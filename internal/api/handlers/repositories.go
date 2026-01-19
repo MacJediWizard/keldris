@@ -20,7 +20,6 @@ type RepositoryStore interface {
 	CreateRepository(ctx context.Context, repo *models.Repository) error
 	UpdateRepository(ctx context.Context, repo *models.Repository) error
 	DeleteRepository(ctx context.Context, id uuid.UUID) error
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
 // RepositoriesHandler handles repository-related HTTP endpoints.
@@ -92,16 +91,14 @@ func (h *RepositoriesHandler) List(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
-	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), dbUser.OrgID)
+	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list repositories")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list repositories")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list repositories"})
 		return
 	}
@@ -122,6 +119,11 @@ func (h *RepositoriesHandler) Get(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -136,14 +138,7 @@ func (h *RepositoriesHandler) Get(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -156,6 +151,11 @@ func (h *RepositoriesHandler) Get(c *gin.Context) {
 func (h *RepositoriesHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
@@ -179,19 +179,12 @@ func (h *RepositoriesHandler) Create(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// TODO: Encrypt config using internal/crypto package (AES-256-GCM)
 	// For now, we store an empty config. Encryption will be added when
 	// the crypto package is implemented.
 	var configEncrypted []byte
 
-	repo := models.NewRepository(dbUser.OrgID, req.Name, req.Type, configEncrypted)
+	repo := models.NewRepository(user.CurrentOrgID, req.Name, req.Type, configEncrypted)
 
 	if err := h.store.CreateRepository(c.Request.Context(), repo); err != nil {
 		h.logger.Error().Err(err).Str("name", req.Name).Msg("failed to create repository")
@@ -216,6 +209,11 @@ func (h *RepositoriesHandler) Update(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -235,14 +233,7 @@ func (h *RepositoriesHandler) Update(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -272,6 +263,11 @@ func (h *RepositoriesHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -285,14 +281,7 @@ func (h *RepositoriesHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -327,6 +316,11 @@ func (h *RepositoriesHandler) Test(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -340,14 +334,7 @@ func (h *RepositoriesHandler) Test(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
