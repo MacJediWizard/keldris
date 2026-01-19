@@ -1,0 +1,27 @@
+# Build Go agent
+FROM golang:1.24-alpine AS builder
+RUN apk add --no-cache git ca-certificates
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG BUILD_DATE=unknown
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+    -ldflags "-X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.BuildDate=${BUILD_DATE} -s -w" \
+    -o /keldris-agent ./cmd/keldris-agent
+
+# Final image - minimal with restic
+FROM alpine:3.19
+RUN apk add --no-cache ca-certificates tzdata restic
+RUN adduser -D -u 1000 keldris
+WORKDIR /app
+
+COPY --from=builder /keldris-agent /usr/local/bin/keldris-agent
+
+USER keldris
+ENTRYPOINT ["/usr/local/bin/keldris-agent"]
