@@ -39,3 +39,25 @@ export function useDeleteAgent() {
 		},
 	});
 }
+
+export function useRotateAgentApiKey() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (id: string) => agentsApi.rotateApiKey(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['agents'] });
+		},
+	});
+}
+
+export function useRevokeAgentApiKey() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (id: string) => agentsApi.revokeApiKey(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['agents'] });
+		},
+	});
+}
