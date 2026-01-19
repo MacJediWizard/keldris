@@ -1,0 +1,8 @@
+{
+  "setup": [
+    "go mod download",
+    "cd web && npm ci"
+  ],
+  "run": "make dev",
+  "runScriptMode": "nonconcurrent"
+}

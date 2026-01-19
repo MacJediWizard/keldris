@@ -1,0 +1,21 @@
+pre-commit:
+  parallel: true
+  commands:
+    go-fmt:
+      glob: "*.go"
+      run: gofmt -w {staged_files}
+      stage_fixed: true
+    go-vet:
+      glob: "*.go"
+      run: go vet ./...
+    biome:
+      glob: "web/**/*.{js,ts,jsx,tsx}"
+      run: cd web && npx @biomejs/biome check --write {staged_files}
+      stage_fixed: true
+
+pre-push:
+  commands:
+    test:
+      run: go test ./...
+    lint:
+      run: cd web && npx @biomejs/biome check .
