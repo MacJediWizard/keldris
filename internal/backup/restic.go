@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/rs/zerolog"
 )
@@ -21,12 +22,8 @@ var ErrRepositoryNotInitialized = errors.New("repository not initialized")
 // ErrSnapshotNotFound is returned when a snapshot cannot be found.
 var ErrSnapshotNotFound = errors.New("snapshot not found")
 
-// ResticConfig holds configuration for a Restic backup operation.
-type ResticConfig struct {
-	Repository string
-	Password   string
-	Env        map[string]string
-}
+// ResticConfig is an alias to backends.ResticConfig for backwards compatibility.
+type ResticConfig = backends.ResticConfig
 
 // Snapshot represents a Restic snapshot.
 type Snapshot struct {

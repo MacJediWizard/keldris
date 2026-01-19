@@ -144,6 +144,8 @@ export function getRepositoryTypeBadge(type: string): {
 			return { label: 'SFTP', className: 'bg-purple-100 text-purple-800' };
 		case 'rest':
 			return { label: 'REST', className: 'bg-indigo-100 text-indigo-800' };
+		case 'dropbox':
+			return { label: 'Dropbox', className: 'bg-sky-100 text-sky-800' };
 		default:
 			return { label: type, className: 'bg-gray-100 text-gray-800' };
 	}

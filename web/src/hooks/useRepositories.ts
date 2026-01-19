@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { repositoriesApi } from '../lib/api';
 import type {
 	CreateRepositoryRequest,
+	TestConnectionRequest,
 	UpdateRepositoryRequest,
 } from '../lib/types';
 
@@ -59,5 +60,12 @@ export function useDeleteRepository() {
 export function useTestRepository() {
 	return useMutation({
 		mutationFn: (id: string) => repositoriesApi.test(id),
+	});
+}
+
+export function useTestConnection() {
+	return useMutation({
+		mutationFn: (data: TestConnectionRequest) =>
+			repositoriesApi.testConnection(data),
 	});
 }
