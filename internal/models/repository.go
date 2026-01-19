@@ -20,6 +20,8 @@ const (
 	RepositoryTypeSFTP RepositoryType = "sftp"
 	// RepositoryTypeRest is a Restic REST server repository.
 	RepositoryTypeRest RepositoryType = "rest"
+	// RepositoryTypeDropbox is a Dropbox storage repository (via rclone).
+	RepositoryTypeDropbox RepositoryType = "dropbox"
 )
 
 // Repository represents a backup storage destination.
@@ -55,6 +57,7 @@ func ValidRepositoryTypes() []RepositoryType {
 		RepositoryTypeB2,
 		RepositoryTypeSFTP,
 		RepositoryTypeRest,
+		RepositoryTypeDropbox,
 	}
 }
 
