@@ -69,6 +69,16 @@ func (m *mockStore) UpdateBackup(ctx context.Context, backup *models.Backup) err
 	return m.updateErr
 }
 
+func (m *mockStore) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return &models.Agent{
+		ID:       id,
+		OrgID:    uuid.New(),
+		Hostname: "test-agent",
+	}, nil
+}
+
 func (m *mockStore) addSchedule(s models.Schedule) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -83,7 +93,7 @@ func TestScheduler_StartStop(t *testing.T) {
 	config := DefaultSchedulerConfig()
 	config.RefreshInterval = 100 * time.Millisecond
 
-	scheduler := NewScheduler(store, restic, config, logger)
+	scheduler := NewScheduler(store, restic, config, nil, logger)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -111,7 +121,7 @@ func TestScheduler_Reload(t *testing.T) {
 	config := DefaultSchedulerConfig()
 	config.RefreshInterval = time.Hour // Prevent auto-refresh during test
 
-	scheduler := NewScheduler(store, restic, config, logger)
+	scheduler := NewScheduler(store, restic, config, nil, logger)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -171,7 +181,7 @@ func TestScheduler_GetNextRun_NotFound(t *testing.T) {
 	restic := NewRestic(logger)
 	config := DefaultSchedulerConfig()
 
-	scheduler := NewScheduler(store, restic, config, logger)
+	scheduler := NewScheduler(store, restic, config, nil, logger)
 
 	_, ok := scheduler.GetNextRun(uuid.New())
 	if ok {
@@ -193,7 +203,7 @@ func TestScheduler_InvalidCronExpression(t *testing.T) {
 	restic := NewRestic(logger)
 	config := DefaultSchedulerConfig()
 
-	scheduler := NewScheduler(store, restic, config, logger)
+	scheduler := NewScheduler(store, restic, config, nil, logger)
 
 	// Add a schedule with invalid cron expression
 	schedule := models.Schedule{
