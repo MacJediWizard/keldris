@@ -24,6 +24,8 @@ type AgentStore interface {
 	DeleteAgent(ctx context.Context, id uuid.UUID) error
 	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Agent, error)
+	UpdateAgentAPIKeyHash(ctx context.Context, id uuid.UUID, apiKeyHash string) error
+	RevokeAgentAPIKey(ctx context.Context, id uuid.UUID) error
 }
 
 // AgentsHandler handles agent-related HTTP endpoints.
@@ -49,6 +51,8 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		agents.GET("/:id", h.Get)
 		agents.DELETE("/:id", h.Delete)
 		agents.POST("/:id/heartbeat", h.Heartbeat)
+		agents.POST("/:id/apikey/rotate", h.RotateAPIKey)
+		agents.DELETE("/:id/apikey", h.RevokeAPIKey)
 	}
 }
 
@@ -276,6 +280,125 @@ func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, agent)
+}
+
+// RotateAPIKeyResponse is the response for API key rotation.
+type RotateAPIKeyResponse struct {
+	ID       uuid.UUID `json:"id"`
+	Hostname string    `json:"hostname"`
+	APIKey   string    `json:"api_key"` // Only returned once at rotation
+}
+
+// RotateAPIKey generates a new API key for an agent, invalidating the old one.
+// POST /api/v1/agents/:id/apikey/rotate
+func (h *AgentsHandler) RotateAPIKey(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	// Get agent to verify ownership
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify user has access to this agent's org
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	if agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Generate new API key
+	apiKey, err := generateAPIKey()
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to generate API key")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to rotate API key"})
+		return
+	}
+
+	// Hash and store new API key
+	apiKeyHash := hashAPIKey(apiKey)
+	if err := h.store.UpdateAgentAPIKeyHash(c.Request.Context(), id, apiKeyHash); err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to update API key")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to rotate API key"})
+		return
+	}
+
+	h.logger.Info().
+		Str("agent_id", id.String()).
+		Str("hostname", agent.Hostname).
+		Msg("API key rotated")
+
+	c.JSON(http.StatusOK, RotateAPIKeyResponse{
+		ID:       agent.ID,
+		Hostname: agent.Hostname,
+		APIKey:   apiKey,
+	})
+}
+
+// RevokeAPIKey revokes an agent's API key, disabling its ability to authenticate.
+// DELETE /api/v1/agents/:id/apikey
+func (h *AgentsHandler) RevokeAPIKey(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	// Get agent to verify ownership
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify user has access to this agent's org
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	if agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	if err := h.store.RevokeAgentAPIKey(c.Request.Context(), id); err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to revoke API key")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to revoke API key"})
+		return
+	}
+
+	h.logger.Info().
+		Str("agent_id", id.String()).
+		Str("hostname", agent.Hostname).
+		Msg("API key revoked")
+
+	c.JSON(http.StatusOK, gin.H{"message": "API key revoked"})
 }
 
 // generateAPIKey generates a secure random API key.

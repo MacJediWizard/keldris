@@ -29,6 +29,12 @@ export interface CreateAgentResponse {
 	api_key: string;
 }
 
+export interface RotateAPIKeyResponse {
+	id: string;
+	hostname: string;
+	api_key: string;
+}
+
 // Repository types
 export type RepositoryType =
 	| 'local'

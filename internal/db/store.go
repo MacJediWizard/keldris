@@ -219,6 +219,38 @@ func (db *DB) DeleteAgent(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// UpdateAgentAPIKeyHash updates an agent's API key hash.
+func (db *DB) UpdateAgentAPIKeyHash(ctx context.Context, id uuid.UUID, apiKeyHash string) error {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agents
+		SET api_key_hash = $2, updated_at = $3
+		WHERE id = $1
+	`, id, apiKeyHash, time.Now())
+	if err != nil {
+		return fmt.Errorf("update agent API key: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("agent not found")
+	}
+	return nil
+}
+
+// RevokeAgentAPIKey clears an agent's API key hash (effectively disabling API access).
+func (db *DB) RevokeAgentAPIKey(ctx context.Context, id uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agents
+		SET api_key_hash = '', status = $2, updated_at = $3
+		WHERE id = $1
+	`, id, string(models.AgentStatusPending), time.Now())
+	if err != nil {
+		return fmt.Errorf("revoke agent API key: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("agent not found")
+	}
+	return nil
+}
+
 // Repository methods
 
 // GetRepositoriesByOrgID returns all repositories for an organization.
