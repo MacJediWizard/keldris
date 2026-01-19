@@ -11,6 +11,7 @@ import type {
 	MessageResponse,
 	RepositoriesResponse,
 	Repository,
+	RotateAPIKeyResponse,
 	RunScheduleResponse,
 	Schedule,
 	SchedulesResponse,
@@ -107,6 +108,16 @@ export const agentsApi = {
 
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/agents/${id}`, {
+			method: 'DELETE',
+		}),
+
+	rotateApiKey: async (id: string): Promise<RotateAPIKeyResponse> =>
+		fetchApi<RotateAPIKeyResponse>(`/agents/${id}/apikey/rotate`, {
+			method: 'POST',
+		}),
+
+	revokeApiKey: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agents/${id}/apikey`, {
 			method: 'DELETE',
 		}),
 };
