@@ -1,0 +1,91 @@
+package models
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// BackupStatus represents the current status of a backup.
+type BackupStatus string
+
+const (
+	// BackupStatusRunning indicates the backup is in progress.
+	BackupStatusRunning BackupStatus = "running"
+	// BackupStatusCompleted indicates the backup completed successfully.
+	BackupStatusCompleted BackupStatus = "completed"
+	// BackupStatusFailed indicates the backup failed.
+	BackupStatusFailed BackupStatus = "failed"
+	// BackupStatusCanceled indicates the backup was canceled.
+	BackupStatusCanceled BackupStatus = "canceled"
+)
+
+// Backup represents a single backup execution record.
+type Backup struct {
+	ID           uuid.UUID    `json:"id"`
+	ScheduleID   uuid.UUID    `json:"schedule_id"`
+	AgentID      uuid.UUID    `json:"agent_id"`
+	SnapshotID   string       `json:"snapshot_id,omitempty"`
+	StartedAt    time.Time    `json:"started_at"`
+	CompletedAt  *time.Time   `json:"completed_at,omitempty"`
+	Status       BackupStatus `json:"status"`
+	SizeBytes    *int64       `json:"size_bytes,omitempty"`
+	FilesNew     *int         `json:"files_new,omitempty"`
+	FilesChanged *int         `json:"files_changed,omitempty"`
+	ErrorMessage string       `json:"error_message,omitempty"`
+	CreatedAt    time.Time    `json:"created_at"`
+}
+
+// NewBackup creates a new Backup record for the given schedule and agent.
+func NewBackup(scheduleID, agentID uuid.UUID) *Backup {
+	now := time.Now()
+	return &Backup{
+		ID:         uuid.New(),
+		ScheduleID: scheduleID,
+		AgentID:    agentID,
+		StartedAt:  now,
+		Status:     BackupStatusRunning,
+		CreatedAt:  now,
+	}
+}
+
+// Complete marks the backup as completed with the given stats.
+func (b *Backup) Complete(snapshotID string, sizeBytes int64, filesNew, filesChanged int) {
+	now := time.Now()
+	b.CompletedAt = &now
+	b.Status = BackupStatusCompleted
+	b.SnapshotID = snapshotID
+	b.SizeBytes = &sizeBytes
+	b.FilesNew = &filesNew
+	b.FilesChanged = &filesChanged
+}
+
+// Fail marks the backup as failed with the given error message.
+func (b *Backup) Fail(errMsg string) {
+	now := time.Now()
+	b.CompletedAt = &now
+	b.Status = BackupStatusFailed
+	b.ErrorMessage = errMsg
+}
+
+// Cancel marks the backup as canceled.
+func (b *Backup) Cancel() {
+	now := time.Now()
+	b.CompletedAt = &now
+	b.Status = BackupStatusCanceled
+}
+
+// Duration returns the duration of the backup, or zero if not completed.
+func (b *Backup) Duration() time.Duration {
+	if b.CompletedAt == nil {
+		return 0
+	}
+	return b.CompletedAt.Sub(b.StartedAt)
+}
+
+// IsComplete returns true if the backup has finished (success, failure, or canceled).
+func (b *Backup) IsComplete() bool {
+	return b.Status == BackupStatusCompleted ||
+		b.Status == BackupStatusFailed ||
+		b.Status == BackupStatusCanceled
+}
