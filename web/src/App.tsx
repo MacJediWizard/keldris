@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Agents } from './pages/Agents';
+import { AuditLogs } from './pages/AuditLogs';
 import { Backups } from './pages/Backups';
 import { Dashboard } from './pages/Dashboard';
 import { Repositories } from './pages/Repositories';
@@ -34,6 +35,7 @@ function App() {
 						<Route path="repositories" element={<Repositories />} />
 						<Route path="schedules" element={<Schedules />} />
 						<Route path="backups" element={<Backups />} />
+						<Route path="audit-logs" element={<AuditLogs />} />
 					</Route>
 				</Routes>
 			</BrowserRouter>
