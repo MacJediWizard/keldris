@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Offline</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5;">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f4f4f5;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: #f59e0b; padding: 24px 32px;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Agent Offline</h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 32px;">
+                            <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.5;">
+                                A backup agent has gone offline and is no longer reporting.
+                            </p>
+
+                            <!-- Alert Box -->
+                            <div style="background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+                                <div style="display: flex; align-items: center;">
+                                    <span style="color: #f59e0b; font-size: 20px; margin-right: 12px;">&#9888;</span>
+                                    <span style="color: #92400e; font-size: 14px; font-weight: 500;">Scheduled backups for this agent will not run until it comes back online.</span>
+                                </div>
+                            </div>
+
+                            <!-- Summary Box -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f9fafb; border-radius: 6px; margin-bottom: 24px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Hostname</span>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                                    <span style="color: #111827; font-size: 14px; font-weight: 500;">{{.Hostname}}</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Agent ID</span>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                                    <code style="color: #111827; font-size: 13px; font-family: monospace; background-color: #e5e7eb; padding: 2px 6px; border-radius: 4px;">{{.AgentID}}</code>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Last Seen</span>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                                    <span style="color: #111827; font-size: 14px;">{{.LastSeen.Format "Jan 02, 2006 15:04 MST"}}</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Offline Duration</span>
+                                                </td>
+                                                <td style="padding: 8px 0; text-align: right;">
+                                                    <span style="color: #dc2626; font-size: 14px; font-weight: 500;">{{.OfflineSince}}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Troubleshooting -->
+                            <p style="margin: 0 0 12px; color: #374151; font-size: 14px; font-weight: 600;">
+                                Troubleshooting Steps
+                            </p>
+                            <ol style="margin: 0; padding-left: 20px; color: #6b7280; font-size: 14px; line-height: 1.8;">
+                                <li>Verify the host is powered on and accessible</li>
+                                <li>Check network connectivity to the Keldris server</li>
+                                <li>Ensure the Keldris agent service is running</li>
+                                <li>Review agent logs for errors</li>
+                                <li>Verify firewall rules allow outbound connections</li>
+                            </ol>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 20px 32px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; color: #6b7280; font-size: 13px; text-align: center;">
+                                This notification was sent by Keldris Backup System
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

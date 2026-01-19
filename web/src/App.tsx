@@ -5,6 +5,10 @@ import { Agents } from './pages/Agents';
 import { Alerts } from './pages/Alerts';
 import { Backups } from './pages/Backups';
 import { Dashboard } from './pages/Dashboard';
+import { NewOrganization } from './pages/NewOrganization';
+import { Notifications } from './pages/Notifications';
+import { OrganizationMembers } from './pages/OrganizationMembers';
+import { OrganizationSettings } from './pages/OrganizationSettings';
 import { Repositories } from './pages/Repositories';
 import { Schedules } from './pages/Schedules';
 
@@ -36,6 +40,16 @@ function App() {
 						<Route path="schedules" element={<Schedules />} />
 						<Route path="backups" element={<Backups />} />
 						<Route path="alerts" element={<Alerts />} />
+						<Route path="notifications" element={<Notifications />} />
+						<Route
+							path="organization/members"
+							element={<OrganizationMembers />}
+						/>
+						<Route
+							path="organization/settings"
+							element={<OrganizationSettings />}
+						/>
+						<Route path="organization/new" element={<NewOrganization />} />
 					</Route>
 				</Routes>
 			</BrowserRouter>
