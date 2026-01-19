@@ -1,0 +1,230 @@
+// Package handlers provides HTTP handlers for the Keldris API.
+package handlers
+
+import (
+	"context"
+	"net/http"
+	"time"
+
+	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/models"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/rs/zerolog"
+)
+
+// UserStore defines the interface for user persistence operations.
+type UserStore interface {
+	GetUserByOIDCSubject(ctx context.Context, subject string) (*models.User, error)
+	CreateUser(ctx context.Context, user *models.User) error
+	GetOrCreateDefaultOrg(ctx context.Context) (*models.Organization, error)
+}
+
+// AuthHandler handles authentication-related HTTP endpoints.
+type AuthHandler struct {
+	oidc      *auth.OIDC
+	sessions  *auth.SessionStore
+	userStore UserStore
+	logger    zerolog.Logger
+}
+
+// NewAuthHandler creates a new AuthHandler.
+func NewAuthHandler(oidc *auth.OIDC, sessions *auth.SessionStore, userStore UserStore, logger zerolog.Logger) *AuthHandler {
+	return &AuthHandler{
+		oidc:      oidc,
+		sessions:  sessions,
+		userStore: userStore,
+		logger:    logger.With().Str("component", "auth_handler").Logger(),
+	}
+}
+
+// RegisterRoutes registers auth routes on the given router group.
+func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
+	r.GET("/login", h.Login)
+	r.GET("/callback", h.Callback)
+	r.POST("/logout", h.Logout)
+	r.GET("/me", h.Me)
+}
+
+// Login initiates the OIDC authentication flow.
+// GET /auth/login
+func (h *AuthHandler) Login(c *gin.Context) {
+	state, err := auth.GenerateState()
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to generate state")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to initiate login"})
+		return
+	}
+
+	if err := h.sessions.SetOIDCState(c.Request, c.Writer, state); err != nil {
+		h.logger.Error().Err(err).Msg("failed to save state to session")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to initiate login"})
+		return
+	}
+
+	authURL := h.oidc.AuthorizationURL(state)
+	h.logger.Debug().Str("redirect_url", authURL).Msg("redirecting to OIDC provider")
+	c.Redirect(http.StatusTemporaryRedirect, authURL)
+}
+
+// Callback handles the OIDC callback after authentication.
+// GET /auth/callback
+func (h *AuthHandler) Callback(c *gin.Context) {
+	// Check for errors from the OIDC provider
+	if errParam := c.Query("error"); errParam != "" {
+		errDesc := c.Query("error_description")
+		h.logger.Warn().
+			Str("error", errParam).
+			Str("description", errDesc).
+			Msg("OIDC provider returned error")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":       errParam,
+			"description": errDesc,
+		})
+		return
+	}
+
+	// Verify state parameter
+	state := c.Query("state")
+	if state == "" {
+		h.logger.Warn().Msg("missing state parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing state parameter"})
+		return
+	}
+
+	savedState, err := h.sessions.GetOIDCState(c.Request, c.Writer)
+	if err != nil {
+		h.logger.Warn().Err(err).Msg("failed to retrieve state from session")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session state"})
+		return
+	}
+
+	if state != savedState {
+		h.logger.Warn().Msg("state parameter mismatch")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "state mismatch"})
+		return
+	}
+
+	// Exchange authorization code for tokens
+	code := c.Query("code")
+	if code == "" {
+		h.logger.Warn().Msg("missing authorization code")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing authorization code"})
+		return
+	}
+
+	token, err := h.oidc.Exchange(c.Request.Context(), code)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to exchange authorization code")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
+		return
+	}
+
+	// Verify ID token and extract claims
+	claims, err := h.oidc.VerifyIDToken(c.Request.Context(), token)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to verify ID token")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
+		return
+	}
+
+	// Find or create user
+	user, err := h.findOrCreateUser(c.Request.Context(), claims)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to find or create user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
+		return
+	}
+
+	// Store user in session
+	sessionUser := &auth.SessionUser{
+		ID:              user.ID,
+		OIDCSubject:     user.OIDCSubject,
+		Email:           user.Email,
+		Name:            user.Name,
+		AuthenticatedAt: time.Now(),
+	}
+
+	if err := h.sessions.SetUser(c.Request, c.Writer, sessionUser); err != nil {
+		h.logger.Error().Err(err).Msg("failed to save user to session")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
+		return
+	}
+
+	h.logger.Info().
+		Str("user_id", user.ID.String()).
+		Str("email", user.Email).
+		Msg("user authenticated successfully")
+
+	// Redirect to frontend dashboard
+	c.Redirect(http.StatusTemporaryRedirect, "/")
+}
+
+// findOrCreateUser finds an existing user by OIDC subject or creates a new one.
+func (h *AuthHandler) findOrCreateUser(ctx context.Context, claims *auth.IDTokenClaims) (*models.User, error) {
+	// Try to find existing user
+	user, err := h.userStore.GetUserByOIDCSubject(ctx, claims.Subject)
+	if err == nil {
+		return user, nil
+	}
+
+	// Create new user - get or create default organization
+	org, err := h.userStore.GetOrCreateDefaultOrg(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	user = models.NewUser(org.ID, claims.Subject, claims.Email, claims.Name, models.UserRoleUser)
+	if err := h.userStore.CreateUser(ctx, user); err != nil {
+		return nil, err
+	}
+
+	h.logger.Info().
+		Str("user_id", user.ID.String()).
+		Str("email", user.Email).
+		Msg("created new user")
+
+	return user, nil
+}
+
+// Logout terminates the user session.
+// POST /auth/logout
+func (h *AuthHandler) Logout(c *gin.Context) {
+	sessionUser, err := h.sessions.GetUser(c.Request)
+	if err == nil {
+		h.logger.Info().
+			Str("user_id", sessionUser.ID.String()).
+			Msg("user logging out")
+	}
+
+	if err := h.sessions.ClearUser(c.Request, c.Writer); err != nil {
+		h.logger.Error().Err(err).Msg("failed to clear session")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "logout failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "logged out successfully"})
+}
+
+// MeResponse is the response for the /auth/me endpoint.
+type MeResponse struct {
+	ID    uuid.UUID `json:"id"`
+	Email string    `json:"email"`
+	Name  string    `json:"name"`
+}
+
+// Me returns the current authenticated user.
+// GET /auth/me
+func (h *AuthHandler) Me(c *gin.Context) {
+	sessionUser, err := h.sessions.GetUser(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "not authenticated"})
+		return
+	}
+
+	c.JSON(http.StatusOK, MeResponse{
+		ID:    sessionUser.ID,
+		Email: sessionUser.Email,
+		Name:  sessionUser.Name,
+	})
+}
