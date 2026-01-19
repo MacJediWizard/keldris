@@ -101,6 +101,7 @@ export interface Repository {
 	id: string;
 	name: string;
 	type: RepositoryType;
+	escrow_enabled: boolean;
 	created_at: string;
 	updated_at: string;
 }
@@ -109,6 +110,12 @@ export interface CreateRepositoryRequest {
 	name: string;
 	type: RepositoryType;
 	config: BackendConfig;
+	escrow_enabled?: boolean;
+}
+
+export interface CreateRepositoryResponse {
+	repository: Repository;
+	password: string;
 }
 
 export interface UpdateRepositoryRequest {
@@ -124,6 +131,12 @@ export interface TestRepositoryResponse {
 export interface TestConnectionRequest {
 	type: RepositoryType;
 	config: BackendConfig;
+}
+
+export interface KeyRecoveryResponse {
+	repository_id: string;
+	repository_name: string;
+	password: string;
 }
 
 // Schedule types
