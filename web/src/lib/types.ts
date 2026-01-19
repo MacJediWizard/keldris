@@ -315,3 +315,89 @@ export interface ErrorResponse {
 export interface MessageResponse {
 	message: string;
 }
+
+// Notification types
+export type NotificationChannelType = 'email' | 'slack' | 'webhook' | 'pagerduty';
+export type NotificationEventType = 'backup_success' | 'backup_failed' | 'agent_offline';
+export type NotificationStatus = 'queued' | 'sent' | 'failed';
+
+export interface NotificationChannel {
+	id: string;
+	org_id: string;
+	name: string;
+	type: NotificationChannelType;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface EmailChannelConfig {
+	host: string;
+	port: number;
+	username: string;
+	password: string;
+	from: string;
+	tls: boolean;
+}
+
+export interface NotificationPreference {
+	id: string;
+	org_id: string;
+	channel_id: string;
+	event_type: NotificationEventType;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface NotificationLog {
+	id: string;
+	org_id: string;
+	channel_id?: string;
+	event_type: string;
+	recipient: string;
+	subject?: string;
+	status: NotificationStatus;
+	error_message?: string;
+	sent_at?: string;
+	created_at: string;
+}
+
+export interface CreateNotificationChannelRequest {
+	name: string;
+	type: NotificationChannelType;
+	config: EmailChannelConfig | Record<string, unknown>;
+}
+
+export interface UpdateNotificationChannelRequest {
+	name?: string;
+	config?: EmailChannelConfig | Record<string, unknown>;
+	enabled?: boolean;
+}
+
+export interface CreateNotificationPreferenceRequest {
+	channel_id: string;
+	event_type: NotificationEventType;
+	enabled: boolean;
+}
+
+export interface UpdateNotificationPreferenceRequest {
+	enabled: boolean;
+}
+
+export interface NotificationChannelsResponse {
+	channels: NotificationChannel[];
+}
+
+export interface NotificationChannelWithPreferencesResponse {
+	channel: NotificationChannel;
+	preferences: NotificationPreference[];
+}
+
+export interface NotificationPreferencesResponse {
+	preferences: NotificationPreference[];
+}
+
+export interface NotificationLogsResponse {
+	logs: NotificationLog[];
+}
