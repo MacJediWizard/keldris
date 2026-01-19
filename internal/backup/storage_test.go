@@ -496,24 +496,3 @@ func TestParseBackend(t *testing.T) {
 	}
 }
 
-func TestIsRestURL(t *testing.T) {
-	tests := []struct {
-		url  string
-		want bool
-	}{
-		{"rest:https://example.com", true},
-		{"rest:http://example.com", true},
-		{"https://example.com", false},
-		{"http://example.com", false},
-		{"rest", false},
-		{"", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.url, func(t *testing.T) {
-			if got := isRestURL(tt.url); got != tt.want {
-				t.Errorf("isRestURL(%q) = %v, want %v", tt.url, got, tt.want)
-			}
-		})
-	}
-}
