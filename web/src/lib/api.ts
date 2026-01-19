@@ -25,6 +25,7 @@ import type {
 	Schedule,
 	SchedulesResponse,
 	SwitchOrgRequest,
+	TestConnectionRequest,
 	TestRepositoryResponse,
 	UpdateMemberRequest,
 	UpdateOrgRequest,
@@ -157,6 +158,14 @@ export const repositoriesApi = {
 	test: async (id: string): Promise<TestRepositoryResponse> =>
 		fetchApi<TestRepositoryResponse>(`/repositories/${id}/test`, {
 			method: 'POST',
+		}),
+
+	testConnection: async (
+		data: TestConnectionRequest,
+	): Promise<TestRepositoryResponse> =>
+		fetchApi<TestRepositoryResponse>('/repositories/test-connection', {
+			method: 'POST',
+			body: JSON.stringify(data),
 		}),
 };
 

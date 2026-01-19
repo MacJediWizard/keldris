@@ -30,7 +30,66 @@ export interface CreateAgentResponse {
 }
 
 // Repository types
-export type RepositoryType = 'local' | 's3' | 'b2' | 'sftp' | 'rest';
+export type RepositoryType =
+	| 'local'
+	| 's3'
+	| 'b2'
+	| 'sftp'
+	| 'rest'
+	| 'dropbox';
+
+// Backend configuration interfaces
+export interface LocalBackendConfig {
+	path: string;
+}
+
+export interface S3BackendConfig {
+	endpoint?: string;
+	bucket: string;
+	prefix?: string;
+	region?: string;
+	access_key_id: string;
+	secret_access_key: string;
+	use_ssl?: boolean;
+}
+
+export interface B2BackendConfig {
+	bucket: string;
+	prefix?: string;
+	account_id: string;
+	application_key: string;
+}
+
+export interface SFTPBackendConfig {
+	host: string;
+	port?: number;
+	user: string;
+	path: string;
+	password?: string;
+	private_key?: string;
+}
+
+export interface RestBackendConfig {
+	url: string;
+	username?: string;
+	password?: string;
+}
+
+export interface DropboxBackendConfig {
+	remote_name: string;
+	path?: string;
+	token?: string;
+	app_key?: string;
+	app_secret?: string;
+}
+
+export type BackendConfig =
+	| LocalBackendConfig
+	| S3BackendConfig
+	| B2BackendConfig
+	| SFTPBackendConfig
+	| RestBackendConfig
+	| DropboxBackendConfig;
 
 export interface Repository {
 	id: string;
@@ -43,7 +102,7 @@ export interface Repository {
 export interface CreateRepositoryRequest {
 	name: string;
 	type: RepositoryType;
-	config: Record<string, unknown>;
+	config: BackendConfig;
 }
 
 export interface UpdateRepositoryRequest {
@@ -54,6 +113,11 @@ export interface UpdateRepositoryRequest {
 export interface TestRepositoryResponse {
 	success: boolean;
 	message: string;
+}
+
+export interface TestConnectionRequest {
+	type: RepositoryType;
+	config: BackendConfig;
 }
 
 // Schedule types
