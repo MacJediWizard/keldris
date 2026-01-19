@@ -18,6 +18,8 @@ type UserStore interface {
 	GetUserByOIDCSubject(ctx context.Context, subject string) (*models.User, error)
 	CreateUser(ctx context.Context, user *models.User) error
 	GetOrCreateDefaultOrg(ctx context.Context) (*models.Organization, error)
+	GetMembershipsByUserID(ctx context.Context, userID uuid.UUID) ([]*models.OrgMembership, error)
+	CreateMembership(ctx context.Context, m *models.OrgMembership) error
 }
 
 // AuthHandler handles authentication-related HTTP endpoints.
@@ -136,6 +138,22 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
+	// Get user's memberships to set current org
+	memberships, err := h.userStore.GetMembershipsByUserID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to get user memberships")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
+		return
+	}
+
+	var currentOrgID uuid.UUID
+	var currentOrgRole string
+	if len(memberships) > 0 {
+		// Default to first org
+		currentOrgID = memberships[0].OrgID
+		currentOrgRole = string(memberships[0].Role)
+	}
+
 	// Store user in session
 	sessionUser := &auth.SessionUser{
 		ID:              user.ID,
@@ -143,6 +161,8 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		Email:           user.Email,
 		Name:            user.Name,
 		AuthenticatedAt: time.Now(),
+		CurrentOrgID:    currentOrgID,
+		CurrentOrgRole:  currentOrgRole,
 	}
 
 	if err := h.sessions.SetUser(c.Request, c.Writer, sessionUser); err != nil {
@@ -179,10 +199,18 @@ func (h *AuthHandler) findOrCreateUser(ctx context.Context, claims *auth.IDToken
 		return nil, err
 	}
 
+	// Create membership for the user in the default org as owner (first user becomes owner)
+	membership := models.NewOrgMembership(user.ID, org.ID, models.OrgRoleOwner)
+	if err := h.userStore.CreateMembership(ctx, membership); err != nil {
+		h.logger.Error().Err(err).Msg("failed to create membership for new user")
+		// Don't fail the user creation, just log the error
+	}
+
 	h.logger.Info().
 		Str("user_id", user.ID.String()).
 		Str("email", user.Email).
-		Msg("created new user")
+		Str("org_id", org.ID.String()).
+		Msg("created new user with org membership")
 
 	return user, nil
 }
@@ -208,9 +236,11 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 // MeResponse is the response for the /auth/me endpoint.
 type MeResponse struct {
-	ID    uuid.UUID `json:"id"`
-	Email string    `json:"email"`
-	Name  string    `json:"name"`
+	ID             uuid.UUID `json:"id"`
+	Email          string    `json:"email"`
+	Name           string    `json:"name"`
+	CurrentOrgID   uuid.UUID `json:"current_org_id,omitempty"`
+	CurrentOrgRole string    `json:"current_org_role,omitempty"`
 }
 
 // Me returns the current authenticated user.
@@ -223,8 +253,10 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, MeResponse{
-		ID:    sessionUser.ID,
-		Email: sessionUser.Email,
-		Name:  sessionUser.Name,
+		ID:             sessionUser.ID,
+		Email:          sessionUser.Email,
+		Name:           sessionUser.Name,
+		CurrentOrgID:   sessionUser.CurrentOrgID,
+		CurrentOrgRole: sessionUser.CurrentOrgRole,
 	})
 }
