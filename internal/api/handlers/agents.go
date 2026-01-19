@@ -24,6 +24,8 @@ type AgentStore interface {
 	DeleteAgent(ctx context.Context, id uuid.UUID) error
 	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Agent, error)
+	UpdateAgentAPIKeyHash(ctx context.Context, id uuid.UUID, apiKeyHash string) error
+	RevokeAgentAPIKey(ctx context.Context, id uuid.UUID) error
 }
 
 // AgentsHandler handles agent-related HTTP endpoints.
@@ -49,6 +51,8 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		agents.GET("/:id", h.Get)
 		agents.DELETE("/:id", h.Delete)
 		agents.POST("/:id/heartbeat", h.Heartbeat)
+		agents.POST("/:id/apikey/rotate", h.RotateAPIKey)
+		agents.DELETE("/:id/apikey", h.RevokeAPIKey)
 	}
 }
 
@@ -72,17 +76,15 @@ func (h *AgentsHandler) List(c *gin.Context) {
 		return
 	}
 
-	// Get user's org ID
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+	// Use current org from session
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
-	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), dbUser.OrgID)
+	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list agents")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list agents")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list agents"})
 		return
 	}
@@ -95,6 +97,11 @@ func (h *AgentsHandler) List(c *gin.Context) {
 func (h *AgentsHandler) Get(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
@@ -112,15 +119,8 @@ func (h *AgentsHandler) Get(c *gin.Context) {
 		return
 	}
 
-	// Verify user has access to this agent's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if agent.OrgID != dbUser.OrgID {
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
@@ -136,17 +136,14 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 		return
 	}
 
-	var req CreateAgentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
-	// Get user's org ID
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+	var req CreateAgentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
 		return
 	}
 
@@ -161,7 +158,7 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 	// Hash the API key for storage
 	apiKeyHash := hashAPIKey(apiKey)
 
-	agent := models.NewAgent(dbUser.OrgID, req.Hostname, apiKeyHash)
+	agent := models.NewAgent(user.CurrentOrgID, req.Hostname, apiKeyHash)
 
 	if err := h.store.CreateAgent(c.Request.Context(), agent); err != nil {
 		h.logger.Error().Err(err).Str("hostname", req.Hostname).Msg("failed to create agent")
@@ -172,7 +169,7 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 	h.logger.Info().
 		Str("agent_id", agent.ID.String()).
 		Str("hostname", req.Hostname).
-		Str("org_id", dbUser.OrgID.String()).
+		Str("org_id", user.CurrentOrgID.String()).
 		Msg("agent created")
 
 	c.JSON(http.StatusCreated, CreateAgentResponse{
@@ -185,6 +182,116 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 // Delete removes an agent.
 // DELETE /api/v1/agents/:id
 func (h *AgentsHandler) Delete(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	// Get agent to verify ownership
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	if err := h.store.DeleteAgent(c.Request.Context(), id); err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to delete agent")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete agent"})
+		return
+	}
+
+	h.logger.Info().Str("agent_id", id.String()).Msg("agent deleted")
+	c.JSON(http.StatusOK, gin.H{"message": "agent deleted"})
+}
+
+// HeartbeatRequest is the request body for agent heartbeat.
+type HeartbeatRequest struct {
+	OSInfo *models.OSInfo `json:"os_info,omitempty"`
+}
+
+// Heartbeat updates an agent's last seen timestamp.
+// POST /api/v1/agents/:id/heartbeat
+func (h *AgentsHandler) Heartbeat(c *gin.Context) {
+	// This endpoint can be called with either session auth or API key auth
+	// For now, we support session auth. API key auth will be added later.
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	var req HeartbeatRequest
+	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, errors.New("EOF")) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Update agent
+	agent.MarkSeen()
+	if req.OSInfo != nil {
+		agent.OSInfo = req.OSInfo
+	}
+
+	if err := h.store.UpdateAgent(c.Request.Context(), agent); err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to update agent")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update agent"})
+		return
+	}
+
+	c.JSON(http.StatusOK, agent)
+}
+
+// RotateAPIKeyResponse is the response for API key rotation.
+type RotateAPIKeyResponse struct {
+	ID       uuid.UUID `json:"id"`
+	Hostname string    `json:"hostname"`
+	APIKey   string    `json:"api_key"` // Only returned once at rotation
+}
+
+// RotateAPIKey generates a new API key for an agent, invalidating the old one.
+// POST /api/v1/agents/:id/apikey/rotate
+func (h *AgentsHandler) RotateAPIKey(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -217,26 +324,37 @@ func (h *AgentsHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.store.DeleteAgent(c.Request.Context(), id); err != nil {
-		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to delete agent")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete agent"})
+	// Generate new API key
+	apiKey, err := generateAPIKey()
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to generate API key")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to rotate API key"})
 		return
 	}
 
-	h.logger.Info().Str("agent_id", id.String()).Msg("agent deleted")
-	c.JSON(http.StatusOK, gin.H{"message": "agent deleted"})
+	// Hash and store new API key
+	apiKeyHash := hashAPIKey(apiKey)
+	if err := h.store.UpdateAgentAPIKeyHash(c.Request.Context(), id, apiKeyHash); err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to update API key")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to rotate API key"})
+		return
+	}
+
+	h.logger.Info().
+		Str("agent_id", id.String()).
+		Str("hostname", agent.Hostname).
+		Msg("API key rotated")
+
+	c.JSON(http.StatusOK, RotateAPIKeyResponse{
+		ID:       agent.ID,
+		Hostname: agent.Hostname,
+		APIKey:   apiKey,
+	})
 }
 
-// HeartbeatRequest is the request body for agent heartbeat.
-type HeartbeatRequest struct {
-	OSInfo *models.OSInfo `json:"os_info,omitempty"`
-}
-
-// Heartbeat updates an agent's last seen timestamp.
-// POST /api/v1/agents/:id/heartbeat
-func (h *AgentsHandler) Heartbeat(c *gin.Context) {
-	// This endpoint can be called with either session auth or API key auth
-	// For now, we support session auth. API key auth will be added later.
+// RevokeAPIKey revokes an agent's API key, disabling its ability to authenticate.
+// DELETE /api/v1/agents/:id/apikey
+func (h *AgentsHandler) RevokeAPIKey(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -249,12 +367,7 @@ func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 		return
 	}
 
-	var req HeartbeatRequest
-	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, errors.New("EOF")) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
-		return
-	}
-
+	// Get agent to verify ownership
 	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
@@ -274,19 +387,18 @@ func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 		return
 	}
 
-	// Update agent
-	agent.MarkSeen()
-	if req.OSInfo != nil {
-		agent.OSInfo = req.OSInfo
-	}
-
-	if err := h.store.UpdateAgent(c.Request.Context(), agent); err != nil {
-		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to update agent")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update agent"})
+	if err := h.store.RevokeAgentAPIKey(c.Request.Context(), id); err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to revoke API key")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to revoke API key"})
 		return
 	}
 
-	c.JSON(http.StatusOK, agent)
+	h.logger.Info().
+		Str("agent_id", id.String()).
+		Str("hostname", agent.Hostname).
+		Msg("API key revoked")
+
+	c.JSON(http.StatusOK, gin.H{"message": "API key revoked"})
 }
 
 // generateAPIKey generates a secure random API key.

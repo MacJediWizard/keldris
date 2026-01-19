@@ -219,6 +219,38 @@ func (db *DB) DeleteAgent(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// UpdateAgentAPIKeyHash updates an agent's API key hash.
+func (db *DB) UpdateAgentAPIKeyHash(ctx context.Context, id uuid.UUID, apiKeyHash string) error {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agents
+		SET api_key_hash = $2, updated_at = $3
+		WHERE id = $1
+	`, id, apiKeyHash, time.Now())
+	if err != nil {
+		return fmt.Errorf("update agent API key: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("agent not found")
+	}
+	return nil
+}
+
+// RevokeAgentAPIKey clears an agent's API key hash (effectively disabling API access).
+func (db *DB) RevokeAgentAPIKey(ctx context.Context, id uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agents
+		SET api_key_hash = '', status = $2, updated_at = $3
+		WHERE id = $1
+	`, id, string(models.AgentStatusPending), time.Now())
+	if err != nil {
+		return fmt.Errorf("revoke agent API key: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("agent not found")
+	}
+	return nil
+}
+
 // Repository methods
 
 // GetRepositoriesByOrgID returns all repositories for an organization.
@@ -1008,6 +1040,32 @@ func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
 	return schedules, nil
 }
 
+// GetEnabledSchedules returns all enabled schedules.
+func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, agent_id, repository_id, name, cron_expression, paths, excludes,
+		       retention_policy, enabled, created_at, updated_at
+		FROM schedules
+		WHERE enabled = true
+		ORDER BY name
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled schedules: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []models.Schedule
+	for rows.Next() {
+		s, err := scanSchedule(rows)
+		if err != nil {
+			return nil, err
+		}
+		schedules = append(schedules, *s)
+	}
+
+	return schedules, nil
+}
+
 // GetLatestBackupByScheduleID returns the most recent backup for a schedule.
 func (db *DB) GetLatestBackupByScheduleID(ctx context.Context, scheduleID uuid.UUID) (*models.Backup, error) {
 	var b models.Backup
@@ -1056,4 +1114,712 @@ func (db *DB) GetOrgIDByScheduleID(ctx context.Context, scheduleID uuid.UUID) (u
 		return uuid.Nil, fmt.Errorf("get org by schedule: %w", err)
 	}
 	return orgID, nil
+}
+
+// GetRepository returns a repository by ID (alias for GetRepositoryByID).
+func (db *DB) GetRepository(ctx context.Context, id uuid.UUID) (*models.Repository, error) {
+	return db.GetRepositoryByID(ctx, id)
+}
+
+// Organization methods
+
+// GetOrganizationByID returns an organization by ID.
+func (db *DB) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
+	var org models.Organization
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, name, slug, created_at, updated_at
+		FROM organizations
+		WHERE id = $1
+	`, id).Scan(&org.ID, &org.Name, &org.Slug, &org.CreatedAt, &org.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get organization: %w", err)
+	}
+	return &org, nil
+}
+
+// GetOrganizationBySlug returns an organization by slug.
+func (db *DB) GetOrganizationBySlug(ctx context.Context, slug string) (*models.Organization, error) {
+	var org models.Organization
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, name, slug, created_at, updated_at
+		FROM organizations
+		WHERE slug = $1
+	`, slug).Scan(&org.ID, &org.Name, &org.Slug, &org.CreatedAt, &org.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get organization by slug: %w", err)
+	}
+	return &org, nil
+}
+
+// CreateOrganization creates a new organization.
+func (db *DB) CreateOrganization(ctx context.Context, org *models.Organization) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO organizations (id, name, slug, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5)
+	`, org.ID, org.Name, org.Slug, org.CreatedAt, org.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create organization: %w", err)
+	}
+	return nil
+}
+
+// UpdateOrganization updates an existing organization.
+func (db *DB) UpdateOrganization(ctx context.Context, org *models.Organization) error {
+	org.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE organizations
+		SET name = $2, slug = $3, updated_at = $4
+		WHERE id = $1
+	`, org.ID, org.Name, org.Slug, org.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update organization: %w", err)
+	}
+	return nil
+}
+
+// DeleteOrganization deletes an organization by ID.
+func (db *DB) DeleteOrganization(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM organizations WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete organization: %w", err)
+	}
+	return nil
+}
+
+// Membership methods
+
+// GetMembershipByUserAndOrg returns a user's membership in an organization.
+func (db *DB) GetMembershipByUserAndOrg(ctx context.Context, userID, orgID uuid.UUID) (*models.OrgMembership, error) {
+	var m models.OrgMembership
+	var roleStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, user_id, org_id, role, created_at, updated_at
+		FROM org_memberships
+		WHERE user_id = $1 AND org_id = $2
+	`, userID, orgID).Scan(&m.ID, &m.UserID, &m.OrgID, &roleStr, &m.CreatedAt, &m.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get membership: %w", err)
+	}
+	m.Role = models.OrgRole(roleStr)
+	return &m, nil
+}
+
+// GetMembershipsByUserID returns all memberships for a user.
+func (db *DB) GetMembershipsByUserID(ctx context.Context, userID uuid.UUID) ([]*models.OrgMembership, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, user_id, org_id, role, created_at, updated_at
+		FROM org_memberships
+		WHERE user_id = $1
+		ORDER BY created_at
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list memberships: %w", err)
+	}
+	defer rows.Close()
+
+	var memberships []*models.OrgMembership
+	for rows.Next() {
+		var m models.OrgMembership
+		var roleStr string
+		if err := rows.Scan(&m.ID, &m.UserID, &m.OrgID, &roleStr, &m.CreatedAt, &m.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan membership: %w", err)
+		}
+		m.Role = models.OrgRole(roleStr)
+		memberships = append(memberships, &m)
+	}
+	return memberships, nil
+}
+
+// GetMembershipsByOrgID returns all memberships for an organization.
+func (db *DB) GetMembershipsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.OrgMembershipWithUser, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT m.id, m.user_id, m.org_id, m.role, u.email, u.name, m.created_at, m.updated_at
+		FROM org_memberships m
+		JOIN users u ON u.id = m.user_id
+		WHERE m.org_id = $1
+		ORDER BY m.created_at
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list org memberships: %w", err)
+	}
+	defer rows.Close()
+
+	var memberships []*models.OrgMembershipWithUser
+	for rows.Next() {
+		var m models.OrgMembershipWithUser
+		var roleStr string
+		if err := rows.Scan(&m.ID, &m.UserID, &m.OrgID, &roleStr, &m.Email, &m.Name, &m.CreatedAt, &m.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan membership: %w", err)
+		}
+		m.Role = models.OrgRole(roleStr)
+		memberships = append(memberships, &m)
+	}
+	return memberships, nil
+}
+
+// CreateMembership creates a new organization membership.
+func (db *DB) CreateMembership(ctx context.Context, m *models.OrgMembership) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO org_memberships (id, user_id, org_id, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, m.ID, m.UserID, m.OrgID, string(m.Role), m.CreatedAt, m.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create membership: %w", err)
+	}
+	return nil
+}
+
+// UpdateMembership updates an existing membership.
+func (db *DB) UpdateMembership(ctx context.Context, m *models.OrgMembership) error {
+	m.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE org_memberships
+		SET role = $3, updated_at = $4
+		WHERE user_id = $1 AND org_id = $2
+	`, m.UserID, m.OrgID, string(m.Role), m.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update membership: %w", err)
+	}
+	return nil
+}
+
+// DeleteMembership removes a user from an organization.
+func (db *DB) DeleteMembership(ctx context.Context, userID, orgID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM org_memberships
+		WHERE user_id = $1 AND org_id = $2
+	`, userID, orgID)
+	if err != nil {
+		return fmt.Errorf("delete membership: %w", err)
+	}
+	return nil
+}
+
+// GetUserOrganizations returns all organizations a user belongs to.
+func (db *DB) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]*models.Organization, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT o.id, o.name, o.slug, o.created_at, o.updated_at
+		FROM organizations o
+		JOIN org_memberships m ON m.org_id = o.id
+		WHERE m.user_id = $1
+		ORDER BY o.name
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list user organizations: %w", err)
+	}
+	defer rows.Close()
+
+	var orgs []*models.Organization
+	for rows.Next() {
+		var org models.Organization
+		if err := rows.Scan(&org.ID, &org.Name, &org.Slug, &org.CreatedAt, &org.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan organization: %w", err)
+		}
+		orgs = append(orgs, &org)
+	}
+	return orgs, nil
+}
+
+// Invitation methods
+
+// CreateInvitation creates a new organization invitation.
+func (db *DB) CreateInvitation(ctx context.Context, inv *models.OrgInvitation) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO org_invitations (id, org_id, email, role, token, invited_by, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, inv.ID, inv.OrgID, inv.Email, string(inv.Role), inv.Token, inv.InvitedBy, inv.ExpiresAt, inv.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create invitation: %w", err)
+	}
+	return nil
+}
+
+// GetInvitationByToken returns an invitation by its token.
+func (db *DB) GetInvitationByToken(ctx context.Context, token string) (*models.OrgInvitation, error) {
+	var inv models.OrgInvitation
+	var roleStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, email, role, token, invited_by, expires_at, accepted_at, created_at
+		FROM org_invitations
+		WHERE token = $1
+	`, token).Scan(&inv.ID, &inv.OrgID, &inv.Email, &roleStr, &inv.Token, &inv.InvitedBy, &inv.ExpiresAt, &inv.AcceptedAt, &inv.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get invitation: %w", err)
+	}
+	inv.Role = models.OrgRole(roleStr)
+	return &inv, nil
+}
+
+// GetPendingInvitationsByOrgID returns all pending invitations for an organization.
+func (db *DB) GetPendingInvitationsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.OrgInvitationWithDetails, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT i.id, i.org_id, o.name, i.email, i.role, i.invited_by, u.name, i.expires_at, i.accepted_at, i.created_at
+		FROM org_invitations i
+		JOIN organizations o ON o.id = i.org_id
+		JOIN users u ON u.id = i.invited_by
+		WHERE i.org_id = $1 AND i.accepted_at IS NULL AND i.expires_at > NOW()
+		ORDER BY i.created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list invitations: %w", err)
+	}
+	defer rows.Close()
+
+	var invitations []*models.OrgInvitationWithDetails
+	for rows.Next() {
+		var inv models.OrgInvitationWithDetails
+		var roleStr string
+		if err := rows.Scan(&inv.ID, &inv.OrgID, &inv.OrgName, &inv.Email, &roleStr, &inv.InvitedBy, &inv.InviterName, &inv.ExpiresAt, &inv.AcceptedAt, &inv.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan invitation: %w", err)
+		}
+		inv.Role = models.OrgRole(roleStr)
+		invitations = append(invitations, &inv)
+	}
+	return invitations, nil
+}
+
+// GetPendingInvitationsByEmail returns pending invitations for an email address.
+func (db *DB) GetPendingInvitationsByEmail(ctx context.Context, email string) ([]*models.OrgInvitationWithDetails, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT i.id, i.org_id, o.name, i.email, i.role, i.invited_by, u.name, i.expires_at, i.accepted_at, i.created_at
+		FROM org_invitations i
+		JOIN organizations o ON o.id = i.org_id
+		JOIN users u ON u.id = i.invited_by
+		WHERE i.email = $1 AND i.accepted_at IS NULL AND i.expires_at > NOW()
+		ORDER BY i.created_at DESC
+	`, email)
+	if err != nil {
+		return nil, fmt.Errorf("list invitations by email: %w", err)
+	}
+	defer rows.Close()
+
+	var invitations []*models.OrgInvitationWithDetails
+	for rows.Next() {
+		var inv models.OrgInvitationWithDetails
+		var roleStr string
+		if err := rows.Scan(&inv.ID, &inv.OrgID, &inv.OrgName, &inv.Email, &roleStr, &inv.InvitedBy, &inv.InviterName, &inv.ExpiresAt, &inv.AcceptedAt, &inv.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan invitation: %w", err)
+		}
+		inv.Role = models.OrgRole(roleStr)
+		invitations = append(invitations, &inv)
+	}
+	return invitations, nil
+}
+
+// AcceptInvitation marks an invitation as accepted.
+func (db *DB) AcceptInvitation(ctx context.Context, id uuid.UUID) error {
+	now := time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE org_invitations
+		SET accepted_at = $2
+		WHERE id = $1
+	`, id, now)
+	if err != nil {
+		return fmt.Errorf("accept invitation: %w", err)
+	}
+	return nil
+}
+
+// DeleteInvitation deletes an invitation.
+func (db *DB) DeleteInvitation(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM org_invitations WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete invitation: %w", err)
+	}
+	return nil
+}
+
+// Notification Channel methods
+
+// GetNotificationChannelsByOrgID returns all notification channels for an organization.
+func (db *DB) GetNotificationChannelsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.NotificationChannel, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, type, config_encrypted, enabled, created_at, updated_at
+		FROM notification_channels
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list notification channels: %w", err)
+	}
+	defer rows.Close()
+
+	var channels []*models.NotificationChannel
+	for rows.Next() {
+		var c models.NotificationChannel
+		var typeStr string
+		err := rows.Scan(
+			&c.ID, &c.OrgID, &c.Name, &typeStr, &c.ConfigEncrypted,
+			&c.Enabled, &c.CreatedAt, &c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification channel: %w", err)
+		}
+		c.Type = models.NotificationChannelType(typeStr)
+		channels = append(channels, &c)
+	}
+
+	return channels, nil
+}
+
+// GetNotificationChannelByID returns a notification channel by ID.
+func (db *DB) GetNotificationChannelByID(ctx context.Context, id uuid.UUID) (*models.NotificationChannel, error) {
+	var c models.NotificationChannel
+	var typeStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, type, config_encrypted, enabled, created_at, updated_at
+		FROM notification_channels
+		WHERE id = $1
+	`, id).Scan(
+		&c.ID, &c.OrgID, &c.Name, &typeStr, &c.ConfigEncrypted,
+		&c.Enabled, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get notification channel: %w", err)
+	}
+	c.Type = models.NotificationChannelType(typeStr)
+	return &c, nil
+}
+
+// GetEnabledEmailChannelsByOrgID returns all enabled email channels for an organization.
+func (db *DB) GetEnabledEmailChannelsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.NotificationChannel, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, type, config_encrypted, enabled, created_at, updated_at
+		FROM notification_channels
+		WHERE org_id = $1 AND type = 'email' AND enabled = true
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled email channels: %w", err)
+	}
+	defer rows.Close()
+
+	var channels []*models.NotificationChannel
+	for rows.Next() {
+		var c models.NotificationChannel
+		var typeStr string
+		err := rows.Scan(
+			&c.ID, &c.OrgID, &c.Name, &typeStr, &c.ConfigEncrypted,
+			&c.Enabled, &c.CreatedAt, &c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification channel: %w", err)
+		}
+		c.Type = models.NotificationChannelType(typeStr)
+		channels = append(channels, &c)
+	}
+
+	return channels, nil
+}
+
+// CreateNotificationChannel creates a new notification channel.
+func (db *DB) CreateNotificationChannel(ctx context.Context, channel *models.NotificationChannel) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO notification_channels (id, org_id, name, type, config_encrypted, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, channel.ID, channel.OrgID, channel.Name, string(channel.Type), channel.ConfigEncrypted,
+		channel.Enabled, channel.CreatedAt, channel.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create notification channel: %w", err)
+	}
+	return nil
+}
+
+// UpdateNotificationChannel updates an existing notification channel.
+func (db *DB) UpdateNotificationChannel(ctx context.Context, channel *models.NotificationChannel) error {
+	channel.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE notification_channels
+		SET name = $2, config_encrypted = $3, enabled = $4, updated_at = $5
+		WHERE id = $1
+	`, channel.ID, channel.Name, channel.ConfigEncrypted, channel.Enabled, channel.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update notification channel: %w", err)
+	}
+	return nil
+}
+
+// DeleteNotificationChannel deletes a notification channel by ID.
+func (db *DB) DeleteNotificationChannel(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM notification_channels WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete notification channel: %w", err)
+	}
+	return nil
+}
+
+// Notification Preference methods
+
+// GetNotificationPreferencesByOrgID returns all notification preferences for an organization.
+func (db *DB) GetNotificationPreferencesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.NotificationPreference, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, channel_id, event_type, enabled, created_at, updated_at
+		FROM notification_preferences
+		WHERE org_id = $1
+		ORDER BY event_type
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list notification preferences: %w", err)
+	}
+	defer rows.Close()
+
+	var prefs []*models.NotificationPreference
+	for rows.Next() {
+		var p models.NotificationPreference
+		var eventTypeStr string
+		err := rows.Scan(
+			&p.ID, &p.OrgID, &p.ChannelID, &eventTypeStr, &p.Enabled,
+			&p.CreatedAt, &p.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification preference: %w", err)
+		}
+		p.EventType = models.NotificationEventType(eventTypeStr)
+		prefs = append(prefs, &p)
+	}
+
+	return prefs, nil
+}
+
+// GetNotificationPreferencesByChannelID returns all preferences for a channel.
+func (db *DB) GetNotificationPreferencesByChannelID(ctx context.Context, channelID uuid.UUID) ([]*models.NotificationPreference, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, channel_id, event_type, enabled, created_at, updated_at
+		FROM notification_preferences
+		WHERE channel_id = $1
+		ORDER BY event_type
+	`, channelID)
+	if err != nil {
+		return nil, fmt.Errorf("list channel preferences: %w", err)
+	}
+	defer rows.Close()
+
+	var prefs []*models.NotificationPreference
+	for rows.Next() {
+		var p models.NotificationPreference
+		var eventTypeStr string
+		err := rows.Scan(
+			&p.ID, &p.OrgID, &p.ChannelID, &eventTypeStr, &p.Enabled,
+			&p.CreatedAt, &p.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification preference: %w", err)
+		}
+		p.EventType = models.NotificationEventType(eventTypeStr)
+		prefs = append(prefs, &p)
+	}
+
+	return prefs, nil
+}
+
+// GetEnabledPreferencesForEvent returns all enabled preferences for a specific event type in an org.
+func (db *DB) GetEnabledPreferencesForEvent(ctx context.Context, orgID uuid.UUID, eventType models.NotificationEventType) ([]*models.NotificationPreference, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT np.id, np.org_id, np.channel_id, np.event_type, np.enabled, np.created_at, np.updated_at
+		FROM notification_preferences np
+		JOIN notification_channels nc ON np.channel_id = nc.id
+		WHERE np.org_id = $1 AND np.event_type = $2 AND np.enabled = true AND nc.enabled = true
+	`, orgID, string(eventType))
+	if err != nil {
+		return nil, fmt.Errorf("list enabled preferences for event: %w", err)
+	}
+	defer rows.Close()
+
+	var prefs []*models.NotificationPreference
+	for rows.Next() {
+		var p models.NotificationPreference
+		var eventTypeStr string
+		err := rows.Scan(
+			&p.ID, &p.OrgID, &p.ChannelID, &eventTypeStr, &p.Enabled,
+			&p.CreatedAt, &p.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification preference: %w", err)
+		}
+		p.EventType = models.NotificationEventType(eventTypeStr)
+		prefs = append(prefs, &p)
+	}
+
+	return prefs, nil
+}
+
+// CreateNotificationPreference creates a new notification preference.
+func (db *DB) CreateNotificationPreference(ctx context.Context, pref *models.NotificationPreference) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO notification_preferences (id, org_id, channel_id, event_type, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, pref.ID, pref.OrgID, pref.ChannelID, string(pref.EventType), pref.Enabled,
+		pref.CreatedAt, pref.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create notification preference: %w", err)
+	}
+	return nil
+}
+
+// UpdateNotificationPreference updates an existing notification preference.
+func (db *DB) UpdateNotificationPreference(ctx context.Context, pref *models.NotificationPreference) error {
+	pref.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE notification_preferences
+		SET enabled = $2, updated_at = $3
+		WHERE id = $1
+	`, pref.ID, pref.Enabled, pref.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update notification preference: %w", err)
+	}
+	return nil
+}
+
+// DeleteNotificationPreference deletes a notification preference by ID.
+func (db *DB) DeleteNotificationPreference(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM notification_preferences WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete notification preference: %w", err)
+	}
+	return nil
+}
+
+// Notification Log methods
+
+// GetNotificationLogsByOrgID returns notification logs for an organization.
+func (db *DB) GetNotificationLogsByOrgID(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.NotificationLog, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, channel_id, event_type, recipient, subject, status, error_message, sent_at, created_at
+		FROM notification_logs
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list notification logs: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []*models.NotificationLog
+	for rows.Next() {
+		var l models.NotificationLog
+		var statusStr string
+		err := rows.Scan(
+			&l.ID, &l.OrgID, &l.ChannelID, &l.EventType, &l.Recipient,
+			&l.Subject, &statusStr, &l.ErrorMessage, &l.SentAt, &l.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification log: %w", err)
+		}
+		l.Status = models.NotificationStatus(statusStr)
+		logs = append(logs, &l)
+	}
+
+	return logs, nil
+}
+
+// CreateNotificationLog creates a new notification log entry.
+func (db *DB) CreateNotificationLog(ctx context.Context, log *models.NotificationLog) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO notification_logs (id, org_id, channel_id, event_type, recipient, subject, status, error_message, sent_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, log.ID, log.OrgID, log.ChannelID, log.EventType, log.Recipient,
+		log.Subject, string(log.Status), log.ErrorMessage, log.SentAt, log.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create notification log: %w", err)
+	}
+	return nil
+}
+
+// UpdateNotificationLog updates an existing notification log entry.
+func (db *DB) UpdateNotificationLog(ctx context.Context, log *models.NotificationLog) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE notification_logs
+		SET status = $2, error_message = $3, sent_at = $4
+		WHERE id = $1
+	`, log.ID, string(log.Status), log.ErrorMessage, log.SentAt)
+	if err != nil {
+		return fmt.Errorf("update notification log: %w", err)
+	}
+	return nil
+}
+
+// Repository Key methods
+
+// GetRepositoryKeyByRepositoryID returns a repository key by repository ID.
+func (db *DB) GetRepositoryKeyByRepositoryID(ctx context.Context, repositoryID uuid.UUID) (*models.RepositoryKey, error) {
+	var rk models.RepositoryKey
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, repository_id, encrypted_key, escrow_enabled, escrow_encrypted_key, created_at, updated_at
+		FROM repository_keys
+		WHERE repository_id = $1
+	`, repositoryID).Scan(
+		&rk.ID, &rk.RepositoryID, &rk.EncryptedKey, &rk.EscrowEnabled,
+		&rk.EscrowEncryptedKey, &rk.CreatedAt, &rk.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get repository key: %w", err)
+	}
+	return &rk, nil
+}
+
+// CreateRepositoryKey creates a new repository key.
+func (db *DB) CreateRepositoryKey(ctx context.Context, rk *models.RepositoryKey) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO repository_keys (id, repository_id, encrypted_key, escrow_enabled, escrow_encrypted_key, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, rk.ID, rk.RepositoryID, rk.EncryptedKey, rk.EscrowEnabled,
+		rk.EscrowEncryptedKey, rk.CreatedAt, rk.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create repository key: %w", err)
+	}
+	return nil
+}
+
+// UpdateRepositoryKeyEscrow updates the escrow settings for a repository key.
+func (db *DB) UpdateRepositoryKeyEscrow(ctx context.Context, repositoryID uuid.UUID, escrowEnabled bool, escrowEncryptedKey []byte) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE repository_keys
+		SET escrow_enabled = $2, escrow_encrypted_key = $3, updated_at = NOW()
+		WHERE repository_id = $1
+	`, repositoryID, escrowEnabled, escrowEncryptedKey)
+	if err != nil {
+		return fmt.Errorf("update repository key escrow: %w", err)
+	}
+	return nil
+}
+
+// DeleteRepositoryKey deletes a repository key by repository ID.
+func (db *DB) DeleteRepositoryKey(ctx context.Context, repositoryID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM repository_keys WHERE repository_id = $1`, repositoryID)
+	if err != nil {
+		return fmt.Errorf("delete repository key: %w", err)
+	}
+	return nil
+}
+
+// GetRepositoryKeysWithEscrowByOrgID returns all repository keys with escrow enabled for an organization.
+// This is used by admins for key recovery.
+func (db *DB) GetRepositoryKeysWithEscrowByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.RepositoryKey, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT rk.id, rk.repository_id, rk.encrypted_key, rk.escrow_enabled, rk.escrow_encrypted_key, rk.created_at, rk.updated_at
+		FROM repository_keys rk
+		INNER JOIN repositories r ON rk.repository_id = r.id
+		WHERE r.org_id = $1 AND rk.escrow_enabled = true
+		ORDER BY rk.created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list repository keys with escrow: %w", err)
+	}
+	defer rows.Close()
+
+	var keys []*models.RepositoryKey
+	for rows.Next() {
+		var rk models.RepositoryKey
+		err := rows.Scan(
+			&rk.ID, &rk.RepositoryID, &rk.EncryptedKey, &rk.EscrowEnabled,
+			&rk.EscrowEncryptedKey, &rk.CreatedAt, &rk.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan repository key: %w", err)
+		}
+		keys = append(keys, &rk)
+	}
+
+	return keys, nil
 }
