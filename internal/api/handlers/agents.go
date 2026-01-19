@@ -76,17 +76,15 @@ func (h *AgentsHandler) List(c *gin.Context) {
 		return
 	}
 
-	// Get user's org ID
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+	// Use current org from session
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
-	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), dbUser.OrgID)
+	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list agents")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list agents")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list agents"})
 		return
 	}
@@ -99,6 +97,11 @@ func (h *AgentsHandler) List(c *gin.Context) {
 func (h *AgentsHandler) Get(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
@@ -116,15 +119,8 @@ func (h *AgentsHandler) Get(c *gin.Context) {
 		return
 	}
 
-	// Verify user has access to this agent's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if agent.OrgID != dbUser.OrgID {
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
@@ -140,17 +136,14 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 		return
 	}
 
-	var req CreateAgentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
-	// Get user's org ID
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+	var req CreateAgentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
 		return
 	}
 
@@ -165,7 +158,7 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 	// Hash the API key for storage
 	apiKeyHash := hashAPIKey(apiKey)
 
-	agent := models.NewAgent(dbUser.OrgID, req.Hostname, apiKeyHash)
+	agent := models.NewAgent(user.CurrentOrgID, req.Hostname, apiKeyHash)
 
 	if err := h.store.CreateAgent(c.Request.Context(), agent); err != nil {
 		h.logger.Error().Err(err).Str("hostname", req.Hostname).Msg("failed to create agent")
@@ -176,7 +169,7 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 	h.logger.Info().
 		Str("agent_id", agent.ID.String()).
 		Str("hostname", req.Hostname).
-		Str("org_id", dbUser.OrgID.String()).
+		Str("org_id", user.CurrentOrgID.String()).
 		Msg("agent created")
 
 	c.JSON(http.StatusCreated, CreateAgentResponse{
@@ -194,6 +187,11 @@ func (h *AgentsHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -208,15 +206,8 @@ func (h *AgentsHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Verify user has access to this agent's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if agent.OrgID != dbUser.OrgID {
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
@@ -246,6 +237,11 @@ func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -265,15 +261,8 @@ func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 		return
 	}
 
-	// Verify user has access to this agent's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if agent.OrgID != dbUser.OrgID {
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}

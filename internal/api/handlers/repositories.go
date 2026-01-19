@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -18,7 +20,6 @@ type RepositoryStore interface {
 	CreateRepository(ctx context.Context, repo *models.Repository) error
 	UpdateRepository(ctx context.Context, repo *models.Repository) error
 	DeleteRepository(ctx context.Context, id uuid.UUID) error
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
 // RepositoriesHandler handles repository-related HTTP endpoints.
@@ -45,6 +46,7 @@ func (h *RepositoriesHandler) RegisterRoutes(r *gin.RouterGroup) {
 		repos.PUT("/:id", h.Update)
 		repos.DELETE("/:id", h.Delete)
 		repos.POST("/:id/test", h.Test)
+		repos.POST("/test-connection", h.TestConnection)
 	}
 }
 
@@ -89,16 +91,14 @@ func (h *RepositoriesHandler) List(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
-	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), dbUser.OrgID)
+	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list repositories")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list repositories")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list repositories"})
 		return
 	}
@@ -119,6 +119,11 @@ func (h *RepositoriesHandler) Get(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -133,14 +138,7 @@ func (h *RepositoriesHandler) Get(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -153,6 +151,11 @@ func (h *RepositoriesHandler) Get(c *gin.Context) {
 func (h *RepositoriesHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
@@ -176,19 +179,12 @@ func (h *RepositoriesHandler) Create(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// TODO: Encrypt config using internal/crypto package (AES-256-GCM)
 	// For now, we store an empty config. Encryption will be added when
 	// the crypto package is implemented.
 	var configEncrypted []byte
 
-	repo := models.NewRepository(dbUser.OrgID, req.Name, req.Type, configEncrypted)
+	repo := models.NewRepository(user.CurrentOrgID, req.Name, req.Type, configEncrypted)
 
 	if err := h.store.CreateRepository(c.Request.Context(), repo); err != nil {
 		h.logger.Error().Err(err).Str("name", req.Name).Msg("failed to create repository")
@@ -213,6 +209,11 @@ func (h *RepositoriesHandler) Update(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -232,14 +233,7 @@ func (h *RepositoriesHandler) Update(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -269,6 +263,11 @@ func (h *RepositoriesHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -282,14 +281,7 @@ func (h *RepositoriesHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -310,11 +302,22 @@ type TestRepositoryResponse struct {
 	Message string `json:"message"`
 }
 
-// Test checks the repository connection.
+// TestConnectionRequest is the request body for testing a backend connection.
+type TestConnectionRequest struct {
+	Type   models.RepositoryType `json:"type" binding:"required"`
+	Config map[string]any        `json:"config" binding:"required"`
+}
+
+// Test checks an existing repository's connection.
 // POST /api/v1/repositories/:id/test
 func (h *RepositoriesHandler) Test(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
@@ -331,25 +334,84 @@ func (h *RepositoriesHandler) Test(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
 
-	// TODO: Implement actual repository connection test using Restic
-	// This will be implemented when the backup package is created.
-	// For now, return a placeholder response.
+	// TODO: Implement decryption of config and test using backend.TestConnection()
+	// For now, return a message indicating test is not fully implemented.
 	h.logger.Info().Str("repo_id", id.String()).Msg("repository test requested")
 
 	c.JSON(http.StatusOK, TestRepositoryResponse{
 		Success: true,
-		Message: "Repository connection test not yet implemented. Repository exists and is accessible.",
+		Message: "Repository exists. Full connection test requires config decryption (not yet implemented).",
+	})
+}
+
+// TestConnection tests a backend configuration without saving.
+// POST /api/v1/repositories/test-connection
+func (h *RepositoriesHandler) TestConnection(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	var req TestConnectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	// Validate repository type
+	validTypes := models.ValidRepositoryTypes()
+	valid := false
+	for _, t := range validTypes {
+		if req.Type == t {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid repository type", "valid_types": validTypes})
+		return
+	}
+
+	// Convert config map to JSON
+	configJSON, err := json.Marshal(req.Config)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid config format"})
+		return
+	}
+
+	// Parse the backend from config
+	backend, err := backends.ParseBackend(req.Type, configJSON)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid backend config: " + err.Error()})
+		return
+	}
+
+	// Validate the backend configuration
+	if err := backend.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Test the connection
+	h.logger.Info().Str("type", string(req.Type)).Msg("testing backend connection")
+
+	if err := backend.TestConnection(); err != nil {
+		h.logger.Warn().Err(err).Str("type", string(req.Type)).Msg("backend connection test failed")
+		c.JSON(http.StatusOK, TestRepositoryResponse{
+			Success: false,
+			Message: "Connection failed: " + err.Error(),
+		})
+		return
+	}
+
+	h.logger.Info().Str("type", string(req.Type)).Msg("backend connection test successful")
+	c.JSON(http.StatusOK, TestRepositoryResponse{
+		Success: true,
+		Message: "Connection successful",
 	})
 }

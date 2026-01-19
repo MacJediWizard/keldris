@@ -5,17 +5,31 @@ import type {
 	BackupsResponse,
 	CreateAgentRequest,
 	CreateAgentResponse,
+	CreateOrgRequest,
 	CreateRepositoryRequest,
 	CreateScheduleRequest,
 	ErrorResponse,
+	InvitationsResponse,
+	InviteMemberRequest,
+	InviteResponse,
+	MembersResponse,
 	MessageResponse,
+	OrgInvitation,
+	OrgMember,
+	OrgResponse,
+	OrganizationWithRole,
+	OrganizationsResponse,
 	RepositoriesResponse,
 	Repository,
 	RotateAPIKeyResponse,
 	RunScheduleResponse,
 	Schedule,
 	SchedulesResponse,
+	SwitchOrgRequest,
+	TestConnectionRequest,
 	TestRepositoryResponse,
+	UpdateMemberRequest,
+	UpdateOrgRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
 	User,
@@ -156,6 +170,14 @@ export const repositoriesApi = {
 		fetchApi<TestRepositoryResponse>(`/repositories/${id}/test`, {
 			method: 'POST',
 		}),
+
+	testConnection: async (
+		data: TestConnectionRequest,
+	): Promise<TestRepositoryResponse> =>
+		fetchApi<TestRepositoryResponse>('/repositories/test-connection', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Schedules API
@@ -213,4 +235,101 @@ export const backupsApi = {
 
 	get: async (id: string): Promise<Backup> =>
 		fetchApi<Backup>(`/backups/${id}`),
+};
+
+// Organizations API
+export const organizationsApi = {
+	list: async (): Promise<OrganizationWithRole[]> => {
+		const response = await fetchApi<OrganizationsResponse>('/organizations');
+		return response.organizations ?? [];
+	},
+
+	get: async (id: string): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>(`/organizations/${id}`),
+
+	getCurrent: async (): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>('/organizations/current'),
+
+	create: async (data: CreateOrgRequest): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>('/organizations', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (id: string, data: UpdateOrgRequest): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>(`/organizations/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/organizations/${id}`, {
+			method: 'DELETE',
+		}),
+
+	switch: async (data: SwitchOrgRequest): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>('/organizations/switch', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// Members
+	listMembers: async (orgId: string): Promise<OrgMember[]> => {
+		const response = await fetchApi<MembersResponse>(
+			`/organizations/${orgId}/members`,
+		);
+		return response.members ?? [];
+	},
+
+	updateMember: async (
+		orgId: string,
+		userId: string,
+		data: UpdateMemberRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/organizations/${orgId}/members/${userId}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	removeMember: async (
+		orgId: string,
+		userId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/organizations/${orgId}/members/${userId}`, {
+			method: 'DELETE',
+		}),
+
+	// Invitations
+	listInvitations: async (orgId: string): Promise<OrgInvitation[]> => {
+		const response = await fetchApi<InvitationsResponse>(
+			`/organizations/${orgId}/invitations`,
+		);
+		return response.invitations ?? [];
+	},
+
+	createInvitation: async (
+		orgId: string,
+		data: InviteMemberRequest,
+	): Promise<InviteResponse> =>
+		fetchApi<InviteResponse>(`/organizations/${orgId}/invitations`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	deleteInvitation: async (
+		orgId: string,
+		invitationId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/organizations/${orgId}/invitations/${invitationId}`,
+			{
+				method: 'DELETE',
+			},
+		),
+
+	acceptInvitation: async (token: string): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>('/invitations/accept', {
+			method: 'POST',
+			body: JSON.stringify({ token }),
+		}),
 };

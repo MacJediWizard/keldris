@@ -76,7 +76,13 @@ func NewRouter(
 	apiV1 := r.Engine.Group("/api/v1")
 	apiV1.Use(middleware.AuthMiddleware(sessions, logger))
 
+	// Create RBAC for permission checks
+	rbac := auth.NewRBAC(database)
+
 	// Register API handlers
+	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
+	orgsHandler.RegisterRoutes(apiV1)
+
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1)
 
