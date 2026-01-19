@@ -608,6 +608,37 @@ func scanBackups(rows interface {
 	return backups, nil
 }
 
+// GetEnabledSchedules returns all enabled schedules.
+func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, agent_id, repository_id, name, cron_expression, paths, excludes,
+		       retention_policy, enabled, created_at, updated_at
+		FROM schedules
+		WHERE enabled = true
+		ORDER BY name
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled schedules: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []models.Schedule
+	for rows.Next() {
+		s, err := scanSchedule(rows)
+		if err != nil {
+			return nil, err
+		}
+		schedules = append(schedules, *s)
+	}
+
+	return schedules, nil
+}
+
+// GetRepository returns a repository by ID (alias for GetRepositoryByID).
+func (db *DB) GetRepository(ctx context.Context, id uuid.UUID) (*models.Repository, error) {
+	return db.GetRepositoryByID(ctx, id)
+}
+
 // Organization methods
 
 // GetOrganizationByID returns an organization by ID.
@@ -912,6 +943,316 @@ func (db *DB) DeleteInvitation(ctx context.Context, id uuid.UUID) error {
 	_, err := db.Pool.Exec(ctx, `DELETE FROM org_invitations WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("delete invitation: %w", err)
+	}
+	return nil
+}
+
+// Notification Channel methods
+
+// GetNotificationChannelsByOrgID returns all notification channels for an organization.
+func (db *DB) GetNotificationChannelsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.NotificationChannel, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, type, config_encrypted, enabled, created_at, updated_at
+		FROM notification_channels
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list notification channels: %w", err)
+	}
+	defer rows.Close()
+
+	var channels []*models.NotificationChannel
+	for rows.Next() {
+		var c models.NotificationChannel
+		var typeStr string
+		err := rows.Scan(
+			&c.ID, &c.OrgID, &c.Name, &typeStr, &c.ConfigEncrypted,
+			&c.Enabled, &c.CreatedAt, &c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification channel: %w", err)
+		}
+		c.Type = models.NotificationChannelType(typeStr)
+		channels = append(channels, &c)
+	}
+
+	return channels, nil
+}
+
+// GetNotificationChannelByID returns a notification channel by ID.
+func (db *DB) GetNotificationChannelByID(ctx context.Context, id uuid.UUID) (*models.NotificationChannel, error) {
+	var c models.NotificationChannel
+	var typeStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, type, config_encrypted, enabled, created_at, updated_at
+		FROM notification_channels
+		WHERE id = $1
+	`, id).Scan(
+		&c.ID, &c.OrgID, &c.Name, &typeStr, &c.ConfigEncrypted,
+		&c.Enabled, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get notification channel: %w", err)
+	}
+	c.Type = models.NotificationChannelType(typeStr)
+	return &c, nil
+}
+
+// GetEnabledEmailChannelsByOrgID returns all enabled email channels for an organization.
+func (db *DB) GetEnabledEmailChannelsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.NotificationChannel, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, type, config_encrypted, enabled, created_at, updated_at
+		FROM notification_channels
+		WHERE org_id = $1 AND type = 'email' AND enabled = true
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled email channels: %w", err)
+	}
+	defer rows.Close()
+
+	var channels []*models.NotificationChannel
+	for rows.Next() {
+		var c models.NotificationChannel
+		var typeStr string
+		err := rows.Scan(
+			&c.ID, &c.OrgID, &c.Name, &typeStr, &c.ConfigEncrypted,
+			&c.Enabled, &c.CreatedAt, &c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification channel: %w", err)
+		}
+		c.Type = models.NotificationChannelType(typeStr)
+		channels = append(channels, &c)
+	}
+
+	return channels, nil
+}
+
+// CreateNotificationChannel creates a new notification channel.
+func (db *DB) CreateNotificationChannel(ctx context.Context, channel *models.NotificationChannel) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO notification_channels (id, org_id, name, type, config_encrypted, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, channel.ID, channel.OrgID, channel.Name, string(channel.Type), channel.ConfigEncrypted,
+		channel.Enabled, channel.CreatedAt, channel.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create notification channel: %w", err)
+	}
+	return nil
+}
+
+// UpdateNotificationChannel updates an existing notification channel.
+func (db *DB) UpdateNotificationChannel(ctx context.Context, channel *models.NotificationChannel) error {
+	channel.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE notification_channels
+		SET name = $2, config_encrypted = $3, enabled = $4, updated_at = $5
+		WHERE id = $1
+	`, channel.ID, channel.Name, channel.ConfigEncrypted, channel.Enabled, channel.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update notification channel: %w", err)
+	}
+	return nil
+}
+
+// DeleteNotificationChannel deletes a notification channel by ID.
+func (db *DB) DeleteNotificationChannel(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM notification_channels WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete notification channel: %w", err)
+	}
+	return nil
+}
+
+// Notification Preference methods
+
+// GetNotificationPreferencesByOrgID returns all notification preferences for an organization.
+func (db *DB) GetNotificationPreferencesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.NotificationPreference, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, channel_id, event_type, enabled, created_at, updated_at
+		FROM notification_preferences
+		WHERE org_id = $1
+		ORDER BY event_type
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list notification preferences: %w", err)
+	}
+	defer rows.Close()
+
+	var prefs []*models.NotificationPreference
+	for rows.Next() {
+		var p models.NotificationPreference
+		var eventTypeStr string
+		err := rows.Scan(
+			&p.ID, &p.OrgID, &p.ChannelID, &eventTypeStr, &p.Enabled,
+			&p.CreatedAt, &p.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification preference: %w", err)
+		}
+		p.EventType = models.NotificationEventType(eventTypeStr)
+		prefs = append(prefs, &p)
+	}
+
+	return prefs, nil
+}
+
+// GetNotificationPreferencesByChannelID returns all preferences for a channel.
+func (db *DB) GetNotificationPreferencesByChannelID(ctx context.Context, channelID uuid.UUID) ([]*models.NotificationPreference, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, channel_id, event_type, enabled, created_at, updated_at
+		FROM notification_preferences
+		WHERE channel_id = $1
+		ORDER BY event_type
+	`, channelID)
+	if err != nil {
+		return nil, fmt.Errorf("list channel preferences: %w", err)
+	}
+	defer rows.Close()
+
+	var prefs []*models.NotificationPreference
+	for rows.Next() {
+		var p models.NotificationPreference
+		var eventTypeStr string
+		err := rows.Scan(
+			&p.ID, &p.OrgID, &p.ChannelID, &eventTypeStr, &p.Enabled,
+			&p.CreatedAt, &p.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification preference: %w", err)
+		}
+		p.EventType = models.NotificationEventType(eventTypeStr)
+		prefs = append(prefs, &p)
+	}
+
+	return prefs, nil
+}
+
+// GetEnabledPreferencesForEvent returns all enabled preferences for a specific event type in an org.
+func (db *DB) GetEnabledPreferencesForEvent(ctx context.Context, orgID uuid.UUID, eventType models.NotificationEventType) ([]*models.NotificationPreference, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT np.id, np.org_id, np.channel_id, np.event_type, np.enabled, np.created_at, np.updated_at
+		FROM notification_preferences np
+		JOIN notification_channels nc ON np.channel_id = nc.id
+		WHERE np.org_id = $1 AND np.event_type = $2 AND np.enabled = true AND nc.enabled = true
+	`, orgID, string(eventType))
+	if err != nil {
+		return nil, fmt.Errorf("list enabled preferences for event: %w", err)
+	}
+	defer rows.Close()
+
+	var prefs []*models.NotificationPreference
+	for rows.Next() {
+		var p models.NotificationPreference
+		var eventTypeStr string
+		err := rows.Scan(
+			&p.ID, &p.OrgID, &p.ChannelID, &eventTypeStr, &p.Enabled,
+			&p.CreatedAt, &p.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification preference: %w", err)
+		}
+		p.EventType = models.NotificationEventType(eventTypeStr)
+		prefs = append(prefs, &p)
+	}
+
+	return prefs, nil
+}
+
+// CreateNotificationPreference creates a new notification preference.
+func (db *DB) CreateNotificationPreference(ctx context.Context, pref *models.NotificationPreference) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO notification_preferences (id, org_id, channel_id, event_type, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, pref.ID, pref.OrgID, pref.ChannelID, string(pref.EventType), pref.Enabled,
+		pref.CreatedAt, pref.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create notification preference: %w", err)
+	}
+	return nil
+}
+
+// UpdateNotificationPreference updates an existing notification preference.
+func (db *DB) UpdateNotificationPreference(ctx context.Context, pref *models.NotificationPreference) error {
+	pref.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE notification_preferences
+		SET enabled = $2, updated_at = $3
+		WHERE id = $1
+	`, pref.ID, pref.Enabled, pref.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update notification preference: %w", err)
+	}
+	return nil
+}
+
+// DeleteNotificationPreference deletes a notification preference by ID.
+func (db *DB) DeleteNotificationPreference(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM notification_preferences WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete notification preference: %w", err)
+	}
+	return nil
+}
+
+// Notification Log methods
+
+// GetNotificationLogsByOrgID returns notification logs for an organization.
+func (db *DB) GetNotificationLogsByOrgID(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.NotificationLog, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, channel_id, event_type, recipient, subject, status, error_message, sent_at, created_at
+		FROM notification_logs
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list notification logs: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []*models.NotificationLog
+	for rows.Next() {
+		var l models.NotificationLog
+		var statusStr string
+		err := rows.Scan(
+			&l.ID, &l.OrgID, &l.ChannelID, &l.EventType, &l.Recipient,
+			&l.Subject, &statusStr, &l.ErrorMessage, &l.SentAt, &l.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan notification log: %w", err)
+		}
+		l.Status = models.NotificationStatus(statusStr)
+		logs = append(logs, &l)
+	}
+
+	return logs, nil
+}
+
+// CreateNotificationLog creates a new notification log entry.
+func (db *DB) CreateNotificationLog(ctx context.Context, log *models.NotificationLog) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO notification_logs (id, org_id, channel_id, event_type, recipient, subject, status, error_message, sent_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, log.ID, log.OrgID, log.ChannelID, log.EventType, log.Recipient,
+		log.Subject, string(log.Status), log.ErrorMessage, log.SentAt, log.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create notification log: %w", err)
+	}
+	return nil
+}
+
+// UpdateNotificationLog updates an existing notification log entry.
+func (db *DB) UpdateNotificationLog(ctx context.Context, log *models.NotificationLog) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE notification_logs
+		SET status = $2, error_message = $3, sent_at = $4
+		WHERE id = $1
+	`, log.ID, string(log.Status), log.ErrorMessage, log.SentAt)
+	if err != nil {
+		return fmt.Errorf("update notification log: %w", err)
 	}
 	return nil
 }

@@ -5,6 +5,8 @@ import type {
 	BackupsResponse,
 	CreateAgentRequest,
 	CreateAgentResponse,
+	CreateNotificationChannelRequest,
+	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
 	CreateRepositoryRequest,
 	CreateScheduleRequest,
@@ -14,6 +16,13 @@ import type {
 	InviteResponse,
 	MembersResponse,
 	MessageResponse,
+	NotificationChannel,
+	NotificationChannelsResponse,
+	NotificationChannelWithPreferencesResponse,
+	NotificationLog,
+	NotificationLogsResponse,
+	NotificationPreference,
+	NotificationPreferencesResponse,
 	OrgInvitation,
 	OrgMember,
 	OrgResponse,
@@ -29,6 +38,8 @@ import type {
 	TestConnectionRequest,
 	TestRepositoryResponse,
 	UpdateMemberRequest,
+	UpdateNotificationChannelRequest,
+	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
@@ -332,4 +343,80 @@ export const organizationsApi = {
 			method: 'POST',
 			body: JSON.stringify({ token }),
 		}),
+};
+
+// Notifications API
+export const notificationsApi = {
+	// Channels
+	listChannels: async (): Promise<NotificationChannel[]> => {
+		const response =
+			await fetchApi<NotificationChannelsResponse>('/notifications/channels');
+		return response.channels ?? [];
+	},
+
+	getChannel: async (
+		id: string,
+	): Promise<NotificationChannelWithPreferencesResponse> =>
+		fetchApi<NotificationChannelWithPreferencesResponse>(
+			`/notifications/channels/${id}`,
+		),
+
+	createChannel: async (
+		data: CreateNotificationChannelRequest,
+	): Promise<NotificationChannel> =>
+		fetchApi<NotificationChannel>('/notifications/channels', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateChannel: async (
+		id: string,
+		data: UpdateNotificationChannelRequest,
+	): Promise<NotificationChannel> =>
+		fetchApi<NotificationChannel>(`/notifications/channels/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteChannel: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/notifications/channels/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Preferences
+	listPreferences: async (): Promise<NotificationPreference[]> => {
+		const response = await fetchApi<NotificationPreferencesResponse>(
+			'/notifications/preferences',
+		);
+		return response.preferences ?? [];
+	},
+
+	createPreference: async (
+		data: CreateNotificationPreferenceRequest,
+	): Promise<NotificationPreference> =>
+		fetchApi<NotificationPreference>('/notifications/preferences', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updatePreference: async (
+		id: string,
+		data: UpdateNotificationPreferenceRequest,
+	): Promise<NotificationPreference> =>
+		fetchApi<NotificationPreference>(`/notifications/preferences/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deletePreference: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/notifications/preferences/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Logs
+	listLogs: async (): Promise<NotificationLog[]> => {
+		const response =
+			await fetchApi<NotificationLogsResponse>('/notifications/logs');
+		return response.logs ?? [];
+	},
 };
