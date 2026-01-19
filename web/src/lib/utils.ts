@@ -148,3 +148,66 @@ export function getRepositoryTypeBadge(type: string): {
 			return { label: type, className: 'bg-gray-100 text-gray-800' };
 	}
 }
+
+// Audit log utilities
+export function getAuditActionColor(action: string): {
+	bg: string;
+	text: string;
+} {
+	switch (action) {
+		case 'create':
+			return { bg: 'bg-green-100', text: 'text-green-800' };
+		case 'update':
+			return { bg: 'bg-blue-100', text: 'text-blue-800' };
+		case 'delete':
+			return { bg: 'bg-red-100', text: 'text-red-800' };
+		case 'read':
+			return { bg: 'bg-gray-100', text: 'text-gray-800' };
+		case 'login':
+			return { bg: 'bg-indigo-100', text: 'text-indigo-800' };
+		case 'logout':
+			return { bg: 'bg-purple-100', text: 'text-purple-800' };
+		case 'backup':
+			return { bg: 'bg-cyan-100', text: 'text-cyan-800' };
+		case 'restore':
+			return { bg: 'bg-orange-100', text: 'text-orange-800' };
+		default:
+			return { bg: 'bg-gray-100', text: 'text-gray-600' };
+	}
+}
+
+export function getAuditResultColor(result: string): {
+	bg: string;
+	text: string;
+	dot: string;
+} {
+	switch (result) {
+		case 'success':
+			return {
+				bg: 'bg-green-100',
+				text: 'text-green-800',
+				dot: 'bg-green-500',
+			};
+		case 'failure':
+			return { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-500' };
+		case 'denied':
+			return {
+				bg: 'bg-yellow-100',
+				text: 'text-yellow-800',
+				dot: 'bg-yellow-500',
+			};
+		default:
+			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+	}
+}
+
+export function formatAuditAction(action: string): string {
+	return action.charAt(0).toUpperCase() + action.slice(1);
+}
+
+export function formatResourceType(type: string): string {
+	return type
+		.split('_')
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join(' ');
+}

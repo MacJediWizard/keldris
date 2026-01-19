@@ -75,6 +75,7 @@ func NewRouter(
 	// API v1 routes (auth required)
 	apiV1 := r.Engine.Group("/api/v1")
 	apiV1.Use(middleware.AuthMiddleware(sessions, logger))
+	apiV1.Use(middleware.AuditMiddleware(database, logger))
 
 	// Register API handlers
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
@@ -88,6 +89,9 @@ func NewRouter(
 
 	backupsHandler := handlers.NewBackupsHandler(database, logger)
 	backupsHandler.RegisterRoutes(apiV1)
+
+	auditLogsHandler := handlers.NewAuditLogsHandler(database, logger)
+	auditLogsHandler.RegisterRoutes(apiV1)
 
 	r.logger.Info().Msg("API router initialized")
 	return r, nil
