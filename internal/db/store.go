@@ -1256,3 +1256,88 @@ func (db *DB) UpdateNotificationLog(ctx context.Context, log *models.Notificatio
 	}
 	return nil
 }
+
+// Repository Key methods
+
+// GetRepositoryKeyByRepositoryID returns a repository key by repository ID.
+func (db *DB) GetRepositoryKeyByRepositoryID(ctx context.Context, repositoryID uuid.UUID) (*models.RepositoryKey, error) {
+	var rk models.RepositoryKey
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, repository_id, encrypted_key, escrow_enabled, escrow_encrypted_key, created_at, updated_at
+		FROM repository_keys
+		WHERE repository_id = $1
+	`, repositoryID).Scan(
+		&rk.ID, &rk.RepositoryID, &rk.EncryptedKey, &rk.EscrowEnabled,
+		&rk.EscrowEncryptedKey, &rk.CreatedAt, &rk.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get repository key: %w", err)
+	}
+	return &rk, nil
+}
+
+// CreateRepositoryKey creates a new repository key.
+func (db *DB) CreateRepositoryKey(ctx context.Context, rk *models.RepositoryKey) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO repository_keys (id, repository_id, encrypted_key, escrow_enabled, escrow_encrypted_key, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, rk.ID, rk.RepositoryID, rk.EncryptedKey, rk.EscrowEnabled,
+		rk.EscrowEncryptedKey, rk.CreatedAt, rk.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create repository key: %w", err)
+	}
+	return nil
+}
+
+// UpdateRepositoryKeyEscrow updates the escrow settings for a repository key.
+func (db *DB) UpdateRepositoryKeyEscrow(ctx context.Context, repositoryID uuid.UUID, escrowEnabled bool, escrowEncryptedKey []byte) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE repository_keys
+		SET escrow_enabled = $2, escrow_encrypted_key = $3, updated_at = NOW()
+		WHERE repository_id = $1
+	`, repositoryID, escrowEnabled, escrowEncryptedKey)
+	if err != nil {
+		return fmt.Errorf("update repository key escrow: %w", err)
+	}
+	return nil
+}
+
+// DeleteRepositoryKey deletes a repository key by repository ID.
+func (db *DB) DeleteRepositoryKey(ctx context.Context, repositoryID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM repository_keys WHERE repository_id = $1`, repositoryID)
+	if err != nil {
+		return fmt.Errorf("delete repository key: %w", err)
+	}
+	return nil
+}
+
+// GetRepositoryKeysWithEscrowByOrgID returns all repository keys with escrow enabled for an organization.
+// This is used by admins for key recovery.
+func (db *DB) GetRepositoryKeysWithEscrowByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.RepositoryKey, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT rk.id, rk.repository_id, rk.encrypted_key, rk.escrow_enabled, rk.escrow_encrypted_key, rk.created_at, rk.updated_at
+		FROM repository_keys rk
+		INNER JOIN repositories r ON rk.repository_id = r.id
+		WHERE r.org_id = $1 AND rk.escrow_enabled = true
+		ORDER BY rk.created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list repository keys with escrow: %w", err)
+	}
+	defer rows.Close()
+
+	var keys []*models.RepositoryKey
+	for rows.Next() {
+		var rk models.RepositoryKey
+		err := rows.Scan(
+			&rk.ID, &rk.RepositoryID, &rk.EncryptedKey, &rk.EscrowEnabled,
+			&rk.EscrowEncryptedKey, &rk.CreatedAt, &rk.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan repository key: %w", err)
+		}
+		keys = append(keys, &rk)
+	}
+
+	return keys, nil
+}

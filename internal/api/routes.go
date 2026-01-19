@@ -5,6 +5,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/api/handlers"
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -31,10 +32,11 @@ func DefaultConfig() Config {
 
 // Router wraps a Gin engine with configured middleware and routes.
 type Router struct {
-	Engine   *gin.Engine
-	logger   zerolog.Logger
-	sessions *auth.SessionStore
-	db       *db.DB
+	Engine     *gin.Engine
+	logger     zerolog.Logger
+	sessions   *auth.SessionStore
+	db         *db.DB
+	keyManager *crypto.KeyManager
 }
 
 // NewRouter creates a new Router with the given dependencies.
@@ -43,13 +45,15 @@ func NewRouter(
 	database *db.DB,
 	oidc *auth.OIDC,
 	sessions *auth.SessionStore,
+	keyManager *crypto.KeyManager,
 	logger zerolog.Logger,
 ) (*Router, error) {
 	r := &Router{
-		Engine:   gin.New(),
-		logger:   logger.With().Str("component", "router").Logger(),
-		sessions: sessions,
-		db:       database,
+		Engine:     gin.New(),
+		logger:     logger.With().Str("component", "router").Logger(),
+		sessions:   sessions,
+		db:         database,
+		keyManager: keyManager,
 	}
 
 	// Global middleware
@@ -86,7 +90,7 @@ func NewRouter(
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1)
 
-	reposHandler := handlers.NewRepositoriesHandler(database, logger)
+	reposHandler := handlers.NewRepositoriesHandler(database, keyManager, logger)
 	reposHandler.RegisterRoutes(apiV1)
 
 	schedulesHandler := handlers.NewSchedulesHandler(database, logger)

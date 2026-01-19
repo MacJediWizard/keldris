@@ -69,3 +69,9 @@ export function useTestConnection() {
 			repositoriesApi.testConnection(data),
 	});
 }
+
+export function useRecoverRepositoryKey() {
+	return useMutation({
+		mutationFn: (id: string) => repositoriesApi.recoverKey(id),
+	});
+}
