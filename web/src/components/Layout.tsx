@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useLogout, useMe } from '../hooks/useAuth';
 
 interface NavItem {
 	path: string;
@@ -150,6 +152,15 @@ function Sidebar() {
 }
 
 function Header() {
+	const [showDropdown, setShowDropdown] = useState(false);
+	const { data: user } = useMe();
+	const logout = useLogout();
+
+	const userInitial =
+		user?.name?.charAt(0).toUpperCase() ??
+		user?.email?.charAt(0).toUpperCase() ??
+		'U';
+
 	return (
 		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
 			<div className="flex items-center gap-4">
@@ -178,15 +189,66 @@ function Header() {
 						/>
 					</svg>
 				</button>
-				<div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-					U
+				<div className="relative">
+					<button
+						type="button"
+						onClick={() => setShowDropdown(!showDropdown)}
+						className="flex items-center gap-2"
+					>
+						<div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+							{userInitial}
+						</div>
+					</button>
+					{showDropdown && (
+						<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+							{user && (
+								<div className="px-4 py-2 border-b border-gray-100">
+									<p className="text-sm font-medium text-gray-900 truncate">
+										{user.name}
+									</p>
+									<p className="text-xs text-gray-500 truncate">{user.email}</p>
+								</div>
+							)}
+							<button
+								type="button"
+								onClick={() => logout.mutate()}
+								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+							>
+								Sign out
+							</button>
+						</div>
+					)}
 				</div>
 			</div>
 		</header>
 	);
 }
 
+function LoadingScreen() {
+	return (
+		<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+			<div className="text-center">
+				<div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
+				<p className="text-gray-600">Loading...</p>
+			</div>
+		</div>
+	);
+}
+
 export function Layout() {
+	const { isLoading, isError } = useMe();
+
+	// Show loading state while checking auth
+	if (isLoading) {
+		return <LoadingScreen />;
+	}
+
+	// If auth check failed, the API client will redirect to login
+	// But we show a loading state just in case
+	if (isError) {
+		return <LoadingScreen />;
+	}
+
 	return (
 		<div className="min-h-screen bg-gray-50 flex">
 			<Sidebar />
