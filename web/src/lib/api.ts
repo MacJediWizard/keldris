@@ -9,11 +9,13 @@ import type {
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
 	CreateRepositoryRequest,
+	CreateRepositoryResponse,
 	CreateScheduleRequest,
 	ErrorResponse,
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
+	KeyRecoveryResponse,
 	MembersResponse,
 	MessageResponse,
 	NotificationChannel,
@@ -157,8 +159,10 @@ export const repositoriesApi = {
 	get: async (id: string): Promise<Repository> =>
 		fetchApi<Repository>(`/repositories/${id}`),
 
-	create: async (data: CreateRepositoryRequest): Promise<Repository> =>
-		fetchApi<Repository>('/repositories', {
+	create: async (
+		data: CreateRepositoryRequest,
+	): Promise<CreateRepositoryResponse> =>
+		fetchApi<CreateRepositoryResponse>('/repositories', {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
@@ -189,6 +193,9 @@ export const repositoriesApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+
+	recoverKey: async (id: string): Promise<KeyRecoveryResponse> =>
+		fetchApi<KeyRecoveryResponse>(`/repositories/${id}/key/recover`),
 };
 
 // Schedules API
