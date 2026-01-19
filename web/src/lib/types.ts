@@ -128,6 +128,97 @@ export interface User {
 	id: string;
 	email: string;
 	name: string;
+	current_org_id?: string;
+	current_org_role?: string;
+}
+
+// Organization types
+export type OrgRole = 'owner' | 'admin' | 'member' | 'readonly';
+
+export interface Organization {
+	id: string;
+	name: string;
+	slug: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface OrganizationWithRole {
+	id: string;
+	name: string;
+	slug: string;
+	role: OrgRole;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface OrgMember {
+	id: string;
+	user_id: string;
+	org_id: string;
+	role: OrgRole;
+	email: string;
+	name: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface OrgInvitation {
+	id: string;
+	org_id: string;
+	org_name: string;
+	email: string;
+	role: OrgRole;
+	invited_by: string;
+	inviter_name: string;
+	expires_at: string;
+	accepted_at?: string;
+	created_at: string;
+}
+
+export interface CreateOrgRequest {
+	name: string;
+	slug: string;
+}
+
+export interface UpdateOrgRequest {
+	name?: string;
+	slug?: string;
+}
+
+export interface SwitchOrgRequest {
+	org_id: string;
+}
+
+export interface InviteMemberRequest {
+	email: string;
+	role: OrgRole;
+}
+
+export interface UpdateMemberRequest {
+	role: OrgRole;
+}
+
+export interface OrgResponse {
+	organization: Organization;
+	role: string;
+}
+
+export interface OrganizationsResponse {
+	organizations: OrganizationWithRole[];
+}
+
+export interface MembersResponse {
+	members: OrgMember[];
+}
+
+export interface InvitationsResponse {
+	invitations: OrgInvitation[];
+}
+
+export interface InviteResponse {
+	message: string;
+	token: string;
 }
 
 // API response wrappers

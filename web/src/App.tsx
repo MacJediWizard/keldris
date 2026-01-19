@@ -4,6 +4,9 @@ import { Layout } from './components/Layout';
 import { Agents } from './pages/Agents';
 import { Backups } from './pages/Backups';
 import { Dashboard } from './pages/Dashboard';
+import { NewOrganization } from './pages/NewOrganization';
+import { OrganizationMembers } from './pages/OrganizationMembers';
+import { OrganizationSettings } from './pages/OrganizationSettings';
 import { Repositories } from './pages/Repositories';
 import { Schedules } from './pages/Schedules';
 
@@ -34,6 +37,15 @@ function App() {
 						<Route path="repositories" element={<Repositories />} />
 						<Route path="schedules" element={<Schedules />} />
 						<Route path="backups" element={<Backups />} />
+						<Route
+							path="organization/members"
+							element={<OrganizationMembers />}
+						/>
+						<Route
+							path="organization/settings"
+							element={<OrganizationSettings />}
+						/>
+						<Route path="organization/new" element={<NewOrganization />} />
 					</Route>
 				</Routes>
 			</BrowserRouter>
