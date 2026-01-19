@@ -1,10 +1,16 @@
 import type {
 	Agent,
 	AgentsResponse,
+	Alert,
+	AlertCountResponse,
+	AlertRule,
+	AlertRulesResponse,
+	AlertsResponse,
 	Backup,
 	BackupsResponse,
 	CreateAgentRequest,
 	CreateAgentResponse,
+	CreateAlertRuleRequest,
 	CreateRepositoryRequest,
 	CreateScheduleRequest,
 	ErrorResponse,
@@ -15,6 +21,7 @@ import type {
 	Schedule,
 	SchedulesResponse,
 	TestRepositoryResponse,
+	UpdateAlertRuleRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
 	User,
@@ -202,4 +209,65 @@ export const backupsApi = {
 
 	get: async (id: string): Promise<Backup> =>
 		fetchApi<Backup>(`/backups/${id}`),
+};
+
+// Alerts API
+export const alertsApi = {
+	list: async (): Promise<Alert[]> => {
+		const response = await fetchApi<AlertsResponse>('/alerts');
+		return response.alerts ?? [];
+	},
+
+	listActive: async (): Promise<Alert[]> => {
+		const response = await fetchApi<AlertsResponse>('/alerts/active');
+		return response.alerts ?? [];
+	},
+
+	count: async (): Promise<number> => {
+		const response = await fetchApi<AlertCountResponse>('/alerts/count');
+		return response.count;
+	},
+
+	get: async (id: string): Promise<Alert> => fetchApi<Alert>(`/alerts/${id}`),
+
+	acknowledge: async (id: string): Promise<Alert> =>
+		fetchApi<Alert>(`/alerts/${id}/actions/acknowledge`, {
+			method: 'POST',
+		}),
+
+	resolve: async (id: string): Promise<Alert> =>
+		fetchApi<Alert>(`/alerts/${id}/actions/resolve`, {
+			method: 'POST',
+		}),
+};
+
+// Alert Rules API
+export const alertRulesApi = {
+	list: async (): Promise<AlertRule[]> => {
+		const response = await fetchApi<AlertRulesResponse>('/alert-rules');
+		return response.rules ?? [];
+	},
+
+	get: async (id: string): Promise<AlertRule> =>
+		fetchApi<AlertRule>(`/alert-rules/${id}`),
+
+	create: async (data: CreateAlertRuleRequest): Promise<AlertRule> =>
+		fetchApi<AlertRule>('/alert-rules', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateAlertRuleRequest,
+	): Promise<AlertRule> =>
+		fetchApi<AlertRule>(`/alert-rules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/alert-rules/${id}`, {
+			method: 'DELETE',
+		}),
 };
