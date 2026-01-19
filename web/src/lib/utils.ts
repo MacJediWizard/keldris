@@ -144,8 +144,86 @@ export function getRepositoryTypeBadge(type: string): {
 			return { label: 'SFTP', className: 'bg-purple-100 text-purple-800' };
 		case 'rest':
 			return { label: 'REST', className: 'bg-indigo-100 text-indigo-800' };
+		case 'dropbox':
+			return { label: 'Dropbox', className: 'bg-sky-100 text-sky-800' };
 		default:
 			return { label: type, className: 'bg-gray-100 text-gray-800' };
+	}
+}
+
+export function getAlertSeverityColor(severity: string): {
+	bg: string;
+	text: string;
+	border: string;
+	icon: string;
+} {
+	switch (severity) {
+		case 'critical':
+			return {
+				bg: 'bg-red-50',
+				text: 'text-red-800',
+				border: 'border-red-200',
+				icon: 'text-red-500',
+			};
+		case 'warning':
+			return {
+				bg: 'bg-yellow-50',
+				text: 'text-yellow-800',
+				border: 'border-yellow-200',
+				icon: 'text-yellow-500',
+			};
+		case 'info':
+			return {
+				bg: 'bg-blue-50',
+				text: 'text-blue-800',
+				border: 'border-blue-200',
+				icon: 'text-blue-500',
+			};
+		default:
+			return {
+				bg: 'bg-gray-50',
+				text: 'text-gray-800',
+				border: 'border-gray-200',
+				icon: 'text-gray-500',
+			};
+	}
+}
+
+export function getAlertStatusColor(status: string): {
+	bg: string;
+	text: string;
+	dot: string;
+} {
+	switch (status) {
+		case 'active':
+			return { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-500' };
+		case 'acknowledged':
+			return {
+				bg: 'bg-yellow-100',
+				text: 'text-yellow-800',
+				dot: 'bg-yellow-500',
+			};
+		case 'resolved':
+			return {
+				bg: 'bg-green-100',
+				text: 'text-green-800',
+				dot: 'bg-green-500',
+			};
+		default:
+			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+	}
+}
+
+export function getAlertTypeLabel(type: string): string {
+	switch (type) {
+		case 'agent_offline':
+			return 'Agent Offline';
+		case 'backup_sla':
+			return 'Backup SLA';
+		case 'storage_usage':
+			return 'Storage Usage';
+		default:
+			return type;
 	}
 }
 
