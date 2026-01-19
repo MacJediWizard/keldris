@@ -17,8 +17,8 @@ import type {
 	MembersResponse,
 	MessageResponse,
 	NotificationChannel,
-	NotificationChannelsResponse,
 	NotificationChannelWithPreferencesResponse,
+	NotificationChannelsResponse,
 	NotificationLog,
 	NotificationLogsResponse,
 	NotificationPreference,
@@ -349,8 +349,9 @@ export const organizationsApi = {
 export const notificationsApi = {
 	// Channels
 	listChannels: async (): Promise<NotificationChannel[]> => {
-		const response =
-			await fetchApi<NotificationChannelsResponse>('/notifications/channels');
+		const response = await fetchApi<NotificationChannelsResponse>(
+			'/notifications/channels',
+		);
 		return response.channels ?? [];
 	},
 
@@ -415,8 +416,9 @@ export const notificationsApi = {
 
 	// Logs
 	listLogs: async (): Promise<NotificationLog[]> => {
-		const response =
-			await fetchApi<NotificationLogsResponse>('/notifications/logs');
+		const response = await fetchApi<NotificationLogsResponse>(
+			'/notifications/logs',
+		);
 		return response.logs ?? [];
 	},
 };

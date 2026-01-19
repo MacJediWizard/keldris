@@ -317,8 +317,15 @@ export interface MessageResponse {
 }
 
 // Notification types
-export type NotificationChannelType = 'email' | 'slack' | 'webhook' | 'pagerduty';
-export type NotificationEventType = 'backup_success' | 'backup_failed' | 'agent_offline';
+export type NotificationChannelType =
+	| 'email'
+	| 'slack'
+	| 'webhook'
+	| 'pagerduty';
+export type NotificationEventType =
+	| 'backup_success'
+	| 'backup_failed'
+	| 'agent_offline';
 export type NotificationStatus = 'queued' | 'sent' | 'failed';
 
 export interface NotificationChannel {
