@@ -1,21 +1,21 @@
 import { useState } from 'react';
 import {
-	useNotificationChannels,
 	useCreateNotificationChannel,
-	useUpdateNotificationChannel,
-	useDeleteNotificationChannel,
-	useNotificationPreferences,
 	useCreateNotificationPreference,
-	useUpdateNotificationPreference,
+	useDeleteNotificationChannel,
+	useNotificationChannels,
 	useNotificationLogs,
+	useNotificationPreferences,
+	useUpdateNotificationChannel,
+	useUpdateNotificationPreference,
 } from '../hooks/useNotifications';
 import type {
+	EmailChannelConfig,
 	NotificationChannel,
 	NotificationChannelType,
 	NotificationEventType,
-	NotificationPreference,
 	NotificationLog,
-	EmailChannelConfig,
+	NotificationPreference,
 } from '../lib/types';
 import { formatDate } from '../lib/utils';
 
@@ -59,7 +59,7 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 		try {
 			const config: EmailChannelConfig = {
 				host,
-				port: parseInt(port, 10),
+				port: Number.parseInt(port, 10),
 				username,
 				password,
 				from,
@@ -413,11 +413,17 @@ export function Notifications() {
 	const [showAddModal, setShowAddModal] = useState(false);
 	const [activeTab, setActiveTab] = useState<'channels' | 'logs'>('channels');
 
-	const { data: channels, isLoading: channelsLoading, isError: channelsError } =
-		useNotificationChannels();
+	const {
+		data: channels,
+		isLoading: channelsLoading,
+		isError: channelsError,
+	} = useNotificationChannels();
 	const { data: preferences } = useNotificationPreferences();
-	const { data: logs, isLoading: logsLoading, isError: logsError } =
-		useNotificationLogs();
+	const {
+		data: logs,
+		isLoading: logsLoading,
+		isError: logsError,
+	} = useNotificationLogs();
 	const deleteChannel = useDeleteNotificationChannel();
 
 	const handleDelete = (id: string) => {
@@ -493,7 +499,9 @@ export function Notifications() {
 				<div className="bg-white rounded-lg border border-gray-200">
 					{channelsError ? (
 						<div className="p-12 text-center text-red-500">
-							<p className="font-medium">Failed to load notification channels</p>
+							<p className="font-medium">
+								Failed to load notification channels
+							</p>
 							<p className="text-sm mt-1">Please try refreshing the page</p>
 						</div>
 					) : channelsLoading ? (
