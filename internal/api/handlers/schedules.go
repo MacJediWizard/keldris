@@ -52,24 +52,30 @@ func (h *SchedulesHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // CreateScheduleRequest is the request body for creating a schedule.
 type CreateScheduleRequest struct {
-	AgentID         uuid.UUID               `json:"agent_id" binding:"required"`
-	RepositoryID    uuid.UUID               `json:"repository_id" binding:"required"`
-	Name            string                  `json:"name" binding:"required,min=1,max=255"`
-	CronExpression  string                  `json:"cron_expression" binding:"required"`
-	Paths           []string                `json:"paths" binding:"required,min=1"`
-	Excludes        []string                `json:"excludes,omitempty"`
-	RetentionPolicy *models.RetentionPolicy `json:"retention_policy,omitempty"`
-	Enabled         *bool                   `json:"enabled,omitempty"`
+	AgentID          uuid.UUID               `json:"agent_id" binding:"required"`
+	RepositoryID     uuid.UUID               `json:"repository_id" binding:"required"`
+	Name             string                  `json:"name" binding:"required,min=1,max=255"`
+	CronExpression   string                  `json:"cron_expression" binding:"required"`
+	Paths            []string                `json:"paths" binding:"required,min=1"`
+	Excludes         []string                `json:"excludes,omitempty"`
+	RetentionPolicy  *models.RetentionPolicy `json:"retention_policy,omitempty"`
+	BandwidthLimitKB *int                    `json:"bandwidth_limit_kb,omitempty"`
+	BackupWindow     *models.BackupWindow    `json:"backup_window,omitempty"`
+	ExcludedHours    []int                   `json:"excluded_hours,omitempty"`
+	Enabled          *bool                   `json:"enabled,omitempty"`
 }
 
 // UpdateScheduleRequest is the request body for updating a schedule.
 type UpdateScheduleRequest struct {
-	Name            string                  `json:"name,omitempty"`
-	CronExpression  string                  `json:"cron_expression,omitempty"`
-	Paths           []string                `json:"paths,omitempty"`
-	Excludes        []string                `json:"excludes,omitempty"`
-	RetentionPolicy *models.RetentionPolicy `json:"retention_policy,omitempty"`
-	Enabled         *bool                   `json:"enabled,omitempty"`
+	Name             string                  `json:"name,omitempty"`
+	CronExpression   string                  `json:"cron_expression,omitempty"`
+	Paths            []string                `json:"paths,omitempty"`
+	Excludes         []string                `json:"excludes,omitempty"`
+	RetentionPolicy  *models.RetentionPolicy `json:"retention_policy,omitempty"`
+	BandwidthLimitKB *int                    `json:"bandwidth_limit_kb,omitempty"`
+	BackupWindow     *models.BackupWindow    `json:"backup_window,omitempty"`
+	ExcludedHours    []int                   `json:"excluded_hours,omitempty"`
+	Enabled          *bool                   `json:"enabled,omitempty"`
 }
 
 // List returns all schedules for agents in the authenticated user's organization.
@@ -229,6 +235,18 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		schedule.RetentionPolicy = models.DefaultRetentionPolicy()
 	}
 
+	if req.BandwidthLimitKB != nil {
+		schedule.BandwidthLimitKB = req.BandwidthLimitKB
+	}
+
+	if req.BackupWindow != nil {
+		schedule.BackupWindow = req.BackupWindow
+	}
+
+	if req.ExcludedHours != nil {
+		schedule.ExcludedHours = req.ExcludedHours
+	}
+
 	if req.Enabled != nil {
 		schedule.Enabled = *req.Enabled
 	}
@@ -299,6 +317,15 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 	}
 	if req.RetentionPolicy != nil {
 		schedule.RetentionPolicy = req.RetentionPolicy
+	}
+	if req.BandwidthLimitKB != nil {
+		schedule.BandwidthLimitKB = req.BandwidthLimitKB
+	}
+	if req.BackupWindow != nil {
+		schedule.BackupWindow = req.BackupWindow
+	}
+	if req.ExcludedHours != nil {
+		schedule.ExcludedHours = req.ExcludedHours
 	}
 	if req.Enabled != nil {
 		schedule.Enabled = *req.Enabled
