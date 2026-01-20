@@ -120,6 +120,10 @@ export interface Backup {
 	files_new?: number;
 	files_changed?: number;
 	error_message?: string;
+	retention_applied: boolean;
+	snapshots_removed?: number;
+	snapshots_kept?: number;
+	retention_error?: string;
 	created_at: string;
 }
 
