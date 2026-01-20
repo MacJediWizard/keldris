@@ -6,6 +6,7 @@ import type {
 	AlertRule,
 	AlertRulesResponse,
 	AlertsResponse,
+	AssignTagsRequest,
 	AuditLog,
 	AuditLogFilter,
 	AuditLogsResponse,
@@ -21,6 +22,7 @@ import type {
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
 	CreateScheduleRequest,
+	CreateTagRequest,
 	CreateVerificationScheduleRequest,
 	ErrorResponse,
 	InvitationsResponse,
@@ -54,6 +56,8 @@ import type {
 	RunScheduleResponse,
 	Schedule,
 	SchedulesResponse,
+	SearchFilter,
+	SearchResponse,
 	Snapshot,
 	SnapshotFilesResponse,
 	SnapshotsResponse,
@@ -61,6 +65,8 @@ import type {
 	StorageGrowthResponse,
 	StorageStatsSummary,
 	SwitchOrgRequest,
+	Tag,
+	TagsResponse,
 	TestConnectionRequest,
 	TestRepositoryResponse,
 	TriggerVerificationRequest,
@@ -71,6 +77,7 @@ import type {
 	UpdateOrgRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
+	UpdateTagRequest,
 	UpdateVerificationScheduleRequest,
 	User,
 	Verification,
@@ -749,4 +756,83 @@ export const verificationsApi = {
 		fetchApi<MessageResponse>(`/verification-schedules/${id}`, {
 			method: 'DELETE',
 		}),
+};
+
+// Tags API
+export const tagsApi = {
+	list: async (): Promise<Tag[]> => {
+		const response = await fetchApi<TagsResponse>('/tags');
+		return response.tags ?? [];
+	},
+
+	get: async (id: string): Promise<Tag> => fetchApi<Tag>(`/tags/${id}`),
+
+	create: async (data: CreateTagRequest): Promise<Tag> =>
+		fetchApi<Tag>('/tags', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (id: string, data: UpdateTagRequest): Promise<Tag> =>
+		fetchApi<Tag>(`/tags/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/tags/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Backup tags
+	getBackupTags: async (backupId: string): Promise<Tag[]> => {
+		const response = await fetchApi<TagsResponse>(`/backups/${backupId}/tags`);
+		return response.tags ?? [];
+	},
+
+	setBackupTags: async (
+		backupId: string,
+		data: AssignTagsRequest,
+	): Promise<Tag[]> => {
+		const response = await fetchApi<TagsResponse>(`/backups/${backupId}/tags`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		});
+		return response.tags ?? [];
+	},
+};
+
+// Search API
+export const searchApi = {
+	search: async (filter: SearchFilter): Promise<SearchResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', filter.q);
+
+		if (filter.types?.length) {
+			searchParams.set('types', filter.types.join(','));
+		}
+		if (filter.status) {
+			searchParams.set('status', filter.status);
+		}
+		if (filter.tag_ids?.length) {
+			searchParams.set('tag_ids', filter.tag_ids.join(','));
+		}
+		if (filter.date_from) {
+			searchParams.set('date_from', filter.date_from);
+		}
+		if (filter.date_to) {
+			searchParams.set('date_to', filter.date_to);
+		}
+		if (filter.size_min !== undefined) {
+			searchParams.set('size_min', filter.size_min.toString());
+		}
+		if (filter.size_max !== undefined) {
+			searchParams.set('size_max', filter.size_max.toString());
+		}
+		if (filter.limit) {
+			searchParams.set('limit', filter.limit.toString());
+		}
+
+		return fetchApi<SearchResponse>(`/search?${searchParams.toString()}`);
+	},
 };

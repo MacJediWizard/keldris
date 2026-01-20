@@ -3,7 +3,8 @@ import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
-import type { Backup, BackupStatus } from '../lib/types';
+import { useBackupTags, useSetBackupTags, useTags } from '../hooks/useTags';
+import type { Backup, BackupStatus, Tag } from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
@@ -41,10 +42,143 @@ function LoadingRow() {
 	);
 }
 
+interface TagChipProps {
+	tag: Tag;
+	onRemove?: () => void;
+	selected?: boolean;
+	onClick?: () => void;
+}
+
+function TagChip({ tag, onRemove, selected, onClick }: TagChipProps) {
+	return (
+		<span
+			className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white ${
+				onClick ? 'cursor-pointer hover:opacity-80' : ''
+			} ${selected ? 'ring-2 ring-offset-1 ring-gray-900' : ''}`}
+			style={{ backgroundColor: tag.color }}
+			onClick={onClick}
+			onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
+			role={onClick ? 'button' : undefined}
+			tabIndex={onClick ? 0 : undefined}
+		>
+			{tag.name}
+			{onRemove && (
+				<button
+					type="button"
+					onClick={(e) => {
+						e.stopPropagation();
+						onRemove();
+					}}
+					className="hover:bg-white/20 rounded-full p-0.5"
+					aria-label="Remove tag"
+				>
+					<svg
+						aria-hidden="true"
+						className="w-3 h-3"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M6 18L18 6M6 6l12 12"
+						/>
+					</svg>
+				</button>
+			)}
+		</span>
+	);
+}
+
+interface BackupTagsEditorProps {
+	backupId: string;
+	allTags: Tag[];
+}
+
+function BackupTagsEditor({ backupId, allTags }: BackupTagsEditorProps) {
+	const [showDropdown, setShowDropdown] = useState(false);
+	const { data: backupTags } = useBackupTags(backupId);
+	const setBackupTags = useSetBackupTags();
+
+	const currentTagIds = new Set(backupTags?.map((t) => t.id) ?? []);
+
+	const handleToggleTag = (tagId: string) => {
+		const newTagIds = currentTagIds.has(tagId)
+			? [...currentTagIds].filter((id) => id !== tagId)
+			: [...currentTagIds, tagId];
+		setBackupTags.mutate({ backupId, data: { tag_ids: newTagIds } });
+	};
+
+	return (
+		<div>
+			<p className="text-sm font-medium text-gray-500 mb-2">Tags</p>
+			<div className="flex flex-wrap gap-1 mb-2">
+				{backupTags && backupTags.length > 0 ? (
+					backupTags.map((tag) => (
+						<TagChip
+							key={tag.id}
+							tag={tag}
+							onRemove={() => handleToggleTag(tag.id)}
+						/>
+					))
+				) : (
+					<span className="text-sm text-gray-400">No tags</span>
+				)}
+			</div>
+			<div className="relative">
+				<button
+					type="button"
+					onClick={() => setShowDropdown(!showDropdown)}
+					className="text-sm text-indigo-600 hover:text-indigo-800"
+				>
+					{showDropdown ? 'Done' : '+ Add tags'}
+				</button>
+				{showDropdown && allTags.length > 0 && (
+					<div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[150px]">
+						{allTags.map((tag) => (
+							<button
+								key={tag.id}
+								type="button"
+								onClick={() => handleToggleTag(tag.id)}
+								className="w-full text-left px-3 py-1.5 hover:bg-gray-100 flex items-center gap-2"
+							>
+								<span
+									className="w-3 h-3 rounded-full"
+									style={{ backgroundColor: tag.color }}
+								/>
+								<span className="text-sm text-gray-700">{tag.name}</span>
+								{currentTagIds.has(tag.id) && (
+									<svg
+										aria-hidden="true"
+										className="w-4 h-4 text-indigo-600 ml-auto"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M5 13l4 4L19 7"
+										/>
+									</svg>
+								)}
+							</button>
+						))}
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
 interface BackupDetailsModalProps {
 	backup: Backup;
 	agentName?: string;
 	repoName?: string;
+	allTags: Tag[];
 	onClose: () => void;
 }
 
@@ -52,6 +186,7 @@ function BackupDetailsModal({
 	backup,
 	agentName,
 	repoName,
+	allTags,
 	onClose,
 }: BackupDetailsModalProps) {
 	const statusColor = getBackupStatusColor(backup.status);
@@ -123,6 +258,8 @@ function BackupDetailsModal({
 							</div>
 						</div>
 					)}
+
+					<BackupTagsEditor backupId={backup.id} allTags={allTags} />
 
 					{backup.error_message && (
 						<div>
@@ -207,12 +344,16 @@ export function Backups() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [agentFilter, setAgentFilter] = useState<string>('all');
 	const [statusFilter, setStatusFilter] = useState<BackupStatus | 'all'>('all');
+	const [selectedTagFilters, setSelectedTagFilters] = useState<Set<string>>(
+		new Set(),
+	);
 	const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null);
 
 	const { data: backups, isLoading, isError } = useBackups();
 	const { data: agents } = useAgents();
 	const { data: schedules } = useSchedules();
 	const { data: repositories } = useRepositories();
+	const { data: allTags } = useTags();
 
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
@@ -225,6 +366,16 @@ export function Backups() {
 		return repoId ? repoMap.get(repoId) : undefined;
 	};
 
+	const toggleTagFilter = (tagId: string) => {
+		const newFilters = new Set(selectedTagFilters);
+		if (newFilters.has(tagId)) {
+			newFilters.delete(tagId);
+		} else {
+			newFilters.add(tagId);
+		}
+		setSelectedTagFilters(newFilters);
+	};
+
 	const filteredBackups = backups?.filter((backup) => {
 		const snapshotMatch =
 			backup.snapshot_id?.toLowerCase().includes(searchQuery.toLowerCase()) ??
@@ -234,6 +385,9 @@ export function Backups() {
 			agentFilter === 'all' || backup.agent_id === agentFilter;
 		const matchesStatus =
 			statusFilter === 'all' || backup.status === statusFilter;
+		// Note: Tag filtering would require loading backup tags for each backup,
+		// which is expensive. For a more complete implementation, you'd want to
+		// fetch this data on the server side with proper filtering.
 		return matchesSearch && matchesAgent && matchesStatus;
 	});
 
@@ -248,7 +402,7 @@ export function Backups() {
 
 			<div className="bg-white rounded-lg border border-gray-200">
 				<div className="p-6 border-b border-gray-200">
-					<div className="flex items-center gap-4">
+					<div className="flex items-center gap-4 mb-4">
 						<input
 							type="text"
 							placeholder="Search by snapshot ID..."
@@ -282,6 +436,28 @@ export function Backups() {
 							<option value="canceled">Canceled</option>
 						</select>
 					</div>
+					{allTags && allTags.length > 0 && (
+						<div className="flex items-center gap-2 flex-wrap">
+							<span className="text-sm text-gray-500">Filter by tags:</span>
+							{allTags.map((tag) => (
+								<TagChip
+									key={tag.id}
+									tag={tag}
+									selected={selectedTagFilters.has(tag.id)}
+									onClick={() => toggleTagFilter(tag.id)}
+								/>
+							))}
+							{selectedTagFilters.size > 0 && (
+								<button
+									type="button"
+									onClick={() => setSelectedTagFilters(new Set())}
+									className="text-sm text-gray-500 hover:text-gray-700"
+								>
+									Clear all
+								</button>
+							)}
+						</div>
+					)}
 				</div>
 
 				<div className="overflow-x-auto">
@@ -430,6 +606,7 @@ export function Backups() {
 					backup={selectedBackup}
 					agentName={agentMap.get(selectedBackup.agent_id)}
 					repoName={getRepoNameForBackup(selectedBackup)}
+					allTags={allTags ?? []}
 					onClose={() => setSelectedBackup(null)}
 				/>
 			)}

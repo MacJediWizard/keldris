@@ -8,6 +8,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // Organization methods
@@ -2787,4 +2788,589 @@ func scanVerifications(rows interface {
 	}
 
 	return verifications, nil
+}
+
+// Tag methods
+
+// GetTagsByOrgID returns all tags for an organization.
+func (db *DB) GetTagsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Tag, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, color, created_at, updated_at
+		FROM tags
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list tags: %w", err)
+	}
+	defer rows.Close()
+
+	var tags []*models.Tag
+	for rows.Next() {
+		var t models.Tag
+		err := rows.Scan(&t.ID, &t.OrgID, &t.Name, &t.Color, &t.CreatedAt, &t.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan tag: %w", err)
+		}
+		tags = append(tags, &t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tags: %w", err)
+	}
+
+	return tags, nil
+}
+
+// GetTagByID returns a tag by ID.
+func (db *DB) GetTagByID(ctx context.Context, id uuid.UUID) (*models.Tag, error) {
+	var t models.Tag
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, color, created_at, updated_at
+		FROM tags
+		WHERE id = $1
+	`, id).Scan(&t.ID, &t.OrgID, &t.Name, &t.Color, &t.CreatedAt, &t.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get tag: %w", err)
+	}
+	return &t, nil
+}
+
+// GetTagByNameAndOrgID returns a tag by name and organization ID.
+func (db *DB) GetTagByNameAndOrgID(ctx context.Context, name string, orgID uuid.UUID) (*models.Tag, error) {
+	var t models.Tag
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, color, created_at, updated_at
+		FROM tags
+		WHERE name = $1 AND org_id = $2
+	`, name, orgID).Scan(&t.ID, &t.OrgID, &t.Name, &t.Color, &t.CreatedAt, &t.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get tag by name: %w", err)
+	}
+	return &t, nil
+}
+
+// CreateTag creates a new tag.
+func (db *DB) CreateTag(ctx context.Context, tag *models.Tag) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO tags (id, org_id, name, color, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, tag.ID, tag.OrgID, tag.Name, tag.Color, tag.CreatedAt, tag.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create tag: %w", err)
+	}
+	return nil
+}
+
+// UpdateTag updates an existing tag.
+func (db *DB) UpdateTag(ctx context.Context, tag *models.Tag) error {
+	tag.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE tags
+		SET name = $2, color = $3, updated_at = $4
+		WHERE id = $1
+	`, tag.ID, tag.Name, tag.Color, tag.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update tag: %w", err)
+	}
+	return nil
+}
+
+// DeleteTag deletes a tag by ID.
+func (db *DB) DeleteTag(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM tags WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete tag: %w", err)
+	}
+	return nil
+}
+
+// Backup-Tag association methods
+
+// GetTagsByBackupID returns all tags for a backup.
+func (db *DB) GetTagsByBackupID(ctx context.Context, backupID uuid.UUID) ([]*models.Tag, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT t.id, t.org_id, t.name, t.color, t.created_at, t.updated_at
+		FROM tags t
+		JOIN backup_tags bt ON t.id = bt.tag_id
+		WHERE bt.backup_id = $1
+		ORDER BY t.name
+	`, backupID)
+	if err != nil {
+		return nil, fmt.Errorf("list tags for backup: %w", err)
+	}
+	defer rows.Close()
+
+	var tags []*models.Tag
+	for rows.Next() {
+		var t models.Tag
+		err := rows.Scan(&t.ID, &t.OrgID, &t.Name, &t.Color, &t.CreatedAt, &t.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan tag: %w", err)
+		}
+		tags = append(tags, &t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tags: %w", err)
+	}
+
+	return tags, nil
+}
+
+// GetBackupIDsByTagID returns all backup IDs that have a specific tag.
+func (db *DB) GetBackupIDsByTagID(ctx context.Context, tagID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT backup_id FROM backup_tags WHERE tag_id = $1
+	`, tagID)
+	if err != nil {
+		return nil, fmt.Errorf("list backup IDs for tag: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan backup ID: %w", err)
+		}
+		ids = append(ids, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate backup IDs: %w", err)
+	}
+
+	return ids, nil
+}
+
+// AssignTagToBackup assigns a tag to a backup.
+func (db *DB) AssignTagToBackup(ctx context.Context, backupID, tagID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO backup_tags (id, backup_id, tag_id, created_at)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (backup_id, tag_id) DO NOTHING
+	`, uuid.New(), backupID, tagID, time.Now())
+	if err != nil {
+		return fmt.Errorf("assign tag to backup: %w", err)
+	}
+	return nil
+}
+
+// RemoveTagFromBackup removes a tag from a backup.
+func (db *DB) RemoveTagFromBackup(ctx context.Context, backupID, tagID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM backup_tags WHERE backup_id = $1 AND tag_id = $2
+	`, backupID, tagID)
+	if err != nil {
+		return fmt.Errorf("remove tag from backup: %w", err)
+	}
+	return nil
+}
+
+// SetBackupTags replaces all tags for a backup with the given tags.
+func (db *DB) SetBackupTags(ctx context.Context, backupID uuid.UUID, tagIDs []uuid.UUID) error {
+	return db.ExecTx(ctx, func(tx pgx.Tx) error {
+		// Remove all existing tags
+		_, err := tx.Exec(ctx, `DELETE FROM backup_tags WHERE backup_id = $1`, backupID)
+		if err != nil {
+			return fmt.Errorf("clear backup tags: %w", err)
+		}
+
+		// Add new tags
+		for _, tagID := range tagIDs {
+			_, err := tx.Exec(ctx, `
+				INSERT INTO backup_tags (id, backup_id, tag_id, created_at)
+				VALUES ($1, $2, $3, $4)
+			`, uuid.New(), backupID, tagID, time.Now())
+			if err != nil {
+				return fmt.Errorf("assign tag to backup: %w", err)
+			}
+		}
+		return nil
+	})
+}
+
+// Snapshot-Tag association methods
+
+// GetTagsBySnapshotID returns all tags for a snapshot.
+func (db *DB) GetTagsBySnapshotID(ctx context.Context, snapshotID string) ([]*models.Tag, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT t.id, t.org_id, t.name, t.color, t.created_at, t.updated_at
+		FROM tags t
+		JOIN snapshot_tags st ON t.id = st.tag_id
+		WHERE st.snapshot_id = $1
+		ORDER BY t.name
+	`, snapshotID)
+	if err != nil {
+		return nil, fmt.Errorf("list tags for snapshot: %w", err)
+	}
+	defer rows.Close()
+
+	var tags []*models.Tag
+	for rows.Next() {
+		var t models.Tag
+		err := rows.Scan(&t.ID, &t.OrgID, &t.Name, &t.Color, &t.CreatedAt, &t.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan tag: %w", err)
+		}
+		tags = append(tags, &t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tags: %w", err)
+	}
+
+	return tags, nil
+}
+
+// AssignTagToSnapshot assigns a tag to a snapshot.
+func (db *DB) AssignTagToSnapshot(ctx context.Context, snapshotID string, tagID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO snapshot_tags (id, snapshot_id, tag_id, created_at)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (snapshot_id, tag_id) DO NOTHING
+	`, uuid.New(), snapshotID, tagID, time.Now())
+	if err != nil {
+		return fmt.Errorf("assign tag to snapshot: %w", err)
+	}
+	return nil
+}
+
+// RemoveTagFromSnapshot removes a tag from a snapshot.
+func (db *DB) RemoveTagFromSnapshot(ctx context.Context, snapshotID string, tagID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM snapshot_tags WHERE snapshot_id = $1 AND tag_id = $2
+	`, snapshotID, tagID)
+	if err != nil {
+		return fmt.Errorf("remove tag from snapshot: %w", err)
+	}
+	return nil
+}
+
+// SetSnapshotTags replaces all tags for a snapshot with the given tags.
+func (db *DB) SetSnapshotTags(ctx context.Context, snapshotID string, tagIDs []uuid.UUID) error {
+	return db.ExecTx(ctx, func(tx pgx.Tx) error {
+		// Remove all existing tags
+		_, err := tx.Exec(ctx, `DELETE FROM snapshot_tags WHERE snapshot_id = $1`, snapshotID)
+		if err != nil {
+			return fmt.Errorf("clear snapshot tags: %w", err)
+		}
+
+		// Add new tags
+		for _, tagID := range tagIDs {
+			_, err := tx.Exec(ctx, `
+				INSERT INTO snapshot_tags (id, snapshot_id, tag_id, created_at)
+				VALUES ($1, $2, $3, $4)
+			`, uuid.New(), snapshotID, tagID, time.Now())
+			if err != nil {
+				return fmt.Errorf("assign tag to snapshot: %w", err)
+			}
+		}
+		return nil
+	})
+}
+
+// GetBackupsByTagIDs returns all backups that have any of the specified tags.
+func (db *DB) GetBackupsByTagIDs(ctx context.Context, tagIDs []uuid.UUID) ([]*models.Backup, error) {
+	if len(tagIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT DISTINCT b.id, b.schedule_id, b.agent_id, b.snapshot_id, b.started_at, b.completed_at,
+		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error, b.created_at
+		FROM backups b
+		JOIN backup_tags bt ON b.id = bt.backup_id
+		WHERE bt.tag_id = ANY($1)
+		ORDER BY b.started_at DESC
+	`, tagIDs)
+	if err != nil {
+		return nil, fmt.Errorf("list backups by tags: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackups(rows)
+}
+
+// Search methods
+
+// SearchResult represents a single search result.
+type SearchResult struct {
+	Type        string    `json:"type"` // agent, backup, snapshot, schedule, repository
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description,omitempty"`
+	Status      string    `json:"status,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// SearchFilter contains filters for search queries.
+type SearchFilter struct {
+	Query    string      `json:"q"`
+	Types    []string    `json:"types,omitempty"`     // agent, backup, snapshot, schedule, repository
+	Status   string      `json:"status,omitempty"`    // filter by status
+	TagIDs   []uuid.UUID `json:"tag_ids,omitempty"`   // filter by tags
+	DateFrom *time.Time  `json:"date_from,omitempty"` // filter by date range
+	DateTo   *time.Time  `json:"date_to,omitempty"`   // filter by date range
+	SizeMin  *int64      `json:"size_min,omitempty"`  // filter by size
+	SizeMax  *int64      `json:"size_max,omitempty"`  // filter by size
+	Limit    int         `json:"limit,omitempty"`     // max results per type
+}
+
+// Search performs a global search across agents, backups, snapshots, schedules, and repositories.
+func (db *DB) Search(ctx context.Context, orgID uuid.UUID, filter SearchFilter) ([]SearchResult, error) {
+	var results []SearchResult
+	query := "%" + filter.Query + "%"
+
+	// Set default limit
+	if filter.Limit <= 0 {
+		filter.Limit = 10
+	}
+
+	// Determine which types to search
+	searchAll := len(filter.Types) == 0
+	typeSet := make(map[string]bool)
+	for _, t := range filter.Types {
+		typeSet[t] = true
+	}
+
+	// Search agents
+	if searchAll || typeSet["agent"] {
+		agentResults, err := db.searchAgents(ctx, orgID, query, filter)
+		if err != nil {
+			return nil, fmt.Errorf("search agents: %w", err)
+		}
+		results = append(results, agentResults...)
+	}
+
+	// Search backups
+	if searchAll || typeSet["backup"] {
+		backupResults, err := db.searchBackups(ctx, orgID, query, filter)
+		if err != nil {
+			return nil, fmt.Errorf("search backups: %w", err)
+		}
+		results = append(results, backupResults...)
+	}
+
+	// Search schedules
+	if searchAll || typeSet["schedule"] {
+		scheduleResults, err := db.searchSchedules(ctx, orgID, query, filter)
+		if err != nil {
+			return nil, fmt.Errorf("search schedules: %w", err)
+		}
+		results = append(results, scheduleResults...)
+	}
+
+	// Search repositories
+	if searchAll || typeSet["repository"] {
+		repoResults, err := db.searchRepositories(ctx, orgID, query, filter)
+		if err != nil {
+			return nil, fmt.Errorf("search repositories: %w", err)
+		}
+		results = append(results, repoResults...)
+	}
+
+	return results, nil
+}
+
+func (db *DB) searchAgents(ctx context.Context, orgID uuid.UUID, query string, filter SearchFilter) ([]SearchResult, error) {
+	sqlQuery := `
+		SELECT id, hostname, status, created_at
+		FROM agents
+		WHERE org_id = $1 AND hostname ILIKE $2
+	`
+	args := []any{orgID, query}
+
+	if filter.Status != "" {
+		sqlQuery += " AND status = $3"
+		args = append(args, filter.Status)
+	}
+
+	sqlQuery += fmt.Sprintf(" ORDER BY hostname LIMIT %d", filter.Limit)
+
+	rows, err := db.Pool.Query(ctx, sqlQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []SearchResult
+	for rows.Next() {
+		var id uuid.UUID
+		var hostname, status string
+		var createdAt time.Time
+		if err := rows.Scan(&id, &hostname, &status, &createdAt); err != nil {
+			return nil, err
+		}
+		results = append(results, SearchResult{
+			Type:      "agent",
+			ID:        id.String(),
+			Name:      hostname,
+			Status:    status,
+			CreatedAt: createdAt,
+		})
+	}
+	return results, rows.Err()
+}
+
+func (db *DB) searchBackups(ctx context.Context, orgID uuid.UUID, query string, filter SearchFilter) ([]SearchResult, error) {
+	sqlQuery := `
+		SELECT b.id, b.snapshot_id, b.status, b.size_bytes, b.started_at
+		FROM backups b
+		JOIN agents a ON b.agent_id = a.id
+		WHERE a.org_id = $1 AND (b.snapshot_id ILIKE $2 OR b.id::text ILIKE $2)
+	`
+	args := []any{orgID, query}
+	argNum := 3
+
+	if filter.Status != "" {
+		sqlQuery += fmt.Sprintf(" AND b.status = $%d", argNum)
+		args = append(args, filter.Status)
+		argNum++
+	}
+
+	if filter.DateFrom != nil {
+		sqlQuery += fmt.Sprintf(" AND b.started_at >= $%d", argNum)
+		args = append(args, filter.DateFrom)
+		argNum++
+	}
+
+	if filter.DateTo != nil {
+		sqlQuery += fmt.Sprintf(" AND b.started_at <= $%d", argNum)
+		args = append(args, filter.DateTo)
+		argNum++
+	}
+
+	if filter.SizeMin != nil {
+		sqlQuery += fmt.Sprintf(" AND b.size_bytes >= $%d", argNum)
+		args = append(args, *filter.SizeMin)
+		argNum++
+	}
+
+	if filter.SizeMax != nil {
+		sqlQuery += fmt.Sprintf(" AND b.size_bytes <= $%d", argNum)
+		args = append(args, *filter.SizeMax)
+		argNum++
+	}
+
+	// Filter by tags
+	if len(filter.TagIDs) > 0 {
+		sqlQuery += fmt.Sprintf(" AND b.id IN (SELECT backup_id FROM backup_tags WHERE tag_id = ANY($%d))", argNum)
+		args = append(args, filter.TagIDs)
+		argNum++
+	}
+
+	sqlQuery += fmt.Sprintf(" ORDER BY b.started_at DESC LIMIT %d", filter.Limit)
+
+	rows, err := db.Pool.Query(ctx, sqlQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []SearchResult
+	for rows.Next() {
+		var id uuid.UUID
+		var snapshotID, status string
+		var sizeBytes *int64
+		var startedAt time.Time
+		if err := rows.Scan(&id, &snapshotID, &status, &sizeBytes, &startedAt); err != nil {
+			return nil, err
+		}
+		desc := ""
+		if sizeBytes != nil {
+			desc = fmt.Sprintf("%d bytes", *sizeBytes)
+		}
+		name := snapshotID
+		if name == "" {
+			name = id.String()[:8]
+		}
+		results = append(results, SearchResult{
+			Type:        "backup",
+			ID:          id.String(),
+			Name:        name,
+			Description: desc,
+			Status:      status,
+			CreatedAt:   startedAt,
+		})
+	}
+	return results, rows.Err()
+}
+
+func (db *DB) searchSchedules(ctx context.Context, orgID uuid.UUID, query string, filter SearchFilter) ([]SearchResult, error) {
+	sqlQuery := `
+		SELECT s.id, s.name, s.enabled, s.created_at
+		FROM schedules s
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND s.name ILIKE $2
+	`
+	args := []any{orgID, query}
+
+	sqlQuery += fmt.Sprintf(" ORDER BY s.name LIMIT %d", filter.Limit)
+
+	rows, err := db.Pool.Query(ctx, sqlQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []SearchResult
+	for rows.Next() {
+		var id uuid.UUID
+		var name string
+		var enabled bool
+		var createdAt time.Time
+		if err := rows.Scan(&id, &name, &enabled, &createdAt); err != nil {
+			return nil, err
+		}
+		status := "disabled"
+		if enabled {
+			status = "enabled"
+		}
+		results = append(results, SearchResult{
+			Type:      "schedule",
+			ID:        id.String(),
+			Name:      name,
+			Status:    status,
+			CreatedAt: createdAt,
+		})
+	}
+	return results, rows.Err()
+}
+
+func (db *DB) searchRepositories(ctx context.Context, orgID uuid.UUID, query string, filter SearchFilter) ([]SearchResult, error) {
+	sqlQuery := `
+		SELECT id, name, type, created_at
+		FROM repositories
+		WHERE org_id = $1 AND name ILIKE $2
+	`
+	args := []any{orgID, query}
+
+	sqlQuery += fmt.Sprintf(" ORDER BY name LIMIT %d", filter.Limit)
+
+	rows, err := db.Pool.Query(ctx, sqlQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []SearchResult
+	for rows.Next() {
+		var id uuid.UUID
+		var name, repoType string
+		var createdAt time.Time
+		if err := rows.Scan(&id, &name, &repoType, &createdAt); err != nil {
+			return nil, err
+		}
+		results = append(results, SearchResult{
+			Type:        "repository",
+			ID:          id.String(),
+			Name:        name,
+			Description: repoType,
+			CreatedAt:   createdAt,
+		})
+	}
+	return results, rows.Err()
 }
