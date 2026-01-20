@@ -30,9 +30,6 @@ import type {
 	CreateScheduleRequest,
 	CreateTagRequest,
 	CreateVerificationScheduleRequest,
-	DailyBackupStats,
-	DailyBackupStatsResponse,
-	DashboardStats,
 	DRRunbook,
 	DRRunbookRenderResponse,
 	DRRunbooksResponse,
@@ -41,6 +38,9 @@ import type {
 	DRTestSchedule,
 	DRTestSchedulesResponse,
 	DRTestsResponse,
+	DailyBackupStats,
+	DailyBackupStatsResponse,
+	DashboardStats,
 	ErrorResponse,
 	InvitationsResponse,
 	InviteMemberRequest,
@@ -975,7 +975,8 @@ export const metricsApi = {
 	getBackupSuccessRates: async (): Promise<{
 		rate_7d: BackupSuccessRate;
 		rate_30d: BackupSuccessRate;
-	}> => fetchApi<BackupSuccessRatesResponse>('/dashboard-metrics/success-rates'),
+	}> =>
+		fetchApi<BackupSuccessRatesResponse>('/dashboard-metrics/success-rates'),
 
 	getStorageGrowthTrend: async (days = 30): Promise<StorageGrowthTrend[]> => {
 		const response = await fetchApi<StorageGrowthTrendResponse>(
