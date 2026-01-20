@@ -32,6 +32,10 @@ const (
 	NameKey = "name"
 	// AuthenticatedAtKey is the session key for when the user authenticated.
 	AuthenticatedAtKey = "authenticated_at"
+	// CurrentOrgIDKey is the session key for the currently selected organization.
+	CurrentOrgIDKey = "current_org_id"
+	// CurrentOrgRoleKey is the session key for the user's role in the current org.
+	CurrentOrgRoleKey = "current_org_role"
 )
 
 // SessionConfig holds session store configuration.
@@ -142,6 +146,8 @@ type SessionUser struct {
 	Email           string
 	Name            string
 	AuthenticatedAt time.Time
+	CurrentOrgID    uuid.UUID
+	CurrentOrgRole  string
 }
 
 // SetUser stores user data in the session after successful authentication.
@@ -155,6 +161,8 @@ func (s *SessionStore) SetUser(r *http.Request, w http.ResponseWriter, user *Ses
 	session.Values[EmailKey] = user.Email
 	session.Values[NameKey] = user.Name
 	session.Values[AuthenticatedAtKey] = user.AuthenticatedAt
+	session.Values[CurrentOrgIDKey] = user.CurrentOrgID
+	session.Values[CurrentOrgRoleKey] = user.CurrentOrgRole
 	return s.Save(r, w, session)
 }
 
@@ -174,6 +182,8 @@ func (s *SessionStore) GetUser(r *http.Request) (*SessionUser, error) {
 	email, _ := session.Values[EmailKey].(string)
 	name, _ := session.Values[NameKey].(string)
 	authenticatedAt, _ := session.Values[AuthenticatedAtKey].(time.Time)
+	currentOrgID, _ := session.Values[CurrentOrgIDKey].(uuid.UUID)
+	currentOrgRole, _ := session.Values[CurrentOrgRoleKey].(string)
 
 	return &SessionUser{
 		ID:              userID,
@@ -181,7 +191,20 @@ func (s *SessionStore) GetUser(r *http.Request) (*SessionUser, error) {
 		Email:           email,
 		Name:            name,
 		AuthenticatedAt: authenticatedAt,
+		CurrentOrgID:    currentOrgID,
+		CurrentOrgRole:  currentOrgRole,
 	}, nil
+}
+
+// SetCurrentOrg updates the current organization in the session.
+func (s *SessionStore) SetCurrentOrg(r *http.Request, w http.ResponseWriter, orgID uuid.UUID, role string) error {
+	session, err := s.Get(r)
+	if err != nil {
+		return err
+	}
+	session.Values[CurrentOrgIDKey] = orgID
+	session.Values[CurrentOrgRoleKey] = role
+	return s.Save(r, w, session)
 }
 
 // ClearUser removes user data from the session (logout).
@@ -195,6 +218,8 @@ func (s *SessionStore) ClearUser(r *http.Request, w http.ResponseWriter) error {
 	delete(session.Values, EmailKey)
 	delete(session.Values, NameKey)
 	delete(session.Values, AuthenticatedAtKey)
+	delete(session.Values, CurrentOrgIDKey)
+	delete(session.Values, CurrentOrgRoleKey)
 	// Set MaxAge to -1 to delete the cookie
 	session.Options.MaxAge = -1
 	return s.Save(r, w, session)
