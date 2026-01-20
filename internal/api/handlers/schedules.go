@@ -79,8 +79,20 @@ type UpdateScheduleRequest struct {
 }
 
 // List returns all schedules for agents in the authenticated user's organization.
-// GET /api/v1/schedules
-// Optional query param: agent_id to filter by agent
+//
+//	@Summary		List schedules
+//	@Description	Returns all backup schedules for the current organization
+//	@Tags			Schedules
+//	@Accept			json
+//	@Produce		json
+//	@Param			agent_id	query		string	false	"Filter by agent ID"
+//	@Success		200			{object}	map[string][]models.Schedule
+//	@Failure		400			{object}	map[string]string
+//	@Failure		401			{object}	map[string]string
+//	@Failure		404			{object}	map[string]string
+//	@Failure		500			{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/schedules [get]
 func (h *SchedulesHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -145,7 +157,19 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 }
 
 // Get returns a specific schedule by ID.
-// GET /api/v1/schedules/:id
+//
+//	@Summary		Get schedule
+//	@Description	Returns a specific backup schedule by ID
+//	@Tags			Schedules
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Schedule ID"
+//	@Success		200	{object}	models.Schedule
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/schedules/{id} [get]
 func (h *SchedulesHandler) Get(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -180,7 +204,19 @@ func (h *SchedulesHandler) Get(c *gin.Context) {
 }
 
 // Create creates a new schedule.
-// POST /api/v1/schedules
+//
+//	@Summary		Create schedule
+//	@Description	Creates a new backup schedule for an agent
+//	@Tags			Schedules
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		CreateScheduleRequest	true	"Schedule details"
+//	@Success		201		{object}	models.Schedule
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/schedules [post]
 func (h *SchedulesHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -267,7 +303,21 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 }
 
 // Update updates an existing schedule.
-// PUT /api/v1/schedules/:id
+//
+//	@Summary		Update schedule
+//	@Description	Updates an existing backup schedule
+//	@Tags			Schedules
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string					true	"Schedule ID"
+//	@Param			request	body		UpdateScheduleRequest	true	"Schedule updates"
+//	@Success		200		{object}	models.Schedule
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/schedules/{id} [put]
 func (h *SchedulesHandler) Update(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -342,7 +392,20 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 }
 
 // Delete removes a schedule.
-// DELETE /api/v1/schedules/:id
+//
+//	@Summary		Delete schedule
+//	@Description	Removes a backup schedule
+//	@Tags			Schedules
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Schedule ID"
+//	@Success		200	{object}	map[string]string
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/schedules/{id} [delete]
 func (h *SchedulesHandler) Delete(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -388,7 +451,19 @@ type RunScheduleResponse struct {
 }
 
 // Run triggers an immediate backup for this schedule.
-// POST /api/v1/schedules/:id/run
+//
+//	@Summary		Run schedule
+//	@Description	Triggers an immediate backup for the specified schedule
+//	@Tags			Schedules
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Schedule ID"
+//	@Success		202	{object}	RunScheduleResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/schedules/{id}/run [post]
 func (h *SchedulesHandler) Run(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
