@@ -601,3 +601,71 @@ export interface RepositoryHistoryResponse {
 	repository_name: string;
 	history: StorageStats[];
 }
+
+// Verification types
+export type VerificationStatus = 'pending' | 'running' | 'passed' | 'failed';
+export type VerificationType = 'check' | 'check_read_data' | 'test_restore';
+
+export interface VerificationDetails {
+	errors_found?: string[];
+	files_restored?: number;
+	bytes_restored?: number;
+	read_data_subset?: string;
+}
+
+export interface Verification {
+	id: string;
+	repository_id: string;
+	type: VerificationType;
+	snapshot_id?: string;
+	started_at: string;
+	completed_at?: string;
+	status: VerificationStatus;
+	duration_ms?: number;
+	error_message?: string;
+	details?: VerificationDetails;
+	created_at: string;
+}
+
+export interface VerificationSchedule {
+	id: string;
+	repository_id: string;
+	type: VerificationType;
+	cron_expression: string;
+	enabled: boolean;
+	read_data_subset?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface VerificationStatusResponse {
+	repository_id: string;
+	last_verification?: Verification;
+	next_scheduled_at?: string;
+	consecutive_fails: number;
+}
+
+export interface TriggerVerificationRequest {
+	type: VerificationType;
+}
+
+export interface CreateVerificationScheduleRequest {
+	type: VerificationType;
+	cron_expression: string;
+	enabled?: boolean;
+	read_data_subset?: string;
+}
+
+export interface UpdateVerificationScheduleRequest {
+	cron_expression?: string;
+	enabled?: boolean;
+	read_data_subset?: string;
+}
+
+export interface VerificationsResponse {
+	verifications: Verification[];
+}
+
+export interface VerificationSchedulesResponse {
+	schedules: VerificationSchedule[];
+}

@@ -20,6 +20,7 @@ import type {
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
 	CreateScheduleRequest,
+	CreateVerificationScheduleRequest,
 	ErrorResponse,
 	InvitationsResponse,
 	InviteMemberRequest,
@@ -56,6 +57,7 @@ import type {
 	SwitchOrgRequest,
 	TestConnectionRequest,
 	TestRepositoryResponse,
+	TriggerVerificationRequest,
 	UpdateAlertRuleRequest,
 	UpdateMemberRequest,
 	UpdateNotificationChannelRequest,
@@ -63,7 +65,13 @@ import type {
 	UpdateOrgRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
+	UpdateVerificationScheduleRequest,
 	User,
+	Verification,
+	VerificationSchedule,
+	VerificationSchedulesResponse,
+	VerificationStatusResponse,
+	VerificationsResponse,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -615,4 +623,67 @@ export const statsApi = {
 		fetchApi<RepositoryHistoryResponse>(
 			`/stats/repositories/${id}/history?limit=${limit}`,
 		),
+};
+
+// Verifications API
+export const verificationsApi = {
+	listByRepository: async (repoId: string): Promise<Verification[]> => {
+		const response = await fetchApi<VerificationsResponse>(
+			`/repositories/${repoId}/verifications`,
+		);
+		return response.verifications ?? [];
+	},
+
+	get: async (id: string): Promise<Verification> =>
+		fetchApi<Verification>(`/verifications/${id}`),
+
+	getStatus: async (repoId: string): Promise<VerificationStatusResponse> =>
+		fetchApi<VerificationStatusResponse>(
+			`/repositories/${repoId}/verification-status`,
+		),
+
+	trigger: async (
+		repoId: string,
+		data: TriggerVerificationRequest,
+	): Promise<Verification> =>
+		fetchApi<Verification>(`/repositories/${repoId}/verifications`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	listSchedules: async (repoId: string): Promise<VerificationSchedule[]> => {
+		const response = await fetchApi<VerificationSchedulesResponse>(
+			`/repositories/${repoId}/verification-schedules`,
+		);
+		return response.schedules ?? [];
+	},
+
+	createSchedule: async (
+		repoId: string,
+		data: CreateVerificationScheduleRequest,
+	): Promise<VerificationSchedule> =>
+		fetchApi<VerificationSchedule>(
+			`/repositories/${repoId}/verification-schedules`,
+			{
+				method: 'POST',
+				body: JSON.stringify(data),
+			},
+		),
+
+	getSchedule: async (id: string): Promise<VerificationSchedule> =>
+		fetchApi<VerificationSchedule>(`/verification-schedules/${id}`),
+
+	updateSchedule: async (
+		id: string,
+		data: UpdateVerificationScheduleRequest,
+	): Promise<VerificationSchedule> =>
+		fetchApi<VerificationSchedule>(`/verification-schedules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteSchedule: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/verification-schedules/${id}`, {
+			method: 'DELETE',
+		}),
 };
