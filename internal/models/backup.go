@@ -22,18 +22,22 @@ const (
 
 // Backup represents a single backup execution record.
 type Backup struct {
-	ID           uuid.UUID    `json:"id"`
-	ScheduleID   uuid.UUID    `json:"schedule_id"`
-	AgentID      uuid.UUID    `json:"agent_id"`
-	SnapshotID   string       `json:"snapshot_id,omitempty"`
-	StartedAt    time.Time    `json:"started_at"`
-	CompletedAt  *time.Time   `json:"completed_at,omitempty"`
-	Status       BackupStatus `json:"status"`
-	SizeBytes    *int64       `json:"size_bytes,omitempty"`
-	FilesNew     *int         `json:"files_new,omitempty"`
-	FilesChanged *int         `json:"files_changed,omitempty"`
-	ErrorMessage string       `json:"error_message,omitempty"`
-	CreatedAt    time.Time    `json:"created_at"`
+	ID               uuid.UUID    `json:"id"`
+	ScheduleID       uuid.UUID    `json:"schedule_id"`
+	AgentID          uuid.UUID    `json:"agent_id"`
+	SnapshotID       string       `json:"snapshot_id,omitempty"`
+	StartedAt        time.Time    `json:"started_at"`
+	CompletedAt      *time.Time   `json:"completed_at,omitempty"`
+	Status           BackupStatus `json:"status"`
+	SizeBytes        *int64       `json:"size_bytes,omitempty"`
+	FilesNew         *int         `json:"files_new,omitempty"`
+	FilesChanged     *int         `json:"files_changed,omitempty"`
+	ErrorMessage     string       `json:"error_message,omitempty"`
+	RetentionApplied bool         `json:"retention_applied"`
+	SnapshotsRemoved *int         `json:"snapshots_removed,omitempty"`
+	SnapshotsKept    *int         `json:"snapshots_kept,omitempty"`
+	RetentionError   string       `json:"retention_error,omitempty"`
+	CreatedAt        time.Time    `json:"created_at"`
 }
 
 // NewBackup creates a new Backup record for the given schedule and agent.
@@ -73,6 +77,16 @@ func (b *Backup) Cancel() {
 	now := time.Now()
 	b.CompletedAt = &now
 	b.Status = BackupStatusCanceled
+}
+
+// RecordRetention records the results of retention policy enforcement.
+func (b *Backup) RecordRetention(removed, kept int, err error) {
+	b.RetentionApplied = true
+	b.SnapshotsRemoved = &removed
+	b.SnapshotsKept = &kept
+	if err != nil {
+		b.RetentionError = err.Error()
+	}
 }
 
 // Duration returns the duration of the backup, or zero if not completed.
