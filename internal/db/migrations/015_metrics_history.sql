@@ -1,4 +1,4 @@
--- 012_metrics_history.sql
+-- 015_metrics_history.sql
 -- Migration: Add metrics history table for time-series dashboard data
 
 -- Metrics history table for storing time-series backup and system metrics
