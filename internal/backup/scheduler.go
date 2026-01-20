@@ -254,6 +254,7 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 	var successStats *BackupStats
 	var successResticCfg ResticConfig
 	var lastErr error
+	var lastBackup *models.Backup
 
 	for i := range enabledRepos {
 		schedRepo := &enabledRepos[i]
@@ -276,6 +277,7 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 			}
 
 			lastErr = err
+			lastBackup = backup // Track failed backup for notification
 			repoLogger.Warn().
 				Err(err).
 				Int("attempt", attempt).
@@ -293,12 +295,20 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		repoLogger.Warn().Msg("all retry attempts failed for repository, trying next")
 	}
 
-	// If all repositories failed, log and return
+	// If all repositories failed, log, notify, and return
 	if successRepo == nil {
+		errMsg := "backup failed to all repositories"
+		if lastErr != nil {
+			errMsg = fmt.Sprintf("backup failed to all repositories: %v", lastErr)
+		}
 		logger.Error().
 			Err(lastErr).
 			Int("repos_tried", len(enabledRepos)).
 			Msg("backup failed to all repositories")
+		// Send failure notification (use last backup attempt if available)
+		if lastBackup != nil {
+			s.sendBackupNotification(ctx, schedule, lastBackup, false, errMsg)
+		}
 		return
 	}
 
@@ -310,6 +320,9 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		Int64("size_bytes", successStats.SizeBytes).
 		Dur("duration", successStats.Duration).
 		Msg("backup completed successfully")
+
+	// Send success notification
+	s.sendBackupNotification(ctx, schedule, successBackup, true, "")
 
 	// Run prune if retention policy is set
 	if schedule.RetentionPolicy != nil {
@@ -530,12 +543,6 @@ func (s *Scheduler) failBackup(ctx context.Context, backup *models.Backup, errMs
 		return
 	}
 	logger.Error().Str("error", errMsg).Msg("backup failed")
-}
-
-// failBackupWithSchedule marks a backup as failed and sends a notification.
-func (s *Scheduler) failBackupWithSchedule(ctx context.Context, backup *models.Backup, schedule models.Schedule, errMsg string, logger zerolog.Logger) {
-	s.failBackup(ctx, backup, errMsg, logger)
-	s.sendBackupNotification(ctx, schedule, backup, false, errMsg)
 }
 
 // sendBackupNotification sends a notification for a backup result.
