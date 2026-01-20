@@ -298,10 +298,21 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 	// Run prune if retention policy is set
 	if schedule.RetentionPolicy != nil {
 		logger.Info().Msg("running prune with retention policy")
-		if err := s.restic.Prune(ctx, resticCfg, schedule.RetentionPolicy); err != nil {
+		forgetResult, err := s.restic.Prune(ctx, resticCfg, schedule.RetentionPolicy)
+		if err != nil {
 			logger.Error().Err(err).Msg("prune failed")
+			backup.RecordRetention(0, 0, err)
 		} else {
-			logger.Info().Msg("prune completed")
+			logger.Info().
+				Int("snapshots_removed", forgetResult.SnapshotsRemoved).
+				Int("snapshots_kept", forgetResult.SnapshotsKept).
+				Msg("prune completed")
+			backup.RecordRetention(forgetResult.SnapshotsRemoved, forgetResult.SnapshotsKept, nil)
+		}
+
+		// Update backup record with retention results
+		if err := s.store.UpdateBackup(ctx, backup); err != nil {
+			logger.Error().Err(err).Msg("failed to update backup with retention results")
 		}
 	}
 }
