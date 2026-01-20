@@ -145,7 +145,8 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 					c.JSON(http.StatusBadRequest, gin.H{"error": "invalid repository_id"})
 					return
 				}
-				if schedule.RepositoryID != repoID {
+				// Check if the backup's repository matches the filter
+				if backup.RepositoryID == nil || *backup.RepositoryID != repoID {
 					continue
 				}
 			}
@@ -155,6 +156,11 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 				shortID = shortID[:8]
 			}
 
+			repoIDStr := ""
+			if backup.RepositoryID != nil {
+				repoIDStr = backup.RepositoryID.String()
+			}
+
 			snapshots = append(snapshots, SnapshotResponse{
 				ID:           backup.SnapshotID,
 				ShortID:      shortID,
@@ -162,7 +168,7 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 				Hostname:     agent.Hostname,
 				Paths:        schedule.Paths,
 				AgentID:      agent.ID.String(),
-				RepositoryID: schedule.RepositoryID.String(),
+				RepositoryID: repoIDStr,
 				BackupID:     backup.ID.String(),
 				SizeBytes:    backup.SizeBytes,
 			})
@@ -216,6 +222,11 @@ func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 		shortID = shortID[:8]
 	}
 
+	repoIDStr := ""
+	if backup.RepositoryID != nil {
+		repoIDStr = backup.RepositoryID.String()
+	}
+
 	c.JSON(http.StatusOK, SnapshotResponse{
 		ID:           backup.SnapshotID,
 		ShortID:      shortID,
@@ -223,7 +234,7 @@ func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 		Hostname:     agent.Hostname,
 		Paths:        schedule.Paths,
 		AgentID:      agent.ID.String(),
-		RepositoryID: schedule.RepositoryID.String(),
+		RepositoryID: repoIDStr,
 		BackupID:     backup.ID.String(),
 		SizeBytes:    backup.SizeBytes,
 	})

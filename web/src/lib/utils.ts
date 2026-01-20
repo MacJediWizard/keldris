@@ -1,3 +1,32 @@
+// Format date to relative time (past or future)
+export function formatRelativeTime(dateString: string | undefined): string {
+	if (!dateString) return 'Never';
+
+	const date = new Date(dateString);
+	const now = new Date();
+	const diffMs = date.getTime() - now.getTime();
+	const isFuture = diffMs > 0;
+	const absDiffMs = Math.abs(diffMs);
+	const absDiffSeconds = Math.floor(absDiffMs / 1000);
+	const absDiffMinutes = Math.floor(absDiffSeconds / 60);
+	const absDiffHours = Math.floor(absDiffMinutes / 60);
+	const absDiffDays = Math.floor(absDiffHours / 24);
+
+	if (absDiffSeconds < 60) return isFuture ? 'In a moment' : 'Just now';
+	if (absDiffMinutes < 60)
+		return isFuture ? `In ${absDiffMinutes}m` : `${absDiffMinutes}m ago`;
+	if (absDiffHours < 24)
+		return isFuture ? `In ${absDiffHours}h` : `${absDiffHours}h ago`;
+	if (absDiffDays < 7)
+		return isFuture ? `In ${absDiffDays}d` : `${absDiffDays}d ago`;
+
+	return date.toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+	});
+}
+
 // Format date to relative time or absolute date
 export function formatDate(dateString: string | undefined): string {
 	if (!dateString) return 'Never';

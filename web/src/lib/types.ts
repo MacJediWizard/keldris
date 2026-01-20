@@ -149,6 +149,36 @@ export interface RetentionPolicy {
 	keep_yearly?: number;
 }
 
+export interface ScheduleRepository {
+	id: string;
+	schedule_id: string;
+	repository_id: string;
+	priority: number; // 0 = primary, 1+ = secondary by order
+	enabled: boolean;
+	created_at: string;
+}
+
+export interface ScheduleRepositoryRequest {
+	repository_id: string;
+	priority: number;
+	enabled: boolean;
+}
+
+export type ReplicationStatusType = 'pending' | 'syncing' | 'synced' | 'failed';
+
+export interface ReplicationStatus {
+	id: string;
+	schedule_id: string;
+	source_repository_id: string;
+	target_repository_id: string;
+	last_snapshot_id?: string;
+	last_sync_at?: string;
+	status: ReplicationStatusType;
+	error_message?: string;
+	created_at: string;
+	updated_at: string;
+}
+
 export interface BackupWindow {
 	start?: string; // HH:MM format (e.g., "02:00")
 	end?: string; // HH:MM format (e.g., "06:00")
@@ -157,7 +187,6 @@ export interface BackupWindow {
 export interface Schedule {
 	id: string;
 	agent_id: string;
-	repository_id: string;
 	name: string;
 	cron_expression: string;
 	paths: string[];
@@ -167,13 +196,14 @@ export interface Schedule {
 	backup_window?: BackupWindow; // Allowed backup time window
 	excluded_hours?: number[]; // Hours (0-23) when backups should not run
 	enabled: boolean;
+	repositories?: ScheduleRepository[];
 	created_at: string;
 	updated_at: string;
 }
 
 export interface CreateScheduleRequest {
 	agent_id: string;
-	repository_id: string;
+	repositories: ScheduleRepositoryRequest[];
 	name: string;
 	cron_expression: string;
 	paths: string[];
@@ -191,6 +221,7 @@ export interface UpdateScheduleRequest {
 	paths?: string[];
 	excludes?: string[];
 	retention_policy?: RetentionPolicy;
+	repositories?: ScheduleRepositoryRequest[];
 	bandwidth_limit_kb?: number;
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
@@ -202,6 +233,10 @@ export interface RunScheduleResponse {
 	message: string;
 }
 
+export interface ReplicationStatusResponse {
+	replication_status: ReplicationStatus[];
+}
+
 // Backup types
 export type BackupStatus = 'running' | 'completed' | 'failed' | 'canceled';
 
@@ -209,6 +244,7 @@ export interface Backup {
 	id: string;
 	schedule_id: string;
 	agent_id: string;
+	repository_id?: string;
 	snapshot_id?: string;
 	started_at: string;
 	completed_at?: string;
@@ -750,6 +786,154 @@ export interface VerificationsResponse {
 
 export interface VerificationSchedulesResponse {
 	schedules: VerificationSchedule[];
+}
+
+// DR Runbook types
+export type DRRunbookStatus = 'active' | 'draft' | 'archived';
+
+export interface DRRunbookStep {
+	order: number;
+	title: string;
+	description: string;
+	estimated_minutes?: number;
+	requires_confirmation?: boolean;
+}
+
+export interface DRRunbookContact {
+	name: string;
+	role: string;
+	email?: string;
+	phone?: string;
+}
+
+export interface DRRunbook {
+	id: string;
+	org_id: string;
+	name: string;
+	description?: string;
+	scenario: string;
+	steps: DRRunbookStep[];
+	contacts?: DRRunbookContact[];
+	status: DRRunbookStatus;
+	estimated_rto_minutes?: number;
+	estimated_rpo_minutes?: number;
+	last_tested_at?: string;
+	last_test_result?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateDRRunbookRequest {
+	name: string;
+	description?: string;
+	scenario?: string;
+	steps?: DRRunbookStep[];
+	contacts?: DRRunbookContact[];
+	schedule_id?: string;
+	estimated_rto_minutes?: number;
+	estimated_rpo_minutes?: number;
+}
+
+export interface UpdateDRRunbookRequest {
+	name?: string;
+	description?: string;
+	scenario?: string;
+	steps?: DRRunbookStep[];
+	contacts?: DRRunbookContact[];
+	estimated_rto_minutes?: number;
+	estimated_rpo_minutes?: number;
+}
+
+export interface DRRunbooksResponse {
+	runbooks: DRRunbook[];
+}
+
+export interface DRRunbookRenderResponse {
+	runbook: DRRunbook;
+	content: string;
+}
+
+// DR Test types
+export type DRTestStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'passed'
+	| 'failed'
+	| 'skipped';
+
+export interface DRTest {
+	id: string;
+	org_id: string;
+	runbook_id: string;
+	runbook_name?: string;
+	started_at?: string;
+	completed_at?: string;
+	status: DRTestStatus;
+	actual_rto_minutes?: number;
+	actual_rpo_minutes?: number;
+	notes?: string;
+	tested_by?: string;
+	created_at: string;
+}
+
+export interface DRTestSchedule {
+	id: string;
+	org_id: string;
+	runbook_id: string;
+	runbook_name?: string;
+	cron_expression: string;
+	enabled: boolean;
+	last_run_at?: string;
+	next_run_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface RunDRTestRequest {
+	runbook_id: string;
+	notes?: string;
+}
+
+export interface UpdateDRTestRequest {
+	status?: DRTestStatus;
+	actual_rto_minutes?: number;
+	actual_rpo_minutes?: number;
+	notes?: string;
+}
+
+export interface CreateDRTestScheduleRequest {
+	runbook_id: string;
+	cron_expression: string;
+	enabled?: boolean;
+}
+
+export interface UpdateDRTestScheduleRequest {
+	cron_expression?: string;
+	enabled?: boolean;
+}
+
+export interface DRTestsResponse {
+	tests: DRTest[];
+}
+
+export interface DRTestSchedulesResponse {
+	schedules: DRTestSchedule[];
+}
+
+// DR Status for dashboard
+export interface DRStatus {
+	total_runbooks: number;
+	active_runbooks: number;
+	tested_runbooks: number;
+	untested_runbooks: number;
+	overdue_runbooks: number;
+	tests_last_30_days: number;
+	pass_rate: number;
+	last_test?: DRTest;
+	last_test_at?: string;
+	next_test_at?: string;
+	upcoming_tests: DRTestSchedule[];
 }
 
 // Tag types

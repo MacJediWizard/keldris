@@ -371,7 +371,7 @@ func (db *DB) DeleteRepository(ctx context.Context, id uuid.UUID) error {
 // GetSchedulesByAgentID returns all schedules for an agent.
 func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, repository_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
@@ -391,19 +391,40 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 		schedules = append(schedules, s)
 	}
 
+	// Load repositories for all schedules
+	for _, s := range schedules {
+		repos, err := db.GetScheduleRepositories(ctx, s.ID)
+		if err != nil {
+			return nil, fmt.Errorf("get schedule repositories: %w", err)
+		}
+		s.Repositories = repos
+	}
+
 	return schedules, nil
 }
 
 // GetScheduleByID returns a schedule by ID.
 func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error) {
 	row := db.Pool.QueryRow(ctx, `
-		SELECT id, agent_id, repository_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`, id)
 
-	return scanScheduleRow(row)
+	s, err := scanScheduleRow(row)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load repositories
+	repos, err := db.GetScheduleRepositories(ctx, s.ID)
+	if err != nil {
+		return nil, fmt.Errorf("get schedule repositories: %w", err)
+	}
+	s.Repositories = repos
+
+	return s, nil
 }
 
 // CreateSchedule creates a new schedule.
@@ -424,15 +445,24 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 	}
 
 	_, err = db.Pool.Exec(ctx, `
-		INSERT INTO schedules (id, agent_id, repository_id, name, cron_expression, paths,
+		INSERT INTO schedules (id, agent_id, name, cron_expression, paths,
 		                       excludes, retention_policy, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-	`, schedule.ID, schedule.AgentID, schedule.RepositoryID, schedule.Name,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, schedule.ID, schedule.AgentID, schedule.Name,
 		schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
 		schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create schedule: %w", err)
 	}
+
+	// Create schedule-repository associations
+	for _, sr := range schedule.Repositories {
+		sr.ScheduleID = schedule.ID
+		if err := db.CreateScheduleRepository(ctx, &sr); err != nil {
+			return fmt.Errorf("create schedule repository: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -483,7 +513,7 @@ func scanSchedule(rows interface {
 	var s models.Schedule
 	var pathsBytes, excludesBytes, retentionBytes []byte
 	err := rows.Scan(
-		&s.ID, &s.AgentID, &s.RepositoryID, &s.Name, &s.CronExpression,
+		&s.ID, &s.AgentID, &s.Name, &s.CronExpression,
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.Enabled,
 		&s.CreatedAt, &s.UpdatedAt,
 	)
@@ -516,7 +546,7 @@ func scanScheduleRow(row interface {
 // GetBackupsByScheduleID returns all backups for a schedule.
 func (db *DB) GetBackupsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.Backup, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
@@ -534,7 +564,7 @@ func (db *DB) GetBackupsByScheduleID(ctx context.Context, scheduleID uuid.UUID) 
 // GetBackupsByAgentID returns all backups for an agent.
 func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Backup, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
@@ -554,13 +584,13 @@ func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, 
 	var b models.Backup
 	var statusStr string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
 		WHERE id = $1
 	`, id).Scan(
-		&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
+		&b.ID, &b.ScheduleID, &b.AgentID, &b.RepositoryID, &b.SnapshotID, &b.StartedAt,
 		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
 		&b.FilesChanged, &b.ErrorMessage,
 		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError, &b.CreatedAt,
@@ -575,11 +605,11 @@ func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, 
 // CreateBackup creates a new backup record.
 func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
 	_, err := db.Pool.Exec(ctx, `
-		INSERT INTO backups (id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		INSERT INTO backups (id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		                     status, size_bytes, files_new, files_changed, error_message,
 		                     retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-	`, backup.ID, backup.ScheduleID, backup.AgentID, backup.SnapshotID,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+	`, backup.ID, backup.ScheduleID, backup.AgentID, backup.RepositoryID, backup.SnapshotID,
 		backup.StartedAt, backup.CompletedAt, string(backup.Status),
 		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage,
 		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError, backup.CreatedAt)
@@ -624,7 +654,7 @@ func scanBackups(rows interface {
 		var b models.Backup
 		var statusStr string
 		err := r.Scan(
-			&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
+			&b.ID, &b.ScheduleID, &b.AgentID, &b.RepositoryID, &b.SnapshotID, &b.StartedAt,
 			&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
 			&b.FilesChanged, &b.ErrorMessage,
 			&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError, &b.CreatedAt,
@@ -643,19 +673,178 @@ func scanBackups(rows interface {
 	return backups, nil
 }
 
+// ScheduleRepository methods
+
+// GetScheduleRepositories returns all repositories for a schedule, ordered by priority.
+func (db *DB) GetScheduleRepositories(ctx context.Context, scheduleID uuid.UUID) ([]models.ScheduleRepository, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, repository_id, priority, enabled, created_at
+		FROM schedule_repositories
+		WHERE schedule_id = $1
+		ORDER BY priority ASC
+	`, scheduleID)
+	if err != nil {
+		return nil, fmt.Errorf("list schedule repositories: %w", err)
+	}
+	defer rows.Close()
+
+	var repos []models.ScheduleRepository
+	for rows.Next() {
+		var sr models.ScheduleRepository
+		err := rows.Scan(&sr.ID, &sr.ScheduleID, &sr.RepositoryID, &sr.Priority, &sr.Enabled, &sr.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan schedule repository: %w", err)
+		}
+		repos = append(repos, sr)
+	}
+
+	return repos, nil
+}
+
+// CreateScheduleRepository creates a schedule-repository association.
+func (db *DB) CreateScheduleRepository(ctx context.Context, sr *models.ScheduleRepository) error {
+	if sr.ID == uuid.Nil {
+		sr.ID = uuid.New()
+	}
+	if sr.CreatedAt.IsZero() {
+		sr.CreatedAt = time.Now()
+	}
+
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO schedule_repositories (id, schedule_id, repository_id, priority, enabled, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, sr.ID, sr.ScheduleID, sr.RepositoryID, sr.Priority, sr.Enabled, sr.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create schedule repository: %w", err)
+	}
+	return nil
+}
+
+// DeleteScheduleRepositories deletes all repository associations for a schedule.
+func (db *DB) DeleteScheduleRepositories(ctx context.Context, scheduleID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM schedule_repositories WHERE schedule_id = $1`, scheduleID)
+	if err != nil {
+		return fmt.Errorf("delete schedule repositories: %w", err)
+	}
+	return nil
+}
+
+// SetScheduleRepositories replaces all repository associations for a schedule.
+func (db *DB) SetScheduleRepositories(ctx context.Context, scheduleID uuid.UUID, repos []models.ScheduleRepository) error {
+	// Delete existing associations
+	if err := db.DeleteScheduleRepositories(ctx, scheduleID); err != nil {
+		return err
+	}
+
+	// Create new associations
+	for _, sr := range repos {
+		sr.ScheduleID = scheduleID
+		if err := db.CreateScheduleRepository(ctx, &sr); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ReplicationStatus methods
+
+// GetReplicationStatusBySchedule returns all replication status records for a schedule.
+func (db *DB) GetReplicationStatusBySchedule(ctx context.Context, scheduleID uuid.UUID) ([]*models.ReplicationStatus, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, source_repository_id, target_repository_id,
+		       last_snapshot_id, last_sync_at, status, error_message, created_at, updated_at
+		FROM replication_status
+		WHERE schedule_id = $1
+		ORDER BY created_at ASC
+	`, scheduleID)
+	if err != nil {
+		return nil, fmt.Errorf("list replication status: %w", err)
+	}
+	defer rows.Close()
+
+	var statuses []*models.ReplicationStatus
+	for rows.Next() {
+		var rs models.ReplicationStatus
+		var statusStr string
+		err := rows.Scan(
+			&rs.ID, &rs.ScheduleID, &rs.SourceRepositoryID, &rs.TargetRepositoryID,
+			&rs.LastSnapshotID, &rs.LastSyncAt, &statusStr, &rs.ErrorMessage,
+			&rs.CreatedAt, &rs.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan replication status: %w", err)
+		}
+		rs.Status = models.ReplicationStatusType(statusStr)
+		statuses = append(statuses, &rs)
+	}
+
+	return statuses, nil
+}
+
+// GetOrCreateReplicationStatus gets or creates a replication status record.
+func (db *DB) GetOrCreateReplicationStatus(ctx context.Context, scheduleID, sourceRepoID, targetRepoID uuid.UUID) (*models.ReplicationStatus, error) {
+	var rs models.ReplicationStatus
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, schedule_id, source_repository_id, target_repository_id,
+		       last_snapshot_id, last_sync_at, status, error_message, created_at, updated_at
+		FROM replication_status
+		WHERE schedule_id = $1 AND source_repository_id = $2 AND target_repository_id = $3
+	`, scheduleID, sourceRepoID, targetRepoID).Scan(
+		&rs.ID, &rs.ScheduleID, &rs.SourceRepositoryID, &rs.TargetRepositoryID,
+		&rs.LastSnapshotID, &rs.LastSyncAt, &statusStr, &rs.ErrorMessage,
+		&rs.CreatedAt, &rs.UpdatedAt,
+	)
+	if err == nil {
+		rs.Status = models.ReplicationStatusType(statusStr)
+		return &rs, nil
+	}
+
+	// Create new record
+	newRS := models.NewReplicationStatus(scheduleID, sourceRepoID, targetRepoID)
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO replication_status (id, schedule_id, source_repository_id, target_repository_id,
+		                                status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, newRS.ID, newRS.ScheduleID, newRS.SourceRepositoryID, newRS.TargetRepositoryID,
+		string(newRS.Status), newRS.CreatedAt, newRS.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create replication status: %w", err)
+	}
+
+	return newRS, nil
+}
+
+// UpdateReplicationStatus updates a replication status record.
+func (db *DB) UpdateReplicationStatus(ctx context.Context, rs *models.ReplicationStatus) error {
+	rs.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE replication_status
+		SET last_snapshot_id = $2, last_sync_at = $3, status = $4, error_message = $5, updated_at = $6
+		WHERE id = $1
+	`, rs.ID, rs.LastSnapshotID, rs.LastSyncAt, string(rs.Status), rs.ErrorMessage, rs.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update replication status: %w", err)
+	}
+	return nil
+}
+
 // GetBackupBySnapshotID returns a backup by its snapshot ID.
 func (db *DB) GetBackupBySnapshotID(ctx context.Context, snapshotID string) (*models.Backup, error) {
 	var b models.Backup
 	var statusStr string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
-		       status, size_bytes, files_new, files_changed, error_message, created_at
+		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
+		       status, size_bytes, files_new, files_changed, error_message,
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
 		WHERE snapshot_id = $1
 	`, snapshotID).Scan(
-		&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
+		&b.ID, &b.ScheduleID, &b.AgentID, &b.RepositoryID, &b.SnapshotID, &b.StartedAt,
 		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
-		&b.FilesChanged, &b.ErrorMessage, &b.CreatedAt,
+		&b.FilesChanged, &b.ErrorMessage,
+		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError, &b.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get backup by snapshot ID: %w", err)
@@ -2790,7 +2979,456 @@ func scanVerifications(rows interface {
 	return verifications, nil
 }
 
-// Tag methods
+// DR Runbook methods
+
+// GetDRRunbooksByOrgID returns all DR runbooks for an organization.
+func (db *DB) GetDRRunbooksByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.DRRunbook, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, schedule_id, name, description, steps, contacts,
+		       credentials_location, recovery_time_objective_minutes,
+		       recovery_point_objective_minutes, status, created_at, updated_at
+		FROM dr_runbooks
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list DR runbooks: %w", err)
+	}
+	defer rows.Close()
+
+	var runbooks []*models.DRRunbook
+	for rows.Next() {
+		r, err := scanDRRunbook(rows)
+		if err != nil {
+			return nil, err
+		}
+		runbooks = append(runbooks, r)
+	}
+
+	return runbooks, nil
+}
+
+// GetDRRunbookByID returns a DR runbook by ID.
+func (db *DB) GetDRRunbookByID(ctx context.Context, id uuid.UUID) (*models.DRRunbook, error) {
+	row := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, schedule_id, name, description, steps, contacts,
+		       credentials_location, recovery_time_objective_minutes,
+		       recovery_point_objective_minutes, status, created_at, updated_at
+		FROM dr_runbooks
+		WHERE id = $1
+	`, id)
+
+	return scanDRRunbook(row)
+}
+
+// GetDRRunbookByScheduleID returns a DR runbook for a schedule.
+func (db *DB) GetDRRunbookByScheduleID(ctx context.Context, scheduleID uuid.UUID) (*models.DRRunbook, error) {
+	row := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, schedule_id, name, description, steps, contacts,
+		       credentials_location, recovery_time_objective_minutes,
+		       recovery_point_objective_minutes, status, created_at, updated_at
+		FROM dr_runbooks
+		WHERE schedule_id = $1
+	`, scheduleID)
+
+	return scanDRRunbook(row)
+}
+
+// CreateDRRunbook creates a new DR runbook.
+func (db *DB) CreateDRRunbook(ctx context.Context, runbook *models.DRRunbook) error {
+	stepsBytes, err := runbook.StepsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal steps: %w", err)
+	}
+
+	contactsBytes, err := runbook.ContactsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal contacts: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO dr_runbooks (id, org_id, schedule_id, name, description, steps, contacts,
+		                         credentials_location, recovery_time_objective_minutes,
+		                         recovery_point_objective_minutes, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, runbook.ID, runbook.OrgID, runbook.ScheduleID, runbook.Name, runbook.Description,
+		stepsBytes, contactsBytes, runbook.CredentialsLocation,
+		runbook.RecoveryTimeObjectiveMins, runbook.RecoveryPointObjectiveMins,
+		string(runbook.Status), runbook.CreatedAt, runbook.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create DR runbook: %w", err)
+	}
+	return nil
+}
+
+// UpdateDRRunbook updates an existing DR runbook.
+func (db *DB) UpdateDRRunbook(ctx context.Context, runbook *models.DRRunbook) error {
+	stepsBytes, err := runbook.StepsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal steps: %w", err)
+	}
+
+	contactsBytes, err := runbook.ContactsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal contacts: %w", err)
+	}
+
+	runbook.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE dr_runbooks
+		SET name = $2, description = $3, steps = $4, contacts = $5,
+		    credentials_location = $6, recovery_time_objective_minutes = $7,
+		    recovery_point_objective_minutes = $8, status = $9, updated_at = $10,
+		    schedule_id = $11
+		WHERE id = $1
+	`, runbook.ID, runbook.Name, runbook.Description, stepsBytes, contactsBytes,
+		runbook.CredentialsLocation, runbook.RecoveryTimeObjectiveMins,
+		runbook.RecoveryPointObjectiveMins, string(runbook.Status), runbook.UpdatedAt,
+		runbook.ScheduleID)
+	if err != nil {
+		return fmt.Errorf("update DR runbook: %w", err)
+	}
+	return nil
+}
+
+// DeleteDRRunbook deletes a DR runbook by ID.
+func (db *DB) DeleteDRRunbook(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM dr_runbooks WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete DR runbook: %w", err)
+	}
+	return nil
+}
+
+// scanDRRunbook scans a DR runbook from a row.
+func scanDRRunbook(row interface{ Scan(dest ...any) error }) (*models.DRRunbook, error) {
+	var r models.DRRunbook
+	var stepsBytes, contactsBytes []byte
+	var statusStr string
+	err := row.Scan(
+		&r.ID, &r.OrgID, &r.ScheduleID, &r.Name, &r.Description,
+		&stepsBytes, &contactsBytes, &r.CredentialsLocation,
+		&r.RecoveryTimeObjectiveMins, &r.RecoveryPointObjectiveMins,
+		&statusStr, &r.CreatedAt, &r.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("scan DR runbook: %w", err)
+	}
+
+	r.Status = models.DRRunbookStatus(statusStr)
+	if err := r.SetSteps(stepsBytes); err != nil {
+		return nil, fmt.Errorf("parse steps: %w", err)
+	}
+	if err := r.SetContacts(contactsBytes); err != nil {
+		return nil, fmt.Errorf("parse contacts: %w", err)
+	}
+
+	return &r, nil
+}
+
+// DR Test methods
+
+// GetDRTestsByRunbookID returns all DR tests for a runbook.
+func (db *DB) GetDRTestsByRunbookID(ctx context.Context, runbookID uuid.UUID) ([]*models.DRTest, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, runbook_id, schedule_id, agent_id, snapshot_id, status,
+		       started_at, completed_at, restore_size_bytes, restore_duration_seconds,
+		       verification_passed, notes, error_message, created_at
+		FROM dr_tests
+		WHERE runbook_id = $1
+		ORDER BY created_at DESC
+	`, runbookID)
+	if err != nil {
+		return nil, fmt.Errorf("list DR tests: %w", err)
+	}
+	defer rows.Close()
+
+	return scanDRTests(rows)
+}
+
+// GetDRTestsByOrgID returns all DR tests for an organization.
+func (db *DB) GetDRTestsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.DRTest, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT t.id, t.runbook_id, t.schedule_id, t.agent_id, t.snapshot_id, t.status,
+		       t.started_at, t.completed_at, t.restore_size_bytes, t.restore_duration_seconds,
+		       t.verification_passed, t.notes, t.error_message, t.created_at
+		FROM dr_tests t
+		JOIN dr_runbooks r ON t.runbook_id = r.id
+		WHERE r.org_id = $1
+		ORDER BY t.created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list DR tests by org: %w", err)
+	}
+	defer rows.Close()
+
+	return scanDRTests(rows)
+}
+
+// GetDRTestByID returns a DR test by ID.
+func (db *DB) GetDRTestByID(ctx context.Context, id uuid.UUID) (*models.DRTest, error) {
+	var t models.DRTest
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, runbook_id, schedule_id, agent_id, snapshot_id, status,
+		       started_at, completed_at, restore_size_bytes, restore_duration_seconds,
+		       verification_passed, notes, error_message, created_at
+		FROM dr_tests
+		WHERE id = $1
+	`, id).Scan(
+		&t.ID, &t.RunbookID, &t.ScheduleID, &t.AgentID, &t.SnapshotID, &statusStr,
+		&t.StartedAt, &t.CompletedAt, &t.RestoreSizeBytes, &t.RestoreDurationSeconds,
+		&t.VerificationPassed, &t.Notes, &t.ErrorMessage, &t.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get DR test: %w", err)
+	}
+	t.Status = models.DRTestStatus(statusStr)
+	return &t, nil
+}
+
+// GetLatestDRTestByRunbookID returns the most recent DR test for a runbook.
+func (db *DB) GetLatestDRTestByRunbookID(ctx context.Context, runbookID uuid.UUID) (*models.DRTest, error) {
+	var t models.DRTest
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, runbook_id, schedule_id, agent_id, snapshot_id, status,
+		       started_at, completed_at, restore_size_bytes, restore_duration_seconds,
+		       verification_passed, notes, error_message, created_at
+		FROM dr_tests
+		WHERE runbook_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, runbookID).Scan(
+		&t.ID, &t.RunbookID, &t.ScheduleID, &t.AgentID, &t.SnapshotID, &statusStr,
+		&t.StartedAt, &t.CompletedAt, &t.RestoreSizeBytes, &t.RestoreDurationSeconds,
+		&t.VerificationPassed, &t.Notes, &t.ErrorMessage, &t.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get latest DR test: %w", err)
+	}
+	t.Status = models.DRTestStatus(statusStr)
+	return &t, nil
+}
+
+// CreateDRTest creates a new DR test record.
+func (db *DB) CreateDRTest(ctx context.Context, test *models.DRTest) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO dr_tests (id, runbook_id, schedule_id, agent_id, snapshot_id, status,
+		                      started_at, completed_at, restore_size_bytes, restore_duration_seconds,
+		                      verification_passed, notes, error_message, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+	`, test.ID, test.RunbookID, test.ScheduleID, test.AgentID, test.SnapshotID,
+		string(test.Status), test.StartedAt, test.CompletedAt, test.RestoreSizeBytes,
+		test.RestoreDurationSeconds, test.VerificationPassed, test.Notes,
+		test.ErrorMessage, test.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create DR test: %w", err)
+	}
+	return nil
+}
+
+// UpdateDRTest updates an existing DR test record.
+func (db *DB) UpdateDRTest(ctx context.Context, test *models.DRTest) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE dr_tests
+		SET status = $2, started_at = $3, completed_at = $4, snapshot_id = $5,
+		    restore_size_bytes = $6, restore_duration_seconds = $7,
+		    verification_passed = $8, notes = $9, error_message = $10
+		WHERE id = $1
+	`, test.ID, string(test.Status), test.StartedAt, test.CompletedAt, test.SnapshotID,
+		test.RestoreSizeBytes, test.RestoreDurationSeconds, test.VerificationPassed,
+		test.Notes, test.ErrorMessage)
+	if err != nil {
+		return fmt.Errorf("update DR test: %w", err)
+	}
+	return nil
+}
+
+// scanDRTests scans multiple DR test rows.
+func scanDRTests(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.DRTest, error) {
+	type scanner interface {
+		Next() bool
+		Scan(dest ...any) error
+		Err() error
+	}
+	r := rows.(scanner)
+
+	var tests []*models.DRTest
+	for r.Next() {
+		var t models.DRTest
+		var statusStr string
+		err := r.Scan(
+			&t.ID, &t.RunbookID, &t.ScheduleID, &t.AgentID, &t.SnapshotID, &statusStr,
+			&t.StartedAt, &t.CompletedAt, &t.RestoreSizeBytes, &t.RestoreDurationSeconds,
+			&t.VerificationPassed, &t.Notes, &t.ErrorMessage, &t.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan DR test: %w", err)
+		}
+		t.Status = models.DRTestStatus(statusStr)
+		tests = append(tests, &t)
+	}
+
+	if err := r.Err(); err != nil {
+		return nil, fmt.Errorf("iterate DR tests: %w", err)
+	}
+
+	return tests, nil
+}
+
+// DR Test Schedule methods
+
+// GetDRTestSchedulesByRunbookID returns all test schedules for a runbook.
+func (db *DB) GetDRTestSchedulesByRunbookID(ctx context.Context, runbookID uuid.UUID) ([]*models.DRTestSchedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, runbook_id, cron_expression, enabled, last_run_at, next_run_at, created_at, updated_at
+		FROM dr_test_schedules
+		WHERE runbook_id = $1
+		ORDER BY created_at
+	`, runbookID)
+	if err != nil {
+		return nil, fmt.Errorf("list DR test schedules: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []*models.DRTestSchedule
+	for rows.Next() {
+		var s models.DRTestSchedule
+		err := rows.Scan(
+			&s.ID, &s.RunbookID, &s.CronExpression, &s.Enabled,
+			&s.LastRunAt, &s.NextRunAt, &s.CreatedAt, &s.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan DR test schedule: %w", err)
+		}
+		schedules = append(schedules, &s)
+	}
+
+	return schedules, nil
+}
+
+// GetEnabledDRTestSchedules returns all enabled DR test schedules.
+func (db *DB) GetEnabledDRTestSchedules(ctx context.Context) ([]*models.DRTestSchedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, runbook_id, cron_expression, enabled, last_run_at, next_run_at, created_at, updated_at
+		FROM dr_test_schedules
+		WHERE enabled = true
+		ORDER BY next_run_at
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled DR test schedules: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []*models.DRTestSchedule
+	for rows.Next() {
+		var s models.DRTestSchedule
+		err := rows.Scan(
+			&s.ID, &s.RunbookID, &s.CronExpression, &s.Enabled,
+			&s.LastRunAt, &s.NextRunAt, &s.CreatedAt, &s.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan DR test schedule: %w", err)
+		}
+		schedules = append(schedules, &s)
+	}
+
+	return schedules, nil
+}
+
+// CreateDRTestSchedule creates a new DR test schedule.
+func (db *DB) CreateDRTestSchedule(ctx context.Context, schedule *models.DRTestSchedule) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO dr_test_schedules (id, runbook_id, cron_expression, enabled, last_run_at, next_run_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, schedule.ID, schedule.RunbookID, schedule.CronExpression, schedule.Enabled,
+		schedule.LastRunAt, schedule.NextRunAt, schedule.CreatedAt, schedule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create DR test schedule: %w", err)
+	}
+	return nil
+}
+
+// UpdateDRTestSchedule updates an existing DR test schedule.
+func (db *DB) UpdateDRTestSchedule(ctx context.Context, schedule *models.DRTestSchedule) error {
+	schedule.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE dr_test_schedules
+		SET cron_expression = $2, enabled = $3, last_run_at = $4, next_run_at = $5, updated_at = $6
+		WHERE id = $1
+	`, schedule.ID, schedule.CronExpression, schedule.Enabled, schedule.LastRunAt, schedule.NextRunAt, schedule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update DR test schedule: %w", err)
+	}
+	return nil
+}
+
+// DeleteDRTestSchedule deletes a DR test schedule by ID.
+func (db *DB) DeleteDRTestSchedule(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM dr_test_schedules WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete DR test schedule: %w", err)
+	}
+	return nil
+}
+
+// GetDRStatus returns the overall DR status for an organization.
+func (db *DB) GetDRStatus(ctx context.Context, orgID uuid.UUID) (*models.DRStatus, error) {
+	status := &models.DRStatus{}
+
+	// Get runbook counts
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'active')
+		FROM dr_runbooks
+		WHERE org_id = $1
+	`, orgID).Scan(&status.TotalRunbooks, &status.ActiveRunbooks)
+	if err != nil {
+		return nil, fmt.Errorf("get runbook counts: %w", err)
+	}
+
+	// Get test statistics from last 30 days
+	err = db.Pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*),
+			COALESCE(AVG(CASE WHEN verification_passed = true THEN 1.0 ELSE 0.0 END) * 100, 0)
+		FROM dr_tests t
+		JOIN dr_runbooks r ON t.runbook_id = r.id
+		WHERE r.org_id = $1 AND t.created_at > NOW() - INTERVAL '30 days'
+	`, orgID).Scan(&status.TestsLast30Days, &status.PassRate)
+	if err != nil {
+		return nil, fmt.Errorf("get test statistics: %w", err)
+	}
+
+	// Get last test date
+	err = db.Pool.QueryRow(ctx, `
+		SELECT MAX(t.completed_at)
+		FROM dr_tests t
+		JOIN dr_runbooks r ON t.runbook_id = r.id
+		WHERE r.org_id = $1
+	`, orgID).Scan(&status.LastTestAt)
+	if err != nil && err.Error() != "no rows in result set" {
+		return nil, fmt.Errorf("get last test date: %w", err)
+	}
+
+	// Get next scheduled test
+	err = db.Pool.QueryRow(ctx, `
+		SELECT MIN(s.next_run_at)
+		FROM dr_test_schedules s
+		JOIN dr_runbooks r ON s.runbook_id = r.id
+		WHERE r.org_id = $1 AND s.enabled = true AND s.next_run_at IS NOT NULL
+	`, orgID).Scan(&status.NextTestAt)
+	if err != nil && err.Error() != "no rows in result set" {
+		return nil, fmt.Errorf("get next test date: %w", err)
+	}
+
+	return status, nil
+}
+
 
 // GetTagsByOrgID returns all tags for an organization.
 func (db *DB) GetTagsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Tag, error) {
