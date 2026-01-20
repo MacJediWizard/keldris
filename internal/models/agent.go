@@ -23,21 +23,21 @@ const (
 
 // OSInfo contains operating system information from the agent.
 type OSInfo struct {
-	OS       string `json:"os"`
-	Arch     string `json:"arch"`
-	Hostname string `json:"hostname"`
-	Version  string `json:"version,omitempty"`
+	OS       string `json:"os" example:"linux"`
+	Arch     string `json:"arch" example:"amd64"`
+	Hostname string `json:"hostname" example:"backup-server-01"`
+	Version  string `json:"version,omitempty" example:"Ubuntu 22.04"`
 }
 
 // Agent represents a backup agent installed on a host.
 type Agent struct {
-	ID         uuid.UUID   `json:"id"`
-	OrgID      uuid.UUID   `json:"org_id"`
-	Hostname   string      `json:"hostname"`
+	ID         uuid.UUID   `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	OrgID      uuid.UUID   `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440001"`
+	Hostname   string      `json:"hostname" example:"backup-server-01"`
 	APIKeyHash string      `json:"-"` // Never expose in JSON
 	OSInfo     *OSInfo     `json:"os_info,omitempty"`
 	LastSeen   *time.Time  `json:"last_seen,omitempty"`
-	Status     AgentStatus `json:"status"`
+	Status     AgentStatus `json:"status" example:"active"`
 	CreatedAt  time.Time   `json:"created_at"`
 	UpdatedAt  time.Time   `json:"updated_at"`
 }
