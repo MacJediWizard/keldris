@@ -214,6 +214,17 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		Str("schedule_name", schedule.Name).
 		Logger()
 
+	// Check if backup can run at current time based on time window and excluded hours
+	now := time.Now()
+	if !schedule.CanRunAt(now) {
+		nextAllowed := schedule.NextAllowedTime(now)
+		logger.Info().
+			Time("current_time", now).
+			Time("next_allowed_time", nextAllowed).
+			Msg("backup skipped: outside allowed time window")
+		return
+	}
+
 	logger.Info().Msg("starting scheduled backup")
 
 	// Create backup record
@@ -270,8 +281,17 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		fmt.Sprintf("agent:%s", schedule.AgentID.String()),
 	}
 
-	// Run the backup
-	stats, err := s.restic.Backup(ctx, resticCfg, schedule.Paths, schedule.Excludes, tags)
+	// Build backup options with bandwidth limit
+	var opts *BackupOptions
+	if schedule.BandwidthLimitKB != nil {
+		opts = &BackupOptions{
+			BandwidthLimitKB: schedule.BandwidthLimitKB,
+		}
+		logger.Debug().Int("bandwidth_limit_kb", *schedule.BandwidthLimitKB).Msg("bandwidth limit applied")
+	}
+
+	// Run the backup with options
+	stats, err := s.restic.BackupWithOptions(ctx, resticCfg, schedule.Paths, schedule.Excludes, tags, opts)
 	if err != nil {
 		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("backup failed: %v", err), logger)
 		return
@@ -441,4 +461,49 @@ func (s *Scheduler) GetNextRun(scheduleID uuid.UUID) (time.Time, bool) {
 	}
 
 	return entry.Next, true
+}
+
+// GetNextAllowedRun returns the next time a backup can actually run for a schedule,
+// accounting for both the cron schedule and backup window constraints.
+func (s *Scheduler) GetNextAllowedRun(ctx context.Context, scheduleID uuid.UUID) (time.Time, bool) {
+	s.mu.RLock()
+	entryID, exists := s.entries[scheduleID]
+	s.mu.RUnlock()
+
+	if !exists {
+		return time.Time{}, false
+	}
+
+	entry := s.cron.Entry(entryID)
+	if !entry.Valid() {
+		return time.Time{}, false
+	}
+
+	// Get the schedule to check time window constraints
+	schedules, err := s.store.GetEnabledSchedules(ctx)
+	if err != nil {
+		return entry.Next, true // Fall back to cron time if we can't get schedule
+	}
+
+	var schedule *models.Schedule
+	for _, sched := range schedules {
+		if sched.ID == scheduleID {
+			schedule = &sched
+			break
+		}
+	}
+
+	if schedule == nil {
+		return entry.Next, true // Fall back to cron time if schedule not found
+	}
+
+	// Check if the cron time is within the allowed window
+	nextCronTime := entry.Next
+	if schedule.CanRunAt(nextCronTime) {
+		return nextCronTime, true
+	}
+
+	// Find the next allowed time after the cron time
+	nextAllowed := schedule.NextAllowedTime(nextCronTime)
+	return nextAllowed, true
 }
