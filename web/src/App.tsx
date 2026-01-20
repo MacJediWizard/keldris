@@ -16,6 +16,7 @@ import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
 import { Restore } from './pages/Restore';
 import { Schedules } from './pages/Schedules';
 import { StorageStats } from './pages/StorageStats';
+import { Tags } from './pages/Tags';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -51,6 +52,7 @@ function App() {
 						<Route path="audit-logs" element={<AuditLogs />} />
 						<Route path="stats" element={<StorageStats />} />
 						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
+						<Route path="tags" element={<Tags />} />
 						<Route
 							path="organization/members"
 							element={<OrganizationMembers />}

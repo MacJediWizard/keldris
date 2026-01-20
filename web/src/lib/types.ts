@@ -935,3 +935,66 @@ export interface DRStatus {
 	next_test_at?: string;
 	upcoming_tests: DRTestSchedule[];
 }
+
+// Tag types
+export interface Tag {
+	id: string;
+	org_id: string;
+	name: string;
+	color: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateTagRequest {
+	name: string;
+	color?: string;
+}
+
+export interface UpdateTagRequest {
+	name?: string;
+	color?: string;
+}
+
+export interface AssignTagsRequest {
+	tag_ids: string[];
+}
+
+export interface TagsResponse {
+	tags: Tag[];
+}
+
+// Search types
+export type SearchResultType =
+	| 'agent'
+	| 'backup'
+	| 'snapshot'
+	| 'schedule'
+	| 'repository';
+
+export interface SearchResult {
+	type: SearchResultType;
+	id: string;
+	name: string;
+	description?: string;
+	status?: string;
+	created_at: string;
+}
+
+export interface SearchFilter {
+	q: string;
+	types?: string[];
+	status?: string;
+	tag_ids?: string[];
+	date_from?: string;
+	date_to?: string;
+	size_min?: number;
+	size_max?: number;
+	limit?: number;
+}
+
+export interface SearchResponse {
+	results: SearchResult[];
+	query: string;
+	total: number;
+}
