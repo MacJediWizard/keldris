@@ -161,20 +161,92 @@ func (r *Restic) Snapshots(ctx context.Context, cfg ResticConfig) ([]Snapshot, e
 	return snapshots, nil
 }
 
+// SnapshotFile represents a file or directory in a snapshot.
+type SnapshotFile struct {
+	Name       string    `json:"name"`
+	Type       string    `json:"type"` // "file" or "dir"
+	Path       string    `json:"path"`
+	Size       int64     `json:"size"`
+	Mode       uint32    `json:"mode"`
+	ModTime    time.Time `json:"mtime"`
+	AccessTime time.Time `json:"atime"`
+	ChangeTime time.Time `json:"ctime"`
+}
+
+// ListFiles lists files in a snapshot, optionally filtered by path prefix.
+func (r *Restic) ListFiles(ctx context.Context, cfg ResticConfig, snapshotID, pathPrefix string) ([]SnapshotFile, error) {
+	r.logger.Debug().
+		Str("snapshot_id", snapshotID).
+		Str("path_prefix", pathPrefix).
+		Msg("listing files in snapshot")
+
+	args := []string{"ls", "--repo", cfg.Repository, "--json", snapshotID}
+	if pathPrefix != "" {
+		args = append(args, pathPrefix)
+	}
+
+	output, err := r.run(ctx, cfg, args)
+	if err != nil {
+		if strings.Contains(err.Error(), "no matching ID") {
+			return nil, ErrSnapshotNotFound
+		}
+		return nil, fmt.Errorf("list files: %w", err)
+	}
+
+	var files []SnapshotFile
+	lines := bytes.Split(output, []byte("\n"))
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+
+		var file SnapshotFile
+		if err := json.Unmarshal(line, &file); err != nil {
+			// Skip snapshot metadata line (first line)
+			continue
+		}
+		// Only include files and directories
+		if file.Type == "file" || file.Type == "dir" {
+			files = append(files, file)
+		}
+	}
+
+	r.logger.Debug().Int("count", len(files)).Msg("files listed")
+	return files, nil
+}
+
+// RestoreOptions configures a restore operation.
+type RestoreOptions struct {
+	TargetPath string   // Destination path for restore
+	Include    []string // Paths to include (empty = all)
+	Exclude    []string // Paths to exclude
+}
+
 // Restore restores a snapshot to the given target path.
-func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID, targetPath string) error {
+func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID string, opts RestoreOptions) error {
 	r.logger.Info().
 		Str("snapshot_id", snapshotID).
-		Str("target_path", targetPath).
+		Str("target_path", opts.TargetPath).
+		Strs("include", opts.Include).
+		Strs("exclude", opts.Exclude).
 		Msg("starting restore")
 
 	args := []string{
 		"restore",
 		"--repo", cfg.Repository,
-		"--target", targetPath,
+		"--target", opts.TargetPath,
 		"--json",
-		snapshotID,
 	}
+
+	for _, include := range opts.Include {
+		args = append(args, "--include", include)
+	}
+
+	for _, exclude := range opts.Exclude {
+		args = append(args, "--exclude", exclude)
+	}
+
+	args = append(args, snapshotID)
 
 	_, err := r.run(ctx, cfg, args)
 	if err != nil {

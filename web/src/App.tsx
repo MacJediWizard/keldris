@@ -5,6 +5,7 @@ import { Agents } from './pages/Agents';
 import { Backups } from './pages/Backups';
 import { Dashboard } from './pages/Dashboard';
 import { Repositories } from './pages/Repositories';
+import { Restore } from './pages/Restore';
 import { Schedules } from './pages/Schedules';
 
 const queryClient = new QueryClient({
@@ -34,6 +35,7 @@ function App() {
 						<Route path="repositories" element={<Repositories />} />
 						<Route path="schedules" element={<Schedules />} />
 						<Route path="backups" element={<Backups />} />
+						<Route path="restore" element={<Restore />} />
 					</Route>
 				</Routes>
 			</BrowserRouter>
