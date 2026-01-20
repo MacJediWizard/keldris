@@ -753,6 +753,8 @@ export interface VerificationSchedulesResponse {
 }
 
 // DR Runbook types
+export type DRRunbookStatus = 'active' | 'draft' | 'archived';
+
 export interface DRRunbookStep {
 	order: number;
 	title: string;
@@ -776,6 +778,7 @@ export interface DRRunbook {
 	scenario: string;
 	steps: DRRunbookStep[];
 	contacts?: DRRunbookContact[];
+	status: DRRunbookStatus;
 	estimated_rto_minutes?: number;
 	estimated_rpo_minutes?: number;
 	last_tested_at?: string;
@@ -787,9 +790,10 @@ export interface DRRunbook {
 export interface CreateDRRunbookRequest {
 	name: string;
 	description?: string;
-	scenario: string;
-	steps: DRRunbookStep[];
+	scenario?: string;
+	steps?: DRRunbookStep[];
 	contacts?: DRRunbookContact[];
+	schedule_id?: string;
 	estimated_rto_minutes?: number;
 	estimated_rpo_minutes?: number;
 }
@@ -810,13 +814,14 @@ export interface DRRunbooksResponse {
 
 export interface DRRunbookRenderResponse {
 	runbook: DRRunbook;
-	markdown: string;
+	content: string;
 }
 
 // DR Test types
 export type DRTestStatus =
 	| 'pending'
 	| 'running'
+	| 'completed'
 	| 'passed'
 	| 'failed'
 	| 'skipped';
@@ -883,9 +888,14 @@ export interface DRTestSchedulesResponse {
 // DR Status for dashboard
 export interface DRStatus {
 	total_runbooks: number;
+	active_runbooks: number;
 	tested_runbooks: number;
 	untested_runbooks: number;
 	overdue_runbooks: number;
+	tests_last_30_days: number;
+	pass_rate: number;
 	last_test?: DRTest;
+	last_test_at?: string;
+	next_test_at?: string;
 	upcoming_tests: DRTestSchedule[];
 }
