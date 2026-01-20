@@ -28,9 +28,23 @@ type ScheduleStore interface {
 	// UpdateBackup updates an existing backup record.
 	UpdateBackup(ctx context.Context, backup *models.Backup) error
 
+	// GetOrCreateReplicationStatus gets or creates a replication status record.
+	GetOrCreateReplicationStatus(ctx context.Context, scheduleID, sourceRepoID, targetRepoID uuid.UUID) (*models.ReplicationStatus, error)
+
+	// UpdateReplicationStatus updates a replication status record.
+	UpdateReplicationStatus(ctx context.Context, rs *models.ReplicationStatus) error
+
 	// GetAgentByID returns an agent by ID.
 	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
 }
+
+const (
+	// maxRetries is the number of retry attempts per repository.
+	maxRetries = 3
+
+	// retryDelay is the delay between retry attempts.
+	retryDelay = 5 * time.Second
+)
 
 // DecryptFunc is a function that decrypts repository configuration.
 type DecryptFunc func(encrypted []byte) ([]byte, error)
@@ -206,7 +220,7 @@ func (s *Scheduler) addSchedule(schedule models.Schedule) error {
 	return nil
 }
 
-// executeBackup runs a backup for the given schedule.
+// executeBackup runs a backup for the given schedule with retry/failover and replication.
 func (s *Scheduler) executeBackup(schedule models.Schedule) {
 	ctx := context.Background()
 	logger := s.logger.With().
@@ -227,49 +241,165 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 
 	logger.Info().Msg("starting scheduled backup")
 
-	// Create backup record
-	backup := models.NewBackup(schedule.ID, schedule.AgentID)
-	if err := s.store.CreateBackup(ctx, backup); err != nil {
-		logger.Error().Err(err).Msg("failed to create backup record")
+	// Get enabled repositories sorted by priority
+	enabledRepos := schedule.GetEnabledRepositories()
+	if len(enabledRepos) == 0 {
+		logger.Error().Msg("no enabled repositories for schedule")
 		return
 	}
 
-	// Get repository configuration
-	repo, err := s.store.GetRepository(ctx, schedule.RepositoryID)
-	if err != nil {
-		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("get repository: %v", err), logger)
+	// Try backup to each repository with retry logic
+	var successRepo *models.ScheduleRepository
+	var successBackup *models.Backup
+	var successStats *BackupStats
+	var successResticCfg ResticConfig
+	var lastErr error
+	var lastBackup *models.Backup
+
+	for i := range enabledRepos {
+		schedRepo := &enabledRepos[i]
+		repoLogger := logger.With().
+			Str("repository_id", schedRepo.RepositoryID.String()).
+			Int("priority", schedRepo.Priority).
+			Logger()
+
+		repoLogger.Info().Msg("attempting backup to repository")
+
+		// Try up to maxRetries times for this repository
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			backup, stats, resticCfg, err := s.runBackupToRepo(ctx, schedule, schedRepo, attempt, repoLogger)
+			if err == nil {
+				successRepo = schedRepo
+				successBackup = backup
+				successStats = stats
+				successResticCfg = resticCfg
+				break
+			}
+
+			lastErr = err
+			lastBackup = backup // Track failed backup for notification
+			repoLogger.Warn().
+				Err(err).
+				Int("attempt", attempt).
+				Int("max_attempts", maxRetries).
+				Msg("backup attempt failed")
+
+			if attempt < maxRetries {
+				time.Sleep(retryDelay)
+			}
+		}
+
+		if successRepo != nil {
+			break
+		}
+		repoLogger.Warn().Msg("all retry attempts failed for repository, trying next")
+	}
+
+	// If all repositories failed, log, notify, and return
+	if successRepo == nil {
+		errMsg := "backup failed to all repositories"
+		if lastErr != nil {
+			errMsg = fmt.Sprintf("backup failed to all repositories: %v", lastErr)
+		}
+		logger.Error().
+			Err(lastErr).
+			Int("repos_tried", len(enabledRepos)).
+			Msg("backup failed to all repositories")
+		// Send failure notification (use last backup attempt if available)
+		if lastBackup != nil {
+			s.sendBackupNotification(ctx, schedule, lastBackup, false, errMsg)
+		}
 		return
+	}
+
+	logger.Info().
+		Str("repository_id", successRepo.RepositoryID.String()).
+		Str("snapshot_id", successStats.SnapshotID).
+		Int("files_new", successStats.FilesNew).
+		Int("files_changed", successStats.FilesChanged).
+		Int64("size_bytes", successStats.SizeBytes).
+		Dur("duration", successStats.Duration).
+		Msg("backup completed successfully")
+
+	// Send success notification
+	s.sendBackupNotification(ctx, schedule, successBackup, true, "")
+
+	// Run prune if retention policy is set
+	if schedule.RetentionPolicy != nil {
+		logger.Info().Msg("running prune with retention policy")
+		forgetResult, err := s.restic.Prune(ctx, successResticCfg, schedule.RetentionPolicy)
+		if err != nil {
+			logger.Error().Err(err).Msg("prune failed")
+			successBackup.RecordRetention(0, 0, err)
+		} else {
+			logger.Info().
+				Int("snapshots_removed", forgetResult.SnapshotsRemoved).
+				Int("snapshots_kept", forgetResult.SnapshotsKept).
+				Msg("prune completed")
+			successBackup.RecordRetention(forgetResult.SnapshotsRemoved, forgetResult.SnapshotsKept, nil)
+		}
+		// Update backup record with retention results
+		if err := s.store.UpdateBackup(ctx, successBackup); err != nil {
+			logger.Error().Err(err).Msg("failed to update backup with retention results")
+		}
+	}
+
+	// Replicate to other repositories
+	s.replicateToOtherRepos(ctx, schedule, successRepo, successStats.SnapshotID, successResticCfg, enabledRepos, logger)
+
+	_ = successBackup // Backup record already updated in runBackupToRepo
+}
+
+// runBackupToRepo attempts a backup to a specific repository.
+func (s *Scheduler) runBackupToRepo(
+	ctx context.Context,
+	schedule models.Schedule,
+	schedRepo *models.ScheduleRepository,
+	attempt int,
+	logger zerolog.Logger,
+) (*models.Backup, *BackupStats, ResticConfig, error) {
+	// Create backup record
+	backup := models.NewBackup(schedule.ID, schedule.AgentID, &schedRepo.RepositoryID)
+	if err := s.store.CreateBackup(ctx, backup); err != nil {
+		return nil, nil, ResticConfig{}, fmt.Errorf("create backup record: %w", err)
+	}
+
+	// Get repository configuration
+	repo, err := s.store.GetRepository(ctx, schedRepo.RepositoryID)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("get repository: %v", err), logger)
+		return nil, nil, ResticConfig{}, fmt.Errorf("get repository: %w", err)
 	}
 
 	// Decrypt repository configuration
 	if s.config.DecryptFunc == nil {
-		s.failBackupWithSchedule(ctx, backup, schedule, "decrypt function not configured", logger)
-		return
+		s.failBackup(ctx, backup, "decrypt function not configured", logger)
+		return nil, nil, ResticConfig{}, errors.New("decrypt function not configured")
 	}
 
 	configJSON, err := s.config.DecryptFunc(repo.ConfigEncrypted)
 	if err != nil {
-		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("decrypt config: %v", err), logger)
-		return
+		s.failBackup(ctx, backup, fmt.Sprintf("decrypt config: %v", err), logger)
+		return nil, nil, ResticConfig{}, fmt.Errorf("decrypt config: %w", err)
 	}
 
 	// Parse backend configuration
 	backend, err := ParseBackend(repo.Type, configJSON)
 	if err != nil {
-		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("parse backend: %v", err), logger)
-		return
+		s.failBackup(ctx, backup, fmt.Sprintf("parse backend: %v", err), logger)
+		return nil, nil, ResticConfig{}, fmt.Errorf("parse backend: %w", err)
 	}
 
 	// Get repository password
 	if s.config.PasswordFunc == nil {
-		s.failBackupWithSchedule(ctx, backup, schedule, "password function not configured", logger)
-		return
+		s.failBackup(ctx, backup, "password function not configured", logger)
+		return nil, nil, ResticConfig{}, errors.New("password function not configured")
 	}
 
 	password, err := s.config.PasswordFunc(repo.ID)
 	if err != nil {
-		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("get password: %v", err), logger)
-		return
+		s.failBackup(ctx, backup, fmt.Sprintf("get password: %v", err), logger)
+		return nil, nil, ResticConfig{}, fmt.Errorf("get password: %w", err)
 	}
 
 	// Build restic config
@@ -293,47 +423,115 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 	// Run the backup with options
 	stats, err := s.restic.BackupWithOptions(ctx, resticCfg, schedule.Paths, schedule.Excludes, tags, opts)
 	if err != nil {
-		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("backup failed: %v", err), logger)
-		return
+		s.failBackup(ctx, backup, fmt.Sprintf("backup failed (attempt %d): %v", attempt, err), logger)
+		return nil, nil, ResticConfig{}, fmt.Errorf("backup failed: %w", err)
 	}
 
 	// Mark backup as completed
 	backup.Complete(stats.SnapshotID, stats.SizeBytes, stats.FilesNew, stats.FilesChanged)
 	if err := s.store.UpdateBackup(ctx, backup); err != nil {
 		logger.Error().Err(err).Msg("failed to update backup record")
-		return
 	}
 
-	logger.Info().
-		Str("snapshot_id", stats.SnapshotID).
-		Int("files_new", stats.FilesNew).
-		Int("files_changed", stats.FilesChanged).
-		Int64("size_bytes", stats.SizeBytes).
-		Dur("duration", stats.Duration).
-		Msg("scheduled backup completed")
+	return backup, stats, resticCfg, nil
+}
 
-	// Send success notification
-	s.sendBackupNotification(ctx, schedule, backup, true, "")
+// replicateToOtherRepos copies the snapshot to other enabled repositories.
+func (s *Scheduler) replicateToOtherRepos(
+	ctx context.Context,
+	schedule models.Schedule,
+	sourceRepo *models.ScheduleRepository,
+	snapshotID string,
+	sourceCfg ResticConfig,
+	allRepos []models.ScheduleRepository,
+	logger zerolog.Logger,
+) {
+	for i := range allRepos {
+		targetRepo := &allRepos[i]
 
-	// Run prune if retention policy is set
-	if schedule.RetentionPolicy != nil {
-		logger.Info().Msg("running prune with retention policy")
-		forgetResult, err := s.restic.Prune(ctx, resticCfg, schedule.RetentionPolicy)
+		// Skip the source repository
+		if targetRepo.RepositoryID == sourceRepo.RepositoryID {
+			continue
+		}
+
+		replicateLogger := logger.With().
+			Str("source_repo", sourceRepo.RepositoryID.String()).
+			Str("target_repo", targetRepo.RepositoryID.String()).
+			Logger()
+
+		replicateLogger.Info().Msg("starting replication to secondary repository")
+
+		// Get or create replication status
+		replStatus, err := s.store.GetOrCreateReplicationStatus(
+			ctx, schedule.ID, sourceRepo.RepositoryID, targetRepo.RepositoryID,
+		)
 		if err != nil {
-			logger.Error().Err(err).Msg("prune failed")
-			backup.RecordRetention(0, 0, err)
-		} else {
-			logger.Info().
-				Int("snapshots_removed", forgetResult.SnapshotsRemoved).
-				Int("snapshots_kept", forgetResult.SnapshotsKept).
-				Msg("prune completed")
-			backup.RecordRetention(forgetResult.SnapshotsRemoved, forgetResult.SnapshotsKept, nil)
+			replicateLogger.Error().Err(err).Msg("failed to get replication status")
+			continue
 		}
 
-		// Update backup record with retention results
-		if err := s.store.UpdateBackup(ctx, backup); err != nil {
-			logger.Error().Err(err).Msg("failed to update backup with retention results")
+		// Mark as syncing
+		replStatus.MarkSyncing()
+		if err := s.store.UpdateReplicationStatus(ctx, replStatus); err != nil {
+			replicateLogger.Error().Err(err).Msg("failed to update replication status")
 		}
+
+		// Get target repository configuration
+		targetRepoObj, err := s.store.GetRepository(ctx, targetRepo.RepositoryID)
+		if err != nil {
+			replStatus.MarkFailed(fmt.Sprintf("get target repository: %v", err))
+			s.store.UpdateReplicationStatus(ctx, replStatus)
+			replicateLogger.Error().Err(err).Msg("failed to get target repository")
+			continue
+		}
+
+		// Decrypt target repository configuration
+		targetConfigJSON, err := s.config.DecryptFunc(targetRepoObj.ConfigEncrypted)
+		if err != nil {
+			replStatus.MarkFailed(fmt.Sprintf("decrypt target config: %v", err))
+			s.store.UpdateReplicationStatus(ctx, replStatus)
+			replicateLogger.Error().Err(err).Msg("failed to decrypt target repository config")
+			continue
+		}
+
+		// Parse target backend configuration
+		targetBackend, err := ParseBackend(targetRepoObj.Type, targetConfigJSON)
+		if err != nil {
+			replStatus.MarkFailed(fmt.Sprintf("parse target backend: %v", err))
+			s.store.UpdateReplicationStatus(ctx, replStatus)
+			replicateLogger.Error().Err(err).Msg("failed to parse target backend")
+			continue
+		}
+
+		// Get target repository password
+		targetPassword, err := s.config.PasswordFunc(targetRepoObj.ID)
+		if err != nil {
+			replStatus.MarkFailed(fmt.Sprintf("get target password: %v", err))
+			s.store.UpdateReplicationStatus(ctx, replStatus)
+			replicateLogger.Error().Err(err).Msg("failed to get target password")
+			continue
+		}
+
+		// Build target restic config
+		targetCfg := targetBackend.ToResticConfig(targetPassword)
+
+		// Copy snapshot to target repository
+		if err := s.restic.Copy(ctx, sourceCfg, targetCfg, snapshotID); err != nil {
+			replStatus.MarkFailed(fmt.Sprintf("copy snapshot: %v", err))
+			s.store.UpdateReplicationStatus(ctx, replStatus)
+			replicateLogger.Error().Err(err).Msg("failed to copy snapshot")
+			continue
+		}
+
+		// Mark as synced
+		replStatus.MarkSynced(snapshotID)
+		if err := s.store.UpdateReplicationStatus(ctx, replStatus); err != nil {
+			replicateLogger.Error().Err(err).Msg("failed to update replication status")
+		}
+
+		replicateLogger.Info().
+			Str("snapshot_id", snapshotID).
+			Msg("replication completed successfully")
 	}
 }
 
@@ -345,12 +543,6 @@ func (s *Scheduler) failBackup(ctx context.Context, backup *models.Backup, errMs
 		return
 	}
 	logger.Error().Str("error", errMsg).Msg("backup failed")
-}
-
-// failBackupWithSchedule marks a backup as failed and sends a notification.
-func (s *Scheduler) failBackupWithSchedule(ctx context.Context, backup *models.Backup, schedule models.Schedule, errMsg string, logger zerolog.Logger) {
-	s.failBackup(ctx, backup, errMsg, logger)
-	s.sendBackupNotification(ctx, schedule, backup, false, errMsg)
 }
 
 // sendBackupNotification sends a notification for a backup result.
@@ -674,8 +866,15 @@ func (s *DRTestScheduler) executeDRTest(schedule models.DRTestSchedule) {
 			return
 		}
 
+		// Get primary repository from schedule
+		primaryRepo := backupSchedule.GetPrimaryRepository()
+		if primaryRepo == nil {
+			s.failDRTest(ctx, test, "no primary repository configured for schedule", logger)
+			return
+		}
+
 		// Get repository configuration
-		repo, err := s.store.GetRepository(ctx, backupSchedule.RepositoryID)
+		repo, err := s.store.GetRepository(ctx, primaryRepo.RepositoryID)
 		if err != nil {
 			s.failDRTest(ctx, test, fmt.Sprintf("get repository: %v", err), logger)
 			return

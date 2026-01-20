@@ -38,7 +38,13 @@ func (g *RunbookGenerator) GenerateForSchedule(ctx context.Context, schedule *mo
 		return nil, fmt.Errorf("get agent: %w", err)
 	}
 
-	repo, err := g.store.GetRepositoryByID(ctx, schedule.RepositoryID)
+	// Get primary repository from schedule
+	primaryRepo := schedule.GetPrimaryRepository()
+	if primaryRepo == nil {
+		return nil, fmt.Errorf("no primary repository configured for schedule")
+	}
+
+	repo, err := g.store.GetRepositoryByID(ctx, primaryRepo.RepositoryID)
 	if err != nil {
 		return nil, fmt.Errorf("get repository: %w", err)
 	}
@@ -266,9 +272,12 @@ func (g *RunbookGenerator) RenderText(ctx context.Context, runbook *models.DRRun
 				data.Agent = agent
 			}
 
-			repo, err := g.store.GetRepositoryByID(ctx, schedule.RepositoryID)
-			if err == nil {
-				data.Repository = repo
+			// Get primary repository from schedule
+			if primaryRepo := schedule.GetPrimaryRepository(); primaryRepo != nil {
+				repo, err := g.store.GetRepositoryByID(ctx, primaryRepo.RepositoryID)
+				if err == nil {
+					data.Repository = repo
+				}
 			}
 		}
 	}
