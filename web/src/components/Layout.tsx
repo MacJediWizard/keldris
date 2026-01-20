@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
 import {
 	useOrganizations,
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
+import { useSearch } from '../hooks/useSearch';
+import type { SearchResult, SearchResultType } from '../lib/types';
 
 interface NavItem {
 	path: string;
@@ -115,6 +117,26 @@ const navItems: NavItem[] = [
 		),
 	},
 	{
+		path: '/dr-runbooks',
+		label: 'DR Runbooks',
+		icon: (
+			<svg
+				aria-hidden="true"
+				className="w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+				/>
+			</svg>
+		),
+	},
+	{
 		path: '/restore',
 		label: 'Restore',
 		icon: (
@@ -210,6 +232,26 @@ const navItems: NavItem[] = [
 					strokeLinejoin="round"
 					strokeWidth={2}
 					d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+				/>
+			</svg>
+		),
+	},
+	{
+		path: '/tags',
+		label: 'Tags',
+		icon: (
+			<svg
+				aria-hidden="true"
+				className="w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
 				/>
 			</svg>
 		),
@@ -437,6 +479,230 @@ function OrgSwitcher() {
 	);
 }
 
+function getSearchResultIcon(type: SearchResultType) {
+	switch (type) {
+		case 'agent':
+			return (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+					/>
+				</svg>
+			);
+		case 'backup':
+			return (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+					/>
+				</svg>
+			);
+		case 'schedule':
+			return (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+					/>
+				</svg>
+			);
+		case 'repository':
+			return (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+					/>
+				</svg>
+			);
+		default:
+			return (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+					/>
+				</svg>
+			);
+	}
+}
+
+function getSearchResultPath(result: SearchResult): string {
+	switch (result.type) {
+		case 'agent':
+			return '/agents';
+		case 'backup':
+			return '/backups';
+		case 'schedule':
+			return '/schedules';
+		case 'repository':
+			return '/repositories';
+		default:
+			return '/';
+	}
+}
+
+function GlobalSearch() {
+	const [query, setQuery] = useState('');
+	const [isOpen, setIsOpen] = useState(false);
+	const inputRef = useRef<HTMLInputElement>(null);
+	const dropdownRef = useRef<HTMLDivElement>(null);
+	const navigate = useNavigate();
+
+	const { data: searchData, isLoading } = useSearch(
+		query.length >= 2 ? { q: query, limit: 5 } : null,
+	);
+
+	useEffect(() => {
+		function handleClickOutside(event: MouseEvent) {
+			if (
+				dropdownRef.current &&
+				!dropdownRef.current.contains(event.target as Node)
+			) {
+				setIsOpen(false);
+			}
+		}
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => document.removeEventListener('mousedown', handleClickOutside);
+	}, []);
+
+	useEffect(() => {
+		function handleKeyDown(event: KeyboardEvent) {
+			if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+				event.preventDefault();
+				inputRef.current?.focus();
+				setIsOpen(true);
+			}
+			if (event.key === 'Escape') {
+				setIsOpen(false);
+				inputRef.current?.blur();
+			}
+		}
+		document.addEventListener('keydown', handleKeyDown);
+		return () => document.removeEventListener('keydown', handleKeyDown);
+	}, []);
+
+	const handleResultClick = (result: SearchResult) => {
+		setIsOpen(false);
+		setQuery('');
+		navigate(getSearchResultPath(result));
+	};
+
+	return (
+		<div className="relative" ref={dropdownRef}>
+			<div className="relative">
+				<svg
+					aria-hidden="true"
+					className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+					/>
+				</svg>
+				<input
+					ref={inputRef}
+					type="text"
+					value={query}
+					onChange={(e) => {
+						setQuery(e.target.value);
+						setIsOpen(true);
+					}}
+					onFocus={() => setIsOpen(true)}
+					placeholder="Search... (Cmd+K)"
+					className="w-64 pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+				/>
+			</div>
+
+			{isOpen && query.length >= 2 && (
+				<div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+					{isLoading ? (
+						<div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+					) : searchData?.results && searchData.results.length > 0 ? (
+						<>
+							<div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">
+								{searchData.total} result{searchData.total !== 1 ? 's' : ''}
+							</div>
+							{searchData.results.map((result, index) => (
+								<button
+									key={`${result.type}-${result.id}-${index}`}
+									type="button"
+									onClick={() => handleResultClick(result)}
+									className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3"
+								>
+									<span className="text-gray-400">
+										{getSearchResultIcon(result.type)}
+									</span>
+									<div className="flex-1 min-w-0">
+										<p className="text-sm font-medium text-gray-900 truncate">
+											{result.name}
+										</p>
+										<p className="text-xs text-gray-500 truncate">
+											{result.type}
+											{result.status && ` - ${result.status}`}
+										</p>
+									</div>
+								</button>
+							))}
+						</>
+					) : (
+						<div className="px-4 py-3 text-sm text-gray-500">
+							No results found for "{query}"
+						</div>
+					)}
+				</div>
+			)}
+		</div>
+	);
+}
+
 function Header() {
 	const [showDropdown, setShowDropdown] = useState(false);
 	const { data: user } = useMe();
@@ -452,6 +718,7 @@ function Header() {
 		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
 			<div className="flex items-center gap-4">
 				<OrgSwitcher />
+				<GlobalSearch />
 			</div>
 			<div className="flex items-center gap-4">
 				<Link
@@ -499,6 +766,14 @@ function Header() {
 									<p className="text-xs text-gray-500 truncate">{user.email}</p>
 								</div>
 							)}
+							<a
+								href="/api/docs/index.html"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+							>
+								API Documentation
+							</a>
 							<button
 								type="button"
 								onClick={() => logout.mutate()}

@@ -64,18 +64,29 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // CreateAgentRequest is the request body for creating an agent.
 type CreateAgentRequest struct {
-	Hostname string `json:"hostname" binding:"required,min=1,max=255"`
+	Hostname string `json:"hostname" binding:"required,min=1,max=255" example:"backup-server-01"`
 }
 
 // CreateAgentResponse is the response for agent creation.
 type CreateAgentResponse struct {
-	ID       uuid.UUID `json:"id"`
-	Hostname string    `json:"hostname"`
-	APIKey   string    `json:"api_key"` // Only returned once at creation
+	ID       uuid.UUID `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Hostname string    `json:"hostname" example:"backup-server-01"`
+	APIKey   string    `json:"api_key" example:"kld_abc123..."` // Only returned once at creation
 }
 
 // List returns all agents for the authenticated user's organization.
-// GET /api/v1/agents
+//
+//	@Summary		List agents
+//	@Description	Returns all agents registered in the current organization
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string][]models.Agent
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents [get]
 func (h *AgentsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -99,7 +110,19 @@ func (h *AgentsHandler) List(c *gin.Context) {
 }
 
 // Get returns a specific agent by ID.
-// GET /api/v1/agents/:id
+//
+//	@Summary		Get agent
+//	@Description	Returns a specific agent by ID
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Agent ID"
+//	@Success		200	{object}	models.Agent
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id} [get]
 func (h *AgentsHandler) Get(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -135,7 +158,19 @@ func (h *AgentsHandler) Get(c *gin.Context) {
 }
 
 // Create creates a new agent and returns an API key.
-// POST /api/v1/agents
+//
+//	@Summary		Create agent
+//	@Description	Registers a new backup agent and returns a one-time API key. Save this key securely as it cannot be retrieved again.
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		CreateAgentRequest	true	"Agent details"
+//	@Success		201		{object}	CreateAgentResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents [post]
 func (h *AgentsHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -186,7 +221,20 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 }
 
 // Delete removes an agent.
-// DELETE /api/v1/agents/:id
+//
+//	@Summary		Delete agent
+//	@Description	Removes an agent from the organization
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Agent ID"
+//	@Success		200	{object}	map[string]string
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id} [delete]
 func (h *AgentsHandler) Delete(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -234,7 +282,22 @@ type HeartbeatRequest struct {
 }
 
 // Heartbeat updates an agent's last seen timestamp.
-// POST /api/v1/agents/:id/heartbeat
+//
+//	@Summary		Agent heartbeat
+//	@Description	Updates an agent's last seen timestamp and optionally updates OS information
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string				true	"Agent ID"
+//	@Param			request	body		HeartbeatRequest	false	"Heartbeat data"
+//	@Success		200		{object}	models.Agent
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Security		BearerAuth
+//	@Router			/agents/{id}/heartbeat [post]
 func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 	// This endpoint can be called with either session auth or API key auth
 	// For now, we support session auth. API key auth will be added later.
@@ -290,13 +353,26 @@ func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 
 // RotateAPIKeyResponse is the response for API key rotation.
 type RotateAPIKeyResponse struct {
-	ID       uuid.UUID `json:"id"`
-	Hostname string    `json:"hostname"`
-	APIKey   string    `json:"api_key"` // Only returned once at rotation
+	ID       uuid.UUID `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Hostname string    `json:"hostname" example:"backup-server-01"`
+	APIKey   string    `json:"api_key" example:"kld_abc123..."` // Only returned once at rotation
 }
 
 // RotateAPIKey generates a new API key for an agent, invalidating the old one.
-// POST /api/v1/agents/:id/apikey/rotate
+//
+//	@Summary		Rotate API key
+//	@Description	Generates a new API key for an agent, invalidating the previous key. Save the new key securely.
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Agent ID"
+//	@Success		200	{object}	RotateAPIKeyResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id}/apikey/rotate [post]
 func (h *AgentsHandler) RotateAPIKey(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -359,7 +435,20 @@ func (h *AgentsHandler) RotateAPIKey(c *gin.Context) {
 }
 
 // RevokeAPIKey revokes an agent's API key, disabling its ability to authenticate.
-// DELETE /api/v1/agents/:id/apikey
+//
+//	@Summary		Revoke API key
+//	@Description	Revokes an agent's API key, preventing it from authenticating until a new key is issued
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Agent ID"
+//	@Success		200	{object}	map[string]string
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id}/apikey [delete]
 func (h *AgentsHandler) RevokeAPIKey(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
