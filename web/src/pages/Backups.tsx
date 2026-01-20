@@ -216,13 +216,18 @@ export function Backups() {
 
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
-	const scheduleRepoMap = new Map(
-		schedules?.map((s) => [s.id, s.repository_id]),
-	);
 
 	const getRepoNameForBackup = (backup: Backup) => {
-		const repoId = scheduleRepoMap.get(backup.schedule_id);
-		return repoId ? repoMap.get(repoId) : undefined;
+		// First check if backup has its own repository_id
+		if (backup.repository_id) {
+			return repoMap.get(backup.repository_id);
+		}
+		// Fall back to primary repository from schedule
+		const schedule = schedules?.find((s) => s.id === backup.schedule_id);
+		const primaryRepo = schedule?.repositories
+			?.sort((a, b) => a.priority - b.priority)
+			?.find((r) => r.enabled);
+		return primaryRepo ? repoMap.get(primaryRepo.repository_id) : undefined;
 	};
 
 	const filteredBackups = backups?.filter((backup) => {

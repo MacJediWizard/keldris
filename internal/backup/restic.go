@@ -367,6 +367,49 @@ func (r *Restic) PruneOnly(ctx context.Context, cfg ResticConfig) error {
 	return nil
 }
 
+// Copy copies a snapshot from one repository to another.
+// This is used for replicating backups to secondary repositories.
+func (r *Restic) Copy(ctx context.Context, sourceCfg, targetCfg ResticConfig, snapshotID string) error {
+	r.logger.Info().
+		Str("source_repo", sourceCfg.Repository).
+		Str("target_repo", targetCfg.Repository).
+		Str("snapshot_id", snapshotID).
+		Msg("starting snapshot copy")
+
+	args := []string{
+		"copy",
+		"--from-repo", sourceCfg.Repository,
+		"--repo", targetCfg.Repository,
+		"--json",
+		snapshotID,
+	}
+
+	// Build environment with both passwords
+	env := make(map[string]string)
+	for k, v := range targetCfg.Env {
+		env[k] = v
+	}
+	env["RESTIC_FROM_PASSWORD"] = sourceCfg.Password
+
+	// Use target config with modified env
+	copyCfg := ResticConfig{
+		Repository: targetCfg.Repository,
+		Password:   targetCfg.Password,
+		Env:        env,
+	}
+
+	_, err := r.run(ctx, copyCfg, args)
+	if err != nil {
+		return fmt.Errorf("copy snapshot: %w", err)
+	}
+
+	r.logger.Info().
+		Str("snapshot_id", snapshotID).
+		Msg("snapshot copy completed")
+
+	return nil
+}
+
 // CheckOptions configures the repository check operation.
 type CheckOptions struct {
 	// ReadData verifies the data of all pack files in the repository.
