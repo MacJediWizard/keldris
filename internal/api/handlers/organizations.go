@@ -124,7 +124,17 @@ type OrgResponse struct {
 }
 
 // List returns all organizations the user belongs to.
-// GET /api/v1/organizations
+//
+//	@Summary		List organizations
+//	@Description	Returns all organizations the current user is a member of
+//	@Tags			Organizations
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]any
+//	@Failure		401	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/organizations [get]
 func (h *OrganizationsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -160,7 +170,20 @@ func (h *OrganizationsHandler) List(c *gin.Context) {
 }
 
 // Create creates a new organization.
-// POST /api/v1/organizations
+//
+//	@Summary		Create organization
+//	@Description	Creates a new organization with the current user as owner
+//	@Tags			Organizations
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		CreateOrgRequest	true	"Organization details"
+//	@Success		201		{object}	OrgResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		409		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/organizations [post]
 func (h *OrganizationsHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
