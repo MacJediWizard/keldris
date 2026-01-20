@@ -18,7 +18,6 @@ type ScheduleStore interface {
 	CreateSchedule(ctx context.Context, schedule *models.Schedule) error
 	UpdateSchedule(ctx context.Context, schedule *models.Schedule) error
 	DeleteSchedule(ctx context.Context, id uuid.UUID) error
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
 	GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error)
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
@@ -88,10 +87,8 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
@@ -110,7 +107,7 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 			return
 		}
-		if agent.OrgID != dbUser.OrgID {
+		if agent.OrgID != user.CurrentOrgID {
 			c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 			return
 		}
@@ -127,9 +124,9 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 	}
 
 	// Get all schedules for all agents in the org
-	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), dbUser.OrgID)
+	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list agents")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list agents")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list schedules"})
 		return
 	}
@@ -155,6 +152,11 @@ func (h *SchedulesHandler) Get(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -170,7 +172,7 @@ func (h *SchedulesHandler) Get(c *gin.Context) {
 	}
 
 	// Verify schedule's agent belongs to user's org
-	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
+	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, schedule); err != nil {
 		return
 	}
 
@@ -185,16 +187,14 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		return
 	}
 
-	var req CreateScheduleRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+	var req CreateScheduleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
 		return
 	}
 
@@ -204,7 +204,7 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "agent not found"})
 		return
 	}
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "agent not found"})
 		return
 	}
@@ -215,7 +215,7 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "repository not found"})
 		return
 	}
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "repository not found"})
 		return
 	}
@@ -274,6 +274,11 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -293,7 +298,7 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
+	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, schedule); err != nil {
 		return
 	}
 
@@ -344,6 +349,11 @@ func (h *SchedulesHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -357,7 +367,7 @@ func (h *SchedulesHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
+	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, schedule); err != nil {
 		return
 	}
 
@@ -385,6 +395,11 @@ func (h *SchedulesHandler) Run(c *gin.Context) {
 		return
 	}
 
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -398,7 +413,7 @@ func (h *SchedulesHandler) Run(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
+	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, schedule); err != nil {
 		return
 	}
 
@@ -417,21 +432,14 @@ func (h *SchedulesHandler) Run(c *gin.Context) {
 
 // verifyScheduleAccess checks if the user has access to the schedule.
 // Returns nil if access is granted, or sends an error response and returns error.
-func (h *SchedulesHandler) verifyScheduleAccess(c *gin.Context, userID uuid.UUID, schedule *models.Schedule) error {
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), userID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", userID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return err
-	}
-
+func (h *SchedulesHandler) verifyScheduleAccess(c *gin.Context, orgID uuid.UUID, schedule *models.Schedule) error {
 	agent, err := h.store.GetAgentByID(c.Request.Context(), schedule.AgentID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return err
 	}
 
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != orgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return err
 	}

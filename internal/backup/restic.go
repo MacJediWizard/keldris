@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/rs/zerolog"
 )
@@ -21,12 +22,8 @@ var ErrRepositoryNotInitialized = errors.New("repository not initialized")
 // ErrSnapshotNotFound is returned when a snapshot cannot be found.
 var ErrSnapshotNotFound = errors.New("snapshot not found")
 
-// ResticConfig holds configuration for a Restic backup operation.
-type ResticConfig struct {
-	Repository string
-	Password   string
-	Env        map[string]string
-}
+// ResticConfig is an alias to backends.ResticConfig for backwards compatibility.
+type ResticConfig = backends.ResticConfig
 
 // Snapshot represents a Restic snapshot.
 type Snapshot struct {
@@ -208,10 +205,47 @@ func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID, targ
 	return nil
 }
 
-// Prune removes old snapshots according to the retention policy.
-func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.RetentionPolicy) error {
+// Forget removes old snapshots according to the retention policy and returns stats.
+func (r *Restic) Forget(ctx context.Context, cfg ResticConfig, retention *models.RetentionPolicy) (*ForgetResult, error) {
 	if retention == nil {
-		return errors.New("retention policy required for prune")
+		return nil, errors.New("retention policy required for forget")
+	}
+
+	r.logger.Info().
+		Interface("retention", retention).
+		Msg("starting forget with retention policy")
+
+	forgetArgs := r.buildRetentionArgs(cfg.Repository, retention)
+	// Remove --prune from forget args - we'll call prune separately if needed
+	prunelessArgs := make([]string, 0, len(forgetArgs))
+	for _, arg := range forgetArgs {
+		if arg != "--prune" {
+			prunelessArgs = append(prunelessArgs, arg)
+		}
+	}
+
+	output, err := r.run(ctx, cfg, prunelessArgs)
+	if err != nil {
+		return nil, fmt.Errorf("forget failed: %w", err)
+	}
+
+	result, err := parseForgetOutput(output)
+	if err != nil {
+		return nil, fmt.Errorf("parse forget output: %w", err)
+	}
+
+	r.logger.Info().
+		Int("snapshots_removed", result.SnapshotsRemoved).
+		Int("snapshots_kept", result.SnapshotsKept).
+		Msg("forget completed")
+
+	return result, nil
+}
+
+// Prune removes old snapshots according to the retention policy.
+func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.RetentionPolicy) (*ForgetResult, error) {
+	if retention == nil {
+		return nil, errors.New("retention policy required for prune")
 	}
 
 	r.logger.Info().
@@ -220,14 +254,39 @@ func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.
 
 	// First, apply forget with retention policy
 	forgetArgs := r.buildRetentionArgs(cfg.Repository, retention)
-	_, err := r.run(ctx, cfg, forgetArgs)
+	output, err := r.run(ctx, cfg, forgetArgs)
 	if err != nil {
-		return fmt.Errorf("forget failed: %w", err)
+		return nil, fmt.Errorf("forget failed: %w", err)
+	}
+
+	result, err := parseForgetOutput(output)
+	if err != nil {
+		// If we can't parse the output, still return a minimal result
+		r.logger.Warn().Err(err).Msg("failed to parse forget output")
+		result = &ForgetResult{}
 	}
 
 	// Then, prune unreferenced data
 	pruneArgs := []string{"prune", "--repo", cfg.Repository, "--json"}
 	_, err = r.run(ctx, cfg, pruneArgs)
+	if err != nil {
+		return nil, fmt.Errorf("prune failed: %w", err)
+	}
+
+	r.logger.Info().
+		Int("snapshots_removed", result.SnapshotsRemoved).
+		Int("snapshots_kept", result.SnapshotsKept).
+		Msg("prune completed successfully")
+
+	return result, nil
+}
+
+// PruneOnly runs only the prune command without forget.
+func (r *Restic) PruneOnly(ctx context.Context, cfg ResticConfig) error {
+	r.logger.Info().Msg("starting prune")
+
+	pruneArgs := []string{"prune", "--repo", cfg.Repository, "--json"}
+	_, err := r.run(ctx, cfg, pruneArgs)
 	if err != nil {
 		return fmt.Errorf("prune failed: %w", err)
 	}
@@ -272,6 +331,31 @@ func (r *Restic) Stats(ctx context.Context, cfg ResticConfig) (*RepoStats, error
 type RepoStats struct {
 	TotalSize      int64 `json:"total_size"`
 	TotalFileCount int   `json:"total_file_count"`
+}
+
+// ForgetResult contains the results of a forget operation.
+type ForgetResult struct {
+	SnapshotsRemoved int      `json:"snapshots_removed"`
+	SnapshotsKept    int      `json:"snapshots_kept"`
+	RemovedIDs       []string `json:"removed_ids,omitempty"`
+}
+
+// forgetGroupOutput represents the JSON output from restic forget --json.
+type forgetGroupOutput struct {
+	Tags   []string          `json:"tags,omitempty"`
+	Host   string            `json:"host,omitempty"`
+	Paths  []string          `json:"paths,omitempty"`
+	Keep   []forgetSnapshot  `json:"keep"`
+	Remove []forgetSnapshot  `json:"remove"`
+	Reason string            `json:"reasons,omitempty"`
+}
+
+type forgetSnapshot struct {
+	ID       string    `json:"id"`
+	ShortID  string    `json:"short_id"`
+	Time     time.Time `json:"time"`
+	Hostname string    `json:"hostname"`
+	Paths    []string  `json:"paths"`
 }
 
 // buildRetentionArgs builds the forget command arguments from a retention policy.
@@ -390,4 +474,43 @@ func parseBackupOutput(output []byte) (*BackupStats, error) {
 	}
 
 	return nil, errors.New("no backup summary found in output")
+}
+
+// parseForgetOutput parses the JSON output from restic forget.
+func parseForgetOutput(output []byte) (*ForgetResult, error) {
+	// Try to parse as an array of forget group outputs
+	var groups []forgetGroupOutput
+	if err := json.Unmarshal(output, &groups); err == nil && len(groups) > 0 {
+		result := &ForgetResult{}
+		for _, group := range groups {
+			result.SnapshotsKept += len(group.Keep)
+			result.SnapshotsRemoved += len(group.Remove)
+			for _, snap := range group.Remove {
+				result.RemovedIDs = append(result.RemovedIDs, snap.ShortID)
+			}
+		}
+		return result, nil
+	}
+
+	// If array parsing fails, try parsing line by line (restic sometimes outputs multiple JSON objects)
+	lines := bytes.Split(output, []byte("\n"))
+	result := &ForgetResult{}
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+
+		var group forgetGroupOutput
+		if err := json.Unmarshal(line, &group); err != nil {
+			continue
+		}
+
+		result.SnapshotsKept += len(group.Keep)
+		result.SnapshotsRemoved += len(group.Remove)
+		for _, snap := range group.Remove {
+			result.RemovedIDs = append(result.RemovedIDs, snap.ShortID)
+		}
+	}
+
+	return result, nil
 }
