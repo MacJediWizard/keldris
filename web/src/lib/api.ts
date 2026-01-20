@@ -1,22 +1,68 @@
 import type {
 	Agent,
 	AgentsResponse,
+	Alert,
+	AlertCountResponse,
+	AlertRule,
+	AlertRulesResponse,
+	AlertsResponse,
+	AuditLog,
+	AuditLogFilter,
+	AuditLogsResponse,
 	Backup,
 	BackupsResponse,
 	CreateAgentRequest,
 	CreateAgentResponse,
+	CreateAlertRuleRequest,
+	CreateNotificationChannelRequest,
+	CreateNotificationPreferenceRequest,
+	CreateOrgRequest,
 	CreateRepositoryRequest,
+	CreateRepositoryResponse,
 	CreateScheduleRequest,
 	CreateVerificationScheduleRequest,
 	ErrorResponse,
+	InvitationsResponse,
+	InviteMemberRequest,
+	InviteResponse,
+	KeyRecoveryResponse,
+	MembersResponse,
 	MessageResponse,
+	NotificationChannel,
+	NotificationChannelWithPreferencesResponse,
+	NotificationChannelsResponse,
+	NotificationLog,
+	NotificationLogsResponse,
+	NotificationPreference,
+	NotificationPreferencesResponse,
+	OrgInvitation,
+	OrgMember,
+	OrgResponse,
+	OrganizationWithRole,
+	OrganizationsResponse,
 	RepositoriesResponse,
 	Repository,
+	RepositoryGrowthResponse,
+	RepositoryHistoryResponse,
+	RepositoryStatsListItem,
+	RepositoryStatsListResponse,
+	RepositoryStatsResponse,
+	RotateAPIKeyResponse,
 	RunScheduleResponse,
 	Schedule,
 	SchedulesResponse,
+	StorageGrowthPoint,
+	StorageGrowthResponse,
+	StorageStatsSummary,
+	SwitchOrgRequest,
+	TestConnectionRequest,
 	TestRepositoryResponse,
 	TriggerVerificationRequest,
+	UpdateAlertRuleRequest,
+	UpdateMemberRequest,
+	UpdateNotificationChannelRequest,
+	UpdateNotificationPreferenceRequest,
+	UpdateOrgRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
 	UpdateVerificationScheduleRequest,
@@ -117,6 +163,16 @@ export const agentsApi = {
 		fetchApi<MessageResponse>(`/agents/${id}`, {
 			method: 'DELETE',
 		}),
+
+	rotateApiKey: async (id: string): Promise<RotateAPIKeyResponse> =>
+		fetchApi<RotateAPIKeyResponse>(`/agents/${id}/apikey/rotate`, {
+			method: 'POST',
+		}),
+
+	revokeApiKey: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agents/${id}/apikey`, {
+			method: 'DELETE',
+		}),
 };
 
 // Repositories API
@@ -129,8 +185,10 @@ export const repositoriesApi = {
 	get: async (id: string): Promise<Repository> =>
 		fetchApi<Repository>(`/repositories/${id}`),
 
-	create: async (data: CreateRepositoryRequest): Promise<Repository> =>
-		fetchApi<Repository>('/repositories', {
+	create: async (
+		data: CreateRepositoryRequest,
+	): Promise<CreateRepositoryResponse> =>
+		fetchApi<CreateRepositoryResponse>('/repositories', {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
@@ -153,6 +211,17 @@ export const repositoriesApi = {
 		fetchApi<TestRepositoryResponse>(`/repositories/${id}/test`, {
 			method: 'POST',
 		}),
+
+	testConnection: async (
+		data: TestConnectionRequest,
+	): Promise<TestRepositoryResponse> =>
+		fetchApi<TestRepositoryResponse>('/repositories/test-connection', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	recoverKey: async (id: string): Promise<KeyRecoveryResponse> =>
+		fetchApi<KeyRecoveryResponse>(`/repositories/${id}/key/recover`),
 };
 
 // Schedules API
@@ -210,6 +279,350 @@ export const backupsApi = {
 
 	get: async (id: string): Promise<Backup> =>
 		fetchApi<Backup>(`/backups/${id}`),
+};
+
+// Alerts API
+export const alertsApi = {
+	list: async (): Promise<Alert[]> => {
+		const response = await fetchApi<AlertsResponse>('/alerts');
+		return response.alerts ?? [];
+	},
+
+	listActive: async (): Promise<Alert[]> => {
+		const response = await fetchApi<AlertsResponse>('/alerts/active');
+		return response.alerts ?? [];
+	},
+
+	count: async (): Promise<number> => {
+		const response = await fetchApi<AlertCountResponse>('/alerts/count');
+		return response.count;
+	},
+
+	get: async (id: string): Promise<Alert> => fetchApi<Alert>(`/alerts/${id}`),
+
+	acknowledge: async (id: string): Promise<Alert> =>
+		fetchApi<Alert>(`/alerts/${id}/actions/acknowledge`, {
+			method: 'POST',
+		}),
+
+	resolve: async (id: string): Promise<Alert> =>
+		fetchApi<Alert>(`/alerts/${id}/actions/resolve`, {
+			method: 'POST',
+		}),
+};
+
+// Alert Rules API
+export const alertRulesApi = {
+	list: async (): Promise<AlertRule[]> => {
+		const response = await fetchApi<AlertRulesResponse>('/alert-rules');
+		return response.rules ?? [];
+	},
+
+	get: async (id: string): Promise<AlertRule> =>
+		fetchApi<AlertRule>(`/alert-rules/${id}`),
+
+	create: async (data: CreateAlertRuleRequest): Promise<AlertRule> =>
+		fetchApi<AlertRule>('/alert-rules', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateAlertRuleRequest,
+	): Promise<AlertRule> =>
+		fetchApi<AlertRule>(`/alert-rules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/alert-rules/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Organizations API
+export const organizationsApi = {
+	list: async (): Promise<OrganizationWithRole[]> => {
+		const response = await fetchApi<OrganizationsResponse>('/organizations');
+		return response.organizations ?? [];
+	},
+
+	get: async (id: string): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>(`/organizations/${id}`),
+
+	getCurrent: async (): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>('/organizations/current'),
+
+	create: async (data: CreateOrgRequest): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>('/organizations', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (id: string, data: UpdateOrgRequest): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>(`/organizations/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/organizations/${id}`, {
+			method: 'DELETE',
+		}),
+
+	switch: async (data: SwitchOrgRequest): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>('/organizations/switch', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// Members
+	listMembers: async (orgId: string): Promise<OrgMember[]> => {
+		const response = await fetchApi<MembersResponse>(
+			`/organizations/${orgId}/members`,
+		);
+		return response.members ?? [];
+	},
+
+	updateMember: async (
+		orgId: string,
+		userId: string,
+		data: UpdateMemberRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/organizations/${orgId}/members/${userId}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	removeMember: async (
+		orgId: string,
+		userId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/organizations/${orgId}/members/${userId}`, {
+			method: 'DELETE',
+		}),
+
+	// Invitations
+	listInvitations: async (orgId: string): Promise<OrgInvitation[]> => {
+		const response = await fetchApi<InvitationsResponse>(
+			`/organizations/${orgId}/invitations`,
+		);
+		return response.invitations ?? [];
+	},
+
+	createInvitation: async (
+		orgId: string,
+		data: InviteMemberRequest,
+	): Promise<InviteResponse> =>
+		fetchApi<InviteResponse>(`/organizations/${orgId}/invitations`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	deleteInvitation: async (
+		orgId: string,
+		invitationId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/organizations/${orgId}/invitations/${invitationId}`,
+			{
+				method: 'DELETE',
+			},
+		),
+
+	acceptInvitation: async (token: string): Promise<OrgResponse> =>
+		fetchApi<OrgResponse>('/invitations/accept', {
+			method: 'POST',
+			body: JSON.stringify({ token }),
+		}),
+};
+
+// Notifications API
+export const notificationsApi = {
+	// Channels
+	listChannels: async (): Promise<NotificationChannel[]> => {
+		const response = await fetchApi<NotificationChannelsResponse>(
+			'/notifications/channels',
+		);
+		return response.channels ?? [];
+	},
+
+	getChannel: async (
+		id: string,
+	): Promise<NotificationChannelWithPreferencesResponse> =>
+		fetchApi<NotificationChannelWithPreferencesResponse>(
+			`/notifications/channels/${id}`,
+		),
+
+	createChannel: async (
+		data: CreateNotificationChannelRequest,
+	): Promise<NotificationChannel> =>
+		fetchApi<NotificationChannel>('/notifications/channels', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateChannel: async (
+		id: string,
+		data: UpdateNotificationChannelRequest,
+	): Promise<NotificationChannel> =>
+		fetchApi<NotificationChannel>(`/notifications/channels/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteChannel: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/notifications/channels/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Preferences
+	listPreferences: async (): Promise<NotificationPreference[]> => {
+		const response = await fetchApi<NotificationPreferencesResponse>(
+			'/notifications/preferences',
+		);
+		return response.preferences ?? [];
+	},
+
+	createPreference: async (
+		data: CreateNotificationPreferenceRequest,
+	): Promise<NotificationPreference> =>
+		fetchApi<NotificationPreference>('/notifications/preferences', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updatePreference: async (
+		id: string,
+		data: UpdateNotificationPreferenceRequest,
+	): Promise<NotificationPreference> =>
+		fetchApi<NotificationPreference>(`/notifications/preferences/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deletePreference: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/notifications/preferences/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Logs
+	listLogs: async (): Promise<NotificationLog[]> => {
+		const response = await fetchApi<NotificationLogsResponse>(
+			'/notifications/logs',
+		);
+		return response.logs ?? [];
+	},
+};
+
+// Audit Logs API
+export const auditLogsApi = {
+	list: async (filter?: AuditLogFilter): Promise<AuditLogsResponse> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.action) searchParams.set('action', filter.action);
+		if (filter?.resource_type)
+			searchParams.set('resource_type', filter.resource_type);
+		if (filter?.result) searchParams.set('result', filter.result);
+		if (filter?.start_date) searchParams.set('start_date', filter.start_date);
+		if (filter?.end_date) searchParams.set('end_date', filter.end_date);
+		if (filter?.search) searchParams.set('search', filter.search);
+		if (filter?.limit) searchParams.set('limit', filter.limit.toString());
+		if (filter?.offset) searchParams.set('offset', filter.offset.toString());
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/audit-logs?${query}` : '/audit-logs';
+		return fetchApi<AuditLogsResponse>(endpoint);
+	},
+
+	get: async (id: string): Promise<AuditLog> =>
+		fetchApi<AuditLog>(`/audit-logs/${id}`),
+
+	exportCsv: async (filter?: AuditLogFilter): Promise<Blob> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.action) searchParams.set('action', filter.action);
+		if (filter?.resource_type)
+			searchParams.set('resource_type', filter.resource_type);
+		if (filter?.result) searchParams.set('result', filter.result);
+		if (filter?.start_date) searchParams.set('start_date', filter.start_date);
+		if (filter?.end_date) searchParams.set('end_date', filter.end_date);
+		if (filter?.search) searchParams.set('search', filter.search);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/audit-logs/export/csv?${query}`
+			: '/audit-logs/export/csv';
+		const response = await fetch(`${API_BASE}${endpoint}`, {
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export audit logs');
+		}
+		return response.blob();
+	},
+
+	exportJson: async (filter?: AuditLogFilter): Promise<Blob> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.action) searchParams.set('action', filter.action);
+		if (filter?.resource_type)
+			searchParams.set('resource_type', filter.resource_type);
+		if (filter?.result) searchParams.set('result', filter.result);
+		if (filter?.start_date) searchParams.set('start_date', filter.start_date);
+		if (filter?.end_date) searchParams.set('end_date', filter.end_date);
+		if (filter?.search) searchParams.set('search', filter.search);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/audit-logs/export/json?${query}`
+			: '/audit-logs/export/json';
+		const response = await fetch(`${API_BASE}${endpoint}`, {
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export audit logs');
+		}
+		return response.blob();
+	},
+};
+
+// Storage Stats API
+export const statsApi = {
+	getSummary: async (): Promise<StorageStatsSummary> =>
+		fetchApi<StorageStatsSummary>('/stats/summary'),
+
+	getGrowth: async (days = 30): Promise<StorageGrowthPoint[]> => {
+		const response = await fetchApi<StorageGrowthResponse>(
+			`/stats/growth?days=${days}`,
+		);
+		return response.growth ?? [];
+	},
+
+	listRepositoryStats: async (): Promise<RepositoryStatsListItem[]> => {
+		const response = await fetchApi<RepositoryStatsListResponse>(
+			'/stats/repositories',
+		);
+		return response.stats ?? [];
+	},
+
+	getRepositoryStats: async (id: string): Promise<RepositoryStatsResponse> =>
+		fetchApi<RepositoryStatsResponse>(`/stats/repositories/${id}`),
+
+	getRepositoryGrowth: async (
+		id: string,
+		days = 30,
+	): Promise<RepositoryGrowthResponse> =>
+		fetchApi<RepositoryGrowthResponse>(
+			`/stats/repositories/${id}/growth?days=${days}`,
+		),
+
+	getRepositoryHistory: async (
+		id: string,
+		limit = 30,
+	): Promise<RepositoryHistoryResponse> =>
+		fetchApi<RepositoryHistoryResponse>(
+			`/stats/repositories/${id}/history?limit=${limit}`,
+		),
 };
 
 // Verifications API
