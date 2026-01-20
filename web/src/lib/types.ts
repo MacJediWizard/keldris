@@ -35,6 +35,32 @@ export interface RotateAPIKeyResponse {
 	api_key: string;
 }
 
+export interface AgentStats {
+	agent_id: string;
+	total_backups: number;
+	successful_backups: number;
+	failed_backups: number;
+	success_rate: number;
+	total_size_bytes: number;
+	last_backup_at?: string;
+	next_scheduled_at?: string;
+	schedule_count: number;
+	uptime?: string;
+}
+
+export interface AgentStatsResponse {
+	agent: Agent;
+	stats: AgentStats;
+}
+
+export interface AgentBackupsResponse {
+	backups: Backup[];
+}
+
+export interface AgentSchedulesResponse {
+	schedules: Schedule[];
+}
+
 // Repository types
 export type RepositoryType =
 	| 'local'

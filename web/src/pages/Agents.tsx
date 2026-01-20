@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import {
 	useAgents,
@@ -238,7 +239,12 @@ function AgentRow({
 	return (
 		<tr className="hover:bg-gray-50">
 			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900">{agent.hostname}</div>
+				<Link
+					to={`/agents/${agent.id}`}
+					className="font-medium text-indigo-600 hover:text-indigo-700"
+				>
+					{agent.hostname}
+				</Link>
 				{agent.os_info && (
 					<div className="text-sm text-gray-500">
 						{agent.os_info.os} {agent.os_info.arch}

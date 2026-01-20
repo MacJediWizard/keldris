@@ -92,3 +92,33 @@ func (a *Agent) MarkSeen() {
 	a.Status = AgentStatusActive
 	a.UpdatedAt = now
 }
+
+// AgentStats contains aggregated statistics for an agent.
+type AgentStats struct {
+	AgentID          uuid.UUID  `json:"agent_id"`
+	TotalBackups     int        `json:"total_backups"`
+	SuccessfulBackups int       `json:"successful_backups"`
+	FailedBackups    int        `json:"failed_backups"`
+	SuccessRate      float64    `json:"success_rate"`
+	TotalSizeBytes   int64      `json:"total_size_bytes"`
+	LastBackupAt     *time.Time `json:"last_backup_at,omitempty"`
+	NextScheduledAt  *time.Time `json:"next_scheduled_at,omitempty"`
+	ScheduleCount    int        `json:"schedule_count"`
+	Uptime           *string    `json:"uptime,omitempty"`
+}
+
+// AgentStatsResponse is the response for the agent stats endpoint.
+type AgentStatsResponse struct {
+	Agent *Agent      `json:"agent"`
+	Stats *AgentStats `json:"stats"`
+}
+
+// AgentEvent represents an event in the agent's history.
+type AgentEvent struct {
+	ID          uuid.UUID  `json:"id"`
+	AgentID     uuid.UUID  `json:"agent_id"`
+	Type        string     `json:"type"`
+	Description string     `json:"description"`
+	Metadata    string     `json:"metadata,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
