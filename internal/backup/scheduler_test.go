@@ -69,6 +69,18 @@ func (m *mockStore) UpdateBackup(ctx context.Context, backup *models.Backup) err
 	return m.updateErr
 }
 
+func (m *mockStore) GetOrCreateReplicationStatus(ctx context.Context, scheduleID, sourceRepoID, targetRepoID uuid.UUID) (*models.ReplicationStatus, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return models.NewReplicationStatus(scheduleID, sourceRepoID, targetRepoID), nil
+}
+
+func (m *mockStore) UpdateReplicationStatus(ctx context.Context, rs *models.ReplicationStatus) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil
+}
+
 func (m *mockStore) addSchedule(s models.Schedule) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -128,14 +140,17 @@ func TestScheduler_Reload(t *testing.T) {
 	}
 
 	// Add a schedule
+	repoID := uuid.New()
 	schedule := models.Schedule{
 		ID:             uuid.New(),
 		AgentID:        uuid.New(),
-		RepositoryID:   uuid.New(),
 		Name:           "Test Schedule",
 		CronExpression: "0 */5 * * * *", // Every 5 minutes with seconds
 		Paths:          []string{"/home/user"},
 		Enabled:        true,
+		Repositories: []models.ScheduleRepository{
+			{ID: uuid.New(), RepositoryID: repoID, Priority: 0, Enabled: true},
+		},
 	}
 	store.addSchedule(schedule)
 
@@ -196,14 +211,17 @@ func TestScheduler_InvalidCronExpression(t *testing.T) {
 	scheduler := NewScheduler(store, restic, config, logger)
 
 	// Add a schedule with invalid cron expression
+	repoID := uuid.New()
 	schedule := models.Schedule{
 		ID:             uuid.New(),
 		AgentID:        uuid.New(),
-		RepositoryID:   uuid.New(),
 		Name:           "Invalid Schedule",
 		CronExpression: "invalid cron",
 		Paths:          []string{"/home/user"},
 		Enabled:        true,
+		Repositories: []models.ScheduleRepository{
+			{ID: uuid.New(), RepositoryID: repoID, Priority: 0, Enabled: true},
+		},
 	}
 	store.addSchedule(schedule)
 

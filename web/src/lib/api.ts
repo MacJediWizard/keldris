@@ -9,6 +9,8 @@ import type {
 	CreateScheduleRequest,
 	ErrorResponse,
 	MessageResponse,
+	ReplicationStatus,
+	ReplicationStatusResponse,
 	RepositoriesResponse,
 	Repository,
 	RunScheduleResponse,
@@ -179,6 +181,13 @@ export const schedulesApi = {
 		fetchApi<RunScheduleResponse>(`/schedules/${id}/run`, {
 			method: 'POST',
 		}),
+
+	getReplicationStatus: async (id: string): Promise<ReplicationStatus[]> => {
+		const response = await fetchApi<ReplicationStatusResponse>(
+			`/schedules/${id}/replication`,
+		);
+		return response.replication_status ?? [];
+	},
 };
 
 // Backups API

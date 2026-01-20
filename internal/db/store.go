@@ -312,7 +312,7 @@ func (db *DB) DeleteRepository(ctx context.Context, id uuid.UUID) error {
 // GetSchedulesByAgentID returns all schedules for an agent.
 func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, repository_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
@@ -332,19 +332,40 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 		schedules = append(schedules, s)
 	}
 
+	// Load repositories for all schedules
+	for _, s := range schedules {
+		repos, err := db.GetScheduleRepositories(ctx, s.ID)
+		if err != nil {
+			return nil, fmt.Errorf("get schedule repositories: %w", err)
+		}
+		s.Repositories = repos
+	}
+
 	return schedules, nil
 }
 
 // GetScheduleByID returns a schedule by ID.
 func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error) {
 	row := db.Pool.QueryRow(ctx, `
-		SELECT id, agent_id, repository_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`, id)
 
-	return scanScheduleRow(row)
+	s, err := scanScheduleRow(row)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load repositories
+	repos, err := db.GetScheduleRepositories(ctx, s.ID)
+	if err != nil {
+		return nil, fmt.Errorf("get schedule repositories: %w", err)
+	}
+	s.Repositories = repos
+
+	return s, nil
 }
 
 // CreateSchedule creates a new schedule.
@@ -365,15 +386,24 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 	}
 
 	_, err = db.Pool.Exec(ctx, `
-		INSERT INTO schedules (id, agent_id, repository_id, name, cron_expression, paths,
+		INSERT INTO schedules (id, agent_id, name, cron_expression, paths,
 		                       excludes, retention_policy, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-	`, schedule.ID, schedule.AgentID, schedule.RepositoryID, schedule.Name,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, schedule.ID, schedule.AgentID, schedule.Name,
 		schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
 		schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create schedule: %w", err)
 	}
+
+	// Create schedule-repository associations
+	for _, sr := range schedule.Repositories {
+		sr.ScheduleID = schedule.ID
+		if err := db.CreateScheduleRepository(ctx, &sr); err != nil {
+			return fmt.Errorf("create schedule repository: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -424,7 +454,7 @@ func scanSchedule(rows interface {
 	var s models.Schedule
 	var pathsBytes, excludesBytes, retentionBytes []byte
 	err := rows.Scan(
-		&s.ID, &s.AgentID, &s.RepositoryID, &s.Name, &s.CronExpression,
+		&s.ID, &s.AgentID, &s.Name, &s.CronExpression,
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.Enabled,
 		&s.CreatedAt, &s.UpdatedAt,
 	)
@@ -457,7 +487,7 @@ func scanScheduleRow(row interface {
 // GetBackupsByScheduleID returns all backups for a schedule.
 func (db *DB) GetBackupsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.Backup, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message, created_at
 		FROM backups
 		WHERE schedule_id = $1
@@ -474,7 +504,7 @@ func (db *DB) GetBackupsByScheduleID(ctx context.Context, scheduleID uuid.UUID) 
 // GetBackupsByAgentID returns all backups for an agent.
 func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Backup, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message, created_at
 		FROM backups
 		WHERE agent_id = $1
@@ -493,12 +523,12 @@ func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, 
 	var b models.Backup
 	var statusStr string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message, created_at
 		FROM backups
 		WHERE id = $1
 	`, id).Scan(
-		&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
+		&b.ID, &b.ScheduleID, &b.AgentID, &b.RepositoryID, &b.SnapshotID, &b.StartedAt,
 		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
 		&b.FilesChanged, &b.ErrorMessage, &b.CreatedAt,
 	)
@@ -512,10 +542,10 @@ func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, 
 // CreateBackup creates a new backup record.
 func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
 	_, err := db.Pool.Exec(ctx, `
-		INSERT INTO backups (id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		INSERT INTO backups (id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		                     status, size_bytes, files_new, files_changed, error_message, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-	`, backup.ID, backup.ScheduleID, backup.AgentID, backup.SnapshotID,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, backup.ID, backup.ScheduleID, backup.AgentID, backup.RepositoryID, backup.SnapshotID,
 		backup.StartedAt, backup.CompletedAt, string(backup.Status),
 		backup.SizeBytes, backup.FilesNew, backup.FilesChanged,
 		backup.ErrorMessage, backup.CreatedAt)
@@ -558,7 +588,7 @@ func scanBackups(rows interface {
 		var b models.Backup
 		var statusStr string
 		err := r.Scan(
-			&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
+			&b.ID, &b.ScheduleID, &b.AgentID, &b.RepositoryID, &b.SnapshotID, &b.StartedAt,
 			&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
 			&b.FilesChanged, &b.ErrorMessage, &b.CreatedAt,
 		)
@@ -574,4 +604,161 @@ func scanBackups(rows interface {
 	}
 
 	return backups, nil
+}
+
+// ScheduleRepository methods
+
+// GetScheduleRepositories returns all repositories for a schedule, ordered by priority.
+func (db *DB) GetScheduleRepositories(ctx context.Context, scheduleID uuid.UUID) ([]models.ScheduleRepository, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, repository_id, priority, enabled, created_at
+		FROM schedule_repositories
+		WHERE schedule_id = $1
+		ORDER BY priority ASC
+	`, scheduleID)
+	if err != nil {
+		return nil, fmt.Errorf("list schedule repositories: %w", err)
+	}
+	defer rows.Close()
+
+	var repos []models.ScheduleRepository
+	for rows.Next() {
+		var sr models.ScheduleRepository
+		err := rows.Scan(&sr.ID, &sr.ScheduleID, &sr.RepositoryID, &sr.Priority, &sr.Enabled, &sr.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan schedule repository: %w", err)
+		}
+		repos = append(repos, sr)
+	}
+
+	return repos, nil
+}
+
+// CreateScheduleRepository creates a schedule-repository association.
+func (db *DB) CreateScheduleRepository(ctx context.Context, sr *models.ScheduleRepository) error {
+	if sr.ID == uuid.Nil {
+		sr.ID = uuid.New()
+	}
+	if sr.CreatedAt.IsZero() {
+		sr.CreatedAt = time.Now()
+	}
+
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO schedule_repositories (id, schedule_id, repository_id, priority, enabled, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, sr.ID, sr.ScheduleID, sr.RepositoryID, sr.Priority, sr.Enabled, sr.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create schedule repository: %w", err)
+	}
+	return nil
+}
+
+// DeleteScheduleRepositories deletes all repository associations for a schedule.
+func (db *DB) DeleteScheduleRepositories(ctx context.Context, scheduleID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM schedule_repositories WHERE schedule_id = $1`, scheduleID)
+	if err != nil {
+		return fmt.Errorf("delete schedule repositories: %w", err)
+	}
+	return nil
+}
+
+// SetScheduleRepositories replaces all repository associations for a schedule.
+func (db *DB) SetScheduleRepositories(ctx context.Context, scheduleID uuid.UUID, repos []models.ScheduleRepository) error {
+	// Delete existing associations
+	if err := db.DeleteScheduleRepositories(ctx, scheduleID); err != nil {
+		return err
+	}
+
+	// Create new associations
+	for _, sr := range repos {
+		sr.ScheduleID = scheduleID
+		if err := db.CreateScheduleRepository(ctx, &sr); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ReplicationStatus methods
+
+// GetReplicationStatusBySchedule returns all replication status records for a schedule.
+func (db *DB) GetReplicationStatusBySchedule(ctx context.Context, scheduleID uuid.UUID) ([]*models.ReplicationStatus, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, source_repository_id, target_repository_id,
+		       last_snapshot_id, last_sync_at, status, error_message, created_at, updated_at
+		FROM replication_status
+		WHERE schedule_id = $1
+		ORDER BY created_at ASC
+	`, scheduleID)
+	if err != nil {
+		return nil, fmt.Errorf("list replication status: %w", err)
+	}
+	defer rows.Close()
+
+	var statuses []*models.ReplicationStatus
+	for rows.Next() {
+		var rs models.ReplicationStatus
+		var statusStr string
+		err := rows.Scan(
+			&rs.ID, &rs.ScheduleID, &rs.SourceRepositoryID, &rs.TargetRepositoryID,
+			&rs.LastSnapshotID, &rs.LastSyncAt, &statusStr, &rs.ErrorMessage,
+			&rs.CreatedAt, &rs.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan replication status: %w", err)
+		}
+		rs.Status = models.ReplicationStatusType(statusStr)
+		statuses = append(statuses, &rs)
+	}
+
+	return statuses, nil
+}
+
+// GetOrCreateReplicationStatus gets or creates a replication status record.
+func (db *DB) GetOrCreateReplicationStatus(ctx context.Context, scheduleID, sourceRepoID, targetRepoID uuid.UUID) (*models.ReplicationStatus, error) {
+	var rs models.ReplicationStatus
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, schedule_id, source_repository_id, target_repository_id,
+		       last_snapshot_id, last_sync_at, status, error_message, created_at, updated_at
+		FROM replication_status
+		WHERE schedule_id = $1 AND source_repository_id = $2 AND target_repository_id = $3
+	`, scheduleID, sourceRepoID, targetRepoID).Scan(
+		&rs.ID, &rs.ScheduleID, &rs.SourceRepositoryID, &rs.TargetRepositoryID,
+		&rs.LastSnapshotID, &rs.LastSyncAt, &statusStr, &rs.ErrorMessage,
+		&rs.CreatedAt, &rs.UpdatedAt,
+	)
+	if err == nil {
+		rs.Status = models.ReplicationStatusType(statusStr)
+		return &rs, nil
+	}
+
+	// Create new record
+	newRS := models.NewReplicationStatus(scheduleID, sourceRepoID, targetRepoID)
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO replication_status (id, schedule_id, source_repository_id, target_repository_id,
+		                                status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, newRS.ID, newRS.ScheduleID, newRS.SourceRepositoryID, newRS.TargetRepositoryID,
+		string(newRS.Status), newRS.CreatedAt, newRS.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create replication status: %w", err)
+	}
+
+	return newRS, nil
+}
+
+// UpdateReplicationStatus updates a replication status record.
+func (db *DB) UpdateReplicationStatus(ctx context.Context, rs *models.ReplicationStatus) error {
+	rs.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE replication_status
+		SET last_snapshot_id = $2, last_sync_at = $3, status = $4, error_message = $5, updated_at = $6
+		WHERE id = $1
+	`, rs.ID, rs.LastSnapshotID, rs.LastSyncAt, string(rs.Status), rs.ErrorMessage, rs.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update replication status: %w", err)
+	}
+	return nil
 }

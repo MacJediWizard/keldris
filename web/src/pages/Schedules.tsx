@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { useAgents } from '../hooks/useAgents';
 import { useRepositories } from '../hooks/useRepositories';
 import {
@@ -8,7 +9,7 @@ import {
 	useSchedules,
 	useUpdateSchedule,
 } from '../hooks/useSchedules';
-import type { Schedule } from '../lib/types';
+import type { Schedule, ScheduleRepositoryRequest } from '../lib/types';
 
 function LoadingRow() {
 	return (
@@ -40,7 +41,9 @@ interface CreateScheduleModalProps {
 function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	const [name, setName] = useState('');
 	const [agentId, setAgentId] = useState('');
-	const [repositoryId, setRepositoryId] = useState('');
+	const [selectedRepos, setSelectedRepos] = useState<
+		ScheduleRepositoryRequest[]
+	>([]);
 	const [cronExpression, setCronExpression] = useState('0 2 * * *');
 	const [paths, setPaths] = useState('/home');
 
@@ -50,11 +53,14 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (selectedRepos.length === 0) {
+			return; // Don't submit without repositories
+		}
 		try {
 			await createSchedule.mutateAsync({
 				name,
 				agent_id: agentId,
-				repository_id: repositoryId,
+				repositories: selectedRepos,
 				cron_expression: cronExpression,
 				paths: paths.split('\n').filter((p) => p.trim()),
 				enabled: true,
@@ -62,7 +68,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			onClose();
 			setName('');
 			setAgentId('');
-			setRepositoryId('');
+			setSelectedRepos([]);
 			setCronExpression('0 2 * * *');
 			setPaths('/home');
 		} catch {
@@ -120,26 +126,11 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 							</select>
 						</div>
 						<div>
-							<label
-								htmlFor="schedule-repo"
-								className="block text-sm font-medium text-gray-700 mb-1"
-							>
-								Repository
-							</label>
-							<select
-								id="schedule-repo"
-								value={repositoryId}
-								onChange={(e) => setRepositoryId(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								required
-							>
-								<option value="">Select a repository</option>
-								{repositories?.map((repo) => (
-									<option key={repo.id} value={repo.id}>
-										{repo.name} ({repo.type})
-									</option>
-								))}
-							</select>
+							<MultiRepoSelector
+								repositories={repositories ?? []}
+								selectedRepos={selectedRepos}
+								onChange={setSelectedRepos}
+							/>
 						</div>
 						<div>
 							<label
@@ -209,7 +200,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 interface ScheduleRowProps {
 	schedule: Schedule;
 	agentName?: string;
-	repoName?: string;
+	repoNames: string[];
 	onToggle: (id: string, enabled: boolean) => void;
 	onDelete: (id: string) => void;
 	onRun: (id: string) => void;
@@ -221,7 +212,7 @@ interface ScheduleRowProps {
 function ScheduleRow({
 	schedule,
 	agentName,
-	repoName,
+	repoNames,
 	onToggle,
 	onDelete,
 	onRun,
@@ -234,7 +225,8 @@ function ScheduleRow({
 			<td className="px-6 py-4">
 				<div className="font-medium text-gray-900">{schedule.name}</div>
 				<div className="text-sm text-gray-500">
-					{agentName ?? 'Unknown Agent'} → {repoName ?? 'Unknown Repo'}
+					{agentName ?? 'Unknown Agent'} →{' '}
+					{repoNames.length > 0 ? repoNames.join(', ') : 'No repos'}
 				</div>
 			</td>
 			<td className="px-6 py-4">
@@ -439,20 +431,25 @@ export function Schedules() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200">
-							{filteredSchedules.map((schedule) => (
-								<ScheduleRow
-									key={schedule.id}
-									schedule={schedule}
-									agentName={agentMap.get(schedule.agent_id)}
-									repoName={repoMap.get(schedule.repository_id)}
-									onToggle={handleToggle}
-									onDelete={handleDelete}
-									onRun={handleRun}
-									isUpdating={updateSchedule.isPending}
-									isDeleting={deleteSchedule.isPending}
-									isRunning={runSchedule.isPending}
-								/>
-							))}
+							{filteredSchedules.map((schedule) => {
+								const repoNames = (schedule.repositories ?? [])
+									.sort((a, b) => a.priority - b.priority)
+									.map((r) => repoMap.get(r.repository_id) ?? 'Unknown');
+								return (
+									<ScheduleRow
+										key={schedule.id}
+										schedule={schedule}
+										agentName={agentMap.get(schedule.agent_id)}
+										repoNames={repoNames}
+										onToggle={handleToggle}
+										onDelete={handleDelete}
+										onRun={handleRun}
+										isUpdating={updateSchedule.isPending}
+										isDeleting={deleteSchedule.isPending}
+										isRunning={runSchedule.isPending}
+									/>
+								);
+							})}
 						</tbody>
 					</table>
 				) : (

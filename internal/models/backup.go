@@ -25,6 +25,7 @@ type Backup struct {
 	ID           uuid.UUID    `json:"id"`
 	ScheduleID   uuid.UUID    `json:"schedule_id"`
 	AgentID      uuid.UUID    `json:"agent_id"`
+	RepositoryID *uuid.UUID   `json:"repository_id,omitempty"`
 	SnapshotID   string       `json:"snapshot_id,omitempty"`
 	StartedAt    time.Time    `json:"started_at"`
 	CompletedAt  *time.Time   `json:"completed_at,omitempty"`
@@ -36,16 +37,17 @@ type Backup struct {
 	CreatedAt    time.Time    `json:"created_at"`
 }
 
-// NewBackup creates a new Backup record for the given schedule and agent.
-func NewBackup(scheduleID, agentID uuid.UUID) *Backup {
+// NewBackup creates a new Backup record for the given schedule, agent, and repository.
+func NewBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID) *Backup {
 	now := time.Now()
 	return &Backup{
-		ID:         uuid.New(),
-		ScheduleID: scheduleID,
-		AgentID:    agentID,
-		StartedAt:  now,
-		Status:     BackupStatusRunning,
-		CreatedAt:  now,
+		ID:           uuid.New(),
+		ScheduleID:   scheduleID,
+		AgentID:      agentID,
+		RepositoryID: repositoryID,
+		StartedAt:    now,
+		Status:       BackupStatusRunning,
+		CreatedAt:    now,
 	}
 }
 

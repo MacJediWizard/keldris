@@ -66,3 +66,12 @@ export function useRunSchedule() {
 		},
 	});
 }
+
+export function useReplicationStatus(scheduleId: string) {
+	return useQuery({
+		queryKey: ['schedules', scheduleId, 'replication'],
+		queryFn: () => schedulesApi.getReplicationStatus(scheduleId),
+		enabled: !!scheduleId,
+		staleTime: 30 * 1000, // 30 seconds
+	});
+}
