@@ -277,6 +277,47 @@ func (db *DB) RevokeAgentAPIKey(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// GetAgentStats returns aggregated statistics for an agent.
+func (db *DB) GetAgentStats(ctx context.Context, agentID uuid.UUID) (*models.AgentStats, error) {
+	stats := &models.AgentStats{AgentID: agentID}
+
+	// Get backup statistics
+	err := db.Pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*) as total,
+			COUNT(*) FILTER (WHERE status = 'completed') as successful,
+			COUNT(*) FILTER (WHERE status = 'failed') as failed,
+			COALESCE(SUM(size_bytes) FILTER (WHERE status = 'completed'), 0) as total_size,
+			MAX(completed_at) FILTER (WHERE status = 'completed') as last_backup
+		FROM backups
+		WHERE agent_id = $1
+	`, agentID).Scan(
+		&stats.TotalBackups,
+		&stats.SuccessfulBackups,
+		&stats.FailedBackups,
+		&stats.TotalSizeBytes,
+		&stats.LastBackupAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get backup stats: %w", err)
+	}
+
+	// Calculate success rate
+	if stats.TotalBackups > 0 {
+		stats.SuccessRate = float64(stats.SuccessfulBackups) / float64(stats.TotalBackups) * 100
+	}
+
+	// Get schedule count
+	err = db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM schedules WHERE agent_id = $1 AND enabled = true
+	`, agentID).Scan(&stats.ScheduleCount)
+	if err != nil {
+		return nil, fmt.Errorf("get schedule count: %w", err)
+	}
+
+	return stats, nil
+}
+
 // Repository methods
 
 // GetRepositoriesByOrgID returns all repositories for an organization.
