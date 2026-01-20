@@ -2,210 +2,138 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"strconv"
+	"strings"
+	"time"
 
-	"github.com/MacJediWizard/keldris/internal/api/middleware"
-	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )
 
-// MetricsStore defines the interface for metrics persistence operations.
+// MetricsStore defines the interface for retrieving metrics data.
 type MetricsStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
-	GetDashboardStats(ctx context.Context, orgID uuid.UUID) (*models.DashboardStats, error)
-	GetBackupSuccessRates(ctx context.Context, orgID uuid.UUID) (*models.BackupSuccessRate, *models.BackupSuccessRate, error)
-	GetStorageGrowthTrend(ctx context.Context, orgID uuid.UUID, days int) ([]*models.StorageGrowthTrend, error)
-	GetBackupDurationTrend(ctx context.Context, orgID uuid.UUID, days int) ([]*models.BackupDurationTrend, error)
-	GetDailyBackupStats(ctx context.Context, orgID uuid.UUID, days int) ([]*models.DailyBackupStats, error)
+	Ping(ctx context.Context) error
+	Health() map[string]any
 }
 
-// MetricsHandler handles metrics related HTTP endpoints.
+// MetricsHandler handles Prometheus-compatible metrics endpoints.
 type MetricsHandler struct {
-	store  MetricsStore
+	db     MetricsStore
 	logger zerolog.Logger
 }
 
 // NewMetricsHandler creates a new MetricsHandler.
-func NewMetricsHandler(store MetricsStore, logger zerolog.Logger) *MetricsHandler {
+func NewMetricsHandler(db MetricsStore, logger zerolog.Logger) *MetricsHandler {
 	return &MetricsHandler{
-		store:  store,
+		db:     db,
 		logger: logger.With().Str("component", "metrics_handler").Logger(),
 	}
 }
 
-// RegisterRoutes registers metrics routes on the given router group.
-func (h *MetricsHandler) RegisterRoutes(r *gin.RouterGroup) {
-	metrics := r.Group("/metrics")
-	{
-		metrics.GET("/dashboard", h.GetDashboardStats)
-		metrics.GET("/success-rates", h.GetBackupSuccessRates)
-		metrics.GET("/storage-growth", h.GetStorageGrowthTrend)
-		metrics.GET("/backup-duration", h.GetBackupDurationTrend)
-		metrics.GET("/daily-backups", h.GetDailyBackupStats)
-	}
+// RegisterPublicRoutes registers metrics routes that don't require authentication.
+func (h *MetricsHandler) RegisterPublicRoutes(r *gin.Engine) {
+	r.GET("/metrics", h.Metrics)
 }
 
-// GetDashboardStats returns aggregated dashboard statistics.
-// GET /api/v1/metrics/dashboard
-func (h *MetricsHandler) GetDashboardStats(c *gin.Context) {
-	user := middleware.RequireUser(c)
-	if user == nil {
-		return
-	}
+// Metrics returns metrics in Prometheus exposition format.
+// GET /metrics
+func (h *MetricsHandler) Metrics(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
+	var sb strings.Builder
 
-	stats, err := h.store.GetDashboardStats(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get dashboard stats")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve dashboard stats"})
-		return
-	}
+	// Server info metric
+	sb.WriteString("# HELP keldris_info Server information\n")
+	sb.WriteString("# TYPE keldris_info gauge\n")
+	sb.WriteString("keldris_info{component=\"server\"} 1\n")
+	sb.WriteString("\n")
 
-	// Get success rates
-	rate7d, rate30d, err := h.store.GetBackupSuccessRates(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Warn().Err(err).Msg("failed to get success rates")
+	// Server up metric
+	sb.WriteString("# HELP keldris_up Server health status (1 = healthy, 0 = unhealthy)\n")
+	sb.WriteString("# TYPE keldris_up gauge\n")
+
+	// Check database health
+	dbHealthy := 1
+	if h.db != nil {
+		if err := h.db.Ping(ctx); err != nil {
+			dbHealthy = 0
+			h.logger.Warn().Err(err).Msg("database ping failed for metrics")
+		}
 	} else {
-		if rate7d != nil {
-			stats.SuccessRate7d = rate7d.SuccessPercent
+		dbHealthy = 0
+	}
+	sb.WriteString(fmt.Sprintf("keldris_up{component=\"database\"} %d\n", dbHealthy))
+	sb.WriteString("\n")
+
+	// Database pool metrics
+	if h.db != nil {
+		poolStats := h.db.Health()
+
+		sb.WriteString("# HELP keldris_db_connections_total Total number of connections in the pool\n")
+		sb.WriteString("# TYPE keldris_db_connections_total gauge\n")
+		if v, ok := poolStats["total_conns"].(int32); ok {
+			sb.WriteString(fmt.Sprintf("keldris_db_connections_total %d\n", v))
 		}
-		if rate30d != nil {
-			stats.SuccessRate30d = rate30d.SuccessPercent
+		sb.WriteString("\n")
+
+		sb.WriteString("# HELP keldris_db_connections_acquired Number of currently acquired connections\n")
+		sb.WriteString("# TYPE keldris_db_connections_acquired gauge\n")
+		if v, ok := poolStats["acquired_conns"].(int32); ok {
+			sb.WriteString(fmt.Sprintf("keldris_db_connections_acquired %d\n", v))
 		}
-	}
+		sb.WriteString("\n")
 
-	c.JSON(http.StatusOK, stats)
-}
-
-// GetBackupSuccessRates returns backup success rates for different time periods.
-// GET /api/v1/metrics/success-rates
-func (h *MetricsHandler) GetBackupSuccessRates(c *gin.Context) {
-	user := middleware.RequireUser(c)
-	if user == nil {
-		return
-	}
-
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	rate7d, rate30d, err := h.store.GetBackupSuccessRates(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get success rates")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve success rates"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"rate_7d":  rate7d,
-		"rate_30d": rate30d,
-	})
-}
-
-// GetStorageGrowthTrend returns storage growth over time.
-// GET /api/v1/metrics/storage-growth?days=30
-func (h *MetricsHandler) GetStorageGrowthTrend(c *gin.Context) {
-	user := middleware.RequireUser(c)
-	if user == nil {
-		return
-	}
-
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	days := 30
-	if daysParam := c.Query("days"); daysParam != "" {
-		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 365 {
-			days = d
+		sb.WriteString("# HELP keldris_db_connections_idle Number of idle connections\n")
+		sb.WriteString("# TYPE keldris_db_connections_idle gauge\n")
+		if v, ok := poolStats["idle_conns"].(int32); ok {
+			sb.WriteString(fmt.Sprintf("keldris_db_connections_idle %d\n", v))
 		}
-	}
+		sb.WriteString("\n")
 
-	trend, err := h.store.GetStorageGrowthTrend(c.Request.Context(), dbUser.OrgID, days)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get storage growth trend")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve storage growth trend"})
-		return
-	}
+		sb.WriteString("# HELP keldris_db_connections_max Maximum number of connections in the pool\n")
+		sb.WriteString("# TYPE keldris_db_connections_max gauge\n")
+		if v, ok := poolStats["max_conns"].(int32); ok {
+			sb.WriteString(fmt.Sprintf("keldris_db_connections_max %d\n", v))
+		}
+		sb.WriteString("\n")
 
-	c.JSON(http.StatusOK, gin.H{"trend": trend})
-}
+		sb.WriteString("# HELP keldris_db_connections_constructing Number of connections being constructed\n")
+		sb.WriteString("# TYPE keldris_db_connections_constructing gauge\n")
+		if v, ok := poolStats["constructing"].(int32); ok {
+			sb.WriteString(fmt.Sprintf("keldris_db_connections_constructing %d\n", v))
+		}
+		sb.WriteString("\n")
 
-// GetBackupDurationTrend returns backup duration trends over time.
-// GET /api/v1/metrics/backup-duration?days=30
-func (h *MetricsHandler) GetBackupDurationTrend(c *gin.Context) {
-	user := middleware.RequireUser(c)
-	if user == nil {
-		return
-	}
+		sb.WriteString("# HELP keldris_db_acquire_empty_total Total number of acquire attempts that had to wait for a connection\n")
+		sb.WriteString("# TYPE keldris_db_acquire_empty_total counter\n")
+		if v, ok := poolStats["empty_acquire"].(int64); ok {
+			sb.WriteString(fmt.Sprintf("keldris_db_acquire_empty_total %d\n", v))
+		}
+		sb.WriteString("\n")
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
+		sb.WriteString("# HELP keldris_db_acquire_canceled_total Total number of acquire attempts that were canceled\n")
+		sb.WriteString("# TYPE keldris_db_acquire_canceled_total counter\n")
+		if v, ok := poolStats["canceled_acquire"].(int64); ok {
+			sb.WriteString(fmt.Sprintf("keldris_db_acquire_canceled_total %d\n", v))
+		}
+		sb.WriteString("\n")
 
-	days := 30
-	if daysParam := c.Query("days"); daysParam != "" {
-		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 365 {
-			days = d
+		sb.WriteString("# HELP keldris_db_lifetime_destroy_total Total number of connections destroyed due to max lifetime\n")
+		sb.WriteString("# TYPE keldris_db_lifetime_destroy_total counter\n")
+		if v, ok := poolStats["max_lifetime_dest"].(int64); ok {
+			sb.WriteString(fmt.Sprintf("keldris_db_lifetime_destroy_total %d\n", v))
+		}
+		sb.WriteString("\n")
+
+		sb.WriteString("# HELP keldris_db_idle_destroy_total Total number of connections destroyed due to max idle time\n")
+		sb.WriteString("# TYPE keldris_db_idle_destroy_total counter\n")
+		if v, ok := poolStats["max_idle_dest"].(int64); ok {
+			sb.WriteString(fmt.Sprintf("keldris_db_idle_destroy_total %d\n", v))
 		}
 	}
 
-	trend, err := h.store.GetBackupDurationTrend(c.Request.Context(), dbUser.OrgID, days)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get backup duration trend")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve backup duration trend"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"trend": trend})
-}
-
-// GetDailyBackupStats returns daily backup statistics.
-// GET /api/v1/metrics/daily-backups?days=30
-func (h *MetricsHandler) GetDailyBackupStats(c *gin.Context) {
-	user := middleware.RequireUser(c)
-	if user == nil {
-		return
-	}
-
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	days := 30
-	if daysParam := c.Query("days"); daysParam != "" {
-		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 365 {
-			days = d
-		}
-	}
-
-	stats, err := h.store.GetDailyBackupStats(c.Request.Context(), dbUser.OrgID, days)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get daily backup stats")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve daily backup stats"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"stats": stats})
+	c.Header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	c.String(http.StatusOK, sb.String())
 }
