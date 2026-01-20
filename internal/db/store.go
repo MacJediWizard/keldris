@@ -38,6 +38,31 @@ func (db *DB) GetOrCreateDefaultOrg(ctx context.Context) (*models.Organization, 
 	return &org, nil
 }
 
+// GetAllOrganizations returns all organizations.
+func (db *DB) GetAllOrganizations(ctx context.Context) ([]*models.Organization, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, name, slug, created_at, updated_at
+		FROM organizations
+		ORDER BY name
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list organizations: %w", err)
+	}
+	defer rows.Close()
+
+	var orgs []*models.Organization
+	for rows.Next() {
+		var org models.Organization
+		err := rows.Scan(&org.ID, &org.Name, &org.Slug, &org.CreatedAt, &org.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan organization: %w", err)
+		}
+		orgs = append(orgs, &org)
+	}
+
+	return orgs, nil
+}
+
 // User methods
 
 // GetUserByOIDCSubject returns a user by their OIDC subject.
@@ -793,6 +818,24 @@ func (db *DB) ResolveAlertsByResource(ctx context.Context, resourceType models.R
 	`, string(resourceType), resourceID, now)
 	if err != nil {
 		return fmt.Errorf("resolve alerts by resource: %w", err)
+	}
+	return nil
+}
+
+// Storage Stats methods
+
+// CreateStorageStats creates a new storage stats record.
+func (db *DB) CreateStorageStats(ctx context.Context, stats *models.StorageStats) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO storage_stats (id, repository_id, total_size, total_file_count, raw_data_size,
+		                           restore_size, dedup_ratio, space_saved, space_saved_pct,
+		                           snapshot_count, collected_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, stats.ID, stats.RepositoryID, stats.TotalSize, stats.TotalFileCount, stats.RawDataSize,
+		stats.RestoreSize, stats.DedupRatio, stats.SpaceSaved, stats.SpaceSavedPct,
+		stats.SnapshotCount, stats.CollectedAt, stats.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create storage stats: %w", err)
 	}
 	return nil
 }
@@ -2014,4 +2057,213 @@ func scanAuditLogs(rows interface {
 	}
 
 	return logs, nil
+}
+
+// Storage Stats query methods
+
+// GetLatestStorageStats returns the most recent storage stats for a repository.
+func (db *DB) GetLatestStorageStats(ctx context.Context, repositoryID uuid.UUID) (*models.StorageStats, error) {
+	var s models.StorageStats
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, repository_id, total_size, total_file_count, raw_data_size, restore_size,
+		       dedup_ratio, space_saved, space_saved_pct, snapshot_count, collected_at, created_at
+		FROM storage_stats
+		WHERE repository_id = $1
+		ORDER BY collected_at DESC
+		LIMIT 1
+	`, repositoryID).Scan(
+		&s.ID, &s.RepositoryID, &s.TotalSize, &s.TotalFileCount, &s.RawDataSize,
+		&s.RestoreSize, &s.DedupRatio, &s.SpaceSaved, &s.SpaceSavedPct,
+		&s.SnapshotCount, &s.CollectedAt, &s.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get latest storage stats: %w", err)
+	}
+	return &s, nil
+}
+
+// GetStorageStatsByRepositoryID returns all storage stats for a repository ordered by date.
+func (db *DB) GetStorageStatsByRepositoryID(ctx context.Context, repositoryID uuid.UUID, limit int) ([]*models.StorageStats, error) {
+	query := `
+		SELECT id, repository_id, total_size, total_file_count, raw_data_size, restore_size,
+		       dedup_ratio, space_saved, space_saved_pct, snapshot_count, collected_at, created_at
+		FROM storage_stats
+		WHERE repository_id = $1
+		ORDER BY collected_at DESC
+	`
+	if limit > 0 {
+		query += fmt.Sprintf(" LIMIT %d", limit)
+	}
+
+	rows, err := db.Pool.Query(ctx, query, repositoryID)
+	if err != nil {
+		return nil, fmt.Errorf("list storage stats: %w", err)
+	}
+	defer rows.Close()
+
+	return scanStorageStats(rows)
+}
+
+// GetStorageStatsSummary returns aggregated storage statistics for all repositories in an org.
+func (db *DB) GetStorageStatsSummary(ctx context.Context, orgID uuid.UUID) (*models.StorageStatsSummary, error) {
+	var summary models.StorageStatsSummary
+	err := db.Pool.QueryRow(ctx, `
+		SELECT
+			COALESCE(SUM(latest.raw_data_size), 0) as total_raw_size,
+			COALESCE(SUM(latest.restore_size), 0) as total_restore_size,
+			COALESCE(SUM(latest.space_saved), 0) as total_space_saved,
+			COALESCE(AVG(latest.dedup_ratio), 0) as avg_dedup_ratio,
+			COUNT(DISTINCT latest.repository_id) as repository_count,
+			COALESCE(SUM(latest.snapshot_count), 0) as total_snapshots
+		FROM (
+			SELECT DISTINCT ON (s.repository_id)
+				s.repository_id, s.raw_data_size, s.restore_size, s.space_saved,
+				s.dedup_ratio, s.snapshot_count
+			FROM storage_stats s
+			JOIN repositories r ON s.repository_id = r.id
+			WHERE r.org_id = $1
+			ORDER BY s.repository_id, s.collected_at DESC
+		) as latest
+	`, orgID).Scan(
+		&summary.TotalRawSize, &summary.TotalRestoreSize, &summary.TotalSpaceSaved,
+		&summary.AvgDedupRatio, &summary.RepositoryCount, &summary.TotalSnapshots,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get storage stats summary: %w", err)
+	}
+	return &summary, nil
+}
+
+// GetStorageGrowth returns storage growth data points for a repository over a time period.
+func (db *DB) GetStorageGrowth(ctx context.Context, repositoryID uuid.UUID, days int) ([]*models.StorageGrowthPoint, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT DATE(collected_at) as date,
+		       MAX(raw_data_size) as raw_data_size,
+		       MAX(restore_size) as restore_size
+		FROM storage_stats
+		WHERE repository_id = $1
+		  AND collected_at >= NOW() - INTERVAL '1 day' * $2
+		GROUP BY DATE(collected_at)
+		ORDER BY date ASC
+	`, repositoryID, days)
+	if err != nil {
+		return nil, fmt.Errorf("get storage growth: %w", err)
+	}
+	defer rows.Close()
+
+	var points []*models.StorageGrowthPoint
+	for rows.Next() {
+		var p models.StorageGrowthPoint
+		err := rows.Scan(&p.Date, &p.RawDataSize, &p.RestoreSize)
+		if err != nil {
+			return nil, fmt.Errorf("scan storage growth: %w", err)
+		}
+		points = append(points, &p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate storage growth: %w", err)
+	}
+
+	return points, nil
+}
+
+// GetAllStorageGrowth returns aggregated storage growth for all repositories in an org.
+func (db *DB) GetAllStorageGrowth(ctx context.Context, orgID uuid.UUID, days int) ([]*models.StorageGrowthPoint, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT DATE(s.collected_at) as date,
+		       SUM(latest.raw_data_size) as raw_data_size,
+		       SUM(latest.restore_size) as restore_size
+		FROM (
+			SELECT DISTINCT ON (repository_id, DATE(collected_at))
+				repository_id, collected_at, raw_data_size, restore_size
+			FROM storage_stats
+			WHERE repository_id IN (SELECT id FROM repositories WHERE org_id = $1)
+			  AND collected_at >= NOW() - INTERVAL '1 day' * $2
+			ORDER BY repository_id, DATE(collected_at), collected_at DESC
+		) as latest
+		JOIN storage_stats s ON s.id = (
+			SELECT id FROM storage_stats
+			WHERE repository_id = latest.repository_id
+			  AND DATE(collected_at) = DATE(latest.collected_at)
+			ORDER BY collected_at DESC
+			LIMIT 1
+		)
+		GROUP BY DATE(s.collected_at)
+		ORDER BY date ASC
+	`, orgID, days)
+	if err != nil {
+		return nil, fmt.Errorf("get all storage growth: %w", err)
+	}
+	defer rows.Close()
+
+	var points []*models.StorageGrowthPoint
+	for rows.Next() {
+		var p models.StorageGrowthPoint
+		err := rows.Scan(&p.Date, &p.RawDataSize, &p.RestoreSize)
+		if err != nil {
+			return nil, fmt.Errorf("scan all storage growth: %w", err)
+		}
+		points = append(points, &p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate all storage growth: %w", err)
+	}
+
+	return points, nil
+}
+
+// GetLatestStatsForAllRepos returns the latest storage stats for all repositories in an org.
+func (db *DB) GetLatestStatsForAllRepos(ctx context.Context, orgID uuid.UUID) ([]*models.StorageStats, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT DISTINCT ON (s.repository_id)
+			s.id, s.repository_id, s.total_size, s.total_file_count, s.raw_data_size,
+			s.restore_size, s.dedup_ratio, s.space_saved, s.space_saved_pct,
+			s.snapshot_count, s.collected_at, s.created_at
+		FROM storage_stats s
+		JOIN repositories r ON s.repository_id = r.id
+		WHERE r.org_id = $1
+		ORDER BY s.repository_id, s.collected_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get latest stats for all repos: %w", err)
+	}
+	defer rows.Close()
+
+	return scanStorageStats(rows)
+}
+
+// scanStorageStats scans multiple storage stats rows.
+func scanStorageStats(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.StorageStats, error) {
+	type scanner interface {
+		Next() bool
+		Scan(dest ...any) error
+		Err() error
+	}
+	r := rows.(scanner)
+
+	var stats []*models.StorageStats
+	for r.Next() {
+		var s models.StorageStats
+		err := r.Scan(
+			&s.ID, &s.RepositoryID, &s.TotalSize, &s.TotalFileCount, &s.RawDataSize,
+			&s.RestoreSize, &s.DedupRatio, &s.SpaceSaved, &s.SpaceSavedPct,
+			&s.SnapshotCount, &s.CollectedAt, &s.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan storage stats: %w", err)
+		}
+		stats = append(stats, &s)
+	}
+
+	if err := r.Err(); err != nil {
+		return nil, fmt.Errorf("iterate storage stats: %w", err)
+	}
+
+	return stats, nil
 }
