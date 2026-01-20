@@ -3,6 +3,8 @@ package main
 
 import (
 	"bufio"
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/updater"
 	"github.com/spf13/cobra"
 )
 
@@ -28,6 +31,28 @@ func main() {
 	}
 }
 
+// checkUpdateOnStartup checks for updates if auto-check is enabled in config.
+func checkUpdateOnStartup() {
+	cfg, err := config.LoadDefault()
+	if err != nil || !cfg.AutoCheckUpdate {
+		return
+	}
+
+	u := updater.New(Version)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	info, err := u.CheckForUpdate(ctx)
+	if err != nil {
+		// Silently ignore errors - this is a background check
+		return
+	}
+
+	fmt.Printf("\n[Update available] Version %s is available (you have %s)\n", info.LatestVersion, Version)
+	fmt.Println("Run 'keldris-agent update' to install it.")
+	fmt.Println()
+}
+
 func newRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "keldris-agent",
@@ -37,6 +62,13 @@ to perform automated backups using Restic.
 
 Run 'keldris-agent register' to connect to a server.`,
 		SilenceUsage: true,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// Skip auto-check for certain commands
+			if cmd.Name() == "update" || cmd.Name() == "version" || cmd.Name() == "help" {
+				return
+			}
+			checkUpdateOnStartup()
+		},
 	}
 
 	rootCmd.AddCommand(
@@ -46,6 +78,7 @@ Run 'keldris-agent register' to connect to a server.`,
 		newStatusCmd(),
 		newBackupCmd(),
 		newRestoreCmd(),
+		newUpdateCmd(),
 	)
 
 	return rootCmd
@@ -147,6 +180,7 @@ func newConfigCmd() *cobra.Command {
 	cmd.AddCommand(
 		newConfigShowCmd(),
 		newConfigSetServerCmd(),
+		newConfigSetAutoUpdateCmd(),
 	)
 
 	return cmd
@@ -171,14 +205,15 @@ func newConfigShowCmd() *cobra.Command {
 				return nil
 			}
 
-			fmt.Printf("Server URL: %s\n", cfg.ServerURL)
-			fmt.Printf("API Key:    %s\n", maskAPIKey(cfg.APIKey))
+			fmt.Printf("Server URL:        %s\n", cfg.ServerURL)
+			fmt.Printf("API Key:           %s\n", maskAPIKey(cfg.APIKey))
 			if cfg.AgentID != "" {
-				fmt.Printf("Agent ID:   %s\n", cfg.AgentID)
+				fmt.Printf("Agent ID:          %s\n", cfg.AgentID)
 			}
 			if cfg.Hostname != "" {
-				fmt.Printf("Hostname:   %s\n", cfg.Hostname)
+				fmt.Printf("Hostname:          %s\n", cfg.Hostname)
 			}
+			fmt.Printf("Auto-check update: %v\n", cfg.AutoCheckUpdate)
 
 			return nil
 		},
@@ -214,6 +249,44 @@ func newConfigSetServerCmd() *cobra.Command {
 			}
 
 			fmt.Printf("Server URL set to: %s\n", cfg.ServerURL)
+			return nil
+		},
+	}
+}
+
+func newConfigSetAutoUpdateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "set-auto-update <true|false>",
+		Short: "Enable or disable automatic update checks on startup",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			value := strings.ToLower(args[0])
+			var enabled bool
+			switch value {
+			case "true", "1", "yes", "on":
+				enabled = true
+			case "false", "0", "no", "off":
+				enabled = false
+			default:
+				return fmt.Errorf("invalid value: use true or false")
+			}
+
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			cfg.AutoCheckUpdate = enabled
+
+			if err := cfg.SaveDefault(); err != nil {
+				return fmt.Errorf("save config: %w", err)
+			}
+
+			if enabled {
+				fmt.Println("Auto-check update: enabled")
+			} else {
+				fmt.Println("Auto-check update: disabled")
+			}
 			return nil
 		},
 	}
@@ -345,6 +418,106 @@ func newRestoreCmd() *cobra.Command {
 	cmd.Flags().StringVar(&snapshotID, "snapshot", "", "Restore from a specific snapshot ID")
 
 	return cmd
+}
+
+func newUpdateCmd() *cobra.Command {
+	var checkOnly bool
+	var force bool
+
+	cmd := &cobra.Command{
+		Use:   "update",
+		Short: "Check for and install agent updates",
+		Long: `Check for new versions of the Keldris agent and optionally install them.
+
+By default, this command will check for updates and prompt before installing.
+Use --check to only check without installing.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runUpdate(checkOnly, force)
+		},
+	}
+
+	cmd.Flags().BoolVar(&checkOnly, "check", false, "Check for updates without installing")
+	cmd.Flags().BoolVar(&force, "force", false, "Install update without confirmation")
+
+	return cmd
+}
+
+func runUpdate(checkOnly, force bool) error {
+	u := updater.New(Version)
+
+	fmt.Printf("Current version: %s\n", Version)
+	fmt.Println("Checking for updates...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	info, err := u.CheckForUpdate(ctx)
+	if err != nil {
+		if errors.Is(err, updater.ErrNoUpdateAvailable) {
+			fmt.Println("You are running the latest version.")
+			return nil
+		}
+		return fmt.Errorf("check for updates: %w", err)
+	}
+
+	fmt.Printf("\nNew version available: %s\n", info.LatestVersion)
+	if info.ReleaseNotes != "" {
+		fmt.Println("\nRelease notes:")
+		fmt.Println(info.ReleaseNotes)
+	}
+	fmt.Println()
+
+	if checkOnly {
+		fmt.Println("Run 'keldris-agent update' to install this update.")
+		return nil
+	}
+
+	if !force {
+		fmt.Print("Install this update? [y/N] ")
+		reader := bufio.NewReader(os.Stdin)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("read response: %w", err)
+		}
+		response = strings.TrimSpace(strings.ToLower(response))
+		if response != "y" && response != "yes" {
+			fmt.Println("Update cancelled.")
+			return nil
+		}
+	}
+
+	fmt.Printf("Downloading %s...\n", info.AssetName)
+
+	downloadCtx, downloadCancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer downloadCancel()
+
+	tmpPath, err := u.Download(downloadCtx, info, func(downloaded, total int64) {
+		if total > 0 {
+			pct := float64(downloaded) / float64(total) * 100
+			fmt.Printf("\rDownloading: %.1f%% (%d / %d bytes)", pct, downloaded, total)
+		}
+	})
+	if err != nil {
+		return fmt.Errorf("download update: %w", err)
+	}
+	defer os.Remove(tmpPath)
+
+	fmt.Println("\n\nInstalling update...")
+
+	if err := u.Apply(tmpPath); err != nil {
+		return fmt.Errorf("apply update: %w", err)
+	}
+
+	fmt.Printf("Successfully updated to %s!\n", info.LatestVersion)
+	fmt.Println("Restarting agent...")
+
+	if err := u.Restart(); err != nil {
+		// If restart fails, just exit - the update was still successful
+		fmt.Printf("Note: Could not restart automatically: %v\n", err)
+		fmt.Println("Please restart the agent manually.")
+	}
+
+	return nil
 }
 
 // maskAPIKey returns a masked version of the API key for display.

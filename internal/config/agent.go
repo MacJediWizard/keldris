@@ -30,10 +30,11 @@ func DefaultConfigPath() (string, error) {
 
 // AgentConfig holds the agent's configuration.
 type AgentConfig struct {
-	ServerURL string `yaml:"server_url,omitempty"`
-	APIKey    string `yaml:"api_key,omitempty"`
-	AgentID   string `yaml:"agent_id,omitempty"`
-	Hostname  string `yaml:"hostname,omitempty"`
+	ServerURL       string `yaml:"server_url,omitempty"`
+	APIKey          string `yaml:"api_key,omitempty"`
+	AgentID         string `yaml:"agent_id,omitempty"`
+	Hostname        string `yaml:"hostname,omitempty"`
+	AutoCheckUpdate bool   `yaml:"auto_check_update,omitempty"`
 }
 
 // Validate checks that the configuration has required fields for operation.

@@ -18,6 +18,10 @@ type Config struct {
 	RateLimitRequests int64
 	// RateLimitPeriod is the duration string for rate limiting (e.g. "1m", "1h").
 	RateLimitPeriod string
+	// Version information for the version endpoint.
+	Version   string
+	Commit    string
+	BuildDate string
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -26,6 +30,9 @@ func DefaultConfig() Config {
 		AllowedOrigins:    []string{},
 		RateLimitRequests: 100,
 		RateLimitPeriod:   "1m",
+		Version:           "dev",
+		Commit:            "unknown",
+		BuildDate:         "unknown",
 	}
 }
 
@@ -67,6 +74,10 @@ func NewRouter(
 	// Health check endpoint (no auth required)
 	r.Engine.GET("/health", r.healthCheck)
 
+	// Version endpoint (no auth required)
+	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)
+	versionHandler.RegisterPublicRoutes(r.Engine)
+
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
@@ -77,6 +88,8 @@ func NewRouter(
 	apiV1.Use(middleware.AuthMiddleware(sessions, logger))
 
 	// Register API handlers
+	versionHandler.RegisterRoutes(apiV1)
+
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1)
 
