@@ -109,6 +109,9 @@ func NewRouter(
 	notificationsHandler := handlers.NewNotificationsHandler(database, logger)
 	notificationsHandler.RegisterRoutes(apiV1)
 
+	statsHandler := handlers.NewStatsHandler(database, logger)
+	statsHandler.RegisterRoutes(apiV1)
+
 	r.logger.Info().Msg("API router initialized")
 	return r, nil
 }
