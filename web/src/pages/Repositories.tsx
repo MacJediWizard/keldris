@@ -7,6 +7,10 @@ import {
 	useTestConnection,
 	useTestRepository,
 } from '../hooks/useRepositories';
+import {
+	useTriggerVerification,
+	useVerificationStatus,
+} from '../hooks/useVerifications';
 import type {
 	B2BackendConfig,
 	CreateRepositoryResponse,
@@ -18,6 +22,8 @@ import type {
 	S3BackendConfig,
 	SFTPBackendConfig,
 	TestRepositoryResponse,
+	VerificationStatus,
+	VerificationType,
 } from '../lib/types';
 import { formatDate, getRepositoryTypeBadge } from '../lib/utils';
 
@@ -787,13 +793,45 @@ function AddRepositoryModal({
 	);
 }
 
+function getVerificationStatusBadge(status?: VerificationStatus) {
+	switch (status) {
+		case 'passed':
+			return { label: 'Verified', className: 'bg-green-100 text-green-800' };
+		case 'failed':
+			return { label: 'Failed', className: 'bg-red-100 text-red-800' };
+		case 'running':
+			return { label: 'Running', className: 'bg-blue-100 text-blue-800' };
+		case 'pending':
+			return { label: 'Pending', className: 'bg-yellow-100 text-yellow-800' };
+		default:
+			return { label: 'Not verified', className: 'bg-gray-100 text-gray-600' };
+	}
+}
+
+function formatRelativeTime(dateStr: string): string {
+	const date = new Date(dateStr);
+	const now = new Date();
+	const diffMs = now.getTime() - date.getTime();
+	const diffMins = Math.floor(diffMs / 60000);
+	const diffHours = Math.floor(diffMins / 60);
+	const diffDays = Math.floor(diffHours / 24);
+
+	if (diffMins < 1) return 'just now';
+	if (diffMins < 60) return `${diffMins}m ago`;
+	if (diffHours < 24) return `${diffHours}h ago`;
+	if (diffDays < 7) return `${diffDays}d ago`;
+	return formatDate(dateStr);
+}
+
 interface RepositoryCardProps {
 	repository: Repository;
 	onDelete: (id: string) => void;
 	onTest: (id: string) => void;
+	onVerify: (id: string, type: VerificationType) => void;
 	onRecoverKey: (id: string) => void;
 	isDeleting: boolean;
 	isTesting: boolean;
+	isVerifying: boolean;
 	isRecovering: boolean;
 	testResult?: { success: boolean; message: string };
 }
@@ -802,13 +840,22 @@ function RepositoryCard({
 	repository,
 	onDelete,
 	onTest,
+	onVerify,
 	onRecoverKey,
 	isDeleting,
 	isTesting,
+	isVerifying,
 	isRecovering,
 	testResult,
 }: RepositoryCardProps) {
 	const typeBadge = getRepositoryTypeBadge(repository.type);
+	const { data: verificationStatus } = useVerificationStatus(repository.id);
+
+	const lastVerification = verificationStatus?.last_verification;
+	const verificationBadge = getVerificationStatusBadge(
+		lastVerification?.status,
+	);
+	const consecutiveFails = verificationStatus?.consecutive_fails ?? 0;
 
 	return (
 		<div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -832,6 +879,44 @@ function RepositoryCard({
 					</span>
 				</div>
 			</div>
+
+			{/* Verification Status */}
+			<div className="mb-4 p-3 bg-gray-50 rounded-lg">
+				<div className="flex items-center justify-between mb-2">
+					<span className="text-sm font-medium text-gray-700">Integrity</span>
+					<span
+						className={`px-2 py-0.5 rounded-full text-xs font-medium ${verificationBadge.className}`}
+					>
+						{verificationBadge.label}
+					</span>
+				</div>
+				{lastVerification && (
+					<p className="text-xs text-gray-500">
+						Last checked: {formatRelativeTime(lastVerification.started_at)}
+						{lastVerification.status === 'failed' &&
+							lastVerification.error_message && (
+								<span
+									className="block text-red-600 mt-1 truncate"
+									title={lastVerification.error_message}
+								>
+									{lastVerification.error_message}
+								</span>
+							)}
+					</p>
+				)}
+				{consecutiveFails > 0 && (
+					<p className="text-xs text-red-600 mt-1">
+						{consecutiveFails} consecutive failure
+						{consecutiveFails > 1 ? 's' : ''}
+					</p>
+				)}
+				{verificationStatus?.next_scheduled_at && (
+					<p className="text-xs text-gray-500 mt-1">
+						Next: {formatRelativeTime(verificationStatus.next_scheduled_at)}
+					</p>
+				)}
+			</div>
+
 			{testResult && (
 				<div
 					className={`mb-4 p-3 rounded-lg text-sm ${
@@ -846,11 +931,20 @@ function RepositoryCard({
 			<div className="flex items-center gap-2 flex-wrap">
 				<button
 					type="button"
+					onClick={() => onVerify(repository.id, 'check')}
+					disabled={isVerifying}
+					className="text-sm text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
+				>
+					{isVerifying ? 'Verifying...' : 'Verify'}
+				</button>
+				<span className="text-gray-300">|</span>
+				<button
+					type="button"
 					onClick={() => onTest(repository.id)}
 					disabled={isTesting}
 					className="text-sm text-indigo-600 hover:text-indigo-800 font-medium disabled:opacity-50"
 				>
-					{isTesting ? 'Testing...' : 'Test Connection'}
+					{isTesting ? 'Testing...' : 'Test'}
 				</button>
 				{repository.escrow_enabled && (
 					<>
@@ -985,6 +1079,7 @@ export function Repositories() {
 	const { data: repositories, isLoading, isError } = useRepositories();
 	const deleteRepository = useDeleteRepository();
 	const testRepository = useTestRepository();
+	const triggerVerification = useTriggerVerification();
 	const recoverKey = useRecoverRepositoryKey();
 
 	const filteredRepositories = repositories?.filter((repo) => {
@@ -1011,6 +1106,10 @@ export function Repositories() {
 				[id]: { success: false, message: 'Connection test failed' },
 			}));
 		}
+	};
+
+	const handleVerify = (id: string, type: VerificationType) => {
+		triggerVerification.mutate({ repoId: id, type });
 	};
 
 	const handleRecoverKey = async (id: string) => {
@@ -1123,9 +1222,11 @@ export function Repositories() {
 								repository={repo}
 								onDelete={handleDelete}
 								onTest={handleTest}
+								onVerify={handleVerify}
 								onRecoverKey={handleRecoverKey}
 								isDeleting={deleteRepository.isPending}
 								isTesting={testRepository.isPending}
+								isVerifying={triggerVerification.isPending}
 								isRecovering={recoverKey.isPending}
 								testResult={testResults[repo.id]}
 							/>
