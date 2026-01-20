@@ -814,7 +814,12 @@ export interface DRRunbookRenderResponse {
 }
 
 // DR Test types
-export type DRTestStatus = 'pending' | 'running' | 'passed' | 'failed' | 'skipped';
+export type DRTestStatus =
+	| 'pending'
+	| 'running'
+	| 'passed'
+	| 'failed'
+	| 'skipped';
 
 export interface DRTest {
 	id: string;
