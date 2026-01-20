@@ -491,3 +491,49 @@ export interface NotificationPreferencesResponse {
 export interface NotificationLogsResponse {
 	logs: NotificationLog[];
 }
+
+// Audit log types
+export type AuditAction =
+	| 'login'
+	| 'logout'
+	| 'create'
+	| 'read'
+	| 'update'
+	| 'delete'
+	| 'backup'
+	| 'restore';
+
+export type AuditResult = 'success' | 'failure' | 'denied';
+
+export interface AuditLog {
+	id: string;
+	org_id: string;
+	user_id?: string;
+	agent_id?: string;
+	action: AuditAction;
+	resource_type: string;
+	resource_id?: string;
+	result: AuditResult;
+	ip_address?: string;
+	user_agent?: string;
+	details?: string;
+	created_at: string;
+}
+
+export interface AuditLogFilter {
+	action?: string;
+	resource_type?: string;
+	result?: string;
+	start_date?: string;
+	end_date?: string;
+	search?: string;
+	limit?: number;
+	offset?: number;
+}
+
+export interface AuditLogsResponse {
+	audit_logs: AuditLog[];
+	total_count: number;
+	limit: number;
+	offset: number;
+}

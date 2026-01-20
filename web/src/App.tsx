@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Agents } from './pages/Agents';
 import { Alerts } from './pages/Alerts';
+import { AuditLogs } from './pages/AuditLogs';
 import { Backups } from './pages/Backups';
 import { Dashboard } from './pages/Dashboard';
 import { NewOrganization } from './pages/NewOrganization';
@@ -41,6 +42,7 @@ function App() {
 						<Route path="backups" element={<Backups />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
+						<Route path="audit-logs" element={<AuditLogs />} />
 						<Route
 							path="organization/members"
 							element={<OrganizationMembers />}

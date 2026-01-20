@@ -1823,3 +1823,195 @@ func (db *DB) GetRepositoryKeysWithEscrowByOrgID(ctx context.Context, orgID uuid
 
 	return keys, nil
 }
+
+// Audit log methods
+
+// AuditLogFilter holds filter parameters for querying audit logs.
+type AuditLogFilter struct {
+	Action       string
+	ResourceType string
+	Result       string
+	StartDate    *time.Time
+	EndDate      *time.Time
+	Search       string
+	Limit        int
+	Offset       int
+}
+
+// GetAuditLogsByOrgID returns audit logs for an organization with optional filters.
+func (db *DB) GetAuditLogsByOrgID(ctx context.Context, orgID uuid.UUID, filter AuditLogFilter) ([]*models.AuditLog, error) {
+	query := `
+		SELECT id, org_id, user_id, agent_id, action, resource_type, resource_id,
+		       result, ip_address, user_agent, details, created_at
+		FROM audit_logs
+		WHERE org_id = $1
+	`
+	args := []any{orgID}
+	argNum := 2
+
+	if filter.Action != "" {
+		query += fmt.Sprintf(" AND action = $%d", argNum)
+		args = append(args, filter.Action)
+		argNum++
+	}
+	if filter.ResourceType != "" {
+		query += fmt.Sprintf(" AND resource_type = $%d", argNum)
+		args = append(args, filter.ResourceType)
+		argNum++
+	}
+	if filter.Result != "" {
+		query += fmt.Sprintf(" AND result = $%d", argNum)
+		args = append(args, filter.Result)
+		argNum++
+	}
+	if filter.StartDate != nil {
+		query += fmt.Sprintf(" AND created_at >= $%d", argNum)
+		args = append(args, filter.StartDate)
+		argNum++
+	}
+	if filter.EndDate != nil {
+		query += fmt.Sprintf(" AND created_at <= $%d", argNum)
+		args = append(args, filter.EndDate)
+		argNum++
+	}
+	if filter.Search != "" {
+		query += fmt.Sprintf(" AND (details ILIKE $%d OR resource_type ILIKE $%d)", argNum, argNum)
+		args = append(args, "%"+filter.Search+"%")
+		argNum++
+	}
+
+	query += " ORDER BY created_at DESC"
+
+	if filter.Limit > 0 {
+		query += fmt.Sprintf(" LIMIT $%d", argNum)
+		args = append(args, filter.Limit)
+		argNum++
+	}
+	if filter.Offset > 0 {
+		query += fmt.Sprintf(" OFFSET $%d", argNum)
+		args = append(args, filter.Offset)
+	}
+
+	rows, err := db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list audit logs: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAuditLogs(rows)
+}
+
+// GetAuditLogByID returns an audit log by ID.
+func (db *DB) GetAuditLogByID(ctx context.Context, id uuid.UUID) (*models.AuditLog, error) {
+	var a models.AuditLog
+	var actionStr, resultStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, user_id, agent_id, action, resource_type, resource_id,
+		       result, ip_address, user_agent, details, created_at
+		FROM audit_logs
+		WHERE id = $1
+	`, id).Scan(
+		&a.ID, &a.OrgID, &a.UserID, &a.AgentID, &actionStr, &a.ResourceType,
+		&a.ResourceID, &resultStr, &a.IPAddress, &a.UserAgent, &a.Details, &a.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get audit log: %w", err)
+	}
+	a.Action = models.AuditAction(actionStr)
+	a.Result = models.AuditResult(resultStr)
+	return &a, nil
+}
+
+// CreateAuditLog creates a new audit log entry.
+func (db *DB) CreateAuditLog(ctx context.Context, log *models.AuditLog) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO audit_logs (id, org_id, user_id, agent_id, action, resource_type,
+		                        resource_id, result, ip_address, user_agent, details, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, log.ID, log.OrgID, log.UserID, log.AgentID, string(log.Action), log.ResourceType,
+		log.ResourceID, string(log.Result), log.IPAddress, log.UserAgent, log.Details, log.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create audit log: %w", err)
+	}
+	return nil
+}
+
+// CountAuditLogsByOrgID returns the total count of audit logs for an organization with filters.
+func (db *DB) CountAuditLogsByOrgID(ctx context.Context, orgID uuid.UUID, filter AuditLogFilter) (int64, error) {
+	query := `SELECT COUNT(*) FROM audit_logs WHERE org_id = $1`
+	args := []any{orgID}
+	argNum := 2
+
+	if filter.Action != "" {
+		query += fmt.Sprintf(" AND action = $%d", argNum)
+		args = append(args, filter.Action)
+		argNum++
+	}
+	if filter.ResourceType != "" {
+		query += fmt.Sprintf(" AND resource_type = $%d", argNum)
+		args = append(args, filter.ResourceType)
+		argNum++
+	}
+	if filter.Result != "" {
+		query += fmt.Sprintf(" AND result = $%d", argNum)
+		args = append(args, filter.Result)
+		argNum++
+	}
+	if filter.StartDate != nil {
+		query += fmt.Sprintf(" AND created_at >= $%d", argNum)
+		args = append(args, filter.StartDate)
+		argNum++
+	}
+	if filter.EndDate != nil {
+		query += fmt.Sprintf(" AND created_at <= $%d", argNum)
+		args = append(args, filter.EndDate)
+		argNum++
+	}
+	if filter.Search != "" {
+		query += fmt.Sprintf(" AND (details ILIKE $%d OR resource_type ILIKE $%d)", argNum, argNum)
+		args = append(args, "%"+filter.Search+"%")
+	}
+
+	var count int64
+	err := db.Pool.QueryRow(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count audit logs: %w", err)
+	}
+	return count, nil
+}
+
+// scanAuditLogs scans multiple audit log rows.
+func scanAuditLogs(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.AuditLog, error) {
+	type scanner interface {
+		Next() bool
+		Scan(dest ...any) error
+		Err() error
+	}
+	r := rows.(scanner)
+
+	var logs []*models.AuditLog
+	for r.Next() {
+		var a models.AuditLog
+		var actionStr, resultStr string
+		err := r.Scan(
+			&a.ID, &a.OrgID, &a.UserID, &a.AgentID, &actionStr, &a.ResourceType,
+			&a.ResourceID, &resultStr, &a.IPAddress, &a.UserAgent, &a.Details, &a.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan audit log: %w", err)
+		}
+		a.Action = models.AuditAction(actionStr)
+		a.Result = models.AuditResult(resultStr)
+		logs = append(logs, &a)
+	}
+
+	if err := r.Err(); err != nil {
+		return nil, fmt.Errorf("iterate audit logs: %w", err)
+	}
+
+	return logs, nil
+}
