@@ -14,6 +14,8 @@ import type {
 	CreateAgentRequest,
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
+	CreateDRRunbookRequest,
+	CreateDRTestScheduleRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
@@ -22,6 +24,14 @@ import type {
 	CreateRestoreRequest,
 	CreateScheduleRequest,
 	CreateVerificationScheduleRequest,
+	DRRunbook,
+	DRRunbookRenderResponse,
+	DRRunbooksResponse,
+	DRStatus,
+	DRTest,
+	DRTestSchedule,
+	DRTestSchedulesResponse,
+	DRTestsResponse,
 	ErrorResponse,
 	InvitationsResponse,
 	InviteMemberRequest,
@@ -51,6 +61,7 @@ import type {
 	Restore,
 	RestoresResponse,
 	RotateAPIKeyResponse,
+	RunDRTestRequest,
 	RunScheduleResponse,
 	Schedule,
 	SchedulesResponse,
@@ -65,6 +76,7 @@ import type {
 	TestRepositoryResponse,
 	TriggerVerificationRequest,
 	UpdateAlertRuleRequest,
+	UpdateDRRunbookRequest,
 	UpdateMemberRequest,
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
@@ -748,5 +760,105 @@ export const verificationsApi = {
 	deleteSchedule: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/verification-schedules/${id}`, {
 			method: 'DELETE',
+		}),
+};
+
+// DR Runbooks API
+export const drRunbooksApi = {
+	list: async (): Promise<DRRunbook[]> => {
+		const response = await fetchApi<DRRunbooksResponse>('/dr-runbooks');
+		return response.runbooks ?? [];
+	},
+
+	get: async (id: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}`),
+
+	create: async (data: CreateDRRunbookRequest): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>('/dr-runbooks', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateDRRunbookRequest,
+	): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/dr-runbooks/${id}`, {
+			method: 'DELETE',
+		}),
+
+	activate: async (id: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}/activate`, {
+			method: 'POST',
+		}),
+
+	archive: async (id: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}/archive`, {
+			method: 'POST',
+		}),
+
+	render: async (id: string): Promise<DRRunbookRenderResponse> =>
+		fetchApi<DRRunbookRenderResponse>(`/dr-runbooks/${id}/render`),
+
+	generateFromSchedule: async (scheduleId: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${scheduleId}/generate`, {
+			method: 'POST',
+		}),
+
+	getStatus: async (): Promise<DRStatus> =>
+		fetchApi<DRStatus>('/dr-runbooks/status'),
+
+	listTestSchedules: async (runbookId: string): Promise<DRTestSchedule[]> => {
+		const response = await fetchApi<DRTestSchedulesResponse>(
+			`/dr-runbooks/${runbookId}/test-schedules`,
+		);
+		return response.schedules ?? [];
+	},
+
+	createTestSchedule: async (
+		runbookId: string,
+		data: CreateDRTestScheduleRequest,
+	): Promise<DRTestSchedule> =>
+		fetchApi<DRTestSchedule>(`/dr-runbooks/${runbookId}/test-schedules`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+};
+
+// DR Tests API
+export const drTestsApi = {
+	list: async (params?: {
+		runbook_id?: string;
+		status?: string;
+	}): Promise<DRTest[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.runbook_id) searchParams.set('runbook_id', params.runbook_id);
+		if (params?.status) searchParams.set('status', params.status);
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/dr-tests?${query}` : '/dr-tests';
+		const response = await fetchApi<DRTestsResponse>(endpoint);
+		return response.tests ?? [];
+	},
+
+	get: async (id: string): Promise<DRTest> =>
+		fetchApi<DRTest>(`/dr-tests/${id}`),
+
+	run: async (data: RunDRTestRequest): Promise<DRTest> =>
+		fetchApi<DRTest>('/dr-tests', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	cancel: async (id: string, notes?: string): Promise<DRTest> =>
+		fetchApi<DRTest>(`/dr-tests/${id}/cancel`, {
+			method: 'POST',
+			body: JSON.stringify({ notes }),
 		}),
 };
