@@ -154,3 +154,71 @@ export interface ErrorResponse {
 export interface MessageResponse {
 	message: string;
 }
+
+// Snapshot types
+export interface Snapshot {
+	id: string;
+	short_id: string;
+	time: string;
+	hostname: string;
+	paths: string[];
+	agent_id: string;
+	repository_id: string;
+	backup_id?: string;
+	size_bytes?: number;
+}
+
+export interface SnapshotFile {
+	name: string;
+	path: string;
+	type: 'file' | 'dir';
+	size: number;
+	mod_time: string;
+}
+
+export interface SnapshotsResponse {
+	snapshots: Snapshot[];
+}
+
+export interface SnapshotFilesResponse {
+	files: SnapshotFile[];
+	snapshot_id: string;
+	path: string;
+	message?: string;
+}
+
+// Restore types
+export type RestoreStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed'
+	| 'canceled';
+
+export interface Restore {
+	id: string;
+	agent_id: string;
+	repository_id: string;
+	snapshot_id: string;
+	target_path: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+	status: RestoreStatus;
+	started_at?: string;
+	completed_at?: string;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface CreateRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	target_path: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+}
+
+export interface RestoresResponse {
+	restores: Restore[];
+}
