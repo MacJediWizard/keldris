@@ -1,19 +1,21 @@
 import { Link } from 'react-router-dom';
-import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
-import { useDRStatus } from '../hooks/useDRRunbooks';
-import { useRepositories } from '../hooks/useRepositories';
-import { useSchedules } from '../hooks/useSchedules';
-import { useStorageStatsSummary } from '../hooks/useStorageStats';
+import {
+	useBackupDurationTrend,
+	useDailyBackupStats,
+	useDashboardStats,
+	useStorageGrowthTrend,
+} from '../hooks/useMetrics';
 import {
 	formatBytes,
 	formatDate,
 	formatDedupRatio,
+	formatDurationMs,
 	formatPercent,
-	formatRelativeTime,
 	getBackupStatusColor,
 	getDedupRatioColor,
 	getSpaceSavedColor,
+	getSuccessRateColor,
 	truncateSnapshotId,
 } from '../lib/utils';
 
@@ -23,9 +25,25 @@ interface StatCardProps {
 	subtitle: string;
 	icon: React.ReactNode;
 	isLoading?: boolean;
+	trend?: 'up' | 'down' | 'neutral';
+	trendValue?: string;
 }
 
-function StatCard({ title, value, subtitle, icon, isLoading }: StatCardProps) {
+function StatCard({
+	title,
+	value,
+	subtitle,
+	icon,
+	isLoading,
+	trend,
+	trendValue,
+}: StatCardProps) {
+	const trendColors = {
+		up: 'text-green-600',
+		down: 'text-red-600',
+		neutral: 'text-gray-500',
+	};
+
 	return (
 		<div className="bg-white rounded-lg border border-gray-200 p-6">
 			<div className="flex items-center justify-between">
@@ -38,7 +56,15 @@ function StatCard({ title, value, subtitle, icon, isLoading }: StatCardProps) {
 							value
 						)}
 					</p>
-					<p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+					<div className="flex items-center gap-2 mt-1">
+						<p className="text-sm text-gray-500">{subtitle}</p>
+						{trend && trendValue && (
+							<span className={`text-xs font-medium ${trendColors[trend]}`}>
+								{trend === 'up' ? '+' : trend === 'down' ? '-' : ''}
+								{trendValue}
+							</span>
+						)}
+					</div>
 				</div>
 				<div className="p-3 bg-indigo-50 rounded-lg text-indigo-600">
 					{icon}
@@ -60,21 +86,274 @@ function LoadingRow() {
 	);
 }
 
+function SuccessRateWidget({
+	rate7d,
+	rate30d,
+	isLoading,
+}: {
+	rate7d: number;
+	rate30d: number;
+	isLoading: boolean;
+}) {
+	return (
+		<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<h3 className="text-lg font-semibold text-gray-900 mb-4">
+				Backup Success Rate
+			</h3>
+			{isLoading ? (
+				<div className="space-y-4">
+					<div className="animate-pulse h-4 bg-gray-200 rounded w-3/4" />
+					<div className="animate-pulse h-4 bg-gray-200 rounded w-2/3" />
+				</div>
+			) : (
+				<div className="space-y-4">
+					<div>
+						<div className="flex items-center justify-between mb-1">
+							<span className="text-sm text-gray-600">Last 7 days</span>
+							<span
+								className={`text-sm font-semibold ${getSuccessRateColor(rate7d)}`}
+							>
+								{formatPercent(rate7d)}
+							</span>
+						</div>
+						<div className="w-full bg-gray-200 rounded-full h-2">
+							<div
+								className={`h-2 rounded-full ${rate7d >= 95 ? 'bg-green-500' : rate7d >= 80 ? 'bg-yellow-500' : 'bg-red-500'}`}
+								style={{ width: `${Math.min(rate7d, 100)}%` }}
+							/>
+						</div>
+					</div>
+					<div>
+						<div className="flex items-center justify-between mb-1">
+							<span className="text-sm text-gray-600">Last 30 days</span>
+							<span
+								className={`text-sm font-semibold ${getSuccessRateColor(rate30d)}`}
+							>
+								{formatPercent(rate30d)}
+							</span>
+						</div>
+						<div className="w-full bg-gray-200 rounded-full h-2">
+							<div
+								className={`h-2 rounded-full ${rate30d >= 95 ? 'bg-green-500' : rate30d >= 80 ? 'bg-yellow-500' : 'bg-red-500'}`}
+								style={{ width: `${Math.min(rate30d, 100)}%` }}
+							/>
+						</div>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
+function StorageGrowthChart({
+	data,
+	isLoading,
+}: {
+	data: { date: string; total_size: number; raw_size: number }[];
+	isLoading: boolean;
+}) {
+	const maxSize = Math.max(...data.map((d) => d.total_size), 1);
+
+	return (
+		<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="flex items-center justify-between mb-4">
+				<h3 className="text-lg font-semibold text-gray-900">Storage Growth</h3>
+				<Link
+					to="/stats"
+					className="text-sm text-indigo-600 hover:text-indigo-800"
+				>
+					View Details
+				</Link>
+			</div>
+			{isLoading ? (
+				<div className="h-40 flex items-center justify-center">
+					<div className="animate-pulse h-full w-full bg-gray-100 rounded" />
+				</div>
+			) : data.length === 0 ? (
+				<div className="h-40 flex items-center justify-center text-gray-500">
+					No storage data yet
+				</div>
+			) : (
+				<div className="h-40 flex items-end gap-1">
+					{data.slice(-14).map((point, i) => (
+						<div
+							key={point.date}
+							className="flex-1 flex flex-col items-center gap-1"
+						>
+							<div
+								className="w-full bg-indigo-500 rounded-t hover:bg-indigo-600 transition-colors"
+								style={{
+									height: `${(point.total_size / maxSize) * 100}%`,
+									minHeight: '4px',
+								}}
+								title={`${formatBytes(point.total_size)} on ${new Date(point.date).toLocaleDateString()}`}
+							/>
+							{i % 2 === 0 && (
+								<span className="text-[10px] text-gray-400">
+									{new Date(point.date).toLocaleDateString('en-US', {
+										month: 'short',
+										day: 'numeric',
+									})}
+								</span>
+							)}
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
+
+function BackupDurationChart({
+	data,
+	isLoading,
+}: {
+	data: {
+		date: string;
+		avg_duration_ms: number;
+		max_duration_ms: number;
+		backup_count: number;
+	}[];
+	isLoading: boolean;
+}) {
+	const maxDuration = Math.max(...data.map((d) => d.avg_duration_ms), 1);
+
+	return (
+		<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<h3 className="text-lg font-semibold text-gray-900 mb-4">
+				Backup Duration Trends
+			</h3>
+			{isLoading ? (
+				<div className="h-40 flex items-center justify-center">
+					<div className="animate-pulse h-full w-full bg-gray-100 rounded" />
+				</div>
+			) : data.length === 0 ? (
+				<div className="h-40 flex items-center justify-center text-gray-500">
+					No backup duration data yet
+				</div>
+			) : (
+				<div className="h-40 flex items-end gap-1">
+					{data.slice(-14).map((point, i) => (
+						<div
+							key={point.date}
+							className="flex-1 flex flex-col items-center gap-1"
+						>
+							<div
+								className="w-full bg-cyan-500 rounded-t hover:bg-cyan-600 transition-colors"
+								style={{
+									height: `${(point.avg_duration_ms / maxDuration) * 100}%`,
+									minHeight: '4px',
+								}}
+								title={`Avg: ${formatDurationMs(point.avg_duration_ms)} (${point.backup_count} backups)`}
+							/>
+							{i % 2 === 0 && (
+								<span className="text-[10px] text-gray-400">
+									{new Date(point.date).toLocaleDateString('en-US', {
+										month: 'short',
+										day: 'numeric',
+									})}
+								</span>
+							)}
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
+
+function DailyBackupsChart({
+	data,
+	isLoading,
+}: {
+	data: {
+		date: string;
+		total: number;
+		successful: number;
+		failed: number;
+	}[];
+	isLoading: boolean;
+}) {
+	const maxCount = Math.max(...data.map((d) => d.total), 1);
+
+	return (
+		<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="flex items-center justify-between mb-4">
+				<h3 className="text-lg font-semibold text-gray-900">Daily Backups</h3>
+				<div className="flex items-center gap-4 text-xs">
+					<span className="flex items-center gap-1">
+						<span className="w-3 h-3 bg-green-500 rounded" /> Successful
+					</span>
+					<span className="flex items-center gap-1">
+						<span className="w-3 h-3 bg-red-500 rounded" /> Failed
+					</span>
+				</div>
+			</div>
+			{isLoading ? (
+				<div className="h-40 flex items-center justify-center">
+					<div className="animate-pulse h-full w-full bg-gray-100 rounded" />
+				</div>
+			) : data.length === 0 ? (
+				<div className="h-40 flex items-center justify-center text-gray-500">
+					No backup data yet
+				</div>
+			) : (
+				<div className="h-40 flex items-end gap-1">
+					{data.slice(-14).map((point, i) => (
+						<div
+							key={point.date}
+							className="flex-1 flex flex-col items-center gap-1"
+						>
+							<div className="w-full flex flex-col" style={{ height: '100%' }}>
+								<div
+									className="w-full bg-red-500 rounded-t"
+									style={{
+										height:
+											point.total > 0
+												? `${(point.failed / maxCount) * 100}%`
+												: '0%',
+										minHeight: point.failed > 0 ? '2px' : '0',
+									}}
+								/>
+								<div
+									className="w-full bg-green-500"
+									style={{
+										height:
+											point.total > 0
+												? `${(point.successful / maxCount) * 100}%`
+												: '0%',
+										minHeight: point.successful > 0 ? '2px' : '0',
+									}}
+									title={`${point.successful} successful, ${point.failed} failed`}
+								/>
+							</div>
+							{i % 2 === 0 && (
+								<span className="text-[10px] text-gray-400">
+									{new Date(point.date).toLocaleDateString('en-US', {
+										month: 'short',
+										day: 'numeric',
+									})}
+								</span>
+							)}
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
+
 export function Dashboard() {
-	const { data: agents, isLoading: agentsLoading } = useAgents();
-	const { data: repositories, isLoading: reposLoading } = useRepositories();
-	const { data: schedules, isLoading: schedulesLoading } = useSchedules();
+	const { data: dashboardStats, isLoading: statsLoading } = useDashboardStats();
 	const { data: backups, isLoading: backupsLoading } = useBackups();
-	const { data: drStatus, isLoading: drStatusLoading } = useDRStatus();
-	const { data: storageStats, isLoading: statsLoading } =
-		useStorageStatsSummary();
+	const { data: dailyStats, isLoading: dailyStatsLoading } =
+		useDailyBackupStats(30);
+	const { data: storageGrowth, isLoading: storageGrowthLoading } =
+		useStorageGrowthTrend(30);
+	const { data: durationTrend, isLoading: durationTrendLoading } =
+		useBackupDurationTrend(30);
 
-	const activeAgents = agents?.filter((a) => a.status === 'active').length ?? 0;
-	const enabledSchedules = schedules?.filter((s) => s.enabled).length ?? 0;
 	const recentBackups = backups?.slice(0, 5) ?? [];
-
-	const isLoading =
-		agentsLoading || reposLoading || schedulesLoading || backupsLoading;
 
 	return (
 		<div className="space-y-6">
@@ -83,12 +362,35 @@ export function Dashboard() {
 				<p className="text-gray-600 mt-1">Overview of your backup system</p>
 			</div>
 
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+			{/* Main Stats Row */}
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+				<StatCard
+					title="Total Backup Size"
+					value={formatBytes(dashboardStats?.total_backup_size ?? 0)}
+					subtitle={`${dashboardStats?.repository_count ?? 0} repositories`}
+					isLoading={statsLoading}
+					icon={
+						<svg
+							aria-hidden="true"
+							className="w-6 h-6"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+							/>
+						</svg>
+					}
+				/>
 				<StatCard
 					title="Active Agents"
-					value={String(activeAgents)}
-					subtitle="Connected agents"
-					isLoading={agentsLoading}
+					value={`${dashboardStats?.agent_online ?? 0}/${dashboardStats?.agent_total ?? 0}`}
+					subtitle={`${dashboardStats?.agent_offline ?? 0} offline`}
+					isLoading={statsLoading}
 					icon={
 						<svg
 							aria-hidden="true"
@@ -107,10 +409,10 @@ export function Dashboard() {
 					}
 				/>
 				<StatCard
-					title="Repositories"
-					value={String(repositories?.length ?? 0)}
-					subtitle="Backup destinations"
-					isLoading={reposLoading}
+					title="Failed (24h)"
+					value={String(dashboardStats?.backup_failed_24h ?? 0)}
+					subtitle={`${dashboardStats?.backup_running ?? 0} running`}
+					isLoading={statsLoading}
 					icon={
 						<svg
 							aria-hidden="true"
@@ -123,16 +425,16 @@ export function Dashboard() {
 								strokeLinecap="round"
 								strokeLinejoin="round"
 								strokeWidth={2}
-								d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
 							/>
 						</svg>
 					}
 				/>
 				<StatCard
 					title="Scheduled Jobs"
-					value={String(enabledSchedules)}
-					subtitle="Active schedules"
-					isLoading={schedulesLoading}
+					value={String(dashboardStats?.schedule_enabled ?? 0)}
+					subtitle={`${dashboardStats?.schedule_count ?? 0} total`}
+					isLoading={statsLoading}
 					icon={
 						<svg
 							aria-hidden="true"
@@ -150,58 +452,110 @@ export function Dashboard() {
 						</svg>
 					}
 				/>
-				<StatCard
-					title="Total Backups"
-					value={String(backups?.length ?? 0)}
-					subtitle="All time"
-					isLoading={backupsLoading}
-					icon={
-						<svg
-							aria-hidden="true"
-							className="w-6 h-6"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-							/>
-						</svg>
-					}
+			</div>
+
+			{/* Success Rate and Storage Efficiency Row */}
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<SuccessRateWidget
+					rate7d={dashboardStats?.success_rate_7d ?? 0}
+					rate30d={dashboardStats?.success_rate_30d ?? 0}
+					isLoading={statsLoading}
 				/>
-				<StatCard
-					title="DR Pass Rate"
-					value={drStatus ? `${Math.round(drStatus.pass_rate)}%` : '0%'}
-					subtitle={`${drStatus?.tests_last_30_days ?? 0} tests (30 days)`}
-					isLoading={drStatusLoading}
-					icon={
-						<svg
-							aria-hidden="true"
-							className="w-6 h-6"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
+				<div className="bg-white rounded-lg border border-gray-200 p-6">
+					<div className="flex items-center justify-between mb-4">
+						<h3 className="text-lg font-semibold text-gray-900">
+							Storage Efficiency
+						</h3>
+						<Link
+							to="/stats"
+							className="text-sm text-indigo-600 hover:text-indigo-800"
 						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-							/>
-						</svg>
-					}
+							View Details
+						</Link>
+					</div>
+					{statsLoading ? (
+						<div className="grid grid-cols-2 gap-4">
+							{[1, 2, 3, 4].map((i) => (
+								<div key={i} className="animate-pulse">
+									<div className="h-4 w-24 bg-gray-200 rounded mb-2" />
+									<div className="h-8 w-20 bg-gray-200 rounded" />
+								</div>
+							))}
+						</div>
+					) : dashboardStats ? (
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<p className="text-sm font-medium text-gray-600">Dedup Ratio</p>
+								<p
+									className={`text-2xl font-bold mt-1 ${getDedupRatioColor(dashboardStats.avg_dedup_ratio)}`}
+								>
+									{formatDedupRatio(dashboardStats.avg_dedup_ratio)}
+								</p>
+							</div>
+							<div>
+								<p className="text-sm font-medium text-gray-600">Space Saved</p>
+								<p
+									className={`text-2xl font-bold mt-1 ${getSpaceSavedColor(dashboardStats.total_backup_size > 0 ? (dashboardStats.total_space_saved / dashboardStats.total_backup_size) * 100 : 0)}`}
+								>
+									{formatBytes(dashboardStats.total_space_saved)}
+								</p>
+							</div>
+							<div>
+								<p className="text-sm font-medium text-gray-600">
+									Actual Storage
+								</p>
+								<p className="text-2xl font-bold text-gray-900 mt-1">
+									{formatBytes(dashboardStats.total_raw_size)}
+								</p>
+							</div>
+							<div>
+								<p className="text-sm font-medium text-gray-600">
+									Original Size
+								</p>
+								<p className="text-2xl font-bold text-gray-900 mt-1">
+									{formatBytes(dashboardStats.total_backup_size)}
+								</p>
+							</div>
+						</div>
+					) : (
+						<div className="text-center py-8 text-gray-500">
+							No storage stats available
+						</div>
+					)}
+				</div>
+			</div>
+
+			{/* Charts Row */}
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<StorageGrowthChart
+					data={storageGrowth ?? []}
+					isLoading={storageGrowthLoading}
+				/>
+				<DailyBackupsChart
+					data={dailyStats ?? []}
+					isLoading={dailyStatsLoading}
 				/>
 			</div>
 
+			{/* Backup Duration and Recent Backups Row */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<BackupDurationChart
+					data={durationTrend ?? []}
+					isLoading={durationTrendLoading}
+				/>
 				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
-						Recent Backups
-					</h2>
-					{isLoading ? (
+					<div className="flex items-center justify-between mb-4">
+						<h2 className="text-lg font-semibold text-gray-900">
+							Recent Backups
+						</h2>
+						<Link
+							to="/backups"
+							className="text-sm text-indigo-600 hover:text-indigo-800"
+						>
+							View All
+						</Link>
+					</div>
+					{backupsLoading ? (
 						<div className="space-y-1">
 							<LoadingRow />
 							<LoadingRow />
@@ -259,185 +613,43 @@ export function Dashboard() {
 						</div>
 					)}
 				</div>
-
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
-						System Status
-					</h2>
-					<div className="space-y-4">
-						<div className="flex items-center justify-between">
-							<span className="text-gray-600">Server</span>
-							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-								<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-								Online
-							</span>
-						</div>
-						<div className="flex items-center justify-between">
-							<span className="text-gray-600">Database</span>
-							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-								<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-								Connected
-							</span>
-						</div>
-						<div className="flex items-center justify-between">
-							<span className="text-gray-600">Scheduler</span>
-							{enabledSchedules > 0 ? (
-								<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-									<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-									Active ({enabledSchedules} jobs)
-								</span>
-							) : (
-								<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-									<span className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
-									Idle
-								</span>
-							)}
-						</div>
-					</div>
-
-					<div className="border-t border-gray-200 mt-4 pt-4">
-						<h3 className="text-sm font-medium text-gray-900 mb-3">
-							DR Testing
-						</h3>
-						<div className="space-y-3">
-							<div className="flex items-center justify-between">
-								<span className="text-gray-600 text-sm">Active Runbooks</span>
-								<span className="text-sm font-medium text-gray-900">
-									{drStatusLoading ? (
-										<span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
-									) : (
-										`${drStatus?.active_runbooks ?? 0} / ${drStatus?.total_runbooks ?? 0}`
-									)}
-								</span>
-							</div>
-							<div className="flex items-center justify-between">
-								<span className="text-gray-600 text-sm">Last Test</span>
-								<span className="text-sm text-gray-900">
-									{drStatusLoading ? (
-										<span className="inline-block w-16 h-4 bg-gray-200 rounded animate-pulse" />
-									) : drStatus?.last_test_at ? (
-										formatRelativeTime(drStatus.last_test_at)
-									) : (
-										<span className="text-gray-400">Never</span>
-									)}
-								</span>
-							</div>
-							<div className="flex items-center justify-between">
-								<span className="text-gray-600 text-sm">Next Test</span>
-								<span className="text-sm text-gray-900">
-									{drStatusLoading ? (
-										<span className="inline-block w-16 h-4 bg-gray-200 rounded animate-pulse" />
-									) : drStatus?.next_test_at ? (
-										formatRelativeTime(drStatus.next_test_at)
-									) : (
-										<span className="text-gray-400">Not scheduled</span>
-									)}
-								</span>
-							</div>
-						</div>
-					</div>
-				</div>
 			</div>
 
+			{/* System Status */}
 			<div className="bg-white rounded-lg border border-gray-200 p-6">
-				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-lg font-semibold text-gray-900">
-						Storage Efficiency
-					</h2>
-					<Link
-						to="/stats"
-						className="text-sm text-indigo-600 hover:text-indigo-800"
-					>
-						View Details
-					</Link>
+				<h2 className="text-lg font-semibold text-gray-900 mb-4">
+					System Status
+				</h2>
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+						<span className="text-gray-600">Server</span>
+						<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+							<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+							Online
+						</span>
+					</div>
+					<div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+						<span className="text-gray-600">Database</span>
+						<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+							<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+							Connected
+						</span>
+					</div>
+					<div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+						<span className="text-gray-600">Scheduler</span>
+						{(dashboardStats?.schedule_enabled ?? 0) > 0 ? (
+							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+								<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+								Active ({dashboardStats?.schedule_enabled} jobs)
+							</span>
+						) : (
+							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+								<span className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
+								Idle
+							</span>
+						)}
+					</div>
 				</div>
-				{statsLoading ? (
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-						{[1, 2, 3, 4].map((i) => (
-							<div key={i} className="animate-pulse">
-								<div className="h-4 w-24 bg-gray-200 rounded mb-2" />
-								<div className="h-8 w-20 bg-gray-200 rounded" />
-							</div>
-						))}
-					</div>
-				) : storageStats ? (
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-						<div>
-							<p className="text-sm font-medium text-gray-600">
-								Avg Dedup Ratio
-							</p>
-							<p
-								className={`text-2xl font-bold mt-1 ${getDedupRatioColor(storageStats.avg_dedup_ratio)}`}
-							>
-								{formatDedupRatio(storageStats.avg_dedup_ratio)}
-							</p>
-							<p className="text-sm text-gray-500 mt-1">
-								{storageStats.repository_count} repositories
-							</p>
-						</div>
-						<div>
-							<p className="text-sm font-medium text-gray-600">Space Saved</p>
-							<p
-								className={`text-2xl font-bold mt-1 ${getSpaceSavedColor(storageStats.total_restore_size > 0 ? (storageStats.total_space_saved / storageStats.total_restore_size) * 100 : 0)}`}
-							>
-								{formatBytes(storageStats.total_space_saved)}
-							</p>
-							<p className="text-sm text-gray-500 mt-1">
-								{formatPercent(
-									storageStats.total_restore_size > 0
-										? (storageStats.total_space_saved /
-												storageStats.total_restore_size) *
-												100
-										: 0,
-								)}{' '}
-								of original
-							</p>
-						</div>
-						<div>
-							<p className="text-sm font-medium text-gray-600">
-								Actual Storage
-							</p>
-							<p className="text-2xl font-bold text-gray-900 mt-1">
-								{formatBytes(storageStats.total_raw_size)}
-							</p>
-							<p className="text-sm text-gray-500 mt-1">
-								From {formatBytes(storageStats.total_restore_size)} original
-							</p>
-						</div>
-						<div>
-							<p className="text-sm font-medium text-gray-600">
-								Total Snapshots
-							</p>
-							<p className="text-2xl font-bold text-gray-900 mt-1">
-								{storageStats.total_snapshots}
-							</p>
-							<p className="text-sm text-gray-500 mt-1">
-								Across all repositories
-							</p>
-						</div>
-					</div>
-				) : (
-					<div className="text-center py-8 text-gray-500">
-						<svg
-							aria-hidden="true"
-							className="w-12 h-12 mx-auto mb-3 text-gray-300"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-							/>
-						</svg>
-						<p>No storage stats yet</p>
-						<p className="text-sm">
-							Stats will be collected automatically once backups run
-						</p>
-					</div>
-				)}
 			</div>
 		</div>
 	);
