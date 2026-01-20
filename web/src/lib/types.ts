@@ -66,6 +66,11 @@ export interface RetentionPolicy {
 	keep_yearly?: number;
 }
 
+export interface BackupWindow {
+	start?: string; // HH:MM format (e.g., "02:00")
+	end?: string; // HH:MM format (e.g., "06:00")
+}
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
@@ -75,6 +80,9 @@ export interface Schedule {
 	paths: string[];
 	excludes?: string[];
 	retention_policy?: RetentionPolicy;
+	bandwidth_limit_kb?: number; // Upload limit in KB/s
+	backup_window?: BackupWindow; // Allowed backup time window
+	excluded_hours?: number[]; // Hours (0-23) when backups should not run
 	enabled: boolean;
 	created_at: string;
 	updated_at: string;
@@ -88,6 +96,9 @@ export interface CreateScheduleRequest {
 	paths: string[];
 	excludes?: string[];
 	retention_policy?: RetentionPolicy;
+	bandwidth_limit_kb?: number;
+	backup_window?: BackupWindow;
+	excluded_hours?: number[];
 	enabled?: boolean;
 }
 
@@ -97,6 +108,9 @@ export interface UpdateScheduleRequest {
 	paths?: string[];
 	excludes?: string[];
 	retention_policy?: RetentionPolicy;
+	bandwidth_limit_kb?: number;
+	backup_window?: BackupWindow;
+	excluded_hours?: number[];
 	enabled?: boolean;
 }
 

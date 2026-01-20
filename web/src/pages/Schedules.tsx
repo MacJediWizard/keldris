@@ -43,28 +43,61 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	const [repositoryId, setRepositoryId] = useState('');
 	const [cronExpression, setCronExpression] = useState('0 2 * * *');
 	const [paths, setPaths] = useState('/home');
+	const [bandwidthLimitKb, setBandwidthLimitKb] = useState('');
+	const [windowStart, setWindowStart] = useState('');
+	const [windowEnd, setWindowEnd] = useState('');
+	const [excludedHours, setExcludedHours] = useState<number[]>([]);
+	const [showAdvanced, setShowAdvanced] = useState(false);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
 	const createSchedule = useCreateSchedule();
 
+	const toggleExcludedHour = (hour: number) => {
+		setExcludedHours((prev) =>
+			prev.includes(hour) ? prev.filter((h) => h !== hour) : [...prev, hour],
+		);
+	};
+
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		try {
-			await createSchedule.mutateAsync({
+			const data: Parameters<typeof createSchedule.mutateAsync>[0] = {
 				name,
 				agent_id: agentId,
 				repository_id: repositoryId,
 				cron_expression: cronExpression,
 				paths: paths.split('\n').filter((p) => p.trim()),
 				enabled: true,
-			});
+			};
+
+			if (bandwidthLimitKb && Number.parseInt(bandwidthLimitKb, 10) > 0) {
+				data.bandwidth_limit_kb = Number.parseInt(bandwidthLimitKb, 10);
+			}
+
+			if (windowStart || windowEnd) {
+				data.backup_window = {
+					start: windowStart || undefined,
+					end: windowEnd || undefined,
+				};
+			}
+
+			if (excludedHours.length > 0) {
+				data.excluded_hours = excludedHours;
+			}
+
+			await createSchedule.mutateAsync(data);
 			onClose();
 			setName('');
 			setAgentId('');
 			setRepositoryId('');
 			setCronExpression('0 2 * * *');
 			setPaths('/home');
+			setBandwidthLimitKb('');
+			setWindowStart('');
+			setWindowEnd('');
+			setExcludedHours([]);
+			setShowAdvanced(false);
 		} catch {
 			// Error handled by mutation
 		}
@@ -178,6 +211,109 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								required
 							/>
 						</div>
+
+						<div className="border-t border-gray-200 pt-4">
+							<button
+								type="button"
+								onClick={() => setShowAdvanced(!showAdvanced)}
+								className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+							>
+								<svg
+									className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9 5l7 7-7 7"
+									/>
+								</svg>
+								Advanced Settings
+							</button>
+
+							{showAdvanced && (
+								<div className="mt-4 space-y-4">
+									<div>
+										<label
+											htmlFor="bandwidth-limit"
+											className="block text-sm font-medium text-gray-700 mb-1"
+										>
+											Bandwidth Limit (KB/s)
+										</label>
+										<input
+											type="number"
+											id="bandwidth-limit"
+											value={bandwidthLimitKb}
+											onChange={(e) => setBandwidthLimitKb(e.target.value)}
+											placeholder="e.g., 1024 (leave empty for unlimited)"
+											min="0"
+											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										/>
+										<p className="text-xs text-gray-500 mt-1">
+											Limit upload speed during backups. Leave empty for
+											unlimited.
+										</p>
+									</div>
+
+									<fieldset>
+										<legend className="block text-sm font-medium text-gray-700 mb-1">
+											Backup Window
+										</legend>
+										<div className="flex items-center gap-2">
+											<input
+												type="time"
+												value={windowStart}
+												onChange={(e) => setWindowStart(e.target.value)}
+												className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+												aria-label="Window start time"
+											/>
+											<span className="text-gray-500">to</span>
+											<input
+												type="time"
+												value={windowEnd}
+												onChange={(e) => setWindowEnd(e.target.value)}
+												className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+												aria-label="Window end time"
+											/>
+										</div>
+										<p className="text-xs text-gray-500 mt-1">
+											Only run backups within this time window. Leave empty to
+											allow any time.
+										</p>
+									</fieldset>
+
+									<fieldset>
+										<legend className="block text-sm font-medium text-gray-700 mb-2">
+											Excluded Hours
+										</legend>
+										<div className="grid grid-cols-6 gap-1">
+											{Array.from({ length: 24 }, (_, i) => (
+												<button
+													// biome-ignore lint/suspicious/noArrayIndexKey: Static list of 24 hours, order never changes
+													key={i}
+													type="button"
+													onClick={() => toggleExcludedHour(i)}
+													className={`px-2 py-1 text-xs rounded transition-colors ${
+														excludedHours.includes(i)
+															? 'bg-red-100 text-red-800 border border-red-300'
+															: 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+													}`}
+												>
+													{i.toString().padStart(2, '0')}
+												</button>
+											))}
+										</div>
+										<p className="text-xs text-gray-500 mt-1">
+											Click to exclude hours when backups should not run.
+										</p>
+									</fieldset>
+								</div>
+							)}
+						</div>
 					</div>
 					{createSchedule.isError && (
 						<p className="text-sm text-red-600 mt-4">
@@ -206,6 +342,23 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	);
 }
 
+function formatBandwidth(kbps?: number): string {
+	if (!kbps) return 'Unlimited';
+	if (kbps >= 1024) {
+		return `${(kbps / 1024).toFixed(1)} MB/s`;
+	}
+	return `${kbps} KB/s`;
+}
+
+function formatBackupWindow(window?: { start?: string; end?: string }):
+	| string
+	| null {
+	if (!window || (!window.start && !window.end)) return null;
+	const start = window.start || '00:00';
+	const end = window.end || '23:59';
+	return `${start} - ${end}`;
+}
+
 interface ScheduleRowProps {
 	schedule: Schedule;
 	agentName?: string;
@@ -229,6 +382,11 @@ function ScheduleRow({
 	isDeleting,
 	isRunning,
 }: ScheduleRowProps) {
+	const hasResourceControls =
+		schedule.bandwidth_limit_kb ||
+		schedule.backup_window ||
+		(schedule.excluded_hours && schedule.excluded_hours.length > 0);
+
 	return (
 		<tr className="hover:bg-gray-50">
 			<td className="px-6 py-4">
@@ -236,6 +394,68 @@ function ScheduleRow({
 				<div className="text-sm text-gray-500">
 					{agentName ?? 'Unknown Agent'} → {repoName ?? 'Unknown Repo'}
 				</div>
+				{hasResourceControls && (
+					<div className="mt-1 flex flex-wrap gap-1.5">
+						{schedule.bandwidth_limit_kb && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M13 10V3L4 14h7v7l9-11h-7z"
+									/>
+								</svg>
+								{formatBandwidth(schedule.bandwidth_limit_kb)}
+							</span>
+						)}
+						{formatBackupWindow(schedule.backup_window) && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-purple-50 text-purple-700 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
+								{formatBackupWindow(schedule.backup_window)}
+							</span>
+						)}
+						{schedule.excluded_hours && schedule.excluded_hours.length > 0 && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-amber-50 text-amber-700 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636"
+									/>
+								</svg>
+								{schedule.excluded_hours.length} excluded hour
+								{schedule.excluded_hours.length !== 1 ? 's' : ''}
+							</span>
+						)}
+					</div>
+				)}
 			</td>
 			<td className="px-6 py-4">
 				<code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">
