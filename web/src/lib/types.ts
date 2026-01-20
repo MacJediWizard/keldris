@@ -998,3 +998,70 @@ export interface SearchResponse {
 	query: string;
 	total: number;
 }
+
+// Dashboard Metrics types
+export interface DashboardStats {
+	agent_total: number;
+	agent_online: number;
+	agent_offline: number;
+	backup_total: number;
+	backup_running: number;
+	backup_failed_24h: number;
+	repository_count: number;
+	schedule_count: number;
+	schedule_enabled: number;
+	total_backup_size: number;
+	total_raw_size: number;
+	total_space_saved: number;
+	avg_dedup_ratio: number;
+	success_rate_7d: number;
+	success_rate_30d: number;
+}
+
+export interface BackupSuccessRate {
+	period: string;
+	total: number;
+	successful: number;
+	failed: number;
+	success_percent: number;
+}
+
+export interface BackupSuccessRatesResponse {
+	rate_7d: BackupSuccessRate;
+	rate_30d: BackupSuccessRate;
+}
+
+export interface StorageGrowthTrend {
+	date: string;
+	total_size: number;
+	raw_size: number;
+	snapshot_count: number;
+}
+
+export interface StorageGrowthTrendResponse {
+	trend: StorageGrowthTrend[];
+}
+
+export interface BackupDurationTrend {
+	date: string;
+	avg_duration_ms: number;
+	max_duration_ms: number;
+	min_duration_ms: number;
+	backup_count: number;
+}
+
+export interface BackupDurationTrendResponse {
+	trend: BackupDurationTrend[];
+}
+
+export interface DailyBackupStats {
+	date: string;
+	total: number;
+	successful: number;
+	failed: number;
+	total_size: number;
+}
+
+export interface DailyBackupStatsResponse {
+	stats: DailyBackupStats[];
+}
