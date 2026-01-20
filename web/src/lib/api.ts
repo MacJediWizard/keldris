@@ -1,5 +1,8 @@
 import type {
 	Agent,
+	AgentBackupsResponse,
+	AgentSchedulesResponse,
+	AgentStatsResponse,
 	AgentsResponse,
 	Alert,
 	AlertCountResponse,
@@ -209,6 +212,15 @@ export const agentsApi = {
 		fetchApi<MessageResponse>(`/agents/${id}/apikey`, {
 			method: 'DELETE',
 		}),
+
+	getStats: async (id: string): Promise<AgentStatsResponse> =>
+		fetchApi<AgentStatsResponse>(`/agents/${id}/stats`),
+
+	getBackups: async (id: string): Promise<AgentBackupsResponse> =>
+		fetchApi<AgentBackupsResponse>(`/agents/${id}/backups`),
+
+	getSchedules: async (id: string): Promise<AgentSchedulesResponse> =>
+		fetchApi<AgentSchedulesResponse>(`/agents/${id}/schedules`),
 };
 
 // Repositories API

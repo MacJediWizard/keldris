@@ -26,6 +26,9 @@ type AgentStore interface {
 	GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Agent, error)
 	UpdateAgentAPIKeyHash(ctx context.Context, id uuid.UUID, apiKeyHash string) error
 	RevokeAgentAPIKey(ctx context.Context, id uuid.UUID) error
+	GetAgentStats(ctx context.Context, agentID uuid.UUID) (*models.AgentStats, error)
+	GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Backup, error)
+	GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error)
 }
 
 // AgentsHandler handles agent-related HTTP endpoints.
@@ -53,6 +56,9 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		agents.POST("/:id/heartbeat", h.Heartbeat)
 		agents.POST("/:id/apikey/rotate", h.RotateAPIKey)
 		agents.DELETE("/:id/apikey", h.RevokeAPIKey)
+		agents.GET("/:id/stats", h.Stats)
+		agents.GET("/:id/backups", h.Backups)
+		agents.GET("/:id/schedules", h.Schedules)
 	}
 }
 
@@ -503,4 +509,133 @@ func generateAPIKey() (string, error) {
 func hashAPIKey(key string) string {
 	hash := sha256.Sum256([]byte(key))
 	return hex.EncodeToString(hash[:])
+}
+
+// Stats returns statistics for a specific agent.
+// GET /api/v1/agents/:id/stats
+func (h *AgentsHandler) Stats(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	stats, err := h.store.GetAgentStats(c.Request.Context(), id)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to get agent stats")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get agent stats"})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.AgentStatsResponse{
+		Agent: agent,
+		Stats: stats,
+	})
+}
+
+// Backups returns backup history for a specific agent.
+// GET /api/v1/agents/:id/backups
+func (h *AgentsHandler) Backups(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	backups, err := h.store.GetBackupsByAgentID(c.Request.Context(), id)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to get agent backups")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get agent backups"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"backups": backups})
+}
+
+// Schedules returns schedules for a specific agent.
+// GET /api/v1/agents/:id/schedules
+func (h *AgentsHandler) Schedules(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	schedules, err := h.store.GetSchedulesByAgentID(c.Request.Context(), id)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to get agent schedules")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get agent schedules"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"schedules": schedules})
 }
