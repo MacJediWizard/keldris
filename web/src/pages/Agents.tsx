@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AgentDownloads } from '../components/features/AgentDownloads';
 import {
 	useAgents,
 	useCreateAgent,
@@ -515,7 +516,7 @@ export function Agents() {
 						</tbody>
 					</table>
 				) : (
-					<div className="p-12 text-center text-gray-500">
+					<div className="p-8 text-center text-gray-500">
 						<svg
 							aria-hidden="true"
 							className="w-16 h-16 mx-auto mb-4 text-gray-300"
@@ -533,17 +534,9 @@ export function Agents() {
 						<h3 className="text-lg font-medium text-gray-900 mb-2">
 							No agents registered
 						</h3>
-						<p className="mb-4">
+						<p className="mb-6">
 							Install and register an agent to start backing up your systems
 						</p>
-						<div className="bg-gray-50 rounded-lg p-4 max-w-md mx-auto text-left">
-							<p className="text-sm font-medium text-gray-700 mb-2">
-								Quick start:
-							</p>
-							<code className="text-sm text-gray-600 block">
-								keldris-agent register --server https://your-server
-							</code>
-						</div>
 					</div>
 				)}
 			</div>
@@ -557,6 +550,9 @@ export function Agents() {
 			{newApiKey && (
 				<ApiKeyModal apiKey={newApiKey} onClose={() => setNewApiKey(null)} />
 			)}
+
+			{/* Download section - always visible */}
+			<AgentDownloads showInstallCommands={true} />
 		</div>
 	);
 }
