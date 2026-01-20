@@ -216,18 +216,69 @@ func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.
 	return nil
 }
 
+// CheckOptions configures the repository check operation.
+type CheckOptions struct {
+	// ReadData verifies the data of all pack files in the repository.
+	// This is more thorough but much slower.
+	ReadData bool
+	// ReadDataSubset reads only a subset of pack files (e.g., "2.5%" or "5G").
+	// Ignored if ReadData is false.
+	ReadDataSubset string
+}
+
+// CheckResult contains the results of a repository check.
+type CheckResult struct {
+	// Errors contains any errors found during the check.
+	Errors []string
+	// Duration is how long the check took.
+	Duration time.Duration
+}
+
 // Check verifies the repository integrity.
 func (r *Restic) Check(ctx context.Context, cfg ResticConfig) error {
-	r.logger.Debug().Msg("checking repository integrity")
+	_, err := r.CheckWithOptions(ctx, cfg, CheckOptions{})
+	return err
+}
+
+// CheckWithOptions verifies the repository integrity with the given options.
+func (r *Restic) CheckWithOptions(ctx context.Context, cfg ResticConfig, opts CheckOptions) (*CheckResult, error) {
+	r.logger.Debug().
+		Bool("read_data", opts.ReadData).
+		Str("read_data_subset", opts.ReadDataSubset).
+		Msg("checking repository integrity")
+
+	start := time.Now()
 
 	args := []string{"check", "--repo", cfg.Repository, "--json"}
-	_, err := r.run(ctx, cfg, args)
-	if err != nil {
-		return fmt.Errorf("check failed: %w", err)
+
+	if opts.ReadData {
+		if opts.ReadDataSubset != "" {
+			args = append(args, "--read-data-subset", opts.ReadDataSubset)
+		} else {
+			args = append(args, "--read-data")
+		}
 	}
 
-	r.logger.Debug().Msg("repository check passed")
-	return nil
+	output, err := r.run(ctx, cfg, args)
+	result := &CheckResult{
+		Duration: time.Since(start),
+	}
+
+	if err != nil {
+		result.Errors = append(result.Errors, err.Error())
+		return result, fmt.Errorf("check failed: %w", err)
+	}
+
+	// Parse output for any warnings
+	if len(output) > 0 {
+		r.logger.Debug().Str("output", string(output)).Msg("check output")
+	}
+
+	r.logger.Debug().
+		Dur("duration", result.Duration).
+		Msg("repository check passed")
+
+	return result, nil
 }
 
 // Stats returns statistics about the repository.

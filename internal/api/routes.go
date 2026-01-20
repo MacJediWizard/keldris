@@ -18,6 +18,8 @@ type Config struct {
 	RateLimitRequests int64
 	// RateLimitPeriod is the duration string for rate limiting (e.g. "1m", "1h").
 	RateLimitPeriod string
+	// VerificationTrigger for manually triggering verifications (optional).
+	VerificationTrigger handlers.VerificationTrigger
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -88,6 +90,12 @@ func NewRouter(
 
 	backupsHandler := handlers.NewBackupsHandler(database, logger)
 	backupsHandler.RegisterRoutes(apiV1)
+
+	// Register verification handler if trigger is available
+	if cfg.VerificationTrigger != nil {
+		verificationsHandler := handlers.NewVerificationsHandler(database, cfg.VerificationTrigger, logger)
+		verificationsHandler.RegisterRoutes(apiV1)
+	}
 
 	r.logger.Info().Msg("API router initialized")
 	return r, nil
