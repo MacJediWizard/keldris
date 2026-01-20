@@ -751,3 +751,151 @@ export interface VerificationsResponse {
 export interface VerificationSchedulesResponse {
 	schedules: VerificationSchedule[];
 }
+
+// DR Runbook types
+export type DRRunbookStatus = 'active' | 'draft' | 'archived';
+
+export interface DRRunbookStep {
+	order: number;
+	title: string;
+	description: string;
+	estimated_minutes?: number;
+	requires_confirmation?: boolean;
+}
+
+export interface DRRunbookContact {
+	name: string;
+	role: string;
+	email?: string;
+	phone?: string;
+}
+
+export interface DRRunbook {
+	id: string;
+	org_id: string;
+	name: string;
+	description?: string;
+	scenario: string;
+	steps: DRRunbookStep[];
+	contacts?: DRRunbookContact[];
+	status: DRRunbookStatus;
+	estimated_rto_minutes?: number;
+	estimated_rpo_minutes?: number;
+	last_tested_at?: string;
+	last_test_result?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateDRRunbookRequest {
+	name: string;
+	description?: string;
+	scenario?: string;
+	steps?: DRRunbookStep[];
+	contacts?: DRRunbookContact[];
+	schedule_id?: string;
+	estimated_rto_minutes?: number;
+	estimated_rpo_minutes?: number;
+}
+
+export interface UpdateDRRunbookRequest {
+	name?: string;
+	description?: string;
+	scenario?: string;
+	steps?: DRRunbookStep[];
+	contacts?: DRRunbookContact[];
+	estimated_rto_minutes?: number;
+	estimated_rpo_minutes?: number;
+}
+
+export interface DRRunbooksResponse {
+	runbooks: DRRunbook[];
+}
+
+export interface DRRunbookRenderResponse {
+	runbook: DRRunbook;
+	content: string;
+}
+
+// DR Test types
+export type DRTestStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'passed'
+	| 'failed'
+	| 'skipped';
+
+export interface DRTest {
+	id: string;
+	org_id: string;
+	runbook_id: string;
+	runbook_name?: string;
+	started_at?: string;
+	completed_at?: string;
+	status: DRTestStatus;
+	actual_rto_minutes?: number;
+	actual_rpo_minutes?: number;
+	notes?: string;
+	tested_by?: string;
+	created_at: string;
+}
+
+export interface DRTestSchedule {
+	id: string;
+	org_id: string;
+	runbook_id: string;
+	runbook_name?: string;
+	cron_expression: string;
+	enabled: boolean;
+	last_run_at?: string;
+	next_run_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface RunDRTestRequest {
+	runbook_id: string;
+	notes?: string;
+}
+
+export interface UpdateDRTestRequest {
+	status?: DRTestStatus;
+	actual_rto_minutes?: number;
+	actual_rpo_minutes?: number;
+	notes?: string;
+}
+
+export interface CreateDRTestScheduleRequest {
+	runbook_id: string;
+	cron_expression: string;
+	enabled?: boolean;
+}
+
+export interface UpdateDRTestScheduleRequest {
+	cron_expression?: string;
+	enabled?: boolean;
+}
+
+export interface DRTestsResponse {
+	tests: DRTest[];
+}
+
+export interface DRTestSchedulesResponse {
+	schedules: DRTestSchedule[];
+}
+
+// DR Status for dashboard
+export interface DRStatus {
+	total_runbooks: number;
+	active_runbooks: number;
+	tested_runbooks: number;
+	untested_runbooks: number;
+	overdue_runbooks: number;
+	tests_last_30_days: number;
+	pass_rate: number;
+	last_test?: DRTest;
+	last_test_at?: string;
+	next_test_at?: string;
+	upcoming_tests: DRTestSchedule[];
+}
