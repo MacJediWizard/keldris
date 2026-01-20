@@ -1,3 +1,32 @@
+// Format date to relative time (past or future)
+export function formatRelativeTime(dateString: string | undefined): string {
+	if (!dateString) return 'Never';
+
+	const date = new Date(dateString);
+	const now = new Date();
+	const diffMs = date.getTime() - now.getTime();
+	const isFuture = diffMs > 0;
+	const absDiffMs = Math.abs(diffMs);
+	const absDiffSeconds = Math.floor(absDiffMs / 1000);
+	const absDiffMinutes = Math.floor(absDiffSeconds / 60);
+	const absDiffHours = Math.floor(absDiffMinutes / 60);
+	const absDiffDays = Math.floor(absDiffHours / 24);
+
+	if (absDiffSeconds < 60) return isFuture ? 'In a moment' : 'Just now';
+	if (absDiffMinutes < 60)
+		return isFuture ? `In ${absDiffMinutes}m` : `${absDiffMinutes}m ago`;
+	if (absDiffHours < 24)
+		return isFuture ? `In ${absDiffHours}h` : `${absDiffHours}h ago`;
+	if (absDiffDays < 7)
+		return isFuture ? `In ${absDiffDays}d` : `${absDiffDays}d ago`;
+
+	return date.toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+	});
+}
+
 // Format date to relative time or absolute date
 export function formatDate(dateString: string | undefined): string {
 	if (!dateString) return 'Never';
@@ -325,4 +354,37 @@ export function formatChartDate(dateString: string): string {
 		month: 'short',
 		day: 'numeric',
 	});
+}
+
+// Format duration in milliseconds to human readable
+export function formatDurationMs(ms: number | undefined): string {
+	if (ms === undefined || ms === null) return 'N/A';
+	if (ms < 1000) return `${ms}ms`;
+
+	const seconds = Math.floor(ms / 1000);
+	const minutes = Math.floor(seconds / 60);
+	const hours = Math.floor(minutes / 60);
+
+	if (hours > 0) return `${hours}h ${minutes % 60}m`;
+	if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+	return `${seconds}s`;
+}
+
+// Get success rate color based on percentage
+export function getSuccessRateColor(percent: number): string {
+	if (percent >= 95) return 'text-green-600';
+	if (percent >= 80) return 'text-yellow-600';
+	if (percent >= 50) return 'text-orange-600';
+	return 'text-red-600';
+}
+
+// Get success rate badge classes based on percentage
+export function getSuccessRateBadge(percent: number): {
+	bg: string;
+	text: string;
+} {
+	if (percent >= 95) return { bg: 'bg-green-100', text: 'text-green-800' };
+	if (percent >= 80) return { bg: 'bg-yellow-100', text: 'text-yellow-800' };
+	if (percent >= 50) return { bg: 'bg-orange-100', text: 'text-orange-800' };
+	return { bg: 'bg-red-100', text: 'text-red-800' };
 }
