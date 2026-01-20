@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/rs/zerolog"
 )
@@ -21,12 +22,8 @@ var ErrRepositoryNotInitialized = errors.New("repository not initialized")
 // ErrSnapshotNotFound is returned when a snapshot cannot be found.
 var ErrSnapshotNotFound = errors.New("snapshot not found")
 
-// ResticConfig holds configuration for a Restic backup operation.
-type ResticConfig struct {
-	Repository string
-	Password   string
-	Env        map[string]string
-}
+// ResticConfig is an alias to backends.ResticConfig for backwards compatibility.
+type ResticConfig = backends.ResticConfig
 
 // Snapshot represents a Restic snapshot.
 type Snapshot struct {
@@ -90,21 +87,41 @@ func (r *Restic) Init(ctx context.Context, cfg ResticConfig) error {
 	return nil
 }
 
+// BackupOptions contains optional parameters for backup operations.
+type BackupOptions struct {
+	BandwidthLimitKB *int // Upload bandwidth limit in KB/s (nil = unlimited)
+}
+
 // Backup runs a backup operation with the given paths and excludes.
 func (r *Restic) Backup(ctx context.Context, cfg ResticConfig, paths, excludes []string, tags []string) (*BackupStats, error) {
+	return r.BackupWithOptions(ctx, cfg, paths, excludes, tags, nil)
+}
+
+// BackupWithOptions runs a backup operation with additional options.
+func (r *Restic) BackupWithOptions(ctx context.Context, cfg ResticConfig, paths, excludes []string, tags []string, opts *BackupOptions) (*BackupStats, error) {
 	if len(paths) == 0 {
 		return nil, errors.New("no paths specified for backup")
 	}
 
-	r.logger.Info().
+	logEvent := r.logger.Info().
 		Strs("paths", paths).
 		Strs("excludes", excludes).
-		Strs("tags", tags).
-		Msg("starting backup")
+		Strs("tags", tags)
+
+	if opts != nil && opts.BandwidthLimitKB != nil {
+		logEvent = logEvent.Int("bandwidth_limit_kb", *opts.BandwidthLimitKB)
+	}
+	logEvent.Msg("starting backup")
 
 	start := time.Now()
 
 	args := []string{"backup", "--repo", cfg.Repository, "--json"}
+
+	// Add bandwidth limit if specified
+	if opts != nil && opts.BandwidthLimitKB != nil && *opts.BandwidthLimitKB > 0 {
+		// Restic expects --limit-upload in KiB/s
+		args = append(args, "--limit-upload", fmt.Sprintf("%d", *opts.BandwidthLimitKB))
+	}
 
 	for _, exclude := range excludes {
 		args = append(args, "--exclude", exclude)
@@ -161,20 +178,92 @@ func (r *Restic) Snapshots(ctx context.Context, cfg ResticConfig) ([]Snapshot, e
 	return snapshots, nil
 }
 
+// SnapshotFile represents a file or directory in a snapshot.
+type SnapshotFile struct {
+	Name       string    `json:"name"`
+	Type       string    `json:"type"` // "file" or "dir"
+	Path       string    `json:"path"`
+	Size       int64     `json:"size"`
+	Mode       uint32    `json:"mode"`
+	ModTime    time.Time `json:"mtime"`
+	AccessTime time.Time `json:"atime"`
+	ChangeTime time.Time `json:"ctime"`
+}
+
+// ListFiles lists files in a snapshot, optionally filtered by path prefix.
+func (r *Restic) ListFiles(ctx context.Context, cfg ResticConfig, snapshotID, pathPrefix string) ([]SnapshotFile, error) {
+	r.logger.Debug().
+		Str("snapshot_id", snapshotID).
+		Str("path_prefix", pathPrefix).
+		Msg("listing files in snapshot")
+
+	args := []string{"ls", "--repo", cfg.Repository, "--json", snapshotID}
+	if pathPrefix != "" {
+		args = append(args, pathPrefix)
+	}
+
+	output, err := r.run(ctx, cfg, args)
+	if err != nil {
+		if strings.Contains(err.Error(), "no matching ID") {
+			return nil, ErrSnapshotNotFound
+		}
+		return nil, fmt.Errorf("list files: %w", err)
+	}
+
+	var files []SnapshotFile
+	lines := bytes.Split(output, []byte("\n"))
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+
+		var file SnapshotFile
+		if err := json.Unmarshal(line, &file); err != nil {
+			// Skip snapshot metadata line (first line)
+			continue
+		}
+		// Only include files and directories
+		if file.Type == "file" || file.Type == "dir" {
+			files = append(files, file)
+		}
+	}
+
+	r.logger.Debug().Int("count", len(files)).Msg("files listed")
+	return files, nil
+}
+
+// RestoreOptions configures a restore operation.
+type RestoreOptions struct {
+	TargetPath string   // Destination path for restore
+	Include    []string // Paths to include (empty = all)
+	Exclude    []string // Paths to exclude
+}
+
 // Restore restores a snapshot to the given target path.
-func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID, targetPath string) error {
+func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID string, opts RestoreOptions) error {
 	r.logger.Info().
 		Str("snapshot_id", snapshotID).
-		Str("target_path", targetPath).
+		Str("target_path", opts.TargetPath).
+		Strs("include", opts.Include).
+		Strs("exclude", opts.Exclude).
 		Msg("starting restore")
 
 	args := []string{
 		"restore",
 		"--repo", cfg.Repository,
-		"--target", targetPath,
+		"--target", opts.TargetPath,
 		"--json",
-		snapshotID,
 	}
+
+	for _, include := range opts.Include {
+		args = append(args, "--include", include)
+	}
+
+	for _, exclude := range opts.Exclude {
+		args = append(args, "--exclude", exclude)
+	}
+
+	args = append(args, snapshotID)
 
 	_, err := r.run(ctx, cfg, args)
 	if err != nil {
@@ -188,10 +277,47 @@ func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID, targ
 	return nil
 }
 
-// Prune removes old snapshots according to the retention policy.
-func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.RetentionPolicy) error {
+// Forget removes old snapshots according to the retention policy and returns stats.
+func (r *Restic) Forget(ctx context.Context, cfg ResticConfig, retention *models.RetentionPolicy) (*ForgetResult, error) {
 	if retention == nil {
-		return errors.New("retention policy required for prune")
+		return nil, errors.New("retention policy required for forget")
+	}
+
+	r.logger.Info().
+		Interface("retention", retention).
+		Msg("starting forget with retention policy")
+
+	forgetArgs := r.buildRetentionArgs(cfg.Repository, retention)
+	// Remove --prune from forget args - we'll call prune separately if needed
+	prunelessArgs := make([]string, 0, len(forgetArgs))
+	for _, arg := range forgetArgs {
+		if arg != "--prune" {
+			prunelessArgs = append(prunelessArgs, arg)
+		}
+	}
+
+	output, err := r.run(ctx, cfg, prunelessArgs)
+	if err != nil {
+		return nil, fmt.Errorf("forget failed: %w", err)
+	}
+
+	result, err := parseForgetOutput(output)
+	if err != nil {
+		return nil, fmt.Errorf("parse forget output: %w", err)
+	}
+
+	r.logger.Info().
+		Int("snapshots_removed", result.SnapshotsRemoved).
+		Int("snapshots_kept", result.SnapshotsKept).
+		Msg("forget completed")
+
+	return result, nil
+}
+
+// Prune removes old snapshots according to the retention policy.
+func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.RetentionPolicy) (*ForgetResult, error) {
+	if retention == nil {
+		return nil, errors.New("retention policy required for prune")
 	}
 
 	r.logger.Info().
@@ -200,14 +326,39 @@ func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.
 
 	// First, apply forget with retention policy
 	forgetArgs := r.buildRetentionArgs(cfg.Repository, retention)
-	_, err := r.run(ctx, cfg, forgetArgs)
+	output, err := r.run(ctx, cfg, forgetArgs)
 	if err != nil {
-		return fmt.Errorf("forget failed: %w", err)
+		return nil, fmt.Errorf("forget failed: %w", err)
+	}
+
+	result, err := parseForgetOutput(output)
+	if err != nil {
+		// If we can't parse the output, still return a minimal result
+		r.logger.Warn().Err(err).Msg("failed to parse forget output")
+		result = &ForgetResult{}
 	}
 
 	// Then, prune unreferenced data
 	pruneArgs := []string{"prune", "--repo", cfg.Repository, "--json"}
 	_, err = r.run(ctx, cfg, pruneArgs)
+	if err != nil {
+		return nil, fmt.Errorf("prune failed: %w", err)
+	}
+
+	r.logger.Info().
+		Int("snapshots_removed", result.SnapshotsRemoved).
+		Int("snapshots_kept", result.SnapshotsKept).
+		Msg("prune completed successfully")
+
+	return result, nil
+}
+
+// PruneOnly runs only the prune command without forget.
+func (r *Restic) PruneOnly(ctx context.Context, cfg ResticConfig) error {
+	r.logger.Info().Msg("starting prune")
+
+	pruneArgs := []string{"prune", "--repo", cfg.Repository, "--json"}
+	_, err := r.run(ctx, cfg, pruneArgs)
 	if err != nil {
 		return fmt.Errorf("prune failed: %w", err)
 	}
@@ -216,18 +367,69 @@ func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.
 	return nil
 }
 
+// CheckOptions configures the repository check operation.
+type CheckOptions struct {
+	// ReadData verifies the data of all pack files in the repository.
+	// This is more thorough but much slower.
+	ReadData bool
+	// ReadDataSubset reads only a subset of pack files (e.g., "2.5%" or "5G").
+	// Ignored if ReadData is false.
+	ReadDataSubset string
+}
+
+// CheckResult contains the results of a repository check.
+type CheckResult struct {
+	// Errors contains any errors found during the check.
+	Errors []string
+	// Duration is how long the check took.
+	Duration time.Duration
+}
+
 // Check verifies the repository integrity.
 func (r *Restic) Check(ctx context.Context, cfg ResticConfig) error {
-	r.logger.Debug().Msg("checking repository integrity")
+	_, err := r.CheckWithOptions(ctx, cfg, CheckOptions{})
+	return err
+}
+
+// CheckWithOptions verifies the repository integrity with the given options.
+func (r *Restic) CheckWithOptions(ctx context.Context, cfg ResticConfig, opts CheckOptions) (*CheckResult, error) {
+	r.logger.Debug().
+		Bool("read_data", opts.ReadData).
+		Str("read_data_subset", opts.ReadDataSubset).
+		Msg("checking repository integrity")
+
+	start := time.Now()
 
 	args := []string{"check", "--repo", cfg.Repository, "--json"}
-	_, err := r.run(ctx, cfg, args)
-	if err != nil {
-		return fmt.Errorf("check failed: %w", err)
+
+	if opts.ReadData {
+		if opts.ReadDataSubset != "" {
+			args = append(args, "--read-data-subset", opts.ReadDataSubset)
+		} else {
+			args = append(args, "--read-data")
+		}
 	}
 
-	r.logger.Debug().Msg("repository check passed")
-	return nil
+	output, err := r.run(ctx, cfg, args)
+	result := &CheckResult{
+		Duration: time.Since(start),
+	}
+
+	if err != nil {
+		result.Errors = append(result.Errors, err.Error())
+		return result, fmt.Errorf("check failed: %w", err)
+	}
+
+	// Parse output for any warnings
+	if len(output) > 0 {
+		r.logger.Debug().Str("output", string(output)).Msg("check output")
+	}
+
+	r.logger.Debug().
+		Dur("duration", result.Duration).
+		Msg("repository check passed")
+
+	return result, nil
 }
 
 // Stats returns statistics about the repository.
@@ -252,6 +454,31 @@ func (r *Restic) Stats(ctx context.Context, cfg ResticConfig) (*RepoStats, error
 type RepoStats struct {
 	TotalSize      int64 `json:"total_size"`
 	TotalFileCount int   `json:"total_file_count"`
+}
+
+// ForgetResult contains the results of a forget operation.
+type ForgetResult struct {
+	SnapshotsRemoved int      `json:"snapshots_removed"`
+	SnapshotsKept    int      `json:"snapshots_kept"`
+	RemovedIDs       []string `json:"removed_ids,omitempty"`
+}
+
+// forgetGroupOutput represents the JSON output from restic forget --json.
+type forgetGroupOutput struct {
+	Tags   []string          `json:"tags,omitempty"`
+	Host   string            `json:"host,omitempty"`
+	Paths  []string          `json:"paths,omitempty"`
+	Keep   []forgetSnapshot  `json:"keep"`
+	Remove []forgetSnapshot  `json:"remove"`
+	Reason string            `json:"reasons,omitempty"`
+}
+
+type forgetSnapshot struct {
+	ID       string    `json:"id"`
+	ShortID  string    `json:"short_id"`
+	Time     time.Time `json:"time"`
+	Hostname string    `json:"hostname"`
+	Paths    []string  `json:"paths"`
 }
 
 // buildRetentionArgs builds the forget command arguments from a retention policy.
@@ -370,4 +597,43 @@ func parseBackupOutput(output []byte) (*BackupStats, error) {
 	}
 
 	return nil, errors.New("no backup summary found in output")
+}
+
+// parseForgetOutput parses the JSON output from restic forget.
+func parseForgetOutput(output []byte) (*ForgetResult, error) {
+	// Try to parse as an array of forget group outputs
+	var groups []forgetGroupOutput
+	if err := json.Unmarshal(output, &groups); err == nil && len(groups) > 0 {
+		result := &ForgetResult{}
+		for _, group := range groups {
+			result.SnapshotsKept += len(group.Keep)
+			result.SnapshotsRemoved += len(group.Remove)
+			for _, snap := range group.Remove {
+				result.RemovedIDs = append(result.RemovedIDs, snap.ShortID)
+			}
+		}
+		return result, nil
+	}
+
+	// If array parsing fails, try parsing line by line (restic sometimes outputs multiple JSON objects)
+	lines := bytes.Split(output, []byte("\n"))
+	result := &ForgetResult{}
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+
+		var group forgetGroupOutput
+		if err := json.Unmarshal(line, &group); err != nil {
+			continue
+		}
+
+		result.SnapshotsKept += len(group.Keep)
+		result.SnapshotsRemoved += len(group.Remove)
+		for _, snap := range group.Remove {
+			result.RemovedIDs = append(result.RemovedIDs, snap.ShortID)
+		}
+	}
+
+	return result, nil
 }
