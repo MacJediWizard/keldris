@@ -115,6 +115,9 @@ func NewRouter(
 	backupsHandler := handlers.NewBackupsHandler(database, logger)
 	backupsHandler.RegisterRoutes(apiV1)
 
+	snapshotsHandler := handlers.NewSnapshotsHandler(database, logger)
+	snapshotsHandler.RegisterRoutes(apiV1)
+
 	auditLogsHandler := handlers.NewAuditLogsHandler(database, logger)
 	auditLogsHandler.RegisterRoutes(apiV1)
 

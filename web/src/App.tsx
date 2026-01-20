@@ -12,6 +12,7 @@ import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSettings } from './pages/OrganizationSettings';
 import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
+import { Restore } from './pages/Restore';
 import { Schedules } from './pages/Schedules';
 import { StorageStats } from './pages/StorageStats';
 
@@ -42,6 +43,7 @@ function App() {
 						<Route path="repositories" element={<Repositories />} />
 						<Route path="schedules" element={<Schedules />} />
 						<Route path="backups" element={<Backups />} />
+						<Route path="restore" element={<Restore />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
 						<Route path="audit-logs" element={<AuditLogs />} />
