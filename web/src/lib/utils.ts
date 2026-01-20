@@ -289,3 +289,40 @@ export function formatResourceType(type: string): string {
 		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
 		.join(' ');
 }
+
+// Format deduplication ratio (e.g., 2.5x)
+export function formatDedupRatio(ratio: number | undefined): string {
+	if (ratio === undefined || ratio === null || ratio === 0) return 'N/A';
+	return `${ratio.toFixed(1)}x`;
+}
+
+// Format percentage (e.g., 45.2%)
+export function formatPercent(percent: number | undefined): string {
+	if (percent === undefined || percent === null) return 'N/A';
+	return `${percent.toFixed(1)}%`;
+}
+
+// Get color class based on dedup ratio quality
+export function getDedupRatioColor(ratio: number): string {
+	if (ratio >= 3) return 'text-green-600';
+	if (ratio >= 2) return 'text-blue-600';
+	if (ratio >= 1.5) return 'text-yellow-600';
+	return 'text-gray-600';
+}
+
+// Get color class based on space saved percentage
+export function getSpaceSavedColor(percent: number): string {
+	if (percent >= 70) return 'text-green-600';
+	if (percent >= 50) return 'text-blue-600';
+	if (percent >= 30) return 'text-yellow-600';
+	return 'text-gray-600';
+}
+
+// Format a date for chart axis labels
+export function formatChartDate(dateString: string): string {
+	const date = new Date(dateString);
+	return date.toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+	});
+}

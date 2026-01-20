@@ -11,7 +11,9 @@ import { Notifications } from './pages/Notifications';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSettings } from './pages/OrganizationSettings';
 import { Repositories } from './pages/Repositories';
+import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
 import { Schedules } from './pages/Schedules';
+import { StorageStats } from './pages/StorageStats';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -43,6 +45,8 @@ function App() {
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
 						<Route path="audit-logs" element={<AuditLogs />} />
+						<Route path="stats" element={<StorageStats />} />
+						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
 						<Route
 							path="organization/members"
 							element={<OrganizationMembers />}
