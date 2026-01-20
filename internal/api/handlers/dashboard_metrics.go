@@ -12,8 +12,8 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// MetricsStore defines the interface for metrics persistence operations.
-type MetricsStore interface {
+// DashboardMetricsStore defines the interface for dashboard metrics persistence operations.
+type DashboardMetricsStore interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetDashboardStats(ctx context.Context, orgID uuid.UUID) (*models.DashboardStats, error)
 	GetBackupSuccessRates(ctx context.Context, orgID uuid.UUID) (*models.BackupSuccessRate, *models.BackupSuccessRate, error)
@@ -22,25 +22,25 @@ type MetricsStore interface {
 	GetDailyBackupStats(ctx context.Context, orgID uuid.UUID, days int) ([]*models.DailyBackupStats, error)
 }
 
-// MetricsHandler handles metrics related HTTP endpoints.
-type MetricsHandler struct {
-	store  MetricsStore
+// DashboardMetricsHandler handles dashboard metrics related HTTP endpoints.
+type DashboardMetricsHandler struct {
+	store  DashboardMetricsStore
 	logger zerolog.Logger
 }
 
-// NewMetricsHandler creates a new MetricsHandler.
-func NewMetricsHandler(store MetricsStore, logger zerolog.Logger) *MetricsHandler {
-	return &MetricsHandler{
+// NewDashboardMetricsHandler creates a new DashboardMetricsHandler.
+func NewDashboardMetricsHandler(store DashboardMetricsStore, logger zerolog.Logger) *DashboardMetricsHandler {
+	return &DashboardMetricsHandler{
 		store:  store,
-		logger: logger.With().Str("component", "metrics_handler").Logger(),
+		logger: logger.With().Str("component", "dashboard_metrics_handler").Logger(),
 	}
 }
 
-// RegisterRoutes registers metrics routes on the given router group.
-func (h *MetricsHandler) RegisterRoutes(r *gin.RouterGroup) {
-	metrics := r.Group("/metrics")
+// RegisterRoutes registers dashboard metrics routes on the given router group.
+func (h *DashboardMetricsHandler) RegisterRoutes(r *gin.RouterGroup) {
+	metrics := r.Group("/dashboard-metrics")
 	{
-		metrics.GET("/dashboard", h.GetDashboardStats)
+		metrics.GET("/stats", h.GetDashboardStats)
 		metrics.GET("/success-rates", h.GetBackupSuccessRates)
 		metrics.GET("/storage-growth", h.GetStorageGrowthTrend)
 		metrics.GET("/backup-duration", h.GetBackupDurationTrend)
@@ -49,8 +49,8 @@ func (h *MetricsHandler) RegisterRoutes(r *gin.RouterGroup) {
 }
 
 // GetDashboardStats returns aggregated dashboard statistics.
-// GET /api/v1/metrics/dashboard
-func (h *MetricsHandler) GetDashboardStats(c *gin.Context) {
+// GET /api/v1/dashboard-metrics/stats
+func (h *DashboardMetricsHandler) GetDashboardStats(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -87,8 +87,8 @@ func (h *MetricsHandler) GetDashboardStats(c *gin.Context) {
 }
 
 // GetBackupSuccessRates returns backup success rates for different time periods.
-// GET /api/v1/metrics/success-rates
-func (h *MetricsHandler) GetBackupSuccessRates(c *gin.Context) {
+// GET /api/v1/dashboard-metrics/success-rates
+func (h *DashboardMetricsHandler) GetBackupSuccessRates(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -115,8 +115,8 @@ func (h *MetricsHandler) GetBackupSuccessRates(c *gin.Context) {
 }
 
 // GetStorageGrowthTrend returns storage growth over time.
-// GET /api/v1/metrics/storage-growth?days=30
-func (h *MetricsHandler) GetStorageGrowthTrend(c *gin.Context) {
+// GET /api/v1/dashboard-metrics/storage-growth?days=30
+func (h *DashboardMetricsHandler) GetStorageGrowthTrend(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -147,8 +147,8 @@ func (h *MetricsHandler) GetStorageGrowthTrend(c *gin.Context) {
 }
 
 // GetBackupDurationTrend returns backup duration trends over time.
-// GET /api/v1/metrics/backup-duration?days=30
-func (h *MetricsHandler) GetBackupDurationTrend(c *gin.Context) {
+// GET /api/v1/dashboard-metrics/backup-duration?days=30
+func (h *DashboardMetricsHandler) GetBackupDurationTrend(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -179,8 +179,8 @@ func (h *MetricsHandler) GetBackupDurationTrend(c *gin.Context) {
 }
 
 // GetDailyBackupStats returns daily backup statistics.
-// GET /api/v1/metrics/daily-backups?days=30
-func (h *MetricsHandler) GetDailyBackupStats(c *gin.Context) {
+// GET /api/v1/dashboard-metrics/daily-backups?days=30
+func (h *DashboardMetricsHandler) GetDailyBackupStats(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
