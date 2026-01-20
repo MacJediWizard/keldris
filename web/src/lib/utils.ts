@@ -355,3 +355,36 @@ export function formatChartDate(dateString: string): string {
 		day: 'numeric',
 	});
 }
+
+// Format duration in milliseconds to human readable
+export function formatDurationMs(ms: number | undefined): string {
+	if (ms === undefined || ms === null) return 'N/A';
+	if (ms < 1000) return `${ms}ms`;
+
+	const seconds = Math.floor(ms / 1000);
+	const minutes = Math.floor(seconds / 60);
+	const hours = Math.floor(minutes / 60);
+
+	if (hours > 0) return `${hours}h ${minutes % 60}m`;
+	if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+	return `${seconds}s`;
+}
+
+// Get success rate color based on percentage
+export function getSuccessRateColor(percent: number): string {
+	if (percent >= 95) return 'text-green-600';
+	if (percent >= 80) return 'text-yellow-600';
+	if (percent >= 50) return 'text-orange-600';
+	return 'text-red-600';
+}
+
+// Get success rate badge classes based on percentage
+export function getSuccessRateBadge(percent: number): {
+	bg: string;
+	text: string;
+} {
+	if (percent >= 95) return { bg: 'bg-green-100', text: 'text-green-800' };
+	if (percent >= 80) return { bg: 'bg-yellow-100', text: 'text-yellow-800' };
+	if (percent >= 50) return { bg: 'bg-orange-100', text: 'text-orange-800' };
+	return { bg: 'bg-red-100', text: 'text-red-800' };
+}

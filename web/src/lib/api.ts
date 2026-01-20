@@ -11,6 +11,10 @@ import type {
 	AuditLogFilter,
 	AuditLogsResponse,
 	Backup,
+	BackupDurationTrend,
+	BackupDurationTrendResponse,
+	BackupSuccessRate,
+	BackupSuccessRatesResponse,
 	BackupsResponse,
 	CreateAgentRequest,
 	CreateAgentResponse,
@@ -34,6 +38,9 @@ import type {
 	DRTestSchedule,
 	DRTestSchedulesResponse,
 	DRTestsResponse,
+	DailyBackupStats,
+	DailyBackupStatsResponse,
+	DashboardStats,
 	ErrorResponse,
 	InvitationsResponse,
 	InviteMemberRequest,
@@ -76,6 +83,8 @@ import type {
 	SnapshotsResponse,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
+	StorageGrowthTrend,
+	StorageGrowthTrendResponse,
 	StorageStatsSummary,
 	SwitchOrgRequest,
 	Tag,
@@ -955,5 +964,38 @@ export const searchApi = {
 		}
 
 		return fetchApi<SearchResponse>(`/search?${searchParams.toString()}`);
+	},
+};
+
+// Dashboard Metrics API
+export const metricsApi = {
+	getDashboardStats: async (): Promise<DashboardStats> =>
+		fetchApi<DashboardStats>('/dashboard-metrics/stats'),
+
+	getBackupSuccessRates: async (): Promise<{
+		rate_7d: BackupSuccessRate;
+		rate_30d: BackupSuccessRate;
+	}> =>
+		fetchApi<BackupSuccessRatesResponse>('/dashboard-metrics/success-rates'),
+
+	getStorageGrowthTrend: async (days = 30): Promise<StorageGrowthTrend[]> => {
+		const response = await fetchApi<StorageGrowthTrendResponse>(
+			`/dashboard-metrics/storage-growth?days=${days}`,
+		);
+		return response.trend ?? [];
+	},
+
+	getBackupDurationTrend: async (days = 30): Promise<BackupDurationTrend[]> => {
+		const response = await fetchApi<BackupDurationTrendResponse>(
+			`/dashboard-metrics/backup-duration?days=${days}`,
+		);
+		return response.trend ?? [];
+	},
+
+	getDailyBackupStats: async (days = 30): Promise<DailyBackupStats[]> => {
+		const response = await fetchApi<DailyBackupStatsResponse>(
+			`/dashboard-metrics/daily-backups?days=${days}`,
+		);
+		return response.stats ?? [];
 	},
 };
