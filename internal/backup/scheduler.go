@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/models"
+	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog"
@@ -26,6 +27,9 @@ type ScheduleStore interface {
 
 	// UpdateBackup updates an existing backup record.
 	UpdateBackup(ctx context.Context, backup *models.Backup) error
+
+	// GetAgentByID returns an agent by ID.
+	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
 }
 
 // DecryptFunc is a function that decrypts repository configuration.
@@ -52,25 +56,28 @@ func DefaultSchedulerConfig() SchedulerConfig {
 
 // Scheduler manages backup schedules using cron.
 type Scheduler struct {
-	store   ScheduleStore
-	restic  *Restic
-	config  SchedulerConfig
-	cron    *cron.Cron
-	logger  zerolog.Logger
-	mu      sync.RWMutex
-	entries map[uuid.UUID]cron.EntryID
-	running bool
+	store    ScheduleStore
+	restic   *Restic
+	config   SchedulerConfig
+	notifier *notifications.Service
+	cron     *cron.Cron
+	logger   zerolog.Logger
+	mu       sync.RWMutex
+	entries  map[uuid.UUID]cron.EntryID
+	running  bool
 }
 
 // NewScheduler creates a new backup scheduler.
-func NewScheduler(store ScheduleStore, restic *Restic, config SchedulerConfig, logger zerolog.Logger) *Scheduler {
+// The notifier parameter is optional and can be nil if notifications are not needed.
+func NewScheduler(store ScheduleStore, restic *Restic, config SchedulerConfig, notifier *notifications.Service, logger zerolog.Logger) *Scheduler {
 	return &Scheduler{
-		store:   store,
-		restic:  restic,
-		config:  config,
-		cron:    cron.New(cron.WithSeconds()),
-		logger:  logger.With().Str("component", "scheduler").Logger(),
-		entries: make(map[uuid.UUID]cron.EntryID),
+		store:    store,
+		restic:   restic,
+		config:   config,
+		notifier: notifier,
+		cron:     cron.New(cron.WithSeconds()),
+		logger:   logger.With().Str("component", "scheduler").Logger(),
+		entries:  make(map[uuid.UUID]cron.EntryID),
 	}
 }
 
@@ -219,38 +226,38 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 	// Get repository configuration
 	repo, err := s.store.GetRepository(ctx, schedule.RepositoryID)
 	if err != nil {
-		s.failBackup(ctx, backup, fmt.Sprintf("get repository: %v", err), logger)
+		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("get repository: %v", err), logger)
 		return
 	}
 
 	// Decrypt repository configuration
 	if s.config.DecryptFunc == nil {
-		s.failBackup(ctx, backup, "decrypt function not configured", logger)
+		s.failBackupWithSchedule(ctx, backup, schedule, "decrypt function not configured", logger)
 		return
 	}
 
 	configJSON, err := s.config.DecryptFunc(repo.ConfigEncrypted)
 	if err != nil {
-		s.failBackup(ctx, backup, fmt.Sprintf("decrypt config: %v", err), logger)
+		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("decrypt config: %v", err), logger)
 		return
 	}
 
 	// Parse backend configuration
 	backend, err := ParseBackend(repo.Type, configJSON)
 	if err != nil {
-		s.failBackup(ctx, backup, fmt.Sprintf("parse backend: %v", err), logger)
+		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("parse backend: %v", err), logger)
 		return
 	}
 
 	// Get repository password
 	if s.config.PasswordFunc == nil {
-		s.failBackup(ctx, backup, "password function not configured", logger)
+		s.failBackupWithSchedule(ctx, backup, schedule, "password function not configured", logger)
 		return
 	}
 
 	password, err := s.config.PasswordFunc(repo.ID)
 	if err != nil {
-		s.failBackup(ctx, backup, fmt.Sprintf("get password: %v", err), logger)
+		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("get password: %v", err), logger)
 		return
 	}
 
@@ -266,7 +273,7 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 	// Run the backup
 	stats, err := s.restic.Backup(ctx, resticCfg, schedule.Paths, schedule.Excludes, tags)
 	if err != nil {
-		s.failBackup(ctx, backup, fmt.Sprintf("backup failed: %v", err), logger)
+		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("backup failed: %v", err), logger)
 		return
 	}
 
@@ -285,13 +292,27 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		Dur("duration", stats.Duration).
 		Msg("scheduled backup completed")
 
+	// Send success notification
+	s.sendBackupNotification(ctx, schedule, backup, true, "")
+
 	// Run prune if retention policy is set
 	if schedule.RetentionPolicy != nil {
 		logger.Info().Msg("running prune with retention policy")
-		if err := s.restic.Prune(ctx, resticCfg, schedule.RetentionPolicy); err != nil {
+		forgetResult, err := s.restic.Prune(ctx, resticCfg, schedule.RetentionPolicy)
+		if err != nil {
 			logger.Error().Err(err).Msg("prune failed")
+			backup.RecordRetention(0, 0, err)
 		} else {
-			logger.Info().Msg("prune completed")
+			logger.Info().
+				Int("snapshots_removed", forgetResult.SnapshotsRemoved).
+				Int("snapshots_kept", forgetResult.SnapshotsKept).
+				Msg("prune completed")
+			backup.RecordRetention(forgetResult.SnapshotsRemoved, forgetResult.SnapshotsKept, nil)
+		}
+
+		// Update backup record with retention results
+		if err := s.store.UpdateBackup(ctx, backup); err != nil {
+			logger.Error().Err(err).Msg("failed to update backup with retention results")
 		}
 	}
 }
@@ -304,6 +325,55 @@ func (s *Scheduler) failBackup(ctx context.Context, backup *models.Backup, errMs
 		return
 	}
 	logger.Error().Str("error", errMsg).Msg("backup failed")
+}
+
+// failBackupWithSchedule marks a backup as failed and sends a notification.
+func (s *Scheduler) failBackupWithSchedule(ctx context.Context, backup *models.Backup, schedule models.Schedule, errMsg string, logger zerolog.Logger) {
+	s.failBackup(ctx, backup, errMsg, logger)
+	s.sendBackupNotification(ctx, schedule, backup, false, errMsg)
+}
+
+// sendBackupNotification sends a notification for a backup result.
+func (s *Scheduler) sendBackupNotification(ctx context.Context, schedule models.Schedule, backup *models.Backup, success bool, errMsg string) {
+	if s.notifier == nil {
+		return
+	}
+
+	// Get agent info for hostname
+	agent, err := s.store.GetAgentByID(ctx, schedule.AgentID)
+	if err != nil {
+		s.logger.Error().Err(err).
+			Str("agent_id", schedule.AgentID.String()).
+			Msg("failed to get agent for notification")
+		return
+	}
+
+	result := notifications.BackupResult{
+		OrgID:        agent.OrgID,
+		ScheduleID:   schedule.ID,
+		ScheduleName: schedule.Name,
+		AgentID:      agent.ID,
+		Hostname:     agent.Hostname,
+		SnapshotID:   backup.SnapshotID,
+		StartedAt:    backup.StartedAt,
+		Success:      success,
+		ErrorMessage: errMsg,
+	}
+
+	if backup.CompletedAt != nil {
+		result.CompletedAt = *backup.CompletedAt
+	}
+	if backup.SizeBytes != nil {
+		result.SizeBytes = *backup.SizeBytes
+	}
+	if backup.FilesNew != nil {
+		result.FilesNew = *backup.FilesNew
+	}
+	if backup.FilesChanged != nil {
+		result.FilesChanged = *backup.FilesChanged
+	}
+
+	s.notifier.NotifyBackupComplete(ctx, result)
 }
 
 // refreshLoop periodically reloads schedules from the database.
