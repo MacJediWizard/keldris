@@ -9,6 +9,10 @@ import (
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "github.com/MacJediWizard/keldris/docs/api"
 )
 
 // Config holds configuration for the API router.
@@ -84,6 +88,12 @@ func NewRouter(
 	// Prometheus metrics endpoint (no auth required)
 	metricsHandler := handlers.NewMetricsHandler(database, logger)
 	metricsHandler.RegisterPublicRoutes(r.Engine)
+
+	// Swagger API documentation (no auth required)
+	r.Engine.GET("/api/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler,
+		ginSwagger.URL("/api/docs/doc.json"),
+		ginSwagger.DefaultModelsExpandDepth(-1),
+	))
 
 	// Version endpoint (no auth required)
 	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)
