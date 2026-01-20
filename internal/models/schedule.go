@@ -19,26 +19,25 @@ type RetentionPolicy struct {
 
 // Schedule represents a backup schedule configuration.
 type Schedule struct {
-	ID              uuid.UUID        `json:"id"`
-	AgentID         uuid.UUID        `json:"agent_id"`
-	RepositoryID    uuid.UUID        `json:"repository_id"`
-	Name            string           `json:"name"`
-	CronExpression  string           `json:"cron_expression"`
-	Paths           []string         `json:"paths"`
-	Excludes        []string         `json:"excludes,omitempty"`
-	RetentionPolicy *RetentionPolicy `json:"retention_policy,omitempty"`
-	Enabled         bool             `json:"enabled"`
-	CreatedAt       time.Time        `json:"created_at"`
-	UpdatedAt       time.Time        `json:"updated_at"`
+	ID              uuid.UUID              `json:"id"`
+	AgentID         uuid.UUID              `json:"agent_id"`
+	Name            string                 `json:"name"`
+	CronExpression  string                 `json:"cron_expression"`
+	Paths           []string               `json:"paths"`
+	Excludes        []string               `json:"excludes,omitempty"`
+	RetentionPolicy *RetentionPolicy       `json:"retention_policy,omitempty"`
+	Enabled         bool                   `json:"enabled"`
+	Repositories    []ScheduleRepository   `json:"repositories,omitempty"`
+	CreatedAt       time.Time              `json:"created_at"`
+	UpdatedAt       time.Time              `json:"updated_at"`
 }
 
 // NewSchedule creates a new Schedule with the given details.
-func NewSchedule(agentID, repositoryID uuid.UUID, name, cronExpr string, paths []string) *Schedule {
+func NewSchedule(agentID uuid.UUID, name, cronExpr string, paths []string) *Schedule {
 	now := time.Now()
 	return &Schedule{
 		ID:             uuid.New(),
 		AgentID:        agentID,
-		RepositoryID:   repositoryID,
 		Name:           name,
 		CronExpression: cronExpr,
 		Paths:          paths,
@@ -46,6 +45,35 @@ func NewSchedule(agentID, repositoryID uuid.UUID, name, cronExpr string, paths [
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
+}
+
+// GetPrimaryRepository returns the primary repository (priority 0), or nil if none.
+func (s *Schedule) GetPrimaryRepository() *ScheduleRepository {
+	for i := range s.Repositories {
+		if s.Repositories[i].Priority == 0 && s.Repositories[i].Enabled {
+			return &s.Repositories[i]
+		}
+	}
+	return nil
+}
+
+// GetEnabledRepositories returns all enabled repositories sorted by priority.
+func (s *Schedule) GetEnabledRepositories() []ScheduleRepository {
+	var enabled []ScheduleRepository
+	for _, r := range s.Repositories {
+		if r.Enabled {
+			enabled = append(enabled, r)
+		}
+	}
+	// Sort by priority (already sorted in DB query, but ensure)
+	for i := 0; i < len(enabled)-1; i++ {
+		for j := i + 1; j < len(enabled); j++ {
+			if enabled[i].Priority > enabled[j].Priority {
+				enabled[i], enabled[j] = enabled[j], enabled[i]
+			}
+		}
+	}
+	return enabled
 }
 
 // SetPaths sets the paths from JSON bytes.

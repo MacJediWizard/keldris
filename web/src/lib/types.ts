@@ -66,23 +66,53 @@ export interface RetentionPolicy {
 	keep_yearly?: number;
 }
 
+export interface ScheduleRepository {
+	id: string;
+	schedule_id: string;
+	repository_id: string;
+	priority: number; // 0 = primary, 1+ = secondary by order
+	enabled: boolean;
+	created_at: string;
+}
+
+export interface ScheduleRepositoryRequest {
+	repository_id: string;
+	priority: number;
+	enabled: boolean;
+}
+
+export type ReplicationStatusType = 'pending' | 'syncing' | 'synced' | 'failed';
+
+export interface ReplicationStatus {
+	id: string;
+	schedule_id: string;
+	source_repository_id: string;
+	target_repository_id: string;
+	last_snapshot_id?: string;
+	last_sync_at?: string;
+	status: ReplicationStatusType;
+	error_message?: string;
+	created_at: string;
+	updated_at: string;
+}
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
-	repository_id: string;
 	name: string;
 	cron_expression: string;
 	paths: string[];
 	excludes?: string[];
 	retention_policy?: RetentionPolicy;
 	enabled: boolean;
+	repositories?: ScheduleRepository[];
 	created_at: string;
 	updated_at: string;
 }
 
 export interface CreateScheduleRequest {
 	agent_id: string;
-	repository_id: string;
+	repositories: ScheduleRepositoryRequest[];
 	name: string;
 	cron_expression: string;
 	paths: string[];
@@ -97,12 +127,17 @@ export interface UpdateScheduleRequest {
 	paths?: string[];
 	excludes?: string[];
 	retention_policy?: RetentionPolicy;
+	repositories?: ScheduleRepositoryRequest[];
 	enabled?: boolean;
 }
 
 export interface RunScheduleResponse {
 	backup_id: string;
 	message: string;
+}
+
+export interface ReplicationStatusResponse {
+	replication_status: ReplicationStatus[];
 }
 
 // Backup types
@@ -112,6 +147,7 @@ export interface Backup {
 	id: string;
 	schedule_id: string;
 	agent_id: string;
+	repository_id?: string;
 	snapshot_id?: string;
 	started_at: string;
 	completed_at?: string;
