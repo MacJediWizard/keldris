@@ -17,9 +17,9 @@ import {
 
 function LoadingCard() {
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
-			<div className="h-4 w-24 bg-gray-200 rounded mb-2" />
-			<div className="h-8 w-32 bg-gray-200 rounded mb-1" />
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
+			<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+			<div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-1" />
 			<div className="h-3 w-20 bg-gray-100 rounded" />
 		</div>
 	);
@@ -33,10 +33,10 @@ function LoadingTable() {
 					key={i}
 					className="flex items-center justify-between py-4 border-b border-gray-100"
 				>
-					<div className="h-4 w-32 bg-gray-200 rounded" />
-					<div className="h-4 w-20 bg-gray-200 rounded" />
-					<div className="h-4 w-16 bg-gray-200 rounded" />
-					<div className="h-4 w-24 bg-gray-200 rounded" />
+					<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+					<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
+					<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
+					<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 				</div>
 			))}
 		</div>
@@ -54,8 +54,8 @@ export function StorageStats() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900">Storage Statistics</h1>
-				<p className="text-gray-600 mt-1">
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Storage Statistics</h1>
+				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Monitor storage efficiency and deduplication across your repositories
 				</p>
 			</div>
@@ -70,7 +70,7 @@ export function StorageStats() {
 					</>
 				) : summary ? (
 					<>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm font-medium text-gray-600">
 								Average Dedup Ratio
 							</p>
@@ -79,11 +79,11 @@ export function StorageStats() {
 							>
 								{formatDedupRatio(summary.avg_dedup_ratio)}
 							</p>
-							<p className="text-sm text-gray-500 mt-1">
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 								Across {summary.repository_count} repositories
 							</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm font-medium text-gray-600">
 								Total Space Saved
 							</p>
@@ -92,7 +92,7 @@ export function StorageStats() {
 							>
 								{formatBytes(summary.total_space_saved)}
 							</p>
-							<p className="text-sm text-gray-500 mt-1">
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 								{formatPercent(
 									summary.total_restore_size > 0
 										? (summary.total_space_saved / summary.total_restore_size) *
@@ -102,45 +102,45 @@ export function StorageStats() {
 								savings
 							</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm font-medium text-gray-600">
 								Actual Storage Used
 							</p>
 							<p className="text-3xl font-bold text-gray-900 mt-1">
 								{formatBytes(summary.total_raw_size)}
 							</p>
-							<p className="text-sm text-gray-500 mt-1">
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 								From {formatBytes(summary.total_restore_size)} original
 							</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm font-medium text-gray-600">
 								Total Snapshots
 							</p>
 							<p className="text-3xl font-bold text-gray-900 mt-1">
 								{summary.total_snapshots}
 							</p>
-							<p className="text-sm text-gray-500 mt-1">
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 								{summary.repository_count} repositories
 							</p>
 						</div>
 					</>
 				) : (
-					<div className="col-span-4 text-center py-8 text-gray-500">
+					<div className="col-span-4 text-center py-8 text-gray-500 dark:text-gray-400">
 						No storage statistics available yet
 					</div>
 				)}
 			</div>
 
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-lg font-semibold text-gray-900">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Storage Growth
 					</h2>
 					<select
 						value={growthDays}
 						onChange={(e) => setGrowthDays(Number(e.target.value))}
-						className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+						className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
 					>
 						<option value={7}>Last 7 days</option>
 						<option value={30}>Last 30 days</option>
@@ -166,7 +166,7 @@ export function StorageStats() {
 									>
 										<div className="w-full flex flex-col items-center justify-end relative h-52">
 											<div
-												className="w-full bg-gray-200 rounded-t absolute bottom-0"
+												className="w-full bg-gray-200 dark:bg-gray-700 rounded-t absolute bottom-0"
 												style={{ height: `${restoreHeight}%` }}
 												title={`Original: ${formatBytes(point.restore_size)}`}
 											/>
@@ -176,7 +176,7 @@ export function StorageStats() {
 												title={`Stored: ${formatBytes(point.raw_data_size)}`}
 											/>
 										</div>
-										<span className="text-xs text-gray-500 mt-2 whitespace-nowrap">
+										<span className="text-xs text-gray-500 dark:text-gray-400 mt-2 whitespace-nowrap">
 											{formatChartDate(point.date)}
 										</span>
 									</div>
@@ -186,16 +186,16 @@ export function StorageStats() {
 						<div className="flex items-center justify-center gap-6 mt-4">
 							<div className="flex items-center gap-2">
 								<div className="w-3 h-3 bg-indigo-500 rounded" />
-								<span className="text-sm text-gray-600">Actual storage</span>
+								<span className="text-sm text-gray-600 dark:text-gray-400">Actual storage</span>
 							</div>
 							<div className="flex items-center gap-2">
-								<div className="w-3 h-3 bg-gray-200 rounded" />
-								<span className="text-sm text-gray-600">Original data</span>
+								<div className="w-3 h-3 bg-gray-200 dark:bg-gray-700 rounded" />
+								<span className="text-sm text-gray-600 dark:text-gray-400">Original data</span>
 							</div>
 						</div>
 					</div>
 				) : (
-					<div className="h-64 flex items-center justify-center text-gray-500">
+					<div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
 						<div className="text-center">
 							<svg
 								aria-hidden="true"
@@ -220,9 +220,9 @@ export function StorageStats() {
 				)}
 			</div>
 
-			<div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-				<div className="px-6 py-4 border-b border-gray-200">
-					<h2 className="text-lg font-semibold text-gray-900">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+				<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Repository Statistics
 					</h2>
 				</div>
@@ -235,36 +235,36 @@ export function StorageStats() {
 						<table className="w-full">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Repository
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Dedup Ratio
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Space Saved
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actual Size
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Original Size
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Snapshots
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Last Updated
 									</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
+							<tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700">
 								{repoStats.map((stats) => (
-									<tr key={stats.id} className="hover:bg-gray-50">
+									<tr key={stats.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Link
 												to={`/stats/${stats.repository_id}`}
-												className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+												className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
 											>
 												{stats.repository_name}
 											</Link>
@@ -278,7 +278,7 @@ export function StorageStats() {
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<div>
-												<span className="text-sm font-medium text-gray-900">
+												<span className="text-sm font-medium text-gray-900 dark:text-white">
 													{formatBytes(stats.space_saved)}
 												</span>
 												<span
@@ -291,13 +291,13 @@ export function StorageStats() {
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 											{formatBytes(stats.raw_data_size)}
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 											{formatBytes(stats.restore_size)}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 											{stats.snapshot_count}
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 											{formatDate(stats.collected_at)}
 										</td>
 									</tr>
@@ -306,7 +306,7 @@ export function StorageStats() {
 						</table>
 					</div>
 				) : (
-					<div className="p-12 text-center text-gray-500">
+					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
 						<svg
 							aria-hidden="true"
 							className="w-12 h-12 mx-auto mb-3 text-gray-300"
