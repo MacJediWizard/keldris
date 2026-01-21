@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
-	useExcludePatternsLibrary,
-	useExcludePatternCategories,
 	useCreateExcludePattern,
+	useExcludePatternCategories,
+	useExcludePatternsLibrary,
 } from '../../hooks/useExcludePatterns';
 import type {
 	BuiltInPattern,
@@ -446,7 +446,9 @@ export function PatternLibraryModal({
 										id="custom-category"
 										value={customCategory}
 										onChange={(e) =>
-											setCustomCategory(e.target.value as ExcludePatternCategory)
+											setCustomCategory(
+												e.target.value as ExcludePatternCategory,
+											)
 										}
 										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 									>
@@ -499,7 +501,9 @@ export function PatternLibraryModal({
 									);
 									const partiallyAdded =
 										!alreadyAdded &&
-										pattern.patterns.some((p: string) => existingPatternsSet.has(p));
+										pattern.patterns.some((p: string) =>
+											existingPatternsSet.has(p),
+										);
 
 									return (
 										<div
@@ -533,19 +537,21 @@ export function PatternLibraryModal({
 														{pattern.description}
 													</p>
 													<div className="mt-2 flex flex-wrap gap-1">
-														{pattern.patterns.slice(0, 5).map((p: string, i: number) => (
-															<code
-																// biome-ignore lint/suspicious/noArrayIndexKey: Static display of pattern strings
-																key={i}
-																className={`text-xs px-1.5 py-0.5 rounded ${
-																	existingPatternsSet.has(p)
-																		? 'bg-green-100 text-green-700'
-																		: 'bg-gray-100 text-gray-600'
-																}`}
-															>
-																{p}
-															</code>
-														))}
+														{pattern.patterns
+															.slice(0, 5)
+															.map((p: string, i: number) => (
+																<code
+																	// biome-ignore lint/suspicious/noArrayIndexKey: Static display of pattern strings
+																	key={i}
+																	className={`text-xs px-1.5 py-0.5 rounded ${
+																		existingPatternsSet.has(p)
+																			? 'bg-green-100 text-green-700'
+																			: 'bg-gray-100 text-gray-600'
+																	}`}
+																>
+																	{p}
+																</code>
+															))}
 														{pattern.patterns.length > 5 && (
 															<span className="text-xs text-gray-500">
 																+{pattern.patterns.length - 5} more
@@ -558,9 +564,7 @@ export function PatternLibraryModal({
 														<>
 															<button
 																type="button"
-																onClick={() =>
-																	togglePattern(pattern.name)
-																}
+																onClick={() => togglePattern(pattern.name)}
 																className={`p-2 rounded-lg transition-colors ${
 																	isSelected
 																		? 'bg-indigo-100 text-indigo-700'
