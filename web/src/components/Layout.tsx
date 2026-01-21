@@ -2,21 +2,23 @@ import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
+import { useLocale } from '../hooks/useLocale';
 import {
 	useOrganizations,
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
+import { LanguageSelector } from './features/LanguageSelector';
 
 interface NavItem {
 	path: string;
-	label: string;
+	labelKey: string;
 	icon: React.ReactNode;
 }
 
 const navItems: NavItem[] = [
 	{
 		path: '/',
-		label: 'Dashboard',
+		labelKey: 'nav.dashboard',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -36,7 +38,7 @@ const navItems: NavItem[] = [
 	},
 	{
 		path: '/agents',
-		label: 'Agents',
+		labelKey: 'nav.agents',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -56,7 +58,7 @@ const navItems: NavItem[] = [
 	},
 	{
 		path: '/repositories',
-		label: 'Repositories',
+		labelKey: 'nav.repositories',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -76,7 +78,7 @@ const navItems: NavItem[] = [
 	},
 	{
 		path: '/schedules',
-		label: 'Schedules',
+		labelKey: 'nav.schedules',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -96,7 +98,7 @@ const navItems: NavItem[] = [
 	},
 	{
 		path: '/backups',
-		label: 'Backups',
+		labelKey: 'nav.backups',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -116,7 +118,7 @@ const navItems: NavItem[] = [
 	},
 	{
 		path: '/restore',
-		label: 'Restore',
+		labelKey: 'nav.restore',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -136,7 +138,7 @@ const navItems: NavItem[] = [
 	},
 	{
 		path: '/alerts',
-		label: 'Alerts',
+		labelKey: 'nav.alerts',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -156,7 +158,7 @@ const navItems: NavItem[] = [
 	},
 	{
 		path: '/notifications',
-		label: 'Notifications',
+		labelKey: 'nav.notifications',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -176,7 +178,7 @@ const navItems: NavItem[] = [
 	},
 	{
 		path: '/audit-logs',
-		label: 'Audit Logs',
+		labelKey: 'nav.auditLogs',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -196,7 +198,7 @@ const navItems: NavItem[] = [
 	},
 	{
 		path: '/stats',
-		label: 'Storage Stats',
+		labelKey: 'nav.storageStats',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -219,14 +221,15 @@ const navItems: NavItem[] = [
 function Sidebar() {
 	const location = useLocation();
 	const { data: user } = useMe();
+	const { t } = useLocale();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
 	return (
 		<aside className="w-64 bg-gray-900 text-white flex flex-col">
 			<div className="p-6">
-				<h1 className="text-2xl font-bold">Keldris</h1>
-				<p className="text-gray-400 text-sm">Keeper of your data</p>
+				<h1 className="text-2xl font-bold">{t('common.appName')}</h1>
+				<p className="text-gray-400 text-sm">{t('common.tagline')}</p>
 			</div>
 			<nav className="flex-1 px-4">
 				<ul className="space-y-1">
@@ -245,7 +248,7 @@ function Sidebar() {
 									}`}
 								>
 									{item.icon}
-									<span>{item.label}</span>
+									<span>{t(item.labelKey)}</span>
 								</Link>
 							</li>
 						);
@@ -254,7 +257,7 @@ function Sidebar() {
 				{isAdmin && (
 					<>
 						<div className="mt-6 mb-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-							Organization
+							{t('nav.organization')}
 						</div>
 						<ul className="space-y-1">
 							<li>
@@ -280,7 +283,7 @@ function Sidebar() {
 											d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
 										/>
 									</svg>
-									<span>Members</span>
+									<span>{t('nav.members')}</span>
 								</Link>
 							</li>
 							<li>
@@ -312,7 +315,7 @@ function Sidebar() {
 											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
 										/>
 									</svg>
-									<span>Settings</span>
+									<span>{t('nav.settings')}</span>
 								</Link>
 							</li>
 						</ul>
@@ -320,7 +323,9 @@ function Sidebar() {
 				)}
 			</nav>
 			<div className="p-4 border-t border-gray-800">
-				<p className="text-xs text-gray-500">v0.0.1</p>
+				<p className="text-xs text-gray-500">
+					{t('common.version', { version: '0.0.1' })}
+				</p>
 			</div>
 		</aside>
 	);
@@ -331,6 +336,7 @@ function OrgSwitcher() {
 	const { data: organizations, isLoading } = useOrganizations();
 	const { data: user } = useMe();
 	const switchOrg = useSwitchOrganization();
+	const { t } = useLocale();
 
 	const currentOrg = organizations?.find(
 		(org) => org.id === user?.current_org_id,
@@ -369,7 +375,7 @@ function OrgSwitcher() {
 					/>
 				</svg>
 				<span className="max-w-32 truncate">
-					{currentOrg?.name ?? 'Select org'}
+					{currentOrg?.name ?? t('common.selectOrg')}
 				</span>
 				<svg
 					aria-hidden="true"
@@ -389,7 +395,7 @@ function OrgSwitcher() {
 			{showDropdown && (
 				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
 					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-						Organizations
+						{t('org.organizations')}
 					</div>
 					{organizations.map((org) => (
 						<button
@@ -428,7 +434,7 @@ function OrgSwitcher() {
 									d="M12 4v16m8-8H4"
 								/>
 							</svg>
-							Create organization
+							{t('org.createOrganization')}
 						</Link>
 					</div>
 				</div>
@@ -442,6 +448,7 @@ function Header() {
 	const { data: user } = useMe();
 	const { data: alertCount } = useAlertCount();
 	const logout = useLogout();
+	const { t } = useLocale();
 
 	const userInitial =
 		user?.name?.charAt(0).toUpperCase() ??
@@ -454,9 +461,10 @@ function Header() {
 				<OrgSwitcher />
 			</div>
 			<div className="flex items-center gap-4">
+				<LanguageSelector />
 				<Link
 					to="/alerts"
-					aria-label="Alerts"
+					aria-label={t('nav.alerts')}
 					className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
 				>
 					<svg
@@ -504,7 +512,7 @@ function Header() {
 								onClick={() => logout.mutate()}
 								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
 							>
-								Sign out
+								{t('common.signOut')}
 							</button>
 						</div>
 					)}
@@ -515,11 +523,12 @@ function Header() {
 }
 
 function LoadingScreen() {
+	const { t } = useLocale();
 	return (
 		<div className="min-h-screen bg-gray-50 flex items-center justify-center">
 			<div className="text-center">
 				<div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
-				<p className="text-gray-600">Loading...</p>
+				<p className="text-gray-600">{t('common.loading')}</p>
 			</div>
 		</div>
 	);
