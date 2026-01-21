@@ -160,6 +160,9 @@ func NewRouter(
 	statsHandler := handlers.NewStatsHandler(database, logger)
 	statsHandler.RegisterRoutes(apiV1)
 
+	excludePatternsHandler := handlers.NewExcludePatternsHandler(database, logger)
+	excludePatternsHandler.RegisterRoutes(apiV1)
+
 	tagsHandler := handlers.NewTagsHandler(database, logger)
 	tagsHandler.RegisterRoutes(apiV1)
 
