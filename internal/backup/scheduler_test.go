@@ -91,6 +91,13 @@ func (m *mockStore) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Age
 	}, nil
 }
 
+func (m *mockStore) GetEnabledBackupScriptsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.BackupScript, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Return empty slice for tests - no scripts configured
+	return nil, nil
+}
+
 func (m *mockStore) addSchedule(s models.Schedule) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
