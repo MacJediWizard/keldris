@@ -100,3 +100,20 @@ export function useRunSchedule() {
 		},
 	});
 }
+
+export function useAgentHealthHistory(id: string, limit = 100) {
+	return useQuery({
+		queryKey: ['agents', id, 'health-history', limit],
+		queryFn: () => agentsApi.getHealthHistory(id, limit),
+		enabled: !!id,
+		staleTime: 30 * 1000, // 30 seconds
+	});
+}
+
+export function useFleetHealth() {
+	return useQuery({
+		queryKey: ['agents', 'fleet-health'],
+		queryFn: () => agentsApi.getFleetHealth(),
+		staleTime: 30 * 1000, // 30 seconds
+	});
+}

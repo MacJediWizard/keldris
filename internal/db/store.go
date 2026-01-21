@@ -122,7 +122,8 @@ func (db *DB) CreateUser(ctx context.Context, user *models.User) error {
 // GetAgentsByOrgID returns all agents for an organization.
 func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status, created_at, updated_at
+		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
+		       health_status, health_metrics, health_checked_at, created_at, updated_at
 		FROM agents
 		WHERE org_id = $1
 		ORDER BY hostname
@@ -136,17 +137,28 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 	for rows.Next() {
 		var a models.Agent
 		var osInfoBytes []byte
+		var healthMetricsBytes []byte
 		var statusStr string
+		var healthStatusStr *string
 		err := rows.Scan(
 			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
-			&a.LastSeen, &statusStr, &a.CreatedAt, &a.UpdatedAt,
+			&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
+			&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
 		}
 		a.Status = models.AgentStatus(statusStr)
+		if healthStatusStr != nil {
+			a.HealthStatus = models.HealthStatus(*healthStatusStr)
+		} else {
+			a.HealthStatus = models.HealthStatusUnknown
+		}
 		if err := a.SetOSInfo(osInfoBytes); err != nil {
 			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse OS info")
+		}
+		if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
+			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 		}
 		agents = append(agents, &a)
 	}
@@ -158,21 +170,33 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error) {
 	var a models.Agent
 	var osInfoBytes []byte
+	var healthMetricsBytes []byte
 	var statusStr string
+	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status, created_at, updated_at
+		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
+		       health_status, health_metrics, health_checked_at, created_at, updated_at
 		FROM agents
 		WHERE id = $1
 	`, id).Scan(
 		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
-		&a.LastSeen, &statusStr, &a.CreatedAt, &a.UpdatedAt,
+		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
+		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent: %w", err)
 	}
 	a.Status = models.AgentStatus(statusStr)
+	if healthStatusStr != nil {
+		a.HealthStatus = models.HealthStatus(*healthStatusStr)
+	} else {
+		a.HealthStatus = models.HealthStatusUnknown
+	}
 	if err := a.SetOSInfo(osInfoBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse OS info")
+	}
+	if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
+		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 	}
 	return &a, nil
 }
@@ -181,21 +205,33 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Agent, error) {
 	var a models.Agent
 	var osInfoBytes []byte
+	var healthMetricsBytes []byte
 	var statusStr string
+	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status, created_at, updated_at
+		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
+		       health_status, health_metrics, health_checked_at, created_at, updated_at
 		FROM agents
 		WHERE api_key_hash = $1
 	`, hash).Scan(
 		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
-		&a.LastSeen, &statusStr, &a.CreatedAt, &a.UpdatedAt,
+		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
+		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent by API key: %w", err)
 	}
 	a.Status = models.AgentStatus(statusStr)
+	if healthStatusStr != nil {
+		a.HealthStatus = models.HealthStatus(*healthStatusStr)
+	} else {
+		a.HealthStatus = models.HealthStatusUnknown
+	}
 	if err := a.SetOSInfo(osInfoBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse OS info")
+	}
+	if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
+		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 	}
 	return &a, nil
 }
@@ -225,12 +261,19 @@ func (db *DB) UpdateAgent(ctx context.Context, agent *models.Agent) error {
 		return fmt.Errorf("marshal OS info: %w", err)
 	}
 
+	healthMetricsBytes, err := agent.HealthMetricsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal health metrics: %w", err)
+	}
+
 	agent.UpdatedAt = time.Now()
 	_, err = db.Pool.Exec(ctx, `
 		UPDATE agents
-		SET hostname = $2, os_info = $3, last_seen = $4, status = $5, updated_at = $6
+		SET hostname = $2, os_info = $3, last_seen = $4, status = $5, updated_at = $6,
+		    health_status = $7, health_metrics = $8, health_checked_at = $9
 		WHERE id = $1
-	`, agent.ID, agent.Hostname, osInfoBytes, agent.LastSeen, string(agent.Status), agent.UpdatedAt)
+	`, agent.ID, agent.Hostname, osInfoBytes, agent.LastSeen, string(agent.Status), agent.UpdatedAt,
+		string(agent.HealthStatus), healthMetricsBytes, agent.HealthCheckedAt)
 	if err != nil {
 		return fmt.Errorf("update agent: %w", err)
 	}
@@ -276,6 +319,117 @@ func (db *DB) RevokeAgentAPIKey(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("agent not found")
 	}
 	return nil
+}
+
+// CreateAgentHealthHistory creates a new health history record.
+func (db *DB) CreateAgentHealthHistory(ctx context.Context, history *models.AgentHealthHistory) error {
+	issuesBytes, err := json.Marshal(history.Issues)
+	if err != nil {
+		return fmt.Errorf("marshal issues: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO agent_health_history (
+			id, agent_id, org_id, health_status, cpu_usage, memory_usage, disk_usage,
+			disk_free_bytes, disk_total_bytes, network_up, restic_version, restic_available,
+			issues, recorded_at, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+	`, history.ID, history.AgentID, history.OrgID, string(history.HealthStatus),
+		history.CPUUsage, history.MemoryUsage, history.DiskUsage,
+		history.DiskFreeBytes, history.DiskTotalBytes, history.NetworkUp,
+		history.ResticVersion, history.ResticAvailable, issuesBytes,
+		history.RecordedAt, history.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create health history: %w", err)
+	}
+	return nil
+}
+
+// GetAgentHealthHistory returns health history for an agent.
+func (db *DB) GetAgentHealthHistory(ctx context.Context, agentID uuid.UUID, limit int) ([]*models.AgentHealthHistory, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, agent_id, org_id, health_status, cpu_usage, memory_usage, disk_usage,
+		       disk_free_bytes, disk_total_bytes, network_up, restic_version, restic_available,
+		       issues, recorded_at, created_at
+		FROM agent_health_history
+		WHERE agent_id = $1
+		ORDER BY recorded_at DESC
+		LIMIT $2
+	`, agentID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get health history: %w", err)
+	}
+	defer rows.Close()
+
+	var history []*models.AgentHealthHistory
+	for rows.Next() {
+		var h models.AgentHealthHistory
+		var healthStatusStr string
+		var issuesBytes []byte
+		err := rows.Scan(
+			&h.ID, &h.AgentID, &h.OrgID, &healthStatusStr,
+			&h.CPUUsage, &h.MemoryUsage, &h.DiskUsage,
+			&h.DiskFreeBytes, &h.DiskTotalBytes, &h.NetworkUp,
+			&h.ResticVersion, &h.ResticAvailable,
+			&issuesBytes, &h.RecordedAt, &h.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan health history: %w", err)
+		}
+		h.HealthStatus = models.HealthStatus(healthStatusStr)
+		if len(issuesBytes) > 0 {
+			if err := json.Unmarshal(issuesBytes, &h.Issues); err != nil {
+				db.logger.Warn().Err(err).Str("history_id", h.ID.String()).Msg("failed to parse health issues")
+			}
+		}
+		history = append(history, &h)
+	}
+
+	return history, nil
+}
+
+// GetFleetHealthSummary returns aggregated health stats for all agents in an org.
+func (db *DB) GetFleetHealthSummary(ctx context.Context, orgID uuid.UUID) (*models.FleetHealthSummary, error) {
+	summary := &models.FleetHealthSummary{}
+
+	err := db.Pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*) as total_agents,
+			COUNT(*) FILTER (WHERE health_status = 'healthy') as healthy_count,
+			COUNT(*) FILTER (WHERE health_status = 'warning') as warning_count,
+			COUNT(*) FILTER (WHERE health_status = 'critical') as critical_count,
+			COUNT(*) FILTER (WHERE health_status = 'unknown' OR health_status IS NULL) as unknown_count,
+			COUNT(*) FILTER (WHERE status = 'active') as active_count,
+			COUNT(*) FILTER (WHERE status = 'offline') as offline_count,
+			COALESCE(AVG(CASE WHEN health_metrics->>'cpu_usage' IS NOT NULL
+				THEN (health_metrics->>'cpu_usage')::DECIMAL ELSE NULL END), 0) as avg_cpu_usage,
+			COALESCE(AVG(CASE WHEN health_metrics->>'memory_usage' IS NOT NULL
+				THEN (health_metrics->>'memory_usage')::DECIMAL ELSE NULL END), 0) as avg_memory_usage,
+			COALESCE(AVG(CASE WHEN health_metrics->>'disk_usage' IS NOT NULL
+				THEN (health_metrics->>'disk_usage')::DECIMAL ELSE NULL END), 0) as avg_disk_usage
+		FROM agents
+		WHERE org_id = $1
+	`, orgID).Scan(
+		&summary.TotalAgents,
+		&summary.HealthyCount,
+		&summary.WarningCount,
+		&summary.CriticalCount,
+		&summary.UnknownCount,
+		&summary.ActiveCount,
+		&summary.OfflineCount,
+		&summary.AvgCPUUsage,
+		&summary.AvgMemoryUsage,
+		&summary.AvgDiskUsage,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get fleet health summary: %w", err)
+	}
+
+	return summary, nil
 }
 
 // GetAgentStats returns aggregated statistics for an agent.

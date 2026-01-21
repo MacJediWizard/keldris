@@ -251,6 +251,10 @@ export function getAlertTypeLabel(type: string): string {
 			return 'Backup SLA';
 		case 'storage_usage':
 			return 'Storage Usage';
+		case 'agent_health_warning':
+			return 'Agent Health Warning';
+		case 'agent_health_critical':
+			return 'Agent Health Critical';
 		default:
 			return type;
 	}
@@ -387,4 +391,72 @@ export function getSuccessRateBadge(percent: number): {
 	if (percent >= 80) return { bg: 'bg-yellow-100', text: 'text-yellow-800' };
 	if (percent >= 50) return { bg: 'bg-orange-100', text: 'text-orange-800' };
 	return { bg: 'bg-red-100', text: 'text-red-800' };
+}
+
+// Get health status color classes for badges
+export function getHealthStatusColor(status: string): {
+	bg: string;
+	text: string;
+	dot: string;
+	icon: string;
+} {
+	switch (status) {
+		case 'healthy':
+			return {
+				bg: 'bg-green-100',
+				text: 'text-green-800',
+				dot: 'bg-green-500',
+				icon: 'text-green-500',
+			};
+		case 'warning':
+			return {
+				bg: 'bg-yellow-100',
+				text: 'text-yellow-800',
+				dot: 'bg-yellow-500',
+				icon: 'text-yellow-500',
+			};
+		case 'critical':
+			return {
+				bg: 'bg-red-100',
+				text: 'text-red-800',
+				dot: 'bg-red-500',
+				icon: 'text-red-500',
+			};
+		case 'unknown':
+		default:
+			return {
+				bg: 'bg-gray-100',
+				text: 'text-gray-600',
+				dot: 'bg-gray-400',
+				icon: 'text-gray-400',
+			};
+	}
+}
+
+// Get health status label
+export function getHealthStatusLabel(status: string): string {
+	switch (status) {
+		case 'healthy':
+			return 'Healthy';
+		case 'warning':
+			return 'Warning';
+		case 'critical':
+			return 'Critical';
+		case 'unknown':
+		default:
+			return 'Unknown';
+	}
+}
+
+// Format uptime from seconds
+export function formatUptime(seconds: number | undefined): string {
+	if (seconds === undefined || seconds === null) return 'N/A';
+
+	const days = Math.floor(seconds / 86400);
+	const hours = Math.floor((seconds % 86400) / 3600);
+	const minutes = Math.floor((seconds % 3600) / 60);
+
+	if (days > 0) return `${days}d ${hours}h`;
+	if (hours > 0) return `${hours}h ${minutes}m`;
+	return `${minutes}m`;
 }
