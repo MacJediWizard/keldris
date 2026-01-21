@@ -13,8 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/updater"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
 
@@ -79,6 +81,7 @@ Run 'keldris-agent register' to connect to a server.`,
 		newBackupCmd(),
 		newRestoreCmd(),
 		newUpdateCmd(),
+		newMountsCmd(),
 	)
 
 	return rootCmd
@@ -518,6 +521,44 @@ func runUpdate(checkOnly, force bool) error {
 	}
 
 	return nil
+}
+
+func newMountsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "mounts",
+		Short: "List detected network mounts",
+		Long: `Detects and displays all network mounts (NFS, SMB, CIFS) on this system.
+
+Shows mount path, type, remote location, and current accessibility status.
+Network mounts can be included in backup schedules, and the agent will
+report mount availability to the server.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			logger := zerolog.New(os.Stderr).Level(zerolog.Disabled)
+			nd := backup.NewNetworkDrives(logger)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			mounts, err := nd.DetectMounts(ctx)
+			if err != nil {
+				return fmt.Errorf("detect mounts: %w", err)
+			}
+
+			if len(mounts) == 0 {
+				fmt.Println("No network mounts detected")
+				return nil
+			}
+
+			fmt.Printf("%-40s %-8s %-40s %-12s\n", "PATH", "TYPE", "REMOTE", "STATUS")
+			fmt.Println(strings.Repeat("-", 104))
+			for _, m := range mounts {
+				fmt.Printf("%-40s %-8s %-40s %-12s\n",
+					m.Path, m.Type, m.Remote, m.Status)
+			}
+
+			return nil
+		},
+	}
 }
 
 // maskAPIKey returns a masked version of the API key for display.
