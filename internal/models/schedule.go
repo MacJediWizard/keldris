@@ -24,9 +24,13 @@ type BackupWindow struct {
 }
 
 // Schedule represents a backup schedule configuration.
+// A schedule can be assigned to either an individual agent (via AgentID)
+// or to an agent group (via AgentGroupID). When AgentGroupID is set,
+// the schedule applies to all agents in that group.
 type Schedule struct {
 	ID               uuid.UUID        `json:"id"`
 	AgentID          uuid.UUID        `json:"agent_id"`
+	AgentGroupID     *uuid.UUID       `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
 	RepositoryID     uuid.UUID        `json:"repository_id"`
 	Name             string           `json:"name"`
 	CronExpression   string           `json:"cron_expression"`
