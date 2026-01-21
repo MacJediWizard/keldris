@@ -71,6 +71,7 @@ import type {
 	UpdateOrgRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
+	UpdateUserPreferencesRequest,
 	UpdateVerificationScheduleRequest,
 	User,
 	Verification,
@@ -146,6 +147,14 @@ export const authApi = {
 
 	logout: async (): Promise<MessageResponse> =>
 		fetchAuth<MessageResponse>('/auth/logout', { method: 'POST' }),
+
+	updatePreferences: async (
+		data: UpdateUserPreferencesRequest,
+	): Promise<User> =>
+		fetchAuth<User>('/auth/preferences', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
 
 	getLoginUrl: () => '/auth/login',
 };

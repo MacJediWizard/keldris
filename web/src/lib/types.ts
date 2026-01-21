@@ -225,12 +225,19 @@ export interface Backup {
 }
 
 // Auth types
+export type SupportedLanguage = 'en' | 'es' | 'pt';
+
 export interface User {
 	id: string;
 	email: string;
 	name: string;
 	current_org_id?: string;
 	current_org_role?: string;
+	language?: SupportedLanguage;
+}
+
+export interface UpdateUserPreferencesRequest {
+	language?: SupportedLanguage;
 }
 
 // Organization types
