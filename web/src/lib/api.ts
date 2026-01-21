@@ -28,6 +28,7 @@ import type {
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
+	CreateReportScheduleRequest,
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
@@ -67,6 +68,12 @@ import type {
 	OrganizationsResponse,
 	ReplicationStatus,
 	ReplicationStatusResponse,
+	ReportFrequency,
+	ReportHistory,
+	ReportHistoryResponse,
+	ReportPreviewResponse,
+	ReportSchedule,
+	ReportSchedulesResponse,
 	RepositoriesResponse,
 	Repository,
 	RepositoryGrowthResponse,
@@ -103,6 +110,7 @@ import type {
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
+	UpdateReportScheduleRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
 	UpdateTagRequest,
@@ -1023,4 +1031,66 @@ export const metricsApi = {
 		);
 		return response.stats ?? [];
 	},
+};
+
+export const reportsApi = {
+	// Schedules
+	listSchedules: async (): Promise<ReportSchedule[]> => {
+		const response =
+			await fetchApi<ReportSchedulesResponse>('/reports/schedules');
+		return response.schedules ?? [];
+	},
+
+	getSchedule: async (id: string): Promise<ReportSchedule> =>
+		fetchApi<ReportSchedule>(`/reports/schedules/${id}`),
+
+	createSchedule: async (
+		data: CreateReportScheduleRequest,
+	): Promise<ReportSchedule> =>
+		fetchApi<ReportSchedule>('/reports/schedules', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateSchedule: async (
+		id: string,
+		data: UpdateReportScheduleRequest,
+	): Promise<ReportSchedule> =>
+		fetchApi<ReportSchedule>(`/reports/schedules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteSchedule: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/reports/schedules/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Actions
+	sendReport: async (
+		id: string,
+		preview = false,
+	): Promise<ReportPreviewResponse | MessageResponse> =>
+		fetchApi(`/reports/schedules/${id}/send`, {
+			method: 'POST',
+			body: JSON.stringify({ preview }),
+		}),
+
+	previewReport: async (
+		frequency: ReportFrequency,
+		timezone = 'UTC',
+	): Promise<ReportPreviewResponse> =>
+		fetchApi<ReportPreviewResponse>('/reports/preview', {
+			method: 'POST',
+			body: JSON.stringify({ frequency, timezone }),
+		}),
+
+	// History
+	listHistory: async (): Promise<ReportHistory[]> => {
+		const response = await fetchApi<ReportHistoryResponse>('/reports/history');
+		return response.history ?? [];
+	},
+
+	getHistory: async (id: string): Promise<ReportHistory> =>
+		fetchApi<ReportHistory>(`/reports/history/${id}`),
 };

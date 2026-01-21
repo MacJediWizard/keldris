@@ -12,6 +12,7 @@ import { NewOrganization } from './pages/NewOrganization';
 import { Notifications } from './pages/Notifications';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSettings } from './pages/OrganizationSettings';
+import Reports from './pages/Reports';
 import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
 import { Restore } from './pages/Restore';
@@ -51,6 +52,7 @@ function App() {
 						<Route path="restore" element={<Restore />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
+						<Route path="reports" element={<Reports />} />
 						<Route path="audit-logs" element={<AuditLogs />} />
 						<Route path="stats" element={<StorageStats />} />
 						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
