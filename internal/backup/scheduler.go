@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/maintenance"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/google/uuid"
@@ -70,15 +71,16 @@ func DefaultSchedulerConfig() SchedulerConfig {
 
 // Scheduler manages backup schedules using cron.
 type Scheduler struct {
-	store    ScheduleStore
-	restic   *Restic
-	config   SchedulerConfig
-	notifier *notifications.Service
-	cron     *cron.Cron
-	logger   zerolog.Logger
-	mu       sync.RWMutex
-	entries  map[uuid.UUID]cron.EntryID
-	running  bool
+	store       ScheduleStore
+	restic      *Restic
+	config      SchedulerConfig
+	notifier    *notifications.Service
+	maintenance *maintenance.Service
+	cron        *cron.Cron
+	logger      zerolog.Logger
+	mu          sync.RWMutex
+	entries     map[uuid.UUID]cron.EntryID
+	running     bool
 }
 
 // NewScheduler creates a new backup scheduler.
@@ -93,6 +95,12 @@ func NewScheduler(store ScheduleStore, restic *Restic, config SchedulerConfig, n
 		logger:   logger.With().Str("component", "scheduler").Logger(),
 		entries:  make(map[uuid.UUID]cron.EntryID),
 	}
+}
+
+// SetMaintenanceService sets the maintenance service for checking maintenance windows.
+// This should be called before Start() if maintenance mode checking is desired.
+func (s *Scheduler) SetMaintenanceService(maint *maintenance.Service) {
+	s.maintenance = maint
 }
 
 // Start starts the scheduler and loads initial schedules.
@@ -237,6 +245,22 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 			Time("next_allowed_time", nextAllowed).
 			Msg("backup skipped: outside allowed time window")
 		return
+	}
+
+	// Check if maintenance mode is active for the agent's organization
+	if s.maintenance != nil {
+		agent, err := s.store.GetAgentByID(ctx, schedule.AgentID)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to get agent for maintenance check")
+			return
+		}
+		if s.maintenance.IsMaintenanceActive(agent.OrgID) {
+			logger.Info().
+				Str("agent_id", agent.ID.String()).
+				Str("org_id", agent.OrgID.String()).
+				Msg("backup skipped: maintenance mode active")
+			return
+		}
 	}
 
 	logger.Info().Msg("starting scheduled backup")
@@ -614,6 +638,14 @@ func (s *Scheduler) refreshLoop(ctx context.Context) {
 
 			if err := s.Reload(ctx); err != nil {
 				s.logger.Error().Err(err).Msg("failed to reload schedules")
+			}
+
+			// Refresh maintenance window cache and check for pending notifications
+			if s.maintenance != nil {
+				if err := s.maintenance.RefreshCache(ctx); err != nil {
+					s.logger.Error().Err(err).Msg("failed to refresh maintenance cache")
+				}
+				s.maintenance.CheckAndSendNotifications(ctx)
 			}
 		}
 	}
