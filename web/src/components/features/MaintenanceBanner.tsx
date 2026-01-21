@@ -33,12 +33,11 @@ export function MaintenanceBanner() {
 		}
 
 		const updateCountdown = () => {
-			if (!data.active && !data.upcoming) return;
-			const target = data.active
-				? new Date(data.active.ends_at)
-				: new Date(data.upcoming.starts_at);
-
-			setTimeLeft(formatTimeLeft(target));
+			if (data.active) {
+				setTimeLeft(formatTimeLeft(new Date(data.active.ends_at)));
+			} else if (data.upcoming) {
+				setTimeLeft(formatTimeLeft(new Date(data.upcoming.starts_at)));
+			}
 		};
 
 		updateCountdown();
