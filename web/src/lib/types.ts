@@ -154,6 +154,8 @@ export interface BackupWindow {
 	end?: string; // HH:MM format (e.g., "06:00")
 }
 
+export type CompressionLevel = 'off' | 'auto' | 'max';
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
@@ -166,6 +168,7 @@ export interface Schedule {
 	bandwidth_limit_kb?: number; // Upload limit in KB/s
 	backup_window?: BackupWindow; // Allowed backup time window
 	excluded_hours?: number[]; // Hours (0-23) when backups should not run
+	compression_level?: CompressionLevel; // Compression level: off, auto, max
 	enabled: boolean;
 	created_at: string;
 	updated_at: string;
@@ -182,6 +185,7 @@ export interface CreateScheduleRequest {
 	bandwidth_limit_kb?: number;
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
+	compression_level?: CompressionLevel;
 	enabled?: boolean;
 }
 
@@ -194,6 +198,7 @@ export interface UpdateScheduleRequest {
 	bandwidth_limit_kb?: number;
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
+	compression_level?: CompressionLevel;
 	enabled?: boolean;
 }
 

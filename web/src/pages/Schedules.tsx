@@ -8,7 +8,7 @@ import {
 	useSchedules,
 	useUpdateSchedule,
 } from '../hooks/useSchedules';
-import type { Schedule } from '../lib/types';
+import type { CompressionLevel, Schedule } from '../lib/types';
 
 function LoadingRow() {
 	return (
@@ -55,6 +55,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	const [windowStart, setWindowStart] = useState('');
 	const [windowEnd, setWindowEnd] = useState('');
 	const [excludedHours, setExcludedHours] = useState<number[]>([]);
+	const [compressionLevel, setCompressionLevel] = useState<
+		CompressionLevel | ''
+	>('');
 	const [showAdvanced, setShowAdvanced] = useState(false);
 
 	const { data: agents } = useAgents();
@@ -105,6 +108,10 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				data.excluded_hours = excludedHours;
 			}
 
+			if (compressionLevel) {
+				data.compression_level = compressionLevel;
+			}
+
 			await createSchedule.mutateAsync(data);
 			onClose();
 			setName('');
@@ -124,6 +131,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			setWindowStart('');
 			setWindowEnd('');
 			setExcludedHours([]);
+			setCompressionLevel('');
 			setShowAdvanced(false);
 		} catch {
 			// Error handled by mutation
@@ -458,6 +466,43 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											Click to exclude hours when backups should not run.
 										</p>
 									</fieldset>
+
+									<div>
+										<label
+											htmlFor="compression-level"
+											className="block text-sm font-medium text-gray-700 mb-1"
+										>
+											Compression Level
+										</label>
+										<select
+											id="compression-level"
+											value={compressionLevel}
+											onChange={(e) =>
+												setCompressionLevel(
+													e.target.value as CompressionLevel | '',
+												)
+											}
+											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										>
+											<option value="">Auto (default)</option>
+											<option value="off">
+												Off - No compression (fastest, largest files)
+											</option>
+											<option value="auto">Auto - Balanced compression</option>
+											<option value="max">
+												Max - Maximum compression (slowest, smallest files)
+											</option>
+										</select>
+										<p className="text-xs text-gray-500 mt-1">
+											<strong>Off:</strong> Best for already-compressed data
+											(videos, images, archives).
+											<br />
+											<strong>Auto:</strong> Good balance for most data types.
+											<br />
+											<strong>Max:</strong> Best for text files, logs, and
+											databases.
+										</p>
+									</div>
 								</div>
 							)}
 						</div>
@@ -532,7 +577,8 @@ function ScheduleRow({
 	const hasResourceControls =
 		schedule.bandwidth_limit_kb ||
 		schedule.backup_window ||
-		(schedule.excluded_hours && schedule.excluded_hours.length > 0);
+		(schedule.excluded_hours && schedule.excluded_hours.length > 0) ||
+		schedule.compression_level;
 
 	return (
 		<tr className="hover:bg-gray-50">
@@ -599,6 +645,29 @@ function ScheduleRow({
 								</svg>
 								{schedule.excluded_hours.length} excluded hour
 								{schedule.excluded_hours.length !== 1 ? 's' : ''}
+							</span>
+						)}
+						{schedule.compression_level && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-cyan-50 text-cyan-700 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+									/>
+								</svg>
+								{schedule.compression_level === 'off'
+									? 'No compression'
+									: schedule.compression_level === 'max'
+										? 'Max compression'
+										: 'Auto compression'}
 							</span>
 						)}
 					</div>

@@ -62,6 +62,7 @@ type CreateScheduleRequest struct {
 	BandwidthLimitKB *int                    `json:"bandwidth_limit_kb,omitempty"`
 	BackupWindow     *models.BackupWindow    `json:"backup_window,omitempty"`
 	ExcludedHours    []int                   `json:"excluded_hours,omitempty"`
+	CompressionLevel *string                 `json:"compression_level,omitempty"`
 	Enabled          *bool                   `json:"enabled,omitempty"`
 }
 
@@ -75,6 +76,7 @@ type UpdateScheduleRequest struct {
 	BandwidthLimitKB *int                    `json:"bandwidth_limit_kb,omitempty"`
 	BackupWindow     *models.BackupWindow    `json:"backup_window,omitempty"`
 	ExcludedHours    []int                   `json:"excluded_hours,omitempty"`
+	CompressionLevel *string                 `json:"compression_level,omitempty"`
 	Enabled          *bool                   `json:"enabled,omitempty"`
 }
 
@@ -247,6 +249,10 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		schedule.ExcludedHours = req.ExcludedHours
 	}
 
+	if req.CompressionLevel != nil {
+		schedule.CompressionLevel = req.CompressionLevel
+	}
+
 	if req.Enabled != nil {
 		schedule.Enabled = *req.Enabled
 	}
@@ -326,6 +332,9 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 	}
 	if req.ExcludedHours != nil {
 		schedule.ExcludedHours = req.ExcludedHours
+	}
+	if req.CompressionLevel != nil {
+		schedule.CompressionLevel = req.CompressionLevel
 	}
 	if req.Enabled != nil {
 		schedule.Enabled = *req.Enabled
