@@ -84,6 +84,8 @@ import type {
 	NotificationLogsResponse,
 	NotificationPreference,
 	NotificationPreferencesResponse,
+	OnboardingStatus,
+	OnboardingStep,
 	OrgInvitation,
 	OrgMember,
 	OrgResponse,
@@ -1361,4 +1363,19 @@ export const reportsApi = {
 
 	getHistory: async (id: string): Promise<ReportHistory> =>
 		fetchApi<ReportHistory>(`/reports/history/${id}`),
+};
+// Onboarding API
+export const onboardingApi = {
+	getStatus: async (): Promise<OnboardingStatus> =>
+		fetchApi<OnboardingStatus>('/onboarding/status'),
+
+	completeStep: async (step: OnboardingStep): Promise<OnboardingStatus> =>
+		fetchApi<OnboardingStatus>(`/onboarding/step/${step}`, {
+			method: 'POST',
+		}),
+
+	skip: async (): Promise<OnboardingStatus> =>
+		fetchApi<OnboardingStatus>('/onboarding/skip', {
+			method: 'POST',
+		}),
 };

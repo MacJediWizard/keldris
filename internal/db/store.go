@@ -5320,9 +5320,7 @@ func (db *DB) GetDailyBackupStats(ctx context.Context, orgID uuid.UUID, days int
 	return stats, nil
 }
 
-// =============================================================================
 // Report Schedules
-// =============================================================================
 
 // GetEnabledReportSchedules returns all enabled report schedules.
 func (db *DB) GetEnabledReportSchedules(ctx context.Context) ([]*models.ReportSchedule, error) {
@@ -5478,9 +5476,7 @@ func scanReportSchedules(rows interface {
 	return schedules, nil
 }
 
-// =============================================================================
 // Report History
-// =============================================================================
 
 // CreateReportHistory creates a new report history entry.
 func (db *DB) CreateReportHistory(ctx context.Context, history *models.ReportHistory) error {
@@ -5589,9 +5585,7 @@ func scanReportHistory(rows interface {
 	return history, nil
 }
 
-// =============================================================================
 // Report Data Queries
-// =============================================================================
 
 // GetBackupsByOrgIDAndDateRange returns backups for an org within a date range.
 func (db *DB) GetBackupsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]*models.Backup, error) {
@@ -5934,4 +5928,83 @@ func (db *DB) GetSchedulesByAgentGroupID(ctx context.Context, agentGroupID uuid.
 	}
 
 	return schedules, nil
+}
+// Onboarding methods
+
+// GetOnboardingProgress returns the onboarding progress for an organization.
+func (db *DB) GetOnboardingProgress(ctx context.Context, orgID uuid.UUID) (*models.OnboardingProgress, error) {
+	var p models.OnboardingProgress
+	var currentStepStr string
+	var completedStepsArr []string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, current_step, completed_steps, skipped, completed_at, created_at, updated_at
+		FROM onboarding_progress
+		WHERE org_id = $1
+	`, orgID).Scan(
+		&p.ID, &p.OrgID, &currentStepStr, &completedStepsArr,
+		&p.Skipped, &p.CompletedAt, &p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get onboarding progress: %w", err)
+	}
+	p.CurrentStep = models.OnboardingStep(currentStepStr)
+	p.CompletedSteps = make([]models.OnboardingStep, len(completedStepsArr))
+	for i, s := range completedStepsArr {
+		p.CompletedSteps[i] = models.OnboardingStep(s)
+	}
+	return &p, nil
+}
+
+// GetOrCreateOnboardingProgress returns existing progress or creates new progress for an organization.
+func (db *DB) GetOrCreateOnboardingProgress(ctx context.Context, orgID uuid.UUID) (*models.OnboardingProgress, error) {
+	// Try to get existing progress
+	p, err := db.GetOnboardingProgress(ctx, orgID)
+	if err == nil {
+		return p, nil
+	}
+
+	// Create new progress
+	progress := models.NewOnboardingProgress(orgID)
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO onboarding_progress (id, org_id, current_step, completed_steps, skipped, completed_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, progress.ID, progress.OrgID, string(progress.CurrentStep), []string{}, progress.Skipped, progress.CompletedAt, progress.CreatedAt, progress.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create onboarding progress: %w", err)
+	}
+
+	db.logger.Info().Str("org_id", orgID.String()).Msg("created onboarding progress")
+	return progress, nil
+}
+
+// UpdateOnboardingProgress updates the onboarding progress for an organization.
+func (db *DB) UpdateOnboardingProgress(ctx context.Context, progress *models.OnboardingProgress) error {
+	completedStepsArr := make([]string, len(progress.CompletedSteps))
+	for i, s := range progress.CompletedSteps {
+		completedStepsArr[i] = string(s)
+	}
+
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE onboarding_progress
+		SET current_step = $2, completed_steps = $3, skipped = $4, completed_at = $5, updated_at = $6
+		WHERE org_id = $1
+	`, progress.OrgID, string(progress.CurrentStep), completedStepsArr, progress.Skipped, progress.CompletedAt, time.Now())
+	if err != nil {
+		return fmt.Errorf("update onboarding progress: %w", err)
+	}
+	return nil
+}
+
+// SkipOnboarding marks the onboarding as skipped for an organization.
+func (db *DB) SkipOnboarding(ctx context.Context, orgID uuid.UUID) error {
+	now := time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE onboarding_progress
+		SET skipped = true, completed_at = $2, updated_at = $2
+		WHERE org_id = $1
+	`, orgID, now)
+	if err != nil {
+		return fmt.Errorf("skip onboarding: %w", err)
+	}
+	return nil
 }
