@@ -2788,3 +2788,177 @@ func scanVerifications(rows interface {
 
 	return verifications, nil
 }
+
+// Exclude Pattern methods
+
+// GetExcludePatternsByOrgID returns all exclude patterns for an organization (including built-in patterns).
+func (db *DB) GetExcludePatternsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.ExcludePattern, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, description, patterns, category, is_builtin, created_at, updated_at
+		FROM exclude_patterns
+		WHERE org_id = $1 OR is_builtin = true
+		ORDER BY is_builtin DESC, category, name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list exclude patterns: %w", err)
+	}
+	defer rows.Close()
+
+	return scanExcludePatterns(rows)
+}
+
+// GetBuiltinExcludePatterns returns only the built-in exclude patterns.
+func (db *DB) GetBuiltinExcludePatterns(ctx context.Context) ([]*models.ExcludePattern, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, description, patterns, category, is_builtin, created_at, updated_at
+		FROM exclude_patterns
+		WHERE is_builtin = true
+		ORDER BY category, name
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list built-in exclude patterns: %w", err)
+	}
+	defer rows.Close()
+
+	return scanExcludePatterns(rows)
+}
+
+// GetExcludePatternByID returns an exclude pattern by ID.
+func (db *DB) GetExcludePatternByID(ctx context.Context, id uuid.UUID) (*models.ExcludePattern, error) {
+	var ep models.ExcludePattern
+	var patternsBytes []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, description, patterns, category, is_builtin, created_at, updated_at
+		FROM exclude_patterns
+		WHERE id = $1
+	`, id).Scan(
+		&ep.ID, &ep.OrgID, &ep.Name, &ep.Description, &patternsBytes,
+		&ep.Category, &ep.IsBuiltin, &ep.CreatedAt, &ep.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get exclude pattern: %w", err)
+	}
+	if err := ep.SetPatterns(patternsBytes); err != nil {
+		return nil, fmt.Errorf("parse exclude patterns: %w", err)
+	}
+	return &ep, nil
+}
+
+// GetExcludePatternsByCategory returns all exclude patterns for a given category.
+func (db *DB) GetExcludePatternsByCategory(ctx context.Context, orgID uuid.UUID, category string) ([]*models.ExcludePattern, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, description, patterns, category, is_builtin, created_at, updated_at
+		FROM exclude_patterns
+		WHERE (org_id = $1 OR is_builtin = true) AND category = $2
+		ORDER BY is_builtin DESC, name
+	`, orgID, category)
+	if err != nil {
+		return nil, fmt.Errorf("list exclude patterns by category: %w", err)
+	}
+	defer rows.Close()
+
+	return scanExcludePatterns(rows)
+}
+
+// CreateExcludePattern creates a new exclude pattern.
+func (db *DB) CreateExcludePattern(ctx context.Context, ep *models.ExcludePattern) error {
+	patternsBytes, err := ep.PatternsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal patterns: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO exclude_patterns (id, org_id, name, description, patterns, category, is_builtin, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, ep.ID, ep.OrgID, ep.Name, ep.Description, patternsBytes, ep.Category, ep.IsBuiltin, ep.CreatedAt, ep.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create exclude pattern: %w", err)
+	}
+	return nil
+}
+
+// UpdateExcludePattern updates an exclude pattern.
+func (db *DB) UpdateExcludePattern(ctx context.Context, ep *models.ExcludePattern) error {
+	patternsBytes, err := ep.PatternsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal patterns: %w", err)
+	}
+
+	ep.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE exclude_patterns
+		SET name = $2, description = $3, patterns = $4, category = $5, updated_at = $6
+		WHERE id = $1 AND is_builtin = false
+	`, ep.ID, ep.Name, ep.Description, patternsBytes, ep.Category, ep.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update exclude pattern: %w", err)
+	}
+	return nil
+}
+
+// DeleteExcludePattern deletes an exclude pattern by ID.
+func (db *DB) DeleteExcludePattern(ctx context.Context, id uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `
+		DELETE FROM exclude_patterns
+		WHERE id = $1 AND is_builtin = false
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete exclude pattern: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("exclude pattern not found or is built-in")
+	}
+	return nil
+}
+
+// SeedBuiltinExcludePatterns inserts or updates the built-in exclude patterns from the library.
+func (db *DB) SeedBuiltinExcludePatterns(ctx context.Context, patterns []*models.ExcludePattern) error {
+	for _, ep := range patterns {
+		patternsBytes, err := ep.PatternsJSON()
+		if err != nil {
+			return fmt.Errorf("marshal patterns for %s: %w", ep.Name, err)
+		}
+
+		_, err = db.Pool.Exec(ctx, `
+			INSERT INTO exclude_patterns (id, org_id, name, description, patterns, category, is_builtin, created_at, updated_at)
+			VALUES ($1, NULL, $2, $3, $4, $5, true, $6, $7)
+			ON CONFLICT (name) WHERE is_builtin = true
+			DO UPDATE SET description = $3, patterns = $4, category = $5, updated_at = $7
+		`, ep.ID, ep.Name, ep.Description, patternsBytes, ep.Category, ep.CreatedAt, ep.UpdatedAt)
+		if err != nil {
+			return fmt.Errorf("seed exclude pattern %s: %w", ep.Name, err)
+		}
+	}
+	return nil
+}
+
+// scanExcludePatterns scans multiple exclude pattern rows.
+func scanExcludePatterns(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.ExcludePattern, error) {
+	var patterns []*models.ExcludePattern
+	for rows.Next() {
+		var ep models.ExcludePattern
+		var patternsBytes []byte
+		err := rows.Scan(
+			&ep.ID, &ep.OrgID, &ep.Name, &ep.Description, &patternsBytes,
+			&ep.Category, &ep.IsBuiltin, &ep.CreatedAt, &ep.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan exclude pattern: %w", err)
+		}
+		if err := ep.SetPatterns(patternsBytes); err != nil {
+			// Log warning but continue
+			ep.Patterns = []string{}
+		}
+		patterns = append(patterns, &ep)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate exclude patterns: %w", err)
+	}
+
+	return patterns, nil
+}

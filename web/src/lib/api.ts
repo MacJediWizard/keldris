@@ -11,9 +11,14 @@ import type {
 	AuditLogsResponse,
 	Backup,
 	BackupsResponse,
+	BuiltInPattern,
+	BuiltInPatternsResponse,
+	CategoriesResponse,
+	CategoryInfo,
 	CreateAgentRequest,
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
+	CreateExcludePatternRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
@@ -23,6 +28,8 @@ import type {
 	CreateScheduleRequest,
 	CreateVerificationScheduleRequest,
 	ErrorResponse,
+	ExcludePattern,
+	ExcludePatternsResponse,
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
@@ -65,6 +72,7 @@ import type {
 	TestRepositoryResponse,
 	TriggerVerificationRequest,
 	UpdateAlertRuleRequest,
+	UpdateExcludePatternRequest,
 	UpdateMemberRequest,
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
@@ -747,6 +755,54 @@ export const verificationsApi = {
 
 	deleteSchedule: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/verification-schedules/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Exclude Patterns API
+export const excludePatternsApi = {
+	list: async (category?: string): Promise<ExcludePattern[]> => {
+		const endpoint = category
+			? `/exclude-patterns?category=${category}`
+			: '/exclude-patterns';
+		const response = await fetchApi<ExcludePatternsResponse>(endpoint);
+		return response.patterns ?? [];
+	},
+
+	get: async (id: string): Promise<ExcludePattern> =>
+		fetchApi<ExcludePattern>(`/exclude-patterns/${id}`),
+
+	getLibrary: async (): Promise<BuiltInPattern[]> => {
+		const response = await fetchApi<BuiltInPatternsResponse>(
+			'/exclude-patterns/library',
+		);
+		return response.patterns ?? [];
+	},
+
+	getCategories: async (): Promise<CategoryInfo[]> => {
+		const response = await fetchApi<CategoriesResponse>(
+			'/exclude-patterns/categories',
+		);
+		return response.categories ?? [];
+	},
+
+	create: async (data: CreateExcludePatternRequest): Promise<ExcludePattern> =>
+		fetchApi<ExcludePattern>('/exclude-patterns', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateExcludePatternRequest,
+	): Promise<ExcludePattern> =>
+		fetchApi<ExcludePattern>(`/exclude-patterns/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/exclude-patterns/${id}`, {
 			method: 'DELETE',
 		}),
 };

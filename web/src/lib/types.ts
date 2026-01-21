@@ -751,3 +751,68 @@ export interface VerificationsResponse {
 export interface VerificationSchedulesResponse {
 	schedules: VerificationSchedule[];
 }
+
+// Exclude Pattern types
+export type ExcludePatternCategory =
+	| 'os'
+	| 'ide'
+	| 'language'
+	| 'build'
+	| 'cache'
+	| 'temp'
+	| 'logs'
+	| 'security'
+	| 'database'
+	| 'container';
+
+export interface ExcludePattern {
+	id: string;
+	org_id?: string;
+	name: string;
+	description?: string;
+	patterns: string[];
+	category: ExcludePatternCategory;
+	is_builtin: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface BuiltInPattern {
+	name: string;
+	description: string;
+	patterns: string[];
+	category: ExcludePatternCategory;
+}
+
+export interface CategoryInfo {
+	id: ExcludePatternCategory;
+	name: string;
+	description: string;
+	icon: string;
+}
+
+export interface CreateExcludePatternRequest {
+	name: string;
+	description?: string;
+	patterns: string[];
+	category: ExcludePatternCategory;
+}
+
+export interface UpdateExcludePatternRequest {
+	name?: string;
+	description?: string;
+	patterns?: string[];
+	category?: ExcludePatternCategory;
+}
+
+export interface ExcludePatternsResponse {
+	patterns: ExcludePattern[];
+}
+
+export interface BuiltInPatternsResponse {
+	patterns: BuiltInPattern[];
+}
+
+export interface CategoriesResponse {
+	categories: CategoryInfo[];
+}
