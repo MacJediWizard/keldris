@@ -1021,7 +1021,9 @@ export function AgentDetails() {
 										d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
 									/>
 								</svg>
-								<p className="text-sm font-medium text-gray-600">Memory Usage</p>
+								<p className="text-sm font-medium text-gray-600">
+									Memory Usage
+								</p>
 							</div>
 							<p
 								className={`text-3xl font-bold ${
@@ -1103,14 +1105,14 @@ export function AgentDetails() {
 									Health Issues
 								</h3>
 								<div className="space-y-3">
-									{agent.health_metrics.issues.map((issue, idx) => {
+									{agent.health_metrics.issues.map((issue) => {
 										const severityColors =
 											issue.severity === 'critical'
 												? 'bg-red-50 border-red-200 text-red-800'
 												: 'bg-yellow-50 border-yellow-200 text-yellow-800';
 										return (
 											<div
-												key={idx}
+												key={`${issue.component}-${issue.severity}-${issue.message}`}
 												className={`p-4 rounded-lg border ${severityColors}`}
 											>
 												<div className="flex items-center gap-2">
@@ -1201,7 +1203,7 @@ export function AgentDetails() {
 											{healthHistory
 												.slice(-24)
 												.reverse()
-												.map((h: AgentHealthHistory, idx: number) => {
+												.map((h: AgentHealthHistory) => {
 													const value = h.cpu_usage ?? 0;
 													const color =
 														value >= 95
@@ -1211,7 +1213,7 @@ export function AgentDetails() {
 																: 'bg-green-500';
 													return (
 														<div
-															key={idx}
+															key={h.id}
 															className={`flex-1 ${color} rounded-t transition-all`}
 															style={{ height: `${Math.max(value, 2)}%` }}
 															title={`${value.toFixed(1)}%`}
@@ -1229,7 +1231,7 @@ export function AgentDetails() {
 											{healthHistory
 												.slice(-24)
 												.reverse()
-												.map((h: AgentHealthHistory, idx: number) => {
+												.map((h: AgentHealthHistory) => {
 													const value = h.memory_usage ?? 0;
 													const color =
 														value >= 95
@@ -1239,7 +1241,7 @@ export function AgentDetails() {
 																: 'bg-blue-500';
 													return (
 														<div
-															key={idx}
+															key={h.id}
 															className={`flex-1 ${color} rounded-t transition-all`}
 															style={{ height: `${Math.max(value, 2)}%` }}
 															title={`${value.toFixed(1)}%`}
@@ -1257,7 +1259,7 @@ export function AgentDetails() {
 											{healthHistory
 												.slice(-24)
 												.reverse()
-												.map((h: AgentHealthHistory, idx: number) => {
+												.map((h: AgentHealthHistory) => {
 													const value = h.disk_usage ?? 0;
 													const color =
 														value >= 90
@@ -1267,7 +1269,7 @@ export function AgentDetails() {
 																: 'bg-purple-500';
 													return (
 														<div
-															key={idx}
+															key={h.id}
 															className={`flex-1 ${color} rounded-t transition-all`}
 															style={{ height: `${Math.max(value, 2)}%` }}
 															title={`${value.toFixed(1)}%`}
@@ -1301,35 +1303,37 @@ export function AgentDetails() {
 											</tr>
 										</thead>
 										<tbody className="divide-y divide-gray-200">
-											{healthHistory.slice(0, 10).map((h: AgentHealthHistory) => {
-												const hColor = getHealthStatusColor(h.health_status);
-												return (
-													<tr key={h.id} className="hover:bg-gray-50">
-														<td className="px-4 py-2 text-gray-900">
-															{formatDateTime(h.recorded_at)}
-														</td>
-														<td className="px-4 py-2">
-															<span
-																className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${hColor.bg} ${hColor.text}`}
-															>
+											{healthHistory
+												.slice(0, 10)
+												.map((h: AgentHealthHistory) => {
+													const hColor = getHealthStatusColor(h.health_status);
+													return (
+														<tr key={h.id} className="hover:bg-gray-50">
+															<td className="px-4 py-2 text-gray-900">
+																{formatDateTime(h.recorded_at)}
+															</td>
+															<td className="px-4 py-2">
 																<span
-																	className={`w-1.5 h-1.5 ${hColor.dot} rounded-full`}
-																/>
-																{getHealthStatusLabel(h.health_status)}
-															</span>
-														</td>
-														<td className="px-4 py-2 text-gray-500">
-															{formatPercent(h.cpu_usage)}
-														</td>
-														<td className="px-4 py-2 text-gray-500">
-															{formatPercent(h.memory_usage)}
-														</td>
-														<td className="px-4 py-2 text-gray-500">
-															{formatPercent(h.disk_usage)}
-														</td>
-													</tr>
-												);
-											})}
+																	className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${hColor.bg} ${hColor.text}`}
+																>
+																	<span
+																		className={`w-1.5 h-1.5 ${hColor.dot} rounded-full`}
+																	/>
+																	{getHealthStatusLabel(h.health_status)}
+																</span>
+															</td>
+															<td className="px-4 py-2 text-gray-500">
+																{formatPercent(h.cpu_usage)}
+															</td>
+															<td className="px-4 py-2 text-gray-500">
+																{formatPercent(h.memory_usage)}
+															</td>
+															<td className="px-4 py-2 text-gray-500">
+																{formatPercent(h.disk_usage)}
+															</td>
+														</tr>
+													);
+												})}
 										</tbody>
 									</table>
 								</div>
