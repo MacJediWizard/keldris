@@ -18,25 +18,25 @@ function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
 			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 rounded" />
+				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 rounded" />
+				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-6 w-20 bg-gray-200 rounded-full" />
+				<div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-28 bg-gray-200 rounded" />
+				<div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4 text-right">
-				<div className="h-4 w-12 bg-gray-200 rounded inline-block" />
+				<div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
 			</td>
 		</tr>
 	);
@@ -193,9 +193,9 @@ function BackupDetailsModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Backup Details
 					</h3>
 					<span
@@ -209,32 +209,48 @@ function BackupDetailsModal({
 				<div className="space-y-4">
 					{backup.snapshot_id && (
 						<div>
-							<p className="text-sm font-medium text-gray-500">Snapshot ID</p>
-							<p className="font-mono text-gray-900">{backup.snapshot_id}</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Snapshot ID
+							</p>
+							<p className="font-mono text-gray-900 dark:text-white">
+								{backup.snapshot_id}
+							</p>
 						</div>
 					)}
 
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<p className="text-sm font-medium text-gray-500">Agent</p>
-							<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Agent
+							</p>
+							<p className="text-gray-900 dark:text-white">
+								{agentName ?? 'Unknown'}
+							</p>
 						</div>
 						<div>
-							<p className="text-sm font-medium text-gray-500">Repository</p>
-							<p className="text-gray-900">{repoName ?? 'Unknown'}</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Repository
+							</p>
+							<p className="text-gray-900 dark:text-white">
+								{repoName ?? 'Unknown'}
+							</p>
 						</div>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<p className="text-sm font-medium text-gray-500">Started</p>
-							<p className="text-gray-900">
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Started
+							</p>
+							<p className="text-gray-900 dark:text-white">
 								{formatDateTime(backup.started_at)}
 							</p>
 						</div>
 						<div>
-							<p className="text-sm font-medium text-gray-500">Duration</p>
-							<p className="text-gray-900">
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Duration
+							</p>
+							<p className="text-gray-900 dark:text-white">
 								{formatDuration(backup.started_at, backup.completed_at)}
 							</p>
 						</div>
@@ -243,18 +259,28 @@ function BackupDetailsModal({
 					{backup.status === 'completed' && (
 						<div className="grid grid-cols-3 gap-4">
 							<div>
-								<p className="text-sm font-medium text-gray-500">Size</p>
-								<p className="text-gray-900">
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Size
+								</p>
+								<p className="text-gray-900 dark:text-white">
 									{formatBytes(backup.size_bytes)}
 								</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-500">New Files</p>
-								<p className="text-gray-900">{backup.files_new ?? 0}</p>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									New Files
+								</p>
+								<p className="text-gray-900 dark:text-white">
+									{backup.files_new ?? 0}
+								</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-500">Changed</p>
-								<p className="text-gray-900">{backup.files_changed ?? 0}</p>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Changed
+								</p>
+								<p className="text-gray-900 dark:text-white">
+									{backup.files_changed ?? 0}
+								</p>
 							</div>
 						</div>
 					)}
@@ -263,8 +289,10 @@ function BackupDetailsModal({
 
 					{backup.error_message && (
 						<div>
-							<p className="text-sm font-medium text-gray-500">Error</p>
-							<p className="text-red-600 bg-red-50 p-3 rounded-lg text-sm">
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Error
+							</p>
+							<p className="text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-3 rounded-lg text-sm">
 								{backup.error_message}
 							</p>
 						</div>
@@ -327,7 +355,7 @@ function BackupDetailsModal({
 					<button
 						type="button"
 						onClick={onClose}
-						className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+						className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
 					>
 						Close
 					</button>
@@ -353,19 +381,19 @@ function BackupRow({
 	const statusColor = getBackupStatusColor(backup.status);
 
 	return (
-		<tr className="hover:bg-gray-50">
+		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
-				<code className="text-sm font-mono text-gray-900">
+				<code className="text-sm font-mono text-gray-900 dark:text-white">
 					{truncateSnapshotId(backup.snapshot_id)}
 				</code>
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-900">
+			<td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
 				{agentName ?? 'Unknown'}
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-900">
+			<td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
 				{repoName ?? 'Unknown'}
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatBytes(backup.size_bytes)}
 			</td>
 			<td className="px-6 py-4">
@@ -376,14 +404,14 @@ function BackupRow({
 					{backup.status}
 				</span>
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(backup.started_at)}
 			</td>
 			<td className="px-6 py-4 text-right">
 				<button
 					type="button"
 					onClick={() => onViewDetails(backup)}
-					className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+					className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
 				>
 					Details
 				</button>
@@ -452,25 +480,29 @@ export function Backups() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Backups</h1>
-					<p className="text-gray-600 mt-1">View and manage backup snapshots</p>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Backups
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						View and manage backup snapshots
+					</p>
 				</div>
 			</div>
 
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="p-6 border-b border-gray-200">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 					<div className="flex items-center gap-4 mb-4">
 						<input
 							type="text"
 							placeholder="Search by snapshot ID..."
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
-							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 						<select
 							value={agentFilter}
 							onChange={(e) => setAgentFilter(e.target.value)}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="all">All Agents</option>
 							{agents?.map((agent) => (
@@ -484,7 +516,7 @@ export function Backups() {
 							onChange={(e) =>
 								setStatusFilter(e.target.value as BackupStatus | 'all')
 							}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="all">All Status</option>
 							<option value="completed">Completed</option>
@@ -519,38 +551,38 @@ export function Backups() {
 
 				<div className="overflow-x-auto">
 					{isError ? (
-						<div className="p-12 text-center text-red-500">
+						<div className="p-12 text-center text-red-500 dark:text-red-400">
 							<p className="font-medium">Failed to load backups</p>
 							<p className="text-sm">Please try refreshing the page</p>
 						</div>
 					) : isLoading ? (
 						<table className="w-full">
-							<thead className="bg-gray-50 border-b border-gray-200">
+							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Snapshot ID
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Agent
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Repository
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Size
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Status
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Created
 									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
 							</thead>
-							<tbody className="divide-y divide-gray-200">
+							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 								<LoadingRow />
 								<LoadingRow />
 								<LoadingRow />
@@ -560,32 +592,32 @@ export function Backups() {
 						</table>
 					) : filteredBackups && filteredBackups.length > 0 ? (
 						<table className="w-full">
-							<thead className="bg-gray-50 border-b border-gray-200">
+							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Snapshot ID
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Agent
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Repository
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Size
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Status
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Created
 									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
 							</thead>
-							<tbody className="divide-y divide-gray-200">
+							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 								{filteredBackups.map((backup) => (
 									<BackupRow
 										key={backup.id}
@@ -599,40 +631,40 @@ export function Backups() {
 						</table>
 					) : (
 						<table className="w-full">
-							<thead className="bg-gray-50 border-b border-gray-200">
+							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Snapshot ID
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Agent
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Repository
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Size
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Status
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Created
 									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
 							</thead>
-							<tbody className="divide-y divide-gray-200">
+							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 								<tr>
 									<td
 										colSpan={7}
-										className="px-6 py-12 text-center text-gray-500"
+										className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
 									>
 										<svg
 											aria-hidden="true"
-											className="w-12 h-12 mx-auto mb-3 text-gray-300"
+											className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
 											fill="none"
 											stroke="currentColor"
 											viewBox="0 0 24 24"
@@ -644,7 +676,7 @@ export function Backups() {
 												d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
 											/>
 										</svg>
-										<p className="font-medium text-gray-900">
+										<p className="font-medium text-gray-900 dark:text-white">
 											No backups found
 										</p>
 										<p className="text-sm">
