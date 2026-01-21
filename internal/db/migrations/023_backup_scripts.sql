@@ -1,4 +1,4 @@
--- 012_backup_scripts.sql
+-- 023_backup_scripts.sql
 -- Migration: Add backup scripts for pre/post backup hooks
 
 -- Create backup_scripts table for storing scripts associated with schedules
