@@ -1,6 +1,7 @@
 import type {
 	Agent,
 	AgentBackupsResponse,
+	AgentHealthHistoryResponse,
 	AgentSchedulesResponse,
 	AgentStatsResponse,
 	AgentsResponse,
@@ -45,6 +46,7 @@ import type {
 	DailyBackupStatsResponse,
 	DashboardStats,
 	ErrorResponse,
+	FleetHealthSummary,
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
@@ -221,6 +223,17 @@ export const agentsApi = {
 
 	getSchedules: async (id: string): Promise<AgentSchedulesResponse> =>
 		fetchApi<AgentSchedulesResponse>(`/agents/${id}/schedules`),
+
+	getHealthHistory: async (
+		id: string,
+		limit = 100,
+	): Promise<AgentHealthHistoryResponse> =>
+		fetchApi<AgentHealthHistoryResponse>(
+			`/agents/${id}/health-history?limit=${limit}`,
+		),
+
+	getFleetHealth: async (): Promise<FleetHealthSummary> =>
+		fetchApi<FleetHealthSummary>('/agents/fleet-health'),
 };
 
 // Repositories API

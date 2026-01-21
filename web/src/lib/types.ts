@@ -1,11 +1,33 @@
 // Agent types
 export type AgentStatus = 'pending' | 'active' | 'offline' | 'disabled';
+export type HealthStatus = 'healthy' | 'warning' | 'critical' | 'unknown';
 
 export interface OSInfo {
 	os: string;
 	arch: string;
 	hostname: string;
 	version?: string;
+}
+
+export interface HealthMetrics {
+	cpu_usage: number;
+	memory_usage: number;
+	disk_usage: number;
+	disk_free_bytes: number;
+	disk_total_bytes: number;
+	network_up: boolean;
+	uptime_seconds: number;
+	restic_version?: string;
+	restic_available: boolean;
+	issues?: HealthIssue[];
+}
+
+export interface HealthIssue {
+	component: string;
+	severity: HealthStatus;
+	message: string;
+	value?: number;
+	threshold?: number;
 }
 
 export interface Agent {
@@ -15,8 +37,42 @@ export interface Agent {
 	os_info?: OSInfo;
 	last_seen?: string;
 	status: AgentStatus;
+	health_status: HealthStatus;
+	health_metrics?: HealthMetrics;
+	health_checked_at?: string;
 	created_at: string;
 	updated_at: string;
+}
+
+export interface AgentHealthHistory {
+	id: string;
+	agent_id: string;
+	org_id: string;
+	health_status: HealthStatus;
+	cpu_usage?: number;
+	memory_usage?: number;
+	disk_usage?: number;
+	disk_free_bytes?: number;
+	disk_total_bytes?: number;
+	network_up: boolean;
+	restic_version?: string;
+	restic_available: boolean;
+	issues?: HealthIssue[];
+	recorded_at: string;
+	created_at: string;
+}
+
+export interface FleetHealthSummary {
+	total_agents: number;
+	healthy_count: number;
+	warning_count: number;
+	critical_count: number;
+	unknown_count: number;
+	active_count: number;
+	offline_count: number;
+	avg_cpu_usage: number;
+	avg_memory_usage: number;
+	avg_disk_usage: number;
 }
 
 export interface CreateAgentRequest {
@@ -59,6 +115,10 @@ export interface AgentBackupsResponse {
 
 export interface AgentSchedulesResponse {
 	schedules: Schedule[];
+}
+
+export interface AgentHealthHistoryResponse {
+	history: AgentHealthHistory[];
 }
 
 // Repository types
@@ -478,7 +538,12 @@ export interface RestoresResponse {
 }
 
 // Alert types
-export type AlertType = 'agent_offline' | 'backup_sla' | 'storage_usage';
+export type AlertType =
+	| 'agent_offline'
+	| 'backup_sla'
+	| 'storage_usage'
+	| 'agent_health_warning'
+	| 'agent_health_critical';
 export type AlertSeverity = 'info' | 'warning' | 'critical';
 export type AlertStatus = 'active' | 'acknowledged' | 'resolved';
 export type ResourceType = 'agent' | 'schedule' | 'repository';

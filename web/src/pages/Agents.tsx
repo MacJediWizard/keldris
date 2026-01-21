@@ -9,13 +9,21 @@ import {
 	useRotateAgentApiKey,
 } from '../hooks/useAgents';
 import type { Agent, AgentStatus } from '../lib/types';
-import { formatDate, getAgentStatusColor } from '../lib/utils';
+import {
+	formatDate,
+	getAgentStatusColor,
+	getHealthStatusColor,
+	getHealthStatusLabel,
+} from '../lib/utils';
 
 function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
 			<td className="px-6 py-4">
 				<div className="h-4 w-32 bg-gray-200 rounded" />
+			</td>
+			<td className="px-6 py-4">
+				<div className="h-6 w-16 bg-gray-200 rounded-full" />
 			</td>
 			<td className="px-6 py-4">
 				<div className="h-6 w-16 bg-gray-200 rounded-full" />
@@ -235,6 +243,7 @@ function AgentRow({
 }: AgentRowProps) {
 	const [showMenu, setShowMenu] = useState(false);
 	const statusColor = getAgentStatusColor(agent.status);
+	const healthColor = getHealthStatusColor(agent.health_status || 'unknown');
 
 	return (
 		<tr className="hover:bg-gray-50">
@@ -257,6 +266,19 @@ function AgentRow({
 				>
 					<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
 					{agent.status}
+				</span>
+			</td>
+			<td className="px-6 py-4">
+				<span
+					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${healthColor.bg} ${healthColor.text}`}
+					title={
+						agent.health_metrics
+							? `CPU: ${agent.health_metrics.cpu_usage?.toFixed(1)}% | Memory: ${agent.health_metrics.memory_usage?.toFixed(1)}% | Disk: ${agent.health_metrics.disk_usage?.toFixed(1)}%`
+							: 'No health data'
+					}
+				>
+					<span className={`w-1.5 h-1.5 ${healthColor.dot} rounded-full`} />
+					{getHealthStatusLabel(agent.health_status || 'unknown')}
 				</span>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500">
@@ -469,6 +491,9 @@ export function Agents() {
 									Status
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Health
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Last Seen
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -494,6 +519,9 @@ export function Agents() {
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Status
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Health
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Last Seen
