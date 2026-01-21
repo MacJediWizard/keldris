@@ -130,6 +130,9 @@ func NewRouter(
 	statsHandler := handlers.NewStatsHandler(database, logger)
 	statsHandler.RegisterRoutes(apiV1)
 
+	excludePatternsHandler := handlers.NewExcludePatternsHandler(database, logger)
+	excludePatternsHandler.RegisterRoutes(apiV1)
+
 	// Register verification handler if trigger is available
 	if cfg.VerificationTrigger != nil {
 		verificationsHandler := handlers.NewVerificationsHandler(database, cfg.VerificationTrigger, logger)
