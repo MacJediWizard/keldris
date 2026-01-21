@@ -111,7 +111,9 @@ function AlertCard({
 							{alert.status}
 						</span>
 					</div>
-					<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{alert.message}</p>
+					<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+						{alert.message}
+					</p>
 					<div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 						<span className="inline-flex items-center gap-1">
 							<svg
@@ -208,8 +210,12 @@ export function Alerts() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Alerts</h1>
-					<p className="text-gray-600 dark:text-gray-400 mt-1">Monitor and manage system alerts</p>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Alerts
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						Monitor and manage system alerts
+					</p>
 				</div>
 			</div>
 
@@ -246,7 +252,9 @@ export function Alerts() {
 							<div className="text-2xl font-bold text-gray-900 dark:text-white">
 								{activeCount}
 							</div>
-							<div className="text-sm text-gray-500 dark:text-gray-400">Active</div>
+							<div className="text-sm text-gray-500 dark:text-gray-400">
+								Active
+							</div>
 						</div>
 					</div>
 				</button>
@@ -291,7 +299,9 @@ export function Alerts() {
 							<div className="text-2xl font-bold text-gray-900 dark:text-white">
 								{acknowledgedCount}
 							</div>
-							<div className="text-sm text-gray-500 dark:text-gray-400">Acknowledged</div>
+							<div className="text-sm text-gray-500 dark:text-gray-400">
+								Acknowledged
+							</div>
 						</div>
 					</div>
 				</button>
@@ -328,7 +338,9 @@ export function Alerts() {
 							<div className="text-2xl font-bold text-gray-900 dark:text-white">
 								{resolvedCount}
 							</div>
-							<div className="text-sm text-gray-500 dark:text-gray-400">Resolved</div>
+							<div className="text-sm text-gray-500 dark:text-gray-400">
+								Resolved
+							</div>
 						</div>
 					</div>
 				</button>

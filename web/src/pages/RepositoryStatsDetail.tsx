@@ -92,7 +92,9 @@ export function RepositoryStatsDetail() {
 							>
 								{formatDedupRatio(stats.dedup_ratio)}
 							</p>
-							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Compression factor</p>
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+								Compression factor
+							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm font-medium text-gray-600">Space Saved</p>
@@ -112,7 +114,9 @@ export function RepositoryStatsDetail() {
 							<p className="text-3xl font-bold text-gray-900 mt-1">
 								{formatBytes(stats.raw_data_size)}
 							</p>
-							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">On disk</p>
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+								On disk
+							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm font-medium text-gray-600">Original Size</p>
@@ -213,7 +217,9 @@ export function RepositoryStatsDetail() {
 						<div className="space-y-4">
 							<div>
 								<div className="flex items-center justify-between mb-1">
-									<span className="text-sm text-gray-600 dark:text-gray-400">Storage used</span>
+									<span className="text-sm text-gray-600 dark:text-gray-400">
+										Storage used
+									</span>
 									<span className="text-sm font-medium text-gray-900 dark:text-white">
 										{formatPercent(
 											stats.restore_size > 0
@@ -241,13 +247,17 @@ export function RepositoryStatsDetail() {
 							</div>
 							<div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
 								<div>
-									<p className="text-sm text-gray-600 dark:text-gray-400">Total Files</p>
+									<p className="text-sm text-gray-600 dark:text-gray-400">
+										Total Files
+									</p>
 									<p className="text-xl font-semibold text-gray-900">
 										{stats.total_file_count.toLocaleString()}
 									</p>
 								</div>
 								<div>
-									<p className="text-sm text-gray-600 dark:text-gray-400">Snapshots</p>
+									<p className="text-sm text-gray-600 dark:text-gray-400">
+										Snapshots
+									</p>
 									<p className="text-xl font-semibold text-gray-900">
 										{stats.snapshot_count}
 									</p>
@@ -313,7 +323,10 @@ export function RepositoryStatsDetail() {
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700">
 								{history.map((record) => (
-									<tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+									<tr
+										key={record.id}
+										className="hover:bg-gray-50 dark:hover:bg-gray-700"
+									>
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 											{formatDateTime(record.collected_at)}
 										</td>

@@ -87,7 +87,9 @@ export function OrganizationSettings() {
 	if (!currentOrg) {
 		return (
 			<div className="text-center py-12">
-				<p className="text-gray-500 dark:text-gray-400">Organization not found</p>
+				<p className="text-gray-500 dark:text-gray-400">
+					Organization not found
+				</p>
 			</div>
 		);
 	}
@@ -195,13 +197,17 @@ export function OrganizationSettings() {
 								</dd>
 							</div>
 							<div>
-								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">URL Slug</dt>
+								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									URL Slug
+								</dt>
 								<dd className="mt-1 text-sm text-gray-900">
 									{currentOrg.organization.slug}
 								</dd>
 							</div>
 							<div>
-								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Your Role</dt>
+								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Your Role
+								</dt>
 								<dd className="mt-1">
 									<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize bg-indigo-100 text-indigo-700">
 										{currentUserRole}
@@ -209,7 +215,9 @@ export function OrganizationSettings() {
 								</dd>
 							</div>
 							<div>
-								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Created</dt>
+								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Created
+								</dt>
 								<dd className="mt-1 text-sm text-gray-900">
 									{new Date(
 										currentOrg.organization.created_at,

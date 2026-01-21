@@ -589,7 +589,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 												className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 												aria-label="Window start time"
 											/>
-											<span className="text-gray-500 dark:text-gray-400">to</span>
+											<span className="text-gray-500 dark:text-gray-400">
+												to
+											</span>
 											<input
 												type="time"
 												value={windowEnd}
@@ -783,7 +785,9 @@ function ScheduleRow({
 	return (
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900 dark:text-white">{schedule.name}</div>
+				<div className="font-medium text-gray-900 dark:text-white">
+					{schedule.name}
+				</div>
 				<div className="text-sm text-gray-500 dark:text-gray-400">
 					{agentName ?? 'Unknown Agent'} →{' '}
 					{repoNames.length > 0 ? repoNames.join(', ') : 'No repos'}
@@ -1008,8 +1012,12 @@ export function Schedules() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Schedules</h1>
-					<p className="text-gray-600 dark:text-gray-400 mt-1">Configure automated backup jobs</p>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Schedules
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						Configure automated backup jobs
+					</p>
 				</div>
 				<button
 					type="button"

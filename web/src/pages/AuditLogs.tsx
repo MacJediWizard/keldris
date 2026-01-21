@@ -100,7 +100,9 @@ export function AuditLogs() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Audit Logs</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Audit Logs
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Track all user and system actions for compliance
 					</p>
@@ -299,7 +301,10 @@ export function AuditLogs() {
 										const actionColor = getAuditActionColor(log.action);
 										const resultColor = getAuditResultColor(log.result);
 										return (
-											<tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+											<tr
+												key={log.id}
+												className="hover:bg-gray-50 dark:hover:bg-gray-700"
+											>
 												<td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
 													{formatDateTime(log.created_at)}
 												</td>

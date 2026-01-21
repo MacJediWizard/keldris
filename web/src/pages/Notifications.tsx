@@ -205,7 +205,10 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 								onChange={(e) => setUseTLS(e.target.checked)}
 								className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
 							/>
-							<label htmlFor="tls" className="ml-2 text-sm text-gray-700 dark:text-gray-300 dark:text-gray-600">
+							<label
+								htmlFor="tls"
+								className="ml-2 text-sm text-gray-700 dark:text-gray-300 dark:text-gray-600"
+							>
 								Use TLS
 							</label>
 						</div>
@@ -312,8 +315,12 @@ function ChannelRow({
 						</svg>
 					</div>
 					<div>
-						<p className="font-medium text-gray-900 dark:text-white">{channel.name}</p>
-						<p className="text-sm text-gray-500 dark:text-gray-400">{channel.type}</p>
+						<p className="font-medium text-gray-900 dark:text-white">
+							{channel.name}
+						</p>
+						<p className="text-sm text-gray-500 dark:text-gray-400">
+							{channel.type}
+						</p>
 					</div>
 				</div>
 			</td>
@@ -391,7 +398,9 @@ function LogRow({ log }: { log: NotificationLog }) {
 			<td className="px-6 py-4 text-sm text-gray-900">
 				{log.subject || log.event_type}
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{log.recipient}</td>
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+				{log.recipient}
+			</td>
 			<td className="px-6 py-4">
 				<span
 					className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
@@ -439,7 +448,9 @@ export function Notifications() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Notifications
+					</h1>
 					<p className="text-gray-500 mt-1">
 						Configure email notifications for backup events
 					</p>

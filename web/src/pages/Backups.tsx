@@ -209,31 +209,47 @@ function BackupDetailsModal({
 				<div className="space-y-4">
 					{backup.snapshot_id && (
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Snapshot ID</p>
-							<p className="font-mono text-gray-900 dark:text-white">{backup.snapshot_id}</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Snapshot ID
+							</p>
+							<p className="font-mono text-gray-900 dark:text-white">
+								{backup.snapshot_id}
+							</p>
 						</div>
 					)}
 
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Agent</p>
-							<p className="text-gray-900 dark:text-white">{agentName ?? 'Unknown'}</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Agent
+							</p>
+							<p className="text-gray-900 dark:text-white">
+								{agentName ?? 'Unknown'}
+							</p>
 						</div>
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Repository</p>
-							<p className="text-gray-900 dark:text-white">{repoName ?? 'Unknown'}</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Repository
+							</p>
+							<p className="text-gray-900 dark:text-white">
+								{repoName ?? 'Unknown'}
+							</p>
 						</div>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Started</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Started
+							</p>
 							<p className="text-gray-900 dark:text-white">
 								{formatDateTime(backup.started_at)}
 							</p>
 						</div>
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Duration</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Duration
+							</p>
 							<p className="text-gray-900 dark:text-white">
 								{formatDuration(backup.started_at, backup.completed_at)}
 							</p>
@@ -243,18 +259,28 @@ function BackupDetailsModal({
 					{backup.status === 'completed' && (
 						<div className="grid grid-cols-3 gap-4">
 							<div>
-								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Size</p>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Size
+								</p>
 								<p className="text-gray-900 dark:text-white">
 									{formatBytes(backup.size_bytes)}
 								</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">New Files</p>
-								<p className="text-gray-900 dark:text-white">{backup.files_new ?? 0}</p>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									New Files
+								</p>
+								<p className="text-gray-900 dark:text-white">
+									{backup.files_new ?? 0}
+								</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Changed</p>
-								<p className="text-gray-900 dark:text-white">{backup.files_changed ?? 0}</p>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Changed
+								</p>
+								<p className="text-gray-900 dark:text-white">
+									{backup.files_changed ?? 0}
+								</p>
 							</div>
 						</div>
 					)}
@@ -263,7 +289,9 @@ function BackupDetailsModal({
 
 					{backup.error_message && (
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Error</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Error
+							</p>
 							<p className="text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-3 rounded-lg text-sm">
 								{backup.error_message}
 							</p>
@@ -452,8 +480,12 @@ export function Backups() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Backups</h1>
-					<p className="text-gray-600 dark:text-gray-400 mt-1">View and manage backup snapshots</p>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Backups
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						View and manage backup snapshots
+					</p>
 				</div>
 			</div>
 

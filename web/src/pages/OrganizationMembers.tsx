@@ -198,7 +198,9 @@ function MemberRow({
 					{member.name || 'No name'}
 				</div>
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{member.email}</td>
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+				{member.email}
+			</td>
 			<td className="px-6 py-4">
 				{isEditing ? (
 					<div className="flex items-center gap-2">
@@ -287,7 +289,9 @@ function InvitationRow({ invitation, orgId }: InvitationRowProps) {
 
 	return (
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
-			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{invitation.email}</td>
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+				{invitation.email}
+			</td>
 			<td className="px-6 py-4">
 				<span
 					className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getRoleBadgeColor(invitation.role)}`}
@@ -345,7 +349,9 @@ export function OrganizationMembers() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Members</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Members
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Manage members of{' '}
 						{currentOrg?.organization.name ?? 'your organization'}
