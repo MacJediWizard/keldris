@@ -282,7 +282,8 @@ func (h *AgentsHandler) Delete(c *gin.Context) {
 
 // HeartbeatRequest is the request body for agent heartbeat.
 type HeartbeatRequest struct {
-	OSInfo *models.OSInfo `json:"os_info,omitempty"`
+	OSInfo        *models.OSInfo        `json:"os_info,omitempty"`
+	NetworkMounts []models.NetworkMount `json:"network_mounts,omitempty"`
 }
 
 // Heartbeat updates an agent's last seen timestamp.
@@ -344,6 +345,9 @@ func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 	agent.MarkSeen()
 	if req.OSInfo != nil {
 		agent.OSInfo = req.OSInfo
+	}
+	if req.NetworkMounts != nil {
+		agent.NetworkMounts = req.NetworkMounts
 	}
 
 	if err := h.store.UpdateAgent(c.Request.Context(), agent); err != nil {

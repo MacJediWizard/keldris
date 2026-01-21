@@ -73,6 +73,7 @@ type Agent struct {
 	Hostname        string         `json:"hostname" example:"backup-server-01"`
 	APIKeyHash      string         `json:"-"` // Never expose in JSON
 	OSInfo          *OSInfo        `json:"os_info,omitempty"`
+	NetworkMounts   []NetworkMount `json:"network_mounts,omitempty"`
 	LastSeen        *time.Time     `json:"last_seen,omitempty"`
 	Status          AgentStatus    `json:"status" example:"active"`
 	HealthStatus    HealthStatus   `json:"health_status" example:"healthy"`
@@ -133,18 +134,55 @@ func (a *Agent) MarkSeen() {
 	a.UpdatedAt = now
 }
 
+// SetNetworkMounts sets the network mounts from JSON bytes.
+func (a *Agent) SetNetworkMounts(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	return json.Unmarshal(data, &a.NetworkMounts)
+}
+
+// NetworkMountsJSON returns the network mounts as JSON bytes for database storage.
+func (a *Agent) NetworkMountsJSON() ([]byte, error) {
+	if a.NetworkMounts == nil {
+		return []byte("[]"), nil
+	}
+	return json.Marshal(a.NetworkMounts)
+}
+
+// GetMountByPath returns a mount by its path, or nil if not found.
+func (a *Agent) GetMountByPath(path string) *NetworkMount {
+	for i := range a.NetworkMounts {
+		if a.NetworkMounts[i].Path == path {
+			return &a.NetworkMounts[i]
+		}
+	}
+	return nil
+}
+
+// GetConnectedMounts returns only connected mounts.
+func (a *Agent) GetConnectedMounts() []NetworkMount {
+	var connected []NetworkMount
+	for _, m := range a.NetworkMounts {
+		if m.Status == MountStatusConnected {
+			connected = append(connected, m)
+		}
+	}
+	return connected
+}
+
 // AgentStats contains aggregated statistics for an agent.
 type AgentStats struct {
-	AgentID          uuid.UUID  `json:"agent_id"`
-	TotalBackups     int        `json:"total_backups"`
-	SuccessfulBackups int       `json:"successful_backups"`
-	FailedBackups    int        `json:"failed_backups"`
-	SuccessRate      float64    `json:"success_rate"`
-	TotalSizeBytes   int64      `json:"total_size_bytes"`
-	LastBackupAt     *time.Time `json:"last_backup_at,omitempty"`
-	NextScheduledAt  *time.Time `json:"next_scheduled_at,omitempty"`
-	ScheduleCount    int        `json:"schedule_count"`
-	Uptime           *string    `json:"uptime,omitempty"`
+	AgentID           uuid.UUID  `json:"agent_id"`
+	TotalBackups      int        `json:"total_backups"`
+	SuccessfulBackups int        `json:"successful_backups"`
+	FailedBackups     int        `json:"failed_backups"`
+	SuccessRate       float64    `json:"success_rate"`
+	TotalSizeBytes    int64      `json:"total_size_bytes"`
+	LastBackupAt      *time.Time `json:"last_backup_at,omitempty"`
+	NextScheduledAt   *time.Time `json:"next_scheduled_at,omitempty"`
+	ScheduleCount     int        `json:"schedule_count"`
+	Uptime            *string    `json:"uptime,omitempty"`
 }
 
 // AgentStatsResponse is the response for the agent stats endpoint.
@@ -165,21 +203,21 @@ type AgentEvent struct {
 
 // AgentHealthHistory represents a health metrics record in the history.
 type AgentHealthHistory struct {
-	ID              uuid.UUID      `json:"id"`
-	AgentID         uuid.UUID      `json:"agent_id"`
-	OrgID           uuid.UUID      `json:"org_id"`
-	HealthStatus    HealthStatus   `json:"health_status"`
-	CPUUsage        *float64       `json:"cpu_usage,omitempty"`
-	MemoryUsage     *float64       `json:"memory_usage,omitempty"`
-	DiskUsage       *float64       `json:"disk_usage,omitempty"`
-	DiskFreeBytes   *int64         `json:"disk_free_bytes,omitempty"`
-	DiskTotalBytes  *int64         `json:"disk_total_bytes,omitempty"`
-	NetworkUp       bool           `json:"network_up"`
-	ResticVersion   string         `json:"restic_version,omitempty"`
-	ResticAvailable bool           `json:"restic_available"`
-	Issues          []HealthIssue  `json:"issues,omitempty"`
-	RecordedAt      time.Time      `json:"recorded_at"`
-	CreatedAt       time.Time      `json:"created_at"`
+	ID              uuid.UUID    `json:"id"`
+	AgentID         uuid.UUID    `json:"agent_id"`
+	OrgID           uuid.UUID    `json:"org_id"`
+	HealthStatus    HealthStatus `json:"health_status"`
+	CPUUsage        *float64     `json:"cpu_usage,omitempty"`
+	MemoryUsage     *float64     `json:"memory_usage,omitempty"`
+	DiskUsage       *float64     `json:"disk_usage,omitempty"`
+	DiskFreeBytes   *int64       `json:"disk_free_bytes,omitempty"`
+	DiskTotalBytes  *int64       `json:"disk_total_bytes,omitempty"`
+	NetworkUp       bool         `json:"network_up"`
+	ResticVersion   string       `json:"restic_version,omitempty"`
+	ResticAvailable bool         `json:"restic_available"`
+	Issues          []HealthIssue `json:"issues,omitempty"`
+	RecordedAt      time.Time    `json:"recorded_at"`
+	CreatedAt       time.Time    `json:"created_at"`
 }
 
 // NewAgentHealthHistory creates a new health history record.

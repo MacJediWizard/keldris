@@ -14,6 +14,7 @@ import {
 } from '../hooks/useSchedules';
 import type {
 	CompressionLevel,
+	MountBehavior,
 	Schedule,
 	ScheduleRepositoryRequest,
 } from '../lib/types';
@@ -70,6 +71,8 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	const [compressionLevel, setCompressionLevel] = useState<
 		CompressionLevel | ''
 	>('');
+	const [onMountUnavailable, setOnMountUnavailable] =
+		useState<MountBehavior>('fail');
 	const [showAdvanced, setShowAdvanced] = useState(false);
 	// Exclude patterns state
 	const [excludes, setExcludes] = useState<string[]>([]);
@@ -168,6 +171,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			if (compressionLevel) {
 				data.compression_level = compressionLevel;
 			}
+			if (onMountUnavailable !== 'fail') {
+				data.on_mount_unavailable = onMountUnavailable;
+			}
 
 			await createSchedule.mutateAsync(data);
 			onClose();
@@ -190,6 +196,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			setWindowEnd('');
 			setExcludedHours([]);
 			setCompressionLevel('');
+			setOnMountUnavailable('fail');
 			setShowAdvanced(false);
 			// Reset exclude patterns state
 			setExcludes([]);
@@ -657,6 +664,31 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											<br />
 											<strong>Max:</strong> Best for text files, logs, and
 											databases.
+										</p>
+									</div>
+
+									{/* Network Mount Behavior */}
+									<div>
+										<label
+											htmlFor="schedule-mount-behavior"
+											className="block text-sm font-medium text-gray-700 mb-1"
+										>
+											On Network Mount Unavailable
+										</label>
+										<select
+											id="schedule-mount-behavior"
+											value={onMountUnavailable}
+											onChange={(e) =>
+												setOnMountUnavailable(e.target.value as MountBehavior)
+											}
+											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										>
+											<option value="fail">Fail backup</option>
+											<option value="skip">Skip backup</option>
+										</select>
+										<p className="text-xs text-gray-500 mt-1">
+											Choose what happens if a network path is unavailable when
+											backup runs.
 										</p>
 									</div>
 								</div>

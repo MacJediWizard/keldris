@@ -268,6 +268,28 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		}
 	}
 
+	// Check network mount availability for scheduled paths
+	mountErr := s.checkNetworkMounts(ctx, schedule, logger)
+	if mountErr != nil {
+		if schedule.OnMountUnavailable == models.MountBehaviorSkip {
+			logger.Info().Err(mountErr).Msg("backup skipped: network mount unavailable")
+			return
+		}
+		// Create backup record and mark as failed
+		// Get primary repository ID for the backup record
+		var repoID *uuid.UUID
+		if primaryRepo := schedule.GetPrimaryRepository(); primaryRepo != nil {
+			repoID = &primaryRepo.RepositoryID
+		}
+		backup := models.NewBackup(schedule.ID, schedule.AgentID, repoID)
+		if err := s.store.CreateBackup(ctx, backup); err != nil {
+			logger.Error().Err(err).Msg("failed to create backup record")
+			return
+		}
+		s.failBackup(ctx, backup, fmt.Sprintf("network mount unavailable: %v", mountErr), logger)
+		return
+	}
+
 	logger.Info().Msg("starting scheduled backup")
 
 	// Get enabled repositories sorted by priority
@@ -606,6 +628,40 @@ func (s *Scheduler) replicateToOtherRepos(
 			Str("snapshot_id", snapshotID).
 			Msg("replication completed successfully")
 	}
+}
+
+// checkNetworkMounts validates that all network mounts required for the backup are available.
+// Returns nil if all mounts are available, or an error describing the unavailable mount.
+func (s *Scheduler) checkNetworkMounts(ctx context.Context, schedule models.Schedule, logger zerolog.Logger) error {
+	// Get the agent to access its network mounts
+	agent, err := s.store.GetAgentByID(ctx, schedule.AgentID)
+	if err != nil {
+		return fmt.Errorf("get agent: %w", err)
+	}
+
+	// If agent has no network mounts reported, skip the check
+	if len(agent.NetworkMounts) == 0 {
+		return nil
+	}
+
+	nd := NewNetworkDrives(s.logger)
+
+	// Check each path in the schedule
+	for _, path := range schedule.Paths {
+		ok, mount, err := nd.ValidateMountForBackup(ctx, path, agent.NetworkMounts)
+		if !ok {
+			return err
+		}
+		if mount != nil {
+			logger.Debug().
+				Str("path", path).
+				Str("mount", mount.Path).
+				Str("status", string(mount.Status)).
+				Msg("network mount validated")
+		}
+	}
+
+	return nil
 }
 
 // failBackup marks a backup as failed and logs the error.
