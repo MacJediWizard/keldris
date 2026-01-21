@@ -45,11 +45,22 @@ func (h *BackupsHandler) RegisterRoutes(r *gin.RouterGroup) {
 }
 
 // List returns backups for the authenticated user's organization.
-// GET /api/v1/backups
-// Optional query params:
-//   - agent_id: filter by agent
-//   - schedule_id: filter by schedule
-//   - status: filter by status (running, completed, failed, canceled)
+//
+//	@Summary		List backups
+//	@Description	Returns backup jobs for the current organization. Supports filtering by agent, schedule, or status.
+//	@Tags			Backups
+//	@Accept			json
+//	@Produce		json
+//	@Param			agent_id	query		string	false	"Filter by agent ID"
+//	@Param			schedule_id	query		string	false	"Filter by schedule ID"
+//	@Param			status		query		string	false	"Filter by status (running, completed, failed, canceled)"
+//	@Success		200			{object}	map[string][]models.Backup
+//	@Failure		400			{object}	map[string]string
+//	@Failure		401			{object}	map[string]string
+//	@Failure		404			{object}	map[string]string
+//	@Failure		500			{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/backups [get]
 func (h *BackupsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -143,7 +154,19 @@ func (h *BackupsHandler) List(c *gin.Context) {
 }
 
 // Get returns a specific backup by ID.
-// GET /api/v1/backups/:id
+//
+//	@Summary		Get backup
+//	@Description	Returns details of a specific backup job
+//	@Tags			Backups
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Backup ID"
+//	@Success		200	{object}	models.Backup
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/backups/{id} [get]
 func (h *BackupsHandler) Get(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
