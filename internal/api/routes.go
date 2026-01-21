@@ -133,6 +133,9 @@ func NewRouter(
 	schedulesHandler := handlers.NewSchedulesHandler(database, logger)
 	schedulesHandler.RegisterRoutes(apiV1)
 
+	backupScriptsHandler := handlers.NewBackupScriptsHandler(database, logger)
+	backupScriptsHandler.RegisterRoutes(apiV1)
+
 	policiesHandler := handlers.NewPoliciesHandler(database, logger)
 	policiesHandler.RegisterRoutes(apiV1)
 

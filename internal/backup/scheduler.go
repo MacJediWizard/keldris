@@ -1,9 +1,11 @@
 package backup
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"sync"
 	"time"
 
@@ -37,6 +39,9 @@ type ScheduleStore interface {
 
 	// GetAgentByID returns an agent by ID.
 	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
+
+	// GetEnabledBackupScriptsByScheduleID returns all enabled backup scripts for a schedule.
+	GetEnabledBackupScriptsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.BackupScript, error)
 }
 
 const (
@@ -272,6 +277,38 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		return
 	}
 
+	// Load backup scripts for this schedule
+	scripts, err := s.store.GetEnabledBackupScriptsByScheduleID(ctx, schedule.ID)
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to load backup scripts, continuing without scripts")
+		scripts = nil
+	}
+
+	// Create a temporary backup record for pre-script execution
+	preScriptBackup := &models.Backup{
+		ID:         uuid.New(),
+		ScheduleID: schedule.ID,
+		AgentID:    schedule.AgentID,
+		Status:     models.BackupStatusRunning,
+		StartedAt:  time.Now(),
+	}
+
+	// Run pre-backup script if configured
+	if err := s.runPreBackupScript(ctx, scripts, preScriptBackup, logger); err != nil {
+		// Create a backup record to record the pre-script failure
+		preScriptBackup.Fail(fmt.Sprintf("pre-backup script failed: %v", err))
+		if createErr := s.store.CreateBackup(ctx, preScriptBackup); createErr != nil {
+			logger.Error().Err(createErr).Msg("failed to create backup record for pre-script failure")
+		}
+		s.runPostBackupScripts(ctx, scripts, preScriptBackup, false, logger)
+		// Update the backup record with post-script output
+		if updateErr := s.store.UpdateBackup(ctx, preScriptBackup); updateErr != nil {
+			logger.Error().Err(updateErr).Msg("failed to update backup record with post-script output")
+		}
+		s.sendBackupNotification(ctx, schedule, preScriptBackup, false, fmt.Sprintf("pre-backup script failed: %v", err))
+		return
+	}
+
 	// Try backup to each repository with retry logic
 	var successRepo *models.ScheduleRepository
 	var successBackup *models.Backup
@@ -291,7 +328,7 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 
 		// Try up to maxRetries times for this repository
 		for attempt := 1; attempt <= maxRetries; attempt++ {
-			backup, stats, resticCfg, err := s.runBackupToRepo(ctx, schedule, schedRepo, attempt, repoLogger)
+			backup, stats, resticCfg, err := s.runBackupToRepo(ctx, schedule, schedRepo, scripts, attempt, repoLogger)
 			if err == nil {
 				successRepo = schedRepo
 				successBackup = backup
@@ -329,8 +366,9 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 			Err(lastErr).
 			Int("repos_tried", len(enabledRepos)).
 			Msg("backup failed to all repositories")
-		// Send failure notification (use last backup attempt if available)
+		// Run post-backup scripts (failure)
 		if lastBackup != nil {
+			s.runPostBackupScripts(ctx, scripts, lastBackup, false, logger)
 			s.sendBackupNotification(ctx, schedule, lastBackup, false, errMsg)
 		}
 		return
@@ -379,6 +417,7 @@ func (s *Scheduler) runBackupToRepo(
 	ctx context.Context,
 	schedule models.Schedule,
 	schedRepo *models.ScheduleRepository,
+	scripts []*models.BackupScript,
 	attempt int,
 	logger zerolog.Logger,
 ) (*models.Backup, *BackupStats, ResticConfig, error) {
@@ -459,6 +498,10 @@ func (s *Scheduler) runBackupToRepo(
 
 	// Mark backup as completed
 	backup.Complete(stats.SnapshotID, stats.SizeBytes, stats.FilesNew, stats.FilesChanged)
+
+	// Run post-backup scripts (success)
+	s.runPostBackupScripts(ctx, scripts, backup, true, logger)
+
 	if err := s.store.UpdateBackup(ctx, backup); err != nil {
 		logger.Error().Err(err).Msg("failed to update backup record")
 	}
@@ -1109,4 +1152,127 @@ func (s *Scheduler) GetNextAllowedRun(ctx context.Context, scheduleID uuid.UUID)
 	// Find the next allowed time after the cron time
 	nextAllowed := schedule.NextAllowedTime(nextCronTime)
 	return nextAllowed, true
+}
+
+// runScript executes a backup script with the given timeout.
+func (s *Scheduler) runScript(ctx context.Context, script *models.BackupScript, logger zerolog.Logger) (string, error) {
+	logger.Info().
+		Str("script_type", string(script.Type)).
+		Int("timeout_seconds", script.TimeoutSeconds).
+		Msg("running backup script")
+
+	// Create context with timeout
+	scriptCtx, cancel := context.WithTimeout(ctx, time.Duration(script.TimeoutSeconds)*time.Second)
+	defer cancel()
+
+	// Execute the script using sh -c
+	cmd := exec.CommandContext(scriptCtx, "sh", "-c", script.Script)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+
+	// Combine stdout and stderr for output
+	output := stdout.String()
+	if stderr.Len() > 0 {
+		if output != "" {
+			output += "\n"
+		}
+		output += stderr.String()
+	}
+
+	// Truncate output if too long (max 64KB)
+	const maxOutputLen = 64 * 1024
+	if len(output) > maxOutputLen {
+		output = output[:maxOutputLen] + "\n... (output truncated)"
+	}
+
+	if err != nil {
+		if scriptCtx.Err() == context.DeadlineExceeded {
+			return output, fmt.Errorf("script timed out after %d seconds", script.TimeoutSeconds)
+		}
+		return output, fmt.Errorf("script failed: %w", err)
+	}
+
+	logger.Info().
+		Str("script_type", string(script.Type)).
+		Msg("backup script completed successfully")
+
+	return output, nil
+}
+
+// getScriptsByType returns scripts of the specified type from the scripts list.
+func getScriptsByType(scripts []*models.BackupScript, scriptType models.BackupScriptType) *models.BackupScript {
+	for _, script := range scripts {
+		if script.Type == scriptType {
+			return script
+		}
+	}
+	return nil
+}
+
+// runPreBackupScript runs the pre-backup script if configured.
+func (s *Scheduler) runPreBackupScript(ctx context.Context, scripts []*models.BackupScript, backup *models.Backup, logger zerolog.Logger) error {
+	script := getScriptsByType(scripts, models.BackupScriptTypePreBackup)
+	if script == nil {
+		return nil
+	}
+
+	output, err := s.runScript(ctx, script, logger)
+	backup.RecordPreScript(output, err)
+
+	if err != nil && script.FailOnError {
+		return fmt.Errorf("pre-backup script failed: %w", err)
+	}
+
+	return nil
+}
+
+// runPostBackupScripts runs the appropriate post-backup scripts based on backup success.
+func (s *Scheduler) runPostBackupScripts(ctx context.Context, scripts []*models.BackupScript, backup *models.Backup, success bool, logger zerolog.Logger) {
+	var scriptsToRun []*models.BackupScript
+
+	// Always run post_always scripts
+	if script := getScriptsByType(scripts, models.BackupScriptTypePostAlways); script != nil {
+		scriptsToRun = append(scriptsToRun, script)
+	}
+
+	// Run success or failure script based on outcome
+	if success {
+		if script := getScriptsByType(scripts, models.BackupScriptTypePostSuccess); script != nil {
+			scriptsToRun = append(scriptsToRun, script)
+		}
+	} else {
+		if script := getScriptsByType(scripts, models.BackupScriptTypePostFailure); script != nil {
+			scriptsToRun = append(scriptsToRun, script)
+		}
+	}
+
+	if len(scriptsToRun) == 0 {
+		return
+	}
+
+	var combinedOutput string
+	var combinedError error
+
+	for _, script := range scriptsToRun {
+		output, err := s.runScript(ctx, script, logger)
+		if combinedOutput != "" && output != "" {
+			combinedOutput += "\n--- " + string(script.Type) + " ---\n"
+		}
+		combinedOutput += output
+
+		if err != nil {
+			if combinedError == nil {
+				combinedError = err
+			} else {
+				combinedError = fmt.Errorf("%v; %w", combinedError, err)
+			}
+			logger.Warn().Err(err).Str("script_type", string(script.Type)).Msg("post-backup script failed")
+		}
+	}
+
+	backup.RecordPostScript(combinedOutput, combinedError)
 }
