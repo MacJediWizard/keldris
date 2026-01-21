@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
 import { useAgents } from '../hooks/useAgents';
 import { useRepositories } from '../hooks/useRepositories';
 import {
@@ -513,6 +514,7 @@ interface ScheduleRowProps {
 	onToggle: (id: string, enabled: boolean) => void;
 	onDelete: (id: string) => void;
 	onRun: (id: string) => void;
+	onEditScripts: (id: string) => void;
 	isUpdating: boolean;
 	isDeleting: boolean;
 	isRunning: boolean;
@@ -525,6 +527,7 @@ function ScheduleRow({
 	onToggle,
 	onDelete,
 	onRun,
+	onEditScripts,
 	isUpdating,
 	isDeleting,
 	isRunning,
@@ -644,6 +647,14 @@ function ScheduleRow({
 					<span className="text-gray-300">|</span>
 					<button
 						type="button"
+						onClick={() => onEditScripts(schedule.id)}
+						className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+					>
+						Scripts
+					</button>
+					<span className="text-gray-300">|</span>
+					<button
+						type="button"
 						onClick={() => onDelete(schedule.id)}
 						disabled={isDeleting}
 						className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
@@ -662,6 +673,9 @@ export function Schedules() {
 		'all',
 	);
 	const [showCreateModal, setShowCreateModal] = useState(false);
+	const [editingScriptsScheduleId, setEditingScriptsScheduleId] = useState<
+		string | null
+	>(null);
 
 	const { data: schedules, isLoading, isError } = useSchedules();
 	const { data: agents } = useAgents();
@@ -815,6 +829,7 @@ export function Schedules() {
 									onToggle={handleToggle}
 									onDelete={handleDelete}
 									onRun={handleRun}
+									onEditScripts={setEditingScriptsScheduleId}
 									isUpdating={updateSchedule.isPending}
 									isDeleting={deleteSchedule.isPending}
 									isRunning={runSchedule.isPending}
@@ -875,6 +890,13 @@ export function Schedules() {
 				isOpen={showCreateModal}
 				onClose={() => setShowCreateModal(false)}
 			/>
+
+			{editingScriptsScheduleId && (
+				<BackupScriptsEditor
+					scheduleId={editingScriptsScheduleId}
+					onClose={() => setEditingScriptsScheduleId(null)}
+				/>
+			)}
 		</div>
 	);
 }
