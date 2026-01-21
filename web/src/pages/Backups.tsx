@@ -193,7 +193,7 @@ function BackupDetailsModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+			<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="flex items-center justify-between mb-4">
 					<h3 className="text-lg font-semibold text-gray-900">
 						Backup Details
@@ -267,6 +267,58 @@ function BackupDetailsModal({
 							<p className="text-red-600 bg-red-50 p-3 rounded-lg text-sm">
 								{backup.error_message}
 							</p>
+						</div>
+					)}
+
+					{(backup.pre_script_output || backup.pre_script_error) && (
+						<div>
+							<p className="text-sm font-medium text-gray-500 mb-2">
+								Pre-Backup Script
+							</p>
+							{backup.pre_script_output && (
+								<div className="mb-2">
+									<p className="text-xs font-medium text-gray-400 mb-1">
+										Output
+									</p>
+									<pre className="bg-gray-100 p-3 rounded-lg text-xs text-gray-800 overflow-x-auto max-h-32 whitespace-pre-wrap">
+										{backup.pre_script_output}
+									</pre>
+								</div>
+							)}
+							{backup.pre_script_error && (
+								<div>
+									<p className="text-xs font-medium text-red-400 mb-1">Error</p>
+									<pre className="bg-red-50 p-3 rounded-lg text-xs text-red-700 overflow-x-auto max-h-32 whitespace-pre-wrap">
+										{backup.pre_script_error}
+									</pre>
+								</div>
+							)}
+						</div>
+					)}
+
+					{(backup.post_script_output || backup.post_script_error) && (
+						<div>
+							<p className="text-sm font-medium text-gray-500 mb-2">
+								Post-Backup Script
+							</p>
+							{backup.post_script_output && (
+								<div className="mb-2">
+									<p className="text-xs font-medium text-gray-400 mb-1">
+										Output
+									</p>
+									<pre className="bg-gray-100 p-3 rounded-lg text-xs text-gray-800 overflow-x-auto max-h-32 whitespace-pre-wrap">
+										{backup.post_script_output}
+									</pre>
+								</div>
+							)}
+							{backup.post_script_error && (
+								<div>
+									<p className="text-xs font-medium text-red-400 mb-1">Error</p>
+									<pre className="bg-red-50 p-3 rounded-lg text-xs text-red-700 overflow-x-auto max-h-32 whitespace-pre-wrap">
+										{backup.post_script_error}
+									</pre>
+								</div>
+							)}
 						</div>
 					)}
 				</div>
