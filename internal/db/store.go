@@ -566,7 +566,7 @@ func (db *DB) DeleteRepository(ctx context.Context, id uuid.UUID) error {
 // GetSchedulesByAgentID returns all schedules for an agent.
 func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
@@ -601,7 +601,7 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 // GetScheduleByID returns a schedule by ID.
 func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error) {
 	row := db.Pool.QueryRow(ctx, `
-		SELECT id, agent_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
@@ -640,10 +640,10 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 	}
 
 	_, err = db.Pool.Exec(ctx, `
-		INSERT INTO schedules (id, agent_id, name, cron_expression, paths,
+		INSERT INTO schedules (id, agent_id, policy_id, name, cron_expression, paths,
 		                       excludes, retention_policy, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-	`, schedule.ID, schedule.AgentID, schedule.Name,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`, schedule.ID, schedule.AgentID, schedule.PolicyID, schedule.Name,
 		schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
 		schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 	if err != nil {
@@ -681,10 +681,10 @@ func (db *DB) UpdateSchedule(ctx context.Context, schedule *models.Schedule) err
 	schedule.UpdatedAt = time.Now()
 	_, err = db.Pool.Exec(ctx, `
 		UPDATE schedules
-		SET name = $2, cron_expression = $3, paths = $4, excludes = $5,
-		    retention_policy = $6, enabled = $7, updated_at = $8
+		SET policy_id = $2, name = $3, cron_expression = $4, paths = $5, excludes = $6,
+		    retention_policy = $7, enabled = $8, updated_at = $9
 		WHERE id = $1
-	`, schedule.ID, schedule.Name, schedule.CronExpression, pathsBytes,
+	`, schedule.ID, schedule.PolicyID, schedule.Name, schedule.CronExpression, pathsBytes,
 		excludesBytes, retentionBytes, schedule.Enabled, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update schedule: %w", err)
@@ -708,7 +708,7 @@ func scanSchedule(rows interface {
 	var s models.Schedule
 	var pathsBytes, excludesBytes, retentionBytes []byte
 	err := rows.Scan(
-		&s.ID, &s.AgentID, &s.Name, &s.CronExpression,
+		&s.ID, &s.AgentID, &s.PolicyID, &s.Name, &s.CronExpression,
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.Enabled,
 		&s.CreatedAt, &s.UpdatedAt,
 	)
@@ -734,6 +734,220 @@ func scanScheduleRow(row interface {
 	Scan(dest ...any) error
 }) (*models.Schedule, error) {
 	return scanSchedule(row)
+}
+
+// Policy methods
+
+// GetPoliciesByOrgID returns all policies for an organization.
+func (db *DB) GetPoliciesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Policy, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, description, paths, excludes, retention_policy,
+		       bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, cron_expression, created_at, updated_at
+		FROM backup_policies
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list policies: %w", err)
+	}
+	defer rows.Close()
+
+	var policies []*models.Policy
+	for rows.Next() {
+		p, err := scanPolicy(rows)
+		if err != nil {
+			return nil, err
+		}
+		policies = append(policies, p)
+	}
+
+	return policies, nil
+}
+
+// GetPolicyByID returns a policy by ID.
+func (db *DB) GetPolicyByID(ctx context.Context, id uuid.UUID) (*models.Policy, error) {
+	row := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, description, paths, excludes, retention_policy,
+		       bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, cron_expression, created_at, updated_at
+		FROM backup_policies
+		WHERE id = $1
+	`, id)
+
+	return scanPolicy(row)
+}
+
+// CreatePolicy creates a new policy.
+func (db *DB) CreatePolicy(ctx context.Context, policy *models.Policy) error {
+	pathsBytes, err := policy.PathsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal paths: %w", err)
+	}
+
+	excludesBytes, err := policy.ExcludesJSON()
+	if err != nil {
+		return fmt.Errorf("marshal excludes: %w", err)
+	}
+
+	retentionBytes, err := policy.RetentionPolicyJSON()
+	if err != nil {
+		return fmt.Errorf("marshal retention policy: %w", err)
+	}
+
+	excludedHoursBytes, err := policy.ExcludedHoursJSON()
+	if err != nil {
+		return fmt.Errorf("marshal excluded hours: %w", err)
+	}
+
+	var windowStart, windowEnd *string
+	if policy.BackupWindow != nil {
+		if policy.BackupWindow.Start != "" {
+			windowStart = &policy.BackupWindow.Start
+		}
+		if policy.BackupWindow.End != "" {
+			windowEnd = &policy.BackupWindow.End
+		}
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO backup_policies (id, org_id, name, description, paths, excludes,
+		                             retention_policy, bandwidth_limit_kbps,
+		                             backup_window_start, backup_window_end,
+		                             excluded_hours, cron_expression, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+	`, policy.ID, policy.OrgID, policy.Name, policy.Description, pathsBytes, excludesBytes,
+		retentionBytes, policy.BandwidthLimitKB, windowStart, windowEnd,
+		excludedHoursBytes, policy.CronExpression, policy.CreatedAt, policy.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create policy: %w", err)
+	}
+	return nil
+}
+
+// UpdatePolicy updates an existing policy.
+func (db *DB) UpdatePolicy(ctx context.Context, policy *models.Policy) error {
+	pathsBytes, err := policy.PathsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal paths: %w", err)
+	}
+
+	excludesBytes, err := policy.ExcludesJSON()
+	if err != nil {
+		return fmt.Errorf("marshal excludes: %w", err)
+	}
+
+	retentionBytes, err := policy.RetentionPolicyJSON()
+	if err != nil {
+		return fmt.Errorf("marshal retention policy: %w", err)
+	}
+
+	excludedHoursBytes, err := policy.ExcludedHoursJSON()
+	if err != nil {
+		return fmt.Errorf("marshal excluded hours: %w", err)
+	}
+
+	var windowStart, windowEnd *string
+	if policy.BackupWindow != nil {
+		if policy.BackupWindow.Start != "" {
+			windowStart = &policy.BackupWindow.Start
+		}
+		if policy.BackupWindow.End != "" {
+			windowEnd = &policy.BackupWindow.End
+		}
+	}
+
+	policy.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE backup_policies
+		SET name = $2, description = $3, paths = $4, excludes = $5, retention_policy = $6,
+		    bandwidth_limit_kbps = $7, backup_window_start = $8, backup_window_end = $9,
+		    excluded_hours = $10, cron_expression = $11, updated_at = $12
+		WHERE id = $1
+	`, policy.ID, policy.Name, policy.Description, pathsBytes, excludesBytes, retentionBytes,
+		policy.BandwidthLimitKB, windowStart, windowEnd, excludedHoursBytes,
+		policy.CronExpression, policy.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update policy: %w", err)
+	}
+	return nil
+}
+
+// DeletePolicy deletes a policy by ID.
+func (db *DB) DeletePolicy(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM backup_policies WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete policy: %w", err)
+	}
+	return nil
+}
+
+// GetSchedulesByPolicyID returns all schedules using a policy.
+func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([]*models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, agent_id, repository_id, policy_id, name, cron_expression, paths, excludes,
+		       retention_policy, enabled, created_at, updated_at
+		FROM schedules
+		WHERE policy_id = $1
+		ORDER BY name
+	`, policyID)
+	if err != nil {
+		return nil, fmt.Errorf("list schedules by policy: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []*models.Schedule
+	for rows.Next() {
+		s, err := scanSchedule(rows)
+		if err != nil {
+			return nil, err
+		}
+		schedules = append(schedules, s)
+	}
+
+	return schedules, nil
+}
+
+// scanPolicy scans a policy from a row iterator.
+func scanPolicy(rows interface {
+	Scan(dest ...any) error
+}) (*models.Policy, error) {
+	var p models.Policy
+	var pathsBytes, excludesBytes, retentionBytes, excludedHoursBytes []byte
+	var windowStart, windowEnd *string
+	var description *string
+	var cronExpression *string
+	err := rows.Scan(
+		&p.ID, &p.OrgID, &p.Name, &description, &pathsBytes, &excludesBytes,
+		&retentionBytes, &p.BandwidthLimitKB, &windowStart, &windowEnd,
+		&excludedHoursBytes, &cronExpression, &p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("scan policy: %w", err)
+	}
+
+	if description != nil {
+		p.Description = *description
+	}
+	if cronExpression != nil {
+		p.CronExpression = *cronExpression
+	}
+
+	if err := p.SetPaths(pathsBytes); err != nil {
+		return nil, fmt.Errorf("parse paths: %w", err)
+	}
+	if err := p.SetExcludes(excludesBytes); err != nil {
+		return nil, fmt.Errorf("parse excludes: %w", err)
+	}
+	if err := p.SetRetentionPolicy(retentionBytes); err != nil {
+		return nil, fmt.Errorf("parse retention policy: %w", err)
+	}
+	if err := p.SetExcludedHours(excludedHoursBytes); err != nil {
+		return nil, fmt.Errorf("parse excluded hours: %w", err)
+	}
+	p.SetBackupWindow(windowStart, windowEnd)
+
+	return &p, nil
 }
 
 // Backup methods

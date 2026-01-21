@@ -27,6 +27,7 @@ type BackupWindow struct {
 type Schedule struct {
 	ID               uuid.UUID            `json:"id"`
 	AgentID          uuid.UUID            `json:"agent_id"`
+	PolicyID         *uuid.UUID           `json:"policy_id,omitempty"` // Policy this schedule was created from
 	Name             string               `json:"name"`
 	CronExpression   string               `json:"cron_expression"`
 	Paths            []string             `json:"paths"`
