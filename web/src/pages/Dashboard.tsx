@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useFleetHealth } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import {
 	useBackupDurationTrend,
@@ -6,6 +7,7 @@ import {
 	useDashboardStats,
 	useStorageGrowthTrend,
 } from '../hooks/useMetrics';
+import type { FleetHealthSummary } from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
@@ -343,8 +345,261 @@ function DailyBackupsChart({
 	);
 }
 
+function FleetHealthWidget({
+	data,
+	isLoading,
+}: {
+	data: FleetHealthSummary | undefined;
+	isLoading: boolean;
+}) {
+	const totalAgents = data?.total_agents ?? 0;
+	const healthyPercent =
+		totalAgents > 0 ? ((data?.healthy_count ?? 0) / totalAgents) * 100 : 0;
+
+	return (
+		<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="flex items-center justify-between mb-4">
+				<h3 className="text-lg font-semibold text-gray-900">Fleet Health</h3>
+				<Link
+					to="/agents"
+					className="text-sm text-indigo-600 hover:text-indigo-800"
+				>
+					View Agents
+				</Link>
+			</div>
+			{isLoading ? (
+				<div className="space-y-4">
+					<div className="animate-pulse h-20 bg-gray-100 rounded" />
+					<div className="animate-pulse h-4 bg-gray-200 rounded w-3/4" />
+				</div>
+			) : totalAgents === 0 ? (
+				<div className="text-center py-8 text-gray-500">
+					<svg
+						aria-hidden="true"
+						className="w-12 h-12 mx-auto mb-3 text-gray-300"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+						/>
+					</svg>
+					<p>No agents registered</p>
+					<p className="text-sm">Register an agent to monitor fleet health</p>
+				</div>
+			) : (
+				<div className="space-y-4">
+					{/* Health Distribution */}
+					<div className="flex items-center gap-4">
+						{/* Health Ring */}
+						<div className="relative w-20 h-20">
+							<svg
+								aria-hidden="true"
+								className="w-20 h-20 -rotate-90"
+								viewBox="0 0 36 36"
+							>
+								{/* Background circle */}
+								<circle
+									cx="18"
+									cy="18"
+									r="15.5"
+									fill="none"
+									stroke="#e5e7eb"
+									strokeWidth="3"
+								/>
+								{/* Healthy segment */}
+								<circle
+									cx="18"
+									cy="18"
+									r="15.5"
+									fill="none"
+									stroke="#22c55e"
+									strokeWidth="3"
+									strokeDasharray={`${healthyPercent} 100`}
+									strokeLinecap="round"
+								/>
+							</svg>
+							<div className="absolute inset-0 flex items-center justify-center">
+								<span className="text-lg font-bold text-gray-900">
+									{Math.round(healthyPercent)}%
+								</span>
+							</div>
+						</div>
+
+						{/* Agent counts */}
+						<div className="flex-1 grid grid-cols-2 gap-2">
+							<div className="flex items-center gap-2">
+								<span className="w-3 h-3 bg-green-500 rounded-full" />
+								<div>
+									<p className="text-sm font-medium text-gray-900">
+										{data?.healthy_count ?? 0}
+									</p>
+									<p className="text-xs text-gray-500">Healthy</p>
+								</div>
+							</div>
+							<div className="flex items-center gap-2">
+								<span className="w-3 h-3 bg-yellow-500 rounded-full" />
+								<div>
+									<p className="text-sm font-medium text-gray-900">
+										{data?.warning_count ?? 0}
+									</p>
+									<p className="text-xs text-gray-500">Warning</p>
+								</div>
+							</div>
+							<div className="flex items-center gap-2">
+								<span className="w-3 h-3 bg-red-500 rounded-full" />
+								<div>
+									<p className="text-sm font-medium text-gray-900">
+										{data?.critical_count ?? 0}
+									</p>
+									<p className="text-xs text-gray-500">Critical</p>
+								</div>
+							</div>
+							<div className="flex items-center gap-2">
+								<span className="w-3 h-3 bg-gray-400 rounded-full" />
+								<div>
+									<p className="text-sm font-medium text-gray-900">
+										{data?.unknown_count ?? 0}
+									</p>
+									<p className="text-xs text-gray-500">Unknown</p>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					{/* Resource Averages */}
+					<div className="border-t border-gray-200 pt-4">
+						<p className="text-sm font-medium text-gray-600 mb-3">
+							Average Resource Usage
+						</p>
+						<div className="space-y-2">
+							<div>
+								<div className="flex items-center justify-between text-xs mb-1">
+									<span className="text-gray-500">CPU</span>
+									<span className="font-medium text-gray-700">
+										{formatPercent(data?.avg_cpu_usage)}
+									</span>
+								</div>
+								<div className="w-full bg-gray-200 rounded-full h-1.5">
+									<div
+										className={`h-1.5 rounded-full ${
+											(data?.avg_cpu_usage ?? 0) >= 80
+												? 'bg-red-500'
+												: (data?.avg_cpu_usage ?? 0) >= 60
+													? 'bg-yellow-500'
+													: 'bg-green-500'
+										}`}
+										style={{
+											width: `${Math.min(data?.avg_cpu_usage ?? 0, 100)}%`,
+										}}
+									/>
+								</div>
+							</div>
+							<div>
+								<div className="flex items-center justify-between text-xs mb-1">
+									<span className="text-gray-500">Memory</span>
+									<span className="font-medium text-gray-700">
+										{formatPercent(data?.avg_memory_usage)}
+									</span>
+								</div>
+								<div className="w-full bg-gray-200 rounded-full h-1.5">
+									<div
+										className={`h-1.5 rounded-full ${
+											(data?.avg_memory_usage ?? 0) >= 85
+												? 'bg-red-500'
+												: (data?.avg_memory_usage ?? 0) >= 70
+													? 'bg-yellow-500'
+													: 'bg-blue-500'
+										}`}
+										style={{
+											width: `${Math.min(data?.avg_memory_usage ?? 0, 100)}%`,
+										}}
+									/>
+								</div>
+							</div>
+							<div>
+								<div className="flex items-center justify-between text-xs mb-1">
+									<span className="text-gray-500">Disk</span>
+									<span className="font-medium text-gray-700">
+										{formatPercent(data?.avg_disk_usage)}
+									</span>
+								</div>
+								<div className="w-full bg-gray-200 rounded-full h-1.5">
+									<div
+										className={`h-1.5 rounded-full ${
+											(data?.avg_disk_usage ?? 0) >= 80
+												? 'bg-red-500'
+												: (data?.avg_disk_usage ?? 0) >= 60
+													? 'bg-yellow-500'
+													: 'bg-purple-500'
+										}`}
+										style={{
+											width: `${Math.min(data?.avg_disk_usage ?? 0, 100)}%`,
+										}}
+									/>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					{/* Alerts */}
+					{((data?.critical_count ?? 0) > 0 ||
+						(data?.warning_count ?? 0) > 0) && (
+						<div className="border-t border-gray-200 pt-4">
+							{(data?.critical_count ?? 0) > 0 && (
+								<div className="flex items-center gap-2 text-red-700 bg-red-50 px-3 py-2 rounded-lg text-sm mb-2">
+									<svg
+										aria-hidden="true"
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+										/>
+									</svg>
+									{data?.critical_count} agent(s) in critical state
+								</div>
+							)}
+							{(data?.warning_count ?? 0) > 0 && (
+								<div className="flex items-center gap-2 text-yellow-700 bg-yellow-50 px-3 py-2 rounded-lg text-sm">
+									<svg
+										aria-hidden="true"
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+										/>
+									</svg>
+									{data?.warning_count} agent(s) need attention
+								</div>
+							)}
+						</div>
+					)}
+				</div>
+			)}
+		</div>
+	);
+}
+
 export function Dashboard() {
 	const { data: dashboardStats, isLoading: statsLoading } = useDashboardStats();
+	const { data: fleetHealthResponse, isLoading: fleetHealthLoading } =
+		useFleetHealth();
 	const { data: backups, isLoading: backupsLoading } = useBackups();
 	const { data: dailyStats, isLoading: dailyStatsLoading } =
 		useDailyBackupStats(30);
@@ -454,8 +709,12 @@ export function Dashboard() {
 				/>
 			</div>
 
-			{/* Success Rate and Storage Efficiency Row */}
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			{/* Fleet Health, Success Rate and Storage Efficiency Row */}
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+				<FleetHealthWidget
+					data={fleetHealthResponse}
+					isLoading={fleetHealthLoading}
+				/>
 				<SuccessRateWidget
 					rate7d={dashboardStats?.success_rate_7d ?? 0}
 					rate30d={dashboardStats?.success_rate_30d ?? 0}

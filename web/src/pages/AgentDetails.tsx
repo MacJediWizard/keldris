@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
 	useAgent,
 	useAgentBackups,
+	useAgentHealthHistory,
 	useAgentSchedules,
 	useAgentStats,
 	useDeleteAgent,
@@ -10,14 +11,18 @@ import {
 	useRotateAgentApiKey,
 	useRunSchedule,
 } from '../hooks/useAgents';
-import type { Backup, Schedule } from '../lib/types';
+import type { AgentHealthHistory, Backup, Schedule } from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
 	formatDateTime,
 	formatDuration,
+	formatPercent,
+	formatUptime,
 	getAgentStatusColor,
 	getBackupStatusColor,
+	getHealthStatusColor,
+	getHealthStatusLabel,
 } from '../lib/utils';
 
 function LoadingCard() {
@@ -252,7 +257,7 @@ export function AgentDetails() {
 	const navigate = useNavigate();
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState<
-		'overview' | 'backups' | 'schedules'
+		'overview' | 'backups' | 'schedules' | 'health'
 	>('overview');
 
 	const { data: agent, isLoading: agentLoading } = useAgent(id ?? '');
@@ -264,6 +269,8 @@ export function AgentDetails() {
 	);
 	const { data: schedulesResponse, isLoading: schedulesLoading } =
 		useAgentSchedules(id ?? '');
+	const { data: healthHistoryResponse, isLoading: healthLoading } =
+		useAgentHealthHistory(id ?? '', 50);
 
 	const deleteAgent = useDeleteAgent();
 	const rotateApiKey = useRotateAgentApiKey();
@@ -273,6 +280,7 @@ export function AgentDetails() {
 	const stats = statsResponse?.stats;
 	const backups = backupsResponse?.backups ?? [];
 	const schedules = schedulesResponse?.schedules ?? [];
+	const healthHistory = healthHistoryResponse?.history ?? [];
 
 	const handleDelete = () => {
 		if (confirm('Are you sure you want to delete this agent?')) {
@@ -348,6 +356,7 @@ export function AgentDetails() {
 	}
 
 	const statusColor = getAgentStatusColor(agent.status);
+	const healthColor = getHealthStatusColor(agent.health_status || 'unknown');
 
 	return (
 		<div className="space-y-6">
@@ -385,6 +394,19 @@ export function AgentDetails() {
 									className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`}
 								/>
 								{agent.status}
+							</span>
+							<span
+								className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${healthColor.bg} ${healthColor.text}`}
+								title={
+									agent.health_metrics
+										? `CPU: ${agent.health_metrics.cpu_usage?.toFixed(1)}% | Memory: ${agent.health_metrics.memory_usage?.toFixed(1)}% | Disk: ${agent.health_metrics.disk_usage?.toFixed(1)}%`
+										: 'No health data'
+								}
+							>
+								<span
+									className={`w-1.5 h-1.5 ${healthColor.dot} rounded-full`}
+								/>
+								{getHealthStatusLabel(agent.health_status || 'unknown')}
 							</span>
 						</div>
 						<p className="text-gray-600 mt-1">
@@ -604,6 +626,17 @@ export function AgentDetails() {
 						}`}
 					>
 						Schedules ({schedules.length})
+					</button>
+					<button
+						type="button"
+						onClick={() => setActiveTab('health')}
+						className={`py-4 px-1 border-b-2 font-medium text-sm ${
+							activeTab === 'health'
+								? 'border-indigo-500 text-indigo-600'
+								: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+						}`}
+					>
+						Health
 					</button>
 				</nav>
 			</div>
@@ -935,6 +968,401 @@ export function AgentDetails() {
 							</Link>
 						</div>
 					)}
+				</div>
+			)}
+
+			{activeTab === 'health' && (
+				<div className="space-y-6">
+					{/* Current Health Status */}
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+						<div className="bg-white rounded-lg border border-gray-200 p-6">
+							<div className="flex items-center gap-2 mb-2">
+								<svg
+									aria-hidden="true"
+									className="w-5 h-5 text-gray-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+									/>
+								</svg>
+								<p className="text-sm font-medium text-gray-600">CPU Usage</p>
+							</div>
+							<p
+								className={`text-3xl font-bold ${
+									(agent.health_metrics?.cpu_usage ?? 0) >= 95
+										? 'text-red-600'
+										: (agent.health_metrics?.cpu_usage ?? 0) >= 80
+											? 'text-yellow-600'
+											: 'text-gray-900'
+								}`}
+							>
+								{formatPercent(agent.health_metrics?.cpu_usage)}
+							</p>
+						</div>
+						<div className="bg-white rounded-lg border border-gray-200 p-6">
+							<div className="flex items-center gap-2 mb-2">
+								<svg
+									aria-hidden="true"
+									className="w-5 h-5 text-gray-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+									/>
+								</svg>
+								<p className="text-sm font-medium text-gray-600">
+									Memory Usage
+								</p>
+							</div>
+							<p
+								className={`text-3xl font-bold ${
+									(agent.health_metrics?.memory_usage ?? 0) >= 95
+										? 'text-red-600'
+										: (agent.health_metrics?.memory_usage ?? 0) >= 85
+											? 'text-yellow-600'
+											: 'text-gray-900'
+								}`}
+							>
+								{formatPercent(agent.health_metrics?.memory_usage)}
+							</p>
+						</div>
+						<div className="bg-white rounded-lg border border-gray-200 p-6">
+							<div className="flex items-center gap-2 mb-2">
+								<svg
+									aria-hidden="true"
+									className="w-5 h-5 text-gray-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+									/>
+								</svg>
+								<p className="text-sm font-medium text-gray-600">Disk Usage</p>
+							</div>
+							<p
+								className={`text-3xl font-bold ${
+									(agent.health_metrics?.disk_usage ?? 0) >= 90
+										? 'text-red-600'
+										: (agent.health_metrics?.disk_usage ?? 0) >= 80
+											? 'text-yellow-600'
+											: 'text-gray-900'
+								}`}
+							>
+								{formatPercent(agent.health_metrics?.disk_usage)}
+							</p>
+							{agent.health_metrics && (
+								<p className="text-sm text-gray-500 mt-1">
+									{formatBytes(agent.health_metrics.disk_free_bytes)} free of{' '}
+									{formatBytes(agent.health_metrics.disk_total_bytes)}
+								</p>
+							)}
+						</div>
+						<div className="bg-white rounded-lg border border-gray-200 p-6">
+							<div className="flex items-center gap-2 mb-2">
+								<svg
+									aria-hidden="true"
+									className="w-5 h-5 text-gray-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
+								<p className="text-sm font-medium text-gray-600">Uptime</p>
+							</div>
+							<p className="text-3xl font-bold text-gray-900">
+								{formatUptime(agent.health_metrics?.uptime_seconds)}
+							</p>
+						</div>
+					</div>
+
+					{/* Health Issues */}
+					{agent.health_metrics?.issues &&
+						agent.health_metrics.issues.length > 0 && (
+							<div className="bg-white rounded-lg border border-gray-200 p-6">
+								<h3 className="text-lg font-semibold text-gray-900 mb-4">
+									Health Issues
+								</h3>
+								<div className="space-y-3">
+									{agent.health_metrics.issues.map((issue) => {
+										const severityColors =
+											issue.severity === 'critical'
+												? 'bg-red-50 border-red-200 text-red-800'
+												: 'bg-yellow-50 border-yellow-200 text-yellow-800';
+										return (
+											<div
+												key={`${issue.component}-${issue.severity}-${issue.message}`}
+												className={`p-4 rounded-lg border ${severityColors}`}
+											>
+												<div className="flex items-center gap-2">
+													<svg
+														aria-hidden="true"
+														className="w-5 h-5"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+														/>
+													</svg>
+													<span className="font-medium capitalize">
+														{issue.severity}
+													</span>
+												</div>
+												<p className="mt-1">{issue.message}</p>
+											</div>
+										);
+									})}
+								</div>
+							</div>
+						)}
+
+					{/* Restic Info */}
+					<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+							Restic Information
+						</h3>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+							<div>
+								<p className="text-sm text-gray-600">Version</p>
+								<p className="font-medium text-gray-900">
+									{agent.health_metrics?.restic_version || 'Unknown'}
+								</p>
+							</div>
+							<div>
+								<p className="text-sm text-gray-600">Available</p>
+								<span
+									className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+										agent.health_metrics?.restic_available
+											? 'bg-green-100 text-green-800'
+											: 'bg-red-100 text-red-800'
+									}`}
+								>
+									{agent.health_metrics?.restic_available ? 'Yes' : 'No'}
+								</span>
+							</div>
+							<div>
+								<p className="text-sm text-gray-600">Network</p>
+								<span
+									className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+										agent.health_metrics?.network_up
+											? 'bg-green-100 text-green-800'
+											: 'bg-red-100 text-red-800'
+									}`}
+								>
+									{agent.health_metrics?.network_up ? 'Online' : 'Offline'}
+								</span>
+							</div>
+						</div>
+					</div>
+
+					{/* Health History Chart */}
+					<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+							Health History
+						</h3>
+						{healthLoading ? (
+							<div className="h-64 flex items-center justify-center">
+								<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+							</div>
+						) : healthHistory.length > 0 ? (
+							<div className="space-y-6">
+								{/* Simple bar chart for CPU, Memory, Disk */}
+								<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+									{/* CPU History */}
+									<div>
+										<p className="text-sm font-medium text-gray-600 mb-2">
+											CPU Usage
+										</p>
+										<div className="h-32 flex items-end gap-1">
+											{healthHistory
+												.slice(-24)
+												.reverse()
+												.map((h: AgentHealthHistory) => {
+													const value = h.cpu_usage ?? 0;
+													const color =
+														value >= 95
+															? 'bg-red-500'
+															: value >= 80
+																? 'bg-yellow-500'
+																: 'bg-green-500';
+													return (
+														<div
+															key={h.id}
+															className={`flex-1 ${color} rounded-t transition-all`}
+															style={{ height: `${Math.max(value, 2)}%` }}
+															title={`${value.toFixed(1)}%`}
+														/>
+													);
+												})}
+										</div>
+									</div>
+									{/* Memory History */}
+									<div>
+										<p className="text-sm font-medium text-gray-600 mb-2">
+											Memory Usage
+										</p>
+										<div className="h-32 flex items-end gap-1">
+											{healthHistory
+												.slice(-24)
+												.reverse()
+												.map((h: AgentHealthHistory) => {
+													const value = h.memory_usage ?? 0;
+													const color =
+														value >= 95
+															? 'bg-red-500'
+															: value >= 85
+																? 'bg-yellow-500'
+																: 'bg-blue-500';
+													return (
+														<div
+															key={h.id}
+															className={`flex-1 ${color} rounded-t transition-all`}
+															style={{ height: `${Math.max(value, 2)}%` }}
+															title={`${value.toFixed(1)}%`}
+														/>
+													);
+												})}
+										</div>
+									</div>
+									{/* Disk History */}
+									<div>
+										<p className="text-sm font-medium text-gray-600 mb-2">
+											Disk Usage
+										</p>
+										<div className="h-32 flex items-end gap-1">
+											{healthHistory
+												.slice(-24)
+												.reverse()
+												.map((h: AgentHealthHistory) => {
+													const value = h.disk_usage ?? 0;
+													const color =
+														value >= 90
+															? 'bg-red-500'
+															: value >= 80
+																? 'bg-yellow-500'
+																: 'bg-purple-500';
+													return (
+														<div
+															key={h.id}
+															className={`flex-1 ${color} rounded-t transition-all`}
+															style={{ height: `${Math.max(value, 2)}%` }}
+															title={`${value.toFixed(1)}%`}
+														/>
+													);
+												})}
+										</div>
+									</div>
+								</div>
+
+								{/* Health History Table */}
+								<div className="overflow-x-auto">
+									<table className="w-full text-sm">
+										<thead className="bg-gray-50 border-b border-gray-200">
+											<tr>
+												<th className="px-4 py-2 text-left font-medium text-gray-500">
+													Time
+												</th>
+												<th className="px-4 py-2 text-left font-medium text-gray-500">
+													Status
+												</th>
+												<th className="px-4 py-2 text-left font-medium text-gray-500">
+													CPU
+												</th>
+												<th className="px-4 py-2 text-left font-medium text-gray-500">
+													Memory
+												</th>
+												<th className="px-4 py-2 text-left font-medium text-gray-500">
+													Disk
+												</th>
+											</tr>
+										</thead>
+										<tbody className="divide-y divide-gray-200">
+											{healthHistory
+												.slice(0, 10)
+												.map((h: AgentHealthHistory) => {
+													const hColor = getHealthStatusColor(h.health_status);
+													return (
+														<tr key={h.id} className="hover:bg-gray-50">
+															<td className="px-4 py-2 text-gray-900">
+																{formatDateTime(h.recorded_at)}
+															</td>
+															<td className="px-4 py-2">
+																<span
+																	className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${hColor.bg} ${hColor.text}`}
+																>
+																	<span
+																		className={`w-1.5 h-1.5 ${hColor.dot} rounded-full`}
+																	/>
+																	{getHealthStatusLabel(h.health_status)}
+																</span>
+															</td>
+															<td className="px-4 py-2 text-gray-500">
+																{formatPercent(h.cpu_usage)}
+															</td>
+															<td className="px-4 py-2 text-gray-500">
+																{formatPercent(h.memory_usage)}
+															</td>
+															<td className="px-4 py-2 text-gray-500">
+																{formatPercent(h.disk_usage)}
+															</td>
+														</tr>
+													);
+												})}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						) : (
+							<div className="h-64 flex items-center justify-center text-gray-500">
+								<div className="text-center">
+									<svg
+										aria-hidden="true"
+										className="w-12 h-12 mx-auto mb-4 text-gray-300"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+										/>
+									</svg>
+									<p>No health history available</p>
+									<p className="text-sm mt-1">
+										Health metrics will appear after the agent reports data
+									</p>
+								</div>
+							</div>
+						)}
+					</div>
 				</div>
 			)}
 
