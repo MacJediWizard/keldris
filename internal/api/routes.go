@@ -106,6 +106,9 @@ func NewRouter(
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1)
 
+	agentGroupsHandler := handlers.NewAgentGroupsHandler(database, logger)
+	agentGroupsHandler.RegisterRoutes(apiV1)
+
 	reposHandler := handlers.NewRepositoriesHandler(database, keyManager, logger)
 	reposHandler.RegisterRoutes(apiV1)
 
