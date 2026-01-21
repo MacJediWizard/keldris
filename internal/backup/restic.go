@@ -89,7 +89,8 @@ func (r *Restic) Init(ctx context.Context, cfg ResticConfig) error {
 
 // BackupOptions contains optional parameters for backup operations.
 type BackupOptions struct {
-	BandwidthLimitKB *int // Upload bandwidth limit in KB/s (nil = unlimited)
+	BandwidthLimitKB *int    // Upload bandwidth limit in KB/s (nil = unlimited)
+	CompressionLevel *string // Compression level: off, auto, max (nil = restic default "auto")
 }
 
 // Backup runs a backup operation with the given paths and excludes.
@@ -111,6 +112,9 @@ func (r *Restic) BackupWithOptions(ctx context.Context, cfg ResticConfig, paths,
 	if opts != nil && opts.BandwidthLimitKB != nil {
 		logEvent = logEvent.Int("bandwidth_limit_kb", *opts.BandwidthLimitKB)
 	}
+	if opts != nil && opts.CompressionLevel != nil {
+		logEvent = logEvent.Str("compression_level", *opts.CompressionLevel)
+	}
 	logEvent.Msg("starting backup")
 
 	start := time.Now()
@@ -121,6 +125,11 @@ func (r *Restic) BackupWithOptions(ctx context.Context, cfg ResticConfig, paths,
 	if opts != nil && opts.BandwidthLimitKB != nil && *opts.BandwidthLimitKB > 0 {
 		// Restic expects --limit-upload in KiB/s
 		args = append(args, "--limit-upload", fmt.Sprintf("%d", *opts.BandwidthLimitKB))
+	}
+
+	// Add compression level if specified
+	if opts != nil && opts.CompressionLevel != nil && *opts.CompressionLevel != "" {
+		args = append(args, "--compression", *opts.CompressionLevel)
 	}
 
 	for _, exclude := range excludes {

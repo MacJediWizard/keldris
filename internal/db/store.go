@@ -567,7 +567,8 @@ func (db *DB) DeleteRepository(ctx context.Context, id uuid.UUID) error {
 func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
-		       retention_policy, enabled, created_at, updated_at
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
 		ORDER BY name
@@ -602,7 +603,8 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error) {
 	row := db.Pool.QueryRow(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
-		       retention_policy, enabled, created_at, updated_at
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`, id)
@@ -639,13 +641,32 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 		return fmt.Errorf("marshal retention policy: %w", err)
 	}
 
+	excludedHoursBytes, err := schedule.ExcludedHoursJSON()
+	if err != nil {
+		return fmt.Errorf("marshal excluded hours: %w", err)
+	}
+
+	// Extract backup window times
+	var windowStart, windowEnd *string
+	if schedule.BackupWindow != nil {
+		if schedule.BackupWindow.Start != "" {
+			windowStart = &schedule.BackupWindow.Start
+		}
+		if schedule.BackupWindow.End != "" {
+			windowEnd = &schedule.BackupWindow.End
+		}
+	}
+
 	_, err = db.Pool.Exec(ctx, `
 		INSERT INTO schedules (id, agent_id, agent_group_id, policy_id, name, cron_expression, paths,
-		                       excludes, retention_policy, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		                       excludes, retention_policy, bandwidth_limit_kbps,
+		                       backup_window_start, backup_window_end, excluded_hours,
+		                       compression_level, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 	`, schedule.ID, schedule.AgentID, schedule.AgentGroupID, schedule.PolicyID, schedule.Name,
 		schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
-		schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
+		schedule.BandwidthLimitKB, windowStart, windowEnd, excludedHoursBytes,
+		schedule.CompressionLevel, schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create schedule: %w", err)
 	}
@@ -678,14 +699,34 @@ func (db *DB) UpdateSchedule(ctx context.Context, schedule *models.Schedule) err
 		return fmt.Errorf("marshal retention policy: %w", err)
 	}
 
+	excludedHoursBytes, err := schedule.ExcludedHoursJSON()
+	if err != nil {
+		return fmt.Errorf("marshal excluded hours: %w", err)
+	}
+
+	// Extract backup window times
+	var windowStart, windowEnd *string
+	if schedule.BackupWindow != nil {
+		if schedule.BackupWindow.Start != "" {
+			windowStart = &schedule.BackupWindow.Start
+		}
+		if schedule.BackupWindow.End != "" {
+			windowEnd = &schedule.BackupWindow.End
+		}
+	}
+
 	schedule.UpdatedAt = time.Now()
 	_, err = db.Pool.Exec(ctx, `
 		UPDATE schedules
 		SET policy_id = $2, name = $3, cron_expression = $4, paths = $5, excludes = $6,
-		    retention_policy = $7, enabled = $8, updated_at = $9
+		    retention_policy = $7, bandwidth_limit_kbps = $8, backup_window_start = $9,
+		    backup_window_end = $10, excluded_hours = $11, compression_level = $12,
+		    enabled = $13, updated_at = $14
 		WHERE id = $1
 	`, schedule.ID, schedule.PolicyID, schedule.Name, schedule.CronExpression, pathsBytes,
-		excludesBytes, retentionBytes, schedule.Enabled, schedule.UpdatedAt)
+		excludesBytes, retentionBytes, schedule.BandwidthLimitKB, windowStart,
+		windowEnd, excludedHoursBytes, schedule.CompressionLevel,
+		schedule.Enabled, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update schedule: %w", err)
 	}
@@ -706,12 +747,14 @@ func scanSchedule(rows interface {
 	Scan(dest ...any) error
 }) (*models.Schedule, error) {
 	var s models.Schedule
-	var pathsBytes, excludesBytes, retentionBytes []byte
+	var pathsBytes, excludesBytes, retentionBytes, excludedHoursBytes []byte
 	var agentGroupID *uuid.UUID
+	var windowStart, windowEnd, compressionLevel *string
 	err := rows.Scan(
 		&s.ID, &s.AgentID, &agentGroupID, &s.PolicyID, &s.Name, &s.CronExpression,
-		&pathsBytes, &excludesBytes, &retentionBytes, &s.Enabled,
-		&s.CreatedAt, &s.UpdatedAt,
+		&pathsBytes, &excludesBytes, &retentionBytes, &s.BandwidthLimitKB,
+		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel,
+		&s.Enabled, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan schedule: %w", err)
@@ -727,6 +770,11 @@ func scanSchedule(rows interface {
 	if err := s.SetRetentionPolicy(retentionBytes); err != nil {
 		return nil, fmt.Errorf("parse retention policy: %w", err)
 	}
+	if err := s.SetExcludedHours(excludedHoursBytes); err != nil {
+		return nil, fmt.Errorf("parse excluded hours: %w", err)
+	}
+	s.SetBackupWindow(windowStart, windowEnd)
+	s.CompressionLevel = compressionLevel
 
 	return &s, nil
 }
@@ -1692,7 +1740,8 @@ func (db *DB) GetAllAgents(ctx context.Context) ([]*models.Agent, error) {
 func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression, s.paths, s.excludes,
-		       s.retention_policy, s.enabled, s.created_at, s.updated_at
+		       s.retention_policy, s.bandwidth_limit_kbps, s.backup_window_start, s.backup_window_end,
+		       s.excluded_hours, s.compression_level, s.enabled, s.created_at, s.updated_at
 		FROM schedules s
 		WHERE s.enabled = true
 		ORDER BY s.name
@@ -1718,7 +1767,8 @@ func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
 func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
-		       retention_policy, enabled, created_at, updated_at
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, enabled, created_at, updated_at
 		FROM schedules
 		WHERE enabled = true
 		ORDER BY name
