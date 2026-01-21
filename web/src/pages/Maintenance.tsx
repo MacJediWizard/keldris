@@ -97,7 +97,11 @@ export function Maintenance() {
 	};
 
 	const handleDelete = async (id: string) => {
-		if (!window.confirm('Are you sure you want to delete this maintenance window?')) {
+		if (
+			!window.confirm(
+				'Are you sure you want to delete this maintenance window?',
+			)
+		) {
 			return;
 		}
 		try {
@@ -163,10 +167,7 @@ export function Maintenance() {
 				<div className="bg-white rounded-lg border border-gray-200 p-6">
 					<div className="space-y-4">
 						{[1, 2, 3].map((i) => (
-							<div
-								key={i}
-								className="h-16 bg-gray-200 rounded animate-pulse"
-							/>
+							<div key={i} className="h-16 bg-gray-200 rounded animate-pulse" />
 						))}
 					</div>
 				</div>
@@ -228,7 +229,9 @@ export function Maintenance() {
 			{(showForm || editingId) && (
 				<div className="bg-white rounded-lg border border-gray-200 p-6">
 					<h2 className="text-lg font-medium text-gray-900 mb-4">
-						{editingId ? 'Edit Maintenance Window' : 'Schedule Maintenance Window'}
+						{editingId
+							? 'Edit Maintenance Window'
+							: 'Schedule Maintenance Window'}
 					</h2>
 					<form onSubmit={editingId ? handleUpdate : handleCreate}>
 						<div className="space-y-4">
@@ -325,7 +328,10 @@ export function Maintenance() {
 									onChange={(e) =>
 										setFormData({
 											...formData,
-											notify_before_minutes: Number.parseInt(e.target.value, 10),
+											notify_before_minutes: Number.parseInt(
+												e.target.value,
+												10,
+											),
 										})
 									}
 									min={0}
@@ -399,10 +405,7 @@ export function Maintenance() {
 						{sortedWindows.map((w) => {
 							const status = getWindowStatus(w);
 							return (
-								<li
-									key={w.id}
-									className="p-4 hover:bg-gray-50"
-								>
+								<li key={w.id} className="p-4 hover:bg-gray-50">
 									<div className="flex items-center justify-between">
 										<div className="flex-1 min-w-0">
 											<div className="flex items-center gap-2">

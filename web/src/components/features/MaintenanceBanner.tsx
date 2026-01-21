@@ -33,9 +33,10 @@ export function MaintenanceBanner() {
 		}
 
 		const updateCountdown = () => {
+			if (!data.active && !data.upcoming) return;
 			const target = data.active
 				? new Date(data.active.ends_at)
-				: new Date(data.upcoming!.starts_at);
+				: new Date(data.upcoming.starts_at);
 
 			setTimeLeft(formatTimeLeft(target));
 		};
@@ -50,7 +51,8 @@ export function MaintenanceBanner() {
 	}
 
 	const isActive = !!data.active;
-	const window = data.active || data.upcoming!;
+	const window = data.active ?? data.upcoming;
+	if (!window) return null;
 
 	return (
 		<div

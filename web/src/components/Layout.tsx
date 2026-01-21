@@ -6,9 +6,9 @@ import {
 	useOrganizations,
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
-import { MaintenanceBanner } from './features/MaintenanceBanner';
 import { useSearch } from '../hooks/useSearch';
 import type { SearchResult, SearchResultType } from '../lib/types';
+import { MaintenanceBanner } from './features/MaintenanceBanner';
 
 interface NavItem {
 	path: string;
