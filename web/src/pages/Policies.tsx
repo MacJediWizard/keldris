@@ -472,9 +472,9 @@ function ApplyPolicyModal({ policy, isOpen, onClose }: ApplyPolicyModalProps) {
 					<div className="space-y-4">
 						<div>
 							<div className="flex items-center justify-between mb-2">
-								<label className="block text-sm font-medium text-gray-700">
+								<span className="block text-sm font-medium text-gray-700">
 									Select Agents
-								</label>
+								</span>
 								<div className="flex gap-2">
 									<button
 										type="button"

@@ -374,7 +374,10 @@ export const policiesApi = {
 		return response.schedules ?? [];
 	},
 
-	apply: async (id: string, data: ApplyPolicyRequest): Promise<ApplyPolicyResponse> =>
+	apply: async (
+		id: string,
+		data: ApplyPolicyRequest,
+	): Promise<ApplyPolicyResponse> =>
 		fetchApi<ApplyPolicyResponse>(`/policies/${id}/apply`, {
 			method: 'POST',
 			body: JSON.stringify(data),
