@@ -20,9 +20,10 @@ const (
 type NotificationEventType string
 
 const (
-	EventBackupSuccess NotificationEventType = "backup_success"
-	EventBackupFailed  NotificationEventType = "backup_failed"
-	EventAgentOffline  NotificationEventType = "agent_offline"
+	EventBackupSuccess        NotificationEventType = "backup_success"
+	EventBackupFailed         NotificationEventType = "backup_failed"
+	EventAgentOffline         NotificationEventType = "agent_offline"
+	EventMaintenanceScheduled NotificationEventType = "maintenance_scheduled"
 )
 
 // NotificationStatus represents the status of a notification

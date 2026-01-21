@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
+import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
+import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
 import { useAgents } from '../hooks/useAgents';
+import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
 import {
 	useCreateSchedule,
@@ -9,7 +12,11 @@ import {
 	useSchedules,
 	useUpdateSchedule,
 } from '../hooks/useSchedules';
-import type { Schedule } from '../lib/types';
+import type {
+	CompressionLevel,
+	Schedule,
+	ScheduleRepositoryRequest,
+} from '../lib/types';
 
 function LoadingRow() {
 	return (
@@ -41,9 +48,13 @@ interface CreateScheduleModalProps {
 function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	const [name, setName] = useState('');
 	const [agentId, setAgentId] = useState('');
-	const [repositoryId, setRepositoryId] = useState('');
+	const [selectedRepos, setSelectedRepos] = useState<
+		ScheduleRepositoryRequest[]
+	>([]);
 	const [cronExpression, setCronExpression] = useState('0 2 * * *');
 	const [paths, setPaths] = useState('/home');
+	// Policy template state
+	const [selectedPolicyId, setSelectedPolicyId] = useState('');
 	// Retention policy state
 	const [showRetention, setShowRetention] = useState(false);
 	const [keepLast, setKeepLast] = useState(5);
@@ -56,11 +67,55 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	const [windowStart, setWindowStart] = useState('');
 	const [windowEnd, setWindowEnd] = useState('');
 	const [excludedHours, setExcludedHours] = useState<number[]>([]);
+	const [compressionLevel, setCompressionLevel] = useState<
+		CompressionLevel | ''
+	>('');
 	const [showAdvanced, setShowAdvanced] = useState(false);
+	// Exclude patterns state
+	const [excludes, setExcludes] = useState<string[]>([]);
+	const [showPatternLibrary, setShowPatternLibrary] = useState(false);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
+	const { data: policies } = usePolicies();
 	const createSchedule = useCreateSchedule();
+
+	const handlePolicySelect = (policyId: string) => {
+		setSelectedPolicyId(policyId);
+		if (!policyId) return;
+
+		const policy = policies?.find((p) => p.id === policyId);
+		if (!policy) return;
+
+		// Apply policy values to form
+		if (policy.paths && policy.paths.length > 0) {
+			setPaths(policy.paths.join('\n'));
+		}
+		if (policy.cron_expression) {
+			setCronExpression(policy.cron_expression);
+		}
+		if (policy.retention_policy) {
+			setShowRetention(true);
+			setKeepLast(policy.retention_policy.keep_last || 5);
+			setKeepDaily(policy.retention_policy.keep_daily || 7);
+			setKeepWeekly(policy.retention_policy.keep_weekly || 4);
+			setKeepMonthly(policy.retention_policy.keep_monthly || 6);
+			setKeepYearly(policy.retention_policy.keep_yearly || 0);
+		}
+		if (policy.bandwidth_limit_kb) {
+			setBandwidthLimitKb(policy.bandwidth_limit_kb.toString());
+			setShowAdvanced(true);
+		}
+		if (policy.backup_window) {
+			setWindowStart(policy.backup_window.start || '');
+			setWindowEnd(policy.backup_window.end || '');
+			setShowAdvanced(true);
+		}
+		if (policy.excluded_hours && policy.excluded_hours.length > 0) {
+			setExcludedHours(policy.excluded_hours);
+			setShowAdvanced(true);
+		}
+	};
 
 	const toggleExcludedHour = (hour: number) => {
 		setExcludedHours((prev) =>
@@ -70,6 +125,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (selectedRepos.length === 0) {
+			return; // Don't submit without repositories
+		}
 		try {
 			const retentionPolicy = showRetention
 				? {
@@ -84,9 +142,10 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			const data: Parameters<typeof createSchedule.mutateAsync>[0] = {
 				name,
 				agent_id: agentId,
-				repository_id: repositoryId,
+				repositories: selectedRepos,
 				cron_expression: cronExpression,
 				paths: paths.split('\n').filter((p) => p.trim()),
+				excludes: excludes.length > 0 ? excludes : undefined,
 				retention_policy: retentionPolicy,
 				enabled: true,
 			};
@@ -106,11 +165,16 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				data.excluded_hours = excludedHours;
 			}
 
+			if (compressionLevel) {
+				data.compression_level = compressionLevel;
+			}
+
 			await createSchedule.mutateAsync(data);
 			onClose();
 			setName('');
 			setAgentId('');
-			setRepositoryId('');
+			setSelectedRepos([]);
+			setSelectedPolicyId('');
 			setCronExpression('0 2 * * *');
 			setPaths('/home');
 			// Reset retention policy state
@@ -125,10 +189,25 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			setWindowStart('');
 			setWindowEnd('');
 			setExcludedHours([]);
+			setCompressionLevel('');
 			setShowAdvanced(false);
+			// Reset exclude patterns state
+			setExcludes([]);
+			setShowPatternLibrary(false);
 		} catch {
 			// Error handled by mutation
 		}
+	};
+
+	const handleAddPatterns = (patterns: string[]) => {
+		setExcludes((prev) => [
+			...prev,
+			...patterns.filter((p) => !prev.includes(p)),
+		]);
+	};
+
+	const handleRemovePattern = (pattern: string) => {
+		setExcludes((prev) => prev.filter((p) => p !== pattern));
 	};
 
 	if (!isOpen) return null;
@@ -181,27 +260,38 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 							</select>
 						</div>
 						<div>
-							<label
-								htmlFor="schedule-repo"
-								className="block text-sm font-medium text-gray-700 mb-1"
-							>
-								Repository
-							</label>
-							<select
-								id="schedule-repo"
-								value={repositoryId}
-								onChange={(e) => setRepositoryId(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								required
-							>
-								<option value="">Select a repository</option>
-								{repositories?.map((repo) => (
-									<option key={repo.id} value={repo.id}>
-										{repo.name} ({repo.type})
-									</option>
-								))}
-							</select>
+							<MultiRepoSelector
+								repositories={repositories ?? []}
+								selectedRepos={selectedRepos}
+								onChange={setSelectedRepos}
+							/>
 						</div>
+						{policies && policies.length > 0 && (
+							<div>
+								<label
+									htmlFor="schedule-policy"
+									className="block text-sm font-medium text-gray-700 mb-1"
+								>
+									Policy Template (optional)
+								</label>
+								<select
+									id="schedule-policy"
+									value={selectedPolicyId}
+									onChange={(e) => handlePolicySelect(e.target.value)}
+									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								>
+									<option value="">No template - configure manually</option>
+									{policies.map((policy) => (
+										<option key={policy.id} value={policy.id}>
+											{policy.name}
+										</option>
+									))}
+								</select>
+								<p className="text-xs text-gray-500 mt-1">
+									Select a policy to pre-fill the form with template values
+								</p>
+							</div>
+						)}
 						<div>
 							<label
 								htmlFor="schedule-cron"
@@ -238,6 +328,79 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
 								required
 							/>
+						</div>
+
+						{/* Exclude Patterns Section */}
+						<div className="border-t border-gray-200 pt-4">
+							<div className="flex items-center justify-between mb-2">
+								<span className="block text-sm font-medium text-gray-700">
+									Exclude Patterns
+								</span>
+								<button
+									type="button"
+									onClick={() => setShowPatternLibrary(true)}
+									className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+								>
+									<svg
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										aria-hidden="true"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+										/>
+									</svg>
+									Browse Library
+								</button>
+							</div>
+							{excludes.length > 0 ? (
+								<div className="space-y-2">
+									<div className="flex flex-wrap gap-1.5 p-3 bg-gray-50 rounded-lg max-h-32 overflow-y-auto">
+										{excludes.map((pattern) => (
+											<span
+												key={pattern}
+												className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-200 rounded group"
+											>
+												<code className="text-gray-700">{pattern}</code>
+												<button
+													type="button"
+													onClick={() => handleRemovePattern(pattern)}
+													className="text-gray-400 hover:text-red-500 transition-colors"
+												>
+													<svg
+														className="w-3 h-3"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+														aria-hidden="true"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M6 18L18 6M6 6l12 12"
+														/>
+													</svg>
+												</button>
+											</span>
+										))}
+									</div>
+									<p className="text-xs text-gray-500">
+										{excludes.length} pattern{excludes.length !== 1 ? 's' : ''}{' '}
+										will be excluded from backup
+									</p>
+								</div>
+							) : (
+								<p className="text-sm text-gray-500">
+									No patterns selected. Click "Browse Library" to add common
+									patterns.
+								</p>
+							)}
 						</div>
 
 						{/* Retention Policy Section */}
@@ -459,6 +622,43 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											Click to exclude hours when backups should not run.
 										</p>
 									</fieldset>
+
+									<div>
+										<label
+											htmlFor="compression-level"
+											className="block text-sm font-medium text-gray-700 mb-1"
+										>
+											Compression Level
+										</label>
+										<select
+											id="compression-level"
+											value={compressionLevel}
+											onChange={(e) =>
+												setCompressionLevel(
+													e.target.value as CompressionLevel | '',
+												)
+											}
+											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										>
+											<option value="">Auto (default)</option>
+											<option value="off">
+												Off - No compression (fastest, largest files)
+											</option>
+											<option value="auto">Auto - Balanced compression</option>
+											<option value="max">
+												Max - Maximum compression (slowest, smallest files)
+											</option>
+										</select>
+										<p className="text-xs text-gray-500 mt-1">
+											<strong>Off:</strong> Best for already-compressed data
+											(videos, images, archives).
+											<br />
+											<strong>Auto:</strong> Good balance for most data types.
+											<br />
+											<strong>Max:</strong> Best for text files, logs, and
+											databases.
+										</p>
+									</div>
 								</div>
 							)}
 						</div>
@@ -486,6 +686,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 					</div>
 				</form>
 			</div>
+			<PatternLibraryModal
+				isOpen={showPatternLibrary}
+				onClose={() => setShowPatternLibrary(false)}
+				onAddPatterns={handleAddPatterns}
+				existingPatterns={excludes}
+			/>
 		</div>
 	);
 }
@@ -510,7 +716,8 @@ function formatBackupWindow(window?: { start?: string; end?: string }):
 interface ScheduleRowProps {
 	schedule: Schedule;
 	agentName?: string;
-	repoName?: string;
+	repoNames: string[];
+	policyName?: string;
 	onToggle: (id: string, enabled: boolean) => void;
 	onDelete: (id: string) => void;
 	onRun: (id: string) => void;
@@ -523,7 +730,8 @@ interface ScheduleRowProps {
 function ScheduleRow({
 	schedule,
 	agentName,
-	repoName,
+	repoNames,
+	policyName,
 	onToggle,
 	onDelete,
 	onRun,
@@ -535,15 +743,42 @@ function ScheduleRow({
 	const hasResourceControls =
 		schedule.bandwidth_limit_kb ||
 		schedule.backup_window ||
-		(schedule.excluded_hours && schedule.excluded_hours.length > 0);
+		(schedule.excluded_hours && schedule.excluded_hours.length > 0) ||
+		schedule.compression_level;
+
+	const hasBadges = hasResourceControls || policyName;
 
 	return (
 		<tr className="hover:bg-gray-50">
 			<td className="px-6 py-4">
 				<div className="font-medium text-gray-900">{schedule.name}</div>
 				<div className="text-sm text-gray-500">
-					{agentName ?? 'Unknown Agent'} → {repoName ?? 'Unknown Repo'}
+					{agentName ?? 'Unknown Agent'} →{' '}
+					{repoNames.length > 0 ? repoNames.join(', ') : 'No repos'}
 				</div>
+				{hasBadges && (
+					<div className="mt-1 flex flex-wrap gap-1.5">
+						{policyName && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-indigo-50 text-indigo-700 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+									/>
+								</svg>
+								{policyName}
+							</span>
+						)}
+					</div>
+				)}
 				{hasResourceControls && (
 					<div className="mt-1 flex flex-wrap gap-1.5">
 						{schedule.bandwidth_limit_kb && (
@@ -602,6 +837,29 @@ function ScheduleRow({
 								</svg>
 								{schedule.excluded_hours.length} excluded hour
 								{schedule.excluded_hours.length !== 1 ? 's' : ''}
+							</span>
+						)}
+						{schedule.compression_level && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-cyan-50 text-cyan-700 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+									/>
+								</svg>
+								{schedule.compression_level === 'off'
+									? 'No compression'
+									: schedule.compression_level === 'max'
+										? 'Max compression'
+										: 'Auto compression'}
 							</span>
 						)}
 					</div>
@@ -680,12 +938,14 @@ export function Schedules() {
 	const { data: schedules, isLoading, isError } = useSchedules();
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
+	const { data: policies } = usePolicies();
 	const updateSchedule = useUpdateSchedule();
 	const deleteSchedule = useDeleteSchedule();
 	const runSchedule = useRunSchedule();
 
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
+	const policyMap = new Map(policies?.map((p) => [p.id, p.name]));
 
 	const filteredSchedules = schedules?.filter((schedule) => {
 		const matchesSearch = schedule.name
@@ -820,21 +1080,31 @@ export function Schedules() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200">
-							{filteredSchedules.map((schedule) => (
-								<ScheduleRow
-									key={schedule.id}
-									schedule={schedule}
-									agentName={agentMap.get(schedule.agent_id)}
-									repoName={repoMap.get(schedule.repository_id)}
-									onToggle={handleToggle}
-									onDelete={handleDelete}
-									onRun={handleRun}
-									onEditScripts={setEditingScriptsScheduleId}
-									isUpdating={updateSchedule.isPending}
-									isDeleting={deleteSchedule.isPending}
-									isRunning={runSchedule.isPending}
-								/>
-							))}
+							{filteredSchedules.map((schedule) => {
+								const repoNames = (schedule.repositories ?? [])
+									.sort((a, b) => a.priority - b.priority)
+									.map((r) => repoMap.get(r.repository_id) ?? 'Unknown');
+								return (
+									<ScheduleRow
+										key={schedule.id}
+										schedule={schedule}
+										agentName={agentMap.get(schedule.agent_id)}
+										repoNames={repoNames}
+										policyName={
+											schedule.policy_id
+												? policyMap.get(schedule.policy_id)
+												: undefined
+										}
+										onToggle={handleToggle}
+										onDelete={handleDelete}
+										onRun={handleRun}
+										onEditScripts={setEditingScriptsScheduleId}
+										isUpdating={updateSchedule.isPending}
+										isDeleting={deleteSchedule.isPending}
+										isRunning={runSchedule.isPending}
+									/>
+								);
+							})}
 						</tbody>
 					</table>
 				) : (

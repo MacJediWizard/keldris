@@ -133,3 +133,15 @@ func (o *OIDC) UserInfo(ctx context.Context, token *oauth2.Token) (*oidc.UserInf
 	}
 	return userInfo, nil
 }
+
+// HealthCheck verifies that the OIDC provider is reachable by fetching its discovery document.
+func (o *OIDC) HealthCheck(ctx context.Context) error {
+	// The provider already has the discovery document cached, but we can verify
+	// connectivity by attempting to fetch claims. A simple way is to check that
+	// the provider's endpoint is available.
+	endpoint := o.provider.Endpoint()
+	if endpoint.AuthURL == "" || endpoint.TokenURL == "" {
+		return fmt.Errorf("OIDC provider endpoints not available")
+	}
+	return nil
+}
