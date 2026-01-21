@@ -24,11 +24,11 @@ import type {
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
 	CreateDRRunbookRequest,
-	CreateReportScheduleRequest,
 	CreateDRTestScheduleRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
+	CreateReportScheduleRequest,
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
@@ -1087,8 +1087,7 @@ export const reportsApi = {
 
 	// History
 	listHistory: async (): Promise<ReportHistory[]> => {
-		const response =
-			await fetchApi<ReportHistoryResponse>('/reports/history');
+		const response = await fetchApi<ReportHistoryResponse>('/reports/history');
 		return response.history ?? [];
 	},
 

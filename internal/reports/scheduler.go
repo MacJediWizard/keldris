@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -13,6 +12,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // SchedulerStore defines the interface for report schedule persistence.
@@ -276,7 +277,7 @@ func (s *Scheduler) SendReport(ctx context.Context, schedule *models.ReportSched
 	// Convert to email data format
 	emailData := notifications.ReportEmailData{
 		OrgName:              orgName,
-		Frequency:            strings.Title(string(schedule.Frequency)),
+		Frequency:            cases.Title(language.English).String(string(schedule.Frequency)),
 		FrequencyLower:       string(schedule.Frequency),
 		PeriodStart:          periodStart,
 		PeriodEnd:            periodEnd,
