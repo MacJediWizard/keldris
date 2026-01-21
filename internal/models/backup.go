@@ -37,6 +37,10 @@ type Backup struct {
 	SnapshotsRemoved *int         `json:"snapshots_removed,omitempty"`
 	SnapshotsKept    *int         `json:"snapshots_kept,omitempty"`
 	RetentionError   string       `json:"retention_error,omitempty"`
+	PreScriptOutput  string       `json:"pre_script_output,omitempty"`
+	PreScriptError   string       `json:"pre_script_error,omitempty"`
+	PostScriptOutput string       `json:"post_script_output,omitempty"`
+	PostScriptError  string       `json:"post_script_error,omitempty"`
 	CreatedAt        time.Time    `json:"created_at"`
 }
 
@@ -102,4 +106,20 @@ func (b *Backup) IsComplete() bool {
 	return b.Status == BackupStatusCompleted ||
 		b.Status == BackupStatusFailed ||
 		b.Status == BackupStatusCanceled
+}
+
+// RecordPreScript records the results of running a pre-backup script.
+func (b *Backup) RecordPreScript(output string, err error) {
+	b.PreScriptOutput = output
+	if err != nil {
+		b.PreScriptError = err.Error()
+	}
+}
+
+// RecordPostScript records the results of running a post-backup script.
+func (b *Backup) RecordPostScript(output string, err error) {
+	b.PostScriptOutput = output
+	if err != nil {
+		b.PostScriptError = err.Error()
+	}
 }

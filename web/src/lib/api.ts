@@ -10,10 +10,13 @@ import type {
 	AuditLogFilter,
 	AuditLogsResponse,
 	Backup,
+	BackupScript,
+	BackupScriptsResponse,
 	BackupsResponse,
 	CreateAgentRequest,
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
+	CreateBackupScriptRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
@@ -65,6 +68,7 @@ import type {
 	TestRepositoryResponse,
 	TriggerVerificationRequest,
 	UpdateAlertRuleRequest,
+	UpdateBackupScriptRequest,
 	UpdateMemberRequest,
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
@@ -285,6 +289,43 @@ export const backupsApi = {
 
 	get: async (id: string): Promise<Backup> =>
 		fetchApi<Backup>(`/backups/${id}`),
+};
+
+// Backup Scripts API
+export const backupScriptsApi = {
+	list: async (scheduleId: string): Promise<BackupScript[]> => {
+		const response = await fetchApi<BackupScriptsResponse>(
+			`/schedules/${scheduleId}/scripts`,
+		);
+		return response.scripts ?? [];
+	},
+
+	get: async (scheduleId: string, id: string): Promise<BackupScript> =>
+		fetchApi<BackupScript>(`/schedules/${scheduleId}/scripts/${id}`),
+
+	create: async (
+		scheduleId: string,
+		data: CreateBackupScriptRequest,
+	): Promise<BackupScript> =>
+		fetchApi<BackupScript>(`/schedules/${scheduleId}/scripts`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		scheduleId: string,
+		id: string,
+		data: UpdateBackupScriptRequest,
+	): Promise<BackupScript> =>
+		fetchApi<BackupScript>(`/schedules/${scheduleId}/scripts/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (scheduleId: string, id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/schedules/${scheduleId}/scripts/${id}`, {
+			method: 'DELETE',
+		}),
 };
 
 // Snapshots API

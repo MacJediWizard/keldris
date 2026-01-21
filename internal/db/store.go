@@ -475,6 +475,142 @@ func (db *DB) DeleteSchedule(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// Backup Script methods
+
+// GetBackupScriptsByScheduleID returns all backup scripts for a schedule.
+func (db *DB) GetBackupScriptsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.BackupScript, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, type, script, timeout_seconds, fail_on_error, enabled, created_at, updated_at
+		FROM backup_scripts
+		WHERE schedule_id = $1
+		ORDER BY type
+	`, scheduleID)
+	if err != nil {
+		return nil, fmt.Errorf("list backup scripts by schedule: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackupScripts(rows)
+}
+
+// GetBackupScriptByID returns a backup script by ID.
+func (db *DB) GetBackupScriptByID(ctx context.Context, id uuid.UUID) (*models.BackupScript, error) {
+	var s models.BackupScript
+	var typeStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, schedule_id, type, script, timeout_seconds, fail_on_error, enabled, created_at, updated_at
+		FROM backup_scripts
+		WHERE id = $1
+	`, id).Scan(
+		&s.ID, &s.ScheduleID, &typeStr, &s.Script, &s.TimeoutSeconds,
+		&s.FailOnError, &s.Enabled, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get backup script: %w", err)
+	}
+	s.Type = models.BackupScriptType(typeStr)
+	return &s, nil
+}
+
+// GetBackupScriptByScheduleAndType returns a backup script by schedule ID and type.
+func (db *DB) GetBackupScriptByScheduleAndType(ctx context.Context, scheduleID uuid.UUID, scriptType models.BackupScriptType) (*models.BackupScript, error) {
+	var s models.BackupScript
+	var typeStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, schedule_id, type, script, timeout_seconds, fail_on_error, enabled, created_at, updated_at
+		FROM backup_scripts
+		WHERE schedule_id = $1 AND type = $2
+	`, scheduleID, string(scriptType)).Scan(
+		&s.ID, &s.ScheduleID, &typeStr, &s.Script, &s.TimeoutSeconds,
+		&s.FailOnError, &s.Enabled, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get backup script by type: %w", err)
+	}
+	s.Type = models.BackupScriptType(typeStr)
+	return &s, nil
+}
+
+// GetEnabledBackupScriptsByScheduleID returns all enabled backup scripts for a schedule.
+func (db *DB) GetEnabledBackupScriptsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.BackupScript, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, type, script, timeout_seconds, fail_on_error, enabled, created_at, updated_at
+		FROM backup_scripts
+		WHERE schedule_id = $1 AND enabled = true
+		ORDER BY type
+	`, scheduleID)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled backup scripts by schedule: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackupScripts(rows)
+}
+
+// CreateBackupScript creates a new backup script.
+func (db *DB) CreateBackupScript(ctx context.Context, script *models.BackupScript) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO backup_scripts (id, schedule_id, type, script, timeout_seconds, fail_on_error, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, script.ID, script.ScheduleID, string(script.Type), script.Script, script.TimeoutSeconds,
+		script.FailOnError, script.Enabled, script.CreatedAt, script.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create backup script: %w", err)
+	}
+	return nil
+}
+
+// UpdateBackupScript updates an existing backup script.
+func (db *DB) UpdateBackupScript(ctx context.Context, script *models.BackupScript) error {
+	script.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE backup_scripts
+		SET script = $2, timeout_seconds = $3, fail_on_error = $4, enabled = $5, updated_at = $6
+		WHERE id = $1
+	`, script.ID, script.Script, script.TimeoutSeconds, script.FailOnError, script.Enabled, script.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update backup script: %w", err)
+	}
+	return nil
+}
+
+// DeleteBackupScript deletes a backup script by ID.
+func (db *DB) DeleteBackupScript(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM backup_scripts WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete backup script: %w", err)
+	}
+	return nil
+}
+
+// scanBackupScripts scans multiple backup script rows.
+func scanBackupScripts(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.BackupScript, error) {
+	var scripts []*models.BackupScript
+	for rows.Next() {
+		var s models.BackupScript
+		var typeStr string
+		err := rows.Scan(
+			&s.ID, &s.ScheduleID, &typeStr, &s.Script, &s.TimeoutSeconds,
+			&s.FailOnError, &s.Enabled, &s.CreatedAt, &s.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan backup script: %w", err)
+		}
+		s.Type = models.BackupScriptType(typeStr)
+		scripts = append(scripts, &s)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate backup scripts: %w", err)
+	}
+
+	return scripts, nil
+}
+
 // scanSchedule scans a schedule from a row iterator.
 func scanSchedule(rows interface {
 	Scan(dest ...any) error
@@ -517,7 +653,8 @@ func (db *DB) GetBackupsByScheduleID(ctx context.Context, scheduleID uuid.UUID) 
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
-		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
+		       pre_script_output, pre_script_error, post_script_output, post_script_error, created_at
 		FROM backups
 		WHERE schedule_id = $1
 		ORDER BY started_at DESC
@@ -535,7 +672,8 @@ func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*mo
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
-		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
+		       pre_script_output, pre_script_error, post_script_output, post_script_error, created_at
 		FROM backups
 		WHERE agent_id = $1
 		ORDER BY started_at DESC
@@ -555,14 +693,16 @@ func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, 
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
-		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
+		       pre_script_output, pre_script_error, post_script_output, post_script_error, created_at
 		FROM backups
 		WHERE id = $1
 	`, id).Scan(
 		&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
 		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
 		&b.FilesChanged, &b.ErrorMessage,
-		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError, &b.CreatedAt,
+		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError,
+		&b.PreScriptOutput, &b.PreScriptError, &b.PostScriptOutput, &b.PostScriptError, &b.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get backup: %w", err)
@@ -576,12 +716,14 @@ func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
 	_, err := db.Pool.Exec(ctx, `
 		INSERT INTO backups (id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
 		                     status, size_bytes, files_new, files_changed, error_message,
-		                     retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		                     retention_applied, snapshots_removed, snapshots_kept, retention_error,
+		                     pre_script_output, pre_script_error, post_script_output, post_script_error, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 	`, backup.ID, backup.ScheduleID, backup.AgentID, backup.SnapshotID,
 		backup.StartedAt, backup.CompletedAt, string(backup.Status),
 		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage,
-		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError, backup.CreatedAt)
+		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError,
+		backup.PreScriptOutput, backup.PreScriptError, backup.PostScriptOutput, backup.PostScriptError, backup.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("create backup: %w", err)
 	}
@@ -594,11 +736,13 @@ func (db *DB) UpdateBackup(ctx context.Context, backup *models.Backup) error {
 		UPDATE backups
 		SET snapshot_id = $2, completed_at = $3, status = $4, size_bytes = $5,
 		    files_new = $6, files_changed = $7, error_message = $8,
-		    retention_applied = $9, snapshots_removed = $10, snapshots_kept = $11, retention_error = $12
+		    retention_applied = $9, snapshots_removed = $10, snapshots_kept = $11, retention_error = $12,
+		    pre_script_output = $13, pre_script_error = $14, post_script_output = $15, post_script_error = $16
 		WHERE id = $1
 	`, backup.ID, backup.SnapshotID, backup.CompletedAt, string(backup.Status),
 		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage,
-		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError)
+		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError,
+		backup.PreScriptOutput, backup.PreScriptError, backup.PostScriptOutput, backup.PostScriptError)
 	if err != nil {
 		return fmt.Errorf("update backup: %w", err)
 	}
@@ -626,7 +770,8 @@ func scanBackups(rows interface {
 			&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
 			&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
 			&b.FilesChanged, &b.ErrorMessage,
-			&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError, &b.CreatedAt,
+			&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError,
+			&b.PreScriptOutput, &b.PreScriptError, &b.PostScriptOutput, &b.PostScriptError, &b.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan backup: %w", err)
