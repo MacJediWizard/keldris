@@ -7,6 +7,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	swaggerFiles "github.com/swaggo/files"
@@ -29,6 +30,8 @@ type Config struct {
 	BuildDate string
 	// VerificationTrigger for manually triggering verifications (optional).
 	VerificationTrigger handlers.VerificationTrigger
+	// ReportScheduler for report generation and sending (optional).
+	ReportScheduler *reports.Scheduler
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -141,6 +144,12 @@ func NewRouter(
 
 	notificationsHandler := handlers.NewNotificationsHandler(database, logger)
 	notificationsHandler.RegisterRoutes(apiV1)
+
+	// Register reports handler if scheduler is available
+	if cfg.ReportScheduler != nil {
+		reportsHandler := handlers.NewReportsHandler(database, cfg.ReportScheduler, logger)
+		reportsHandler.RegisterRoutes(apiV1)
+	}
 
 	statsHandler := handlers.NewStatsHandler(database, logger)
 	statsHandler.RegisterRoutes(apiV1)
