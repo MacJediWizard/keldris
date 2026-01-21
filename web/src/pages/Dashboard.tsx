@@ -47,19 +47,19 @@ function StatCard({
 	};
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<p className="text-sm font-medium text-gray-600">{title}</p>
-					<p className="text-2xl font-bold text-gray-900 mt-1">
+					<p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
+					<p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
 						{isLoading ? (
-							<span className="inline-block w-8 h-7 bg-gray-200 rounded animate-pulse" />
+							<span className="inline-block w-8 h-7 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
 						) : (
 							value
 						)}
 					</p>
 					<div className="flex items-center gap-2 mt-1">
-						<p className="text-sm text-gray-500">{subtitle}</p>
+						<p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
 						{trend && trendValue && (
 							<span className={`text-xs font-medium ${trendColors[trend]}`}>
 								{trend === 'up' ? '+' : trend === 'down' ? '-' : ''}
@@ -68,7 +68,7 @@ function StatCard({
 						)}
 					</div>
 				</div>
-				<div className="p-3 bg-indigo-50 rounded-lg text-indigo-600">
+				<div className="p-3 bg-indigo-50 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-400">
 					{icon}
 				</div>
 			</div>
@@ -78,12 +78,12 @@ function StatCard({
 
 function LoadingRow() {
 	return (
-		<div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+		<div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
 			<div className="space-y-2">
-				<div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
-				<div className="h-3 w-24 bg-gray-100 rounded animate-pulse" />
+				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+				<div className="h-3 w-24 bg-gray-100 dark:bg-gray-600 rounded animate-pulse" />
 			</div>
-			<div className="h-6 w-20 bg-gray-200 rounded-full animate-pulse" />
+			<div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
 		</div>
 	);
 }
@@ -613,8 +613,8 @@ export function Dashboard() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-				<p className="text-gray-600 mt-1">Overview of your backup system</p>
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+				<p className="text-gray-600 dark:text-gray-400 mt-1">Overview of your backup system</p>
 			</div>
 
 			{/* Main Stats Row */}
@@ -802,14 +802,14 @@ export function Dashboard() {
 					data={durationTrend ?? []}
 					isLoading={durationTrendLoading}
 				/>
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-lg font-semibold text-gray-900">
+						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Recent Backups
 						</h2>
 						<Link
 							to="/backups"
-							className="text-sm text-indigo-600 hover:text-indigo-800"
+							className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
 						>
 							View All
 						</Link>
@@ -821,10 +821,10 @@ export function Dashboard() {
 							<LoadingRow />
 						</div>
 					) : recentBackups.length === 0 ? (
-						<div className="text-center py-8 text-gray-500">
+						<div className="text-center py-8 text-gray-500 dark:text-gray-400">
 							<svg
 								aria-hidden="true"
-								className="w-12 h-12 mx-auto mb-3 text-gray-300"
+								className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
 								fill="none"
 								stroke="currentColor"
 								viewBox="0 0 24 24"
@@ -846,13 +846,13 @@ export function Dashboard() {
 								return (
 									<div
 										key={backup.id}
-										className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
+										className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0"
 									>
 										<div>
-											<p className="text-sm font-medium text-gray-900">
+											<p className="text-sm font-medium text-gray-900 dark:text-white">
 												{truncateSnapshotId(backup.snapshot_id) || 'Running...'}
 											</p>
-											<p className="text-xs text-gray-500">
+											<p className="text-xs text-gray-500 dark:text-gray-400">
 												{formatDate(backup.started_at)}
 												{backup.size_bytes !== undefined &&
 													` - ${formatBytes(backup.size_bytes)}`}
@@ -875,34 +875,34 @@ export function Dashboard() {
 			</div>
 
 			{/* System Status */}
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
-				<h2 className="text-lg font-semibold text-gray-900 mb-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+				<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 					System Status
 				</h2>
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-					<div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-						<span className="text-gray-600">Server</span>
-						<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+					<div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+						<span className="text-gray-600 dark:text-gray-400">Server</span>
+						<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
 							<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
 							Online
 						</span>
 					</div>
-					<div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-						<span className="text-gray-600">Database</span>
-						<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+					<div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+						<span className="text-gray-600 dark:text-gray-400">Database</span>
+						<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
 							<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
 							Connected
 						</span>
 					</div>
-					<div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-						<span className="text-gray-600">Scheduler</span>
+					<div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+						<span className="text-gray-600 dark:text-gray-400">Scheduler</span>
 						{(dashboardStats?.schedule_enabled ?? 0) > 0 ? (
-							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
 								<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
 								Active ({dashboardStats?.schedule_enabled} jobs)
 							</span>
 						) : (
-							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
 								<span className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
 								Idle
 							</span>
