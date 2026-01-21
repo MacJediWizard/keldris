@@ -566,7 +566,7 @@ func (db *DB) DeleteRepository(ctx context.Context, id uuid.UUID) error {
 // GetSchedulesByAgentID returns all schedules for an agent.
 func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, policy_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
@@ -601,7 +601,7 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 // GetScheduleByID returns a schedule by ID.
 func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error) {
 	row := db.Pool.QueryRow(ctx, `
-		SELECT id, agent_id, policy_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
@@ -640,10 +640,10 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 	}
 
 	_, err = db.Pool.Exec(ctx, `
-		INSERT INTO schedules (id, agent_id, policy_id, name, cron_expression, paths,
+		INSERT INTO schedules (id, agent_id, agent_group_id, policy_id, name, cron_expression, paths,
 		                       excludes, retention_policy, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-	`, schedule.ID, schedule.AgentID, schedule.PolicyID, schedule.Name,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, schedule.ID, schedule.AgentID, schedule.AgentGroupID, schedule.PolicyID, schedule.Name,
 		schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
 		schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 	if err != nil {
@@ -707,14 +707,16 @@ func scanSchedule(rows interface {
 }) (*models.Schedule, error) {
 	var s models.Schedule
 	var pathsBytes, excludesBytes, retentionBytes []byte
+	var agentGroupID *uuid.UUID
 	err := rows.Scan(
-		&s.ID, &s.AgentID, &s.PolicyID, &s.Name, &s.CronExpression,
+		&s.ID, &s.AgentID, &agentGroupID, &s.PolicyID, &s.Name, &s.CronExpression,
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.Enabled,
 		&s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan schedule: %w", err)
 	}
+	s.AgentGroupID = agentGroupID
 
 	if err := s.SetPaths(pathsBytes); err != nil {
 		return nil, fmt.Errorf("parse paths: %w", err)
@@ -885,7 +887,7 @@ func (db *DB) DeletePolicy(ctx context.Context, id uuid.UUID) error {
 // GetSchedulesByPolicyID returns all schedules using a policy.
 func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, repository_id, policy_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE policy_id = $1
@@ -1689,7 +1691,7 @@ func (db *DB) GetAllAgents(ctx context.Context) ([]*models.Agent, error) {
 // GetAllSchedules returns all enabled schedules across all organizations (for monitoring).
 func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT s.id, s.agent_id, s.repository_id, s.name, s.cron_expression, s.paths, s.excludes,
+		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression, s.paths, s.excludes,
 		       s.retention_policy, s.enabled, s.created_at, s.updated_at
 		FROM schedules s
 		WHERE s.enabled = true
@@ -1715,7 +1717,7 @@ func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
 // GetEnabledSchedules returns all enabled schedules.
 func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, repository_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE enabled = true
@@ -5038,7 +5040,7 @@ func (db *DB) GetAlertsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID,
 // GetEnabledSchedulesByOrgID returns all enabled backup schedules for an org.
 func (db *DB) GetEnabledSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT s.id, s.agent_id, s.repository_id, s.name, s.cron_expression,
+		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression,
 		       s.paths, s.excludes, s.retention_policy, s.enabled,
 		       s.created_at, s.updated_at
 		FROM schedules s
@@ -5059,5 +5061,284 @@ func (db *DB) GetEnabledSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) (
 		}
 		schedules = append(schedules, s)
 	}
+	return schedules, nil
+}
+
+// Agent Group methods
+
+// GetAgentGroupsByOrgID returns all agent groups for an organization with agent counts.
+func (db *DB) GetAgentGroupsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.AgentGroup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT g.id, g.org_id, g.name, g.description, g.color, g.created_at, g.updated_at,
+		       COUNT(m.id) as agent_count
+		FROM agent_groups g
+		LEFT JOIN agent_group_members m ON g.id = m.group_id
+		WHERE g.org_id = $1
+		GROUP BY g.id
+		ORDER BY g.name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list agent groups: %w", err)
+	}
+	defer rows.Close()
+
+	var groups []*models.AgentGroup
+	for rows.Next() {
+		var g models.AgentGroup
+		var description, color *string
+		err := rows.Scan(
+			&g.ID, &g.OrgID, &g.Name, &description, &color,
+			&g.CreatedAt, &g.UpdatedAt, &g.AgentCount,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan agent group: %w", err)
+		}
+		if description != nil {
+			g.Description = *description
+		}
+		if color != nil {
+			g.Color = *color
+		}
+		groups = append(groups, &g)
+	}
+
+	return groups, nil
+}
+
+// GetAgentGroupByID returns an agent group by ID.
+func (db *DB) GetAgentGroupByID(ctx context.Context, id uuid.UUID) (*models.AgentGroup, error) {
+	var g models.AgentGroup
+	var description, color *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT g.id, g.org_id, g.name, g.description, g.color, g.created_at, g.updated_at,
+		       COUNT(m.id) as agent_count
+		FROM agent_groups g
+		LEFT JOIN agent_group_members m ON g.id = m.group_id
+		WHERE g.id = $1
+		GROUP BY g.id
+	`, id).Scan(
+		&g.ID, &g.OrgID, &g.Name, &description, &color,
+		&g.CreatedAt, &g.UpdatedAt, &g.AgentCount,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get agent group: %w", err)
+	}
+	if description != nil {
+		g.Description = *description
+	}
+	if color != nil {
+		g.Color = *color
+	}
+	return &g, nil
+}
+
+// CreateAgentGroup creates a new agent group.
+func (db *DB) CreateAgentGroup(ctx context.Context, group *models.AgentGroup) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO agent_groups (id, org_id, name, description, color, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, group.ID, group.OrgID, group.Name, group.Description, group.Color,
+		group.CreatedAt, group.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create agent group: %w", err)
+	}
+	return nil
+}
+
+// UpdateAgentGroup updates an existing agent group.
+func (db *DB) UpdateAgentGroup(ctx context.Context, group *models.AgentGroup) error {
+	group.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE agent_groups
+		SET name = $2, description = $3, color = $4, updated_at = $5
+		WHERE id = $1
+	`, group.ID, group.Name, group.Description, group.Color, group.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update agent group: %w", err)
+	}
+	return nil
+}
+
+// DeleteAgentGroup deletes an agent group.
+func (db *DB) DeleteAgentGroup(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM agent_groups WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete agent group: %w", err)
+	}
+	return nil
+}
+
+// GetAgentGroupMembers returns all agents in a group.
+func (db *DB) GetAgentGroupMembers(ctx context.Context, groupID uuid.UUID) ([]*models.Agent, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT a.id, a.org_id, a.hostname, a.api_key_hash, a.os_info, a.last_seen, a.status, a.created_at, a.updated_at
+		FROM agents a
+		INNER JOIN agent_group_members m ON a.id = m.agent_id
+		WHERE m.group_id = $1
+		ORDER BY a.hostname
+	`, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("list agent group members: %w", err)
+	}
+	defer rows.Close()
+
+	var agents []*models.Agent
+	for rows.Next() {
+		var a models.Agent
+		var osInfoBytes []byte
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+			&a.LastSeen, &a.Status, &a.CreatedAt, &a.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan agent: %w", err)
+		}
+		if osInfoBytes != nil {
+			if err := json.Unmarshal(osInfoBytes, &a.OSInfo); err != nil {
+				db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse OS info")
+			}
+		}
+		agents = append(agents, &a)
+	}
+
+	return agents, nil
+}
+
+// AddAgentToGroup adds an agent to a group.
+func (db *DB) AddAgentToGroup(ctx context.Context, groupID, agentID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO agent_group_members (id, group_id, agent_id, created_at)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (group_id, agent_id) DO NOTHING
+	`, uuid.New(), groupID, agentID, time.Now())
+	if err != nil {
+		return fmt.Errorf("add agent to group: %w", err)
+	}
+	return nil
+}
+
+// RemoveAgentFromGroup removes an agent from a group.
+func (db *DB) RemoveAgentFromGroup(ctx context.Context, groupID, agentID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM agent_group_members
+		WHERE group_id = $1 AND agent_id = $2
+	`, groupID, agentID)
+	if err != nil {
+		return fmt.Errorf("remove agent from group: %w", err)
+	}
+	return nil
+}
+
+// GetGroupsByAgentID returns all groups an agent belongs to.
+func (db *DB) GetGroupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.AgentGroup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT g.id, g.org_id, g.name, g.description, g.color, g.created_at, g.updated_at
+		FROM agent_groups g
+		INNER JOIN agent_group_members m ON g.id = m.group_id
+		WHERE m.agent_id = $1
+		ORDER BY g.name
+	`, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("list groups by agent: %w", err)
+	}
+	defer rows.Close()
+
+	var groups []*models.AgentGroup
+	for rows.Next() {
+		var g models.AgentGroup
+		var description, color *string
+		err := rows.Scan(
+			&g.ID, &g.OrgID, &g.Name, &description, &color,
+			&g.CreatedAt, &g.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan agent group: %w", err)
+		}
+		if description != nil {
+			g.Description = *description
+		}
+		if color != nil {
+			g.Color = *color
+		}
+		groups = append(groups, &g)
+	}
+
+	return groups, nil
+}
+
+// GetAgentsWithGroupsByOrgID returns all agents with their groups for an organization.
+func (db *DB) GetAgentsWithGroupsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.AgentWithGroups, error) {
+	// First get all agents
+	agents, err := db.GetAgentsByOrgID(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build result with groups
+	result := make([]*models.AgentWithGroups, len(agents))
+	for i, agent := range agents {
+		groupPtrs, err := db.GetGroupsByAgentID(ctx, agent.ID)
+		if err != nil {
+			return nil, fmt.Errorf("get groups for agent %s: %w", agent.ID, err)
+		}
+		// Convert []*AgentGroup to []AgentGroup
+		groups := make([]models.AgentGroup, len(groupPtrs))
+		for j, g := range groupPtrs {
+			groups[j] = *g
+		}
+		result[i] = &models.AgentWithGroups{
+			Agent:  *agent,
+			Groups: groups,
+		}
+	}
+
+	return result, nil
+}
+
+// GetAgentsByGroupID returns all agent IDs in a group.
+func (db *DB) GetAgentsByGroupID(ctx context.Context, groupID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT agent_id FROM agent_group_members WHERE group_id = $1
+	`, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("list agents by group: %w", err)
+	}
+	defer rows.Close()
+
+	var agentIDs []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan agent id: %w", err)
+		}
+		agentIDs = append(agentIDs, id)
+	}
+
+	return agentIDs, nil
+}
+
+// GetSchedulesByAgentGroupID returns all schedules for an agent group.
+func (db *DB) GetSchedulesByAgentGroupID(ctx context.Context, agentGroupID uuid.UUID) ([]*models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
+		       retention_policy, enabled, created_at, updated_at
+		FROM schedules
+		WHERE agent_group_id = $1
+		ORDER BY name
+	`, agentGroupID)
+	if err != nil {
+		return nil, fmt.Errorf("list schedules by group: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []*models.Schedule
+	for rows.Next() {
+		s, err := scanSchedule(rows)
+		if err != nil {
+			return nil, err
+		}
+		schedules = append(schedules, s)
+	}
+
 	return schedules, nil
 }

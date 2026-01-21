@@ -75,6 +75,46 @@ export interface FleetHealthSummary {
 	avg_disk_usage: number;
 }
 
+// Agent Group types
+export interface AgentGroup {
+	id: string;
+	org_id: string;
+	name: string;
+	description?: string;
+	color?: string;
+	agent_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface AgentWithGroups extends Agent {
+	groups?: AgentGroup[];
+}
+
+export interface CreateAgentGroupRequest {
+	name: string;
+	description?: string;
+	color?: string;
+}
+
+export interface UpdateAgentGroupRequest {
+	name?: string;
+	description?: string;
+	color?: string;
+}
+
+export interface AddAgentToGroupRequest {
+	agent_id: string;
+}
+
+export interface AgentGroupsResponse {
+	groups: AgentGroup[];
+}
+
+export interface AgentsWithGroupsResponse {
+	agents: AgentWithGroups[];
+}
+
 export interface CreateAgentRequest {
 	hostname: string;
 }
