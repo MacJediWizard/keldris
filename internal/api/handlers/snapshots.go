@@ -72,10 +72,20 @@ type SnapshotResponse struct {
 }
 
 // ListSnapshots returns all snapshots for the authenticated user's organization.
-// GET /api/v1/snapshots
-// Optional query params:
-//   - agent_id: filter by agent
-//   - repository_id: filter by repository
+//
+//	@Summary		List snapshots
+//	@Description	Returns all backup snapshots for the current organization
+//	@Tags			Snapshots
+//	@Accept			json
+//	@Produce		json
+//	@Param			agent_id		query		string	false	"Filter by agent ID"
+//	@Param			repository_id	query		string	false	"Filter by repository ID"
+//	@Success		200				{object}	map[string][]SnapshotResponse
+//	@Failure		400				{object}	map[string]string
+//	@Failure		401				{object}	map[string]string
+//	@Failure		500				{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/snapshots [get]
 func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -145,7 +155,8 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 					c.JSON(http.StatusBadRequest, gin.H{"error": "invalid repository_id"})
 					return
 				}
-				if schedule.RepositoryID != repoID {
+				// Check if the backup's repository matches the filter
+				if backup.RepositoryID == nil || *backup.RepositoryID != repoID {
 					continue
 				}
 			}
@@ -155,6 +166,11 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 				shortID = shortID[:8]
 			}
 
+			repoIDStr := ""
+			if backup.RepositoryID != nil {
+				repoIDStr = backup.RepositoryID.String()
+			}
+
 			snapshots = append(snapshots, SnapshotResponse{
 				ID:           backup.SnapshotID,
 				ShortID:      shortID,
@@ -162,7 +178,7 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 				Hostname:     agent.Hostname,
 				Paths:        schedule.Paths,
 				AgentID:      agent.ID.String(),
-				RepositoryID: schedule.RepositoryID.String(),
+				RepositoryID: repoIDStr,
 				BackupID:     backup.ID.String(),
 				SizeBytes:    backup.SizeBytes,
 			})
@@ -173,7 +189,20 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 }
 
 // GetSnapshot returns a specific snapshot by ID.
-// GET /api/v1/snapshots/:id
+//
+//	@Summary		Get snapshot
+//	@Description	Returns a specific snapshot by ID
+//	@Tags			Snapshots
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Snapshot ID"
+//	@Success		200	{object}	SnapshotResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/snapshots/{id} [get]
 func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -216,6 +245,11 @@ func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 		shortID = shortID[:8]
 	}
 
+	repoIDStr := ""
+	if backup.RepositoryID != nil {
+		repoIDStr = backup.RepositoryID.String()
+	}
+
 	c.JSON(http.StatusOK, SnapshotResponse{
 		ID:           backup.SnapshotID,
 		ShortID:      shortID,
@@ -223,7 +257,7 @@ func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 		Hostname:     agent.Hostname,
 		Paths:        schedule.Paths,
 		AgentID:      agent.ID.String(),
-		RepositoryID: schedule.RepositoryID.String(),
+		RepositoryID: repoIDStr,
 		BackupID:     backup.ID.String(),
 		SizeBytes:    backup.SizeBytes,
 	})
@@ -239,9 +273,21 @@ type SnapshotFileResponse struct {
 }
 
 // ListFiles returns files in a snapshot.
-// GET /api/v1/snapshots/:id/files
-// Optional query params:
-//   - path: filter to specific directory (default: root)
+//
+//	@Summary		List snapshot files
+//	@Description	Returns files in a snapshot, optionally filtered by path
+//	@Tags			Snapshots
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string	true	"Snapshot ID"
+//	@Param			path	query		string	false	"Filter to specific directory (default: root)"
+//	@Success		200		{object}	map[string]any
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/snapshots/{id}/files [get]
 func (h *SnapshotsHandler) ListFiles(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -342,7 +388,20 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 }
 
 // CreateRestore creates a new restore job.
-// POST /api/v1/restores
+//
+//	@Summary		Create restore
+//	@Description	Creates a new restore job to restore files from a snapshot
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		CreateRestoreRequest	true	"Restore details"
+//	@Success		201		{object}	RestoreResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores [post]
 func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -421,10 +480,20 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 }
 
 // ListRestores returns all restore jobs for the authenticated user's organization.
-// GET /api/v1/restores
-// Optional query params:
-//   - agent_id: filter by agent
-//   - status: filter by status
+//
+//	@Summary		List restores
+//	@Description	Returns all restore jobs for the current organization
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			agent_id	query		string	false	"Filter by agent ID"
+//	@Param			status		query		string	false	"Filter by status"
+//	@Success		200			{object}	map[string][]RestoreResponse
+//	@Failure		400			{object}	map[string]string
+//	@Failure		401			{object}	map[string]string
+//	@Failure		500			{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores [get]
 func (h *SnapshotsHandler) ListRestores(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -487,7 +556,19 @@ func (h *SnapshotsHandler) ListRestores(c *gin.Context) {
 }
 
 // GetRestore returns a specific restore job by ID.
-// GET /api/v1/restores/:id
+//
+//	@Summary		Get restore
+//	@Description	Returns a specific restore job by ID
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Restore ID"
+//	@Success		200	{object}	RestoreResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores/{id} [get]
 func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {

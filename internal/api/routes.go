@@ -7,8 +7,13 @@ import (
 	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "github.com/MacJediWizard/keldris/docs/api"
 )
 
 // Config holds configuration for the API router.
@@ -25,6 +30,8 @@ type Config struct {
 	BuildDate string
 	// VerificationTrigger for manually triggering verifications (optional).
 	VerificationTrigger handlers.VerificationTrigger
+	// ReportScheduler for report generation and sending (optional).
+	ReportScheduler *reports.Scheduler
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -77,8 +84,19 @@ func NewRouter(
 	}
 	r.Engine.Use(rateLimiter)
 
-	// Health check endpoint (no auth required)
-	r.Engine.GET("/health", r.healthCheck)
+	// Health check endpoints (no auth required)
+	healthHandler := handlers.NewHealthHandler(database, oidc, logger)
+	healthHandler.RegisterPublicRoutes(r.Engine)
+
+	// Prometheus metrics endpoint (no auth required)
+	metricsHandler := handlers.NewMetricsHandler(database, logger)
+	metricsHandler.RegisterPublicRoutes(r.Engine)
+
+	// Swagger API documentation (no auth required)
+	r.Engine.GET("/api/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler,
+		ginSwagger.URL("/api/docs/doc.json"),
+		ginSwagger.DefaultModelsExpandDepth(-1),
+	))
 
 	// Version endpoint (no auth required)
 	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)
@@ -115,6 +133,9 @@ func NewRouter(
 	schedulesHandler := handlers.NewSchedulesHandler(database, logger)
 	schedulesHandler.RegisterRoutes(apiV1)
 
+	policiesHandler := handlers.NewPoliciesHandler(database, logger)
+	policiesHandler.RegisterRoutes(apiV1)
+
 	backupsHandler := handlers.NewBackupsHandler(database, logger)
 	backupsHandler.RegisterRoutes(apiV1)
 
@@ -130,8 +151,23 @@ func NewRouter(
 	notificationsHandler := handlers.NewNotificationsHandler(database, logger)
 	notificationsHandler.RegisterRoutes(apiV1)
 
+	// Register reports handler if scheduler is available
+	if cfg.ReportScheduler != nil {
+		reportsHandler := handlers.NewReportsHandler(database, cfg.ReportScheduler, logger)
+		reportsHandler.RegisterRoutes(apiV1)
+	}
+
 	statsHandler := handlers.NewStatsHandler(database, logger)
 	statsHandler.RegisterRoutes(apiV1)
+
+	tagsHandler := handlers.NewTagsHandler(database, logger)
+	tagsHandler.RegisterRoutes(apiV1)
+
+	searchHandler := handlers.NewSearchHandler(database, logger)
+	searchHandler.RegisterRoutes(apiV1)
+
+	dashboardMetricsHandler := handlers.NewDashboardMetricsHandler(database, logger)
+	dashboardMetricsHandler.RegisterRoutes(apiV1)
 
 	// Register verification handler if trigger is available
 	if cfg.VerificationTrigger != nil {
@@ -139,14 +175,24 @@ func NewRouter(
 		verificationsHandler.RegisterRoutes(apiV1)
 	}
 
+	// DR Runbook routes
+	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
+	drRunbooksHandler.RegisterRoutes(apiV1)
+
+	// DR Test routes (runner is nil for now, will be set up when scheduler is integrated)
+	drTestsHandler := handlers.NewDRTestsHandler(database, nil, logger)
+	drTestsHandler.RegisterRoutes(apiV1)
+
+	// Agent API routes (API key auth required)
+	// These endpoints are for agents to communicate with the server
+	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
+	agentAPI := r.Engine.Group("/api/v1/agent")
+	agentAPI.Use(middleware.APIKeyMiddleware(apiKeyValidator, logger))
+
+	agentAPIHandler := handlers.NewAgentAPIHandler(database, logger)
+	agentAPIHandler.RegisterRoutes(agentAPI)
+
 	r.logger.Info().Msg("API router initialized")
 	return r, nil
 }
 
-// healthCheck returns basic health information.
-func (r *Router) healthCheck(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"status": "healthy",
-		"db":     r.db.Health(),
-	})
-}
