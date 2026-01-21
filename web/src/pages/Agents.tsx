@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AgentDownloads } from '../components/features/AgentDownloads';
+import { useAgentGroups, useAgentsWithGroups } from '../hooks/useAgentGroups';
 import {
-	useAgents,
 	useCreateAgent,
 	useDeleteAgent,
 	useRevokeAgentApiKey,
 	useRotateAgentApiKey,
 } from '../hooks/useAgents';
-import type { Agent, AgentStatus } from '../lib/types';
+import type { AgentGroup, AgentStatus, AgentWithGroups } from '../lib/types';
 import {
 	formatDate,
 	getAgentStatusColor,
@@ -29,6 +29,11 @@ function LoadingRow() {
 				<div className="h-6 w-16 bg-gray-200 rounded-full" />
 			</td>
 			<td className="px-6 py-4">
+				<div className="flex gap-1">
+					<div className="h-5 w-16 bg-gray-200 rounded-full" />
+				</div>
+			</td>
+			<td className="px-6 py-4">
 				<div className="h-4 w-24 bg-gray-200 rounded" />
 			</td>
 			<td className="px-6 py-4">
@@ -38,6 +43,30 @@ function LoadingRow() {
 				<div className="h-8 w-16 bg-gray-200 rounded inline-block" />
 			</td>
 		</tr>
+	);
+}
+
+interface GroupBadgeProps {
+	group: AgentGroup;
+}
+
+function GroupBadge({ group }: GroupBadgeProps) {
+	const bgColor = group.color ? `${group.color}20` : 'rgba(99, 102, 241, 0.1)';
+	const textColor = group.color || '#6366f1';
+
+	return (
+		<span
+			className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+			style={{ backgroundColor: bgColor, color: textColor }}
+		>
+			{group.color && (
+				<span
+					className="w-1.5 h-1.5 rounded-full"
+					style={{ backgroundColor: textColor }}
+				/>
+			)}
+			{group.name}
+		</span>
 	);
 }
 
@@ -223,7 +252,7 @@ function ApiKeyModal({ apiKey, onClose }: ApiKeyModalProps) {
 }
 
 interface AgentRowProps {
-	agent: Agent;
+	agent: AgentWithGroups;
 	onDelete: (id: string) => void;
 	onRotateKey: (id: string) => void;
 	onRevokeKey: (id: string) => void;
@@ -280,6 +309,17 @@ function AgentRow({
 					<span className={`w-1.5 h-1.5 ${healthColor.dot} rounded-full`} />
 					{getHealthStatusLabel(agent.health_status || 'unknown')}
 				</span>
+			</td>
+			<td className="px-6 py-4">
+				{agent.groups && agent.groups.length > 0 ? (
+					<div className="flex flex-wrap gap-1">
+						{agent.groups.map((group) => (
+							<GroupBadge key={group.id} group={group} />
+						))}
+					</div>
+				) : (
+					<span className="text-sm text-gray-400">-</span>
+				)}
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500">
 				{formatDate(agent.last_seen)}
@@ -364,10 +404,12 @@ function AgentRow({
 export function Agents() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [statusFilter, setStatusFilter] = useState<AgentStatus | 'all'>('all');
+	const [groupFilter, setGroupFilter] = useState<string>('all');
 	const [showRegisterModal, setShowRegisterModal] = useState(false);
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
 
-	const { data: agents, isLoading, isError } = useAgents();
+	const { data: agents, isLoading, isError } = useAgentsWithGroups();
+	const { data: groups } = useAgentGroups();
 	const deleteAgent = useDeleteAgent();
 	const rotateApiKey = useRotateAgentApiKey();
 	const revokeApiKey = useRevokeAgentApiKey();
@@ -378,7 +420,12 @@ export function Agents() {
 			.includes(searchQuery.toLowerCase());
 		const matchesStatus =
 			statusFilter === 'all' || agent.status === statusFilter;
-		return matchesSearch && matchesStatus;
+		const matchesGroup =
+			groupFilter === 'all' ||
+			(groupFilter === 'none'
+				? !agent.groups || agent.groups.length === 0
+				: agent.groups?.some((g) => g.id === groupFilter));
+		return matchesSearch && matchesStatus && matchesGroup;
 	});
 
 	const handleRegisterSuccess = (apiKey: string) => {
@@ -472,6 +519,19 @@ export function Agents() {
 							<option value="pending">Pending</option>
 							<option value="disabled">Disabled</option>
 						</select>
+						<select
+							value={groupFilter}
+							onChange={(e) => setGroupFilter(e.target.value)}
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						>
+							<option value="all">All Groups</option>
+							<option value="none">No Group</option>
+							{groups?.map((group) => (
+								<option key={group.id} value={group.id}>
+									{group.name}
+								</option>
+							))}
+						</select>
 					</div>
 				</div>
 
@@ -492,6 +552,9 @@ export function Agents() {
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Health
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Groups
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Last Seen
@@ -522,6 +585,9 @@ export function Agents() {
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Health
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Groups
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Last Seen

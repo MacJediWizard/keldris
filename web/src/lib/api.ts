@@ -1,10 +1,15 @@
 import type {
+	AddAgentToGroupRequest,
 	Agent,
 	AgentBackupsResponse,
+	AgentGroup,
+	AgentGroupsResponse,
 	AgentHealthHistoryResponse,
 	AgentSchedulesResponse,
 	AgentStatsResponse,
+	AgentWithGroups,
 	AgentsResponse,
+	AgentsWithGroupsResponse,
 	Alert,
 	AlertCountResponse,
 	AlertRule,
@@ -22,6 +27,7 @@ import type {
 	BackupSuccessRate,
 	BackupSuccessRatesResponse,
 	BackupsResponse,
+	CreateAgentGroupRequest,
 	CreateAgentRequest,
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
@@ -109,6 +115,7 @@ import type {
 	TestConnectionRequest,
 	TestRepositoryResponse,
 	TriggerVerificationRequest,
+	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
 	UpdateDRRunbookRequest,
 	UpdateMemberRequest,
@@ -248,6 +255,68 @@ export const agentsApi = {
 
 	getFleetHealth: async (): Promise<FleetHealthSummary> =>
 		fetchApi<FleetHealthSummary>('/agents/fleet-health'),
+
+	listWithGroups: async (): Promise<AgentWithGroups[]> => {
+		const response = await fetchApi<AgentsWithGroupsResponse>(
+			'/agents/with-groups',
+		);
+		return response.agents ?? [];
+	},
+};
+
+// Agent Groups API
+export const agentGroupsApi = {
+	list: async (): Promise<AgentGroup[]> => {
+		const response = await fetchApi<AgentGroupsResponse>('/agent-groups');
+		return response.groups ?? [];
+	},
+
+	get: async (id: string): Promise<AgentGroup> =>
+		fetchApi<AgentGroup>(`/agent-groups/${id}`),
+
+	create: async (data: CreateAgentGroupRequest): Promise<AgentGroup> =>
+		fetchApi<AgentGroup>('/agent-groups', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateAgentGroupRequest,
+	): Promise<AgentGroup> =>
+		fetchApi<AgentGroup>(`/agent-groups/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agent-groups/${id}`, {
+			method: 'DELETE',
+		}),
+
+	listMembers: async (groupId: string): Promise<Agent[]> => {
+		const response = await fetchApi<AgentsResponse>(
+			`/agent-groups/${groupId}/agents`,
+		);
+		return response.agents ?? [];
+	},
+
+	addAgent: async (
+		groupId: string,
+		data: AddAgentToGroupRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agent-groups/${groupId}/agents`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	removeAgent: async (
+		groupId: string,
+		agentId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agent-groups/${groupId}/agents/${agentId}`, {
+			method: 'DELETE',
+		}),
 };
 
 // Repositories API
