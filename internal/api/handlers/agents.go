@@ -29,6 +29,8 @@ type AgentStore interface {
 	GetAgentStats(ctx context.Context, agentID uuid.UUID) (*models.AgentStats, error)
 	GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Backup, error)
 	GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error)
+	GetAgentHealthHistory(ctx context.Context, agentID uuid.UUID, limit int) ([]*models.AgentHealthHistory, error)
+	GetFleetHealthSummary(ctx context.Context, orgID uuid.UUID) (*models.FleetHealthSummary, error)
 }
 
 // AgentsHandler handles agent-related HTTP endpoints.
@@ -51,6 +53,7 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		agents.GET("", h.List)
 		agents.POST("", h.Create)
+		agents.GET("/fleet-health", h.FleetHealth)
 		agents.GET("/:id", h.Get)
 		agents.DELETE("/:id", h.Delete)
 		agents.POST("/:id/heartbeat", h.Heartbeat)
@@ -59,6 +62,7 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		agents.GET("/:id/stats", h.Stats)
 		agents.GET("/:id/backups", h.Backups)
 		agents.GET("/:id/schedules", h.Schedules)
+		agents.GET("/:id/health-history", h.HealthHistory)
 	}
 }
 
@@ -638,4 +642,124 @@ func (h *AgentsHandler) Schedules(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"schedules": schedules})
+}
+
+// HealthHistory returns health history for a specific agent.
+//
+//	@Summary		Get agent health history
+//	@Description	Returns health metrics history for an agent
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string	true	"Agent ID"
+//	@Param			limit	query		int		false	"Number of records to return (default 100)"
+//	@Success		200		{object}	map[string][]models.AgentHealthHistory
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id}/health-history [get]
+func (h *AgentsHandler) HealthHistory(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Parse limit parameter
+	limit := 100
+	if limitParam := c.Query("limit"); limitParam != "" {
+		if l, err := parseIntParam(limitParam); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	history, err := h.store.GetAgentHealthHistory(c.Request.Context(), id, limit)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to get health history")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get health history"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"history": history})
+}
+
+// FleetHealth returns aggregated health statistics for all agents.
+//
+//	@Summary		Get fleet health summary
+//	@Description	Returns aggregated health statistics for all agents in the organization
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.FleetHealthSummary
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/fleet-health [get]
+func (h *AgentsHandler) FleetHealth(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	summary, err := h.store.GetFleetHealthSummary(c.Request.Context(), user.CurrentOrgID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get fleet health")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get fleet health"})
+		return
+	}
+
+	c.JSON(http.StatusOK, summary)
+}
+
+// parseIntParam parses a string to int.
+func parseIntParam(s string) (int, error) {
+	var i int
+	_, err := getParamInt(s, &i)
+	return i, err
+}
+
+// getParamInt is a helper to parse int from string.
+func getParamInt(s string, result *int) (bool, error) {
+	if s == "" {
+		return false, nil
+	}
+	n := 0
+	for _, ch := range s {
+		if ch < '0' || ch > '9' {
+			return false, errors.New("invalid integer")
+		}
+		n = n*10 + int(ch-'0')
+	}
+	*result = n
+	return true, nil
 }
