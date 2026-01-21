@@ -1156,3 +1156,118 @@ export interface DailyBackupStats {
 export interface DailyBackupStatsResponse {
 	stats: DailyBackupStats[];
 }
+// Report types
+export type ReportFrequency = 'daily' | 'weekly' | 'monthly';
+export type ReportStatus = 'sent' | 'failed' | 'preview';
+
+export interface ReportSchedule {
+	id: string;
+	org_id: string;
+	name: string;
+	frequency: ReportFrequency;
+	recipients: string[];
+	channel_id?: string;
+	timezone: string;
+	enabled: boolean;
+	last_sent_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface ReportBackupSummary {
+	total_backups: number;
+	successful_backups: number;
+	failed_backups: number;
+	success_rate: number;
+	total_data_backed: number;
+	schedules_active: number;
+}
+
+export interface ReportStorageSummary {
+	total_raw_size: number;
+	total_restore_size: number;
+	space_saved: number;
+	space_saved_pct: number;
+	repository_count: number;
+	total_snapshots: number;
+}
+
+export interface ReportAgentSummary {
+	total_agents: number;
+	active_agents: number;
+	offline_agents: number;
+	pending_agents: number;
+}
+
+export interface ReportAlertSummary {
+	total_alerts: number;
+	critical_alerts: number;
+	warning_alerts: number;
+	acknowledged_alerts: number;
+	resolved_alerts: number;
+}
+
+export interface ReportIssue {
+	type: string;
+	severity: string;
+	title: string;
+	description: string;
+	occurred_at: string;
+}
+
+export interface ReportData {
+	backup_summary: ReportBackupSummary;
+	storage_summary: ReportStorageSummary;
+	agent_summary: ReportAgentSummary;
+	alert_summary: ReportAlertSummary;
+	top_issues?: ReportIssue[];
+}
+
+export interface ReportHistory {
+	id: string;
+	org_id: string;
+	schedule_id?: string;
+	report_type: string;
+	period_start: string;
+	period_end: string;
+	recipients: string[];
+	status: ReportStatus;
+	error_message?: string;
+	report_data?: ReportData;
+	sent_at?: string;
+	created_at: string;
+}
+
+export interface CreateReportScheduleRequest {
+	name: string;
+	frequency: ReportFrequency;
+	recipients: string[];
+	channel_id?: string;
+	timezone?: string;
+	enabled?: boolean;
+}
+
+export interface UpdateReportScheduleRequest {
+	name?: string;
+	frequency?: ReportFrequency;
+	recipients?: string[];
+	channel_id?: string;
+	timezone?: string;
+	enabled?: boolean;
+}
+
+export interface ReportSchedulesResponse {
+	schedules: ReportSchedule[];
+}
+
+export interface ReportHistoryResponse {
+	history: ReportHistory[];
+}
+
+export interface ReportPreviewResponse {
+	data: ReportData;
+	period: {
+		start: string;
+		end: string;
+	};
+}
