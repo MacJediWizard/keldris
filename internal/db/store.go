@@ -122,7 +122,7 @@ func (db *DB) CreateUser(ctx context.Context, user *models.User) error {
 // GetAgentsByOrgID returns all agents for an organization.
 func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
+		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at, created_at, updated_at
 		FROM agents
 		WHERE org_id = $1
@@ -137,11 +137,12 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 	for rows.Next() {
 		var a models.Agent
 		var osInfoBytes []byte
+		var networkMountsBytes []byte
 		var healthMetricsBytes []byte
 		var statusStr string
 		var healthStatusStr *string
 		err := rows.Scan(
-			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 			&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 			&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 		)
@@ -157,6 +158,9 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		if err := a.SetOSInfo(osInfoBytes); err != nil {
 			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse OS info")
 		}
+		if err := a.SetNetworkMounts(networkMountsBytes); err != nil {
+			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse network mounts")
+		}
 		if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
 			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 		}
@@ -170,16 +174,17 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error) {
 	var a models.Agent
 	var osInfoBytes []byte
+	var networkMountsBytes []byte
 	var healthMetricsBytes []byte
 	var statusStr string
 	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
+		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at, created_at, updated_at
 		FROM agents
 		WHERE id = $1
 	`, id).Scan(
-		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 	)
@@ -195,6 +200,9 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 	if err := a.SetOSInfo(osInfoBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse OS info")
 	}
+	if err := a.SetNetworkMounts(networkMountsBytes); err != nil {
+		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse network mounts")
+	}
 	if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 	}
@@ -205,16 +213,17 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Agent, error) {
 	var a models.Agent
 	var osInfoBytes []byte
+	var networkMountsBytes []byte
 	var healthMetricsBytes []byte
 	var statusStr string
 	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
+		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at, created_at, updated_at
 		FROM agents
 		WHERE api_key_hash = $1
 	`, hash).Scan(
-		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 	)
@@ -230,6 +239,9 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 	if err := a.SetOSInfo(osInfoBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse OS info")
 	}
+	if err := a.SetNetworkMounts(networkMountsBytes); err != nil {
+		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse network mounts")
+	}
 	if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 	}
@@ -242,11 +254,15 @@ func (db *DB) CreateAgent(ctx context.Context, agent *models.Agent) error {
 	if err != nil {
 		return fmt.Errorf("marshal OS info: %w", err)
 	}
+	networkMountsBytes, err := agent.NetworkMountsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal network mounts: %w", err)
+	}
 
 	_, err = db.Pool.Exec(ctx, `
-		INSERT INTO agents (id, org_id, hostname, api_key_hash, os_info, last_seen, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, agent.ID, agent.OrgID, agent.Hostname, agent.APIKeyHash, osInfoBytes,
+		INSERT INTO agents (id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, agent.ID, agent.OrgID, agent.Hostname, agent.APIKeyHash, osInfoBytes, networkMountsBytes,
 		agent.LastSeen, string(agent.Status), agent.CreatedAt, agent.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create agent: %w", err)
@@ -260,6 +276,10 @@ func (db *DB) UpdateAgent(ctx context.Context, agent *models.Agent) error {
 	if err != nil {
 		return fmt.Errorf("marshal OS info: %w", err)
 	}
+	networkMountsBytes, err := agent.NetworkMountsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal network mounts: %w", err)
+	}
 
 	healthMetricsBytes, err := agent.HealthMetricsJSON()
 	if err != nil {
@@ -269,10 +289,10 @@ func (db *DB) UpdateAgent(ctx context.Context, agent *models.Agent) error {
 	agent.UpdatedAt = time.Now()
 	_, err = db.Pool.Exec(ctx, `
 		UPDATE agents
-		SET hostname = $2, os_info = $3, last_seen = $4, status = $5, updated_at = $6,
-		    health_status = $7, health_metrics = $8, health_checked_at = $9
+		SET hostname = $2, os_info = $3, network_mounts = $4, last_seen = $5, status = $6, updated_at = $7,
+		    health_status = $8, health_metrics = $9, health_checked_at = $10
 		WHERE id = $1
-	`, agent.ID, agent.Hostname, osInfoBytes, agent.LastSeen, string(agent.Status), agent.UpdatedAt,
+	`, agent.ID, agent.Hostname, osInfoBytes, networkMountsBytes, agent.LastSeen, string(agent.Status), agent.UpdatedAt,
 		string(agent.HealthStatus), healthMetricsBytes, agent.HealthCheckedAt)
 	if err != nil {
 		return fmt.Errorf("update agent: %w", err)
@@ -568,7 +588,7 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, enabled, created_at, updated_at
+		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
 		ORDER BY name
@@ -604,7 +624,7 @@ func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedu
 	row := db.Pool.QueryRow(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, enabled, created_at, updated_at
+		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`, id)
@@ -657,16 +677,22 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 		}
 	}
 
+	// Default mount behavior to fail if not set
+	mountBehavior := string(schedule.OnMountUnavailable)
+	if mountBehavior == "" {
+		mountBehavior = string(models.MountBehaviorFail)
+	}
+
 	_, err = db.Pool.Exec(ctx, `
 		INSERT INTO schedules (id, agent_id, agent_group_id, policy_id, name, cron_expression, paths,
 		                       excludes, retention_policy, bandwidth_limit_kbps,
 		                       backup_window_start, backup_window_end, excluded_hours,
-		                       compression_level, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+		                       compression_level, on_mount_unavailable, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 	`, schedule.ID, schedule.AgentID, schedule.AgentGroupID, schedule.PolicyID, schedule.Name,
 		schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
 		schedule.BandwidthLimitKB, windowStart, windowEnd, excludedHoursBytes,
-		schedule.CompressionLevel, schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
+		schedule.CompressionLevel, mountBehavior, schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create schedule: %w", err)
 	}
@@ -715,18 +741,23 @@ func (db *DB) UpdateSchedule(ctx context.Context, schedule *models.Schedule) err
 		}
 	}
 
+	// Default mount behavior to fail if not set
+	mountBehavior := string(schedule.OnMountUnavailable)
+	if mountBehavior == "" {
+		mountBehavior = string(models.MountBehaviorFail)
+	}
+
 	schedule.UpdatedAt = time.Now()
 	_, err = db.Pool.Exec(ctx, `
 		UPDATE schedules
 		SET policy_id = $2, name = $3, cron_expression = $4, paths = $5, excludes = $6,
 		    retention_policy = $7, bandwidth_limit_kbps = $8, backup_window_start = $9,
 		    backup_window_end = $10, excluded_hours = $11, compression_level = $12,
-		    enabled = $13, updated_at = $14
+		    on_mount_unavailable = $13, enabled = $14, updated_at = $15
 		WHERE id = $1
 	`, schedule.ID, schedule.PolicyID, schedule.Name, schedule.CronExpression, pathsBytes,
-		excludesBytes, retentionBytes, schedule.BandwidthLimitKB, windowStart,
-		windowEnd, excludedHoursBytes, schedule.CompressionLevel,
-		schedule.Enabled, schedule.UpdatedAt)
+		excludesBytes, retentionBytes, schedule.BandwidthLimitKB, windowStart, windowEnd,
+		excludedHoursBytes, schedule.CompressionLevel, mountBehavior, schedule.Enabled, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update schedule: %w", err)
 	}
@@ -885,11 +916,11 @@ func scanSchedule(rows interface {
 	var s models.Schedule
 	var pathsBytes, excludesBytes, retentionBytes, excludedHoursBytes []byte
 	var agentGroupID *uuid.UUID
-	var windowStart, windowEnd, compressionLevel *string
+	var windowStart, windowEnd, compressionLevel, mountBehavior *string
 	err := rows.Scan(
 		&s.ID, &s.AgentID, &agentGroupID, &s.PolicyID, &s.Name, &s.CronExpression,
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.BandwidthLimitKB,
-		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel,
+		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel, &mountBehavior,
 		&s.Enabled, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
@@ -911,6 +942,13 @@ func scanSchedule(rows interface {
 	}
 	s.SetBackupWindow(windowStart, windowEnd)
 	s.CompressionLevel = compressionLevel
+
+	// Set mount behavior with default
+	if mountBehavior != nil && *mountBehavior != "" {
+		s.OnMountUnavailable = models.MountBehavior(*mountBehavior)
+	} else {
+		s.OnMountUnavailable = models.MountBehaviorFail
+	}
 
 	return &s, nil
 }
@@ -1913,7 +1951,7 @@ func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, enabled, created_at, updated_at
+		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE enabled = true
 		ORDER BY name
