@@ -28,37 +28,39 @@ type BackupWindow struct {
 // or to an agent group (via AgentGroupID). When AgentGroupID is set,
 // the schedule applies to all agents in that group.
 type Schedule struct {
-	ID               uuid.UUID            `json:"id"`
-	AgentID          uuid.UUID            `json:"agent_id"`
-	AgentGroupID     *uuid.UUID           `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
-	PolicyID         *uuid.UUID           `json:"policy_id,omitempty"`      // Policy this schedule was created from
-	Name             string               `json:"name"`
-	CronExpression   string               `json:"cron_expression"`
-	Paths            []string             `json:"paths"`
-	Excludes         []string             `json:"excludes,omitempty"`
-	RetentionPolicy  *RetentionPolicy     `json:"retention_policy,omitempty"`
-	BandwidthLimitKB *int                 `json:"bandwidth_limit_kb,omitempty"` // Upload limit in KB/s
-	BackupWindow     *BackupWindow        `json:"backup_window,omitempty"`      // Allowed backup time window
-	ExcludedHours    []int                `json:"excluded_hours,omitempty"`     // Hours (0-23) when backups should not run
-	CompressionLevel *string              `json:"compression_level,omitempty"`  // Compression level: off, auto, max
-	Enabled          bool                 `json:"enabled"`
-	Repositories     []ScheduleRepository `json:"repositories,omitempty"`
-	CreatedAt        time.Time            `json:"created_at"`
-	UpdatedAt        time.Time            `json:"updated_at"`
+	ID                 uuid.UUID            `json:"id"`
+	AgentID            uuid.UUID            `json:"agent_id"`
+	AgentGroupID       *uuid.UUID           `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
+	PolicyID           *uuid.UUID           `json:"policy_id,omitempty"`      // Policy this schedule was created from
+	Name               string               `json:"name"`
+	CronExpression     string               `json:"cron_expression"`
+	Paths              []string             `json:"paths"`
+	Excludes           []string             `json:"excludes,omitempty"`
+	RetentionPolicy    *RetentionPolicy     `json:"retention_policy,omitempty"`
+	BandwidthLimitKB   *int                 `json:"bandwidth_limit_kb,omitempty"`   // Upload limit in KB/s
+	BackupWindow       *BackupWindow        `json:"backup_window,omitempty"`        // Allowed backup time window
+	ExcludedHours      []int                `json:"excluded_hours,omitempty"`       // Hours (0-23) when backups should not run
+	CompressionLevel   *string              `json:"compression_level,omitempty"`    // Compression level: off, auto, max
+	OnMountUnavailable MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
+	Enabled            bool                 `json:"enabled"`
+	Repositories       []ScheduleRepository `json:"repositories,omitempty"`
+	CreatedAt          time.Time            `json:"created_at"`
+	UpdatedAt          time.Time            `json:"updated_at"`
 }
 
 // NewSchedule creates a new Schedule with the given details.
 func NewSchedule(agentID uuid.UUID, name, cronExpr string, paths []string) *Schedule {
 	now := time.Now()
 	return &Schedule{
-		ID:             uuid.New(),
-		AgentID:        agentID,
-		Name:           name,
-		CronExpression: cronExpr,
-		Paths:          paths,
-		Enabled:        true,
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		ID:                 uuid.New(),
+		AgentID:            agentID,
+		Name:               name,
+		CronExpression:     cronExpr,
+		Paths:              paths,
+		OnMountUnavailable: MountBehaviorFail,
+		Enabled:            true,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 }
 

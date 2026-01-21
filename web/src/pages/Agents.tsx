@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AgentDownloads } from '../components/features/AgentDownloads';
+import { NetworkMountStatus } from '../components/features/NetworkMountStatus';
 import { useAgentGroups, useAgentsWithGroups } from '../hooks/useAgentGroups';
 import {
 	useCreateAgent,
@@ -286,6 +287,11 @@ function AgentRow({
 				{agent.os_info && (
 					<div className="text-sm text-gray-500">
 						{agent.os_info.os} {agent.os_info.arch}
+					</div>
+				)}
+				{agent.network_mounts && agent.network_mounts.length > 0 && (
+					<div className="mt-1">
+						<NetworkMountStatus mounts={agent.network_mounts} compact />
 					</div>
 				)}
 			</td>
