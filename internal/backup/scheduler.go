@@ -281,13 +281,19 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		fmt.Sprintf("agent:%s", schedule.AgentID.String()),
 	}
 
-	// Build backup options with bandwidth limit
+	// Build backup options with bandwidth limit and compression level
 	var opts *BackupOptions
-	if schedule.BandwidthLimitKB != nil {
+	if schedule.BandwidthLimitKB != nil || schedule.CompressionLevel != nil {
 		opts = &BackupOptions{
 			BandwidthLimitKB: schedule.BandwidthLimitKB,
+			CompressionLevel: schedule.CompressionLevel,
 		}
-		logger.Debug().Int("bandwidth_limit_kb", *schedule.BandwidthLimitKB).Msg("bandwidth limit applied")
+		if schedule.BandwidthLimitKB != nil {
+			logger.Debug().Int("bandwidth_limit_kb", *schedule.BandwidthLimitKB).Msg("bandwidth limit applied")
+		}
+		if schedule.CompressionLevel != nil {
+			logger.Debug().Str("compression_level", *schedule.CompressionLevel).Msg("compression level applied")
+		}
 	}
 
 	// Run the backup with options

@@ -33,9 +33,10 @@ type Schedule struct {
 	Paths            []string         `json:"paths"`
 	Excludes         []string         `json:"excludes,omitempty"`
 	RetentionPolicy  *RetentionPolicy `json:"retention_policy,omitempty"`
-	BandwidthLimitKB *int             `json:"bandwidth_limit_kb,omitempty"` // Upload limit in KB/s
-	BackupWindow     *BackupWindow    `json:"backup_window,omitempty"`      // Allowed backup time window
-	ExcludedHours    []int            `json:"excluded_hours,omitempty"`     // Hours (0-23) when backups should not run
+	BandwidthLimitKB *int             `json:"bandwidth_limit_kb,omitempty"`  // Upload limit in KB/s
+	BackupWindow     *BackupWindow    `json:"backup_window,omitempty"`       // Allowed backup time window
+	ExcludedHours    []int            `json:"excluded_hours,omitempty"`      // Hours (0-23) when backups should not run
+	CompressionLevel *string          `json:"compression_level,omitempty"`   // Compression level: off, auto, max
 	Enabled          bool             `json:"enabled"`
 	CreatedAt        time.Time        `json:"created_at"`
 	UpdatedAt        time.Time        `json:"updated_at"`
