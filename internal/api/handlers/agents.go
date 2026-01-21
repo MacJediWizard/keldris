@@ -26,6 +26,11 @@ type AgentStore interface {
 	GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Agent, error)
 	UpdateAgentAPIKeyHash(ctx context.Context, id uuid.UUID, apiKeyHash string) error
 	RevokeAgentAPIKey(ctx context.Context, id uuid.UUID) error
+	GetAgentStats(ctx context.Context, agentID uuid.UUID) (*models.AgentStats, error)
+	GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Backup, error)
+	GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error)
+	GetAgentHealthHistory(ctx context.Context, agentID uuid.UUID, limit int) ([]*models.AgentHealthHistory, error)
+	GetFleetHealthSummary(ctx context.Context, orgID uuid.UUID) (*models.FleetHealthSummary, error)
 }
 
 // AgentsHandler handles agent-related HTTP endpoints.
@@ -48,28 +53,44 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		agents.GET("", h.List)
 		agents.POST("", h.Create)
+		agents.GET("/fleet-health", h.FleetHealth)
 		agents.GET("/:id", h.Get)
 		agents.DELETE("/:id", h.Delete)
 		agents.POST("/:id/heartbeat", h.Heartbeat)
 		agents.POST("/:id/apikey/rotate", h.RotateAPIKey)
 		agents.DELETE("/:id/apikey", h.RevokeAPIKey)
+		agents.GET("/:id/stats", h.Stats)
+		agents.GET("/:id/backups", h.Backups)
+		agents.GET("/:id/schedules", h.Schedules)
+		agents.GET("/:id/health-history", h.HealthHistory)
 	}
 }
 
 // CreateAgentRequest is the request body for creating an agent.
 type CreateAgentRequest struct {
-	Hostname string `json:"hostname" binding:"required,min=1,max=255"`
+	Hostname string `json:"hostname" binding:"required,min=1,max=255" example:"backup-server-01"`
 }
 
 // CreateAgentResponse is the response for agent creation.
 type CreateAgentResponse struct {
-	ID       uuid.UUID `json:"id"`
-	Hostname string    `json:"hostname"`
-	APIKey   string    `json:"api_key"` // Only returned once at creation
+	ID       uuid.UUID `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Hostname string    `json:"hostname" example:"backup-server-01"`
+	APIKey   string    `json:"api_key" example:"kld_abc123..."` // Only returned once at creation
 }
 
 // List returns all agents for the authenticated user's organization.
-// GET /api/v1/agents
+//
+//	@Summary		List agents
+//	@Description	Returns all agents registered in the current organization
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string][]models.Agent
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents [get]
 func (h *AgentsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -93,7 +114,19 @@ func (h *AgentsHandler) List(c *gin.Context) {
 }
 
 // Get returns a specific agent by ID.
-// GET /api/v1/agents/:id
+//
+//	@Summary		Get agent
+//	@Description	Returns a specific agent by ID
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Agent ID"
+//	@Success		200	{object}	models.Agent
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id} [get]
 func (h *AgentsHandler) Get(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -129,7 +162,19 @@ func (h *AgentsHandler) Get(c *gin.Context) {
 }
 
 // Create creates a new agent and returns an API key.
-// POST /api/v1/agents
+//
+//	@Summary		Create agent
+//	@Description	Registers a new backup agent and returns a one-time API key. Save this key securely as it cannot be retrieved again.
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		CreateAgentRequest	true	"Agent details"
+//	@Success		201		{object}	CreateAgentResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents [post]
 func (h *AgentsHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -180,7 +225,20 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 }
 
 // Delete removes an agent.
-// DELETE /api/v1/agents/:id
+//
+//	@Summary		Delete agent
+//	@Description	Removes an agent from the organization
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Agent ID"
+//	@Success		200	{object}	map[string]string
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id} [delete]
 func (h *AgentsHandler) Delete(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -228,7 +286,22 @@ type HeartbeatRequest struct {
 }
 
 // Heartbeat updates an agent's last seen timestamp.
-// POST /api/v1/agents/:id/heartbeat
+//
+//	@Summary		Agent heartbeat
+//	@Description	Updates an agent's last seen timestamp and optionally updates OS information
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string				true	"Agent ID"
+//	@Param			request	body		HeartbeatRequest	false	"Heartbeat data"
+//	@Success		200		{object}	models.Agent
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Security		BearerAuth
+//	@Router			/agents/{id}/heartbeat [post]
 func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 	// This endpoint can be called with either session auth or API key auth
 	// For now, we support session auth. API key auth will be added later.
@@ -284,13 +357,26 @@ func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 
 // RotateAPIKeyResponse is the response for API key rotation.
 type RotateAPIKeyResponse struct {
-	ID       uuid.UUID `json:"id"`
-	Hostname string    `json:"hostname"`
-	APIKey   string    `json:"api_key"` // Only returned once at rotation
+	ID       uuid.UUID `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Hostname string    `json:"hostname" example:"backup-server-01"`
+	APIKey   string    `json:"api_key" example:"kld_abc123..."` // Only returned once at rotation
 }
 
 // RotateAPIKey generates a new API key for an agent, invalidating the old one.
-// POST /api/v1/agents/:id/apikey/rotate
+//
+//	@Summary		Rotate API key
+//	@Description	Generates a new API key for an agent, invalidating the previous key. Save the new key securely.
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Agent ID"
+//	@Success		200	{object}	RotateAPIKeyResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id}/apikey/rotate [post]
 func (h *AgentsHandler) RotateAPIKey(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -353,7 +439,20 @@ func (h *AgentsHandler) RotateAPIKey(c *gin.Context) {
 }
 
 // RevokeAPIKey revokes an agent's API key, disabling its ability to authenticate.
-// DELETE /api/v1/agents/:id/apikey
+//
+//	@Summary		Revoke API key
+//	@Description	Revokes an agent's API key, preventing it from authenticating until a new key is issued
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Agent ID"
+//	@Success		200	{object}	map[string]string
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id}/apikey [delete]
 func (h *AgentsHandler) RevokeAPIKey(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -414,4 +513,253 @@ func generateAPIKey() (string, error) {
 func hashAPIKey(key string) string {
 	hash := sha256.Sum256([]byte(key))
 	return hex.EncodeToString(hash[:])
+}
+
+// Stats returns statistics for a specific agent.
+// GET /api/v1/agents/:id/stats
+func (h *AgentsHandler) Stats(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	stats, err := h.store.GetAgentStats(c.Request.Context(), id)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to get agent stats")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get agent stats"})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.AgentStatsResponse{
+		Agent: agent,
+		Stats: stats,
+	})
+}
+
+// Backups returns backup history for a specific agent.
+// GET /api/v1/agents/:id/backups
+func (h *AgentsHandler) Backups(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	backups, err := h.store.GetBackupsByAgentID(c.Request.Context(), id)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to get agent backups")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get agent backups"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"backups": backups})
+}
+
+// Schedules returns schedules for a specific agent.
+// GET /api/v1/agents/:id/schedules
+func (h *AgentsHandler) Schedules(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	schedules, err := h.store.GetSchedulesByAgentID(c.Request.Context(), id)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to get agent schedules")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get agent schedules"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"schedules": schedules})
+}
+
+// HealthHistory returns health history for a specific agent.
+//
+//	@Summary		Get agent health history
+//	@Description	Returns health metrics history for an agent
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string	true	"Agent ID"
+//	@Param			limit	query		int		false	"Number of records to return (default 100)"
+//	@Success		200		{object}	map[string][]models.AgentHealthHistory
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id}/health-history [get]
+func (h *AgentsHandler) HealthHistory(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Parse limit parameter
+	limit := 100
+	if limitParam := c.Query("limit"); limitParam != "" {
+		if l, err := parseIntParam(limitParam); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	history, err := h.store.GetAgentHealthHistory(c.Request.Context(), id, limit)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to get health history")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get health history"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"history": history})
+}
+
+// FleetHealth returns aggregated health statistics for all agents.
+//
+//	@Summary		Get fleet health summary
+//	@Description	Returns aggregated health statistics for all agents in the organization
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.FleetHealthSummary
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/fleet-health [get]
+func (h *AgentsHandler) FleetHealth(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	summary, err := h.store.GetFleetHealthSummary(c.Request.Context(), user.CurrentOrgID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get fleet health")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get fleet health"})
+		return
+	}
+
+	c.JSON(http.StatusOK, summary)
+}
+
+// parseIntParam parses a string to int.
+func parseIntParam(s string) (int, error) {
+	var i int
+	_, err := getParamInt(s, &i)
+	return i, err
+}
+
+// getParamInt is a helper to parse int from string.
+func getParamInt(s string, result *int) (bool, error) {
+	if s == "" {
+		return false, nil
+	}
+	n := 0
+	for _, ch := range s {
+		if ch < '0' || ch > '9' {
+			return false, errors.New("invalid integer")
+		}
+		n = n*10 + int(ch-'0')
+	}
+	*result = n
+	return true, nil
 }
