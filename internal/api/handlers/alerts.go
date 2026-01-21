@@ -63,7 +63,17 @@ func (h *AlertsHandler) RegisterRoutes(r *gin.RouterGroup) {
 }
 
 // List returns all alerts for the authenticated user's organization.
-// GET /api/v1/alerts
+//
+//	@Summary		List alerts
+//	@Description	Returns all alerts for the current organization
+//	@Tags			Alerts
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string][]models.Alert
+//	@Failure		401	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/alerts [get]
 func (h *AlertsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -121,7 +131,17 @@ func (h *AlertsHandler) ListActive(c *gin.Context) {
 }
 
 // Count returns the count of active alerts for the authenticated user's organization.
-// GET /api/v1/alerts/count
+//
+//	@Summary		Count active alerts
+//	@Description	Returns the count of active (non-resolved) alerts for the current organization
+//	@Tags			Alerts
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]int
+//	@Failure		401	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/alerts/count [get]
 func (h *AlertsHandler) Count(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {

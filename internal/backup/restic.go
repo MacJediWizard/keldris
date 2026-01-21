@@ -89,7 +89,8 @@ func (r *Restic) Init(ctx context.Context, cfg ResticConfig) error {
 
 // BackupOptions contains optional parameters for backup operations.
 type BackupOptions struct {
-	BandwidthLimitKB *int // Upload bandwidth limit in KB/s (nil = unlimited)
+	BandwidthLimitKB *int    // Upload bandwidth limit in KB/s (nil = unlimited)
+	CompressionLevel *string // Compression level: off, auto, max (nil = restic default "auto")
 }
 
 // Backup runs a backup operation with the given paths and excludes.
@@ -111,6 +112,9 @@ func (r *Restic) BackupWithOptions(ctx context.Context, cfg ResticConfig, paths,
 	if opts != nil && opts.BandwidthLimitKB != nil {
 		logEvent = logEvent.Int("bandwidth_limit_kb", *opts.BandwidthLimitKB)
 	}
+	if opts != nil && opts.CompressionLevel != nil {
+		logEvent = logEvent.Str("compression_level", *opts.CompressionLevel)
+	}
 	logEvent.Msg("starting backup")
 
 	start := time.Now()
@@ -121,6 +125,11 @@ func (r *Restic) BackupWithOptions(ctx context.Context, cfg ResticConfig, paths,
 	if opts != nil && opts.BandwidthLimitKB != nil && *opts.BandwidthLimitKB > 0 {
 		// Restic expects --limit-upload in KiB/s
 		args = append(args, "--limit-upload", fmt.Sprintf("%d", *opts.BandwidthLimitKB))
+	}
+
+	// Add compression level if specified
+	if opts != nil && opts.CompressionLevel != nil && *opts.CompressionLevel != "" {
+		args = append(args, "--compression", *opts.CompressionLevel)
 	}
 
 	for _, exclude := range excludes {
@@ -364,6 +373,49 @@ func (r *Restic) PruneOnly(ctx context.Context, cfg ResticConfig) error {
 	}
 
 	r.logger.Info().Msg("prune completed successfully")
+	return nil
+}
+
+// Copy copies a snapshot from one repository to another.
+// This is used for replicating backups to secondary repositories.
+func (r *Restic) Copy(ctx context.Context, sourceCfg, targetCfg ResticConfig, snapshotID string) error {
+	r.logger.Info().
+		Str("source_repo", sourceCfg.Repository).
+		Str("target_repo", targetCfg.Repository).
+		Str("snapshot_id", snapshotID).
+		Msg("starting snapshot copy")
+
+	args := []string{
+		"copy",
+		"--from-repo", sourceCfg.Repository,
+		"--repo", targetCfg.Repository,
+		"--json",
+		snapshotID,
+	}
+
+	// Build environment with both passwords
+	env := make(map[string]string)
+	for k, v := range targetCfg.Env {
+		env[k] = v
+	}
+	env["RESTIC_FROM_PASSWORD"] = sourceCfg.Password
+
+	// Use target config with modified env
+	copyCfg := ResticConfig{
+		Repository: targetCfg.Repository,
+		Password:   targetCfg.Password,
+		Env:        env,
+	}
+
+	_, err := r.run(ctx, copyCfg, args)
+	if err != nil {
+		return fmt.Errorf("copy snapshot: %w", err)
+	}
+
+	r.logger.Info().
+		Str("snapshot_id", snapshotID).
+		Msg("snapshot copy completed")
+
 	return nil
 }
 
