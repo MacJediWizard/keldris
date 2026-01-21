@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
+import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
 import { useAgents } from '../hooks/useAgents';
 import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
@@ -15,7 +16,6 @@ import type {
 	Schedule,
 	ScheduleRepositoryRequest,
 } from '../lib/types';
-import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
 
 function LoadingRow() {
 	return (
@@ -199,7 +199,10 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	};
 
 	const handleAddPatterns = (patterns: string[]) => {
-		setExcludes((prev) => [...prev, ...patterns.filter((p) => !prev.includes(p))]);
+		setExcludes((prev) => [
+			...prev,
+			...patterns.filter((p) => !prev.includes(p)),
+		]);
 	};
 
 	const handleRemovePattern = (pattern: string) => {
@@ -329,9 +332,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						{/* Exclude Patterns Section */}
 						<div className="border-t border-gray-200 pt-4">
 							<div className="flex items-center justify-between mb-2">
-								<label className="block text-sm font-medium text-gray-700">
+								<span className="block text-sm font-medium text-gray-700">
 									Exclude Patterns
-								</label>
+								</span>
 								<button
 									type="button"
 									onClick={() => setShowPatternLibrary(true)}
@@ -387,12 +390,14 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 										))}
 									</div>
 									<p className="text-xs text-gray-500">
-										{excludes.length} pattern{excludes.length !== 1 ? 's' : ''} will be excluded from backup
+										{excludes.length} pattern{excludes.length !== 1 ? 's' : ''}{' '}
+										will be excluded from backup
 									</p>
 								</div>
 							) : (
 								<p className="text-sm text-gray-500">
-									No patterns selected. Click "Browse Library" to add common patterns.
+									No patterns selected. Click "Browse Library" to add common
+									patterns.
 								</p>
 							)}
 						</div>
