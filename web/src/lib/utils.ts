@@ -422,7 +422,6 @@ export function getHealthStatusColor(status: string): {
 				dot: 'bg-red-500',
 				icon: 'text-red-500',
 			};
-		case 'unknown':
 		default:
 			return {
 				bg: 'bg-gray-100',
@@ -442,7 +441,6 @@ export function getHealthStatusLabel(status: string): string {
 			return 'Warning';
 		case 'critical':
 			return 'Critical';
-		case 'unknown':
 		default:
 			return 'Unknown';
 	}

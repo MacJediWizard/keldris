@@ -397,7 +397,11 @@ function FleetHealthWidget({
 					<div className="flex items-center gap-4">
 						{/* Health Ring */}
 						<div className="relative w-20 h-20">
-							<svg className="w-20 h-20 -rotate-90" viewBox="0 0 36 36">
+							<svg
+								aria-hidden="true"
+								className="w-20 h-20 -rotate-90"
+								viewBox="0 0 36 36"
+							>
 								{/* Background circle */}
 								<circle
 									cx="18"
