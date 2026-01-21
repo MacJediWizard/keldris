@@ -10,7 +10,11 @@ import {
 	useSchedules,
 	useUpdateSchedule,
 } from '../hooks/useSchedules';
-import type { CompressionLevel, Schedule, ScheduleRepositoryRequest } from '../lib/types';
+import type {
+	CompressionLevel,
+	Schedule,
+	ScheduleRepositoryRequest,
+} from '../lib/types';
 
 function LoadingRow() {
 	return (
