@@ -103,6 +103,75 @@ type MaintenanceScheduledData struct {
 	Duration string
 }
 
+// ReportEmailData holds data for report summary email template
+type ReportEmailData struct {
+	OrgName              string
+	Frequency            string
+	FrequencyLower       string
+	PeriodStart          time.Time
+	PeriodEnd            time.Time
+	Data                 *ReportData
+	TotalDataFormatted   string
+	RawSizeFormatted     string
+	RestoreSizeFormatted string
+	SpaceSavedFormatted  string
+}
+
+// ReportData contains the aggregated data for a report
+type ReportData struct {
+	BackupSummary  ReportBackupSummary  `json:"backup_summary"`
+	StorageSummary ReportStorageSummary `json:"storage_summary"`
+	AgentSummary   ReportAgentSummary   `json:"agent_summary"`
+	AlertSummary   ReportAlertSummary   `json:"alert_summary"`
+	TopIssues      []ReportIssue        `json:"top_issues,omitempty"`
+}
+
+// ReportBackupSummary contains backup statistics for the report period
+type ReportBackupSummary struct {
+	TotalBackups      int     `json:"total_backups"`
+	SuccessfulBackups int     `json:"successful_backups"`
+	FailedBackups     int     `json:"failed_backups"`
+	SuccessRate       float64 `json:"success_rate"`
+	TotalDataBacked   int64   `json:"total_data_backed"`
+	SchedulesActive   int     `json:"schedules_active"`
+}
+
+// ReportStorageSummary contains storage statistics
+type ReportStorageSummary struct {
+	TotalRawSize     int64   `json:"total_raw_size"`
+	TotalRestoreSize int64   `json:"total_restore_size"`
+	SpaceSaved       int64   `json:"space_saved"`
+	SpaceSavedPct    float64 `json:"space_saved_pct"`
+	RepositoryCount  int     `json:"repository_count"`
+	TotalSnapshots   int     `json:"total_snapshots"`
+}
+
+// ReportAgentSummary contains agent health statistics
+type ReportAgentSummary struct {
+	TotalAgents   int `json:"total_agents"`
+	ActiveAgents  int `json:"active_agents"`
+	OfflineAgents int `json:"offline_agents"`
+	PendingAgents int `json:"pending_agents"`
+}
+
+// ReportAlertSummary contains alert statistics
+type ReportAlertSummary struct {
+	TotalAlerts        int `json:"total_alerts"`
+	CriticalAlerts     int `json:"critical_alerts"`
+	WarningAlerts      int `json:"warning_alerts"`
+	AcknowledgedAlerts int `json:"acknowledged_alerts"`
+	ResolvedAlerts     int `json:"resolved_alerts"`
+}
+
+// ReportIssue represents a notable issue to highlight in the report
+type ReportIssue struct {
+	Type        string    `json:"type"`
+	Severity    string    `json:"severity"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	OccurredAt  time.Time `json:"occurred_at"`
+}
+
 // SendBackupSuccess sends a backup success notification email
 func (s *EmailService) SendBackupSuccess(to []string, data BackupSuccessData) error {
 	subject := fmt.Sprintf("Backup Successful: %s - %s", data.Hostname, data.ScheduleName)
@@ -125,6 +194,35 @@ func (s *EmailService) SendAgentOffline(to []string, data AgentOfflineData) erro
 func (s *EmailService) SendMaintenanceScheduled(to []string, data MaintenanceScheduledData) error {
 	subject := fmt.Sprintf("Scheduled Maintenance: %s", data.Title)
 	return s.sendTemplate(to, subject, "maintenance_scheduled.html", data)
+}
+
+// SendReport sends a report summary email
+func (s *EmailService) SendReport(to []string, data ReportEmailData) error {
+	subject := fmt.Sprintf("%s Backup Report: %s", data.Frequency, data.OrgName)
+	return s.sendTemplate(to, subject, "report_summary.html", data)
+}
+
+// FormatBytes formats bytes into a human-readable string
+func FormatBytes(bytes int64) string {
+	const (
+		KB = 1024
+		MB = 1024 * KB
+		GB = 1024 * MB
+		TB = 1024 * GB
+	)
+
+	switch {
+	case bytes >= TB:
+		return fmt.Sprintf("%.2f TB", float64(bytes)/float64(TB))
+	case bytes >= GB:
+		return fmt.Sprintf("%.2f GB", float64(bytes)/float64(GB))
+	case bytes >= MB:
+		return fmt.Sprintf("%.2f MB", float64(bytes)/float64(MB))
+	case bytes >= KB:
+		return fmt.Sprintf("%.2f KB", float64(bytes)/float64(KB))
+	default:
+		return fmt.Sprintf("%d B", bytes)
+	}
 }
 
 // sendTemplate renders a template and sends the email

@@ -1,0 +1,155 @@
+# Gatus Configuration Example for Keldris
+#
+# This configuration file demonstrates how to set up Gatus to monitor
+# your Keldris backup server health endpoints.
+#
+# For more information on Gatus, see: https://github.com/TwiN/gatus
+#
+# Copy this file to your Gatus config directory and adjust the URLs
+# and alerting settings as needed.
+
+# Alerting configuration (optional)
+# Configure your preferred alerting providers
+alerting:
+  # Slack notifications
+  slack:
+    webhook-url: "${GATUS_SLACK_WEBHOOK_URL}"
+    default-alert:
+      enabled: true
+      failure-threshold: 3
+      success-threshold: 2
+
+  # Email notifications (requires SMTP configuration)
+  # email:
+  #   from: "gatus@yourdomain.com"
+  #   host: "smtp.yourdomain.com"
+  #   port: 587
+  #   username: "your-smtp-user"
+  #   password: "${GATUS_SMTP_PASSWORD}"
+  #   default-alert:
+  #     enabled: true
+  #     failure-threshold: 3
+  #     success-threshold: 2
+
+  # PagerDuty notifications
+  # pagerduty:
+  #   integration-key: "${GATUS_PAGERDUTY_KEY}"
+  #   default-alert:
+  #     enabled: true
+  #     failure-threshold: 2
+  #     success-threshold: 2
+
+# Endpoint configurations
+endpoints:
+  # Overall server health check
+  # This endpoint checks all components (database, OIDC) at once
+  - name: keldris-server
+    url: "http://localhost:8080/health"
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 5000"
+      - "[BODY].status == healthy"
+    alerts:
+      - type: slack
+        enabled: true
+        failure-threshold: 3
+        success-threshold: 2
+        description: "Keldris server health check failed"
+
+  # Database health check
+  # Specifically monitors PostgreSQL connectivity
+  - name: keldris-database
+    url: "http://localhost:8080/health/db"
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 3000"
+      - "[BODY].status == healthy"
+      - "[BODY].checks.database.status == healthy"
+    alerts:
+      - type: slack
+        enabled: true
+        failure-threshold: 2
+        success-threshold: 2
+        description: "Keldris database connection failed"
+
+  # OIDC provider health check
+  # Monitors connectivity to your OIDC provider (Keycloak, Auth0, etc.)
+  - name: keldris-oidc
+    url: "http://localhost:8080/health/oidc"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[RESPONSE_TIME] < 5000"
+      - "[BODY].status == healthy"
+    alerts:
+      - type: slack
+        enabled: true
+        failure-threshold: 3
+        success-threshold: 2
+        description: "Keldris OIDC provider check failed"
+
+  # Server version endpoint (useful for deployment tracking)
+  - name: keldris-version
+    url: "http://localhost:8080/version"
+    interval: 300s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].version != ''"
+
+  # Prometheus metrics endpoint
+  # Useful for monitoring database pool stats and server health
+  # Can also be scraped by Prometheus for more detailed monitoring
+  - name: keldris-metrics
+    url: "http://localhost:8080/metrics"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY] contains keldris_up"
+
+# UI configuration
+ui:
+  title: "Keldris Health Dashboard"
+  header: "Keldris Backup System Status"
+
+# Storage configuration for historical data
+storage:
+  type: sqlite
+  path: /data/gatus.db
+
+# Web server configuration
+web:
+  port: 8081
+  address: "0.0.0.0"
+
+# Example with authentication (if your Keldris instance requires it)
+# Note: Health endpoints are typically unauthenticated for monitoring purposes
+# endpoints:
+#   - name: keldris-authenticated
+#     url: "http://localhost:8080/api/v1/version"
+#     interval: 60s
+#     headers:
+#       Authorization: "Bearer ${GATUS_KELDRIS_TOKEN}"
+#     conditions:
+#       - "[STATUS] == 200"
+
+# Docker Compose example for running Gatus with Keldris:
+#
+# services:
+#   gatus:
+#     image: twinproduction/gatus:latest
+#     volumes:
+#       - ./gatus-config.yaml:/config/config.yaml
+#       - gatus-data:/data
+#     ports:
+#       - "8081:8081"
+#     environment:
+#       - GATUS_SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+#     depends_on:
+#       - keldris-server
+#     networks:
+#       - keldris-network
+#
+# volumes:
+#   gatus-data:
