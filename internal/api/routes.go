@@ -136,6 +136,9 @@ func NewRouter(
 		verificationsHandler.RegisterRoutes(apiV1)
 	}
 
+	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
+	maintenanceHandler.RegisterRoutes(apiV1)
+
 	r.logger.Info().Msg("API router initialized")
 	return r, nil
 }

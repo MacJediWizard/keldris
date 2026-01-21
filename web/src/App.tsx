@@ -6,6 +6,7 @@ import { Alerts } from './pages/Alerts';
 import { AuditLogs } from './pages/AuditLogs';
 import { Backups } from './pages/Backups';
 import { Dashboard } from './pages/Dashboard';
+import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
 import { Notifications } from './pages/Notifications';
 import { OrganizationMembers } from './pages/OrganizationMembers';
@@ -56,6 +57,10 @@ function App() {
 						<Route
 							path="organization/settings"
 							element={<OrganizationSettings />}
+						/>
+						<Route
+							path="organization/maintenance"
+							element={<Maintenance />}
 						/>
 						<Route path="organization/new" element={<NewOrganization />} />
 					</Route>
