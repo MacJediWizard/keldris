@@ -12,6 +12,7 @@ import { NewOrganization } from './pages/NewOrganization';
 import { Notifications } from './pages/Notifications';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSettings } from './pages/OrganizationSettings';
+import { Policies } from './pages/Policies';
 import Reports from './pages/Reports';
 import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
@@ -47,6 +48,7 @@ function App() {
 						<Route path="agents/:id" element={<AgentDetails />} />
 						<Route path="repositories" element={<Repositories />} />
 						<Route path="schedules" element={<Schedules />} />
+						<Route path="policies" element={<Policies />} />
 						<Route path="backups" element={<Backups />} />
 						<Route path="dr-runbooks" element={<DRRunbooks />} />
 						<Route path="restore" element={<Restore />} />
