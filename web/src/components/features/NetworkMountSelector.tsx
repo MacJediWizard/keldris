@@ -24,9 +24,9 @@ export function NetworkMountSelector({
 
 	return (
 		<div className="space-y-3">
-			<label className="block text-sm font-medium text-gray-700">
+			<span className="block text-sm font-medium text-gray-700">
 				Network Mounts
-			</label>
+			</span>
 
 			{connectedMounts.length > 0 && (
 				<div className="space-y-2">

@@ -8,13 +8,29 @@ interface NetworkMountStatusProps {
 function getMountStatusColor(status: string) {
 	switch (status) {
 		case 'connected':
-			return { bg: 'bg-green-100', text: 'text-green-800', dot: 'bg-green-500' };
+			return {
+				bg: 'bg-green-100',
+				text: 'text-green-800',
+				dot: 'bg-green-500',
+			};
 		case 'stale':
-			return { bg: 'bg-amber-100', text: 'text-amber-800', dot: 'bg-amber-500' };
+			return {
+				bg: 'bg-amber-100',
+				text: 'text-amber-800',
+				dot: 'bg-amber-500',
+			};
 		case 'disconnected':
-			return { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-500' };
+			return {
+				bg: 'bg-red-100',
+				text: 'text-red-800',
+				dot: 'bg-red-500',
+			};
 		default:
-			return { bg: 'bg-gray-100', text: 'text-gray-800', dot: 'bg-gray-500' };
+			return {
+				bg: 'bg-gray-100',
+				text: 'text-gray-800',
+				dot: 'bg-gray-500',
+			};
 	}
 }
 
