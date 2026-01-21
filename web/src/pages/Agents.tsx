@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AgentDownloads } from '../components/features/AgentDownloads';
-import {
-	useAgentGroups,
-	useAgentsWithGroups,
-} from '../hooks/useAgentGroups';
+import { useAgentGroups, useAgentsWithGroups } from '../hooks/useAgentGroups';
 import {
 	useCreateAgent,
 	useDeleteAgent,
@@ -54,9 +51,7 @@ interface GroupBadgeProps {
 }
 
 function GroupBadge({ group }: GroupBadgeProps) {
-	const bgColor = group.color
-		? `${group.color}20`
-		: 'rgba(99, 102, 241, 0.1)';
+	const bgColor = group.color ? `${group.color}20` : 'rgba(99, 102, 241, 0.1)';
 	const textColor = group.color || '#6366f1';
 
 	return (
