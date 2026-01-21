@@ -7,8 +7,8 @@ import type {
 	AgentHealthHistoryResponse,
 	AgentSchedulesResponse,
 	AgentStatsResponse,
-	AgentsResponse,
 	AgentWithGroups,
+	AgentsResponse,
 	AgentsWithGroupsResponse,
 	Alert,
 	AlertCountResponse,
@@ -257,8 +257,9 @@ export const agentsApi = {
 		fetchApi<FleetHealthSummary>('/agents/fleet-health'),
 
 	listWithGroups: async (): Promise<AgentWithGroups[]> => {
-		const response =
-			await fetchApi<AgentsWithGroupsResponse>('/agents/with-groups');
+		const response = await fetchApi<AgentsWithGroupsResponse>(
+			'/agents/with-groups',
+		);
 		return response.agents ?? [];
 	},
 };

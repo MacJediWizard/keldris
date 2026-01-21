@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import {
+	useAddAgentToGroup,
+	useAgentGroupMembers,
 	useAgentGroups,
 	useCreateAgentGroup,
 	useDeleteAgentGroup,
-	useUpdateAgentGroup,
-	useAgentGroupMembers,
-	useAddAgentToGroup,
 	useRemoveAgentFromGroup,
+	useUpdateAgentGroup,
 } from '../hooks/useAgentGroups';
 import { useAgents } from '../hooks/useAgents';
 import type { AgentGroup } from '../lib/types';
@@ -295,8 +295,7 @@ function ManageMembersModal({
 	const removeAgent = useRemoveAgentFromGroup();
 
 	const memberIds = new Set(members?.map((m) => m.id) || []);
-	const availableAgents =
-		allAgents?.filter((a) => !memberIds.has(a.id)) || [];
+	const availableAgents = allAgents?.filter((a) => !memberIds.has(a.id)) || [];
 
 	const handleAddAgent = async (agentId: string) => {
 		try {
@@ -310,9 +309,7 @@ function ManageMembersModal({
 	};
 
 	const handleRemoveAgent = async (agentId: string) => {
-		if (
-			confirm('Are you sure you want to remove this agent from the group?')
-		) {
+		if (confirm('Are you sure you want to remove this agent from the group?')) {
 			try {
 				await removeAgent.mutateAsync({
 					groupId: group.id,
@@ -364,7 +361,9 @@ function ManageMembersModal({
 							</h4>
 							<div className="border border-gray-200 rounded-lg overflow-hidden">
 								{membersLoading ? (
-									<div className="p-4 text-center text-gray-500">Loading...</div>
+									<div className="p-4 text-center text-gray-500">
+										Loading...
+									</div>
 								) : members && members.length > 0 ? (
 									<ul className="divide-y divide-gray-200 max-h-64 overflow-auto">
 										{members.map((agent) => (
@@ -401,7 +400,9 @@ function ManageMembersModal({
 							</h4>
 							<div className="border border-gray-200 rounded-lg overflow-hidden">
 								{agentsLoading ? (
-									<div className="p-4 text-center text-gray-500">Loading...</div>
+									<div className="p-4 text-center text-gray-500">
+										Loading...
+									</div>
 								) : availableAgents.length > 0 ? (
 									<ul className="divide-y divide-gray-200 max-h-64 overflow-auto">
 										{availableAgents.map((agent) => (
