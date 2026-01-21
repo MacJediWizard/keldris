@@ -30,11 +30,25 @@ export interface HealthIssue {
 	threshold?: number;
 }
 
+// Network mount types
+export type MountType = 'nfs' | 'smb' | 'cifs';
+export type MountStatus = 'connected' | 'stale' | 'disconnected';
+export type MountBehavior = 'skip' | 'fail';
+
+export interface NetworkMount {
+	path: string;
+	type: MountType;
+	remote: string;
+	status: MountStatus;
+	last_checked: string;
+}
+
 export interface Agent {
 	id: string;
 	org_id: string;
 	hostname: string;
 	os_info?: OSInfo;
+	network_mounts?: NetworkMount[];
 	last_seen?: string;
 	status: AgentStatus;
 	health_status: HealthStatus;
@@ -325,6 +339,7 @@ export interface Schedule {
 	backup_window?: BackupWindow; // Allowed backup time window
 	excluded_hours?: number[]; // Hours (0-23) when backups should not run
 	compression_level?: CompressionLevel; // Compression level: off, auto, max
+	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -343,6 +358,7 @@ export interface CreateScheduleRequest {
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
 	compression_level?: CompressionLevel;
+	on_mount_unavailable?: MountBehavior;
 	enabled?: boolean;
 }
 
@@ -357,6 +373,7 @@ export interface UpdateScheduleRequest {
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
 	compression_level?: CompressionLevel;
+	on_mount_unavailable?: MountBehavior;
 	enabled?: boolean;
 }
 
