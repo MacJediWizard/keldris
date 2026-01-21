@@ -178,6 +178,9 @@ func NewRouter(
 		verificationsHandler.RegisterRoutes(apiV1)
 	}
 
+	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
+	maintenanceHandler.RegisterRoutes(apiV1)
+
 	// DR Runbook routes
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
 	drRunbooksHandler.RegisterRoutes(apiV1)

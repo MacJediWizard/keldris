@@ -94,6 +94,15 @@ type AgentOfflineData struct {
 	AgentID      string
 }
 
+// MaintenanceScheduledData holds data for maintenance scheduled email template
+type MaintenanceScheduledData struct {
+	Title    string
+	Message  string
+	StartsAt time.Time
+	EndsAt   time.Time
+	Duration string
+}
+
 // ReportEmailData holds data for report summary email template
 type ReportEmailData struct {
 	OrgName              string
@@ -179,6 +188,12 @@ func (s *EmailService) SendBackupFailed(to []string, data BackupFailedData) erro
 func (s *EmailService) SendAgentOffline(to []string, data AgentOfflineData) error {
 	subject := fmt.Sprintf("Agent Offline: %s", data.Hostname)
 	return s.sendTemplate(to, subject, "agent_offline.html", data)
+}
+
+// SendMaintenanceScheduled sends a maintenance scheduled notification email
+func (s *EmailService) SendMaintenanceScheduled(to []string, data MaintenanceScheduledData) error {
+	subject := fmt.Sprintf("Scheduled Maintenance: %s", data.Title)
+	return s.sendTemplate(to, subject, "maintenance_scheduled.html", data)
 }
 
 // SendReport sends a report summary email

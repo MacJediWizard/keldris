@@ -8,6 +8,7 @@ import {
 } from '../hooks/useOrganizations';
 import { useSearch } from '../hooks/useSearch';
 import type { SearchResult, SearchResultType } from '../lib/types';
+import { MaintenanceBanner } from './features/MaintenanceBanner';
 
 interface NavItem {
 	path: string;
@@ -415,6 +416,32 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Settings</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/organization/maintenance"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/maintenance'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+										/>
+									</svg>
+									<span>Maintenance</span>
 								</Link>
 							</li>
 						</ul>
@@ -879,6 +906,7 @@ export function Layout() {
 			<Sidebar />
 			<div className="flex-1 flex flex-col">
 				<Header />
+				<MaintenanceBanner />
 				<main className="flex-1 p-6">
 					<Outlet />
 				</main>

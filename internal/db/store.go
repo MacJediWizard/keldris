@@ -3440,6 +3440,116 @@ func scanVerifications(rows interface {
 	return verifications, nil
 }
 
+// Maintenance Window methods
+
+// GetMaintenanceWindowByID returns a maintenance window by ID.
+func (db *DB) GetMaintenanceWindowByID(ctx context.Context, id uuid.UUID) (*models.MaintenanceWindow, error) {
+	var m models.MaintenanceWindow
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
+		       notification_sent, created_by, created_at, updated_at
+		FROM maintenance_windows
+		WHERE id = $1
+	`, id).Scan(
+		&m.ID, &m.OrgID, &m.Title, &m.Message, &m.StartsAt, &m.EndsAt,
+		&m.NotifyBeforeMinutes, &m.NotificationSent, &m.CreatedBy,
+		&m.CreatedAt, &m.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get maintenance window: %w", err)
+	}
+	return &m, nil
+}
+
+// ListMaintenanceWindowsByOrg returns all maintenance windows for an organization.
+func (db *DB) ListMaintenanceWindowsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.MaintenanceWindow, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
+		       notification_sent, created_by, created_at, updated_at
+		FROM maintenance_windows
+		WHERE org_id = $1
+		ORDER BY starts_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list maintenance windows: %w", err)
+	}
+	defer rows.Close()
+
+	return scanMaintenanceWindows(rows)
+}
+
+// ListActiveMaintenanceWindows returns maintenance windows that are currently active.
+func (db *DB) ListActiveMaintenanceWindows(ctx context.Context, orgID uuid.UUID, now time.Time) ([]*models.MaintenanceWindow, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
+		       notification_sent, created_by, created_at, updated_at
+		FROM maintenance_windows
+		WHERE org_id = $1
+		  AND starts_at <= $2
+		  AND ends_at > $2
+		ORDER BY ends_at ASC
+	`, orgID, now)
+	if err != nil {
+		return nil, fmt.Errorf("list active maintenance windows: %w", err)
+	}
+	defer rows.Close()
+
+	return scanMaintenanceWindows(rows)
+}
+
+// ListUpcomingMaintenanceWindows returns maintenance windows starting within the given minutes.
+func (db *DB) ListUpcomingMaintenanceWindows(ctx context.Context, orgID uuid.UUID, now time.Time, withinMinutes int) ([]*models.MaintenanceWindow, error) {
+	notifyTime := now.Add(time.Duration(withinMinutes) * time.Minute)
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
+		       notification_sent, created_by, created_at, updated_at
+		FROM maintenance_windows
+		WHERE org_id = $1
+		  AND starts_at > $2
+		  AND starts_at <= $3
+		ORDER BY starts_at ASC
+	`, orgID, now, notifyTime)
+	if err != nil {
+		return nil, fmt.Errorf("list upcoming maintenance windows: %w", err)
+	}
+	defer rows.Close()
+
+	return scanMaintenanceWindows(rows)
+}
+
+// ListPendingMaintenanceNotifications returns windows that need notifications sent.
+func (db *DB) ListPendingMaintenanceNotifications(ctx context.Context) ([]*models.MaintenanceWindow, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
+		       notification_sent, created_by, created_at, updated_at
+		FROM maintenance_windows
+		WHERE notification_sent = false
+		  AND starts_at > NOW()
+		  AND starts_at <= NOW() + (notify_before_minutes * INTERVAL '1 minute')
+		ORDER BY starts_at ASC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list pending maintenance notifications: %w", err)
+	}
+	defer rows.Close()
+
+	return scanMaintenanceWindows(rows)
+}
+
+// CreateMaintenanceWindow creates a new maintenance window.
+func (db *DB) CreateMaintenanceWindow(ctx context.Context, m *models.MaintenanceWindow) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO maintenance_windows (id, org_id, title, message, starts_at, ends_at,
+		            notify_before_minutes, notification_sent, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`, m.ID, m.OrgID, m.Title, m.Message, m.StartsAt, m.EndsAt,
+		m.NotifyBeforeMinutes, m.NotificationSent, m.CreatedBy, m.CreatedAt, m.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create maintenance window: %w", err)
+	}
+	return nil
+}
+
 // Exclude Pattern methods
 
 // GetExcludePatternsByOrgID returns all exclude patterns for an organization (including built-in patterns).
@@ -3528,6 +3638,22 @@ func (db *DB) CreateExcludePattern(ctx context.Context, ep *models.ExcludePatter
 	return nil
 }
 
+// UpdateMaintenanceWindow updates an existing maintenance window.
+func (db *DB) UpdateMaintenanceWindow(ctx context.Context, m *models.MaintenanceWindow) error {
+	m.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE maintenance_windows
+		SET title = $2, message = $3, starts_at = $4, ends_at = $5,
+		    notify_before_minutes = $6, notification_sent = $7, updated_at = $8
+		WHERE id = $1
+	`, m.ID, m.Title, m.Message, m.StartsAt, m.EndsAt,
+		m.NotifyBeforeMinutes, m.NotificationSent, m.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update maintenance window: %w", err)
+	}
+	return nil
+}
+
 // UpdateExcludePattern updates an exclude pattern.
 func (db *DB) UpdateExcludePattern(ctx context.Context, ep *models.ExcludePattern) error {
 	patternsBytes, err := ep.PatternsJSON()
@@ -3547,6 +3673,18 @@ func (db *DB) UpdateExcludePattern(ctx context.Context, ep *models.ExcludePatter
 	return nil
 }
 
+// DeleteMaintenanceWindow deletes a maintenance window.
+func (db *DB) DeleteMaintenanceWindow(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM maintenance_windows
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete maintenance window: %w", err)
+	}
+	return nil
+}
+
 // DeleteExcludePattern deletes an exclude pattern by ID.
 func (db *DB) DeleteExcludePattern(ctx context.Context, id uuid.UUID) error {
 	result, err := db.Pool.Exec(ctx, `
@@ -3558,6 +3696,19 @@ func (db *DB) DeleteExcludePattern(ctx context.Context, id uuid.UUID) error {
 	}
 	if result.RowsAffected() == 0 {
 		return fmt.Errorf("exclude pattern not found or is built-in")
+	}
+	return nil
+}
+
+// MarkMaintenanceNotificationSent marks a maintenance window's notification as sent.
+func (db *DB) MarkMaintenanceNotificationSent(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE maintenance_windows
+		SET notification_sent = true, updated_at = $2
+		WHERE id = $1
+	`, id, time.Now())
+	if err != nil {
+		return fmt.Errorf("mark maintenance notification sent: %w", err)
 	}
 	return nil
 }
@@ -3581,6 +3732,40 @@ func (db *DB) SeedBuiltinExcludePatterns(ctx context.Context, patterns []*models
 		}
 	}
 	return nil
+}
+
+// scanMaintenanceWindows scans rows into maintenance window structs.
+func scanMaintenanceWindows(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.MaintenanceWindow, error) {
+	type scanner interface {
+		Next() bool
+		Scan(dest ...any) error
+		Err() error
+	}
+	r := rows.(scanner)
+
+	var windows []*models.MaintenanceWindow
+	for r.Next() {
+		var m models.MaintenanceWindow
+		err := r.Scan(
+			&m.ID, &m.OrgID, &m.Title, &m.Message, &m.StartsAt, &m.EndsAt,
+			&m.NotifyBeforeMinutes, &m.NotificationSent, &m.CreatedBy,
+			&m.CreatedAt, &m.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan maintenance window: %w", err)
+		}
+		windows = append(windows, &m)
+	}
+
+	if err := r.Err(); err != nil {
+		return nil, fmt.Errorf("iterate maintenance windows: %w", err)
+	}
+
+	return windows, nil
 }
 
 // scanExcludePatterns scans multiple exclude pattern rows.
