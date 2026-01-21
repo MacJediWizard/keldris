@@ -5751,5 +5751,4 @@ func (db *DB) GetSchedulesByAgentGroupID(ctx context.Context, agentGroupID uuid.
 	}
 
 	return schedules, nil
->>>>>>> origin/main
 }

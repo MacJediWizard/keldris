@@ -70,10 +70,7 @@ function App() {
 							path="organization/settings"
 							element={<OrganizationSettings />}
 						/>
-						<Route
-							path="organization/maintenance"
-							element={<Maintenance />}
-						/>
+						<Route path="organization/maintenance" element={<Maintenance />} />
 						<Route path="organization/new" element={<NewOrganization />} />
 					</Route>
 				</Routes>
