@@ -1,28 +1,62 @@
 import type {
+	AddAgentToGroupRequest,
 	Agent,
+	AgentBackupsResponse,
+	AgentGroup,
+	AgentGroupsResponse,
+	AgentHealthHistoryResponse,
+	AgentSchedulesResponse,
+	AgentStatsResponse,
+	AgentWithGroups,
 	AgentsResponse,
+	AgentsWithGroupsResponse,
 	Alert,
 	AlertCountResponse,
 	AlertRule,
 	AlertRulesResponse,
 	AlertsResponse,
+	ApplyPolicyRequest,
+	ApplyPolicyResponse,
+	AssignTagsRequest,
 	AuditLog,
 	AuditLogFilter,
 	AuditLogsResponse,
 	Backup,
+	BackupDurationTrend,
+	BackupDurationTrendResponse,
+	BackupSuccessRate,
+	BackupSuccessRatesResponse,
 	BackupsResponse,
+	CreateAgentGroupRequest,
 	CreateAgentRequest,
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
+	CreateDRRunbookRequest,
+	CreateDRTestScheduleRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
+	CreatePolicyRequest,
+	CreateReportScheduleRequest,
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
 	CreateScheduleRequest,
+	CreateTagRequest,
 	CreateVerificationScheduleRequest,
+	DRRunbook,
+	DRRunbookRenderResponse,
+	DRRunbooksResponse,
+	DRStatus,
+	DRTest,
+	DRTestSchedule,
+	DRTestSchedulesResponse,
+	DRTestsResponse,
+	DailyBackupStats,
+	DailyBackupStatsResponse,
+	DashboardStats,
 	ErrorResponse,
+	FleetHealthSummary,
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
@@ -41,6 +75,16 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	PoliciesResponse,
+	Policy,
+	ReplicationStatus,
+	ReplicationStatusResponse,
+	ReportFrequency,
+	ReportHistory,
+	ReportHistoryResponse,
+	ReportPreviewResponse,
+	ReportSchedule,
+	ReportSchedulesResponse,
 	RepositoriesResponse,
 	Repository,
 	RepositoryGrowthResponse,
@@ -51,26 +95,38 @@ import type {
 	Restore,
 	RestoresResponse,
 	RotateAPIKeyResponse,
+	RunDRTestRequest,
 	RunScheduleResponse,
 	Schedule,
 	SchedulesResponse,
+	SearchFilter,
+	SearchResponse,
 	Snapshot,
 	SnapshotFilesResponse,
 	SnapshotsResponse,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
+	StorageGrowthTrend,
+	StorageGrowthTrendResponse,
 	StorageStatsSummary,
 	SwitchOrgRequest,
+	Tag,
+	TagsResponse,
 	TestConnectionRequest,
 	TestRepositoryResponse,
 	TriggerVerificationRequest,
+	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
+	UpdateDRRunbookRequest,
 	UpdateMemberRequest,
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
+	UpdatePolicyRequest,
+	UpdateReportScheduleRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
+	UpdateTagRequest,
 	UpdateVerificationScheduleRequest,
 	User,
 	Verification,
@@ -179,6 +235,88 @@ export const agentsApi = {
 		fetchApi<MessageResponse>(`/agents/${id}/apikey`, {
 			method: 'DELETE',
 		}),
+
+	getStats: async (id: string): Promise<AgentStatsResponse> =>
+		fetchApi<AgentStatsResponse>(`/agents/${id}/stats`),
+
+	getBackups: async (id: string): Promise<AgentBackupsResponse> =>
+		fetchApi<AgentBackupsResponse>(`/agents/${id}/backups`),
+
+	getSchedules: async (id: string): Promise<AgentSchedulesResponse> =>
+		fetchApi<AgentSchedulesResponse>(`/agents/${id}/schedules`),
+
+	getHealthHistory: async (
+		id: string,
+		limit = 100,
+	): Promise<AgentHealthHistoryResponse> =>
+		fetchApi<AgentHealthHistoryResponse>(
+			`/agents/${id}/health-history?limit=${limit}`,
+		),
+
+	getFleetHealth: async (): Promise<FleetHealthSummary> =>
+		fetchApi<FleetHealthSummary>('/agents/fleet-health'),
+
+	listWithGroups: async (): Promise<AgentWithGroups[]> => {
+		const response = await fetchApi<AgentsWithGroupsResponse>(
+			'/agents/with-groups',
+		);
+		return response.agents ?? [];
+	},
+};
+
+// Agent Groups API
+export const agentGroupsApi = {
+	list: async (): Promise<AgentGroup[]> => {
+		const response = await fetchApi<AgentGroupsResponse>('/agent-groups');
+		return response.groups ?? [];
+	},
+
+	get: async (id: string): Promise<AgentGroup> =>
+		fetchApi<AgentGroup>(`/agent-groups/${id}`),
+
+	create: async (data: CreateAgentGroupRequest): Promise<AgentGroup> =>
+		fetchApi<AgentGroup>('/agent-groups', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateAgentGroupRequest,
+	): Promise<AgentGroup> =>
+		fetchApi<AgentGroup>(`/agent-groups/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agent-groups/${id}`, {
+			method: 'DELETE',
+		}),
+
+	listMembers: async (groupId: string): Promise<Agent[]> => {
+		const response = await fetchApi<AgentsResponse>(
+			`/agent-groups/${groupId}/agents`,
+		);
+		return response.agents ?? [];
+	},
+
+	addAgent: async (
+		groupId: string,
+		data: AddAgentToGroupRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agent-groups/${groupId}/agents`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	removeAgent: async (
+		groupId: string,
+		agentId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agent-groups/${groupId}/agents/${agentId}`, {
+			method: 'DELETE',
+		}),
 };
 
 // Repositories API
@@ -261,6 +399,57 @@ export const schedulesApi = {
 	run: async (id: string): Promise<RunScheduleResponse> =>
 		fetchApi<RunScheduleResponse>(`/schedules/${id}/run`, {
 			method: 'POST',
+		}),
+
+	getReplicationStatus: async (id: string): Promise<ReplicationStatus[]> => {
+		const response = await fetchApi<ReplicationStatusResponse>(
+			`/schedules/${id}/replication`,
+		);
+		return response.replication_status ?? [];
+	},
+};
+
+// Policies API
+export const policiesApi = {
+	list: async (): Promise<Policy[]> => {
+		const response = await fetchApi<PoliciesResponse>('/policies');
+		return response.policies ?? [];
+	},
+
+	get: async (id: string): Promise<Policy> =>
+		fetchApi<Policy>(`/policies/${id}`),
+
+	create: async (data: CreatePolicyRequest): Promise<Policy> =>
+		fetchApi<Policy>('/policies', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (id: string, data: UpdatePolicyRequest): Promise<Policy> =>
+		fetchApi<Policy>(`/policies/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/policies/${id}`, {
+			method: 'DELETE',
+		}),
+
+	listSchedules: async (id: string): Promise<Schedule[]> => {
+		const response = await fetchApi<SchedulesResponse>(
+			`/policies/${id}/schedules`,
+		);
+		return response.schedules ?? [];
+	},
+
+	apply: async (
+		id: string,
+		data: ApplyPolicyRequest,
+	): Promise<ApplyPolicyResponse> =>
+		fetchApi<ApplyPolicyResponse>(`/policies/${id}/apply`, {
+			method: 'POST',
+			body: JSON.stringify(data),
 		}),
 };
 
@@ -749,4 +938,278 @@ export const verificationsApi = {
 		fetchApi<MessageResponse>(`/verification-schedules/${id}`, {
 			method: 'DELETE',
 		}),
+};
+
+// DR Runbooks API
+export const drRunbooksApi = {
+	list: async (): Promise<DRRunbook[]> => {
+		const response = await fetchApi<DRRunbooksResponse>('/dr-runbooks');
+		return response.runbooks ?? [];
+	},
+
+	get: async (id: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}`),
+
+	create: async (data: CreateDRRunbookRequest): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>('/dr-runbooks', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateDRRunbookRequest,
+	): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/dr-runbooks/${id}`, {
+			method: 'DELETE',
+		}),
+
+	activate: async (id: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}/activate`, {
+			method: 'POST',
+		}),
+
+	archive: async (id: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}/archive`, {
+			method: 'POST',
+		}),
+
+	render: async (id: string): Promise<DRRunbookRenderResponse> =>
+		fetchApi<DRRunbookRenderResponse>(`/dr-runbooks/${id}/render`),
+
+	generateFromSchedule: async (scheduleId: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${scheduleId}/generate`, {
+			method: 'POST',
+		}),
+
+	getStatus: async (): Promise<DRStatus> =>
+		fetchApi<DRStatus>('/dr-runbooks/status'),
+
+	listTestSchedules: async (runbookId: string): Promise<DRTestSchedule[]> => {
+		const response = await fetchApi<DRTestSchedulesResponse>(
+			`/dr-runbooks/${runbookId}/test-schedules`,
+		);
+		return response.schedules ?? [];
+	},
+
+	createTestSchedule: async (
+		runbookId: string,
+		data: CreateDRTestScheduleRequest,
+	): Promise<DRTestSchedule> =>
+		fetchApi<DRTestSchedule>(`/dr-runbooks/${runbookId}/test-schedules`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+};
+
+// DR Tests API
+export const drTestsApi = {
+	list: async (params?: {
+		runbook_id?: string;
+		status?: string;
+	}): Promise<DRTest[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.runbook_id) searchParams.set('runbook_id', params.runbook_id);
+		if (params?.status) searchParams.set('status', params.status);
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/dr-tests?${query}` : '/dr-tests';
+		const response = await fetchApi<DRTestsResponse>(endpoint);
+		return response.tests ?? [];
+	},
+
+	get: async (id: string): Promise<DRTest> =>
+		fetchApi<DRTest>(`/dr-tests/${id}`),
+
+	run: async (data: RunDRTestRequest): Promise<DRTest> =>
+		fetchApi<DRTest>('/dr-tests', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	cancel: async (id: string, notes?: string): Promise<DRTest> =>
+		fetchApi<DRTest>(`/dr-tests/${id}/cancel`, {
+			method: 'POST',
+			body: JSON.stringify({ notes }),
+		}),
+};
+
+// Tags API
+export const tagsApi = {
+	list: async (): Promise<Tag[]> => {
+		const response = await fetchApi<TagsResponse>('/tags');
+		return response.tags ?? [];
+	},
+
+	get: async (id: string): Promise<Tag> => fetchApi<Tag>(`/tags/${id}`),
+
+	create: async (data: CreateTagRequest): Promise<Tag> =>
+		fetchApi<Tag>('/tags', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (id: string, data: UpdateTagRequest): Promise<Tag> =>
+		fetchApi<Tag>(`/tags/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/tags/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Backup tags
+	getBackupTags: async (backupId: string): Promise<Tag[]> => {
+		const response = await fetchApi<TagsResponse>(`/backups/${backupId}/tags`);
+		return response.tags ?? [];
+	},
+
+	setBackupTags: async (
+		backupId: string,
+		data: AssignTagsRequest,
+	): Promise<Tag[]> => {
+		const response = await fetchApi<TagsResponse>(`/backups/${backupId}/tags`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		});
+		return response.tags ?? [];
+	},
+};
+
+// Search API
+export const searchApi = {
+	search: async (filter: SearchFilter): Promise<SearchResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', filter.q);
+
+		if (filter.types?.length) {
+			searchParams.set('types', filter.types.join(','));
+		}
+		if (filter.status) {
+			searchParams.set('status', filter.status);
+		}
+		if (filter.tag_ids?.length) {
+			searchParams.set('tag_ids', filter.tag_ids.join(','));
+		}
+		if (filter.date_from) {
+			searchParams.set('date_from', filter.date_from);
+		}
+		if (filter.date_to) {
+			searchParams.set('date_to', filter.date_to);
+		}
+		if (filter.size_min !== undefined) {
+			searchParams.set('size_min', filter.size_min.toString());
+		}
+		if (filter.size_max !== undefined) {
+			searchParams.set('size_max', filter.size_max.toString());
+		}
+		if (filter.limit) {
+			searchParams.set('limit', filter.limit.toString());
+		}
+
+		return fetchApi<SearchResponse>(`/search?${searchParams.toString()}`);
+	},
+};
+
+// Dashboard Metrics API
+export const metricsApi = {
+	getDashboardStats: async (): Promise<DashboardStats> =>
+		fetchApi<DashboardStats>('/dashboard-metrics/stats'),
+
+	getBackupSuccessRates: async (): Promise<{
+		rate_7d: BackupSuccessRate;
+		rate_30d: BackupSuccessRate;
+	}> =>
+		fetchApi<BackupSuccessRatesResponse>('/dashboard-metrics/success-rates'),
+
+	getStorageGrowthTrend: async (days = 30): Promise<StorageGrowthTrend[]> => {
+		const response = await fetchApi<StorageGrowthTrendResponse>(
+			`/dashboard-metrics/storage-growth?days=${days}`,
+		);
+		return response.trend ?? [];
+	},
+
+	getBackupDurationTrend: async (days = 30): Promise<BackupDurationTrend[]> => {
+		const response = await fetchApi<BackupDurationTrendResponse>(
+			`/dashboard-metrics/backup-duration?days=${days}`,
+		);
+		return response.trend ?? [];
+	},
+
+	getDailyBackupStats: async (days = 30): Promise<DailyBackupStats[]> => {
+		const response = await fetchApi<DailyBackupStatsResponse>(
+			`/dashboard-metrics/daily-backups?days=${days}`,
+		);
+		return response.stats ?? [];
+	},
+};
+
+export const reportsApi = {
+	// Schedules
+	listSchedules: async (): Promise<ReportSchedule[]> => {
+		const response =
+			await fetchApi<ReportSchedulesResponse>('/reports/schedules');
+		return response.schedules ?? [];
+	},
+
+	getSchedule: async (id: string): Promise<ReportSchedule> =>
+		fetchApi<ReportSchedule>(`/reports/schedules/${id}`),
+
+	createSchedule: async (
+		data: CreateReportScheduleRequest,
+	): Promise<ReportSchedule> =>
+		fetchApi<ReportSchedule>('/reports/schedules', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateSchedule: async (
+		id: string,
+		data: UpdateReportScheduleRequest,
+	): Promise<ReportSchedule> =>
+		fetchApi<ReportSchedule>(`/reports/schedules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteSchedule: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/reports/schedules/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Actions
+	sendReport: async (
+		id: string,
+		preview = false,
+	): Promise<ReportPreviewResponse | MessageResponse> =>
+		fetchApi(`/reports/schedules/${id}/send`, {
+			method: 'POST',
+			body: JSON.stringify({ preview }),
+		}),
+
+	previewReport: async (
+		frequency: ReportFrequency,
+		timezone = 'UTC',
+	): Promise<ReportPreviewResponse> =>
+		fetchApi<ReportPreviewResponse>('/reports/preview', {
+			method: 'POST',
+			body: JSON.stringify({ frequency, timezone }),
+		}),
+
+	// History
+	listHistory: async (): Promise<ReportHistory[]> => {
+		const response = await fetchApi<ReportHistoryResponse>('/reports/history');
+		return response.history ?? [];
+	},
+
+	getHistory: async (id: string): Promise<ReportHistory> =>
+		fetchApi<ReportHistory>(`/reports/history/${id}`),
 };
