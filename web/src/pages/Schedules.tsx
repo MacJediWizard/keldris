@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { useAgents } from '../hooks/useAgents';
+import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
 import {
 	useCreateSchedule,
@@ -8,7 +10,7 @@ import {
 	useSchedules,
 	useUpdateSchedule,
 } from '../hooks/useSchedules';
-import type { Schedule } from '../lib/types';
+import type { Schedule, ScheduleRepositoryRequest } from '../lib/types';
 
 function LoadingRow() {
 	return (
@@ -40,9 +42,13 @@ interface CreateScheduleModalProps {
 function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	const [name, setName] = useState('');
 	const [agentId, setAgentId] = useState('');
-	const [repositoryId, setRepositoryId] = useState('');
+	const [selectedRepos, setSelectedRepos] = useState<
+		ScheduleRepositoryRequest[]
+	>([]);
 	const [cronExpression, setCronExpression] = useState('0 2 * * *');
 	const [paths, setPaths] = useState('/home');
+	// Policy template state
+	const [selectedPolicyId, setSelectedPolicyId] = useState('');
 	// Retention policy state
 	const [showRetention, setShowRetention] = useState(false);
 	const [keepLast, setKeepLast] = useState(5);
@@ -59,7 +65,45 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
+	const { data: policies } = usePolicies();
 	const createSchedule = useCreateSchedule();
+
+	const handlePolicySelect = (policyId: string) => {
+		setSelectedPolicyId(policyId);
+		if (!policyId) return;
+
+		const policy = policies?.find((p) => p.id === policyId);
+		if (!policy) return;
+
+		// Apply policy values to form
+		if (policy.paths && policy.paths.length > 0) {
+			setPaths(policy.paths.join('\n'));
+		}
+		if (policy.cron_expression) {
+			setCronExpression(policy.cron_expression);
+		}
+		if (policy.retention_policy) {
+			setShowRetention(true);
+			setKeepLast(policy.retention_policy.keep_last || 5);
+			setKeepDaily(policy.retention_policy.keep_daily || 7);
+			setKeepWeekly(policy.retention_policy.keep_weekly || 4);
+			setKeepMonthly(policy.retention_policy.keep_monthly || 6);
+			setKeepYearly(policy.retention_policy.keep_yearly || 0);
+		}
+		if (policy.bandwidth_limit_kb) {
+			setBandwidthLimitKb(policy.bandwidth_limit_kb.toString());
+			setShowAdvanced(true);
+		}
+		if (policy.backup_window) {
+			setWindowStart(policy.backup_window.start || '');
+			setWindowEnd(policy.backup_window.end || '');
+			setShowAdvanced(true);
+		}
+		if (policy.excluded_hours && policy.excluded_hours.length > 0) {
+			setExcludedHours(policy.excluded_hours);
+			setShowAdvanced(true);
+		}
+	};
 
 	const toggleExcludedHour = (hour: number) => {
 		setExcludedHours((prev) =>
@@ -69,6 +113,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (selectedRepos.length === 0) {
+			return; // Don't submit without repositories
+		}
 		try {
 			const retentionPolicy = showRetention
 				? {
@@ -83,7 +130,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			const data: Parameters<typeof createSchedule.mutateAsync>[0] = {
 				name,
 				agent_id: agentId,
-				repository_id: repositoryId,
+				repositories: selectedRepos,
 				cron_expression: cronExpression,
 				paths: paths.split('\n').filter((p) => p.trim()),
 				retention_policy: retentionPolicy,
@@ -109,7 +156,8 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			onClose();
 			setName('');
 			setAgentId('');
-			setRepositoryId('');
+			setSelectedRepos([]);
+			setSelectedPolicyId('');
 			setCronExpression('0 2 * * *');
 			setPaths('/home');
 			// Reset retention policy state
@@ -180,27 +228,38 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 							</select>
 						</div>
 						<div>
-							<label
-								htmlFor="schedule-repo"
-								className="block text-sm font-medium text-gray-700 mb-1"
-							>
-								Repository
-							</label>
-							<select
-								id="schedule-repo"
-								value={repositoryId}
-								onChange={(e) => setRepositoryId(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								required
-							>
-								<option value="">Select a repository</option>
-								{repositories?.map((repo) => (
-									<option key={repo.id} value={repo.id}>
-										{repo.name} ({repo.type})
-									</option>
-								))}
-							</select>
+							<MultiRepoSelector
+								repositories={repositories ?? []}
+								selectedRepos={selectedRepos}
+								onChange={setSelectedRepos}
+							/>
 						</div>
+						{policies && policies.length > 0 && (
+							<div>
+								<label
+									htmlFor="schedule-policy"
+									className="block text-sm font-medium text-gray-700 mb-1"
+								>
+									Policy Template (optional)
+								</label>
+								<select
+									id="schedule-policy"
+									value={selectedPolicyId}
+									onChange={(e) => handlePolicySelect(e.target.value)}
+									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								>
+									<option value="">No template - configure manually</option>
+									{policies.map((policy) => (
+										<option key={policy.id} value={policy.id}>
+											{policy.name}
+										</option>
+									))}
+								</select>
+								<p className="text-xs text-gray-500 mt-1">
+									Select a policy to pre-fill the form with template values
+								</p>
+							</div>
+						)}
 						<div>
 							<label
 								htmlFor="schedule-cron"
@@ -509,7 +568,8 @@ function formatBackupWindow(window?: { start?: string; end?: string }):
 interface ScheduleRowProps {
 	schedule: Schedule;
 	agentName?: string;
-	repoName?: string;
+	repoNames: string[];
+	policyName?: string;
 	onToggle: (id: string, enabled: boolean) => void;
 	onDelete: (id: string) => void;
 	onRun: (id: string) => void;
@@ -521,7 +581,8 @@ interface ScheduleRowProps {
 function ScheduleRow({
 	schedule,
 	agentName,
-	repoName,
+	repoNames,
+	policyName,
 	onToggle,
 	onDelete,
 	onRun,
@@ -534,13 +595,39 @@ function ScheduleRow({
 		schedule.backup_window ||
 		(schedule.excluded_hours && schedule.excluded_hours.length > 0);
 
+	const hasBadges = hasResourceControls || policyName;
+
 	return (
 		<tr className="hover:bg-gray-50">
 			<td className="px-6 py-4">
 				<div className="font-medium text-gray-900">{schedule.name}</div>
 				<div className="text-sm text-gray-500">
-					{agentName ?? 'Unknown Agent'} → {repoName ?? 'Unknown Repo'}
+					{agentName ?? 'Unknown Agent'} →{' '}
+					{repoNames.length > 0 ? repoNames.join(', ') : 'No repos'}
 				</div>
+				{hasBadges && (
+					<div className="mt-1 flex flex-wrap gap-1.5">
+						{policyName && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-indigo-50 text-indigo-700 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+									/>
+								</svg>
+								{policyName}
+							</span>
+						)}
+					</div>
+				)}
 				{hasResourceControls && (
 					<div className="mt-1 flex flex-wrap gap-1.5">
 						{schedule.bandwidth_limit_kb && (
@@ -666,12 +753,14 @@ export function Schedules() {
 	const { data: schedules, isLoading, isError } = useSchedules();
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
+	const { data: policies } = usePolicies();
 	const updateSchedule = useUpdateSchedule();
 	const deleteSchedule = useDeleteSchedule();
 	const runSchedule = useRunSchedule();
 
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
+	const policyMap = new Map(policies?.map((p) => [p.id, p.name]));
 
 	const filteredSchedules = schedules?.filter((schedule) => {
 		const matchesSearch = schedule.name
@@ -806,20 +895,30 @@ export function Schedules() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200">
-							{filteredSchedules.map((schedule) => (
-								<ScheduleRow
-									key={schedule.id}
-									schedule={schedule}
-									agentName={agentMap.get(schedule.agent_id)}
-									repoName={repoMap.get(schedule.repository_id)}
-									onToggle={handleToggle}
-									onDelete={handleDelete}
-									onRun={handleRun}
-									isUpdating={updateSchedule.isPending}
-									isDeleting={deleteSchedule.isPending}
-									isRunning={runSchedule.isPending}
-								/>
-							))}
+							{filteredSchedules.map((schedule) => {
+								const repoNames = (schedule.repositories ?? [])
+									.sort((a, b) => a.priority - b.priority)
+									.map((r) => repoMap.get(r.repository_id) ?? 'Unknown');
+								return (
+									<ScheduleRow
+										key={schedule.id}
+										schedule={schedule}
+										agentName={agentMap.get(schedule.agent_id)}
+										repoNames={repoNames}
+										policyName={
+											schedule.policy_id
+												? policyMap.get(schedule.policy_id)
+												: undefined
+										}
+										onToggle={handleToggle}
+										onDelete={handleDelete}
+										onRun={handleRun}
+										isUpdating={updateSchedule.isPending}
+										isDeleting={deleteSchedule.isPending}
+										isRunning={runSchedule.isPending}
+									/>
+								);
+							})}
 						</tbody>
 					</table>
 				) : (
