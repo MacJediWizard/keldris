@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
+import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
 import { useAgents } from '../hooks/useAgents';
 import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
@@ -69,6 +70,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 		CompressionLevel | ''
 	>('');
 	const [showAdvanced, setShowAdvanced] = useState(false);
+	// Exclude patterns state
+	const [excludes, setExcludes] = useState<string[]>([]);
+	const [showPatternLibrary, setShowPatternLibrary] = useState(false);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
@@ -140,6 +144,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				repositories: selectedRepos,
 				cron_expression: cronExpression,
 				paths: paths.split('\n').filter((p) => p.trim()),
+				excludes: excludes.length > 0 ? excludes : undefined,
 				retention_policy: retentionPolicy,
 				enabled: true,
 			};
@@ -185,9 +190,23 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			setExcludedHours([]);
 			setCompressionLevel('');
 			setShowAdvanced(false);
+			// Reset exclude patterns state
+			setExcludes([]);
+			setShowPatternLibrary(false);
 		} catch {
 			// Error handled by mutation
 		}
+	};
+
+	const handleAddPatterns = (patterns: string[]) => {
+		setExcludes((prev) => [
+			...prev,
+			...patterns.filter((p) => !prev.includes(p)),
+		]);
+	};
+
+	const handleRemovePattern = (pattern: string) => {
+		setExcludes((prev) => prev.filter((p) => p !== pattern));
 	};
 
 	if (!isOpen) return null;
@@ -308,6 +327,79 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
 								required
 							/>
+						</div>
+
+						{/* Exclude Patterns Section */}
+						<div className="border-t border-gray-200 pt-4">
+							<div className="flex items-center justify-between mb-2">
+								<span className="block text-sm font-medium text-gray-700">
+									Exclude Patterns
+								</span>
+								<button
+									type="button"
+									onClick={() => setShowPatternLibrary(true)}
+									className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+								>
+									<svg
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										aria-hidden="true"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+										/>
+									</svg>
+									Browse Library
+								</button>
+							</div>
+							{excludes.length > 0 ? (
+								<div className="space-y-2">
+									<div className="flex flex-wrap gap-1.5 p-3 bg-gray-50 rounded-lg max-h-32 overflow-y-auto">
+										{excludes.map((pattern) => (
+											<span
+												key={pattern}
+												className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-200 rounded group"
+											>
+												<code className="text-gray-700">{pattern}</code>
+												<button
+													type="button"
+													onClick={() => handleRemovePattern(pattern)}
+													className="text-gray-400 hover:text-red-500 transition-colors"
+												>
+													<svg
+														className="w-3 h-3"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+														aria-hidden="true"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M6 18L18 6M6 6l12 12"
+														/>
+													</svg>
+												</button>
+											</span>
+										))}
+									</div>
+									<p className="text-xs text-gray-500">
+										{excludes.length} pattern{excludes.length !== 1 ? 's' : ''}{' '}
+										will be excluded from backup
+									</p>
+								</div>
+							) : (
+								<p className="text-sm text-gray-500">
+									No patterns selected. Click "Browse Library" to add common
+									patterns.
+								</p>
+							)}
 						</div>
 
 						{/* Retention Policy Section */}
@@ -593,6 +685,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 					</div>
 				</form>
 			</div>
+			<PatternLibraryModal
+				isOpen={showPatternLibrary}
+				onClose={() => setShowPatternLibrary(false)}
+				onAddPatterns={handleAddPatterns}
+				existingPatterns={excludes}
+			/>
 		</div>
 	);
 }
