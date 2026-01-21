@@ -1,4 +1,5 @@
 import type {
+	ActiveMaintenanceResponse,
 	Agent,
 	AgentsResponse,
 	Alert,
@@ -14,6 +15,7 @@ import type {
 	CreateAgentRequest,
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
+	CreateMaintenanceWindowRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
@@ -27,6 +29,8 @@ import type {
 	InviteMemberRequest,
 	InviteResponse,
 	KeyRecoveryResponse,
+	MaintenanceWindow,
+	MaintenanceWindowsResponse,
 	MembersResponse,
 	MessageResponse,
 	NotificationChannel,
@@ -65,6 +69,7 @@ import type {
 	TestRepositoryResponse,
 	TriggerVerificationRequest,
 	UpdateAlertRuleRequest,
+	UpdateMaintenanceWindowRequest,
 	UpdateMemberRequest,
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
@@ -749,4 +754,42 @@ export const verificationsApi = {
 		fetchApi<MessageResponse>(`/verification-schedules/${id}`, {
 			method: 'DELETE',
 		}),
+};
+
+// Maintenance Windows API
+export const maintenanceApi = {
+	list: async (): Promise<MaintenanceWindow[]> => {
+		const response = await fetchApi<MaintenanceWindowsResponse>(
+			'/maintenance-windows',
+		);
+		return response.maintenance_windows ?? [];
+	},
+
+	get: async (id: string): Promise<MaintenanceWindow> =>
+		fetchApi<MaintenanceWindow>(`/maintenance-windows/${id}`),
+
+	create: async (
+		data: CreateMaintenanceWindowRequest,
+	): Promise<MaintenanceWindow> =>
+		fetchApi<MaintenanceWindow>('/maintenance-windows', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateMaintenanceWindowRequest,
+	): Promise<MaintenanceWindow> =>
+		fetchApi<MaintenanceWindow>(`/maintenance-windows/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/maintenance-windows/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getActive: async (): Promise<ActiveMaintenanceResponse> =>
+		fetchApi<ActiveMaintenanceResponse>('/maintenance/active'),
 };

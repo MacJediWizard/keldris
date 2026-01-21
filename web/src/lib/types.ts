@@ -751,3 +751,43 @@ export interface VerificationsResponse {
 export interface VerificationSchedulesResponse {
 	schedules: VerificationSchedule[];
 }
+
+// Maintenance Window types
+export interface MaintenanceWindow {
+	id: string;
+	org_id: string;
+	title: string;
+	message?: string;
+	starts_at: string;
+	ends_at: string;
+	notify_before_minutes: number;
+	notification_sent: boolean;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateMaintenanceWindowRequest {
+	title: string;
+	message?: string;
+	starts_at: string;
+	ends_at: string;
+	notify_before_minutes?: number;
+}
+
+export interface UpdateMaintenanceWindowRequest {
+	title?: string;
+	message?: string;
+	starts_at?: string;
+	ends_at?: string;
+	notify_before_minutes?: number;
+}
+
+export interface MaintenanceWindowsResponse {
+	maintenance_windows: MaintenanceWindow[];
+}
+
+export interface ActiveMaintenanceResponse {
+	active: MaintenanceWindow | null;
+	upcoming: MaintenanceWindow | null;
+}
