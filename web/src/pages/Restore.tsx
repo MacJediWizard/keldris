@@ -190,17 +190,23 @@ function RestoreDetailsModal({
 
 				<div className="space-y-4">
 					<div>
-						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Snapshot ID</p>
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Snapshot ID
+						</p>
 						<p className="font-mono text-gray-900">{restore.snapshot_id}</p>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Agent</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Agent
+							</p>
 							<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
 						</div>
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Created</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Created
+							</p>
 							<p className="text-gray-900">
 								{formatDateTime(restore.created_at)}
 							</p>
@@ -208,7 +214,9 @@ function RestoreDetailsModal({
 					</div>
 
 					<div>
-						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Target Path</p>
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Target Path
+						</p>
 						<p className="font-mono text-gray-900 break-all">
 							{restore.target_path}
 						</p>
@@ -232,14 +240,18 @@ function RestoreDetailsModal({
 					{restore.started_at && (
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Started</p>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Started
+								</p>
 								<p className="text-gray-900">
 									{formatDateTime(restore.started_at)}
 								</p>
 							</div>
 							{restore.completed_at && (
 								<div>
-									<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Completed</p>
+									<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+										Completed
+									</p>
 									<p className="text-gray-900">
 										{formatDateTime(restore.completed_at)}
 									</p>
@@ -250,7 +262,9 @@ function RestoreDetailsModal({
 
 					{restore.error_message && (
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Error</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Error
+							</p>
 							<p className="text-red-600 bg-red-50 p-3 rounded-lg text-sm">
 								{restore.error_message}
 							</p>
@@ -392,11 +406,15 @@ function RestoreModal({
 					<div className="p-6 space-y-6 overflow-y-auto flex-1">
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Agent</p>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Agent
+								</p>
 								<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Repository</p>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Repository
+								</p>
 								<p className="text-gray-900">{repoName ?? 'Unknown'}</p>
 							</div>
 						</div>
@@ -594,7 +612,9 @@ export function Restore() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Restore</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Restore
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Browse snapshots and restore files
 					</p>
@@ -749,7 +769,9 @@ export function Restore() {
 										d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
 									/>
 								</svg>
-								<p className="font-medium text-gray-900 dark:text-white">No snapshots found</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									No snapshots found
+								</p>
 								<p className="text-sm">
 									Snapshots will appear here once backups complete
 								</p>
@@ -841,7 +863,9 @@ export function Restore() {
 									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
 								/>
 							</svg>
-							<p className="font-medium text-gray-900 dark:text-white">No restore jobs</p>
+							<p className="font-medium text-gray-900 dark:text-white">
+								No restore jobs
+							</p>
 							<p className="text-sm">
 								Select a snapshot to start a restore operation
 							</p>

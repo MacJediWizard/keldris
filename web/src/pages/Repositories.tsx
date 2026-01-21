@@ -78,7 +78,11 @@ function FormField({
 				className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 				required={required}
 			/>
-			{helpText && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">{helpText}</p>}
+			{helpText && (
+				<p className="mt-1 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+					{helpText}
+				</p>
+			)}
 		</div>
 	);
 }
@@ -451,7 +455,10 @@ function AddRepositoryModal({
 								onChange={(e) => setS3UseSsl(e.target.checked)}
 								className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 							/>
-							<label htmlFor="s3-use-ssl" className="text-sm text-gray-700 dark:text-gray-300 dark:text-gray-600">
+							<label
+								htmlFor="s3-use-ssl"
+								className="text-sm text-gray-700 dark:text-gray-300 dark:text-gray-600"
+							>
 								Use SSL/TLS
 							</label>
 						</div>
@@ -883,7 +890,9 @@ function RepositoryCard({
 			{/* Verification Status */}
 			<div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
 				<div className="flex items-center justify-between mb-2">
-					<span className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">Integrity</span>
+					<span className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
+						Integrity
+					</span>
 					<span
 						className={`px-2 py-0.5 rounded-full text-xs font-medium ${verificationBadge.className}`}
 					>
@@ -1144,7 +1153,9 @@ export function Repositories() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Repositories</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Repositories
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Configure backup storage destinations
 					</p>
@@ -1258,8 +1269,12 @@ export function Repositories() {
 								onClick={() => handleTypeClick('local')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900 dark:text-white">Local</p>
-								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">Filesystem path</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									Local
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Filesystem path
+								</p>
 							</button>
 							<button
 								type="button"
@@ -1267,7 +1282,9 @@ export function Repositories() {
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
 								<p className="font-medium text-gray-900 dark:text-white">S3</p>
-								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">AWS / MinIO / Wasabi</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									AWS / MinIO / Wasabi
+								</p>
 							</button>
 							<button
 								type="button"
@@ -1275,31 +1292,45 @@ export function Repositories() {
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
 								<p className="font-medium text-gray-900 dark:text-white">B2</p>
-								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">Backblaze</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Backblaze
+								</p>
 							</button>
 							<button
 								type="button"
 								onClick={() => handleTypeClick('sftp')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900 dark:text-white">SFTP</p>
-								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">Remote server</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									SFTP
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Remote server
+								</p>
 							</button>
 							<button
 								type="button"
 								onClick={() => handleTypeClick('rest')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900 dark:text-white">REST</p>
-								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">Restic REST server</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									REST
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Restic REST server
+								</p>
 							</button>
 							<button
 								type="button"
 								onClick={() => handleTypeClick('dropbox')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900 dark:text-white">Dropbox</p>
-								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">Via rclone</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									Dropbox
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Via rclone
+								</p>
 							</button>
 						</div>
 					</div>

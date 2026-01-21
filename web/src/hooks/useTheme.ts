@@ -49,7 +49,8 @@ export function useTheme() {
 	}, []);
 
 	const toggleTheme = useCallback(() => {
-		const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+		const nextTheme =
+			theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
 		setTheme(nextTheme);
 	}, [theme, setTheme]);
 

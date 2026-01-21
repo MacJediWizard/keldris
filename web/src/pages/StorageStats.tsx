@@ -54,7 +54,9 @@ export function StorageStats() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Storage Statistics</h1>
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+					Storage Statistics
+				</h1>
 				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Monitor storage efficiency and deduplication across your repositories
 				</p>
@@ -186,11 +188,15 @@ export function StorageStats() {
 						<div className="flex items-center justify-center gap-6 mt-4">
 							<div className="flex items-center gap-2">
 								<div className="w-3 h-3 bg-indigo-500 rounded" />
-								<span className="text-sm text-gray-600 dark:text-gray-400">Actual storage</span>
+								<span className="text-sm text-gray-600 dark:text-gray-400">
+									Actual storage
+								</span>
 							</div>
 							<div className="flex items-center gap-2">
 								<div className="w-3 h-3 bg-gray-200 dark:bg-gray-700 rounded" />
-								<span className="text-sm text-gray-600 dark:text-gray-400">Original data</span>
+								<span className="text-sm text-gray-600 dark:text-gray-400">
+									Original data
+								</span>
 							</div>
 						</div>
 					</div>
@@ -260,7 +266,10 @@ export function StorageStats() {
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700">
 								{repoStats.map((stats) => (
-									<tr key={stats.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+									<tr
+										key={stats.id}
+										className="hover:bg-gray-50 dark:hover:bg-gray-700"
+									>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Link
 												to={`/stats/${stats.repository_id}`}

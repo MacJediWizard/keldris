@@ -122,7 +122,9 @@ export function AgentDownloads({
 	return (
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 			<div className="p-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 className="text-lg font-semibold text-gray-900 dark:text-white">Download Agent</h3>
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+					Download Agent
+				</h3>
 				<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 					Install the Keldris agent on your systems to enable backups
 				</p>

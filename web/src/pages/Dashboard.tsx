@@ -50,7 +50,9 @@ function StatCard({
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
+					<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+						{title}
+					</p>
 					<p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
 						{isLoading ? (
 							<span className="inline-block w-8 h-7 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -59,7 +61,9 @@ function StatCard({
 						)}
 					</p>
 					<div className="flex items-center gap-2 mt-1">
-						<p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+						<p className="text-sm text-gray-500 dark:text-gray-400">
+							{subtitle}
+						</p>
 						{trend && trendValue && (
 							<span className={`text-xs font-medium ${trendColors[trend]}`}>
 								{trend === 'up' ? '+' : trend === 'down' ? '-' : ''}
@@ -613,8 +617,12 @@ export function Dashboard() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-				<p className="text-gray-600 dark:text-gray-400 mt-1">Overview of your backup system</p>
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+					Dashboard
+				</h1>
+				<p className="text-gray-600 dark:text-gray-400 mt-1">
+					Overview of your backup system
+				</p>
 			</div>
 
 			{/* Main Stats Row */}
