@@ -10,6 +10,8 @@ import type {
 	AlertRule,
 	AlertRulesResponse,
 	AlertsResponse,
+	ApplyPolicyRequest,
+	ApplyPolicyResponse,
 	AssignTagsRequest,
 	AuditLog,
 	AuditLogFilter,
@@ -28,6 +30,7 @@ import type {
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
+	CreatePolicyRequest,
 	CreateReportScheduleRequest,
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
@@ -66,6 +69,8 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	PoliciesResponse,
+	Policy,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -110,6 +115,7 @@ import type {
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
+	UpdatePolicyRequest,
 	UpdateReportScheduleRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
@@ -332,6 +338,47 @@ export const schedulesApi = {
 		);
 		return response.replication_status ?? [];
 	},
+};
+
+// Policies API
+export const policiesApi = {
+	list: async (): Promise<Policy[]> => {
+		const response = await fetchApi<PoliciesResponse>('/policies');
+		return response.policies ?? [];
+	},
+
+	get: async (id: string): Promise<Policy> =>
+		fetchApi<Policy>(`/policies/${id}`),
+
+	create: async (data: CreatePolicyRequest): Promise<Policy> =>
+		fetchApi<Policy>('/policies', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (id: string, data: UpdatePolicyRequest): Promise<Policy> =>
+		fetchApi<Policy>(`/policies/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/policies/${id}`, {
+			method: 'DELETE',
+		}),
+
+	listSchedules: async (id: string): Promise<Schedule[]> => {
+		const response = await fetchApi<SchedulesResponse>(
+			`/policies/${id}/schedules`,
+		);
+		return response.schedules ?? [];
+	},
+
+	apply: async (id: string, data: ApplyPolicyRequest): Promise<ApplyPolicyResponse> =>
+		fetchApi<ApplyPolicyResponse>(`/policies/${id}/apply`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Backups API
