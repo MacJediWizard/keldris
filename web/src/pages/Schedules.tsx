@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { useAgents } from '../hooks/useAgents';
+import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
 import {
 	useCreateSchedule,
@@ -46,6 +47,8 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	>([]);
 	const [cronExpression, setCronExpression] = useState('0 2 * * *');
 	const [paths, setPaths] = useState('/home');
+	// Policy template state
+	const [selectedPolicyId, setSelectedPolicyId] = useState('');
 	// Retention policy state
 	const [showRetention, setShowRetention] = useState(false);
 	const [keepLast, setKeepLast] = useState(5);
@@ -62,7 +65,45 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
+	const { data: policies } = usePolicies();
 	const createSchedule = useCreateSchedule();
+
+	const handlePolicySelect = (policyId: string) => {
+		setSelectedPolicyId(policyId);
+		if (!policyId) return;
+
+		const policy = policies?.find((p) => p.id === policyId);
+		if (!policy) return;
+
+		// Apply policy values to form
+		if (policy.paths && policy.paths.length > 0) {
+			setPaths(policy.paths.join('\n'));
+		}
+		if (policy.cron_expression) {
+			setCronExpression(policy.cron_expression);
+		}
+		if (policy.retention_policy) {
+			setShowRetention(true);
+			setKeepLast(policy.retention_policy.keep_last || 5);
+			setKeepDaily(policy.retention_policy.keep_daily || 7);
+			setKeepWeekly(policy.retention_policy.keep_weekly || 4);
+			setKeepMonthly(policy.retention_policy.keep_monthly || 6);
+			setKeepYearly(policy.retention_policy.keep_yearly || 0);
+		}
+		if (policy.bandwidth_limit_kb) {
+			setBandwidthLimitKb(policy.bandwidth_limit_kb.toString());
+			setShowAdvanced(true);
+		}
+		if (policy.backup_window) {
+			setWindowStart(policy.backup_window.start || '');
+			setWindowEnd(policy.backup_window.end || '');
+			setShowAdvanced(true);
+		}
+		if (policy.excluded_hours && policy.excluded_hours.length > 0) {
+			setExcludedHours(policy.excluded_hours);
+			setShowAdvanced(true);
+		}
+	};
 
 	const toggleExcludedHour = (hour: number) => {
 		setExcludedHours((prev) =>
@@ -116,6 +157,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			setName('');
 			setAgentId('');
 			setSelectedRepos([]);
+			setSelectedPolicyId('');
 			setCronExpression('0 2 * * *');
 			setPaths('/home');
 			// Reset retention policy state
@@ -192,6 +234,32 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								onChange={setSelectedRepos}
 							/>
 						</div>
+						{policies && policies.length > 0 && (
+							<div>
+								<label
+									htmlFor="schedule-policy"
+									className="block text-sm font-medium text-gray-700 mb-1"
+								>
+									Policy Template (optional)
+								</label>
+								<select
+									id="schedule-policy"
+									value={selectedPolicyId}
+									onChange={(e) => handlePolicySelect(e.target.value)}
+									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								>
+									<option value="">No template - configure manually</option>
+									{policies.map((policy) => (
+										<option key={policy.id} value={policy.id}>
+											{policy.name}
+										</option>
+									))}
+								</select>
+								<p className="text-xs text-gray-500 mt-1">
+									Select a policy to pre-fill the form with template values
+								</p>
+							</div>
+						)}
 						<div>
 							<label
 								htmlFor="schedule-cron"
@@ -501,6 +569,7 @@ interface ScheduleRowProps {
 	schedule: Schedule;
 	agentName?: string;
 	repoNames: string[];
+	policyName?: string;
 	onToggle: (id: string, enabled: boolean) => void;
 	onDelete: (id: string) => void;
 	onRun: (id: string) => void;
@@ -513,6 +582,7 @@ function ScheduleRow({
 	schedule,
 	agentName,
 	repoNames,
+	policyName,
 	onToggle,
 	onDelete,
 	onRun,
@@ -525,6 +595,8 @@ function ScheduleRow({
 		schedule.backup_window ||
 		(schedule.excluded_hours && schedule.excluded_hours.length > 0);
 
+	const hasBadges = hasResourceControls || policyName;
+
 	return (
 		<tr className="hover:bg-gray-50">
 			<td className="px-6 py-4">
@@ -533,6 +605,29 @@ function ScheduleRow({
 					{agentName ?? 'Unknown Agent'} →{' '}
 					{repoNames.length > 0 ? repoNames.join(', ') : 'No repos'}
 				</div>
+				{hasBadges && (
+					<div className="mt-1 flex flex-wrap gap-1.5">
+						{policyName && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-indigo-50 text-indigo-700 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+									/>
+								</svg>
+								{policyName}
+							</span>
+						)}
+					</div>
+				)}
 				{hasResourceControls && (
 					<div className="mt-1 flex flex-wrap gap-1.5">
 						{schedule.bandwidth_limit_kb && (
@@ -658,12 +753,14 @@ export function Schedules() {
 	const { data: schedules, isLoading, isError } = useSchedules();
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
+	const { data: policies } = usePolicies();
 	const updateSchedule = useUpdateSchedule();
 	const deleteSchedule = useDeleteSchedule();
 	const runSchedule = useRunSchedule();
 
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
+	const policyMap = new Map(policies?.map((p) => [p.id, p.name]));
 
 	const filteredSchedules = schedules?.filter((schedule) => {
 		const matchesSearch = schedule.name
@@ -808,6 +905,11 @@ export function Schedules() {
 										schedule={schedule}
 										agentName={agentMap.get(schedule.agent_id)}
 										repoNames={repoNames}
+										policyName={
+											schedule.policy_id
+												? policyMap.get(schedule.policy_id)
+												: undefined
+										}
 										onToggle={handleToggle}
 										onDelete={handleDelete}
 										onRun={handleRun}

@@ -273,6 +273,7 @@ export interface BackupWindow {
 export interface Schedule {
 	id: string;
 	agent_id: string;
+	policy_id?: string; // Policy this schedule was created from
 	name: string;
 	cron_expression: string;
 	paths: string[];
@@ -321,6 +322,62 @@ export interface RunScheduleResponse {
 
 export interface ReplicationStatusResponse {
 	replication_status: ReplicationStatus[];
+}
+
+// Policy types
+export interface Policy {
+	id: string;
+	org_id: string;
+	name: string;
+	description?: string;
+	paths?: string[];
+	excludes?: string[];
+	retention_policy?: RetentionPolicy;
+	bandwidth_limit_kb?: number;
+	backup_window?: BackupWindow;
+	excluded_hours?: number[];
+	cron_expression?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreatePolicyRequest {
+	name: string;
+	description?: string;
+	paths?: string[];
+	excludes?: string[];
+	retention_policy?: RetentionPolicy;
+	bandwidth_limit_kb?: number;
+	backup_window?: BackupWindow;
+	excluded_hours?: number[];
+	cron_expression?: string;
+}
+
+export interface UpdatePolicyRequest {
+	name?: string;
+	description?: string;
+	paths?: string[];
+	excludes?: string[];
+	retention_policy?: RetentionPolicy;
+	bandwidth_limit_kb?: number;
+	backup_window?: BackupWindow;
+	excluded_hours?: number[];
+	cron_expression?: string;
+}
+
+export interface ApplyPolicyRequest {
+	agent_ids: string[];
+	repository_id: string;
+	schedule_name?: string;
+}
+
+export interface ApplyPolicyResponse {
+	schedules_created: number;
+	schedules: Schedule[];
+}
+
+export interface PoliciesResponse {
+	policies: Policy[];
 }
 
 // Backup types
