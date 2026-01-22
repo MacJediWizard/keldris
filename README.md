@@ -1,8 +1,22 @@
-# Keldris
+<p align="center">
+  <img src="docs/images/logo.png" alt="Keldris" width="200">
+</p>
 
-Self-hosted backup management with OIDC auth. Built on Restic.
+<h1 align="center">Keldris</h1>
 
-Built for teams that outgrew basic backup tools but don't want to pay enterprise pricing.
+<p align="center">
+  Self-hosted backup management with OIDC auth. Built on Restic.<br>
+  <em>For teams that outgrew basic backup tools but don't want to pay enterprise pricing.</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/status-in%20development-yellow" alt="Status">
+  <img src="https://img.shields.io/github/license/MacJediWizard/keldris" alt="License">
+  <img src="https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go" alt="Go">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" alt="React">
+</p>
+
+---
 
 > ⚠️ **Active development** - Not ready for production yet. Following along? Star the repo.
 
