@@ -90,6 +90,10 @@ type DashboardStats struct {
 	// Success rates
 	SuccessRate7d  float64 `json:"success_rate_7d"`
 	SuccessRate30d float64 `json:"success_rate_30d"`
+
+	// Ransomware alerts (displayed prominently)
+	RansomwareAlertsActive   int `json:"ransomware_alerts_active"`
+	RansomwareAlertsCritical int `json:"ransomware_alerts_critical"`
 }
 
 // BackupSuccessRate represents backup success rate for a time period.
