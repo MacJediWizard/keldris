@@ -34,6 +34,10 @@ import type {
 	BuiltInPatternsResponse,
 	CategoriesResponse,
 	CategoryInfo,
+	ClassificationLevelsResponse,
+	ClassificationRulesResponse,
+	ClassificationSummary,
+	ComplianceReport,
 	CostAlert,
 	CostAlertsResponse,
 	CostForecastResponse,
@@ -54,6 +58,7 @@ import type {
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
+	CreatePathClassificationRuleRequest,
 	CreatePolicyRequest,
 	CreateRegistrationCodeRequest,
 	CreateRegistrationCodeResponse,
@@ -78,6 +83,7 @@ import type {
 	DailyBackupStats,
 	DailyBackupStatsResponse,
 	DashboardStats,
+	DataTypesResponse,
 	DefaultPricingResponse,
 	DryRunResponse,
 	ErrorResponse,
@@ -118,6 +124,7 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	PathClassificationRule,
 	PendingRegistration,
 	PendingRegistrationsResponse,
 	PoliciesResponse,
@@ -155,6 +162,7 @@ import type {
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
+	SetScheduleClassificationRequest,
 	Snapshot,
 	SnapshotComment,
 	SnapshotCommentsResponse,
@@ -185,6 +193,7 @@ import type {
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
+	UpdatePathClassificationRuleRequest,
 	UpdatePolicyRequest,
 	UpdateReportScheduleRequest,
 	UpdateRepositoryImmutabilitySettingsRequest,
@@ -1680,6 +1689,116 @@ export const costAlertsApi = {
 		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
 			method: 'DELETE',
 		}),
+};
+
+// Classification API
+export const classificationsApi = {
+	// Reference data
+	getLevels: async (): Promise<ClassificationLevelsResponse> =>
+		fetchApi<ClassificationLevelsResponse>('/classifications/levels'),
+
+	getDataTypes: async (): Promise<DataTypesResponse> =>
+		fetchApi<DataTypesResponse>('/classifications/data-types'),
+
+	getDefaultRules: async (): Promise<PathClassificationRule[]> => {
+		const response = await fetchApi<{ rules: PathClassificationRule[] }>(
+			'/classifications/default-rules',
+		);
+		return response.rules ?? [];
+	},
+
+	// Rules
+	listRules: async (): Promise<PathClassificationRule[]> => {
+		const response = await fetchApi<ClassificationRulesResponse>(
+			'/classifications/rules',
+		);
+		return response.rules ?? [];
+	},
+
+	getRule: async (id: string): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>(`/classifications/rules/${id}`),
+
+	createRule: async (
+		data: CreatePathClassificationRuleRequest,
+	): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>('/classifications/rules', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateRule: async (
+		id: string,
+		data: UpdatePathClassificationRuleRequest,
+	): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>(`/classifications/rules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteRule: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/classifications/rules/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Schedule classifications
+	listScheduleClassifications: async (level?: string): Promise<Schedule[]> => {
+		const url = level
+			? `/classifications/schedules?level=${level}`
+			: '/classifications/schedules';
+		const response = await fetchApi<{ schedules: Schedule[] }>(url);
+		return response.schedules ?? [];
+	},
+
+	getScheduleClassification: async (
+		scheduleId: string,
+	): Promise<{ schedule_id: string; level: string; data_types: string[] }> =>
+		fetchApi<{ schedule_id: string; level: string; data_types: string[] }>(
+			`/classifications/schedules/${scheduleId}`,
+		),
+
+	setScheduleClassification: async (
+		scheduleId: string,
+		data: SetScheduleClassificationRequest,
+	): Promise<{ schedule_id: string; level: string; data_types: string[] }> =>
+		fetchApi<{ schedule_id: string; level: string; data_types: string[] }>(
+			`/classifications/schedules/${scheduleId}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		),
+
+	autoClassifySchedule: async (
+		scheduleId: string,
+	): Promise<{
+		schedule_id: string;
+		level: string;
+		data_types: string[];
+		auto_classified: boolean;
+	}> =>
+		fetchApi<{
+			schedule_id: string;
+			level: string;
+			data_types: string[];
+			auto_classified: boolean;
+		}>(`/classifications/schedules/${scheduleId}/auto-classify`, {
+			method: 'POST',
+		}),
+
+	// Backup classifications
+	listBackupsByClassification: async (level: string): Promise<Backup[]> => {
+		const response = await fetchApi<{ backups: Backup[]; level: string }>(
+			`/classifications/backups?level=${level}`,
+		);
+		return response.backups ?? [];
+	},
+
+	// Summary and reports
+	getSummary: async (): Promise<ClassificationSummary> =>
+		fetchApi<ClassificationSummary>('/classifications/summary'),
+
+	getComplianceReport: async (): Promise<ComplianceReport> =>
+		fetchApi<ComplianceReport>('/classifications/compliance-report'),
 };
 
 // Immutability API
