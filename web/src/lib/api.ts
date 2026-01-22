@@ -93,6 +93,16 @@ import type {
 	FileHistoryParams,
 	FileHistoryResponse,
 	FleetHealthSummary,
+	GeoRegion,
+	GeoReplicationConfig,
+	GeoReplicationConfigsResponse,
+	GeoReplicationCreateRequest,
+	GeoReplicationEvent,
+	GeoReplicationEventsResponse,
+	GeoReplicationRegionsResponse,
+	GeoReplicationSummary,
+	GeoReplicationSummaryResponse,
+	GeoReplicationUpdateRequest,
 	ImmutabilityLock,
 	ImmutabilityLocksResponse,
 	ImmutabilityStatus,
@@ -144,6 +154,7 @@ import type {
 	RepositoryGrowthResponse,
 	RepositoryHistoryResponse,
 	RepositoryImmutabilitySettings,
+	RepositoryReplicationStatusResponse,
 	RepositoryStatsListItem,
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
@@ -1888,4 +1899,80 @@ export const legalHoldsApi = {
 		fetchApi<MessageResponse>(`/snapshots/${snapshotId}/hold`, {
 			method: 'DELETE',
 		}),
+};
+
+// Geo-Replication API
+export const geoReplicationApi = {
+	listRegions: async (): Promise<{
+		regions: GeoRegion[];
+		pairs: { primary: GeoRegion; secondary: GeoRegion }[];
+	}> => fetchApi<GeoReplicationRegionsResponse>('/geo-replication/regions'),
+
+	listConfigs: async (): Promise<GeoReplicationConfig[]> => {
+		const response = await fetchApi<GeoReplicationConfigsResponse>(
+			'/geo-replication/configs',
+		);
+		return response.configs ?? [];
+	},
+
+	getConfig: async (id: string): Promise<GeoReplicationConfig> =>
+		fetchApi<GeoReplicationConfig>(`/geo-replication/configs/${id}`),
+
+	createConfig: async (
+		data: GeoReplicationCreateRequest,
+	): Promise<GeoReplicationConfig> =>
+		fetchApi<GeoReplicationConfig>('/geo-replication/configs', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateConfig: async (
+		id: string,
+		data: GeoReplicationUpdateRequest,
+	): Promise<GeoReplicationConfig> =>
+		fetchApi<GeoReplicationConfig>(`/geo-replication/configs/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteConfig: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/geo-replication/configs/${id}`, {
+			method: 'DELETE',
+		}),
+
+	triggerReplication: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/geo-replication/configs/${id}/trigger`, {
+			method: 'POST',
+		}),
+
+	getEvents: async (id: string): Promise<GeoReplicationEvent[]> => {
+		const response = await fetchApi<GeoReplicationEventsResponse>(
+			`/geo-replication/configs/${id}/events`,
+		);
+		return response.events ?? [];
+	},
+
+	getRepositoryStatus: async (
+		repoId: string,
+	): Promise<RepositoryReplicationStatusResponse> =>
+		fetchApi<RepositoryReplicationStatusResponse>(
+			`/geo-replication/repositories/${repoId}/status`,
+		),
+
+	setRepositoryRegion: async (
+		repoId: string,
+		region: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/geo-replication/repositories/${repoId}/region`,
+			{
+				method: 'PUT',
+				body: JSON.stringify({ region }),
+			},
+		),
+
+	getSummary: async (): Promise<{
+		summary: GeoReplicationSummary;
+		regions: GeoRegion[];
+	}> => fetchApi<GeoReplicationSummaryResponse>('/geo-replication/summary'),
 };
