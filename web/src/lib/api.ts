@@ -57,6 +57,7 @@ import type {
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
+	CreateSSOGroupMappingRequest,
 	CreateScheduleRequest,
 	CreateSnapshotCommentRequest,
 	CreateStoragePricingRequest,
@@ -126,6 +127,10 @@ import type {
 	RotateAPIKeyResponse,
 	RunDRTestRequest,
 	RunScheduleResponse,
+	SSOGroupMapping,
+	SSOGroupMappingResponse,
+	SSOGroupMappingsResponse,
+	SSOSettings,
 	Schedule,
 	SchedulesResponse,
 	SearchFilter,
@@ -163,12 +168,15 @@ import type {
 	UpdatePolicyRequest,
 	UpdateReportScheduleRequest,
 	UpdateRepositoryRequest,
+	UpdateSSOGroupMappingRequest,
+	UpdateSSOSettingsRequest,
 	UpdateScheduleRequest,
 	UpdateStoragePricingRequest,
 	UpdateTagRequest,
 	UpdateUserPreferencesRequest,
 	UpdateVerificationScheduleRequest,
 	User,
+	UserSSOGroups,
 	Verification,
 	VerificationSchedule,
 	VerificationSchedulesResponse,
@@ -1067,6 +1075,77 @@ export const verificationsApi = {
 		}),
 };
 
+// SSO Group Mappings API
+export const ssoGroupMappingsApi = {
+	list: async (orgId: string): Promise<SSOGroupMapping[]> => {
+		const response = await fetchApi<SSOGroupMappingsResponse>(
+			`/organizations/${orgId}/sso-group-mappings`,
+		);
+		return response.mappings ?? [];
+	},
+
+	get: async (orgId: string, id: string): Promise<SSOGroupMapping> => {
+		const response = await fetchApi<SSOGroupMappingResponse>(
+			`/organizations/${orgId}/sso-group-mappings/${id}`,
+		);
+		return response.mapping;
+	},
+
+	create: async (
+		orgId: string,
+		data: CreateSSOGroupMappingRequest,
+	): Promise<SSOGroupMapping> => {
+		const response = await fetchApi<SSOGroupMappingResponse>(
+			`/organizations/${orgId}/sso-group-mappings`,
+			{
+				method: 'POST',
+				body: JSON.stringify(data),
+			},
+		);
+		return response.mapping;
+	},
+
+	update: async (
+		orgId: string,
+		id: string,
+		data: UpdateSSOGroupMappingRequest,
+	): Promise<SSOGroupMapping> => {
+		const response = await fetchApi<SSOGroupMappingResponse>(
+			`/organizations/${orgId}/sso-group-mappings/${id}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		);
+		return response.mapping;
+	},
+
+	delete: async (orgId: string, id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/organizations/${orgId}/sso-group-mappings/${id}`,
+			{
+				method: 'DELETE',
+			},
+		),
+
+	// SSO Settings
+	getSettings: async (orgId: string): Promise<SSOSettings> =>
+		fetchApi<SSOSettings>(`/organizations/${orgId}/sso-settings`),
+
+	updateSettings: async (
+		orgId: string,
+		data: UpdateSSOSettingsRequest,
+	): Promise<SSOSettings> =>
+		fetchApi<SSOSettings>(`/organizations/${orgId}/sso-settings`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// User SSO Groups
+	getUserSSOGroups: async (userId: string): Promise<UserSSOGroups> =>
+		fetchApi<UserSSOGroups>(`/users/${userId}/sso-groups`),
+};
+
 // Maintenance Windows API
 export const maintenanceApi = {
 	list: async (): Promise<MaintenanceWindow[]> => {
@@ -1095,7 +1174,6 @@ export const maintenanceApi = {
 			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
-
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/maintenance-windows/${id}`, {
 			method: 'DELETE',
