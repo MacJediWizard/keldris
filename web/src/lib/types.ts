@@ -1595,3 +1595,28 @@ export interface OnboardingStatus {
 	skipped: boolean;
 	is_complete: boolean;
 }
+
+// File History types
+export interface FileVersion {
+	snapshot_id: string;
+	short_id: string;
+	snapshot_time: string;
+	size: number;
+	mod_time: string;
+}
+
+export interface FileHistoryResponse {
+	file_path: string;
+	agent_id: string;
+	repository_id: string;
+	agent_name: string;
+	repo_name: string;
+	versions: FileVersion[];
+	message?: string;
+}
+
+export interface FileHistoryParams {
+	path: string;
+	agent_id: string;
+	repository_id: string;
+}
