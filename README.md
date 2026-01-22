@@ -3,6 +3,7 @@
 </p>
 
 <h1 align="center">Keldris</h1>
+<p align="center"><strong>Secure Keeper of Your Data</strong></p>
 
 <p align="center">
   Self-hosted backup management with OIDC auth. Built on Restic.<br>
