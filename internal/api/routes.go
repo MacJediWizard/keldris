@@ -109,6 +109,9 @@ func NewRouter(
 	reposHandler := handlers.NewRepositoriesHandler(database, keyManager, logger)
 	reposHandler.RegisterRoutes(apiV1)
 
+	repoImportHandler := handlers.NewRepositoryImportHandler(database, keyManager, logger)
+	repoImportHandler.RegisterRoutes(apiV1)
+
 	schedulesHandler := handlers.NewSchedulesHandler(database, logger)
 	schedulesHandler.RegisterRoutes(apiV1)
 
