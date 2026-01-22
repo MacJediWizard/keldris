@@ -407,6 +407,31 @@ export interface RunScheduleResponse {
 	message: string;
 }
 
+// Dry run types
+export interface DryRunFile {
+	path: string;
+	type: 'file' | 'dir';
+	size: number;
+	action: 'new' | 'changed' | 'unchanged';
+}
+
+export interface DryRunExcluded {
+	path: string;
+	reason: string;
+}
+
+export interface DryRunResponse {
+	schedule_id: string;
+	total_files: number;
+	total_size: number;
+	new_files: number;
+	changed_files: number;
+	unchanged_files: number;
+	files_to_backup: DryRunFile[];
+	excluded_files: DryRunExcluded[];
+	message: string;
+}
+
 export interface ReplicationStatusResponse {
 	replication_status: ReplicationStatus[];
 }

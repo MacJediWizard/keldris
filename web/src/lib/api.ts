@@ -77,6 +77,7 @@ import type {
 	DailyBackupStatsResponse,
 	DashboardStats,
 	DefaultPricingResponse,
+	DryRunResponse,
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
@@ -512,6 +513,11 @@ export const schedulesApi = {
 
 	run: async (id: string): Promise<RunScheduleResponse> =>
 		fetchApi<RunScheduleResponse>(`/schedules/${id}/run`, {
+			method: 'POST',
+		}),
+
+	dryRun: async (id: string): Promise<DryRunResponse> =>
+		fetchApi<DryRunResponse>(`/schedules/${id}/dry-run`, {
 			method: 'POST',
 		}),
 
