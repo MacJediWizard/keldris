@@ -14,6 +14,7 @@ import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
 import { Restore } from './pages/Restore';
 import { Schedules } from './pages/Schedules';
+import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
 
 const queryClient = new QueryClient({
@@ -44,6 +45,7 @@ function App() {
 						<Route path="schedules" element={<Schedules />} />
 						<Route path="backups" element={<Backups />} />
 						<Route path="restore" element={<Restore />} />
+						<Route path="snapshots/compare" element={<SnapshotCompare />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
 						<Route path="audit-logs" element={<AuditLogs />} />
