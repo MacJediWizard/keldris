@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/logo.png" alt="Keldris" width="200">
+  <img src="https://cdn.macjediwizard.com/cdn/Keldris%20Branding%20Images/keldris-webicon-727336cd.png" alt="Keldris" width="200">
 </p>
 
 <h1 align="center">Keldris</h1>
