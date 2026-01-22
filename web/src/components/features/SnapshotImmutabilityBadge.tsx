@@ -13,7 +13,7 @@ export function SnapshotImmutabilityBadge({
 }: SnapshotImmutabilityBadgeProps) {
 	const { data: status, isLoading } = useSnapshotImmutabilityStatus(
 		snapshotId,
-		repositoryId
+		repositoryId,
 	);
 
 	if (isLoading || !status?.is_locked) {
@@ -74,10 +74,7 @@ export function LockIcon({
 	const title = `Locked until ${lockedUntil ? new Date(lockedUntil).toLocaleDateString() : 'N/A'}${remainingDays !== undefined ? ` (${remainingDays} days remaining)` : ''}${reason ? ` - ${reason}` : ''}`;
 
 	return (
-		<span
-			className="inline-flex items-center text-amber-600"
-			title={title}
-		>
+		<span className="inline-flex items-center text-amber-600" title={title}>
 			<svg
 				className={sizeClasses[size]}
 				fill="none"
@@ -134,8 +131,8 @@ export function ImmutabilityDeleteWarning({
 					</h3>
 					<div className="mt-2 text-sm text-amber-700">
 						<p>
-							This snapshot is protected by an immutability lock and cannot be deleted
-							until{' '}
+							This snapshot is protected by an immutability lock and cannot be
+							deleted until{' '}
 							<strong>
 								{lockedUntil
 									? new Date(lockedUntil).toLocaleDateString()

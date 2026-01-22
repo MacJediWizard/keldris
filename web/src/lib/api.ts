@@ -48,6 +48,7 @@ import type {
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
 	CreateExcludePatternRequest,
+	CreateImmutabilityLockRequest,
 	CreateMaintenanceWindowRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
@@ -81,20 +82,17 @@ import type {
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
+	ExtendImmutabilityLockRequest,
 	FileHistoryParams,
 	FileHistoryResponse,
 	FleetHealthSummary,
+	ImmutabilityLock,
+	ImmutabilityLocksResponse,
+	ImmutabilityStatus,
 	ImportPreviewRequest,
 	ImportPreviewResponse,
 	ImportRepositoryRequest,
 	ImportRepositoryResponse,
-	ImmutabilityLock,
-	ImmutabilityLocksResponse,
-	ImmutabilityStatus,
-	CreateImmutabilityLockRequest,
-	ExtendImmutabilityLockRequest,
-	RepositoryImmutabilitySettings,
-	UpdateRepositoryImmutabilitySettingsRequest,
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
@@ -135,6 +133,7 @@ import type {
 	RepositoryCostsResponse,
 	RepositoryGrowthResponse,
 	RepositoryHistoryResponse,
+	RepositoryImmutabilitySettings,
 	RepositoryStatsListItem,
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
@@ -185,6 +184,7 @@ import type {
 	UpdateOrgRequest,
 	UpdatePolicyRequest,
 	UpdateReportScheduleRequest,
+	UpdateRepositoryImmutabilitySettingsRequest,
 	UpdateRepositoryRequest,
 	UpdateSSOGroupMappingRequest,
 	UpdateSSOSettingsRequest,
@@ -1689,35 +1689,56 @@ export const immutabilityApi = {
 	getLock: async (id: string): Promise<ImmutabilityLock> =>
 		fetchApi<ImmutabilityLock>(`/immutability/${id}`),
 
-	createLock: async (data: CreateImmutabilityLockRequest): Promise<ImmutabilityLock> =>
+	createLock: async (
+		data: CreateImmutabilityLockRequest,
+	): Promise<ImmutabilityLock> =>
 		fetchApi<ImmutabilityLock>('/immutability', {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
 
-	extendLock: async (id: string, data: ExtendImmutabilityLockRequest): Promise<ImmutabilityLock> =>
+	extendLock: async (
+		id: string,
+		data: ExtendImmutabilityLockRequest,
+	): Promise<ImmutabilityLock> =>
 		fetchApi<ImmutabilityLock>(`/immutability/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
 
-	getSnapshotStatus: async (snapshotId: string, repositoryId: string): Promise<ImmutabilityStatus> =>
-		fetchApi<ImmutabilityStatus>(`/snapshots/${snapshotId}/immutability?repository_id=${repositoryId}`),
+	getSnapshotStatus: async (
+		snapshotId: string,
+		repositoryId: string,
+	): Promise<ImmutabilityStatus> =>
+		fetchApi<ImmutabilityStatus>(
+			`/snapshots/${snapshotId}/immutability?repository_id=${repositoryId}`,
+		),
 
-	getRepositorySettings: async (repositoryId: string): Promise<RepositoryImmutabilitySettings> =>
-		fetchApi<RepositoryImmutabilitySettings>(`/repositories/${repositoryId}/immutability`),
+	getRepositorySettings: async (
+		repositoryId: string,
+	): Promise<RepositoryImmutabilitySettings> =>
+		fetchApi<RepositoryImmutabilitySettings>(
+			`/repositories/${repositoryId}/immutability`,
+		),
 
 	updateRepositorySettings: async (
 		repositoryId: string,
-		data: UpdateRepositoryImmutabilitySettingsRequest
+		data: UpdateRepositoryImmutabilitySettingsRequest,
 	): Promise<RepositoryImmutabilitySettings> =>
-		fetchApi<RepositoryImmutabilitySettings>(`/repositories/${repositoryId}/immutability`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
+		fetchApi<RepositoryImmutabilitySettings>(
+			`/repositories/${repositoryId}/immutability`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		),
 
-	listRepositoryLocks: async (repositoryId: string): Promise<ImmutabilityLock[]> => {
-		const response = await fetchApi<ImmutabilityLocksResponse>(`/repositories/${repositoryId}/immutability/locks`);
+	listRepositoryLocks: async (
+		repositoryId: string,
+	): Promise<ImmutabilityLock[]> => {
+		const response = await fetchApi<ImmutabilityLocksResponse>(
+			`/repositories/${repositoryId}/immutability/locks`,
+		);
 		return response.locks ?? [];
 	},
 };
