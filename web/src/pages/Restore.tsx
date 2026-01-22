@@ -9,10 +9,15 @@ import {
 	useDeleteLegalHold,
 } from '../hooks/useLegalHolds';
 import { useRepositories } from '../hooks/useRepositories';
-import { useCreateRestore, useRestores } from '../hooks/useRestore';
+import {
+	useCreateRestore,
+	useRestorePreview,
+	useRestores,
+} from '../hooks/useRestore';
 import { useSnapshotComments } from '../hooks/useSnapshotComments';
 import { useSnapshotFiles, useSnapshots } from '../hooks/useSnapshots';
 import type {
+	RestorePreview,
 	RestoreStatus,
 	Restore as RestoreType,
 	Snapshot,
@@ -477,6 +482,172 @@ function FileTreeItem({
 	);
 }
 
+type RestoreStep = 'configure' | 'preview' | 'restoring';
+
+interface RestorePreviewDisplayProps {
+	preview: RestorePreview;
+}
+
+function RestorePreviewDisplay({ preview }: RestorePreviewDisplayProps) {
+	return (
+		<div className="space-y-4">
+			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+				<h4 className="font-medium text-blue-900 mb-2">Restore Preview</h4>
+				<p className="text-sm text-blue-700">
+					Review what will be restored before proceeding.
+				</p>
+			</div>
+
+			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+				<div className="bg-gray-50 rounded-lg p-3">
+					<p className="text-xs text-gray-500 uppercase tracking-wide">Files</p>
+					<p className="text-lg font-semibold text-gray-900">
+						{preview.total_files}
+					</p>
+				</div>
+				<div className="bg-gray-50 rounded-lg p-3">
+					<p className="text-xs text-gray-500 uppercase tracking-wide">
+						Directories
+					</p>
+					<p className="text-lg font-semibold text-gray-900">
+						{preview.total_dirs}
+					</p>
+				</div>
+				<div className="bg-gray-50 rounded-lg p-3">
+					<p className="text-xs text-gray-500 uppercase tracking-wide">
+						Total Size
+					</p>
+					<p className="text-lg font-semibold text-gray-900">
+						{formatBytes(preview.total_size)}
+					</p>
+				</div>
+				<div className="bg-gray-50 rounded-lg p-3">
+					<p className="text-xs text-gray-500 uppercase tracking-wide">
+						Disk Space
+					</p>
+					<p className="text-lg font-semibold text-gray-900">
+						{formatBytes(preview.disk_space_needed)}
+					</p>
+				</div>
+			</div>
+
+			{preview.conflict_count > 0 && (
+				<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+					<div className="flex items-start gap-3">
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+							/>
+						</svg>
+						<div>
+							<h4 className="font-medium text-yellow-800">
+								{preview.conflict_count} file
+								{preview.conflict_count !== 1 ? 's' : ''} will be overwritten
+							</h4>
+							<p className="text-sm text-yellow-700 mt-1">
+								Existing files at the target location will be replaced with the
+								backup versions.
+							</p>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{preview.files.length > 0 && (
+				<div>
+					<p className="text-sm font-medium text-gray-700 mb-2">
+						Files to restore ({preview.files.length})
+					</p>
+					<div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
+						<table className="w-full text-sm">
+							<thead className="bg-gray-50 sticky top-0">
+								<tr>
+									<th className="text-left px-3 py-2 text-xs font-medium text-gray-500 uppercase">
+										Path
+									</th>
+									<th className="text-left px-3 py-2 text-xs font-medium text-gray-500 uppercase w-20">
+										Type
+									</th>
+									<th className="text-right px-3 py-2 text-xs font-medium text-gray-500 uppercase w-24">
+										Size
+									</th>
+									<th className="text-center px-3 py-2 text-xs font-medium text-gray-500 uppercase w-20">
+										Status
+									</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y divide-gray-100">
+								{preview.files.map((file) => (
+									<tr
+										key={file.path}
+										className={file.has_conflict ? 'bg-yellow-50' : ''}
+									>
+										<td
+											className="px-3 py-2 font-mono text-xs truncate max-w-xs"
+											title={file.path}
+										>
+											{file.path}
+										</td>
+										<td className="px-3 py-2 text-xs text-gray-500">
+											{file.type}
+										</td>
+										<td className="px-3 py-2 text-xs text-gray-500 text-right">
+											{file.type === 'file' ? formatBytes(file.size) : '-'}
+										</td>
+										<td className="px-3 py-2 text-center">
+											{file.has_conflict ? (
+												<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+													Overwrite
+												</span>
+											) : (
+												<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+													New
+												</span>
+											)}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
+
+			{preview.files.length === 0 && (
+				<div className="text-center py-8 text-gray-500">
+					<svg
+						aria-hidden="true"
+						className="w-12 h-12 mx-auto mb-3 text-gray-300"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+						/>
+					</svg>
+					<p className="font-medium">Preview not available</p>
+					<p className="text-sm">
+						File details will be shown after the restore completes.
+					</p>
+				</div>
+			)}
+		</div>
+	);
+}
+
 interface RestoreModalProps {
 	snapshot: Snapshot;
 	agentName?: string;
@@ -494,11 +665,14 @@ function RestoreModal({
 	onSubmit,
 	isSubmitting,
 }: RestoreModalProps) {
+	const [step, setStep] = useState<RestoreStep>('configure');
 	const [targetPath, setTargetPath] = useState('');
 	const [useOriginalPath, setUseOriginalPath] = useState(true);
 	const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+	const [preview, setPreview] = useState<RestorePreview | null>(null);
 
 	const { data: filesData } = useSnapshotFiles(snapshot.id);
+	const previewMutation = useRestorePreview();
 
 	const togglePath = (path: string) => {
 		const newSelected = new Set(selectedPaths);
@@ -510,178 +684,358 @@ function RestoreModal({
 		setSelectedPaths(newSelected);
 	};
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handlePreview = async (e: React.FormEvent) => {
 		e.preventDefault();
 		const finalTargetPath = useOriginalPath ? '/' : targetPath;
 		const includePaths = Array.from(selectedPaths);
+
+		try {
+			const result = await previewMutation.mutateAsync({
+				snapshot_id: snapshot.id,
+				agent_id: snapshot.agent_id,
+				repository_id: snapshot.repository_id,
+				target_path: finalTargetPath,
+				include_paths: includePaths.length > 0 ? includePaths : undefined,
+			});
+			setPreview(result);
+			setStep('preview');
+		} catch {
+			// Error is handled by the mutation
+		}
+	};
+
+	const handleRestore = () => {
+		const finalTargetPath = useOriginalPath ? '/' : targetPath;
+		const includePaths = Array.from(selectedPaths);
+		setStep('restoring');
 		onSubmit(finalTargetPath, includePaths);
+	};
+
+	const handleBack = () => {
+		setStep('configure');
+		setPreview(null);
 	};
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 			<div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
 				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-						Restore Snapshot
-					</h3>
-					<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-						Snapshot {snapshot.short_id} from {formatDateTime(snapshot.time)}
-					</p>
+					<div className="flex items-center justify-between">
+						<div>
+							<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+								{step === 'preview' ? 'Restore Preview' : 'Restore Snapshot'}
+							</h3>
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+								Snapshot {snapshot.short_id} from{' '}
+								{formatDateTime(snapshot.time)}
+							</p>
+						</div>
+						{step === 'configure' && (
+							<div className="flex items-center gap-2 text-sm text-gray-500">
+								<span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-medium">
+									1
+								</span>
+								<span>Configure</span>
+								<span className="mx-1">→</span>
+								<span className="w-6 h-6 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-medium">
+									2
+								</span>
+								<span>Preview</span>
+							</div>
+						)}
+						{step === 'preview' && (
+							<div className="flex items-center gap-2 text-sm text-gray-500">
+								<span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs">
+									<svg
+										aria-hidden="true"
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M5 13l4 4L19 7"
+										/>
+									</svg>
+								</span>
+								<span>Configure</span>
+								<span className="mx-1">→</span>
+								<span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-medium">
+									2
+								</span>
+								<span>Preview</span>
+							</div>
+						)}
+					</div>
 				</div>
 
-				<form
-					onSubmit={handleSubmit}
-					className="flex flex-col flex-1 overflow-hidden"
-				>
-					<div className="p-6 space-y-6 overflow-y-auto flex-1">
-						<div className="grid grid-cols-2 gap-4">
+				{step === 'configure' && (
+					<form
+						onSubmit={handlePreview}
+						className="flex flex-col flex-1 overflow-hidden"
+					>
+						<div className="p-6 space-y-6 overflow-y-auto flex-1">
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+										Agent
+									</p>
+									<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
+								</div>
+								<div>
+									<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+										Repository
+									</p>
+									<p className="text-gray-900">{repoName ?? 'Unknown'}</p>
+								</div>
+							</div>
+
 							<div>
-								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-									Agent
+								<p className="text-sm font-medium text-gray-500 mb-2">
+									Backed up paths
 								</p>
-								<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
+								<ul className="list-disc list-inside text-sm text-gray-900">
+									{snapshot.paths.map((path) => (
+										<li key={path} className="font-mono">
+											{path}
+										</li>
+									))}
+								</ul>
 							</div>
+
 							<div>
-								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-									Repository
+								<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+									Restore Destination
 								</p>
-								<p className="text-gray-900">{repoName ?? 'Unknown'}</p>
-							</div>
-						</div>
-
-						<div>
-							<p className="text-sm font-medium text-gray-500 mb-2">
-								Backed up paths
-							</p>
-							<ul className="list-disc list-inside text-sm text-gray-900">
-								{snapshot.paths.map((path) => (
-									<li key={path} className="font-mono">
-										{path}
-									</li>
-								))}
-							</ul>
-						</div>
-
-						<div>
-							<p className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
-								Restore Destination
-							</p>
-							<div className="mt-2 space-y-2">
-								<label className="flex items-center">
-									<input
-										type="radio"
-										checked={useOriginalPath}
-										onChange={() => setUseOriginalPath(true)}
-										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-									/>
-									<span className="ml-2 text-sm text-gray-900">
-										Original location
-									</span>
-								</label>
-								<label className="flex items-center">
-									<input
-										type="radio"
-										checked={!useOriginalPath}
-										onChange={() => setUseOriginalPath(false)}
-										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-									/>
-									<span className="ml-2 text-sm text-gray-900">
-										Custom location
-									</span>
-								</label>
-								{!useOriginalPath && (
-									<input
-										type="text"
-										value={targetPath}
-										onChange={(e) => setTargetPath(e.target.value)}
-										placeholder="/path/to/restore"
-										className="mt-2 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
-									/>
-								)}
-							</div>
-						</div>
-
-						<div>
-							<p className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
-								Select files to restore (optional)
-							</p>
-							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">
-								Leave empty to restore all files
-							</p>
-							<div className="border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto bg-gray-50">
-								{filesData?.files && filesData.files.length > 0 ? (
-									filesData.files.map((file) => (
-										<FileTreeItem
-											key={file.path}
-											file={file}
-											selectedPaths={selectedPaths}
-											onToggle={togglePath}
-											depth={0}
+								<div className="mt-2 space-y-2">
+									<label className="flex items-center">
+										<input
+											type="radio"
+											checked={useOriginalPath}
+											onChange={() => setUseOriginalPath(true)}
+											className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
 										/>
-									))
-								) : (
-									<p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-										{filesData?.message ||
-											'File listing not available. All files will be restored.'}
+										<span className="ml-2 text-sm text-gray-900">
+											Original location
+										</span>
+									</label>
+									<label className="flex items-center">
+										<input
+											type="radio"
+											checked={!useOriginalPath}
+											onChange={() => setUseOriginalPath(false)}
+											className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+										/>
+										<span className="ml-2 text-sm text-gray-900">
+											Custom location
+										</span>
+									</label>
+									{!useOriginalPath && (
+										<input
+											type="text"
+											value={targetPath}
+											onChange={(e) => setTargetPath(e.target.value)}
+											placeholder="/path/to/restore"
+											className="mt-2 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+										/>
+									)}
+								</div>
+							</div>
+
+							<div>
+								<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+									Select files to restore (optional)
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">
+									Leave empty to restore all files
+								</p>
+								<div className="border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto bg-gray-50">
+									{filesData?.files && filesData.files.length > 0 ? (
+										filesData.files.map((file) => (
+											<FileTreeItem
+												key={file.path}
+												file={file}
+												selectedPaths={selectedPaths}
+												onToggle={togglePath}
+												depth={0}
+											/>
+										))
+									) : (
+										<p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+											{filesData?.message ||
+												'File listing not available. All files will be restored.'}
+										</p>
+									)}
+								</div>
+								{selectedPaths.size > 0 && (
+									<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+										{selectedPaths.size} item(s) selected
 									</p>
 								)}
 							</div>
-							{selectedPaths.size > 0 && (
-								<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-									{selectedPaths.size} item(s) selected
-								</p>
-							)}
+
+							<div className="border-t border-gray-200 pt-6">
+								<SnapshotComments snapshotId={snapshot.id} />
+							</div>
 						</div>
 
-						<div className="border-t border-gray-200 pt-6">
-							<SnapshotComments snapshotId={snapshot.id} />
-						</div>
-					</div>
-
-					<div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-						<button
-							type="button"
-							onClick={onClose}
-							disabled={isSubmitting}
-							className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							disabled={isSubmitting || (!useOriginalPath && !targetPath)}
-							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-						>
-							{isSubmitting ? (
-								<>
-									<svg
-										aria-hidden="true"
-										className="animate-spin h-4 w-4"
-										fill="none"
-										viewBox="0 0 24 24"
-									>
-										<circle
-											className="opacity-25"
-											cx="12"
-											cy="12"
-											r="10"
+						<div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+							<button
+								type="button"
+								onClick={onClose}
+								disabled={previewMutation.isPending}
+								className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+							>
+								Cancel
+							</button>
+							<button
+								type="submit"
+								disabled={
+									previewMutation.isPending || (!useOriginalPath && !targetPath)
+								}
+								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+							>
+								{previewMutation.isPending ? (
+									<>
+										<svg
+											aria-hidden="true"
+											className="animate-spin h-4 w-4"
+											fill="none"
+											viewBox="0 0 24 24"
+										>
+											<circle
+												className="opacity-25"
+												cx="12"
+												cy="12"
+												r="10"
+												stroke="currentColor"
+												strokeWidth="4"
+											/>
+											<path
+												className="opacity-75"
+												fill="currentColor"
+												d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+											/>
+										</svg>
+										Loading Preview...
+									</>
+								) : (
+									<>
+										Preview Restore
+										<svg
+											aria-hidden="true"
+											className="w-4 h-4"
+											fill="none"
 											stroke="currentColor"
-											strokeWidth="4"
-										/>
-										<path
-											className="opacity-75"
-											fill="currentColor"
-											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-										/>
-									</svg>
-									Starting...
-								</>
-							) : (
-								'Start Restore'
-							)}
-						</button>
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M9 5l7 7-7 7"
+											/>
+										</svg>
+									</>
+								)}
+							</button>
+						</div>
+					</form>
+				)}
+
+				{step === 'preview' && preview && (
+					<div className="flex flex-col flex-1 overflow-hidden">
+						<div className="p-6 overflow-y-auto flex-1">
+							<RestorePreviewDisplay preview={preview} />
+						</div>
+
+						<div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+							<button
+								type="button"
+								onClick={handleBack}
+								className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+							>
+								<svg
+									aria-hidden="true"
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M15 19l-7-7 7-7"
+									/>
+								</svg>
+								Back
+							</button>
+							<div className="flex gap-3">
+								<button
+									type="button"
+									onClick={onClose}
+									className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+								>
+									Cancel
+								</button>
+								<button
+									type="button"
+									onClick={handleRestore}
+									disabled={isSubmitting}
+									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+								>
+									{isSubmitting ? (
+										<>
+											<svg
+												aria-hidden="true"
+												className="animate-spin h-4 w-4"
+												fill="none"
+												viewBox="0 0 24 24"
+											>
+												<circle
+													className="opacity-25"
+													cx="12"
+													cy="12"
+													r="10"
+													stroke="currentColor"
+													strokeWidth="4"
+												/>
+												<path
+													className="opacity-75"
+													fill="currentColor"
+													d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+												/>
+											</svg>
+											Starting Restore...
+										</>
+									) : (
+										<>
+											<svg
+												aria-hidden="true"
+												className="w-4 h-4"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+												/>
+											</svg>
+											Start Restore
+										</>
+									)}
+								</button>
+							</div>
+						</div>
 					</div>
-				</form>
+				)}
 			</div>
 		</div>
 	);

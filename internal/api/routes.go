@@ -207,6 +207,9 @@ func NewRouter(
 	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
 	maintenanceHandler.RegisterRoutes(apiV1)
 
+	ransomwareHandler := handlers.NewRansomwareHandler(database, logger)
+	ransomwareHandler.RegisterRoutes(apiV1)
+
 	// DR Runbook routes
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
 	drRunbooksHandler.RegisterRoutes(apiV1)
