@@ -124,6 +124,9 @@ func NewRouter(
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1)
 
+	agentCommandsHandler := handlers.NewAgentCommandsHandler(database, logger)
+	agentCommandsHandler.RegisterRoutes(apiV1)
+
 	// Agent registration with 2FA codes
 	agentRegistrationHandler := handlers.NewAgentRegistrationHandler(database, logger)
 	agentRegistrationHandler.RegisterRoutes(apiV1)

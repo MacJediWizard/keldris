@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { agentsApi, schedulesApi } from '../lib/api';
-import type { CreateAgentRequest } from '../lib/types';
+import type { CreateAgentCommandRequest, CreateAgentRequest } from '../lib/types';
 
 export function useAgents() {
 	return useQuery({
@@ -115,5 +115,48 @@ export function useFleetHealth() {
 		queryKey: ['agents', 'fleet-health'],
 		queryFn: () => agentsApi.getFleetHealth(),
 		staleTime: 30 * 1000, // 30 seconds
+	});
+}
+
+export function useAgentCommands(agentId: string, limit = 50) {
+	return useQuery({
+		queryKey: ['agents', agentId, 'commands', limit],
+		queryFn: () => agentsApi.getCommands(agentId, limit),
+		enabled: !!agentId,
+		staleTime: 10 * 1000, // 10 seconds - refresh more frequently for commands
+	});
+}
+
+export function useCreateAgentCommand() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			agentId,
+			data,
+		}: {
+			agentId: string;
+			data: CreateAgentCommandRequest;
+		}) => agentsApi.createCommand(agentId, data),
+		onSuccess: (_, { agentId }) => {
+			queryClient.invalidateQueries({ queryKey: ['agents', agentId, 'commands'] });
+		},
+	});
+}
+
+export function useCancelAgentCommand() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			agentId,
+			commandId,
+		}: {
+			agentId: string;
+			commandId: string;
+		}) => agentsApi.cancelCommand(agentId, commandId),
+		onSuccess: (_, { agentId }) => {
+			queryClient.invalidateQueries({ queryKey: ['agents', agentId, 'commands'] });
+		},
 	});
 }

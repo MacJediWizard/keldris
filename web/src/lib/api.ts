@@ -3,6 +3,8 @@ import type {
 	AddAgentToGroupRequest,
 	Agent,
 	AgentBackupsResponse,
+	AgentCommand,
+	AgentCommandsResponse,
 	AgentGroup,
 	AgentGroupsResponse,
 	AgentHealthHistoryResponse,
@@ -39,6 +41,7 @@ import type {
 	CostForecastResponse,
 	CostHistoryResponse,
 	CostSummary,
+	CreateAgentCommandRequest,
 	CreateAgentGroupRequest,
 	CreateAgentRequest,
 	CreateAgentResponse,
@@ -328,6 +331,35 @@ export const agentsApi = {
 		);
 		return response.agents ?? [];
 	},
+
+	// Command methods
+	getCommands: async (
+		agentId: string,
+		limit = 50,
+	): Promise<AgentCommandsResponse> =>
+		fetchApi<AgentCommandsResponse>(
+			`/agents/${agentId}/commands?limit=${limit}`,
+		),
+
+	createCommand: async (
+		agentId: string,
+		data: CreateAgentCommandRequest,
+	): Promise<AgentCommand> =>
+		fetchApi<AgentCommand>(`/agents/${agentId}/commands`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getCommand: async (agentId: string, commandId: string): Promise<AgentCommand> =>
+		fetchApi<AgentCommand>(`/agents/${agentId}/commands/${commandId}`),
+
+	cancelCommand: async (
+		agentId: string,
+		commandId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agents/${agentId}/commands/${commandId}`, {
+			method: 'DELETE',
+		}),
 };
 
 // Agent Groups API

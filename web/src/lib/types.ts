@@ -1919,3 +1919,54 @@ export interface ImportRepositoryResponse {
 	repository: Repository;
 	snapshots_imported: number;
 }
+
+// Agent Command types
+export type CommandType = 'backup_now' | 'update' | 'restart' | 'diagnostics';
+export type CommandStatus =
+	| 'pending'
+	| 'acknowledged'
+	| 'running'
+	| 'completed'
+	| 'failed'
+	| 'timed_out'
+	| 'canceled';
+
+export interface CommandPayload {
+	schedule_id?: string;
+	target_version?: string;
+	diagnostic_types?: string[];
+}
+
+export interface CommandResult {
+	output?: string;
+	error?: string;
+	diagnostics?: Record<string, unknown>;
+	backup_id?: string;
+}
+
+export interface AgentCommand {
+	id: string;
+	agent_id: string;
+	org_id: string;
+	type: CommandType;
+	status: CommandStatus;
+	payload?: CommandPayload;
+	result?: CommandResult;
+	created_by?: string;
+	created_by_name?: string;
+	acknowledged_at?: string;
+	started_at?: string;
+	completed_at?: string;
+	timeout_at: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateAgentCommandRequest {
+	type: CommandType;
+	payload?: CommandPayload;
+}
+
+export interface AgentCommandsResponse {
+	commands: AgentCommand[];
+}

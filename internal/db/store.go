@@ -6941,3 +6941,196 @@ func scanImportedSnapshots(rows interface{ Next() bool; Scan(dest ...interface{}
 
 	return snapshots, nil
 }
+
+// Agent Command methods
+
+// CreateAgentCommand creates a new agent command.
+func (db *DB) CreateAgentCommand(ctx context.Context, cmd *models.AgentCommand) error {
+	payloadBytes, err := cmd.PayloadJSON()
+	if err != nil {
+		return fmt.Errorf("marshal payload: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO agent_commands (id, agent_id, org_id, type, status, payload, created_by,
+		                            timeout_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, cmd.ID, cmd.AgentID, cmd.OrgID, string(cmd.Type), string(cmd.Status),
+		payloadBytes, cmd.CreatedBy, cmd.TimeoutAt, cmd.CreatedAt, cmd.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create agent command: %w", err)
+	}
+	return nil
+}
+
+// GetAgentCommandByID returns a command by ID.
+func (db *DB) GetAgentCommandByID(ctx context.Context, id uuid.UUID) (*models.AgentCommand, error) {
+	var cmd models.AgentCommand
+	var typeStr, statusStr string
+	var payloadBytes, resultBytes []byte
+
+	err := db.Pool.QueryRow(ctx, `
+		SELECT c.id, c.agent_id, c.org_id, c.type, c.status, c.payload, c.result,
+		       c.created_by, c.acknowledged_at, c.started_at, c.completed_at,
+		       c.timeout_at, c.created_at, c.updated_at,
+		       COALESCE(u.name, '')
+		FROM agent_commands c
+		LEFT JOIN users u ON c.created_by = u.id
+		WHERE c.id = $1
+	`, id).Scan(
+		&cmd.ID, &cmd.AgentID, &cmd.OrgID, &typeStr, &statusStr,
+		&payloadBytes, &resultBytes, &cmd.CreatedBy,
+		&cmd.AcknowledgedAt, &cmd.StartedAt, &cmd.CompletedAt,
+		&cmd.TimeoutAt, &cmd.CreatedAt, &cmd.UpdatedAt,
+		&cmd.CreatedByName,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get agent command: %w", err)
+	}
+
+	cmd.Type = models.CommandType(typeStr)
+	cmd.Status = models.CommandStatus(statusStr)
+	if err := cmd.SetPayload(payloadBytes); err != nil {
+		return nil, fmt.Errorf("parse payload: %w", err)
+	}
+	if err := cmd.SetResult(resultBytes); err != nil {
+		return nil, fmt.Errorf("parse result: %w", err)
+	}
+
+	return &cmd, nil
+}
+
+// GetPendingCommandsForAgent returns pending commands for an agent.
+func (db *DB) GetPendingCommandsForAgent(ctx context.Context, agentID uuid.UUID) ([]*models.AgentCommand, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT c.id, c.agent_id, c.org_id, c.type, c.status, c.payload, c.result,
+		       c.created_by, c.acknowledged_at, c.started_at, c.completed_at,
+		       c.timeout_at, c.created_at, c.updated_at,
+		       COALESCE(u.name, '')
+		FROM agent_commands c
+		LEFT JOIN users u ON c.created_by = u.id
+		WHERE c.agent_id = $1 AND c.status = 'pending'
+		ORDER BY c.created_at ASC
+	`, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("list pending commands: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAgentCommands(rows)
+}
+
+// GetCommandsByAgentID returns all commands for an agent with optional limit.
+func (db *DB) GetCommandsByAgentID(ctx context.Context, agentID uuid.UUID, limit int) ([]*models.AgentCommand, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT c.id, c.agent_id, c.org_id, c.type, c.status, c.payload, c.result,
+		       c.created_by, c.acknowledged_at, c.started_at, c.completed_at,
+		       c.timeout_at, c.created_at, c.updated_at,
+		       COALESCE(u.name, '')
+		FROM agent_commands c
+		LEFT JOIN users u ON c.created_by = u.id
+		WHERE c.agent_id = $1
+		ORDER BY c.created_at DESC
+		LIMIT $2
+	`, agentID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list agent commands: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAgentCommands(rows)
+}
+
+// UpdateAgentCommand updates a command's status and result.
+func (db *DB) UpdateAgentCommand(ctx context.Context, cmd *models.AgentCommand) error {
+	resultBytes, err := cmd.ResultJSON()
+	if err != nil {
+		return fmt.Errorf("marshal result: %w", err)
+	}
+
+	cmd.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE agent_commands
+		SET status = $2, result = $3, acknowledged_at = $4, started_at = $5,
+		    completed_at = $6, updated_at = $7
+		WHERE id = $1
+	`, cmd.ID, string(cmd.Status), resultBytes, cmd.AcknowledgedAt,
+		cmd.StartedAt, cmd.CompletedAt, cmd.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update agent command: %w", err)
+	}
+	return nil
+}
+
+// CancelAgentCommand cancels a pending or running command.
+func (db *DB) CancelAgentCommand(ctx context.Context, id uuid.UUID) error {
+	now := time.Now()
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agent_commands
+		SET status = 'canceled', completed_at = $2, updated_at = $2
+		WHERE id = $1 AND status IN ('pending', 'acknowledged', 'running')
+	`, id, now)
+	if err != nil {
+		return fmt.Errorf("cancel agent command: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("command not found or already completed")
+	}
+	return nil
+}
+
+// MarkTimedOutCommands marks commands as timed out if they've exceeded their timeout.
+func (db *DB) MarkTimedOutCommands(ctx context.Context) (int64, error) {
+	now := time.Now()
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agent_commands
+		SET status = 'timed_out',
+		    result = '{"error": "command timed out waiting for agent response"}'::jsonb,
+		    completed_at = $1,
+		    updated_at = $1
+		WHERE status IN ('pending', 'acknowledged', 'running')
+		  AND timeout_at < $1
+	`, now)
+	if err != nil {
+		return 0, fmt.Errorf("mark timed out commands: %w", err)
+	}
+	return result.RowsAffected(), nil
+}
+
+// scanAgentCommands scans rows into agent commands.
+func scanAgentCommands(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.AgentCommand, error) {
+	var commands []*models.AgentCommand
+	for rows.Next() {
+		var cmd models.AgentCommand
+		var typeStr, statusStr string
+		var payloadBytes, resultBytes []byte
+
+		err := rows.Scan(
+			&cmd.ID, &cmd.AgentID, &cmd.OrgID, &typeStr, &statusStr,
+			&payloadBytes, &resultBytes, &cmd.CreatedBy,
+			&cmd.AcknowledgedAt, &cmd.StartedAt, &cmd.CompletedAt,
+			&cmd.TimeoutAt, &cmd.CreatedAt, &cmd.UpdatedAt,
+			&cmd.CreatedByName,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan agent command: %w", err)
+		}
+
+		cmd.Type = models.CommandType(typeStr)
+		cmd.Status = models.CommandStatus(statusStr)
+		if err := cmd.SetPayload(payloadBytes); err != nil {
+			return nil, fmt.Errorf("parse payload: %w", err)
+		}
+		if err := cmd.SetResult(resultBytes); err != nil {
+			return nil, fmt.Errorf("parse result: %w", err)
+		}
+
+		commands = append(commands, &cmd)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate agent commands: %w", err)
+	}
+
+	return commands, nil
+}

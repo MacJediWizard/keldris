@@ -3,15 +3,25 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
 	useAgent,
 	useAgentBackups,
+	useAgentCommands,
 	useAgentHealthHistory,
 	useAgentSchedules,
 	useAgentStats,
+	useCancelAgentCommand,
+	useCreateAgentCommand,
 	useDeleteAgent,
 	useRevokeAgentApiKey,
 	useRotateAgentApiKey,
 	useRunSchedule,
 } from '../hooks/useAgents';
-import type { AgentHealthHistory, Backup, Schedule } from '../lib/types';
+import type {
+	AgentCommand,
+	AgentHealthHistory,
+	Backup,
+	CommandStatus,
+	CommandType,
+	Schedule,
+} from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
@@ -252,12 +262,102 @@ function ScheduleRow({ schedule, onRun, isRunning }: ScheduleRowProps) {
 	);
 }
 
+function getCommandStatusColor(status: CommandStatus) {
+	switch (status) {
+		case 'pending':
+			return { bg: 'bg-gray-100', text: 'text-gray-800', dot: 'bg-gray-400' };
+		case 'acknowledged':
+			return { bg: 'bg-blue-100', text: 'text-blue-800', dot: 'bg-blue-400' };
+		case 'running':
+			return { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-400' };
+		case 'completed':
+			return { bg: 'bg-green-100', text: 'text-green-800', dot: 'bg-green-400' };
+		case 'failed':
+			return { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-400' };
+		case 'timed_out':
+			return { bg: 'bg-orange-100', text: 'text-orange-800', dot: 'bg-orange-400' };
+		case 'canceled':
+			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+		default:
+			return { bg: 'bg-gray-100', text: 'text-gray-800', dot: 'bg-gray-400' };
+	}
+}
+
+function getCommandTypeLabel(type: CommandType) {
+	switch (type) {
+		case 'backup_now':
+			return 'Backup Now';
+		case 'update':
+			return 'Update';
+		case 'restart':
+			return 'Restart';
+		case 'diagnostics':
+			return 'Diagnostics';
+		default:
+			return type;
+	}
+}
+
+interface CommandRowProps {
+	command: AgentCommand;
+	onCancel: (id: string) => void;
+	isCanceling: boolean;
+}
+
+function CommandRow({ command, onCancel, isCanceling }: CommandRowProps) {
+	const statusColor = getCommandStatusColor(command.status);
+	const canCancel = ['pending', 'acknowledged', 'running'].includes(command.status);
+
+	return (
+		<tr className="hover:bg-gray-50">
+			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+				{formatDateTime(command.created_at)}
+			</td>
+			<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+				{getCommandTypeLabel(command.type)}
+			</td>
+			<td className="px-6 py-4">
+				<span
+					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
+				>
+					<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
+					{command.status}
+				</span>
+			</td>
+			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+				{command.created_by_name || '-'}
+			</td>
+			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+				{command.result?.error ? (
+					<span className="text-red-600">{command.result.error}</span>
+				) : command.result?.output ? (
+					<span className="truncate max-w-xs">{command.result.output}</span>
+				) : (
+					'-'
+				)}
+			</td>
+			<td className="px-6 py-4 text-right">
+				{canCancel && (
+					<button
+						type="button"
+						onClick={() => onCancel(command.id)}
+						disabled={isCanceling}
+						className="text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
+					>
+						Cancel
+					</button>
+				)}
+			</td>
+		</tr>
+	);
+}
+
 export function AgentDetails() {
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState<
-		'overview' | 'backups' | 'schedules' | 'health'
+		'overview' | 'backups' | 'schedules' | 'health' | 'commands'
 	>('overview');
 
 	const { data: agent, isLoading: agentLoading } = useAgent(id ?? '');
@@ -271,16 +371,21 @@ export function AgentDetails() {
 		useAgentSchedules(id ?? '');
 	const { data: healthHistoryResponse, isLoading: healthLoading } =
 		useAgentHealthHistory(id ?? '', 50);
+	const { data: commandsResponse, isLoading: commandsLoading } =
+		useAgentCommands(id ?? '', 50);
 
 	const deleteAgent = useDeleteAgent();
 	const rotateApiKey = useRotateAgentApiKey();
 	const revokeApiKey = useRevokeAgentApiKey();
 	const runSchedule = useRunSchedule();
+	const createCommand = useCreateAgentCommand();
+	const cancelCommand = useCancelAgentCommand();
 
 	const stats = statsResponse?.stats;
 	const backups = backupsResponse?.backups ?? [];
 	const schedules = schedulesResponse?.schedules ?? [];
 	const healthHistory = healthHistoryResponse?.history ?? [];
+	const commands = commandsResponse?.commands ?? [];
 
 	const handleDelete = () => {
 		if (confirm('Are you sure you want to delete this agent?')) {
@@ -318,6 +423,30 @@ export function AgentDetails() {
 	const handleRunSchedule = (scheduleId: string) => {
 		if (confirm('Run this backup schedule now?')) {
 			runSchedule.mutate(scheduleId);
+		}
+	};
+
+	const handleSendCommand = (type: CommandType) => {
+		const typeLabels: Record<CommandType, string> = {
+			backup_now: 'trigger an immediate backup',
+			update: 'update the agent',
+			restart: 'restart the agent',
+			diagnostics: 'run diagnostics',
+		};
+		if (confirm(`Are you sure you want to ${typeLabels[type]}?`)) {
+			createCommand.mutate({
+				agentId: id ?? '',
+				data: { type },
+			});
+		}
+	};
+
+	const handleCancelCommand = (commandId: string) => {
+		if (confirm('Are you sure you want to cancel this command?')) {
+			cancelCommand.mutate({
+				agentId: id ?? '',
+				commandId,
+			});
 		}
 	};
 
@@ -419,6 +548,78 @@ export function AgentDetails() {
 
 				{/* Actions */}
 				<div className="flex items-center gap-2">
+					{/* Command Buttons */}
+					<div className="flex items-center gap-1 mr-2 pr-2 border-r border-gray-200">
+						<button
+							type="button"
+							onClick={() => handleSendCommand('backup_now')}
+							disabled={createCommand.isPending || agent.status !== 'active'}
+							className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50"
+							title="Trigger immediate backup"
+						>
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+								/>
+							</svg>
+							Backup
+						</button>
+						<button
+							type="button"
+							onClick={() => handleSendCommand('diagnostics')}
+							disabled={createCommand.isPending || agent.status !== 'active'}
+							className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+							title="Run diagnostics"
+						>
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+								/>
+							</svg>
+							Diagnostics
+						</button>
+						<button
+							type="button"
+							onClick={() => handleSendCommand('restart')}
+							disabled={createCommand.isPending || agent.status !== 'active'}
+							className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50"
+							title="Restart agent"
+						>
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+								/>
+							</svg>
+							Restart
+						</button>
+					</div>
 					<button
 						type="button"
 						onClick={handleRotateKey}
@@ -637,6 +838,17 @@ export function AgentDetails() {
 						}`}
 					>
 						Health
+					</button>
+					<button
+						type="button"
+						onClick={() => setActiveTab('commands')}
+						className={`py-4 px-1 border-b-2 font-medium text-sm ${
+							activeTab === 'commands'
+								? 'border-indigo-500 text-indigo-600'
+								: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+						}`}
+					>
+						Commands ({commands.length})
 					</button>
 				</nav>
 			</div>
@@ -1363,6 +1575,81 @@ export function AgentDetails() {
 							</div>
 						)}
 					</div>
+				</div>
+			)}
+
+			{/* Commands Tab */}
+			{activeTab === 'commands' && (
+				<div className="bg-white rounded-lg border border-gray-200">
+					<div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+						<h3 className="font-semibold text-gray-900">Command History</h3>
+						<span className="text-sm text-gray-500">
+							Showing last 50 commands
+						</span>
+					</div>
+					{commandsLoading ? (
+						<div className="p-12 flex items-center justify-center">
+							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+						</div>
+					) : commands.length > 0 ? (
+						<div className="overflow-x-auto">
+							<table className="w-full">
+								<thead className="bg-gray-50">
+									<tr>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Created
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Type
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Status
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Created By
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Result
+										</th>
+										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Actions
+										</th>
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-gray-200">
+									{commands.map((cmd: AgentCommand) => (
+										<CommandRow
+											key={cmd.id}
+											command={cmd}
+											onCancel={handleCancelCommand}
+											isCanceling={cancelCommand.isPending}
+										/>
+									))}
+								</tbody>
+							</table>
+						</div>
+					) : (
+						<div className="p-12 text-center text-gray-500">
+							<svg
+								aria-hidden="true"
+								className="w-12 h-12 mx-auto mb-4 text-gray-300"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+								/>
+							</svg>
+							<p>No commands have been sent to this agent</p>
+							<p className="text-sm mt-1">
+								Use the command buttons above to send a command
+							</p>
+						</div>
+					)}
 				</div>
 			)}
 
