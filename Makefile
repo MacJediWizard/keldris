@@ -1,4 +1,4 @@
-.PHONY: all build dev test lint clean deps
+.PHONY: all build dev test lint clean deps swagger swagger-fmt
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -89,3 +89,9 @@ docker-down:
 
 hooks:
 	lefthook install
+
+swagger:
+	swag init -g cmd/keldris-server/main.go -o docs/api --parseInternal
+
+swagger-fmt:
+	swag fmt
