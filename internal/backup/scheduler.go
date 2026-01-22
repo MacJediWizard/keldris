@@ -76,29 +76,31 @@ func DefaultSchedulerConfig() SchedulerConfig {
 
 // Scheduler manages backup schedules using cron.
 type Scheduler struct {
-	store       ScheduleStore
-	restic      *Restic
-	config      SchedulerConfig
-	notifier    *notifications.Service
-	maintenance *maintenance.Service
-	cron        *cron.Cron
-	logger      zerolog.Logger
-	mu          sync.RWMutex
-	entries     map[uuid.UUID]cron.EntryID
-	running     bool
+	store            ScheduleStore
+	restic           *Restic
+	config           SchedulerConfig
+	notifier         *notifications.Service
+	maintenance      *maintenance.Service
+	largeFileScanner *LargeFileScanner
+	cron             *cron.Cron
+	logger           zerolog.Logger
+	mu               sync.RWMutex
+	entries          map[uuid.UUID]cron.EntryID
+	running          bool
 }
 
 // NewScheduler creates a new backup scheduler.
 // The notifier parameter is optional and can be nil if notifications are not needed.
 func NewScheduler(store ScheduleStore, restic *Restic, config SchedulerConfig, notifier *notifications.Service, logger zerolog.Logger) *Scheduler {
 	return &Scheduler{
-		store:    store,
-		restic:   restic,
-		config:   config,
-		notifier: notifier,
-		cron:     cron.New(cron.WithSeconds()),
-		logger:   logger.With().Str("component", "scheduler").Logger(),
-		entries:  make(map[uuid.UUID]cron.EntryID),
+		store:            store,
+		restic:           restic,
+		config:           config,
+		notifier:         notifier,
+		largeFileScanner: NewLargeFileScanner(logger),
+		cron:             cron.New(cron.WithSeconds()),
+		logger:           logger.With().Str("component", "scheduler").Logger(),
+		entries:          make(map[uuid.UUID]cron.EntryID),
 	}
 }
 
@@ -496,18 +498,46 @@ func (s *Scheduler) runBackupToRepo(
 		fmt.Sprintf("agent:%s", schedule.AgentID.String()),
 	}
 
-	// Build backup options with bandwidth limit and compression level
+	// Build backup options with bandwidth limit, compression level, and max file size
 	var opts *BackupOptions
-	if schedule.BandwidthLimitKB != nil || schedule.CompressionLevel != nil {
+	if schedule.BandwidthLimitKB != nil || schedule.CompressionLevel != nil || schedule.MaxFileSizeMB != nil {
 		opts = &BackupOptions{
 			BandwidthLimitKB: schedule.BandwidthLimitKB,
 			CompressionLevel: schedule.CompressionLevel,
+			MaxFileSizeMB:    schedule.MaxFileSizeMB,
 		}
 		if schedule.BandwidthLimitKB != nil {
 			logger.Debug().Int("bandwidth_limit_kb", *schedule.BandwidthLimitKB).Msg("bandwidth limit applied")
 		}
 		if schedule.CompressionLevel != nil {
 			logger.Debug().Str("compression_level", *schedule.CompressionLevel).Msg("compression level applied")
+		}
+		if schedule.MaxFileSizeMB != nil && *schedule.MaxFileSizeMB > 0 {
+			logger.Debug().Int("max_file_size_mb", *schedule.MaxFileSizeMB).Msg("max file size limit applied")
+		}
+	}
+
+	// Scan for large files if max file size is configured
+	if schedule.MaxFileSizeMB != nil && *schedule.MaxFileSizeMB > 0 {
+		scanResult, err := s.largeFileScanner.Scan(ctx, schedule.Paths, schedule.Excludes, *schedule.MaxFileSizeMB)
+		if err != nil {
+			logger.Warn().Err(err).Msg("failed to scan for large files, proceeding with backup")
+		} else if scanResult.TotalExcluded > 0 {
+			logger.Warn().
+				Int("files_excluded", scanResult.TotalExcluded).
+				Int64("total_size_mb", scanResult.TotalSizeMB).
+				Msg("large files will be excluded from backup")
+
+			// Convert scan results to model type and record on backup
+			excludedFiles := make([]models.ExcludedLargeFile, len(scanResult.LargeFiles))
+			for i, f := range scanResult.LargeFiles {
+				excludedFiles[i] = models.ExcludedLargeFile{
+					Path:      f.Path,
+					SizeBytes: f.SizeBytes,
+					SizeMB:    f.SizeMB,
+				}
+			}
+			backup.RecordExcludedLargeFiles(excludedFiles)
 		}
 	}
 

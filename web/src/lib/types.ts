@@ -364,6 +364,7 @@ export interface Schedule {
 	backup_window?: BackupWindow; // Allowed backup time window
 	excluded_hours?: number[]; // Hours (0-23) when backups should not run
 	compression_level?: CompressionLevel; // Compression level: off, auto, max
+	max_file_size_mb?: number; // Max file size in MB (0 = disabled)
 	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
@@ -383,6 +384,7 @@ export interface CreateScheduleRequest {
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
 	compression_level?: CompressionLevel;
+	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
 	enabled?: boolean;
 }
@@ -398,6 +400,7 @@ export interface UpdateScheduleRequest {
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
 	compression_level?: CompressionLevel;
+	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
 	enabled?: boolean;
 }
@@ -470,6 +473,12 @@ export interface PoliciesResponse {
 // Backup types
 export type BackupStatus = 'running' | 'completed' | 'failed' | 'canceled';
 
+export interface ExcludedLargeFile {
+	path: string;
+	size_bytes: number;
+	size_mb: number;
+}
+
 export interface Backup {
 	id: string;
 	schedule_id: string;
@@ -491,6 +500,7 @@ export interface Backup {
 	pre_script_error?: string;
 	post_script_output?: string;
 	post_script_error?: string;
+	excluded_large_files?: ExcludedLargeFile[]; // Files excluded due to size limit
 	created_at: string;
 }
 
