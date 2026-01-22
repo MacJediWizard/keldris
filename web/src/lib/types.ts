@@ -779,6 +779,34 @@ export interface CreateRestoreRequest {
 	exclude_paths?: string[];
 }
 
+export interface RestorePreviewRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	target_path: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+}
+
+export interface RestorePreviewFile {
+	path: string;
+	type: 'file' | 'dir';
+	size: number;
+	mod_time: string;
+	has_conflict: boolean;
+}
+
+export interface RestorePreview {
+	snapshot_id: string;
+	target_path: string;
+	total_files: number;
+	total_dirs: number;
+	total_size: number;
+	conflict_count: number;
+	files: RestorePreviewFile[];
+	disk_space_needed: number;
+}
+
 export interface RestoresResponse {
 	restores: Restore[];
 }

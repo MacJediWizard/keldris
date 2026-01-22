@@ -131,6 +131,8 @@ import type {
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
 	Restore,
+	RestorePreview,
+	RestorePreviewRequest,
 	RestoresResponse,
 	RotateAPIKeyResponse,
 	RunDRTestRequest,
@@ -706,6 +708,12 @@ export const restoresApi = {
 
 	create: async (data: CreateRestoreRequest): Promise<Restore> =>
 		fetchApi<Restore>('/restores', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	preview: async (data: RestorePreviewRequest): Promise<RestorePreview> =>
+		fetchApi<RestorePreview>('/restores/preview', {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
