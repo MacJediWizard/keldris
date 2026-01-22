@@ -45,6 +45,32 @@ type BackupStats struct {
 	Duration     time.Duration
 }
 
+// DryRunFile represents a file that would be backed up in a dry run.
+type DryRunFile struct {
+	Path   string `json:"path"`
+	Type   string `json:"type"` // "file" or "dir"
+	Size   int64  `json:"size"`
+	Action string `json:"action"` // "new", "changed", or "unchanged"
+}
+
+// DryRunExcluded represents a file that was excluded from backup.
+type DryRunExcluded struct {
+	Path   string `json:"path"`
+	Reason string `json:"reason"`
+}
+
+// DryRunResult contains the results of a dry run backup operation.
+type DryRunResult struct {
+	FilesToBackup   []DryRunFile     `json:"files_to_backup"`
+	ExcludedFiles   []DryRunExcluded `json:"excluded_files"`
+	TotalFiles      int              `json:"total_files"`
+	TotalSize       int64            `json:"total_size"`
+	NewFiles        int              `json:"new_files"`
+	ChangedFiles    int              `json:"changed_files"`
+	UnchangedFiles  int              `json:"unchanged_files"`
+	Duration        time.Duration    `json:"duration"`
+}
+
 // Restic wraps the restic CLI for backup operations.
 type Restic struct {
 	binary string
@@ -172,6 +198,50 @@ func (r *Restic) BackupWithOptions(ctx context.Context, cfg ResticConfig, paths,
 		Msg("backup completed")
 
 	return stats, nil
+}
+
+// DryRun performs a dry run backup operation to preview what would be backed up.
+func (r *Restic) DryRun(ctx context.Context, cfg ResticConfig, paths, excludes []string) (*DryRunResult, error) {
+	if len(paths) == 0 {
+		return nil, errors.New("no paths specified for dry run")
+	}
+
+	r.logger.Info().
+		Strs("paths", paths).
+		Strs("excludes", excludes).
+		Msg("starting dry run backup")
+
+	start := time.Now()
+
+	args := []string{"backup", "--repo", cfg.Repository, "--json", "--dry-run"}
+
+	for _, exclude := range excludes {
+		args = append(args, "--exclude", exclude)
+	}
+
+	args = append(args, paths...)
+
+	output, err := r.run(ctx, cfg, args)
+	if err != nil {
+		return nil, fmt.Errorf("dry run failed: %w", err)
+	}
+
+	result, err := parseDryRunOutput(output, excludes)
+	if err != nil {
+		return nil, fmt.Errorf("parse dry run output: %w", err)
+	}
+
+	result.Duration = time.Since(start)
+
+	r.logger.Info().
+		Int("total_files", result.TotalFiles).
+		Int("new_files", result.NewFiles).
+		Int("changed_files", result.ChangedFiles).
+		Int64("total_size", result.TotalSize).
+		Dur("duration", result.Duration).
+		Msg("dry run completed")
+
+	return result, nil
 }
 
 // Snapshots lists all snapshots in the repository.
@@ -658,6 +728,88 @@ func parseBackupOutput(output []byte) (*BackupStats, error) {
 	}
 
 	return nil, errors.New("no backup summary found in output")
+}
+
+// dryRunStatusMessage represents the JSON output from restic backup --dry-run --json.
+type dryRunStatusMessage struct {
+	MessageType  string   `json:"message_type"`
+	Action       string   `json:"action,omitempty"`       // "new", "modified", "unchanged"
+	Item         string   `json:"item,omitempty"`         // file path
+	DataSize     int64    `json:"data_size,omitempty"`    // size of the item
+	TotalFiles   int      `json:"total_files,omitempty"`  // summary fields
+	TotalBytes   int64    `json:"total_bytes,omitempty"`
+	FilesNew     int      `json:"files_new,omitempty"`
+	FilesChanged int      `json:"files_changed,omitempty"`
+}
+
+// parseDryRunOutput parses the JSON output from restic backup --dry-run.
+func parseDryRunOutput(output []byte, excludes []string) (*DryRunResult, error) {
+	result := &DryRunResult{
+		FilesToBackup: make([]DryRunFile, 0),
+		ExcludedFiles: make([]DryRunExcluded, 0),
+	}
+
+	lines := bytes.Split(output, []byte("\n"))
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+
+		var msg dryRunStatusMessage
+		if err := json.Unmarshal(line, &msg); err != nil {
+			continue
+		}
+
+		switch msg.MessageType {
+		case "status":
+			// Status messages contain file information during dry run
+			if msg.Item != "" {
+				file := DryRunFile{
+					Path: msg.Item,
+					Type: "file",
+					Size: msg.DataSize,
+				}
+
+				switch msg.Action {
+				case "new":
+					file.Action = "new"
+					result.NewFiles++
+				case "modified":
+					file.Action = "changed"
+					result.ChangedFiles++
+				case "unchanged":
+					file.Action = "unchanged"
+					result.UnchangedFiles++
+				default:
+					file.Action = "new"
+					result.NewFiles++
+				}
+
+				result.FilesToBackup = append(result.FilesToBackup, file)
+				result.TotalFiles++
+				result.TotalSize += msg.DataSize
+			}
+		case "summary":
+			// Summary message at the end provides totals
+			if msg.TotalFiles > 0 {
+				result.TotalFiles = msg.TotalFiles
+				result.TotalSize = msg.TotalBytes
+				result.NewFiles = msg.FilesNew
+				result.ChangedFiles = msg.FilesChanged
+				result.UnchangedFiles = msg.TotalFiles - msg.FilesNew - msg.FilesChanged
+			}
+		}
+	}
+
+	// Add excluded patterns as excluded files info
+	for _, pattern := range excludes {
+		result.ExcludedFiles = append(result.ExcludedFiles, DryRunExcluded{
+			Path:   pattern,
+			Reason: "matched exclude pattern",
+		})
+	}
+
+	return result, nil
 }
 
 // parseForgetOutput parses the JSON output from restic forget.
