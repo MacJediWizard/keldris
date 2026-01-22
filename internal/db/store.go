@@ -2788,3 +2788,133 @@ func scanVerifications(rows interface {
 
 	return verifications, nil
 }
+
+// Agent Registration Code methods
+
+// CreateRegistrationCode creates a new agent registration code.
+func (db *DB) CreateRegistrationCode(ctx context.Context, code *models.RegistrationCode) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO agent_registration_codes (id, org_id, created_by, code, hostname, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, code.ID, code.OrgID, code.CreatedBy, code.Code, code.Hostname, code.ExpiresAt, code.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create registration code: %w", err)
+	}
+	return nil
+}
+
+// GetRegistrationCodeByCode returns a registration code by its code value.
+func (db *DB) GetRegistrationCodeByCode(ctx context.Context, orgID uuid.UUID, code string) (*models.RegistrationCode, error) {
+	var r models.RegistrationCode
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, created_by, code, hostname, expires_at, used_at, used_by_agent_id, created_at
+		FROM agent_registration_codes
+		WHERE org_id = $1 AND code = $2
+	`, orgID, code).Scan(
+		&r.ID, &r.OrgID, &r.CreatedBy, &r.Code, &r.Hostname,
+		&r.ExpiresAt, &r.UsedAt, &r.UsedByAgentID, &r.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get registration code: %w", err)
+	}
+	return &r, nil
+}
+
+// GetPendingRegistrationCodes returns all pending (unused, unexpired) registration codes for an organization.
+func (db *DB) GetPendingRegistrationCodes(ctx context.Context, orgID uuid.UUID) ([]*models.RegistrationCode, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, created_by, code, hostname, expires_at, used_at, used_by_agent_id, created_at
+		FROM agent_registration_codes
+		WHERE org_id = $1 AND used_at IS NULL AND expires_at > NOW()
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list pending registration codes: %w", err)
+	}
+	defer rows.Close()
+
+	var codes []*models.RegistrationCode
+	for rows.Next() {
+		var r models.RegistrationCode
+		err := rows.Scan(
+			&r.ID, &r.OrgID, &r.CreatedBy, &r.Code, &r.Hostname,
+			&r.ExpiresAt, &r.UsedAt, &r.UsedByAgentID, &r.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan registration code: %w", err)
+		}
+		codes = append(codes, &r)
+	}
+
+	return codes, nil
+}
+
+// GetPendingRegistrationsWithCreator returns pending codes with creator email for display.
+func (db *DB) GetPendingRegistrationsWithCreator(ctx context.Context, orgID uuid.UUID) ([]*models.PendingRegistration, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT rc.id, rc.hostname, rc.code, rc.expires_at, rc.created_at, u.email
+		FROM agent_registration_codes rc
+		JOIN users u ON rc.created_by = u.id
+		WHERE rc.org_id = $1 AND rc.used_at IS NULL AND rc.expires_at > NOW()
+		ORDER BY rc.created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list pending registrations: %w", err)
+	}
+	defer rows.Close()
+
+	var registrations []*models.PendingRegistration
+	for rows.Next() {
+		var r models.PendingRegistration
+		err := rows.Scan(&r.ID, &r.Hostname, &r.Code, &r.ExpiresAt, &r.CreatedAt, &r.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("scan pending registration: %w", err)
+		}
+		registrations = append(registrations, &r)
+	}
+
+	return registrations, nil
+}
+
+// MarkRegistrationCodeUsed marks a registration code as used by an agent.
+func (db *DB) MarkRegistrationCodeUsed(ctx context.Context, codeID, agentID uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agent_registration_codes
+		SET used_at = NOW(), used_by_agent_id = $2
+		WHERE id = $1 AND used_at IS NULL
+	`, codeID, agentID)
+	if err != nil {
+		return fmt.Errorf("mark registration code used: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("registration code not found or already used")
+	}
+	return nil
+}
+
+// DeleteExpiredRegistrationCodes removes expired registration codes.
+func (db *DB) DeleteExpiredRegistrationCodes(ctx context.Context) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM agent_registration_codes
+		WHERE expires_at < NOW() AND used_at IS NULL
+	`)
+	if err != nil {
+		return fmt.Errorf("delete expired registration codes: %w", err)
+	}
+	return nil
+}
+
+// DeleteRegistrationCode deletes a registration code by ID.
+func (db *DB) DeleteRegistrationCode(ctx context.Context, id uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `
+		DELETE FROM agent_registration_codes
+		WHERE id = $1 AND used_at IS NULL
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete registration code: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("registration code not found or already used")
+	}
+	return nil
+}
