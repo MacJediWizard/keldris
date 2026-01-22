@@ -16,6 +16,7 @@ import { NewOrganization } from './pages/NewOrganization';
 import { Notifications } from './pages/Notifications';
 import { Onboarding } from './pages/Onboarding';
 import { OrganizationMembers } from './pages/OrganizationMembers';
+import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
 import { Policies } from './pages/Policies';
 import Reports from './pages/Reports';
@@ -76,6 +77,10 @@ function App() {
 						<Route
 							path="organization/settings"
 							element={<OrganizationSettings />}
+						/>
+						<Route
+							path="organization/sso"
+							element={<OrganizationSSOSettings />}
 						/>
 						<Route path="organization/maintenance" element={<Maintenance />} />
 						<Route path="organization/new" element={<NewOrganization />} />

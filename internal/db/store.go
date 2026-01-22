@@ -6425,3 +6425,187 @@ func (db *DB) GetEnabledCostAlerts(ctx context.Context, orgID uuid.UUID) ([]*mod
 
 	return alerts, nil
 }
+
+// SSO Group Mapping methods
+
+// GetSSOGroupMappingsByOrgID returns all SSO group mappings for an organization.
+func (db *DB) GetSSOGroupMappingsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.SSOGroupMapping, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, oidc_group_name, role, auto_create_org, created_at, updated_at
+		FROM sso_group_mappings
+		WHERE org_id = $1
+		ORDER BY oidc_group_name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list SSO group mappings: %w", err)
+	}
+	defer rows.Close()
+
+	var mappings []*models.SSOGroupMapping
+	for rows.Next() {
+		var m models.SSOGroupMapping
+		var roleStr string
+		err := rows.Scan(&m.ID, &m.OrgID, &m.OIDCGroupName, &roleStr, &m.AutoCreateOrg, &m.CreatedAt, &m.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan SSO group mapping: %w", err)
+		}
+		m.Role = models.OrgRole(roleStr)
+		mappings = append(mappings, &m)
+	}
+
+	return mappings, nil
+}
+
+// GetSSOGroupMappingsByGroupNames returns all SSO group mappings matching the given group names.
+func (db *DB) GetSSOGroupMappingsByGroupNames(ctx context.Context, groupNames []string) ([]*models.SSOGroupMapping, error) {
+	if len(groupNames) == 0 {
+		return []*models.SSOGroupMapping{}, nil
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, oidc_group_name, role, auto_create_org, created_at, updated_at
+		FROM sso_group_mappings
+		WHERE oidc_group_name = ANY($1)
+		ORDER BY oidc_group_name
+	`, groupNames)
+	if err != nil {
+		return nil, fmt.Errorf("get SSO group mappings by names: %w", err)
+	}
+	defer rows.Close()
+
+	var mappings []*models.SSOGroupMapping
+	for rows.Next() {
+		var m models.SSOGroupMapping
+		var roleStr string
+		err := rows.Scan(&m.ID, &m.OrgID, &m.OIDCGroupName, &roleStr, &m.AutoCreateOrg, &m.CreatedAt, &m.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan SSO group mapping: %w", err)
+		}
+		m.Role = models.OrgRole(roleStr)
+		mappings = append(mappings, &m)
+	}
+
+	return mappings, nil
+}
+
+// GetSSOGroupMappingByID returns an SSO group mapping by ID.
+func (db *DB) GetSSOGroupMappingByID(ctx context.Context, id uuid.UUID) (*models.SSOGroupMapping, error) {
+	var m models.SSOGroupMapping
+	var roleStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, oidc_group_name, role, auto_create_org, created_at, updated_at
+		FROM sso_group_mappings
+		WHERE id = $1
+	`, id).Scan(&m.ID, &m.OrgID, &m.OIDCGroupName, &roleStr, &m.AutoCreateOrg, &m.CreatedAt, &m.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get SSO group mapping: %w", err)
+	}
+	m.Role = models.OrgRole(roleStr)
+	return &m, nil
+}
+
+// CreateSSOGroupMapping creates a new SSO group mapping.
+func (db *DB) CreateSSOGroupMapping(ctx context.Context, m *models.SSOGroupMapping) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO sso_group_mappings (id, org_id, oidc_group_name, role, auto_create_org, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, m.ID, m.OrgID, m.OIDCGroupName, string(m.Role), m.AutoCreateOrg, m.CreatedAt, m.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create SSO group mapping: %w", err)
+	}
+	return nil
+}
+
+// UpdateSSOGroupMapping updates an existing SSO group mapping.
+func (db *DB) UpdateSSOGroupMapping(ctx context.Context, m *models.SSOGroupMapping) error {
+	m.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE sso_group_mappings
+		SET role = $2, auto_create_org = $3, updated_at = $4
+		WHERE id = $1
+	`, m.ID, string(m.Role), m.AutoCreateOrg, m.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update SSO group mapping: %w", err)
+	}
+	return nil
+}
+
+// DeleteSSOGroupMapping deletes an SSO group mapping.
+func (db *DB) DeleteSSOGroupMapping(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM sso_group_mappings WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete SSO group mapping: %w", err)
+	}
+	return nil
+}
+
+// User SSO Groups methods
+
+// GetUserSSOGroups returns a user's SSO groups.
+func (db *DB) GetUserSSOGroups(ctx context.Context, userID uuid.UUID) (*models.UserSSOGroups, error) {
+	var u models.UserSSOGroups
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, user_id, oidc_groups, synced_at
+		FROM user_sso_groups
+		WHERE user_id = $1
+	`, userID).Scan(&u.ID, &u.UserID, &u.OIDCGroups, &u.SyncedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get user SSO groups: %w", err)
+	}
+	return &u, nil
+}
+
+// UpsertUserSSOGroups creates or updates a user's SSO groups.
+func (db *DB) UpsertUserSSOGroups(ctx context.Context, userID uuid.UUID, groups []string) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO user_sso_groups (id, user_id, oidc_groups, synced_at)
+		VALUES (gen_random_uuid(), $1, $2, NOW())
+		ON CONFLICT (user_id)
+		DO UPDATE SET oidc_groups = $2, synced_at = NOW()
+	`, userID, groups)
+	if err != nil {
+		return fmt.Errorf("upsert user SSO groups: %w", err)
+	}
+	return nil
+}
+
+// Organization SSO Settings methods
+
+// GetOrganizationSSOSettings returns an organization's SSO settings.
+func (db *DB) GetOrganizationSSOSettings(ctx context.Context, orgID uuid.UUID) (defaultRole *string, autoCreateOrgs bool, err error) {
+	err = db.Pool.QueryRow(ctx, `
+		SELECT sso_default_role, sso_auto_create_orgs
+		FROM organizations
+		WHERE id = $1
+	`, orgID).Scan(&defaultRole, &autoCreateOrgs)
+	if err != nil {
+		return nil, false, fmt.Errorf("get org SSO settings: %w", err)
+	}
+	return defaultRole, autoCreateOrgs, nil
+}
+
+// UpdateOrganizationSSOSettings updates an organization's SSO settings.
+func (db *DB) UpdateOrganizationSSOSettings(ctx context.Context, orgID uuid.UUID, defaultRole *string, autoCreateOrgs bool) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE organizations
+		SET sso_default_role = $2, sso_auto_create_orgs = $3, updated_at = NOW()
+		WHERE id = $1
+	`, orgID, defaultRole, autoCreateOrgs)
+	if err != nil {
+		return fmt.Errorf("update org SSO settings: %w", err)
+	}
+	return nil
+}
+
+// UpdateMembershipRole updates a membership's role.
+func (db *DB) UpdateMembershipRole(ctx context.Context, membershipID uuid.UUID, role models.OrgRole) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE org_memberships
+		SET role = $2, updated_at = NOW()
+		WHERE id = $1
+	`, membershipID, string(role))
+	if err != nil {
+		return fmt.Errorf("update membership role: %w", err)
+	}
+	return nil
+}
