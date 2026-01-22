@@ -180,7 +180,9 @@ export function OrganizationSSOSettings() {
 									}
 									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								>
-									<option value="">No default (require explicit mapping)</option>
+									<option value="">
+										No default (require explicit mapping)
+									</option>
 									{roleOptions.map((role) => (
 										<option key={role} value={role}>
 											{role.charAt(0).toUpperCase() + role.slice(1)}
@@ -258,7 +260,9 @@ export function OrganizationSSOSettings() {
 			{/* Group Mappings */}
 			<div className="bg-white rounded-lg border border-gray-200">
 				<div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-					<h2 className="text-lg font-semibold text-gray-900">Group Mappings</h2>
+					<h2 className="text-lg font-semibold text-gray-900">
+						Group Mappings
+					</h2>
 					{canEdit && (
 						<button
 							type="button"
@@ -435,9 +439,9 @@ export function OrganizationSSOSettings() {
 						</h3>
 						<form onSubmit={handleUpdateMapping} className="space-y-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
+								<span className="block text-sm font-medium text-gray-700 mb-1">
 									OIDC Group Name
-								</label>
+								</span>
 								<p className="text-sm text-gray-900 py-2">
 									{editingMapping.oidc_group_name}
 								</p>
