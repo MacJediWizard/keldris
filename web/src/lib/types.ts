@@ -761,6 +761,9 @@ export interface Snapshot {
 	repository_id: string;
 	backup_id?: string;
 	size_bytes?: number;
+	is_locked?: boolean;
+	locked_until?: string;
+	remaining_days?: number;
 }
 
 export interface SnapshotFile {
@@ -2032,4 +2035,54 @@ export interface ImportRepositoryRequest {
 export interface ImportRepositoryResponse {
 	repository: Repository;
 	snapshots_imported: number;
+}
+
+// Snapshot Immutability types
+export interface ImmutabilityLock {
+	id: string;
+	repository_id: string;
+	snapshot_id: string;
+	short_id: string;
+	locked_at: string;
+	locked_until: string;
+	locked_by?: string;
+	reason?: string;
+	remaining_days: number;
+	s3_object_lock_enabled: boolean;
+	created_at: string;
+}
+
+export interface ImmutabilityStatus {
+	is_locked: boolean;
+	locked_until?: string;
+	remaining_days?: number;
+	reason?: string;
+	locked_at?: string;
+}
+
+export interface RepositoryImmutabilitySettings {
+	enabled: boolean;
+	default_days?: number;
+}
+
+export interface CreateImmutabilityLockRequest {
+	repository_id: string;
+	snapshot_id: string;
+	days: number;
+	reason?: string;
+	enable_s3_lock?: boolean;
+}
+
+export interface ExtendImmutabilityLockRequest {
+	additional_days: number;
+	reason?: string;
+}
+
+export interface UpdateRepositoryImmutabilitySettingsRequest {
+	enabled: boolean;
+	default_days?: number;
+}
+
+export interface ImmutabilityLocksResponse {
+	locks: ImmutabilityLock[];
 }
