@@ -4,7 +4,12 @@ import type { FileHistoryParams } from '../lib/types';
 
 export function useFileHistory(params: FileHistoryParams | null) {
 	return useQuery({
-		queryKey: ['fileHistory', params?.path, params?.agent_id, params?.repository_id],
+		queryKey: [
+			'fileHistory',
+			params?.path,
+			params?.agent_id,
+			params?.repository_id,
+		],
 		queryFn: () => {
 			if (!params) {
 				throw new Error('File history params required');

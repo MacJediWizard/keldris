@@ -147,7 +147,19 @@ func (h *FileHistoryHandler) GetFileHistory(c *gin.Context) {
 		}
 
 		schedule, err := h.store.GetScheduleByID(c.Request.Context(), backup.ScheduleID)
-		if err != nil || schedule.RepositoryID != repositoryID {
+		if err != nil {
+			continue
+		}
+
+		// Check if schedule uses the specified repository
+		hasRepo := false
+		for _, sr := range schedule.Repositories {
+			if sr.RepositoryID == repositoryID {
+				hasRepo = true
+				break
+			}
+		}
+		if !hasRepo {
 			continue
 		}
 
