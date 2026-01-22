@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { SnapshotComments } from '../components/features/SnapshotComments';
 import { useAgents } from '../hooks/useAgents';
 import { useRepositories } from '../hooks/useRepositories';
 import { useCreateRestore, useRestores } from '../hooks/useRestore';
+import { useSnapshotComments } from '../hooks/useSnapshotComments';
 import { useSnapshotFiles, useSnapshots } from '../hooks/useSnapshots';
 import type {
 	RestoreStatus,
@@ -73,6 +75,36 @@ function getRestoreStatusColor(status: RestoreStatus): {
 	}
 }
 
+function CommentIndicator({ snapshotId }: { snapshotId: string }) {
+	const { data: comments } = useSnapshotComments(snapshotId);
+	const count = comments?.length ?? 0;
+
+	if (count === 0) return null;
+
+	return (
+		<span
+			className="inline-flex items-center gap-1 ml-2 text-gray-400"
+			title={`${count} note${count !== 1 ? 's' : ''}`}
+		>
+			<svg
+				aria-hidden="true"
+				className="w-4 h-4"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+				/>
+			</svg>
+			<span className="text-xs">{count}</span>
+		</span>
+	);
+}
+
 interface SnapshotRowProps {
 	snapshot: Snapshot;
 	agentName?: string;
@@ -109,9 +141,12 @@ function SnapshotRow({
 				/>
 			</td>
 			<td className="px-6 py-4">
-				<code className="text-sm font-mono text-gray-900">
-					{snapshot.short_id}
-				</code>
+				<div className="flex items-center">
+					<code className="text-sm font-mono text-gray-900">
+						{snapshot.short_id}
+					</code>
+					<CommentIndicator snapshotId={snapshot.id} />
+				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-900">
 				{agentName ?? 'Unknown'}
@@ -525,6 +560,10 @@ function RestoreModal({
 									{selectedPaths.size} item(s) selected
 								</p>
 							)}
+						</div>
+
+						<div className="border-t border-gray-200 pt-6">
+							<SnapshotComments snapshotId={snapshot.id} />
 						</div>
 					</div>
 

@@ -52,6 +52,7 @@ import type {
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
 	CreateScheduleRequest,
+	CreateSnapshotCommentRequest,
 	CreateTagRequest,
 	CreateVerificationScheduleRequest,
 	DRRunbook,
@@ -120,6 +121,8 @@ import type {
 	SearchFilter,
 	SearchResponse,
 	Snapshot,
+	SnapshotComment,
+	SnapshotCommentsResponse,
 	SnapshotCompareResponse,
 	SnapshotFilesResponse,
 	SnapshotsResponse,
@@ -576,6 +579,30 @@ export const snapshotsApi = {
 
 	compare: async (id1: string, id2: string): Promise<SnapshotCompareResponse> =>
 		fetchApi<SnapshotCompareResponse>(`/snapshots/${id1}/compare/${id2}`),
+};
+
+// Snapshot Comments API
+export const snapshotCommentsApi = {
+	list: async (snapshotId: string): Promise<SnapshotComment[]> => {
+		const response = await fetchApi<SnapshotCommentsResponse>(
+			`/snapshots/${snapshotId}/comments`,
+		);
+		return response.comments ?? [];
+	},
+
+	create: async (
+		snapshotId: string,
+		data: CreateSnapshotCommentRequest,
+	): Promise<SnapshotComment> =>
+		fetchApi<SnapshotComment>(`/snapshots/${snapshotId}/comments`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (commentId: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/comments/${commentId}`, {
+			method: 'DELETE',
+		}),
 };
 
 // Restores API
