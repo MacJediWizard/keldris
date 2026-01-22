@@ -458,3 +458,36 @@ export function formatUptime(seconds: number | undefined): string {
 	if (hours > 0) return `${hours}h ${minutes}m`;
 	return `${minutes}m`;
 }
+
+// Format currency (USD)
+export function formatCurrency(amount: number | undefined): string {
+	if (amount === undefined || amount === null) return '$0.00';
+	return new Intl.NumberFormat('en-US', {
+		style: 'currency',
+		currency: 'USD',
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	}).format(amount);
+}
+
+// Format large currency amounts (compact notation for large numbers)
+export function formatCurrencyCompact(amount: number | undefined): string {
+	if (amount === undefined || amount === null) return '$0';
+	if (amount < 1000) {
+		return formatCurrency(amount);
+	}
+	return new Intl.NumberFormat('en-US', {
+		style: 'currency',
+		currency: 'USD',
+		notation: 'compact',
+		maximumFractionDigits: 1,
+	}).format(amount);
+}
+
+// Get cost color based on monthly amount
+export function getCostColor(monthlyCost: number, threshold = 100): string {
+	if (monthlyCost >= threshold * 2) return 'text-red-600';
+	if (monthlyCost >= threshold) return 'text-yellow-600';
+	if (monthlyCost > 0) return 'text-green-600';
+	return 'text-gray-600';
+}
