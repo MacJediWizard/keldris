@@ -132,15 +132,18 @@ interface ClassificationLevelSelectProps {
 	value: string;
 	onChange: (level: string) => void;
 	disabled?: boolean;
+	id?: string;
 }
 
 export function ClassificationLevelSelect({
 	value,
 	onChange,
 	disabled = false,
+	id,
 }: ClassificationLevelSelectProps) {
 	return (
 		<select
+			id={id}
 			value={value || 'public'}
 			onChange={(e) => onChange(e.target.value)}
 			disabled={disabled}

@@ -256,7 +256,7 @@ func (s *Schedule) SetClassificationDataTypes(data []byte) error {
 
 // ClassificationDataTypesJSON returns the classification data types as JSON bytes.
 func (s *Schedule) ClassificationDataTypesJSON() ([]byte, error) {
-	if s.ClassificationDataTypes == nil || len(s.ClassificationDataTypes) == 0 {
+	if len(s.ClassificationDataTypes) == 0 {
 		return []byte(`["general"]`), nil
 	}
 	return json.Marshal(s.ClassificationDataTypes)
