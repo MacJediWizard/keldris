@@ -1,3 +1,33 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Dark mode scrollbar styling */
+.dark {
+	color-scheme: dark;
+}
+
+/* Custom scrollbar for dark mode */
+.dark ::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+	background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+	background: #475569;
+	border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+	background: #64748b;
+}
+
+/* Ensure select dropdowns have dark background */
+.dark select option {
+	background-color: #374151;
+	color: #f3f4f6;
+}

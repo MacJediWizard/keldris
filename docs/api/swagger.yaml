@@ -1,0 +1,2207 @@
+basePath: /api/v1
+definitions:
+  handlers.CreateAgentRequest:
+    properties:
+      hostname:
+        example: backup-server-01
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - hostname
+    type: object
+  handlers.CreateAgentResponse:
+    properties:
+      api_key:
+        description: Only returned once at creation
+        example: kld_abc123...
+        type: string
+      hostname:
+        example: backup-server-01
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  handlers.CreateOrgRequest:
+    properties:
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      slug:
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - name
+    - slug
+    type: object
+  handlers.CreateRepositoryRequest:
+    properties:
+      config:
+        additionalProperties: {}
+        type: object
+      escrow_enabled:
+        example: true
+        type: boolean
+      name:
+        example: My S3 Backup
+        maxLength: 255
+        minLength: 1
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/models.RepositoryType'
+        example: s3
+    required:
+    - config
+    - name
+    - type
+    type: object
+  handlers.CreateRepositoryResponse:
+    properties:
+      password:
+        type: string
+      repository:
+        $ref: '#/definitions/handlers.RepositoryResponse'
+    type: object
+  handlers.CreateRestoreRequest:
+    properties:
+      agent_id:
+        type: string
+      exclude_paths:
+        items:
+          type: string
+        type: array
+      include_paths:
+        items:
+          type: string
+        type: array
+      repository_id:
+        type: string
+      snapshot_id:
+        type: string
+      target_path:
+        type: string
+    required:
+    - agent_id
+    - repository_id
+    - snapshot_id
+    - target_path
+    type: object
+  handlers.CreateScheduleRequest:
+    properties:
+      agent_id:
+        type: string
+      backup_window:
+        $ref: '#/definitions/models.BackupWindow'
+      bandwidth_limit_kb:
+        type: integer
+      cron_expression:
+        type: string
+      enabled:
+        type: boolean
+      excluded_hours:
+        items:
+          type: integer
+        type: array
+      excludes:
+        items:
+          type: string
+        type: array
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      paths:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      repository_id:
+        type: string
+      retention_policy:
+        $ref: '#/definitions/models.RetentionPolicy'
+    required:
+    - agent_id
+    - cron_expression
+    - name
+    - paths
+    - repository_id
+    type: object
+  handlers.HeartbeatRequest:
+    properties:
+      os_info:
+        $ref: '#/definitions/models.OSInfo'
+    type: object
+  handlers.KeyRecoveryResponse:
+    properties:
+      password:
+        type: string
+      repository_id:
+        type: string
+      repository_name:
+        type: string
+    type: object
+  handlers.MeResponse:
+    properties:
+      current_org_id:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      current_org_role:
+        example: admin
+        type: string
+      email:
+        example: user@example.com
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        example: John Doe
+        type: string
+    type: object
+  handlers.OrgResponse:
+    properties:
+      organization:
+        $ref: '#/definitions/models.Organization'
+      role:
+        type: string
+    type: object
+  handlers.RepositoryResponse:
+    properties:
+      created_at:
+        type: string
+      escrow_enabled:
+        type: boolean
+      id:
+        type: string
+      name:
+        type: string
+      type:
+        $ref: '#/definitions/models.RepositoryType'
+      updated_at:
+        type: string
+    type: object
+  handlers.RestoreResponse:
+    properties:
+      agent_id:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      error_message:
+        type: string
+      exclude_paths:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      include_paths:
+        items:
+          type: string
+        type: array
+      repository_id:
+        type: string
+      snapshot_id:
+        type: string
+      started_at:
+        type: string
+      status:
+        type: string
+      target_path:
+        type: string
+    type: object
+  handlers.RotateAPIKeyResponse:
+    properties:
+      api_key:
+        description: Only returned once at rotation
+        example: kld_abc123...
+        type: string
+      hostname:
+        example: backup-server-01
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  handlers.RunScheduleResponse:
+    properties:
+      backup_id:
+        type: string
+      message:
+        type: string
+    type: object
+  handlers.SnapshotResponse:
+    properties:
+      agent_id:
+        type: string
+      backup_id:
+        type: string
+      hostname:
+        type: string
+      id:
+        type: string
+      paths:
+        items:
+          type: string
+        type: array
+      repository_id:
+        type: string
+      short_id:
+        type: string
+      size_bytes:
+        type: integer
+      time:
+        type: string
+    type: object
+  handlers.TestConnectionRequest:
+    properties:
+      config:
+        additionalProperties: {}
+        type: object
+      type:
+        $ref: '#/definitions/models.RepositoryType'
+    required:
+    - config
+    - type
+    type: object
+  handlers.TestRepositoryResponse:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  handlers.UpdateRepositoryRequest:
+    properties:
+      config:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+    type: object
+  handlers.UpdateScheduleRequest:
+    properties:
+      backup_window:
+        $ref: '#/definitions/models.BackupWindow'
+      bandwidth_limit_kb:
+        type: integer
+      cron_expression:
+        type: string
+      enabled:
+        type: boolean
+      excluded_hours:
+        items:
+          type: integer
+        type: array
+      excludes:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      paths:
+        items:
+          type: string
+        type: array
+      retention_policy:
+        $ref: '#/definitions/models.RetentionPolicy'
+    type: object
+  handlers.VersionInfo:
+    properties:
+      build_date:
+        example: "2024-01-15T10:30:00Z"
+        type: string
+      commit:
+        example: abc1234
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
+  models.Agent:
+    properties:
+      created_at:
+        type: string
+      hostname:
+        example: backup-server-01
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      last_seen:
+        type: string
+      org_id:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      os_info:
+        $ref: '#/definitions/models.OSInfo'
+      status:
+        allOf:
+        - $ref: '#/definitions/models.AgentStatus'
+        example: active
+      updated_at:
+        type: string
+    type: object
+  models.AgentStatus:
+    enum:
+    - pending
+    - active
+    - offline
+    - disabled
+    type: string
+    x-enum-varnames:
+    - AgentStatusPending
+    - AgentStatusActive
+    - AgentStatusOffline
+    - AgentStatusDisabled
+  models.Alert:
+    properties:
+      acknowledged_at:
+        type: string
+      acknowledged_by:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      message:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      org_id:
+        type: string
+      resolved_at:
+        type: string
+      resource_id:
+        type: string
+      resource_type:
+        $ref: '#/definitions/models.ResourceType'
+      rule_id:
+        type: string
+      severity:
+        $ref: '#/definitions/models.AlertSeverity'
+      status:
+        $ref: '#/definitions/models.AlertStatus'
+      title:
+        type: string
+      type:
+        $ref: '#/definitions/models.AlertType'
+      updated_at:
+        type: string
+    type: object
+  models.AlertSeverity:
+    enum:
+    - info
+    - warning
+    - critical
+    type: string
+    x-enum-varnames:
+    - AlertSeverityInfo
+    - AlertSeverityWarning
+    - AlertSeverityCritical
+  models.AlertStatus:
+    enum:
+    - active
+    - acknowledged
+    - resolved
+    type: string
+    x-enum-varnames:
+    - AlertStatusActive
+    - AlertStatusAcknowledged
+    - AlertStatusResolved
+  models.AlertType:
+    enum:
+    - agent_offline
+    - backup_sla
+    - storage_usage
+    type: string
+    x-enum-varnames:
+    - AlertTypeAgentOffline
+    - AlertTypeBackupSLA
+    - AlertTypeStorageUsage
+  models.Backup:
+    properties:
+      agent_id:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      error_message:
+        type: string
+      files_changed:
+        type: integer
+      files_new:
+        type: integer
+      id:
+        type: string
+      retention_applied:
+        type: boolean
+      retention_error:
+        type: string
+      schedule_id:
+        type: string
+      size_bytes:
+        type: integer
+      snapshot_id:
+        type: string
+      snapshots_kept:
+        type: integer
+      snapshots_removed:
+        type: integer
+      started_at:
+        type: string
+      status:
+        $ref: '#/definitions/models.BackupStatus'
+    type: object
+  models.BackupStatus:
+    enum:
+    - running
+    - completed
+    - failed
+    - canceled
+    type: string
+    x-enum-varnames:
+    - BackupStatusRunning
+    - BackupStatusCompleted
+    - BackupStatusFailed
+    - BackupStatusCanceled
+  models.BackupWindow:
+    properties:
+      end:
+        description: HH:MM format (e.g., "06:00")
+        type: string
+      start:
+        description: HH:MM format (e.g., "02:00")
+        type: string
+    type: object
+  models.OSInfo:
+    properties:
+      arch:
+        example: amd64
+        type: string
+      hostname:
+        example: backup-server-01
+        type: string
+      os:
+        example: linux
+        type: string
+      version:
+        example: Ubuntu 22.04
+        type: string
+    type: object
+  models.Organization:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.RepositoryType:
+    enum:
+    - local
+    - s3
+    - b2
+    - sftp
+    - rest
+    - dropbox
+    type: string
+    x-enum-varnames:
+    - RepositoryTypeLocal
+    - RepositoryTypeS3
+    - RepositoryTypeB2
+    - RepositoryTypeSFTP
+    - RepositoryTypeRest
+    - RepositoryTypeDropbox
+  models.ResourceType:
+    enum:
+    - agent
+    - schedule
+    - repository
+    type: string
+    x-enum-varnames:
+    - ResourceTypeAgent
+    - ResourceTypeSchedule
+    - ResourceTypeRepository
+  models.RetentionPolicy:
+    properties:
+      keep_daily:
+        type: integer
+      keep_hourly:
+        type: integer
+      keep_last:
+        type: integer
+      keep_monthly:
+        type: integer
+      keep_weekly:
+        type: integer
+      keep_yearly:
+        type: integer
+    type: object
+  models.Schedule:
+    properties:
+      agent_id:
+        type: string
+      backup_window:
+        allOf:
+        - $ref: '#/definitions/models.BackupWindow'
+        description: Allowed backup time window
+      bandwidth_limit_kb:
+        description: Upload limit in KB/s
+        type: integer
+      created_at:
+        type: string
+      cron_expression:
+        type: string
+      enabled:
+        type: boolean
+      excluded_hours:
+        description: Hours (0-23) when backups should not run
+        items:
+          type: integer
+        type: array
+      excludes:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      name:
+        type: string
+      paths:
+        items:
+          type: string
+        type: array
+      repository_id:
+        type: string
+      retention_policy:
+        $ref: '#/definitions/models.RetentionPolicy'
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Keldris Support
+    url: https://github.com/MacJediWizard/keldris
+  description: Keldris - Keeper of your data. Self-hosted backup solution with OIDC
+    authentication, Restic backup engine, and cloud storage support.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://keldris.io/terms
+  title: Keldris API
+  version: "1.0"
+paths:
+  /agents:
+    get:
+      consumes:
+      - application/json
+      description: Returns all agents registered in the current organization
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Agent'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: List agents
+      tags:
+      - Agents
+    post:
+      consumes:
+      - application/json
+      description: Registers a new backup agent and returns a one-time API key. Save
+        this key securely as it cannot be retrieved again.
+      parameters:
+      - description: Agent details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateAgentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.CreateAgentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Create agent
+      tags:
+      - Agents
+  /agents/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes an agent from the organization
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Delete agent
+      tags:
+      - Agents
+    get:
+      consumes:
+      - application/json
+      description: Returns a specific agent by ID
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Agent'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Get agent
+      tags:
+      - Agents
+  /agents/{id}/apikey:
+    delete:
+      consumes:
+      - application/json
+      description: Revokes an agent's API key, preventing it from authenticating until
+        a new key is issued
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Revoke API key
+      tags:
+      - Agents
+  /agents/{id}/apikey/rotate:
+    post:
+      consumes:
+      - application/json
+      description: Generates a new API key for an agent, invalidating the previous
+        key. Save the new key securely.
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RotateAPIKeyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Rotate API key
+      tags:
+      - Agents
+  /agents/{id}/heartbeat:
+    post:
+      consumes:
+      - application/json
+      description: Updates an agent's last seen timestamp and optionally updates OS
+        information
+      parameters:
+      - description: Agent ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Heartbeat data
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/handlers.HeartbeatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Agent'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      - BearerAuth: []
+      summary: Agent heartbeat
+      tags:
+      - Agents
+  /alerts:
+    get:
+      consumes:
+      - application/json
+      description: Returns all alerts for the current organization
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Alert'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: List alerts
+      tags:
+      - Alerts
+  /alerts/count:
+    get:
+      consumes:
+      - application/json
+      description: Returns the count of active (non-resolved) alerts for the current
+        organization
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Count active alerts
+      tags:
+      - Alerts
+  /auth/callback:
+    get:
+      description: Handles the callback from the OIDC provider after authentication.
+        Creates or updates user session.
+      parameters:
+      - description: Authorization code
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: State parameter for CSRF protection
+        in: query
+        name: state
+        required: true
+        type: string
+      responses:
+        "307":
+          description: Redirect to dashboard
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: OIDC callback
+      tags:
+      - Auth
+  /auth/login:
+    get:
+      description: Redirects to the OIDC provider for authentication. After successful
+        authentication, user is redirected to /auth/callback.
+      produces:
+      - text/html
+      responses:
+        "307":
+          description: Redirect to OIDC provider
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Initiate login
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Terminates the current user session and clears the session cookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Logout
+      tags:
+      - Auth
+  /auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Returns information about the currently authenticated user including
+        their current organization
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.MeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Get current user
+      tags:
+      - Auth
+  /backups:
+    get:
+      consumes:
+      - application/json
+      description: Returns backup jobs for the current organization. Supports filtering
+        by agent, schedule, or status.
+      parameters:
+      - description: Filter by agent ID
+        in: query
+        name: agent_id
+        type: string
+      - description: Filter by schedule ID
+        in: query
+        name: schedule_id
+        type: string
+      - description: Filter by status (running, completed, failed, canceled)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Backup'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: List backups
+      tags:
+      - Backups
+  /backups/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns details of a specific backup job
+      parameters:
+      - description: Backup ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Backup'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Get backup
+      tags:
+      - Backups
+  /organizations:
+    get:
+      consumes:
+      - application/json
+      description: Returns all organizations the current user is a member of
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: List organizations
+      tags:
+      - Organizations
+    post:
+      consumes:
+      - application/json
+      description: Creates a new organization with the current user as owner
+      parameters:
+      - description: Organization details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateOrgRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.OrgResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Create organization
+      tags:
+      - Organizations
+  /repositories:
+    get:
+      consumes:
+      - application/json
+      description: Returns all backup repositories for the current organization
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/handlers.RepositoryResponse'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: List repositories
+      tags:
+      - Repositories
+    post:
+      consumes:
+      - application/json
+      description: Creates a new backup repository and returns the repository password.
+        Save this password securely as it cannot be retrieved again (unless escrow
+        is enabled).
+      parameters:
+      - description: Repository details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateRepositoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.CreateRepositoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Create repository
+      tags:
+      - Repositories
+  /repositories/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a repository from the organization
+      parameters:
+      - description: Repository ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Delete repository
+      tags:
+      - Repositories
+    get:
+      consumes:
+      - application/json
+      description: Returns a specific repository by ID
+      parameters:
+      - description: Repository ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RepositoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Get repository
+      tags:
+      - Repositories
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing repository's name or configuration
+      parameters:
+      - description: Repository ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Repository updates
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateRepositoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RepositoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Update repository
+      tags:
+      - Repositories
+  /repositories/{id}/key/recover:
+    get:
+      consumes:
+      - application/json
+      description: Recovers the repository password for administrators. Only available
+        when key escrow is enabled for the repository.
+      parameters:
+      - description: Repository ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.KeyRecoveryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Recover repository key
+      tags:
+      - Repositories
+  /repositories/{id}/test:
+    post:
+      consumes:
+      - application/json
+      description: Tests an existing repository's connection to verify it's accessible
+      parameters:
+      - description: Repository ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TestRepositoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Test repository
+      tags:
+      - Repositories
+  /repositories/test-connection:
+    post:
+      consumes:
+      - application/json
+      description: Tests a backend configuration without creating a repository. Useful
+        for validating credentials before saving.
+      parameters:
+      - description: Connection details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.TestConnectionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.TestRepositoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Test connection
+      tags:
+      - Repositories
+  /restores:
+    get:
+      consumes:
+      - application/json
+      description: Returns all restore jobs for the current organization
+      parameters:
+      - description: Filter by agent ID
+        in: query
+        name: agent_id
+        type: string
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/handlers.RestoreResponse'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: List restores
+      tags:
+      - Restores
+    post:
+      consumes:
+      - application/json
+      description: Creates a new restore job to restore files from a snapshot
+      parameters:
+      - description: Restore details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateRestoreRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.RestoreResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Create restore
+      tags:
+      - Restores
+  /restores/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns a specific restore job by ID
+      parameters:
+      - description: Restore ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RestoreResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Get restore
+      tags:
+      - Restores
+  /schedules:
+    get:
+      consumes:
+      - application/json
+      description: Returns all backup schedules for the current organization
+      parameters:
+      - description: Filter by agent ID
+        in: query
+        name: agent_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Schedule'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: List schedules
+      tags:
+      - Schedules
+    post:
+      consumes:
+      - application/json
+      description: Creates a new backup schedule for an agent
+      parameters:
+      - description: Schedule details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateScheduleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Schedule'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Create schedule
+      tags:
+      - Schedules
+  /schedules/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a backup schedule
+      parameters:
+      - description: Schedule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Delete schedule
+      tags:
+      - Schedules
+    get:
+      consumes:
+      - application/json
+      description: Returns a specific backup schedule by ID
+      parameters:
+      - description: Schedule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Schedule'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Get schedule
+      tags:
+      - Schedules
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing backup schedule
+      parameters:
+      - description: Schedule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Schedule updates
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateScheduleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Schedule'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Update schedule
+      tags:
+      - Schedules
+  /schedules/{id}/run:
+    post:
+      consumes:
+      - application/json
+      description: Triggers an immediate backup for the specified schedule
+      parameters:
+      - description: Schedule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/handlers.RunScheduleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Run schedule
+      tags:
+      - Schedules
+  /snapshots:
+    get:
+      consumes:
+      - application/json
+      description: Returns all backup snapshots for the current organization
+      parameters:
+      - description: Filter by agent ID
+        in: query
+        name: agent_id
+        type: string
+      - description: Filter by repository ID
+        in: query
+        name: repository_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/handlers.SnapshotResponse'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: List snapshots
+      tags:
+      - Snapshots
+  /snapshots/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns a specific snapshot by ID
+      parameters:
+      - description: Snapshot ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.SnapshotResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: Get snapshot
+      tags:
+      - Snapshots
+  /snapshots/{id}/files:
+    get:
+      consumes:
+      - application/json
+      description: Returns files in a snapshot, optionally filtered by path
+      parameters:
+      - description: Snapshot ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Filter to specific directory (default: root)'
+        in: query
+        name: path
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SessionAuth: []
+      summary: List snapshot files
+      tags:
+      - Snapshots
+  /version:
+    get:
+      description: Returns server version, commit hash, and build date
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.VersionInfo'
+      summary: Get version
+      tags:
+      - Version
+securityDefinitions:
+  BearerAuth:
+    description: 'Agent API key authentication. Use format: Bearer kld_xxx'
+    in: header
+    name: Authorization
+    type: apiKey
+  SessionAuth:
+    description: Session cookie authentication (for web UI)
+    in: cookie
+    name: session
+    type: apiKey
+swagger: "2.0"

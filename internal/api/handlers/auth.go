@@ -64,7 +64,14 @@ func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
 }
 
 // Login initiates the OIDC authentication flow.
-// GET /auth/login
+//
+//	@Summary		Initiate login
+//	@Description	Redirects to the OIDC provider for authentication. After successful authentication, user is redirected to /auth/callback.
+//	@Tags			Auth
+//	@Produce		html
+//	@Success		307	"Redirect to OIDC provider"
+//	@Failure		500	{object}	map[string]string
+//	@Router			/auth/login [get]
 func (h *AuthHandler) Login(c *gin.Context) {
 	state, err := auth.GenerateState()
 	if err != nil {
@@ -85,7 +92,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 // Callback handles the OIDC callback after authentication.
-// GET /auth/callback
+//
+//	@Summary		OIDC callback
+//	@Description	Handles the callback from the OIDC provider after authentication. Creates or updates user session.
+//	@Tags			Auth
+//	@Param			code	query	string	true	"Authorization code"
+//	@Param			state	query	string	true	"State parameter for CSRF protection"
+//	@Success		307		"Redirect to dashboard"
+//	@Failure		400		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Router			/auth/callback [get]
 func (h *AuthHandler) Callback(c *gin.Context) {
 	// Check for errors from the OIDC provider
 	if errParam := c.Query("error"); errParam != "" {
@@ -262,7 +278,16 @@ func (h *AuthHandler) findOrCreateUser(ctx context.Context, claims *auth.IDToken
 }
 
 // Logout terminates the user session.
-// POST /auth/logout
+//
+//	@Summary		Logout
+//	@Description	Terminates the current user session and clears the session cookie
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	sessionUser, err := h.sessions.GetUser(c.Request)
 	if err == nil {
@@ -282,17 +307,26 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 // MeResponse is the response for the /auth/me endpoint.
 type MeResponse struct {
-	ID             uuid.UUID  `json:"id"`
-	Email          string     `json:"email"`
-	Name           string     `json:"name"`
-	CurrentOrgID   uuid.UUID  `json:"current_org_id,omitempty"`
-	CurrentOrgRole string     `json:"current_org_role,omitempty"`
-	SSOGroups      []string   `json:"sso_groups,omitempty"`
+	ID                uuid.UUID  `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Email             string     `json:"email" example:"user@example.com"`
+	Name              string     `json:"name" example:"John Doe"`
+	CurrentOrgID      uuid.UUID  `json:"current_org_id,omitempty" example:"550e8400-e29b-41d4-a716-446655440001"`
+	CurrentOrgRole    string     `json:"current_org_role,omitempty" example:"admin"`
+	SSOGroups         []string   `json:"sso_groups,omitempty"`
 	SSOGroupsSyncedAt *time.Time `json:"sso_groups_synced_at,omitempty"`
 }
 
 // Me returns the current authenticated user.
-// GET /auth/me
+//
+//	@Summary		Get current user
+//	@Description	Returns information about the currently authenticated user including their current organization
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	MeResponse
+//	@Failure		401	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/auth/me [get]
 func (h *AuthHandler) Me(c *gin.Context) {
 	sessionUser, err := h.sessions.GetUser(c.Request)
 	if err != nil {

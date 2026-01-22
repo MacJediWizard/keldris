@@ -61,10 +61,10 @@ func (h *RepositoriesHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // CreateRepositoryRequest is the request body for creating a repository.
 type CreateRepositoryRequest struct {
-	Name          string                `json:"name" binding:"required,min=1,max=255"`
-	Type          models.RepositoryType `json:"type" binding:"required"`
+	Name          string                `json:"name" binding:"required,min=1,max=255" example:"My S3 Backup"`
+	Type          models.RepositoryType `json:"type" binding:"required" example:"s3"`
 	Config        map[string]any        `json:"config" binding:"required"`
-	EscrowEnabled bool                  `json:"escrow_enabled"`
+	EscrowEnabled bool                  `json:"escrow_enabled" example:"true"`
 }
 
 // UpdateRepositoryRequest is the request body for updating a repository.
@@ -110,7 +110,18 @@ func toRepositoryResponse(r *models.Repository, escrowEnabled bool) RepositoryRe
 }
 
 // List returns all repositories for the authenticated user's organization.
-// GET /api/v1/repositories
+//
+//	@Summary		List repositories
+//	@Description	Returns all backup repositories for the current organization
+//	@Tags			Repositories
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string][]RepositoryResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/repositories [get]
 func (h *RepositoriesHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -144,7 +155,19 @@ func (h *RepositoriesHandler) List(c *gin.Context) {
 }
 
 // Get returns a specific repository by ID.
-// GET /api/v1/repositories/:id
+//
+//	@Summary		Get repository
+//	@Description	Returns a specific repository by ID
+//	@Tags			Repositories
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Repository ID"
+//	@Success		200	{object}	RepositoryResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/repositories/{id} [get]
 func (h *RepositoriesHandler) Get(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -186,7 +209,19 @@ func (h *RepositoriesHandler) Get(c *gin.Context) {
 }
 
 // Create creates a new repository.
-// POST /api/v1/repositories
+//
+//	@Summary		Create repository
+//	@Description	Creates a new backup repository and returns the repository password. Save this password securely as it cannot be retrieved again (unless escrow is enabled).
+//	@Tags			Repositories
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		CreateRepositoryRequest	true	"Repository details"
+//	@Success		201		{object}	CreateRepositoryResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/repositories [post]
 func (h *RepositoriesHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -289,7 +324,21 @@ func (h *RepositoriesHandler) Create(c *gin.Context) {
 }
 
 // Update updates an existing repository.
-// PUT /api/v1/repositories/:id
+//
+//	@Summary		Update repository
+//	@Description	Updates an existing repository's name or configuration
+//	@Tags			Repositories
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string					true	"Repository ID"
+//	@Param			request	body		UpdateRepositoryRequest	true	"Repository updates"
+//	@Success		200		{object}	RepositoryResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/repositories/{id} [put]
 func (h *RepositoriesHandler) Update(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -366,7 +415,20 @@ func (h *RepositoriesHandler) Update(c *gin.Context) {
 }
 
 // Delete removes a repository.
-// DELETE /api/v1/repositories/:id
+//
+//	@Summary		Delete repository
+//	@Description	Removes a repository from the organization
+//	@Tags			Repositories
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Repository ID"
+//	@Success		200	{object}	map[string]string
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/repositories/{id} [delete]
 func (h *RepositoriesHandler) Delete(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -419,7 +481,19 @@ type TestConnectionRequest struct {
 }
 
 // Test checks an existing repository's connection.
-// POST /api/v1/repositories/:id/test
+//
+//	@Summary		Test repository
+//	@Description	Tests an existing repository's connection to verify it's accessible
+//	@Tags			Repositories
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Repository ID"
+//	@Success		200	{object}	TestRepositoryResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/repositories/{id}/test [post]
 func (h *RepositoriesHandler) Test(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -460,7 +534,18 @@ func (h *RepositoriesHandler) Test(c *gin.Context) {
 }
 
 // TestConnection tests a backend configuration without saving.
-// POST /api/v1/repositories/test-connection
+//
+//	@Summary		Test connection
+//	@Description	Tests a backend configuration without creating a repository. Useful for validating credentials before saving.
+//	@Tags			Repositories
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		TestConnectionRequest	true	"Connection details"
+//	@Success		200		{object}	TestRepositoryResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/repositories/test-connection [post]
 func (h *RepositoriesHandler) TestConnection(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -527,7 +612,21 @@ func (h *RepositoriesHandler) TestConnection(c *gin.Context) {
 }
 
 // RecoverKey recovers the repository password for admins (requires escrow to be enabled).
-// GET /api/v1/repositories/:id/key/recover
+//
+//	@Summary		Recover repository key
+//	@Description	Recovers the repository password for administrators. Only available when key escrow is enabled for the repository.
+//	@Tags			Repositories
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Repository ID"
+//	@Success		200	{object}	KeyRecoveryResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		403	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/repositories/{id}/key/recover [get]
 func (h *RepositoriesHandler) RecoverKey(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
