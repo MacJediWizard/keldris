@@ -1,10 +1,16 @@
 import { useState } from 'react';
+import { ClassificationBadge } from '../components/ClassificationBadge';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
 import { useBackupTags, useSetBackupTags, useTags } from '../hooks/useTags';
-import type { Backup, BackupStatus, Tag } from '../lib/types';
+import type {
+	Backup,
+	BackupStatus,
+	ClassificationLevel,
+	Tag,
+} from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
@@ -207,6 +213,41 @@ function BackupDetailsModal({
 				</div>
 
 				<div className="space-y-4">
+					{backup.resumed && (
+						<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+							<div className="flex items-center gap-2">
+								<svg
+									className="w-5 h-5 text-blue-500"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+									/>
+								</svg>
+								<p className="text-sm font-medium text-blue-700 dark:text-blue-400">
+									Resumed Backup
+								</p>
+							</div>
+							<p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
+								This backup was resumed from an interrupted backup.
+								{backup.original_backup_id && (
+									<span className="ml-1">
+										Original backup ID:{' '}
+										<code className="font-mono text-xs">
+											{backup.original_backup_id.slice(0, 8)}...
+										</code>
+									</span>
+								)}
+							</p>
+						</div>
+					)}
+
 					{backup.snapshot_id && (
 						<div>
 							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -282,6 +323,21 @@ function BackupDetailsModal({
 									{backup.files_changed ?? 0}
 								</p>
 							</div>
+						</div>
+					)}
+
+					{(backup.classification_level ||
+						backup.classification_data_types) && (
+						<div>
+							<p className="text-sm font-medium text-gray-500 mb-2">
+								Classification
+							</p>
+							<ClassificationBadge
+								level={backup.classification_level || 'public'}
+								dataTypes={backup.classification_data_types}
+								showDataTypes
+								size="md"
+							/>
 						</div>
 					)}
 
@@ -383,9 +439,19 @@ function BackupRow({
 	return (
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
-				<code className="text-sm font-mono text-gray-900 dark:text-white">
-					{truncateSnapshotId(backup.snapshot_id)}
-				</code>
+				<div className="flex items-center gap-2">
+					<code className="text-sm font-mono text-gray-900 dark:text-white">
+						{truncateSnapshotId(backup.snapshot_id)}
+					</code>
+					{backup.resumed && (
+						<span
+							className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+							title="This backup was resumed from an interrupted backup"
+						>
+							Resumed
+						</span>
+					)}
+				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
 				{agentName ?? 'Unknown'}
@@ -397,12 +463,21 @@ function BackupRow({
 				{formatBytes(backup.size_bytes)}
 			</td>
 			<td className="px-6 py-4">
-				<span
-					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
-				>
-					<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
-					{backup.status}
-				</span>
+				<div className="flex flex-col gap-1">
+					<span
+						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
+					>
+						<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
+						{backup.status}
+					</span>
+					{backup.classification_level &&
+						backup.classification_level !== 'public' && (
+							<ClassificationBadge
+								level={backup.classification_level}
+								size="sm"
+							/>
+						)}
+				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(backup.started_at)}
@@ -424,6 +499,9 @@ export function Backups() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [agentFilter, setAgentFilter] = useState<string>('all');
 	const [statusFilter, setStatusFilter] = useState<BackupStatus | 'all'>('all');
+	const [classificationFilter, setClassificationFilter] = useState<
+		ClassificationLevel | 'all'
+	>('all');
 	const [selectedTagFilters, setSelectedTagFilters] = useState<Set<string>>(
 		new Set(),
 	);
@@ -470,10 +548,15 @@ export function Backups() {
 			agentFilter === 'all' || backup.agent_id === agentFilter;
 		const matchesStatus =
 			statusFilter === 'all' || backup.status === statusFilter;
+		const matchesClassification =
+			classificationFilter === 'all' ||
+			(backup.classification_level || 'public') === classificationFilter;
 		// Note: Tag filtering would require loading backup tags for each backup,
 		// which is expensive. For a more complete implementation, you'd want to
 		// fetch this data on the server side with proper filtering.
-		return matchesSearch && matchesAgent && matchesStatus;
+		return (
+			matchesSearch && matchesAgent && matchesStatus && matchesClassification
+		);
 	});
 
 	return (
@@ -523,6 +606,21 @@ export function Backups() {
 							<option value="running">Running</option>
 							<option value="failed">Failed</option>
 							<option value="canceled">Canceled</option>
+						</select>
+						<select
+							value={classificationFilter}
+							onChange={(e) =>
+								setClassificationFilter(
+									e.target.value as ClassificationLevel | 'all',
+								)
+							}
+							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						>
+							<option value="all">All Classifications</option>
+							<option value="public">Public</option>
+							<option value="internal">Internal</option>
+							<option value="confidential">Confidential</option>
+							<option value="restricted">Restricted</option>
 						</select>
 					</div>
 					{allTags && allTags.length > 0 && (

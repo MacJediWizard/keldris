@@ -34,6 +34,10 @@ import type {
 	BuiltInPatternsResponse,
 	CategoriesResponse,
 	CategoryInfo,
+	ClassificationLevelsResponse,
+	ClassificationRulesResponse,
+	ClassificationSummary,
+	ComplianceReport,
 	CostAlert,
 	CostAlertsResponse,
 	CostForecastResponse,
@@ -48,10 +52,13 @@ import type {
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
 	CreateExcludePatternRequest,
+	CreateImmutabilityLockRequest,
+	CreateLegalHoldRequest,
 	CreateMaintenanceWindowRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
+	CreatePathClassificationRuleRequest,
 	CreatePolicyRequest,
 	CreateRegistrationCodeRequest,
 	CreateRegistrationCodeResponse,
@@ -76,10 +83,13 @@ import type {
 	DailyBackupStats,
 	DailyBackupStatsResponse,
 	DashboardStats,
+	DataTypesResponse,
 	DefaultPricingResponse,
+	DryRunResponse,
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
+	ExtendImmutabilityLockRequest,
 	FileHistoryParams,
 	FileHistoryResponse,
 	FleetHealthSummary,
@@ -93,6 +103,9 @@ import type {
 	GeoReplicationSummary,
 	GeoReplicationSummaryResponse,
 	GeoReplicationUpdateRequest,
+	ImmutabilityLock,
+	ImmutabilityLocksResponse,
+	ImmutabilityStatus,
 	ImportPreviewRequest,
 	ImportPreviewResponse,
 	ImportRepositoryRequest,
@@ -101,6 +114,8 @@ import type {
 	InviteMemberRequest,
 	InviteResponse,
 	KeyRecoveryResponse,
+	LegalHold,
+	LegalHoldsResponse,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
 	MembersResponse,
@@ -119,6 +134,7 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	PathClassificationRule,
 	PendingRegistration,
 	PendingRegistrationsResponse,
 	PoliciesResponse,
@@ -137,11 +153,14 @@ import type {
 	RepositoryCostsResponse,
 	RepositoryGrowthResponse,
 	RepositoryHistoryResponse,
+	RepositoryImmutabilitySettings,
 	RepositoryReplicationStatusResponse,
 	RepositoryStatsListItem,
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
 	Restore,
+	RestorePreview,
+	RestorePreviewRequest,
 	RestoresResponse,
 	RotateAPIKeyResponse,
 	RunDRTestRequest,
@@ -154,6 +173,7 @@ import type {
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
+	SetScheduleClassificationRequest,
 	Snapshot,
 	SnapshotComment,
 	SnapshotCommentsResponse,
@@ -184,8 +204,10 @@ import type {
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
+	UpdatePathClassificationRuleRequest,
 	UpdatePolicyRequest,
 	UpdateReportScheduleRequest,
+	UpdateRepositoryImmutabilitySettingsRequest,
 	UpdateRepositoryRequest,
 	UpdateSSOGroupMappingRequest,
 	UpdateSSOSettingsRequest,
@@ -526,6 +548,11 @@ export const schedulesApi = {
 			method: 'POST',
 		}),
 
+	dryRun: async (id: string): Promise<DryRunResponse> =>
+		fetchApi<DryRunResponse>(`/schedules/${id}/dry-run`, {
+			method: 'POST',
+		}),
+
 	getReplicationStatus: async (id: string): Promise<ReplicationStatus[]> => {
 		const response = await fetchApi<ReplicationStatusResponse>(
 			`/schedules/${id}/replication`,
@@ -717,6 +744,12 @@ export const restoresApi = {
 
 	create: async (data: CreateRestoreRequest): Promise<Restore> =>
 		fetchApi<Restore>('/restores', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	preview: async (data: RestorePreviewRequest): Promise<RestorePreview> =>
+		fetchApi<RestorePreview>('/restores/preview', {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
@@ -1665,6 +1698,205 @@ export const costAlertsApi = {
 
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Classification API
+export const classificationsApi = {
+	// Reference data
+	getLevels: async (): Promise<ClassificationLevelsResponse> =>
+		fetchApi<ClassificationLevelsResponse>('/classifications/levels'),
+
+	getDataTypes: async (): Promise<DataTypesResponse> =>
+		fetchApi<DataTypesResponse>('/classifications/data-types'),
+
+	getDefaultRules: async (): Promise<PathClassificationRule[]> => {
+		const response = await fetchApi<{ rules: PathClassificationRule[] }>(
+			'/classifications/default-rules',
+		);
+		return response.rules ?? [];
+	},
+
+	// Rules
+	listRules: async (): Promise<PathClassificationRule[]> => {
+		const response = await fetchApi<ClassificationRulesResponse>(
+			'/classifications/rules',
+		);
+		return response.rules ?? [];
+	},
+
+	getRule: async (id: string): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>(`/classifications/rules/${id}`),
+
+	createRule: async (
+		data: CreatePathClassificationRuleRequest,
+	): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>('/classifications/rules', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateRule: async (
+		id: string,
+		data: UpdatePathClassificationRuleRequest,
+	): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>(`/classifications/rules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteRule: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/classifications/rules/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Schedule classifications
+	listScheduleClassifications: async (level?: string): Promise<Schedule[]> => {
+		const url = level
+			? `/classifications/schedules?level=${level}`
+			: '/classifications/schedules';
+		const response = await fetchApi<{ schedules: Schedule[] }>(url);
+		return response.schedules ?? [];
+	},
+
+	getScheduleClassification: async (
+		scheduleId: string,
+	): Promise<{ schedule_id: string; level: string; data_types: string[] }> =>
+		fetchApi<{ schedule_id: string; level: string; data_types: string[] }>(
+			`/classifications/schedules/${scheduleId}`,
+		),
+
+	setScheduleClassification: async (
+		scheduleId: string,
+		data: SetScheduleClassificationRequest,
+	): Promise<{ schedule_id: string; level: string; data_types: string[] }> =>
+		fetchApi<{ schedule_id: string; level: string; data_types: string[] }>(
+			`/classifications/schedules/${scheduleId}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		),
+
+	autoClassifySchedule: async (
+		scheduleId: string,
+	): Promise<{
+		schedule_id: string;
+		level: string;
+		data_types: string[];
+		auto_classified: boolean;
+	}> =>
+		fetchApi<{
+			schedule_id: string;
+			level: string;
+			data_types: string[];
+			auto_classified: boolean;
+		}>(`/classifications/schedules/${scheduleId}/auto-classify`, {
+			method: 'POST',
+		}),
+
+	// Backup classifications
+	listBackupsByClassification: async (level: string): Promise<Backup[]> => {
+		const response = await fetchApi<{ backups: Backup[]; level: string }>(
+			`/classifications/backups?level=${level}`,
+		);
+		return response.backups ?? [];
+	},
+
+	// Summary and reports
+	getSummary: async (): Promise<ClassificationSummary> =>
+		fetchApi<ClassificationSummary>('/classifications/summary'),
+
+	getComplianceReport: async (): Promise<ComplianceReport> =>
+		fetchApi<ComplianceReport>('/classifications/compliance-report'),
+};
+
+// Immutability API
+export const immutabilityApi = {
+	listLocks: async (): Promise<ImmutabilityLock[]> => {
+		const response = await fetchApi<ImmutabilityLocksResponse>('/immutability');
+		return response.locks ?? [];
+	},
+
+	getLock: async (id: string): Promise<ImmutabilityLock> =>
+		fetchApi<ImmutabilityLock>(`/immutability/${id}`),
+
+	createLock: async (
+		data: CreateImmutabilityLockRequest,
+	): Promise<ImmutabilityLock> =>
+		fetchApi<ImmutabilityLock>('/immutability', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	extendLock: async (
+		id: string,
+		data: ExtendImmutabilityLockRequest,
+	): Promise<ImmutabilityLock> =>
+		fetchApi<ImmutabilityLock>(`/immutability/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	getSnapshotStatus: async (
+		snapshotId: string,
+		repositoryId: string,
+	): Promise<ImmutabilityStatus> =>
+		fetchApi<ImmutabilityStatus>(
+			`/snapshots/${snapshotId}/immutability?repository_id=${repositoryId}`,
+		),
+
+	getRepositorySettings: async (
+		repositoryId: string,
+	): Promise<RepositoryImmutabilitySettings> =>
+		fetchApi<RepositoryImmutabilitySettings>(
+			`/repositories/${repositoryId}/immutability`,
+		),
+
+	updateRepositorySettings: async (
+		repositoryId: string,
+		data: UpdateRepositoryImmutabilitySettingsRequest,
+	): Promise<RepositoryImmutabilitySettings> =>
+		fetchApi<RepositoryImmutabilitySettings>(
+			`/repositories/${repositoryId}/immutability`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		),
+
+	listRepositoryLocks: async (
+		repositoryId: string,
+	): Promise<ImmutabilityLock[]> => {
+		const response = await fetchApi<ImmutabilityLocksResponse>(
+			`/repositories/${repositoryId}/immutability/locks`,
+		);
+		return response.locks ?? [];
+	},
+};
+
+// Legal Holds API
+export const legalHoldsApi = {
+	list: async (): Promise<LegalHold[]> => {
+		const response = await fetchApi<LegalHoldsResponse>('/legal-holds');
+		return response.legal_holds ?? [];
+	},
+
+	get: async (snapshotId: string): Promise<LegalHold> =>
+		fetchApi<LegalHold>(`/snapshots/${snapshotId}/hold`),
+
+	create: async (
+		snapshotId: string,
+		data: CreateLegalHoldRequest,
+	): Promise<LegalHold> =>
+		fetchApi<LegalHold>(`/snapshots/${snapshotId}/hold`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (snapshotId: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/snapshots/${snapshotId}/hold`, {
 			method: 'DELETE',
 		}),
 };
