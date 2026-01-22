@@ -18,7 +18,31 @@
 
 ---
 
-> ⚠️ **Active development** - Not ready for production yet. Following along? Star the repo.
+> ⚠️ **Active development** - Core features work but still polishing. Star the repo to follow along!
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/images/screenshots/dashboard.svg" alt="Dashboard" width="800"><br>
+  <em>Dashboard - backup status at a glance</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshots/agents.svg" alt="Agent Management" width="800"><br>
+  <em>Agent management across your infrastructure</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshots/file-browser.svg" alt="File Browser" width="800"><br>
+  <em>Browse and restore files from any snapshot</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshots/schedules.svg" alt="Backup Schedules" width="800"><br>
+  <em>Flexible cron-based scheduling</em>
+</p>
+
+---
 
 ## Why I'm building this
 
@@ -30,43 +54,51 @@ I wanted a backup solution that could:
 
 ...I couldn't find one. So I'm building it.
 
-## What it does
+## Features
 
 - **OIDC-first auth** - Authentik, Keycloak, whatever you use
 - **Agent-based** - Small Go binary on each machine, talks to central server
 - **Restic under the hood** - Encryption, deduplication, the good stuff
-- **Multi-tenant** - Orgs and RBAC if you need it
+- **Multi-tenant** - Orgs and RBAC built in
+- **Dark mode** - Because we're not animals
 
 ---
 
 ## Status
 
-Tracking what's done and what's next.
-
-### Done
-- Restic-powered encrypted backups
-- Scheduled backups (cron)
-- OIDC authentication (Authentik-first)
-- Go agent (Linux, macOS, Windows)
-- Docker deployment
-- CI/CD with GitHub Actions
-
-### Working on now
-- Storage backends (S3, B2, Dropbox, local)
-- Retention policies
-- Restore UI with file browser
-- Agent health monitoring
-- Docker volume/compose backup
+### Implemented
+- Restic-powered encrypted backups with deduplication
+- Flexible cron-based scheduling with retention policies
+- OIDC authentication (tested with Authentik, Keycloak)
+- Go agent for Linux, macOS, and Windows
+- Storage backends: S3, B2, Dropbox, local, SFTP, REST
+- Full restore UI with file browser
+- Snapshot comparison (diff between backups)
+- File version history browser
+- Agent health monitoring with history
+- Backup tagging and organization
+- Pre/post backup scripts
+- Network mount detection and handling
 - Email notifications
-- RBAC and multi-org
+- Multi-org with RBAC
+- Audit logging
+- Dark mode
+- First-run onboarding wizard
+- DR runbook generation
+- Prometheus metrics endpoint
+- Docker deployment
 
-### On the roadmap
+### In Progress
+- Agent CLI backup/restore commands
+- Email report delivery
+- DR test automation
+- UI polish and bug fixes
+
+### Roadmap
 - Snapshot mounting (FUSE)
-- Prometheus metrics
-- Slack/Discord/webhook notifications
-- Admin panel
-- DR runbooks
+- Slack/Discord notifications
 - Import existing Restic repos
+- Mobile-friendly improvements
 
 ---
 
