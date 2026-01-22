@@ -364,7 +364,10 @@ export interface Schedule {
 	backup_window?: BackupWindow; // Allowed backup time window
 	excluded_hours?: number[]; // Hours (0-23) when backups should not run
 	compression_level?: CompressionLevel; // Compression level: off, auto, max
+	max_file_size_mb?: number; // Max file size in MB (0 = disabled)
 	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
+	classification_level?: string; // Data classification level
+	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -383,6 +386,7 @@ export interface CreateScheduleRequest {
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
 	compression_level?: CompressionLevel;
+	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
 	enabled?: boolean;
 }
@@ -398,12 +402,38 @@ export interface UpdateScheduleRequest {
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
 	compression_level?: CompressionLevel;
+	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
 	enabled?: boolean;
 }
 
 export interface RunScheduleResponse {
 	backup_id: string;
+	message: string;
+}
+
+// Dry run types
+export interface DryRunFile {
+	path: string;
+	type: 'file' | 'dir';
+	size: number;
+	action: 'new' | 'changed' | 'unchanged';
+}
+
+export interface DryRunExcluded {
+	path: string;
+	reason: string;
+}
+
+export interface DryRunResponse {
+	schedule_id: string;
+	total_files: number;
+	total_size: number;
+	new_files: number;
+	changed_files: number;
+	unchanged_files: number;
+	files_to_backup: DryRunFile[];
+	excluded_files: DryRunExcluded[];
 	message: string;
 }
 
@@ -470,6 +500,12 @@ export interface PoliciesResponse {
 // Backup types
 export type BackupStatus = 'running' | 'completed' | 'failed' | 'canceled';
 
+export interface ExcludedLargeFile {
+	path: string;
+	size_bytes: number;
+	size_mb: number;
+}
+
 export interface Backup {
 	id: string;
 	schedule_id: string;
@@ -491,7 +527,61 @@ export interface Backup {
 	pre_script_error?: string;
 	post_script_output?: string;
 	post_script_error?: string;
+	excluded_large_files?: ExcludedLargeFile[]; // Files excluded due to size limit
+	resumed: boolean;
+	checkpoint_id?: string;
+	original_backup_id?: string;
+	classification_level?: string;
+	classification_data_types?: string[];
 	created_at: string;
+}
+
+// Backup Checkpoint types for resumable backups
+export type CheckpointStatus = 'active' | 'completed' | 'canceled' | 'expired';
+
+export interface BackupCheckpoint {
+	id: string;
+	schedule_id: string;
+	agent_id: string;
+	repository_id: string;
+	backup_id?: string;
+	status: CheckpointStatus;
+	files_processed: number;
+	bytes_processed: number;
+	total_files?: number;
+	total_bytes?: number;
+	last_processed_path?: string;
+	error_message?: string;
+	resume_count: number;
+	expires_at?: string;
+	started_at: string;
+	last_updated_at: string;
+	created_at: string;
+}
+
+export interface ResumeInfo {
+	checkpoint: BackupCheckpoint;
+	progress_percent?: number;
+	files_processed: number;
+	bytes_processed: number;
+	total_files?: number;
+	total_bytes?: number;
+	interrupted_at: string;
+	interrupted_error?: string;
+	resume_count: number;
+	can_resume: boolean;
+}
+
+export interface IncompleteBackupsResponse {
+	checkpoints: BackupCheckpoint[];
+}
+
+export interface ResumeBackupRequest {
+	checkpoint_id: string;
+}
+
+export interface CancelCheckpointRequest {
+	checkpoint_id: string;
 }
 
 // Backup Script types
@@ -675,6 +765,9 @@ export interface Snapshot {
 	repository_id: string;
 	backup_id?: string;
 	size_bytes?: number;
+	is_locked?: boolean;
+	locked_until?: string;
+	remaining_days?: number;
 }
 
 export interface SnapshotFile {
@@ -777,6 +870,34 @@ export interface CreateRestoreRequest {
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+}
+
+export interface RestorePreviewRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	target_path: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+}
+
+export interface RestorePreviewFile {
+	path: string;
+	type: 'file' | 'dir';
+	size: number;
+	mod_time: string;
+	has_conflict: boolean;
+}
+
+export interface RestorePreview {
+	snapshot_id: string;
+	target_path: string;
+	total_files: number;
+	total_dirs: number;
+	total_size: number;
+	conflict_count: number;
+	files: RestorePreviewFile[];
+	disk_space_needed: number;
 }
 
 export interface RestoresResponse {
@@ -1918,6 +2039,281 @@ export interface ImportRepositoryRequest {
 export interface ImportRepositoryResponse {
 	repository: Repository;
 	snapshots_imported: number;
+}
+
+// Classification types
+export type ClassificationLevel =
+	| 'public'
+	| 'internal'
+	| 'confidential'
+	| 'restricted';
+export type DataType = 'pii' | 'phi' | 'pci' | 'proprietary' | 'general';
+
+export interface ClassificationLevelInfo {
+	value: ClassificationLevel;
+	label: string;
+	description: string;
+	priority: number;
+}
+
+export interface DataTypeInfo {
+	value: DataType;
+	label: string;
+	description: string;
+}
+
+export interface PathClassificationRule {
+	id: string;
+	org_id: string;
+	pattern: string;
+	level: ClassificationLevel;
+	data_types: DataType[];
+	description?: string;
+	is_builtin: boolean;
+	priority: number;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+// Snapshot Immutability types
+export interface ImmutabilityLock {
+	id: string;
+	repository_id: string;
+	snapshot_id: string;
+	short_id: string;
+	locked_at: string;
+	locked_until: string;
+	locked_by?: string;
+	reason?: string;
+	remaining_days: number;
+	s3_object_lock_enabled: boolean;
+	created_at: string;
+}
+
+export interface ImmutabilityStatus {
+	is_locked: boolean;
+	locked_until?: string;
+	remaining_days?: number;
+	reason?: string;
+	locked_at?: string;
+}
+
+export interface RepositoryImmutabilitySettings {
+	enabled: boolean;
+	default_days?: number;
+}
+
+export interface CreateImmutabilityLockRequest {
+	repository_id: string;
+	snapshot_id: string;
+	days: number;
+	reason?: string;
+	enable_s3_lock?: boolean;
+}
+
+export interface ExtendImmutabilityLockRequest {
+	additional_days: number;
+	reason?: string;
+}
+
+export interface UpdateRepositoryImmutabilitySettingsRequest {
+	enabled: boolean;
+	default_days?: number;
+}
+
+export interface ImmutabilityLocksResponse {
+	locks: ImmutabilityLock[];
+}
+
+// Legal Hold types
+export interface LegalHold {
+	id: string;
+	snapshot_id: string;
+	reason: string;
+	placed_by: string;
+	placed_by_name: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreatePathClassificationRuleRequest {
+	pattern: string;
+	level: ClassificationLevel;
+	data_types?: DataType[];
+	description?: string;
+	priority?: number;
+}
+
+export interface UpdatePathClassificationRuleRequest {
+	pattern?: string;
+	level?: ClassificationLevel;
+	data_types?: DataType[];
+	description?: string;
+	priority?: number;
+	enabled?: boolean;
+}
+
+export interface SetScheduleClassificationRequest {
+	level: ClassificationLevel;
+	data_types?: DataType[];
+}
+
+export interface ClassificationSummary {
+	total_schedules: number;
+	total_backups: number;
+	by_level: Record<string, number>;
+	by_data_type: Record<string, number>;
+	restricted_count: number;
+	confidential_count: number;
+	internal_count: number;
+	public_count: number;
+}
+
+export interface ClassificationRulesResponse {
+	rules: PathClassificationRule[];
+}
+
+export interface ClassificationLevelsResponse {
+	levels: ClassificationLevelInfo[];
+}
+
+export interface DataTypesResponse {
+	data_types: DataTypeInfo[];
+}
+
+export interface ScheduleClassificationSummary {
+	id: string;
+	name: string;
+	level: ClassificationLevel;
+	data_types: DataType[];
+	paths: string[];
+	agent_id: string;
+}
+
+export interface ComplianceReport {
+	generated_at: string;
+	org_id: string;
+	summary: ClassificationSummary;
+	schedules_by_level: Record<string, ScheduleClassificationSummary[]>;
+}
+
+export interface CreateLegalHoldRequest {
+	reason: string;
+}
+
+export interface LegalHoldsResponse {
+	legal_holds: LegalHold[];
+}
+
+// Geo-Replication types
+export interface GeoRegion {
+	code: string;
+	name: string;
+	display_name: string;
+	latitude: number;
+	longitude: number;
+}
+
+export interface GeoRegionPair {
+	primary: GeoRegion;
+	secondary: GeoRegion;
+}
+
+export type GeoReplicationStatusType =
+	| 'pending'
+	| 'syncing'
+	| 'synced'
+	| 'failed'
+	| 'disabled';
+
+export interface ReplicationLag {
+	snapshots_behind: number;
+	time_behind_hours: number;
+	is_healthy: boolean;
+	last_sync_at?: string;
+}
+
+export interface GeoReplicationConfig {
+	id: string;
+	source_repository_id: string;
+	target_repository_id: string;
+	source_region: GeoRegion;
+	target_region: GeoRegion;
+	enabled: boolean;
+	status: GeoReplicationStatusType;
+	last_snapshot_id?: string;
+	last_sync_at?: string;
+	last_error?: string;
+	max_lag_snapshots: number;
+	max_lag_duration_hours: number;
+	alert_on_lag: boolean;
+	replication_lag?: ReplicationLag;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface GeoReplicationCreateRequest {
+	source_repository_id: string;
+	target_repository_id: string;
+	source_region: string;
+	target_region: string;
+	max_lag_snapshots?: number;
+	max_lag_duration_hours?: number;
+	alert_on_lag?: boolean;
+}
+
+export interface GeoReplicationUpdateRequest {
+	enabled?: boolean;
+	max_lag_snapshots?: number;
+	max_lag_duration_hours?: number;
+	alert_on_lag?: boolean;
+}
+
+export interface GeoReplicationEvent {
+	id: string;
+	config_id: string;
+	snapshot_id: string;
+	status: GeoReplicationStatusType;
+	started_at: string;
+	completed_at?: string;
+	duration_ms: number;
+	bytes_copied?: number;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface GeoReplicationSummary {
+	total_configs: number;
+	enabled_configs: number;
+	synced_count: number;
+	syncing_count: number;
+	pending_count: number;
+	failed_count: number;
+}
+
+export interface GeoReplicationRegionsResponse {
+	regions: GeoRegion[];
+	pairs: GeoRegionPair[];
+}
+
+export interface GeoReplicationConfigsResponse {
+	configs: GeoReplicationConfig[];
+}
+
+export interface GeoReplicationEventsResponse {
+	events: GeoReplicationEvent[];
+}
+
+export interface GeoReplicationSummaryResponse {
+	summary: GeoReplicationSummary;
+	regions: GeoRegion[];
+}
+
+export interface RepositoryReplicationStatusResponse {
+	configured: boolean;
+	config?: GeoReplicationConfig;
+	message?: string;
 }
 
 // Agent Command types
