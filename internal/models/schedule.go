@@ -41,6 +41,7 @@ type Schedule struct {
 	BackupWindow       *BackupWindow        `json:"backup_window,omitempty"`        // Allowed backup time window
 	ExcludedHours      []int                `json:"excluded_hours,omitempty"`       // Hours (0-23) when backups should not run
 	CompressionLevel   *string              `json:"compression_level,omitempty"`    // Compression level: off, auto, max
+	MaxFileSizeMB      *int                 `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
 	OnMountUnavailable MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
 	Enabled            bool                 `json:"enabled"`
 	Repositories       []ScheduleRepository `json:"repositories,omitempty"`

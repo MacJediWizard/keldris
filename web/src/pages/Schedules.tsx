@@ -71,6 +71,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	const [compressionLevel, setCompressionLevel] = useState<
 		CompressionLevel | ''
 	>('');
+	const [maxFileSizeMb, setMaxFileSizeMb] = useState('');
 	const [onMountUnavailable, setOnMountUnavailable] =
 		useState<MountBehavior>('fail');
 	const [showAdvanced, setShowAdvanced] = useState(false);
@@ -171,6 +172,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			if (compressionLevel) {
 				data.compression_level = compressionLevel;
 			}
+			if (maxFileSizeMb && Number.parseInt(maxFileSizeMb, 10) > 0) {
+				data.max_file_size_mb = Number.parseInt(maxFileSizeMb, 10);
+			}
 			if (onMountUnavailable !== 'fail') {
 				data.on_mount_unavailable = onMountUnavailable;
 			}
@@ -196,6 +200,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			setWindowEnd('');
 			setExcludedHours([]);
 			setCompressionLevel('');
+			setMaxFileSizeMb('');
 			setOnMountUnavailable('fail');
 			setShowAdvanced(false);
 			// Reset exclude patterns state
@@ -669,6 +674,29 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 										</p>
 									</div>
 
+									{/* Max File Size */}
+									<div>
+										<label
+											htmlFor="max-file-size"
+											className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+										>
+											Max File Size (MB)
+										</label>
+										<input
+											type="number"
+											id="max-file-size"
+											value={maxFileSizeMb}
+											onChange={(e) => setMaxFileSizeMb(e.target.value)}
+											placeholder="e.g., 100 (leave empty for no limit)"
+											min="0"
+											className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										/>
+										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+											Files larger than this will be automatically excluded from
+											backup. Leave empty or 0 for no limit.
+										</p>
+									</div>
+
 									{/* Network Mount Behavior */}
 									<div>
 										<label
@@ -778,7 +806,8 @@ function ScheduleRow({
 		schedule.bandwidth_limit_kb ||
 		schedule.backup_window ||
 		(schedule.excluded_hours && schedule.excluded_hours.length > 0) ||
-		schedule.compression_level;
+		schedule.compression_level ||
+		(schedule.max_file_size_mb && schedule.max_file_size_mb > 0);
 
 	const hasBadges = hasResourceControls || policyName;
 
@@ -896,6 +925,25 @@ function ScheduleRow({
 									: schedule.compression_level === 'max'
 										? 'Max compression'
 										: 'Auto compression'}
+							</span>
+						)}
+						{schedule.max_file_size_mb && schedule.max_file_size_mb > 0 && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-50 text-orange-700 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+									/>
+								</svg>
+								Max {schedule.max_file_size_mb} MB
 							</span>
 						)}
 					</div>
