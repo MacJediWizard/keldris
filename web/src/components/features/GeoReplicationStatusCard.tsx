@@ -65,7 +65,11 @@ function LagIndicator({
 	maxSnapshots: _maxSnapshots,
 	maxHours: _maxHours,
 }: {
-	lag?: { snapshots_behind: number; time_behind_hours: number; is_healthy: boolean };
+	lag?: {
+		snapshots_behind: number;
+		time_behind_hours: number;
+		is_healthy: boolean;
+	};
 	maxSnapshots: number;
 	maxHours: number;
 }) {
@@ -79,18 +83,19 @@ function LagIndicator({
 	return (
 		<div
 			className={`text-xs px-2 py-1 rounded ${
-				isHealthy ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+				isHealthy
+					? 'bg-green-50 text-green-700'
+					: 'bg-yellow-50 text-yellow-700'
 			}`}
 		>
 			{lag.snapshots_behind > 0 && (
 				<span className="mr-2">
-					{lag.snapshots_behind} snapshot{lag.snapshots_behind !== 1 ? 's' : ''} behind
+					{lag.snapshots_behind} snapshot{lag.snapshots_behind !== 1 ? 's' : ''}{' '}
+					behind
 				</span>
 			)}
 			{lag.time_behind_hours > 0 && (
-				<span>
-					{lag.time_behind_hours}h since last sync
-				</span>
+				<span>{lag.time_behind_hours}h since last sync</span>
 			)}
 			{lag.snapshots_behind === 0 && lag.time_behind_hours === 0 && (
 				<span>Up to date</span>
@@ -135,8 +140,8 @@ export function GeoReplicationStatusCard({
 					Geo-Replication Status
 				</h3>
 				<p className="text-sm text-gray-500">
-					No geo-replication configured. Set up replication to automatically copy
-					backups to secondary regions for disaster recovery.
+					No geo-replication configured. Set up replication to automatically
+					copy backups to secondary regions for disaster recovery.
 				</p>
 			</div>
 		);
@@ -195,7 +200,8 @@ export function GeoReplicationStatusCard({
 
 								{/* Regions */}
 								<div className="text-xs text-gray-500 mt-0.5">
-									{config.source_region.display_name} → {config.target_region.display_name}
+									{config.source_region.display_name} →{' '}
+									{config.target_region.display_name}
 								</div>
 
 								{/* Status and metrics */}
@@ -229,28 +235,31 @@ export function GeoReplicationStatusCard({
 
 							{/* Actions */}
 							<div className="flex-shrink-0 flex items-center gap-2">
-								{onTriggerReplication && config.enabled && config.status !== 'syncing' && (
-									<button
-										type="button"
-										onClick={() => onTriggerReplication(config.id)}
-										className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded"
-										title="Trigger sync now"
-									>
-										<svg
-											className="w-4 h-4"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
+								{onTriggerReplication &&
+									config.enabled &&
+									config.status !== 'syncing' && (
+										<button
+											type="button"
+											onClick={() => onTriggerReplication(config.id)}
+											className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded"
+											title="Trigger sync now"
 										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-											/>
-										</svg>
-									</button>
-								)}
+											<svg
+												aria-hidden="true"
+												className="w-4 h-4"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+												/>
+											</svg>
+										</button>
+									)}
 								{onToggleEnabled && (
 									<button
 										type="button"
@@ -260,10 +269,15 @@ export function GeoReplicationStatusCard({
 												? 'text-green-600 hover:bg-green-50'
 												: 'text-gray-400 hover:bg-gray-200'
 										}`}
-										title={config.enabled ? 'Disable replication' : 'Enable replication'}
+										title={
+											config.enabled
+												? 'Disable replication'
+												: 'Enable replication'
+										}
 									>
 										{config.enabled ? (
 											<svg
+												aria-hidden="true"
 												className="w-4 h-4"
 												fill="none"
 												stroke="currentColor"
@@ -278,6 +292,7 @@ export function GeoReplicationStatusCard({
 											</svg>
 										) : (
 											<svg
+												aria-hidden="true"
 												className="w-4 h-4"
 												fill="none"
 												stroke="currentColor"

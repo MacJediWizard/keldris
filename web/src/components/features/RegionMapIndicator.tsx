@@ -169,18 +169,22 @@ export function RegionMapIndicator({
 	if (activeConfigs.length === 0) {
 		return (
 			<div className="bg-gray-50 rounded-lg p-4 text-center">
-				<p className="text-sm text-gray-500">
-					No geo-replication configured
-				</p>
+				<p className="text-sm text-gray-500">No geo-replication configured</p>
 			</div>
 		);
 	}
 
 	if (compact) {
 		// Compact view - just show status indicators
-		const syncedCount = activeConfigs.filter((c) => c.status === 'synced').length;
-		const syncingCount = activeConfigs.filter((c) => c.status === 'syncing').length;
-		const failedCount = activeConfigs.filter((c) => c.status === 'failed').length;
+		const syncedCount = activeConfigs.filter(
+			(c) => c.status === 'synced',
+		).length;
+		const syncingCount = activeConfigs.filter(
+			(c) => c.status === 'syncing',
+		).length;
+		const failedCount = activeConfigs.filter(
+			(c) => c.status === 'failed',
+		).length;
 
 		return (
 			<div className="flex items-center gap-3">
@@ -191,7 +195,9 @@ export function RegionMapIndicator({
 				{syncingCount > 0 && (
 					<div className="flex items-center gap-1.5">
 						<span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-						<span className="text-xs text-gray-600">{syncingCount} syncing</span>
+						<span className="text-xs text-gray-600">
+							{syncingCount} syncing
+						</span>
 					</div>
 				)}
 				{failedCount > 0 && (
@@ -212,20 +218,24 @@ export function RegionMapIndicator({
 			<div className="relative bg-gray-100 rounded-lg overflow-hidden">
 				{/* Simplified world map background */}
 				<svg
+					aria-hidden="true"
 					viewBox="0 0 100 60"
 					className="w-full h-auto"
 					preserveAspectRatio="xMidYMid meet"
 				>
 					{/* Simple world outline */}
 					<rect x="0" y="0" width="100" height="60" fill="#F3F4F6" />
-
 					{/* Simplified continents */}
-					<ellipse cx="22" cy="38" rx="15" ry="10" fill="#E5E7EB" /> {/* North America */}
-					<ellipse cx="28" cy="52" rx="8" ry="6" fill="#E5E7EB" /> {/* South America */}
-					<ellipse cx="50" cy="35" rx="12" ry="15" fill="#E5E7EB" /> {/* Europe/Africa */}
-					<ellipse cx="75" cy="40" rx="18" ry="15" fill="#E5E7EB" /> {/* Asia */}
-					<ellipse cx="88" cy="55" rx="8" ry="5" fill="#E5E7EB" /> {/* Australia */}
-
+					<ellipse cx="22" cy="38" rx="15" ry="10" fill="#E5E7EB" />{' '}
+					{/* North America */}
+					<ellipse cx="28" cy="52" rx="8" ry="6" fill="#E5E7EB" />{' '}
+					{/* South America */}
+					<ellipse cx="50" cy="35" rx="12" ry="15" fill="#E5E7EB" />{' '}
+					{/* Europe/Africa */}
+					<ellipse cx="75" cy="40" rx="18" ry="15" fill="#E5E7EB" />{' '}
+					{/* Asia */}
+					<ellipse cx="88" cy="55" rx="8" ry="5" fill="#E5E7EB" />{' '}
+					{/* Australia */}
 					{/* Replication lines */}
 					{activeConfigs.map((config) => (
 						<ReplicationLine
@@ -235,7 +245,6 @@ export function RegionMapIndicator({
 							status={config.status}
 						/>
 					))}
-
 					{/* Region dots */}
 					{activeConfigs.map((config) => (
 						<g key={`regions-${config.id}`}>
