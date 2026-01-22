@@ -174,7 +174,7 @@ func (b *Backup) SetClassificationDataTypes(data []byte) error {
 
 // ClassificationDataTypesJSON returns the classification data types as JSON bytes.
 func (b *Backup) ClassificationDataTypesJSON() ([]byte, error) {
-	if b.ClassificationDataTypes == nil || len(b.ClassificationDataTypes) == 0 {
+	if len(b.ClassificationDataTypes) == 0 {
 		return []byte(`["general"]`), nil
 	}
 	return json.Marshal(b.ClassificationDataTypes)

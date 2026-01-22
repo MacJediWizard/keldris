@@ -8,11 +8,9 @@ import {
 	useAutoClassifySchedule,
 	useClassificationRules,
 	useClassificationSummary,
-	useComplianceReport,
 	useCreateClassificationRule,
 	useDeleteClassificationRule,
 	useScheduleClassifications,
-	useSetScheduleClassification,
 	useUpdateClassificationRule,
 } from '../hooks/useClassifications';
 import type {
@@ -80,19 +78,23 @@ function CreateRuleModal({ isOpen, onClose }: CreateRuleModalProps) {
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label
+							htmlFor="classification-level"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
 							Classification Level
 						</label>
 						<ClassificationLevelSelect
+							id="classification-level"
 							value={level}
 							onChange={(l) => setLevel(l as ClassificationLevel)}
 						/>
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 							Data Types
-						</label>
+						</span>
 						<DataTypeMultiSelect
 							value={dataTypes}
 							onChange={(types) => setDataTypes(types as DataType[])}
@@ -232,7 +234,6 @@ export function Classifications() {
 	const [levelFilter, setLevelFilter] = useState<string>('');
 
 	const { data: summary, isLoading: summaryLoading } = useClassificationSummary();
-	const { data: report } = useComplianceReport();
 	const { data: rules, isLoading: rulesLoading } = useClassificationRules();
 	const { data: schedules, isLoading: schedulesLoading } = useScheduleClassifications(
 		levelFilter || undefined,
@@ -240,7 +241,6 @@ export function Classifications() {
 
 	const deleteRule = useDeleteClassificationRule();
 	const updateRule = useUpdateClassificationRule();
-	const setScheduleClassification = useSetScheduleClassification();
 	const autoClassify = useAutoClassifySchedule();
 
 	const handleDeleteRule = (id: string) => {
@@ -336,6 +336,7 @@ export function Classifications() {
 											fill="none"
 											stroke="currentColor"
 											viewBox="0 0 24 24"
+											aria-hidden="true"
 										>
 											<path
 												strokeLinecap="round"
@@ -356,6 +357,7 @@ export function Classifications() {
 											fill="none"
 											stroke="currentColor"
 											viewBox="0 0 24 24"
+											aria-hidden="true"
 										>
 											<path
 												strokeLinecap="round"
@@ -376,6 +378,7 @@ export function Classifications() {
 											fill="none"
 											stroke="currentColor"
 											viewBox="0 0 24 24"
+											aria-hidden="true"
 										>
 											<path
 												strokeLinecap="round"
@@ -396,6 +399,7 @@ export function Classifications() {
 											fill="none"
 											stroke="currentColor"
 											viewBox="0 0 24 24"
+											aria-hidden="true"
 										>
 											<path
 												strokeLinecap="round"
@@ -454,6 +458,7 @@ export function Classifications() {
 								fill="none"
 								stroke="currentColor"
 								viewBox="0 0 24 24"
+								aria-hidden="true"
 							>
 								<path
 									strokeLinecap="round"
