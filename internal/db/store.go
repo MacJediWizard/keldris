@@ -6941,3 +6941,278 @@ func scanImportedSnapshots(rows interface{ Next() bool; Scan(dest ...interface{}
 
 	return snapshots, nil
 }
+
+// Geo-Replication methods
+
+// CreateGeoReplicationConfig creates a new geo-replication configuration.
+func (db *DB) CreateGeoReplicationConfig(ctx context.Context, config *models.GeoReplicationConfig) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO geo_replication_configs (
+			id, org_id, source_repository_id, target_repository_id,
+			source_region, target_region, enabled, status,
+			last_snapshot_id, last_sync_at, last_error,
+			max_lag_snapshots, max_lag_duration_hours, alert_on_lag,
+			created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+	`, config.ID, config.OrgID, config.SourceRepositoryID, config.TargetRepositoryID,
+		config.SourceRegion, config.TargetRegion, config.Enabled, config.Status,
+		config.LastSnapshotID, config.LastSyncAt, config.LastError,
+		config.MaxLagSnapshots, config.MaxLagDurationHours, config.AlertOnLag,
+		config.CreatedAt, config.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create geo-replication config: %w", err)
+	}
+	return nil
+}
+
+// GetGeoReplicationConfig returns a geo-replication configuration by ID.
+func (db *DB) GetGeoReplicationConfig(ctx context.Context, id uuid.UUID) (*models.GeoReplicationConfig, error) {
+	var config models.GeoReplicationConfig
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, source_repository_id, target_repository_id,
+			source_region, target_region, enabled, status,
+			last_snapshot_id, last_sync_at, last_error,
+			max_lag_snapshots, max_lag_duration_hours, alert_on_lag,
+			created_at, updated_at
+		FROM geo_replication_configs
+		WHERE id = $1
+	`, id).Scan(
+		&config.ID, &config.OrgID, &config.SourceRepositoryID, &config.TargetRepositoryID,
+		&config.SourceRegion, &config.TargetRegion, &config.Enabled, &config.Status,
+		&config.LastSnapshotID, &config.LastSyncAt, &config.LastError,
+		&config.MaxLagSnapshots, &config.MaxLagDurationHours, &config.AlertOnLag,
+		&config.CreatedAt, &config.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get geo-replication config: %w", err)
+	}
+	return &config, nil
+}
+
+// GetGeoReplicationConfigByRepository returns the geo-replication config for a source repository.
+func (db *DB) GetGeoReplicationConfigByRepository(ctx context.Context, repositoryID uuid.UUID) (*models.GeoReplicationConfig, error) {
+	var config models.GeoReplicationConfig
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, source_repository_id, target_repository_id,
+			source_region, target_region, enabled, status,
+			last_snapshot_id, last_sync_at, last_error,
+			max_lag_snapshots, max_lag_duration_hours, alert_on_lag,
+			created_at, updated_at
+		FROM geo_replication_configs
+		WHERE source_repository_id = $1
+	`, repositoryID).Scan(
+		&config.ID, &config.OrgID, &config.SourceRepositoryID, &config.TargetRepositoryID,
+		&config.SourceRegion, &config.TargetRegion, &config.Enabled, &config.Status,
+		&config.LastSnapshotID, &config.LastSyncAt, &config.LastError,
+		&config.MaxLagSnapshots, &config.MaxLagDurationHours, &config.AlertOnLag,
+		&config.CreatedAt, &config.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get geo-replication config by repository: %w", err)
+	}
+	return &config, nil
+}
+
+// UpdateGeoReplicationConfig updates a geo-replication configuration.
+func (db *DB) UpdateGeoReplicationConfig(ctx context.Context, config *models.GeoReplicationConfig) error {
+	config.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE geo_replication_configs
+		SET enabled = $2, status = $3, last_snapshot_id = $4, last_sync_at = $5,
+			last_error = $6, max_lag_snapshots = $7, max_lag_duration_hours = $8,
+			alert_on_lag = $9, updated_at = $10
+		WHERE id = $1
+	`, config.ID, config.Enabled, config.Status, config.LastSnapshotID, config.LastSyncAt,
+		config.LastError, config.MaxLagSnapshots, config.MaxLagDurationHours,
+		config.AlertOnLag, config.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update geo-replication config: %w", err)
+	}
+	return nil
+}
+
+// DeleteGeoReplicationConfig deletes a geo-replication configuration.
+func (db *DB) DeleteGeoReplicationConfig(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM geo_replication_configs WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete geo-replication config: %w", err)
+	}
+	return nil
+}
+
+// ListGeoReplicationConfigsByOrg returns all geo-replication configs for an organization.
+func (db *DB) ListGeoReplicationConfigsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.GeoReplicationConfig, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, source_repository_id, target_repository_id,
+			source_region, target_region, enabled, status,
+			last_snapshot_id, last_sync_at, last_error,
+			max_lag_snapshots, max_lag_duration_hours, alert_on_lag,
+			created_at, updated_at
+		FROM geo_replication_configs
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list geo-replication configs: %w", err)
+	}
+	defer rows.Close()
+
+	return scanGeoReplicationConfigs(rows)
+}
+
+// ListPendingReplications returns all enabled configs that may need replication.
+func (db *DB) ListPendingReplications(ctx context.Context) ([]*models.GeoReplicationConfig, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, source_repository_id, target_repository_id,
+			source_region, target_region, enabled, status,
+			last_snapshot_id, last_sync_at, last_error,
+			max_lag_snapshots, max_lag_duration_hours, alert_on_lag,
+			created_at, updated_at
+		FROM geo_replication_configs
+		WHERE enabled = true AND status != 'syncing'
+		ORDER BY last_sync_at ASC NULLS FIRST
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list pending replications: %w", err)
+	}
+	defer rows.Close()
+
+	return scanGeoReplicationConfigs(rows)
+}
+
+// RecordReplicationEvent records a replication event.
+func (db *DB) RecordReplicationEvent(ctx context.Context, event *models.ReplicationEvent) error {
+	durationMs := event.Duration.Milliseconds()
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO replication_events (
+			id, config_id, snapshot_id, status,
+			started_at, completed_at, duration_ms, bytes_copied,
+			error_message, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, event.ID, event.ConfigID, event.SnapshotID, event.Status,
+		event.StartedAt, event.CompletedAt, durationMs, event.BytesCopied,
+		event.ErrorMessage, event.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("record replication event: %w", err)
+	}
+	return nil
+}
+
+// GetReplicationEvents returns recent replication events for a config.
+func (db *DB) GetReplicationEvents(ctx context.Context, configID uuid.UUID, limit int) ([]*models.ReplicationEvent, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, config_id, snapshot_id, status,
+			started_at, completed_at, duration_ms, bytes_copied,
+			error_message, created_at
+		FROM replication_events
+		WHERE config_id = $1
+		ORDER BY started_at DESC
+		LIMIT $2
+	`, configID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get replication events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []*models.ReplicationEvent
+	for rows.Next() {
+		var event models.ReplicationEvent
+		var durationMs int64
+		err := rows.Scan(
+			&event.ID, &event.ConfigID, &event.SnapshotID, &event.Status,
+			&event.StartedAt, &event.CompletedAt, &durationMs, &event.BytesCopied,
+			&event.ErrorMessage, &event.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan replication event: %w", err)
+		}
+		event.Duration = time.Duration(durationMs) * time.Millisecond
+		events = append(events, &event)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate replication events: %w", err)
+	}
+
+	return events, nil
+}
+
+// GetReplicationLagForConfig calculates the current replication lag for a config.
+func (db *DB) GetReplicationLagForConfig(ctx context.Context, configID uuid.UUID) (snapshotsBehind int, lastSyncAt *time.Time, err error) {
+	// Get the config's last sync info
+	var config models.GeoReplicationConfig
+	err = db.Pool.QueryRow(ctx, `
+		SELECT last_snapshot_id, last_sync_at
+		FROM geo_replication_configs
+		WHERE id = $1
+	`, configID).Scan(&config.LastSnapshotID, &config.LastSyncAt)
+	if err != nil {
+		return 0, nil, fmt.Errorf("get config for lag calculation: %w", err)
+	}
+
+	// Count snapshots not yet replicated (simplified - actual implementation would
+	// need to query the source repository for newer snapshots)
+	// For now, we estimate based on the last successful replication event
+	err = db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM replication_events
+		WHERE config_id = $1 AND status = 'failed'
+		AND started_at > COALESCE($2, '1970-01-01'::timestamptz)
+	`, configID, config.LastSyncAt).Scan(&snapshotsBehind)
+	if err != nil {
+		return 0, nil, fmt.Errorf("count failed replications: %w", err)
+	}
+
+	return snapshotsBehind, config.LastSyncAt, nil
+}
+
+// UpdateRepositoryRegion updates the region for a repository.
+func (db *DB) UpdateRepositoryRegion(ctx context.Context, repositoryID uuid.UUID, region string) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE repositories SET region = $2, updated_at = NOW() WHERE id = $1
+	`, repositoryID, region)
+	if err != nil {
+		return fmt.Errorf("update repository region: %w", err)
+	}
+	return nil
+}
+
+// GetRepositoryRegion returns the region for a repository.
+func (db *DB) GetRepositoryRegion(ctx context.Context, repositoryID uuid.UUID) (string, error) {
+	var region *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT region FROM repositories WHERE id = $1
+	`, repositoryID).Scan(&region)
+	if err != nil {
+		return "", fmt.Errorf("get repository region: %w", err)
+	}
+	if region == nil {
+		return "", nil
+	}
+	return *region, nil
+}
+
+// scanGeoReplicationConfigs scans rows into geo-replication configs.
+func scanGeoReplicationConfigs(rows pgx.Rows) ([]*models.GeoReplicationConfig, error) {
+	var configs []*models.GeoReplicationConfig
+	for rows.Next() {
+		var config models.GeoReplicationConfig
+		err := rows.Scan(
+			&config.ID, &config.OrgID, &config.SourceRepositoryID, &config.TargetRepositoryID,
+			&config.SourceRegion, &config.TargetRegion, &config.Enabled, &config.Status,
+			&config.LastSnapshotID, &config.LastSyncAt, &config.LastError,
+			&config.MaxLagSnapshots, &config.MaxLagDurationHours, &config.AlertOnLag,
+			&config.CreatedAt, &config.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan geo-replication config: %w", err)
+		}
+		configs = append(configs, &config)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate geo-replication configs: %w", err)
+	}
+
+	return configs, nil
+}
