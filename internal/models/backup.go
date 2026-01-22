@@ -20,32 +20,40 @@ const (
 	BackupStatusCanceled BackupStatus = "canceled"
 )
 
+// ExcludedLargeFile represents a file excluded from backup due to size.
+type ExcludedLargeFile struct {
+	Path      string `json:"path"`
+	SizeBytes int64  `json:"size_bytes"`
+	SizeMB    int64  `json:"size_mb"`
+}
+
 // Backup represents a single backup execution record.
 type Backup struct {
-	ID               uuid.UUID    `json:"id"`
-	ScheduleID       uuid.UUID    `json:"schedule_id"`
-	AgentID          uuid.UUID    `json:"agent_id"`
-	RepositoryID     *uuid.UUID   `json:"repository_id,omitempty"`
-	SnapshotID       string       `json:"snapshot_id,omitempty"`
-	StartedAt        time.Time    `json:"started_at"`
-	CompletedAt      *time.Time   `json:"completed_at,omitempty"`
-	Status           BackupStatus `json:"status"`
-	SizeBytes        *int64       `json:"size_bytes,omitempty"`
-	FilesNew         *int         `json:"files_new,omitempty"`
-	FilesChanged     *int         `json:"files_changed,omitempty"`
-	ErrorMessage     string       `json:"error_message,omitempty"`
-	RetentionApplied bool         `json:"retention_applied"`
-	SnapshotsRemoved *int         `json:"snapshots_removed,omitempty"`
-	SnapshotsKept    *int         `json:"snapshots_kept,omitempty"`
-	RetentionError   string       `json:"retention_error,omitempty"`
-	PreScriptOutput  string       `json:"pre_script_output,omitempty"`
-	PreScriptError   string       `json:"pre_script_error,omitempty"`
-	PostScriptOutput string       `json:"post_script_output,omitempty"`
-	PostScriptError  string       `json:"post_script_error,omitempty"`
-	Resumed          bool         `json:"resumed"`                         // True if this backup was resumed from a checkpoint
-	CheckpointID     *uuid.UUID   `json:"checkpoint_id,omitempty"`         // Associated checkpoint if resumed
-	OriginalBackupID *uuid.UUID   `json:"original_backup_id,omitempty"`    // Original backup that was interrupted
-	CreatedAt        time.Time    `json:"created_at"`
+	ID                 uuid.UUID           `json:"id"`
+	ScheduleID         uuid.UUID           `json:"schedule_id"`
+	AgentID            uuid.UUID           `json:"agent_id"`
+	RepositoryID       *uuid.UUID          `json:"repository_id,omitempty"`
+	SnapshotID         string              `json:"snapshot_id,omitempty"`
+	StartedAt          time.Time           `json:"started_at"`
+	CompletedAt        *time.Time          `json:"completed_at,omitempty"`
+	Status             BackupStatus        `json:"status"`
+	SizeBytes          *int64              `json:"size_bytes,omitempty"`
+	FilesNew           *int                `json:"files_new,omitempty"`
+	FilesChanged       *int                `json:"files_changed,omitempty"`
+	ErrorMessage       string              `json:"error_message,omitempty"`
+	RetentionApplied   bool                `json:"retention_applied"`
+	SnapshotsRemoved   *int                `json:"snapshots_removed,omitempty"`
+	SnapshotsKept      *int                `json:"snapshots_kept,omitempty"`
+	RetentionError     string              `json:"retention_error,omitempty"`
+	PreScriptOutput    string              `json:"pre_script_output,omitempty"`
+	PreScriptError     string              `json:"pre_script_error,omitempty"`
+	PostScriptOutput   string              `json:"post_script_output,omitempty"`
+	PostScriptError    string              `json:"post_script_error,omitempty"`
+	ExcludedLargeFiles []ExcludedLargeFile `json:"excluded_large_files,omitempty"` // Files excluded due to size limit
+	Resumed            bool                `json:"resumed"`                        // True if this backup was resumed from a checkpoint
+	CheckpointID       *uuid.UUID          `json:"checkpoint_id,omitempty"`        // Associated checkpoint if resumed
+	OriginalBackupID   *uuid.UUID          `json:"original_backup_id,omitempty"`   // Original backup that was interrupted
+	CreatedAt          time.Time           `json:"created_at"`
 }
 
 // NewBackup creates a new Backup record for the given schedule, agent, and repository.
@@ -145,4 +153,9 @@ func (b *Backup) RecordPostScript(output string, err error) {
 	if err != nil {
 		b.PostScriptError = err.Error()
 	}
+}
+
+// RecordExcludedLargeFiles records files that were excluded due to size limits.
+func (b *Backup) RecordExcludedLargeFiles(files []ExcludedLargeFile) {
+	b.ExcludedLargeFiles = files
 }
