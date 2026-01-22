@@ -700,6 +700,26 @@ export interface SnapshotCompareResponse {
 	changes: SnapshotDiffEntry[];
 }
 
+// Snapshot comment types
+export interface SnapshotComment {
+	id: string;
+	snapshot_id: string;
+	user_id: string;
+	user_name: string;
+	user_email: string;
+	content: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateSnapshotCommentRequest {
+	content: string;
+}
+
+export interface SnapshotCommentsResponse {
+	comments: SnapshotComment[];
+}
+
 // Restore types
 export type RestoreStatus =
 	| 'pending'
