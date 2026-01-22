@@ -219,7 +219,7 @@ const navItems: NavItem[] = [
 	},
 	{
 		path: '/costs',
-		label: 'Cost Estimation',
+		labelKey: 'nav.costs',
 		icon: (
 			<svg
 				aria-hidden="true"
