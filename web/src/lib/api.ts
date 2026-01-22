@@ -91,6 +91,9 @@ import type {
 	InviteMemberRequest,
 	InviteResponse,
 	KeyRecoveryResponse,
+	LegalHold,
+	LegalHoldsResponse,
+	CreateLegalHoldRequest,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
 	MembersResponse,
@@ -1654,6 +1657,31 @@ export const costAlertsApi = {
 
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Legal Holds API
+export const legalHoldsApi = {
+	list: async (): Promise<LegalHold[]> => {
+		const response = await fetchApi<LegalHoldsResponse>('/legal-holds');
+		return response.legal_holds ?? [];
+	},
+
+	get: async (snapshotId: string): Promise<LegalHold> =>
+		fetchApi<LegalHold>(`/snapshots/${snapshotId}/hold`),
+
+	create: async (
+		snapshotId: string,
+		data: CreateLegalHoldRequest,
+	): Promise<LegalHold> =>
+		fetchApi<LegalHold>(`/snapshots/${snapshotId}/hold`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (snapshotId: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/snapshots/${snapshotId}/hold`, {
 			method: 'DELETE',
 		}),
 };

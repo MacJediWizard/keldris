@@ -6,6 +6,7 @@ import { AgentGroups } from './pages/AgentGroups';
 import { Agents } from './pages/Agents';
 import { Alerts } from './pages/Alerts';
 import { AuditLogs } from './pages/AuditLogs';
+import { LegalHolds } from './pages/LegalHolds';
 import { Backups } from './pages/Backups';
 import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
@@ -66,6 +67,7 @@ function App() {
 						<Route path="notifications" element={<Notifications />} />
 						<Route path="reports" element={<Reports />} />
 						<Route path="audit-logs" element={<AuditLogs />} />
+						<Route path="legal-holds" element={<LegalHolds />} />
 						<Route path="stats" element={<StorageStats />} />
 						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
 						<Route path="tags" element={<Tags />} />
