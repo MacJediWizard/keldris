@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import {
+	useCreateRegistrationCode,
+	useDeleteRegistrationCode,
+	usePendingRegistrations,
+} from '../hooks/useAgentRegistration';
+import {
 	useAgents,
 	useDeleteAgent,
 	useRevokeAgentApiKey,
 	useRotateAgentApiKey,
 } from '../hooks/useAgents';
-import {
-	useCreateRegistrationCode,
-	useDeleteRegistrationCode,
-	usePendingRegistrations,
-} from '../hooks/useAgentRegistration';
 import { useLocale } from '../hooks/useLocale';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
 import { getAgentStatusColor } from '../lib/utils';
@@ -592,10 +592,8 @@ export function Agents() {
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
 
 	const { data: agents, isLoading, isError } = useAgents();
-	const {
-		data: pendingRegistrations,
-		isLoading: isPendingLoading,
-	} = usePendingRegistrations();
+	const { data: pendingRegistrations, isLoading: isPendingLoading } =
+		usePendingRegistrations();
 	const deleteAgent = useDeleteAgent();
 	const rotateApiKey = useRotateAgentApiKey();
 	const revokeApiKey = useRevokeAgentApiKey();
@@ -647,9 +645,8 @@ export function Agents() {
 
 	// Filter out expired registrations for display count
 	const activePendingCount =
-		pendingRegistrations?.filter(
-			(r) => new Date(r.expires_at) > new Date(),
-		).length ?? 0;
+		pendingRegistrations?.filter((r) => new Date(r.expires_at) > new Date())
+			.length ?? 0;
 
 	return (
 		<div className="space-y-6">
