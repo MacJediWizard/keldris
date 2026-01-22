@@ -123,6 +123,7 @@ import type {
 	MaintenanceWindowsResponse,
 	MembersResponse,
 	MessageResponse,
+	MountSnapshotRequest,
 	NotificationChannel,
 	NotificationChannelWithPreferencesResponse,
 	NotificationChannelsResponse,
@@ -185,7 +186,6 @@ import type {
 	SnapshotMount,
 	SnapshotMountsResponse,
 	SnapshotsResponse,
-	MountSnapshotRequest,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
 	StorageGrowthTrend,
@@ -745,13 +745,24 @@ export const snapshotsApi = {
 			body: JSON.stringify(data),
 		}),
 
-	unmount: async (snapshotId: string, agentId: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/snapshots/${snapshotId}/mount?agent_id=${agentId}`, {
-			method: 'DELETE',
-		}),
+	unmount: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/snapshots/${snapshotId}/mount?agent_id=${agentId}`,
+			{
+				method: 'DELETE',
+			},
+		),
 
-	getMount: async (snapshotId: string, agentId: string): Promise<SnapshotMount> =>
-		fetchApi<SnapshotMount>(`/snapshots/${snapshotId}/mount?agent_id=${agentId}`),
+	getMount: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<SnapshotMount> =>
+		fetchApi<SnapshotMount>(
+			`/snapshots/${snapshotId}/mount?agent_id=${agentId}`,
+		),
 };
 
 // Snapshot Mounts API

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { snapshotsApi, snapshotMountsApi } from '../lib/api';
+import { snapshotMountsApi, snapshotsApi } from '../lib/api';
 import type { MountSnapshotRequest } from '../lib/types';
 
 export function useSnapshotMounts(agentId?: string) {
@@ -38,7 +38,11 @@ export function useMountSnapshot() {
 			queryClient.invalidateQueries({ queryKey: ['snapshot-mounts'] });
 			// Invalidate specific mount status
 			queryClient.invalidateQueries({
-				queryKey: ['snapshot-mounts', variables.snapshotId, variables.data.agent_id],
+				queryKey: [
+					'snapshot-mounts',
+					variables.snapshotId,
+					variables.data.agent_id,
+				],
 			});
 		},
 	});
