@@ -1963,10 +1963,13 @@ export const geoReplicationApi = {
 		repoId: string,
 		region: string,
 	): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/geo-replication/repositories/${repoId}/region`, {
-			method: 'PUT',
-			body: JSON.stringify({ region }),
-		}),
+		fetchApi<MessageResponse>(
+			`/geo-replication/repositories/${repoId}/region`,
+			{
+				method: 'PUT',
+				body: JSON.stringify({ region }),
+			},
+		),
 
 	getSummary: async (): Promise<{
 		summary: GeoReplicationSummary;
