@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { SnapshotComments } from '../components/features/SnapshotComments';
 import { useAgents } from '../hooks/useAgents';
 import { useRepositories } from '../hooks/useRepositories';
 import { useCreateRestore, useRestores } from '../hooks/useRestore';
-import { useSnapshotFiles, useSnapshots } from '../hooks/useSnapshots';
 import { useSnapshotComments } from '../hooks/useSnapshotComments';
-import { SnapshotComments } from '../components/features/SnapshotComments';
+import { useSnapshotFiles, useSnapshots } from '../hooks/useSnapshots';
 import type {
 	RestoreStatus,
 	Restore as RestoreType,
