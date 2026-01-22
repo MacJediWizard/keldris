@@ -365,6 +365,8 @@ export interface Schedule {
 	excluded_hours?: number[]; // Hours (0-23) when backups should not run
 	compression_level?: CompressionLevel; // Compression level: off, auto, max
 	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
+	classification_level?: string; // Data classification level
+	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -491,6 +493,8 @@ export interface Backup {
 	pre_script_error?: string;
 	post_script_output?: string;
 	post_script_error?: string;
+	classification_level?: string;
+	classification_data_types?: string[];
 	created_at: string;
 }
 
@@ -1918,4 +1922,96 @@ export interface ImportRepositoryRequest {
 export interface ImportRepositoryResponse {
 	repository: Repository;
 	snapshots_imported: number;
+}
+
+// Classification types
+export type ClassificationLevel = 'public' | 'internal' | 'confidential' | 'restricted';
+export type DataType = 'pii' | 'phi' | 'pci' | 'proprietary' | 'general';
+
+export interface ClassificationLevelInfo {
+	value: ClassificationLevel;
+	label: string;
+	description: string;
+	priority: number;
+}
+
+export interface DataTypeInfo {
+	value: DataType;
+	label: string;
+	description: string;
+}
+
+export interface PathClassificationRule {
+	id: string;
+	org_id: string;
+	pattern: string;
+	level: ClassificationLevel;
+	data_types: DataType[];
+	description?: string;
+	is_builtin: boolean;
+	priority: number;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreatePathClassificationRuleRequest {
+	pattern: string;
+	level: ClassificationLevel;
+	data_types?: DataType[];
+	description?: string;
+	priority?: number;
+}
+
+export interface UpdatePathClassificationRuleRequest {
+	pattern?: string;
+	level?: ClassificationLevel;
+	data_types?: DataType[];
+	description?: string;
+	priority?: number;
+	enabled?: boolean;
+}
+
+export interface SetScheduleClassificationRequest {
+	level: ClassificationLevel;
+	data_types?: DataType[];
+}
+
+export interface ClassificationSummary {
+	total_schedules: number;
+	total_backups: number;
+	by_level: Record<string, number>;
+	by_data_type: Record<string, number>;
+	restricted_count: number;
+	confidential_count: number;
+	internal_count: number;
+	public_count: number;
+}
+
+export interface ClassificationRulesResponse {
+	rules: PathClassificationRule[];
+}
+
+export interface ClassificationLevelsResponse {
+	levels: ClassificationLevelInfo[];
+}
+
+export interface DataTypesResponse {
+	data_types: DataTypeInfo[];
+}
+
+export interface ScheduleClassificationSummary {
+	id: string;
+	name: string;
+	level: ClassificationLevel;
+	data_types: DataType[];
+	paths: string[];
+	agent_id: string;
+}
+
+export interface ComplianceReport {
+	generated_at: string;
+	org_id: string;
+	summary: ClassificationSummary;
+	schedules_by_level: Record<string, ScheduleClassificationSummary[]>;
 }

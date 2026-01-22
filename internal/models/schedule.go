@@ -28,24 +28,26 @@ type BackupWindow struct {
 // or to an agent group (via AgentGroupID). When AgentGroupID is set,
 // the schedule applies to all agents in that group.
 type Schedule struct {
-	ID                 uuid.UUID            `json:"id"`
-	AgentID            uuid.UUID            `json:"agent_id"`
-	AgentGroupID       *uuid.UUID           `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
-	PolicyID           *uuid.UUID           `json:"policy_id,omitempty"`      // Policy this schedule was created from
-	Name               string               `json:"name"`
-	CronExpression     string               `json:"cron_expression"`
-	Paths              []string             `json:"paths"`
-	Excludes           []string             `json:"excludes,omitempty"`
-	RetentionPolicy    *RetentionPolicy     `json:"retention_policy,omitempty"`
-	BandwidthLimitKB   *int                 `json:"bandwidth_limit_kb,omitempty"`   // Upload limit in KB/s
-	BackupWindow       *BackupWindow        `json:"backup_window,omitempty"`        // Allowed backup time window
-	ExcludedHours      []int                `json:"excluded_hours,omitempty"`       // Hours (0-23) when backups should not run
-	CompressionLevel   *string              `json:"compression_level,omitempty"`    // Compression level: off, auto, max
-	OnMountUnavailable MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
-	Enabled            bool                 `json:"enabled"`
-	Repositories       []ScheduleRepository `json:"repositories,omitempty"`
-	CreatedAt          time.Time            `json:"created_at"`
-	UpdatedAt          time.Time            `json:"updated_at"`
+	ID                      uuid.UUID            `json:"id"`
+	AgentID                 uuid.UUID            `json:"agent_id"`
+	AgentGroupID            *uuid.UUID           `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
+	PolicyID                *uuid.UUID           `json:"policy_id,omitempty"`      // Policy this schedule was created from
+	Name                    string               `json:"name"`
+	CronExpression          string               `json:"cron_expression"`
+	Paths                   []string             `json:"paths"`
+	Excludes                []string             `json:"excludes,omitempty"`
+	RetentionPolicy         *RetentionPolicy     `json:"retention_policy,omitempty"`
+	BandwidthLimitKB        *int                 `json:"bandwidth_limit_kb,omitempty"`   // Upload limit in KB/s
+	BackupWindow            *BackupWindow        `json:"backup_window,omitempty"`        // Allowed backup time window
+	ExcludedHours           []int                `json:"excluded_hours,omitempty"`       // Hours (0-23) when backups should not run
+	CompressionLevel        *string              `json:"compression_level,omitempty"`    // Compression level: off, auto, max
+	OnMountUnavailable      MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
+	ClassificationLevel     string               `json:"classification_level,omitempty"` // Data classification level: public, internal, confidential, restricted
+	ClassificationDataTypes []string             `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	Enabled                 bool                 `json:"enabled"`
+	Repositories            []ScheduleRepository `json:"repositories,omitempty"`
+	CreatedAt               time.Time            `json:"created_at"`
+	UpdatedAt               time.Time            `json:"updated_at"`
 }
 
 // NewSchedule creates a new Schedule with the given details.
@@ -240,4 +242,21 @@ func (s *Schedule) NextAllowedTime(t time.Time) time.Time {
 	}
 	// Fallback: return original time if no valid window found
 	return t
+}
+
+// SetClassificationDataTypes sets the classification data types from JSON bytes.
+func (s *Schedule) SetClassificationDataTypes(data []byte) error {
+	if len(data) == 0 {
+		s.ClassificationDataTypes = []string{"general"}
+		return nil
+	}
+	return json.Unmarshal(data, &s.ClassificationDataTypes)
+}
+
+// ClassificationDataTypesJSON returns the classification data types as JSON bytes.
+func (s *Schedule) ClassificationDataTypesJSON() ([]byte, error) {
+	if s.ClassificationDataTypes == nil || len(s.ClassificationDataTypes) == 0 {
+		return []byte(`["general"]`), nil
+	}
+	return json.Marshal(s.ClassificationDataTypes)
 }
