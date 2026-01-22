@@ -1640,3 +1640,157 @@ export interface FileHistoryParams {
 	agent_id: string;
 	repository_id: string;
 }
+
+// Cost Estimation types
+export interface StoragePricing {
+	id: string;
+	org_id: string;
+	repository_type: RepositoryType;
+	storage_per_gb_month: number;
+	egress_per_gb: number;
+	operations_per_k: number;
+	provider_name?: string;
+	provider_description?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CostEstimate {
+	repository_id: string;
+	repository_name: string;
+	repository_type: RepositoryType;
+	storage_size_bytes: number;
+	storage_size_gb: number;
+	monthly_cost: number;
+	yearly_cost: number;
+	cost_per_gb: number;
+	pricing: {
+		storage_per_gb_month: number;
+		egress_per_gb: number;
+		operations_per_k: number;
+		provider_name: string;
+		provider_description: string;
+	};
+	estimated_at: string;
+}
+
+export interface CostForecast {
+	period: string;
+	months: number;
+	projected_size_gb: number;
+	projected_cost: number;
+	growth_rate: number;
+}
+
+export interface CostSummary {
+	total_monthly_cost: number;
+	total_yearly_cost: number;
+	total_storage_size_gb: number;
+	repository_count: number;
+	by_type: Record<string, number>;
+	repositories: CostEstimate[];
+	forecasts: CostForecast[];
+	estimated_at: string;
+}
+
+export interface CostAlert {
+	id: string;
+	org_id: string;
+	name: string;
+	monthly_threshold: number;
+	enabled: boolean;
+	notify_on_exceed: boolean;
+	notify_on_forecast: boolean;
+	forecast_months: number;
+	last_triggered_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CostEstimateRecord {
+	id: string;
+	org_id: string;
+	repository_id: string;
+	storage_size_bytes: number;
+	monthly_cost: number;
+	yearly_cost: number;
+	cost_per_gb: number;
+	estimated_at: string;
+	created_at: string;
+}
+
+export interface DefaultPricing {
+	storage_per_gb_month: number;
+	egress_per_gb: number;
+	operations_per_k: number;
+	provider_name: string;
+	provider_description: string;
+}
+
+export interface CreateStoragePricingRequest {
+	repository_type: RepositoryType;
+	storage_per_gb_month: number;
+	egress_per_gb?: number;
+	operations_per_k?: number;
+	provider_name?: string;
+	provider_description?: string;
+}
+
+export interface UpdateStoragePricingRequest {
+	storage_per_gb_month?: number;
+	egress_per_gb?: number;
+	operations_per_k?: number;
+	provider_name?: string;
+	provider_description?: string;
+}
+
+export interface CreateCostAlertRequest {
+	name: string;
+	monthly_threshold: number;
+	enabled?: boolean;
+	notify_on_exceed?: boolean;
+	notify_on_forecast?: boolean;
+	forecast_months?: number;
+}
+
+export interface UpdateCostAlertRequest {
+	name?: string;
+	monthly_threshold?: number;
+	enabled?: boolean;
+	notify_on_exceed?: boolean;
+	notify_on_forecast?: boolean;
+	forecast_months?: number;
+}
+
+export interface StoragePricingResponse {
+	pricing: StoragePricing[];
+}
+
+export interface DefaultPricingResponse {
+	defaults: Record<string, DefaultPricing>;
+}
+
+export interface RepositoryCostsResponse {
+	repositories: CostEstimate[];
+}
+
+export interface RepositoryCostResponse {
+	estimate: CostEstimate;
+	forecasts: CostForecast[];
+}
+
+export interface CostForecastResponse {
+	forecasts: CostForecast[];
+	current_storage_gb: number;
+	current_monthly_cost: number;
+	monthly_growth_rate: number;
+}
+
+export interface CostHistoryResponse {
+	estimates: CostEstimateRecord[];
+	storage_growth: StorageGrowthPoint[];
+}
+
+export interface CostAlertsResponse {
+	alerts: CostAlert[];
+}
