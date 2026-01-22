@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -246,6 +247,28 @@ type RestoreOptions struct {
 	TargetPath string   // Destination path for restore
 	Include    []string // Paths to include (empty = all)
 	Exclude    []string // Paths to exclude
+	DryRun     bool     // If true, only preview what would be restored
+}
+
+// RestorePreviewFile represents a file that would be restored.
+type RestorePreviewFile struct {
+	Path       string    `json:"path"`
+	Type       string    `json:"type"` // "file" or "dir"
+	Size       int64     `json:"size"`
+	ModTime    time.Time `json:"mtime"`
+	Mode       uint32    `json:"mode"`
+	HasConflict bool     `json:"has_conflict,omitempty"` // True if file exists at target
+}
+
+// RestorePreview contains the preview results from a dry-run restore.
+type RestorePreview struct {
+	SnapshotID     string               `json:"snapshot_id"`
+	TargetPath     string               `json:"target_path"`
+	TotalFiles     int                  `json:"total_files"`
+	TotalDirs      int                  `json:"total_dirs"`
+	TotalSize      int64                `json:"total_size"`
+	ConflictCount  int                  `json:"conflict_count"`
+	Files          []RestorePreviewFile `json:"files"`
 }
 
 // Restore restores a snapshot to the given target path.
@@ -255,6 +278,7 @@ func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID strin
 		Str("target_path", opts.TargetPath).
 		Strs("include", opts.Include).
 		Strs("exclude", opts.Exclude).
+		Bool("dry_run", opts.DryRun).
 		Msg("starting restore")
 
 	args := []string{
@@ -262,6 +286,10 @@ func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID strin
 		"--repo", cfg.Repository,
 		"--target", opts.TargetPath,
 		"--json",
+	}
+
+	if opts.DryRun {
+		args = append(args, "--dry-run")
 	}
 
 	for _, include := range opts.Include {
@@ -284,6 +312,127 @@ func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID strin
 
 	r.logger.Info().Msg("restore completed successfully")
 	return nil
+}
+
+// RestorePreviewResult returns a preview of what would be restored.
+// This uses restic's --dry-run flag combined with file listing to generate a preview.
+func (r *Restic) RestorePreviewResult(ctx context.Context, cfg ResticConfig, snapshotID string, opts RestoreOptions) (*RestorePreview, error) {
+	r.logger.Info().
+		Str("snapshot_id", snapshotID).
+		Str("target_path", opts.TargetPath).
+		Strs("include", opts.Include).
+		Strs("exclude", opts.Exclude).
+		Msg("generating restore preview")
+
+	// First, list all files that would be restored using ls command
+	// This gives us the complete file information
+	files, err := r.ListFiles(ctx, cfg, snapshotID, "")
+	if err != nil {
+		return nil, fmt.Errorf("list files for preview: %w", err)
+	}
+
+	// Filter files based on include/exclude patterns
+	filteredFiles := filterFilesByPatterns(files, opts.Include, opts.Exclude)
+
+	// Build preview result
+	preview := &RestorePreview{
+		SnapshotID: snapshotID,
+		TargetPath: opts.TargetPath,
+		Files:      make([]RestorePreviewFile, 0, len(filteredFiles)),
+	}
+
+	for _, f := range filteredFiles {
+		previewFile := RestorePreviewFile{
+			Path:    f.Path,
+			Type:    f.Type,
+			Size:    f.Size,
+			ModTime: f.ModTime,
+			Mode:    f.Mode,
+		}
+
+		if f.Type == "file" {
+			preview.TotalFiles++
+			preview.TotalSize += f.Size
+		} else if f.Type == "dir" {
+			preview.TotalDirs++
+		}
+
+		// Check if file would conflict with existing file at target
+		targetPath := opts.TargetPath + f.Path
+		if fileExists(targetPath) {
+			previewFile.HasConflict = true
+			preview.ConflictCount++
+		}
+
+		preview.Files = append(preview.Files, previewFile)
+	}
+
+	r.logger.Info().
+		Int("total_files", preview.TotalFiles).
+		Int("total_dirs", preview.TotalDirs).
+		Int64("total_size", preview.TotalSize).
+		Int("conflict_count", preview.ConflictCount).
+		Msg("restore preview generated")
+
+	return preview, nil
+}
+
+// filterFilesByPatterns filters files based on include/exclude patterns.
+func filterFilesByPatterns(files []SnapshotFile, include, exclude []string) []SnapshotFile {
+	if len(include) == 0 && len(exclude) == 0 {
+		return files
+	}
+
+	var result []SnapshotFile
+	for _, f := range files {
+		// Check exclude patterns first
+		excluded := false
+		for _, pattern := range exclude {
+			if matchPattern(f.Path, pattern) {
+				excluded = true
+				break
+			}
+		}
+		if excluded {
+			continue
+		}
+
+		// If include patterns are specified, check them
+		if len(include) > 0 {
+			included := false
+			for _, pattern := range include {
+				if matchPattern(f.Path, pattern) {
+					included = true
+					break
+				}
+			}
+			if !included {
+				continue
+			}
+		}
+
+		result = append(result, f)
+	}
+	return result
+}
+
+// matchPattern checks if a path matches a pattern (simple prefix/suffix matching).
+func matchPattern(path, pattern string) bool {
+	// Simple pattern matching: prefix or exact match
+	if strings.HasPrefix(path, pattern) {
+		return true
+	}
+	// Check if pattern is a parent directory
+	if strings.HasPrefix(path, pattern+"/") {
+		return true
+	}
+	return path == pattern
+}
+
+// fileExists checks if a file exists at the given path.
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // Forget removes old snapshots according to the retention policy and returns stats.
