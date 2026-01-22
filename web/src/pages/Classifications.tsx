@@ -233,11 +233,11 @@ export function Classifications() {
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [levelFilter, setLevelFilter] = useState<string>('');
 
-	const { data: summary, isLoading: summaryLoading } = useClassificationSummary();
+	const { data: summary, isLoading: summaryLoading } =
+		useClassificationSummary();
 	const { data: rules, isLoading: rulesLoading } = useClassificationRules();
-	const { data: schedules, isLoading: schedulesLoading } = useScheduleClassifications(
-		levelFilter || undefined,
-	);
+	const { data: schedules, isLoading: schedulesLoading } =
+		useScheduleClassifications(levelFilter || undefined);
 
 	const deleteRule = useDeleteClassificationRule();
 	const updateRule = useUpdateClassificationRule();
@@ -507,8 +507,8 @@ export function Classifications() {
 							</table>
 						) : (
 							<div className="p-8 text-center text-gray-500">
-								No custom classification rules defined. Add rules to automatically
-								classify backup paths.
+								No custom classification rules defined. Add rules to
+								automatically classify backup paths.
 							</div>
 						)}
 					</div>

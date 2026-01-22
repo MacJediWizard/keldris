@@ -2042,7 +2042,11 @@ export interface ImportRepositoryResponse {
 }
 
 // Classification types
-export type ClassificationLevel = 'public' | 'internal' | 'confidential' | 'restricted';
+export type ClassificationLevel =
+	| 'public'
+	| 'internal'
+	| 'confidential'
+	| 'restricted';
 export type DataType = 'pii' | 'phi' | 'pci' | 'proprietary' | 'general';
 
 export interface ClassificationLevelInfo {
