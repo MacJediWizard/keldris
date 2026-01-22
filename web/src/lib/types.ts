@@ -2205,3 +2205,113 @@ export interface CreateLegalHoldRequest {
 export interface LegalHoldsResponse {
 	legal_holds: LegalHold[];
 }
+
+// Geo-Replication types
+export interface GeoRegion {
+	code: string;
+	name: string;
+	display_name: string;
+	latitude: number;
+	longitude: number;
+}
+
+export interface GeoRegionPair {
+	primary: GeoRegion;
+	secondary: GeoRegion;
+}
+
+export type GeoReplicationStatusType =
+	| 'pending'
+	| 'syncing'
+	| 'synced'
+	| 'failed'
+	| 'disabled';
+
+export interface ReplicationLag {
+	snapshots_behind: number;
+	time_behind_hours: number;
+	is_healthy: boolean;
+	last_sync_at?: string;
+}
+
+export interface GeoReplicationConfig {
+	id: string;
+	source_repository_id: string;
+	target_repository_id: string;
+	source_region: GeoRegion;
+	target_region: GeoRegion;
+	enabled: boolean;
+	status: GeoReplicationStatusType;
+	last_snapshot_id?: string;
+	last_sync_at?: string;
+	last_error?: string;
+	max_lag_snapshots: number;
+	max_lag_duration_hours: number;
+	alert_on_lag: boolean;
+	replication_lag?: ReplicationLag;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface GeoReplicationCreateRequest {
+	source_repository_id: string;
+	target_repository_id: string;
+	source_region: string;
+	target_region: string;
+	max_lag_snapshots?: number;
+	max_lag_duration_hours?: number;
+	alert_on_lag?: boolean;
+}
+
+export interface GeoReplicationUpdateRequest {
+	enabled?: boolean;
+	max_lag_snapshots?: number;
+	max_lag_duration_hours?: number;
+	alert_on_lag?: boolean;
+}
+
+export interface GeoReplicationEvent {
+	id: string;
+	config_id: string;
+	snapshot_id: string;
+	status: GeoReplicationStatusType;
+	started_at: string;
+	completed_at?: string;
+	duration_ms: number;
+	bytes_copied?: number;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface GeoReplicationSummary {
+	total_configs: number;
+	enabled_configs: number;
+	synced_count: number;
+	syncing_count: number;
+	pending_count: number;
+	failed_count: number;
+}
+
+export interface GeoReplicationRegionsResponse {
+	regions: GeoRegion[];
+	pairs: GeoRegionPair[];
+}
+
+export interface GeoReplicationConfigsResponse {
+	configs: GeoReplicationConfig[];
+}
+
+export interface GeoReplicationEventsResponse {
+	events: GeoReplicationEvent[];
+}
+
+export interface GeoReplicationSummaryResponse {
+	summary: GeoReplicationSummary;
+	regions: GeoRegion[];
+}
+
+export interface RepositoryReplicationStatusResponse {
+	configured: boolean;
+	config?: GeoReplicationConfig;
+	message?: string;
+}

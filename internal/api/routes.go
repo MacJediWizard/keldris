@@ -218,6 +218,10 @@ func NewRouter(
 	drTestsHandler := handlers.NewDRTestsHandler(database, nil, logger)
 	drTestsHandler.RegisterRoutes(apiV1)
 
+	// Geo-Replication routes
+	geoReplicationHandler := handlers.NewGeoReplicationHandler(database, logger)
+	geoReplicationHandler.RegisterRoutes(apiV1)
+
 	// Classification routes
 	classificationsHandler := handlers.NewClassificationsHandler(database, logger)
 	classificationsHandler.RegisterRoutes(apiV1)
