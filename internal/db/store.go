@@ -6941,3 +6941,181 @@ func scanImportedSnapshots(rows interface{ Next() bool; Scan(dest ...interface{}
 
 	return snapshots, nil
 }
+
+// Snapshot Mount methods
+
+// CreateSnapshotMount creates a new snapshot mount record.
+func (db *DB) CreateSnapshotMount(ctx context.Context, mount *models.SnapshotMount) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO snapshot_mounts (
+			id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+			status, mounted_at, expires_at, unmounted_at, error_message,
+			created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, mount.ID, mount.OrgID, mount.AgentID, mount.RepositoryID, mount.SnapshotID,
+		mount.MountPath, string(mount.Status), mount.MountedAt, mount.ExpiresAt,
+		mount.UnmountedAt, mount.ErrorMessage, mount.CreatedAt, mount.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create snapshot mount: %w", err)
+	}
+	return nil
+}
+
+// UpdateSnapshotMount updates a snapshot mount record.
+func (db *DB) UpdateSnapshotMount(ctx context.Context, mount *models.SnapshotMount) error {
+	mount.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE snapshot_mounts
+		SET status = $2, mount_path = $3, mounted_at = $4, expires_at = $5,
+		    unmounted_at = $6, error_message = $7, updated_at = $8
+		WHERE id = $1
+	`, mount.ID, string(mount.Status), mount.MountPath, mount.MountedAt,
+		mount.ExpiresAt, mount.UnmountedAt, mount.ErrorMessage, mount.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update snapshot mount: %w", err)
+	}
+	return nil
+}
+
+// GetSnapshotMountByID returns a snapshot mount by ID.
+func (db *DB) GetSnapshotMountByID(ctx context.Context, id uuid.UUID) (*models.SnapshotMount, error) {
+	var mount models.SnapshotMount
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+		       status, mounted_at, expires_at, unmounted_at, error_message,
+		       created_at, updated_at
+		FROM snapshot_mounts
+		WHERE id = $1
+	`, id).Scan(
+		&mount.ID, &mount.OrgID, &mount.AgentID, &mount.RepositoryID,
+		&mount.SnapshotID, &mount.MountPath, &statusStr, &mount.MountedAt,
+		&mount.ExpiresAt, &mount.UnmountedAt, &mount.ErrorMessage,
+		&mount.CreatedAt, &mount.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot mount: %w", err)
+	}
+	mount.Status = models.SnapshotMountStatus(statusStr)
+	return &mount, nil
+}
+
+// GetActiveSnapshotMountBySnapshotID returns the active mount for a snapshot if one exists.
+func (db *DB) GetActiveSnapshotMountBySnapshotID(ctx context.Context, agentID uuid.UUID, snapshotID string) (*models.SnapshotMount, error) {
+	var mount models.SnapshotMount
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+		       status, mounted_at, expires_at, unmounted_at, error_message,
+		       created_at, updated_at
+		FROM snapshot_mounts
+		WHERE agent_id = $1 AND snapshot_id = $2
+		  AND status IN ('pending', 'mounting', 'mounted')
+	`, agentID, snapshotID).Scan(
+		&mount.ID, &mount.OrgID, &mount.AgentID, &mount.RepositoryID,
+		&mount.SnapshotID, &mount.MountPath, &statusStr, &mount.MountedAt,
+		&mount.ExpiresAt, &mount.UnmountedAt, &mount.ErrorMessage,
+		&mount.CreatedAt, &mount.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get active snapshot mount: %w", err)
+	}
+	mount.Status = models.SnapshotMountStatus(statusStr)
+	return &mount, nil
+}
+
+// GetSnapshotMountsByOrgID returns all snapshot mounts for an organization.
+func (db *DB) GetSnapshotMountsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.SnapshotMount, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+		       status, mounted_at, expires_at, unmounted_at, error_message,
+		       created_at, updated_at
+		FROM snapshot_mounts
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list snapshot mounts: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotMounts(rows)
+}
+
+// GetActiveSnapshotMountsByAgentID returns active mounts for an agent.
+func (db *DB) GetActiveSnapshotMountsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.SnapshotMount, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+		       status, mounted_at, expires_at, unmounted_at, error_message,
+		       created_at, updated_at
+		FROM snapshot_mounts
+		WHERE agent_id = $1 AND status IN ('pending', 'mounting', 'mounted')
+		ORDER BY created_at DESC
+	`, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("list active snapshot mounts: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotMounts(rows)
+}
+
+// GetExpiredSnapshotMounts returns mounts that have expired but are still marked as mounted.
+func (db *DB) GetExpiredSnapshotMounts(ctx context.Context) ([]*models.SnapshotMount, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+		       status, mounted_at, expires_at, unmounted_at, error_message,
+		       created_at, updated_at
+		FROM snapshot_mounts
+		WHERE status = 'mounted' AND expires_at < NOW()
+		ORDER BY expires_at ASC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list expired snapshot mounts: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotMounts(rows)
+}
+
+// DeleteSnapshotMount deletes a snapshot mount record.
+func (db *DB) DeleteSnapshotMount(ctx context.Context, id uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `DELETE FROM snapshot_mounts WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete snapshot mount: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("snapshot mount not found")
+	}
+	return nil
+}
+
+// scanSnapshotMounts scans rows into snapshot mount structs.
+func scanSnapshotMounts(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.SnapshotMount, error) {
+	var mounts []*models.SnapshotMount
+	for rows.Next() {
+		var mount models.SnapshotMount
+		var statusStr string
+		err := rows.Scan(
+			&mount.ID, &mount.OrgID, &mount.AgentID, &mount.RepositoryID,
+			&mount.SnapshotID, &mount.MountPath, &statusStr, &mount.MountedAt,
+			&mount.ExpiresAt, &mount.UnmountedAt, &mount.ErrorMessage,
+			&mount.CreatedAt, &mount.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan snapshot mount: %w", err)
+		}
+		mount.Status = models.SnapshotMountStatus(statusStr)
+		mounts = append(mounts, &mount)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate snapshot mounts: %w", err)
+	}
+
+	return mounts, nil
+}
