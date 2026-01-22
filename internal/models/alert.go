@@ -21,6 +21,8 @@ const (
 	AlertTypeAgentHealthWarning AlertType = "agent_health_warning"
 	// AlertTypeAgentHealthCritical indicates an agent's health status changed to critical.
 	AlertTypeAgentHealthCritical AlertType = "agent_health_critical"
+	// AlertTypeRansomwareSuspected indicates potential ransomware activity was detected.
+	AlertTypeRansomwareSuspected AlertType = "ransomware_suspected"
 )
 
 // AlertSeverity represents the severity level of an alert.
