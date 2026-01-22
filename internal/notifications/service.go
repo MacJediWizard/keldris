@@ -296,6 +296,115 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 	}
 }
 
+// NotifyMaintenanceScheduled sends notifications for an upcoming maintenance window.
+func (s *Service) NotifyMaintenanceScheduled(ctx context.Context, window *models.MaintenanceWindow) {
+	prefs, err := s.store.GetEnabledPreferencesForEvent(ctx, window.OrgID, models.EventMaintenanceScheduled)
+	if err != nil {
+		s.logger.Error().Err(err).
+			Str("org_id", window.OrgID.String()).
+			Str("window_id", window.ID.String()).
+			Msg("failed to get notification preferences")
+		return
+	}
+
+	if len(prefs) == 0 {
+		s.logger.Debug().
+			Str("org_id", window.OrgID.String()).
+			Str("event_type", string(models.EventMaintenanceScheduled)).
+			Msg("no notification preferences enabled for event")
+		return
+	}
+
+	data := MaintenanceScheduledData{
+		Title:    window.Title,
+		Message:  window.Message,
+		StartsAt: window.StartsAt,
+		EndsAt:   window.EndsAt,
+		Duration: formatDuration(window.Duration()),
+	}
+
+	for _, pref := range prefs {
+		go s.sendMaintenanceNotification(ctx, pref, data, window.OrgID)
+	}
+}
+
+// sendMaintenanceNotification sends a maintenance scheduled notification.
+func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.NotificationPreference, data MaintenanceScheduledData, orgID uuid.UUID) {
+	channel, err := s.store.GetNotificationChannelByID(ctx, pref.ChannelID)
+	if err != nil {
+		s.logger.Error().Err(err).
+			Str("channel_id", pref.ChannelID.String()).
+			Msg("failed to get notification channel")
+		return
+	}
+
+	// Only handle email channels for now
+	if channel.Type != models.ChannelTypeEmail {
+		s.logger.Debug().
+			Str("channel_type", string(channel.Type)).
+			Msg("skipping non-email channel")
+		return
+	}
+
+	// Parse email config
+	var emailConfig models.EmailChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
+		s.logger.Error().Err(err).
+			Str("channel_id", channel.ID.String()).
+			Msg("failed to parse email config")
+		return
+	}
+
+	// Create email service
+	smtpConfig := SMTPConfig{
+		Host:     emailConfig.Host,
+		Port:     emailConfig.Port,
+		Username: emailConfig.Username,
+		Password: emailConfig.Password,
+		From:     emailConfig.From,
+		TLS:      emailConfig.TLS,
+	}
+
+	emailService, err := NewEmailService(smtpConfig, s.logger)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("failed to create email service")
+		return
+	}
+
+	// Get recipient from config
+	recipients := []string{emailConfig.From}
+
+	// Create log entry
+	subject := fmt.Sprintf("Scheduled Maintenance: %s", data.Title)
+	log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), recipients[0], subject)
+	if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+		s.logger.Error().Err(err).Msg("failed to create notification log")
+	}
+
+	// Send the email
+	sendErr := emailService.SendMaintenanceScheduled(recipients, data)
+
+	// Update log with result
+	if sendErr != nil {
+		log.MarkFailed(sendErr.Error())
+		s.logger.Error().Err(sendErr).
+			Str("channel_id", channel.ID.String()).
+			Str("recipient", recipients[0]).
+			Msg("failed to send maintenance notification")
+	} else {
+		log.MarkSent()
+		s.logger.Info().
+			Str("channel_id", channel.ID.String()).
+			Str("recipient", recipients[0]).
+			Str("title", data.Title).
+			Msg("maintenance notification sent")
+	}
+
+	if err := s.store.UpdateNotificationLog(ctx, log); err != nil {
+		s.logger.Error().Err(err).Msg("failed to update notification log")
+	}
+}
+
 // formatDuration formats a duration into a human-readable string.
 func formatDuration(d time.Duration) string {
 	if d < time.Minute {

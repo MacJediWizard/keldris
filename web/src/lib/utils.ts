@@ -1,3 +1,32 @@
+// Format date to relative time (past or future)
+export function formatRelativeTime(dateString: string | undefined): string {
+	if (!dateString) return 'Never';
+
+	const date = new Date(dateString);
+	const now = new Date();
+	const diffMs = date.getTime() - now.getTime();
+	const isFuture = diffMs > 0;
+	const absDiffMs = Math.abs(diffMs);
+	const absDiffSeconds = Math.floor(absDiffMs / 1000);
+	const absDiffMinutes = Math.floor(absDiffSeconds / 60);
+	const absDiffHours = Math.floor(absDiffMinutes / 60);
+	const absDiffDays = Math.floor(absDiffHours / 24);
+
+	if (absDiffSeconds < 60) return isFuture ? 'In a moment' : 'Just now';
+	if (absDiffMinutes < 60)
+		return isFuture ? `In ${absDiffMinutes}m` : `${absDiffMinutes}m ago`;
+	if (absDiffHours < 24)
+		return isFuture ? `In ${absDiffHours}h` : `${absDiffHours}h ago`;
+	if (absDiffDays < 7)
+		return isFuture ? `In ${absDiffDays}d` : `${absDiffDays}d ago`;
+
+	return date.toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+	});
+}
+
 // Format date to relative time or absolute date
 export function formatDate(dateString: string | undefined): string {
 	if (!dateString) return 'Never';
@@ -222,6 +251,10 @@ export function getAlertTypeLabel(type: string): string {
 			return 'Backup SLA';
 		case 'storage_usage':
 			return 'Storage Usage';
+		case 'agent_health_warning':
+			return 'Agent Health Warning';
+		case 'agent_health_critical':
+			return 'Agent Health Critical';
 		default:
 			return type;
 	}
@@ -325,4 +358,136 @@ export function formatChartDate(dateString: string): string {
 		month: 'short',
 		day: 'numeric',
 	});
+}
+
+// Format duration in milliseconds to human readable
+export function formatDurationMs(ms: number | undefined): string {
+	if (ms === undefined || ms === null) return 'N/A';
+	if (ms < 1000) return `${ms}ms`;
+
+	const seconds = Math.floor(ms / 1000);
+	const minutes = Math.floor(seconds / 60);
+	const hours = Math.floor(minutes / 60);
+
+	if (hours > 0) return `${hours}h ${minutes % 60}m`;
+	if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+	return `${seconds}s`;
+}
+
+// Get success rate color based on percentage
+export function getSuccessRateColor(percent: number): string {
+	if (percent >= 95) return 'text-green-600';
+	if (percent >= 80) return 'text-yellow-600';
+	if (percent >= 50) return 'text-orange-600';
+	return 'text-red-600';
+}
+
+// Get success rate badge classes based on percentage
+export function getSuccessRateBadge(percent: number): {
+	bg: string;
+	text: string;
+} {
+	if (percent >= 95) return { bg: 'bg-green-100', text: 'text-green-800' };
+	if (percent >= 80) return { bg: 'bg-yellow-100', text: 'text-yellow-800' };
+	if (percent >= 50) return { bg: 'bg-orange-100', text: 'text-orange-800' };
+	return { bg: 'bg-red-100', text: 'text-red-800' };
+}
+
+// Get health status color classes for badges
+export function getHealthStatusColor(status: string): {
+	bg: string;
+	text: string;
+	dot: string;
+	icon: string;
+} {
+	switch (status) {
+		case 'healthy':
+			return {
+				bg: 'bg-green-100',
+				text: 'text-green-800',
+				dot: 'bg-green-500',
+				icon: 'text-green-500',
+			};
+		case 'warning':
+			return {
+				bg: 'bg-yellow-100',
+				text: 'text-yellow-800',
+				dot: 'bg-yellow-500',
+				icon: 'text-yellow-500',
+			};
+		case 'critical':
+			return {
+				bg: 'bg-red-100',
+				text: 'text-red-800',
+				dot: 'bg-red-500',
+				icon: 'text-red-500',
+			};
+		default:
+			return {
+				bg: 'bg-gray-100',
+				text: 'text-gray-600',
+				dot: 'bg-gray-400',
+				icon: 'text-gray-400',
+			};
+	}
+}
+
+// Get health status label
+export function getHealthStatusLabel(status: string): string {
+	switch (status) {
+		case 'healthy':
+			return 'Healthy';
+		case 'warning':
+			return 'Warning';
+		case 'critical':
+			return 'Critical';
+		default:
+			return 'Unknown';
+	}
+}
+
+// Format uptime from seconds
+export function formatUptime(seconds: number | undefined): string {
+	if (seconds === undefined || seconds === null) return 'N/A';
+
+	const days = Math.floor(seconds / 86400);
+	const hours = Math.floor((seconds % 86400) / 3600);
+	const minutes = Math.floor((seconds % 3600) / 60);
+
+	if (days > 0) return `${days}d ${hours}h`;
+	if (hours > 0) return `${hours}h ${minutes}m`;
+	return `${minutes}m`;
+}
+
+// Format currency (USD)
+export function formatCurrency(amount: number | undefined): string {
+	if (amount === undefined || amount === null) return '$0.00';
+	return new Intl.NumberFormat('en-US', {
+		style: 'currency',
+		currency: 'USD',
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	}).format(amount);
+}
+
+// Format large currency amounts (compact notation for large numbers)
+export function formatCurrencyCompact(amount: number | undefined): string {
+	if (amount === undefined || amount === null) return '$0';
+	if (amount < 1000) {
+		return formatCurrency(amount);
+	}
+	return new Intl.NumberFormat('en-US', {
+		style: 'currency',
+		currency: 'USD',
+		notation: 'compact',
+		maximumFractionDigits: 1,
+	}).format(amount);
+}
+
+// Get cost color based on monthly amount
+export function getCostColor(monthlyCost: number, threshold = 100): string {
+	if (monthlyCost >= threshold * 2) return 'text-red-600';
+	if (monthlyCost >= threshold) return 'text-yellow-600';
+	if (monthlyCost > 0) return 'text-green-600';
+	return 'text-gray-600';
 }

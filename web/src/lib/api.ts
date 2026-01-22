@@ -1,34 +1,94 @@
 import type {
+	ActiveMaintenanceResponse,
+	AddAgentToGroupRequest,
 	Agent,
+	AgentBackupsResponse,
+	AgentGroup,
+	AgentGroupsResponse,
+	AgentHealthHistoryResponse,
+	AgentSchedulesResponse,
+	AgentStatsResponse,
+	AgentWithGroups,
 	AgentsResponse,
+	AgentsWithGroupsResponse,
 	Alert,
 	AlertCountResponse,
 	AlertRule,
 	AlertRulesResponse,
 	AlertsResponse,
+	ApplyPolicyRequest,
+	ApplyPolicyResponse,
+	AssignTagsRequest,
 	AuditLog,
 	AuditLogFilter,
 	AuditLogsResponse,
 	Backup,
+	BackupDurationTrend,
+	BackupDurationTrendResponse,
+	BackupScript,
+	BackupScriptsResponse,
+	BackupSuccessRate,
+	BackupSuccessRatesResponse,
 	BackupsResponse,
+	BuiltInPattern,
+	BuiltInPatternsResponse,
+	CategoriesResponse,
+	CategoryInfo,
+	CostAlert,
+	CostAlertsResponse,
+	CostForecastResponse,
+	CostHistoryResponse,
+	CostSummary,
+	CreateAgentGroupRequest,
 	CreateAgentRequest,
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
+	CreateBackupScriptRequest,
+	CreateCostAlertRequest,
+	CreateDRRunbookRequest,
+	CreateDRTestScheduleRequest,
+	CreateExcludePatternRequest,
+	CreateMaintenanceWindowRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
+	CreatePolicyRequest,
 	CreateRegistrationCodeRequest,
 	CreateRegistrationCodeResponse,
+	CreateReportScheduleRequest,
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
+	CreateSSOGroupMappingRequest,
 	CreateScheduleRequest,
+	CreateSnapshotCommentRequest,
+	CreateStoragePricingRequest,
+	CreateTagRequest,
 	CreateVerificationScheduleRequest,
+	DRRunbook,
+	DRRunbookRenderResponse,
+	DRRunbooksResponse,
+	DRStatus,
+	DRTest,
+	DRTestSchedule,
+	DRTestSchedulesResponse,
+	DRTestsResponse,
+	DailyBackupStats,
+	DailyBackupStatsResponse,
+	DashboardStats,
+	DefaultPricingResponse,
 	ErrorResponse,
+	ExcludePattern,
+	ExcludePatternsResponse,
+	FileHistoryParams,
+	FileHistoryResponse,
+	FleetHealthSummary,
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
 	KeyRecoveryResponse,
+	MaintenanceWindow,
+	MaintenanceWindowsResponse,
 	MembersResponse,
 	MessageResponse,
 	NotificationChannel,
@@ -38,6 +98,8 @@ import type {
 	NotificationLogsResponse,
 	NotificationPreference,
 	NotificationPreferencesResponse,
+	OnboardingStatus,
+	OnboardingStep,
 	OrgInvitation,
 	OrgMember,
 	OrgResponse,
@@ -45,8 +107,20 @@ import type {
 	OrganizationsResponse,
 	PendingRegistration,
 	PendingRegistrationsResponse,
+	PoliciesResponse,
+	Policy,
+	ReplicationStatus,
+	ReplicationStatusResponse,
+	ReportFrequency,
+	ReportHistory,
+	ReportHistoryResponse,
+	ReportPreviewResponse,
+	ReportSchedule,
+	ReportSchedulesResponse,
 	RepositoriesResponse,
 	Repository,
+	RepositoryCostResponse,
+	RepositoryCostsResponse,
 	RepositoryGrowthResponse,
 	RepositoryHistoryResponse,
 	RepositoryStatsListItem,
@@ -55,28 +129,58 @@ import type {
 	Restore,
 	RestoresResponse,
 	RotateAPIKeyResponse,
+	RunDRTestRequest,
 	RunScheduleResponse,
+	SSOGroupMapping,
+	SSOGroupMappingResponse,
+	SSOGroupMappingsResponse,
+	SSOSettings,
 	Schedule,
 	SchedulesResponse,
+	SearchFilter,
+	SearchResponse,
 	Snapshot,
+	SnapshotComment,
+	SnapshotCommentsResponse,
+	SnapshotCompareResponse,
 	SnapshotFilesResponse,
 	SnapshotsResponse,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
+	StorageGrowthTrend,
+	StorageGrowthTrendResponse,
+	StoragePricing,
+	StoragePricingResponse,
 	StorageStatsSummary,
 	SwitchOrgRequest,
+	Tag,
+	TagsResponse,
 	TestConnectionRequest,
 	TestRepositoryResponse,
 	TriggerVerificationRequest,
+	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
+	UpdateBackupScriptRequest,
+	UpdateCostAlertRequest,
+	UpdateDRRunbookRequest,
+	UpdateExcludePatternRequest,
+	UpdateMaintenanceWindowRequest,
 	UpdateMemberRequest,
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
+	UpdatePolicyRequest,
+	UpdateReportScheduleRequest,
 	UpdateRepositoryRequest,
+	UpdateSSOGroupMappingRequest,
+	UpdateSSOSettingsRequest,
 	UpdateScheduleRequest,
+	UpdateStoragePricingRequest,
+	UpdateTagRequest,
+	UpdateUserPreferencesRequest,
 	UpdateVerificationScheduleRequest,
 	User,
+	UserSSOGroups,
 	Verification,
 	VerificationSchedule,
 	VerificationSchedulesResponse,
@@ -151,6 +255,14 @@ export const authApi = {
 	logout: async (): Promise<MessageResponse> =>
 		fetchAuth<MessageResponse>('/auth/logout', { method: 'POST' }),
 
+	updatePreferences: async (
+		data: UpdateUserPreferencesRequest,
+	): Promise<User> =>
+		fetchAuth<User>('/auth/preferences', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
 	getLoginUrl: () => '/auth/login',
 };
 
@@ -181,6 +293,88 @@ export const agentsApi = {
 
 	revokeApiKey: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/agents/${id}/apikey`, {
+			method: 'DELETE',
+		}),
+
+	getStats: async (id: string): Promise<AgentStatsResponse> =>
+		fetchApi<AgentStatsResponse>(`/agents/${id}/stats`),
+
+	getBackups: async (id: string): Promise<AgentBackupsResponse> =>
+		fetchApi<AgentBackupsResponse>(`/agents/${id}/backups`),
+
+	getSchedules: async (id: string): Promise<AgentSchedulesResponse> =>
+		fetchApi<AgentSchedulesResponse>(`/agents/${id}/schedules`),
+
+	getHealthHistory: async (
+		id: string,
+		limit = 100,
+	): Promise<AgentHealthHistoryResponse> =>
+		fetchApi<AgentHealthHistoryResponse>(
+			`/agents/${id}/health-history?limit=${limit}`,
+		),
+
+	getFleetHealth: async (): Promise<FleetHealthSummary> =>
+		fetchApi<FleetHealthSummary>('/agents/fleet-health'),
+
+	listWithGroups: async (): Promise<AgentWithGroups[]> => {
+		const response = await fetchApi<AgentsWithGroupsResponse>(
+			'/agents/with-groups',
+		);
+		return response.agents ?? [];
+	},
+};
+
+// Agent Groups API
+export const agentGroupsApi = {
+	list: async (): Promise<AgentGroup[]> => {
+		const response = await fetchApi<AgentGroupsResponse>('/agent-groups');
+		return response.groups ?? [];
+	},
+
+	get: async (id: string): Promise<AgentGroup> =>
+		fetchApi<AgentGroup>(`/agent-groups/${id}`),
+
+	create: async (data: CreateAgentGroupRequest): Promise<AgentGroup> =>
+		fetchApi<AgentGroup>('/agent-groups', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateAgentGroupRequest,
+	): Promise<AgentGroup> =>
+		fetchApi<AgentGroup>(`/agent-groups/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agent-groups/${id}`, {
+			method: 'DELETE',
+		}),
+
+	listMembers: async (groupId: string): Promise<Agent[]> => {
+		const response = await fetchApi<AgentsResponse>(
+			`/agent-groups/${groupId}/agents`,
+		);
+		return response.agents ?? [];
+	},
+
+	addAgent: async (
+		groupId: string,
+		data: AddAgentToGroupRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agent-groups/${groupId}/agents`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	removeAgent: async (
+		groupId: string,
+		agentId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agent-groups/${groupId}/agents/${agentId}`, {
 			method: 'DELETE',
 		}),
 };
@@ -289,6 +483,57 @@ export const schedulesApi = {
 		fetchApi<RunScheduleResponse>(`/schedules/${id}/run`, {
 			method: 'POST',
 		}),
+
+	getReplicationStatus: async (id: string): Promise<ReplicationStatus[]> => {
+		const response = await fetchApi<ReplicationStatusResponse>(
+			`/schedules/${id}/replication`,
+		);
+		return response.replication_status ?? [];
+	},
+};
+
+// Policies API
+export const policiesApi = {
+	list: async (): Promise<Policy[]> => {
+		const response = await fetchApi<PoliciesResponse>('/policies');
+		return response.policies ?? [];
+	},
+
+	get: async (id: string): Promise<Policy> =>
+		fetchApi<Policy>(`/policies/${id}`),
+
+	create: async (data: CreatePolicyRequest): Promise<Policy> =>
+		fetchApi<Policy>('/policies', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (id: string, data: UpdatePolicyRequest): Promise<Policy> =>
+		fetchApi<Policy>(`/policies/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/policies/${id}`, {
+			method: 'DELETE',
+		}),
+
+	listSchedules: async (id: string): Promise<Schedule[]> => {
+		const response = await fetchApi<SchedulesResponse>(
+			`/policies/${id}/schedules`,
+		);
+		return response.schedules ?? [];
+	},
+
+	apply: async (
+		id: string,
+		data: ApplyPolicyRequest,
+	): Promise<ApplyPolicyResponse> =>
+		fetchApi<ApplyPolicyResponse>(`/policies/${id}/apply`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Backups API
@@ -312,6 +557,43 @@ export const backupsApi = {
 
 	get: async (id: string): Promise<Backup> =>
 		fetchApi<Backup>(`/backups/${id}`),
+};
+
+// Backup Scripts API
+export const backupScriptsApi = {
+	list: async (scheduleId: string): Promise<BackupScript[]> => {
+		const response = await fetchApi<BackupScriptsResponse>(
+			`/schedules/${scheduleId}/scripts`,
+		);
+		return response.scripts ?? [];
+	},
+
+	get: async (scheduleId: string, id: string): Promise<BackupScript> =>
+		fetchApi<BackupScript>(`/schedules/${scheduleId}/scripts/${id}`),
+
+	create: async (
+		scheduleId: string,
+		data: CreateBackupScriptRequest,
+	): Promise<BackupScript> =>
+		fetchApi<BackupScript>(`/schedules/${scheduleId}/scripts`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		scheduleId: string,
+		id: string,
+		data: UpdateBackupScriptRequest,
+	): Promise<BackupScript> =>
+		fetchApi<BackupScript>(`/schedules/${scheduleId}/scripts/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (scheduleId: string, id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/schedules/${scheduleId}/scripts/${id}`, {
+			method: 'DELETE',
+		}),
 };
 
 // Snapshots API
@@ -343,6 +625,33 @@ export const snapshotsApi = {
 			: `/snapshots/${id}/files`;
 		return fetchApi<SnapshotFilesResponse>(endpoint);
 	},
+
+	compare: async (id1: string, id2: string): Promise<SnapshotCompareResponse> =>
+		fetchApi<SnapshotCompareResponse>(`/snapshots/${id1}/compare/${id2}`),
+};
+
+// Snapshot Comments API
+export const snapshotCommentsApi = {
+	list: async (snapshotId: string): Promise<SnapshotComment[]> => {
+		const response = await fetchApi<SnapshotCommentsResponse>(
+			`/snapshots/${snapshotId}/comments`,
+		);
+		return response.comments ?? [];
+	},
+
+	create: async (
+		snapshotId: string,
+		data: CreateSnapshotCommentRequest,
+	): Promise<SnapshotComment> =>
+		fetchApi<SnapshotComment>(`/snapshots/${snapshotId}/comments`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (commentId: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/comments/${commentId}`, {
+			method: 'DELETE',
+		}),
 };
 
 // Restores API
@@ -369,6 +678,21 @@ export const restoresApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+};
+
+// File History API
+export const fileHistoryApi = {
+	getHistory: async (
+		params: FileHistoryParams,
+	): Promise<FileHistoryResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('path', params.path);
+		searchParams.set('agent_id', params.agent_id);
+		searchParams.set('repository_id', params.repository_id);
+		return fetchApi<FileHistoryResponse>(
+			`/files/history?${searchParams.toString()}`,
+		);
+	},
 };
 
 // Alerts API
@@ -774,6 +1098,531 @@ export const verificationsApi = {
 
 	deleteSchedule: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/verification-schedules/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// SSO Group Mappings API
+export const ssoGroupMappingsApi = {
+	list: async (orgId: string): Promise<SSOGroupMapping[]> => {
+		const response = await fetchApi<SSOGroupMappingsResponse>(
+			`/organizations/${orgId}/sso-group-mappings`,
+		);
+		return response.mappings ?? [];
+	},
+
+	get: async (orgId: string, id: string): Promise<SSOGroupMapping> => {
+		const response = await fetchApi<SSOGroupMappingResponse>(
+			`/organizations/${orgId}/sso-group-mappings/${id}`,
+		);
+		return response.mapping;
+	},
+
+	create: async (
+		orgId: string,
+		data: CreateSSOGroupMappingRequest,
+	): Promise<SSOGroupMapping> => {
+		const response = await fetchApi<SSOGroupMappingResponse>(
+			`/organizations/${orgId}/sso-group-mappings`,
+			{
+				method: 'POST',
+				body: JSON.stringify(data),
+			},
+		);
+		return response.mapping;
+	},
+
+	update: async (
+		orgId: string,
+		id: string,
+		data: UpdateSSOGroupMappingRequest,
+	): Promise<SSOGroupMapping> => {
+		const response = await fetchApi<SSOGroupMappingResponse>(
+			`/organizations/${orgId}/sso-group-mappings/${id}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		);
+		return response.mapping;
+	},
+
+	delete: async (orgId: string, id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/organizations/${orgId}/sso-group-mappings/${id}`,
+			{
+				method: 'DELETE',
+			},
+		),
+
+	// SSO Settings
+	getSettings: async (orgId: string): Promise<SSOSettings> =>
+		fetchApi<SSOSettings>(`/organizations/${orgId}/sso-settings`),
+
+	updateSettings: async (
+		orgId: string,
+		data: UpdateSSOSettingsRequest,
+	): Promise<SSOSettings> =>
+		fetchApi<SSOSettings>(`/organizations/${orgId}/sso-settings`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// User SSO Groups
+	getUserSSOGroups: async (userId: string): Promise<UserSSOGroups> =>
+		fetchApi<UserSSOGroups>(`/users/${userId}/sso-groups`),
+};
+
+// Maintenance Windows API
+export const maintenanceApi = {
+	list: async (): Promise<MaintenanceWindow[]> => {
+		const response = await fetchApi<MaintenanceWindowsResponse>(
+			'/maintenance-windows',
+		);
+		return response.maintenance_windows ?? [];
+	},
+
+	get: async (id: string): Promise<MaintenanceWindow> =>
+		fetchApi<MaintenanceWindow>(`/maintenance-windows/${id}`),
+
+	create: async (
+		data: CreateMaintenanceWindowRequest,
+	): Promise<MaintenanceWindow> =>
+		fetchApi<MaintenanceWindow>('/maintenance-windows', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateMaintenanceWindowRequest,
+	): Promise<MaintenanceWindow> =>
+		fetchApi<MaintenanceWindow>(`/maintenance-windows/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/maintenance-windows/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getActive: async (): Promise<ActiveMaintenanceResponse> =>
+		fetchApi<ActiveMaintenanceResponse>('/maintenance/active'),
+};
+
+// Exclude Patterns API
+export const excludePatternsApi = {
+	list: async (category?: string): Promise<ExcludePattern[]> => {
+		const endpoint = category
+			? `/exclude-patterns?category=${category}`
+			: '/exclude-patterns';
+		const response = await fetchApi<ExcludePatternsResponse>(endpoint);
+		return response.patterns ?? [];
+	},
+
+	get: async (id: string): Promise<ExcludePattern> =>
+		fetchApi<ExcludePattern>(`/exclude-patterns/${id}`),
+
+	getLibrary: async (): Promise<BuiltInPattern[]> => {
+		const response = await fetchApi<BuiltInPatternsResponse>(
+			'/exclude-patterns/library',
+		);
+		return response.patterns ?? [];
+	},
+
+	getCategories: async (): Promise<CategoryInfo[]> => {
+		const response = await fetchApi<CategoriesResponse>(
+			'/exclude-patterns/categories',
+		);
+		return response.categories ?? [];
+	},
+
+	create: async (data: CreateExcludePatternRequest): Promise<ExcludePattern> =>
+		fetchApi<ExcludePattern>('/exclude-patterns', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateExcludePatternRequest,
+	): Promise<ExcludePattern> =>
+		fetchApi<ExcludePattern>(`/exclude-patterns/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/exclude-patterns/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// DR Runbooks API
+export const drRunbooksApi = {
+	list: async (): Promise<DRRunbook[]> => {
+		const response = await fetchApi<DRRunbooksResponse>('/dr-runbooks');
+		return response.runbooks ?? [];
+	},
+
+	get: async (id: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}`),
+
+	create: async (data: CreateDRRunbookRequest): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>('/dr-runbooks', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateDRRunbookRequest,
+	): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/dr-runbooks/${id}`, {
+			method: 'DELETE',
+		}),
+
+	activate: async (id: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}/activate`, {
+			method: 'POST',
+		}),
+
+	archive: async (id: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${id}/archive`, {
+			method: 'POST',
+		}),
+
+	render: async (id: string): Promise<DRRunbookRenderResponse> =>
+		fetchApi<DRRunbookRenderResponse>(`/dr-runbooks/${id}/render`),
+
+	generateFromSchedule: async (scheduleId: string): Promise<DRRunbook> =>
+		fetchApi<DRRunbook>(`/dr-runbooks/${scheduleId}/generate`, {
+			method: 'POST',
+		}),
+
+	getStatus: async (): Promise<DRStatus> =>
+		fetchApi<DRStatus>('/dr-runbooks/status'),
+
+	listTestSchedules: async (runbookId: string): Promise<DRTestSchedule[]> => {
+		const response = await fetchApi<DRTestSchedulesResponse>(
+			`/dr-runbooks/${runbookId}/test-schedules`,
+		);
+		return response.schedules ?? [];
+	},
+
+	createTestSchedule: async (
+		runbookId: string,
+		data: CreateDRTestScheduleRequest,
+	): Promise<DRTestSchedule> =>
+		fetchApi<DRTestSchedule>(`/dr-runbooks/${runbookId}/test-schedules`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+};
+
+// DR Tests API
+export const drTestsApi = {
+	list: async (params?: {
+		runbook_id?: string;
+		status?: string;
+	}): Promise<DRTest[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.runbook_id) searchParams.set('runbook_id', params.runbook_id);
+		if (params?.status) searchParams.set('status', params.status);
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/dr-tests?${query}` : '/dr-tests';
+		const response = await fetchApi<DRTestsResponse>(endpoint);
+		return response.tests ?? [];
+	},
+
+	get: async (id: string): Promise<DRTest> =>
+		fetchApi<DRTest>(`/dr-tests/${id}`),
+
+	run: async (data: RunDRTestRequest): Promise<DRTest> =>
+		fetchApi<DRTest>('/dr-tests', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	cancel: async (id: string, notes?: string): Promise<DRTest> =>
+		fetchApi<DRTest>(`/dr-tests/${id}/cancel`, {
+			method: 'POST',
+			body: JSON.stringify({ notes }),
+		}),
+};
+
+// Tags API
+export const tagsApi = {
+	list: async (): Promise<Tag[]> => {
+		const response = await fetchApi<TagsResponse>('/tags');
+		return response.tags ?? [];
+	},
+
+	get: async (id: string): Promise<Tag> => fetchApi<Tag>(`/tags/${id}`),
+
+	create: async (data: CreateTagRequest): Promise<Tag> =>
+		fetchApi<Tag>('/tags', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (id: string, data: UpdateTagRequest): Promise<Tag> =>
+		fetchApi<Tag>(`/tags/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/tags/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Backup tags
+	getBackupTags: async (backupId: string): Promise<Tag[]> => {
+		const response = await fetchApi<TagsResponse>(`/backups/${backupId}/tags`);
+		return response.tags ?? [];
+	},
+
+	setBackupTags: async (
+		backupId: string,
+		data: AssignTagsRequest,
+	): Promise<Tag[]> => {
+		const response = await fetchApi<TagsResponse>(`/backups/${backupId}/tags`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		});
+		return response.tags ?? [];
+	},
+};
+
+// Search API
+export const searchApi = {
+	search: async (filter: SearchFilter): Promise<SearchResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', filter.q);
+
+		if (filter.types?.length) {
+			searchParams.set('types', filter.types.join(','));
+		}
+		if (filter.status) {
+			searchParams.set('status', filter.status);
+		}
+		if (filter.tag_ids?.length) {
+			searchParams.set('tag_ids', filter.tag_ids.join(','));
+		}
+		if (filter.date_from) {
+			searchParams.set('date_from', filter.date_from);
+		}
+		if (filter.date_to) {
+			searchParams.set('date_to', filter.date_to);
+		}
+		if (filter.size_min !== undefined) {
+			searchParams.set('size_min', filter.size_min.toString());
+		}
+		if (filter.size_max !== undefined) {
+			searchParams.set('size_max', filter.size_max.toString());
+		}
+		if (filter.limit) {
+			searchParams.set('limit', filter.limit.toString());
+		}
+
+		return fetchApi<SearchResponse>(`/search?${searchParams.toString()}`);
+	},
+};
+
+// Dashboard Metrics API
+export const metricsApi = {
+	getDashboardStats: async (): Promise<DashboardStats> =>
+		fetchApi<DashboardStats>('/dashboard-metrics/stats'),
+
+	getBackupSuccessRates: async (): Promise<{
+		rate_7d: BackupSuccessRate;
+		rate_30d: BackupSuccessRate;
+	}> =>
+		fetchApi<BackupSuccessRatesResponse>('/dashboard-metrics/success-rates'),
+
+	getStorageGrowthTrend: async (days = 30): Promise<StorageGrowthTrend[]> => {
+		const response = await fetchApi<StorageGrowthTrendResponse>(
+			`/dashboard-metrics/storage-growth?days=${days}`,
+		);
+		return response.trend ?? [];
+	},
+
+	getBackupDurationTrend: async (days = 30): Promise<BackupDurationTrend[]> => {
+		const response = await fetchApi<BackupDurationTrendResponse>(
+			`/dashboard-metrics/backup-duration?days=${days}`,
+		);
+		return response.trend ?? [];
+	},
+
+	getDailyBackupStats: async (days = 30): Promise<DailyBackupStats[]> => {
+		const response = await fetchApi<DailyBackupStatsResponse>(
+			`/dashboard-metrics/daily-backups?days=${days}`,
+		);
+		return response.stats ?? [];
+	},
+};
+
+export const reportsApi = {
+	// Schedules
+	listSchedules: async (): Promise<ReportSchedule[]> => {
+		const response =
+			await fetchApi<ReportSchedulesResponse>('/reports/schedules');
+		return response.schedules ?? [];
+	},
+
+	getSchedule: async (id: string): Promise<ReportSchedule> =>
+		fetchApi<ReportSchedule>(`/reports/schedules/${id}`),
+
+	createSchedule: async (
+		data: CreateReportScheduleRequest,
+	): Promise<ReportSchedule> =>
+		fetchApi<ReportSchedule>('/reports/schedules', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateSchedule: async (
+		id: string,
+		data: UpdateReportScheduleRequest,
+	): Promise<ReportSchedule> =>
+		fetchApi<ReportSchedule>(`/reports/schedules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteSchedule: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/reports/schedules/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Actions
+	sendReport: async (
+		id: string,
+		preview = false,
+	): Promise<ReportPreviewResponse | MessageResponse> =>
+		fetchApi(`/reports/schedules/${id}/send`, {
+			method: 'POST',
+			body: JSON.stringify({ preview }),
+		}),
+
+	previewReport: async (
+		frequency: ReportFrequency,
+		timezone = 'UTC',
+	): Promise<ReportPreviewResponse> =>
+		fetchApi<ReportPreviewResponse>('/reports/preview', {
+			method: 'POST',
+			body: JSON.stringify({ frequency, timezone }),
+		}),
+
+	// History
+	listHistory: async (): Promise<ReportHistory[]> => {
+		const response = await fetchApi<ReportHistoryResponse>('/reports/history');
+		return response.history ?? [];
+	},
+
+	getHistory: async (id: string): Promise<ReportHistory> =>
+		fetchApi<ReportHistory>(`/reports/history/${id}`),
+};
+// Onboarding API
+export const onboardingApi = {
+	getStatus: async (): Promise<OnboardingStatus> =>
+		fetchApi<OnboardingStatus>('/onboarding/status'),
+
+	completeStep: async (step: OnboardingStep): Promise<OnboardingStatus> =>
+		fetchApi<OnboardingStatus>(`/onboarding/step/${step}`, {
+			method: 'POST',
+		}),
+
+	skip: async (): Promise<OnboardingStatus> =>
+		fetchApi<OnboardingStatus>('/onboarding/skip', {
+			method: 'POST',
+		}),
+};
+
+// Cost Estimation API
+export const costsApi = {
+	getSummary: async (): Promise<CostSummary> =>
+		fetchApi<CostSummary>('/costs/summary'),
+
+	listRepositoryCosts: async (): Promise<RepositoryCostsResponse> =>
+		fetchApi<RepositoryCostsResponse>('/costs/repositories'),
+
+	getRepositoryCost: async (id: string): Promise<RepositoryCostResponse> =>
+		fetchApi<RepositoryCostResponse>(`/costs/repositories/${id}`),
+
+	getForecast: async (days = 30): Promise<CostForecastResponse> =>
+		fetchApi<CostForecastResponse>(`/costs/forecast?days=${days}`),
+
+	getHistory: async (days = 30): Promise<CostHistoryResponse> =>
+		fetchApi<CostHistoryResponse>(`/costs/history?days=${days}`),
+};
+
+// Pricing API
+export const pricingApi = {
+	list: async (): Promise<StoragePricing[]> => {
+		const response = await fetchApi<StoragePricingResponse>('/pricing');
+		return response.pricing ?? [];
+	},
+
+	getDefaults: async (): Promise<DefaultPricingResponse> =>
+		fetchApi<DefaultPricingResponse>('/pricing/defaults'),
+
+	create: async (data: CreateStoragePricingRequest): Promise<StoragePricing> =>
+		fetchApi<StoragePricing>('/pricing', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateStoragePricingRequest,
+	): Promise<StoragePricing> =>
+		fetchApi<StoragePricing>(`/pricing/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/pricing/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Cost Alerts API
+export const costAlertsApi = {
+	list: async (): Promise<CostAlert[]> => {
+		const response = await fetchApi<CostAlertsResponse>('/cost-alerts');
+		return response.alerts ?? [];
+	},
+
+	get: async (id: string): Promise<CostAlert> =>
+		fetchApi<CostAlert>(`/cost-alerts/${id}`),
+
+	create: async (data: CreateCostAlertRequest): Promise<CostAlert> =>
+		fetchApi<CostAlert>('/cost-alerts', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateCostAlertRequest,
+	): Promise<CostAlert> =>
+		fetchApi<CostAlert>(`/cost-alerts/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
 			method: 'DELETE',
 		}),
 };

@@ -17,6 +17,10 @@ const (
 	AlertTypeBackupSLA AlertType = "backup_sla"
 	// AlertTypeStorageUsage indicates storage usage has exceeded threshold.
 	AlertTypeStorageUsage AlertType = "storage_usage"
+	// AlertTypeAgentHealthWarning indicates an agent's health status changed to warning.
+	AlertTypeAgentHealthWarning AlertType = "agent_health_warning"
+	// AlertTypeAgentHealthCritical indicates an agent's health status changed to critical.
+	AlertTypeAgentHealthCritical AlertType = "agent_health_critical"
 )
 
 // AlertSeverity represents the severity level of an alert.

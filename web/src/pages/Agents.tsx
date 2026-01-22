@@ -11,8 +11,9 @@ import {
 	useDeleteRegistrationCode,
 	usePendingRegistrations,
 } from '../hooks/useAgentRegistration';
+import { useLocale } from '../hooks/useLocale';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
-import { formatDate, getAgentStatusColor } from '../lib/utils';
+import { getAgentStatusColor } from '../lib/utils';
 
 function LoadingRow() {
 	return (
@@ -49,6 +50,7 @@ function GenerateCodeModal({
 }: GenerateCodeModalProps) {
 	const [hostname, setHostname] = useState('');
 	const createCode = useCreateRegistrationCode();
+	const { t } = useLocale();
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -81,14 +83,14 @@ function GenerateCodeModal({
 							htmlFor="hostname"
 							className="block text-sm font-medium text-gray-700 mb-1"
 						>
-							Hostname (optional)
+							{t('agents.hostname')} (optional)
 						</label>
 						<input
 							type="text"
 							id="hostname"
 							value={hostname}
 							onChange={(e) => setHostname(e.target.value)}
-							placeholder="e.g., server-01"
+							placeholder={t('agents.hostnamePlaceholder')}
 							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 						<p className="mt-1 text-xs text-gray-500">
@@ -106,7 +108,7 @@ function GenerateCodeModal({
 							onClick={onClose}
 							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
 						>
-							Cancel
+							{t('common.cancel')}
 						</button>
 						<button
 							type="submit"
@@ -134,6 +136,7 @@ function RegistrationCodeModal({
 	onClose,
 }: RegistrationCodeModalProps) {
 	const [copied, setCopied] = useState(false);
+	const { t } = useLocale();
 
 	const copyToClipboard = async () => {
 		await navigator.clipboard.writeText(code);
@@ -236,7 +239,7 @@ function RegistrationCodeModal({
 						onClick={onClose}
 						className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
 					>
-						Done
+						{t('common.done')}
 					</button>
 				</div>
 			</div>
@@ -251,6 +254,7 @@ interface ApiKeyModalProps {
 
 function ApiKeyModal({ apiKey, onClose }: ApiKeyModalProps) {
 	const [copied, setCopied] = useState(false);
+	const { t } = useLocale();
 
 	const copyToClipboard = async () => {
 		await navigator.clipboard.writeText(apiKey);
@@ -283,7 +287,7 @@ function ApiKeyModal({ apiKey, onClose }: ApiKeyModalProps) {
 					</h3>
 				</div>
 				<p className="text-sm text-gray-600 mb-4">
-					Save this API key now. You won't be able to see it again!
+					{t('agents.saveApiKeyWarning')}
 				</p>
 				<div className="bg-gray-50 rounded-lg p-4 mb-4">
 					<div className="flex items-center justify-between gap-2">
@@ -331,7 +335,7 @@ function ApiKeyModal({ apiKey, onClose }: ApiKeyModalProps) {
 				</div>
 				<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
 					<p className="text-sm text-yellow-800">
-						Update your agent configuration with this key:
+						{t('agents.useKeyToConfigure')}
 					</p>
 					<code className="text-xs text-yellow-700 block mt-2">
 						keldris-agent config --api-key {apiKey.substring(0, 20)}...
@@ -343,7 +347,7 @@ function ApiKeyModal({ apiKey, onClose }: ApiKeyModalProps) {
 						onClick={onClose}
 						className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
 					>
-						Done
+						{t('common.done')}
 					</button>
 				</div>
 			</div>
@@ -477,6 +481,7 @@ function AgentRow({
 }: AgentRowProps) {
 	const [showMenu, setShowMenu] = useState(false);
 	const statusColor = getAgentStatusColor(agent.status);
+	const { t, formatRelativeTime } = useLocale();
 
 	return (
 		<tr className="hover:bg-gray-50">
@@ -497,10 +502,10 @@ function AgentRow({
 				</span>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500">
-				{formatDate(agent.last_seen)}
+				{formatRelativeTime(agent.last_seen)}
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500">
-				{formatDate(agent.created_at)}
+				{formatRelativeTime(agent.created_at)}
 			</td>
 			<td className="px-6 py-4 text-right">
 				<div className="relative inline-block text-left">
@@ -509,7 +514,7 @@ function AgentRow({
 						onClick={() => setShowMenu(!showMenu)}
 						className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
 					>
-						Actions
+						{t('common.actions')}
 						<svg
 							aria-hidden="true"
 							className="w-4 h-4"
@@ -542,7 +547,7 @@ function AgentRow({
 									disabled={isRotating}
 									className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
 								>
-									{isRotating ? 'Rotating...' : 'Rotate API Key'}
+									{isRotating ? t('agents.rotating') : t('agents.rotateApiKey')}
 								</button>
 								<button
 									type="button"
@@ -553,7 +558,7 @@ function AgentRow({
 									disabled={isRevoking || agent.status === 'pending'}
 									className="w-full text-left px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 disabled:opacity-50"
 								>
-									{isRevoking ? 'Revoking...' : 'Revoke API Key'}
+									{isRevoking ? t('agents.revoking') : t('agents.revokeApiKey')}
 								</button>
 								<div className="border-t border-gray-100 my-1" />
 								<button
@@ -565,7 +570,7 @@ function AgentRow({
 									disabled={isDeleting}
 									className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
 								>
-									{isDeleting ? 'Deleting...' : 'Delete Agent'}
+									{isDeleting ? t('agents.deleting') : t('agents.deleteAgent')}
 								</button>
 							</div>
 						</>
@@ -595,6 +600,7 @@ export function Agents() {
 	const rotateApiKey = useRotateAgentApiKey();
 	const revokeApiKey = useRevokeAgentApiKey();
 	const deleteCode = useDeleteRegistrationCode();
+	const { t } = useLocale();
 
 	const filteredAgents = agents?.filter((agent) => {
 		const matchesSearch = agent.hostname
@@ -611,17 +617,13 @@ export function Agents() {
 	};
 
 	const handleDelete = (id: string) => {
-		if (confirm('Are you sure you want to delete this agent?')) {
+		if (confirm(t('agents.confirmDelete'))) {
 			deleteAgent.mutate(id);
 		}
 	};
 
 	const handleRotateKey = async (id: string) => {
-		if (
-			confirm(
-				'Are you sure you want to rotate this API key? The old key will be invalidated immediately.',
-			)
-		) {
+		if (confirm(t('agents.confirmRotate'))) {
 			try {
 				const result = await rotateApiKey.mutateAsync(id);
 				setNewApiKey(result.api_key);
@@ -632,11 +634,7 @@ export function Agents() {
 	};
 
 	const handleRevokeKey = (id: string) => {
-		if (
-			confirm(
-				'Are you sure you want to revoke this API key? The agent will no longer be able to authenticate.',
-			)
-		) {
+		if (confirm(t('agents.confirmRevoke'))) {
 			revokeApiKey.mutate(id);
 		}
 	};
@@ -657,10 +655,10 @@ export function Agents() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Agents</h1>
-					<p className="text-gray-600 mt-1">
-						Manage backup agents across your infrastructure
-					</p>
+					<h1 className="text-2xl font-bold text-gray-900">
+						{t('agents.title')}
+					</h1>
+					<p className="text-gray-600 mt-1">{t('agents.subtitle')}</p>
 				</div>
 				<button
 					type="button"
@@ -681,7 +679,7 @@ export function Agents() {
 							d="M12 4v16m8-8H4"
 						/>
 					</svg>
-					Register Agent
+					{t('agents.registerAgent')}
 				</button>
 			</div>
 
@@ -729,16 +727,16 @@ export function Agents() {
 										Code
 									</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-										Hostname
+										{t('agents.hostname')}
 									</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-										Status
+										{t('common.status')}
 									</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 										Created By
 									</th>
 									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-										Actions
+										{t('common.actions')}
 									</th>
 								</tr>
 							</thead>
@@ -763,7 +761,7 @@ export function Agents() {
 					<div className="flex items-center gap-4">
 						<input
 							type="text"
-							placeholder="Search agents..."
+							placeholder={t('agents.searchAgents')}
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -775,38 +773,38 @@ export function Agents() {
 							}
 							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
-							<option value="all">All Status</option>
-							<option value="active">Active</option>
-							<option value="offline">Offline</option>
-							<option value="pending">Pending</option>
-							<option value="disabled">Disabled</option>
+							<option value="all">{t('agents.allStatus')}</option>
+							<option value="active">{t('agents.active')}</option>
+							<option value="offline">{t('agents.offline')}</option>
+							<option value="pending">{t('agents.pending')}</option>
+							<option value="disabled">{t('agents.disabled')}</option>
 						</select>
 					</div>
 				</div>
 
 				{isError ? (
 					<div className="p-12 text-center text-red-500">
-						<p className="font-medium">Failed to load agents</p>
-						<p className="text-sm">Please try refreshing the page</p>
+						<p className="font-medium">{t('agents.failedToLoad')}</p>
+						<p className="text-sm">{t('agents.tryRefreshing')}</p>
 					</div>
 				) : isLoading ? (
 					<table className="w-full">
 						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Hostname
+									{t('agents.hostname')}
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Status
+									{t('common.status')}
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Last Seen
+									{t('agents.lastSeen')}
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Registered
+									{t('agents.registered')}
 								</th>
 								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Actions
+									{t('common.actions')}
 								</th>
 							</tr>
 						</thead>
@@ -821,19 +819,19 @@ export function Agents() {
 						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Hostname
+									{t('agents.hostname')}
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Status
+									{t('common.status')}
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Last Seen
+									{t('agents.lastSeen')}
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Registered
+									{t('agents.registered')}
 								</th>
 								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Actions
+									{t('common.actions')}
 								</th>
 							</tr>
 						</thead>
@@ -869,7 +867,7 @@ export function Agents() {
 							/>
 						</svg>
 						<h3 className="text-lg font-medium text-gray-900 mb-2">
-							No agents registered
+							{t('agents.noAgentsRegistered')}
 						</h3>
 						<p className="mb-6">
 							Generate a registration code to start backing up your systems
