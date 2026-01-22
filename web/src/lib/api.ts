@@ -383,7 +383,10 @@ export const agentsApi = {
 			body: JSON.stringify(data),
 		}),
 
-	getCommand: async (agentId: string, commandId: string): Promise<AgentCommand> =>
+	getCommand: async (
+		agentId: string,
+		commandId: string,
+	): Promise<AgentCommand> =>
 		fetchApi<AgentCommand>(`/agents/${agentId}/commands/${commandId}`),
 
 	cancelCommand: async (
