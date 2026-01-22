@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { ClassificationBadge } from '../components/ClassificationBadge';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
 import { useBackupTags, useSetBackupTags, useTags } from '../hooks/useTags';
-import type { Backup, BackupStatus, Tag } from '../lib/types';
+import type { Backup, BackupStatus, ClassificationLevel, Tag } from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
@@ -285,6 +286,20 @@ function BackupDetailsModal({
 						</div>
 					)}
 
+					{(backup.classification_level || backup.classification_data_types) && (
+						<div>
+							<p className="text-sm font-medium text-gray-500 mb-2">
+								Classification
+							</p>
+							<ClassificationBadge
+								level={backup.classification_level || 'public'}
+								dataTypes={backup.classification_data_types}
+								showDataTypes
+								size="md"
+							/>
+						</div>
+					)}
+
 					<BackupTagsEditor backupId={backup.id} allTags={allTags} />
 
 					{backup.error_message && (
@@ -397,12 +412,20 @@ function BackupRow({
 				{formatBytes(backup.size_bytes)}
 			</td>
 			<td className="px-6 py-4">
-				<span
-					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
-				>
-					<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
-					{backup.status}
-				</span>
+				<div className="flex flex-col gap-1">
+					<span
+						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
+					>
+						<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
+						{backup.status}
+					</span>
+					{backup.classification_level && backup.classification_level !== 'public' && (
+						<ClassificationBadge
+							level={backup.classification_level}
+							size="sm"
+						/>
+					)}
+				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(backup.started_at)}
@@ -424,6 +447,7 @@ export function Backups() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [agentFilter, setAgentFilter] = useState<string>('all');
 	const [statusFilter, setStatusFilter] = useState<BackupStatus | 'all'>('all');
+	const [classificationFilter, setClassificationFilter] = useState<ClassificationLevel | 'all'>('all');
 	const [selectedTagFilters, setSelectedTagFilters] = useState<Set<string>>(
 		new Set(),
 	);
@@ -470,10 +494,13 @@ export function Backups() {
 			agentFilter === 'all' || backup.agent_id === agentFilter;
 		const matchesStatus =
 			statusFilter === 'all' || backup.status === statusFilter;
+		const matchesClassification =
+			classificationFilter === 'all' ||
+			(backup.classification_level || 'public') === classificationFilter;
 		// Note: Tag filtering would require loading backup tags for each backup,
 		// which is expensive. For a more complete implementation, you'd want to
 		// fetch this data on the server side with proper filtering.
-		return matchesSearch && matchesAgent && matchesStatus;
+		return matchesSearch && matchesAgent && matchesStatus && matchesClassification;
 	});
 
 	return (
@@ -523,6 +550,19 @@ export function Backups() {
 							<option value="running">Running</option>
 							<option value="failed">Failed</option>
 							<option value="canceled">Canceled</option>
+						</select>
+						<select
+							value={classificationFilter}
+							onChange={(e) =>
+								setClassificationFilter(e.target.value as ClassificationLevel | 'all')
+							}
+							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						>
+							<option value="all">All Classifications</option>
+							<option value="public">Public</option>
+							<option value="internal">Internal</option>
+							<option value="confidential">Confidential</option>
+							<option value="restricted">Restricted</option>
 						</select>
 					</div>
 					{allTags && allTags.length > 0 && (

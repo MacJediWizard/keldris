@@ -7,6 +7,7 @@ import { Agents } from './pages/Agents';
 import { Alerts } from './pages/Alerts';
 import { AuditLogs } from './pages/AuditLogs';
 import { Backups } from './pages/Backups';
+import { Classifications } from './pages/Classifications';
 import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
@@ -69,6 +70,7 @@ function App() {
 						<Route path="stats" element={<StorageStats />} />
 						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
 						<Route path="tags" element={<Tags />} />
+						<Route path="classifications" element={<Classifications />} />
 						<Route path="costs" element={<CostEstimation />} />
 						<Route
 							path="organization/members"

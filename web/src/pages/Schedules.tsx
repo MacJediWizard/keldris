@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
+import { ClassificationBadge } from '../components/ClassificationBadge';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
 import { useAgents } from '../hooks/useAgents';
@@ -780,7 +781,11 @@ function ScheduleRow({
 		(schedule.excluded_hours && schedule.excluded_hours.length > 0) ||
 		schedule.compression_level;
 
-	const hasBadges = hasResourceControls || policyName;
+	const hasClassification =
+		schedule.classification_level &&
+		schedule.classification_level !== 'public';
+
+	const hasBadges = hasResourceControls || policyName || hasClassification;
 
 	return (
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -794,6 +799,14 @@ function ScheduleRow({
 				</div>
 				{hasBadges && (
 					<div className="mt-1 flex flex-wrap gap-1.5">
+						{hasClassification && (
+							<ClassificationBadge
+								level={schedule.classification_level}
+								dataTypes={schedule.classification_data_types}
+								showDataTypes
+								size="sm"
+							/>
+						)}
 						{policyName && (
 							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-indigo-50 text-indigo-700 rounded">
 								<svg
