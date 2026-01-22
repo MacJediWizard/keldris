@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
+import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
 import { useAgents } from '../hooks/useAgents';
@@ -8,12 +9,14 @@ import { useRepositories } from '../hooks/useRepositories';
 import {
 	useCreateSchedule,
 	useDeleteSchedule,
+	useDryRunSchedule,
 	useRunSchedule,
 	useSchedules,
 	useUpdateSchedule,
 } from '../hooks/useSchedules';
 import type {
 	CompressionLevel,
+	DryRunResponse,
 	MountBehavior,
 	Schedule,
 	ScheduleRepositoryRequest,
@@ -755,10 +758,12 @@ interface ScheduleRowProps {
 	onToggle: (id: string, enabled: boolean) => void;
 	onDelete: (id: string) => void;
 	onRun: (id: string) => void;
+	onDryRun: (id: string) => void;
 	onEditScripts: (id: string) => void;
 	isUpdating: boolean;
 	isDeleting: boolean;
 	isRunning: boolean;
+	isDryRunning: boolean;
 }
 
 function ScheduleRow({
@@ -769,10 +774,12 @@ function ScheduleRow({
 	onToggle,
 	onDelete,
 	onRun,
+	onDryRun,
 	onEditScripts,
 	isUpdating,
 	isDeleting,
 	isRunning,
+	isDryRunning,
 }: ScheduleRowProps) {
 	const hasResourceControls =
 		schedule.bandwidth_limit_kb ||
@@ -941,6 +948,15 @@ function ScheduleRow({
 					<span className="text-gray-300 dark:text-gray-600">|</span>
 					<button
 						type="button"
+						onClick={() => onDryRun(schedule.id)}
+						disabled={isDryRunning}
+						className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 text-sm font-medium disabled:opacity-50"
+					>
+						{isDryRunning ? 'Simulating...' : 'Dry Run'}
+					</button>
+					<span className="text-gray-300 dark:text-gray-600">|</span>
+					<button
+						type="button"
 						onClick={() => onEditScripts(schedule.id)}
 						className="text-gray-600 hover:text-gray-800 text-sm font-medium"
 					>
@@ -970,6 +986,11 @@ export function Schedules() {
 	const [editingScriptsScheduleId, setEditingScriptsScheduleId] = useState<
 		string | null
 	>(null);
+	const [showDryRunModal, setShowDryRunModal] = useState(false);
+	const [dryRunResults, setDryRunResults] = useState<DryRunResponse | null>(
+		null,
+	);
+	const [dryRunError, setDryRunError] = useState<Error | null>(null);
 
 	const { data: schedules, isLoading, isError } = useSchedules();
 	const { data: agents } = useAgents();
@@ -978,6 +999,7 @@ export function Schedules() {
 	const updateSchedule = useUpdateSchedule();
 	const deleteSchedule = useDeleteSchedule();
 	const runSchedule = useRunSchedule();
+	const dryRunSchedule = useDryRunSchedule();
 
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
@@ -1006,6 +1028,26 @@ export function Schedules() {
 
 	const handleRun = (id: string) => {
 		runSchedule.mutate(id);
+	};
+
+	const handleDryRun = (id: string) => {
+		setDryRunResults(null);
+		setDryRunError(null);
+		setShowDryRunModal(true);
+		dryRunSchedule.mutate(id, {
+			onSuccess: (data) => {
+				setDryRunResults(data);
+			},
+			onError: (error) => {
+				setDryRunError(error as Error);
+			},
+		});
+	};
+
+	const handleCloseDryRunModal = () => {
+		setShowDryRunModal(false);
+		setDryRunResults(null);
+		setDryRunError(null);
 	};
 
 	return (
@@ -1138,10 +1180,12 @@ export function Schedules() {
 										onToggle={handleToggle}
 										onDelete={handleDelete}
 										onRun={handleRun}
+										onDryRun={handleDryRun}
 										onEditScripts={setEditingScriptsScheduleId}
 										isUpdating={updateSchedule.isPending}
 										isDeleting={deleteSchedule.isPending}
 										isRunning={runSchedule.isPending}
+										isDryRunning={dryRunSchedule.isPending}
 									/>
 								);
 							})}
@@ -1207,6 +1251,14 @@ export function Schedules() {
 					onClose={() => setEditingScriptsScheduleId(null)}
 				/>
 			)}
+
+			<DryRunResultsModal
+				isOpen={showDryRunModal}
+				onClose={handleCloseDryRunModal}
+				results={dryRunResults}
+				isLoading={dryRunSchedule.isPending}
+				error={dryRunError}
+			/>
 		</div>
 	);
 }
