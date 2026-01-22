@@ -269,13 +269,25 @@ function getCommandStatusColor(status: CommandStatus) {
 		case 'acknowledged':
 			return { bg: 'bg-blue-100', text: 'text-blue-800', dot: 'bg-blue-400' };
 		case 'running':
-			return { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-400' };
+			return {
+				bg: 'bg-yellow-100',
+				text: 'text-yellow-800',
+				dot: 'bg-yellow-400',
+			};
 		case 'completed':
-			return { bg: 'bg-green-100', text: 'text-green-800', dot: 'bg-green-400' };
+			return {
+				bg: 'bg-green-100',
+				text: 'text-green-800',
+				dot: 'bg-green-400',
+			};
 		case 'failed':
 			return { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-400' };
 		case 'timed_out':
-			return { bg: 'bg-orange-100', text: 'text-orange-800', dot: 'bg-orange-400' };
+			return {
+				bg: 'bg-orange-100',
+				text: 'text-orange-800',
+				dot: 'bg-orange-400',
+			};
 		case 'canceled':
 			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
 		default:
@@ -306,7 +318,9 @@ interface CommandRowProps {
 
 function CommandRow({ command, onCancel, isCanceling }: CommandRowProps) {
 	const statusColor = getCommandStatusColor(command.status);
-	const canCancel = ['pending', 'acknowledged', 'running'].includes(command.status);
+	const canCancel = ['pending', 'acknowledged', 'running'].includes(
+		command.status,
+	);
 
 	return (
 		<tr className="hover:bg-gray-50">

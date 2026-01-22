@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { agentsApi, schedulesApi } from '../lib/api';
-import type { CreateAgentCommandRequest, CreateAgentRequest } from '../lib/types';
+import type {
+	CreateAgentCommandRequest,
+	CreateAgentRequest,
+} from '../lib/types';
 
 export function useAgents() {
 	return useQuery({
@@ -139,7 +142,9 @@ export function useCreateAgentCommand() {
 			data: CreateAgentCommandRequest;
 		}) => agentsApi.createCommand(agentId, data),
 		onSuccess: (_, { agentId }) => {
-			queryClient.invalidateQueries({ queryKey: ['agents', agentId, 'commands'] });
+			queryClient.invalidateQueries({
+				queryKey: ['agents', agentId, 'commands'],
+			});
 		},
 	});
 }
@@ -156,7 +161,9 @@ export function useCancelAgentCommand() {
 			commandId: string;
 		}) => agentsApi.cancelCommand(agentId, commandId),
 		onSuccess: (_, { agentId }) => {
-			queryClient.invalidateQueries({ queryKey: ['agents', agentId, 'commands'] });
+			queryClient.invalidateQueries({
+				queryKey: ['agents', agentId, 'commands'],
+			});
 		},
 	});
 }
