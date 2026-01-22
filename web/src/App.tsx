@@ -10,6 +10,7 @@ import { NewOrganization } from './pages/NewOrganization';
 import { Notifications } from './pages/Notifications';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSettings } from './pages/OrganizationSettings';
+import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
 import { Restore } from './pages/Restore';
@@ -56,6 +57,10 @@ function App() {
 						<Route
 							path="organization/settings"
 							element={<OrganizationSettings />}
+						/>
+						<Route
+							path="organization/sso"
+							element={<OrganizationSSOSettings />}
 						/>
 						<Route path="organization/new" element={<NewOrganization />} />
 					</Route>
