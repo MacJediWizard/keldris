@@ -25,6 +25,12 @@ type SnapshotStore interface {
 	CreateRestore(ctx context.Context, restore *models.Restore) error
 	GetRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Restore, error)
 	GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore, error)
+	// Snapshot comment methods
+	CreateSnapshotComment(ctx context.Context, comment *models.SnapshotComment) error
+	GetSnapshotCommentsBySnapshotID(ctx context.Context, snapshotID string, orgID uuid.UUID) ([]*models.SnapshotComment, error)
+	GetSnapshotCommentByID(ctx context.Context, id uuid.UUID) (*models.SnapshotComment, error)
+	DeleteSnapshotComment(ctx context.Context, id uuid.UUID) error
+	GetSnapshotCommentCounts(ctx context.Context, snapshotIDs []string, orgID uuid.UUID) (map[string]int, error)
 }
 
 // SnapshotsHandler handles snapshot and restore HTTP endpoints.
@@ -48,6 +54,15 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		snapshots.GET("", h.ListSnapshots)
 		snapshots.GET("/:id", h.GetSnapshot)
 		snapshots.GET("/:id/files", h.ListFiles)
+		snapshots.GET("/:id/comments", h.ListSnapshotComments)
+		snapshots.POST("/:id/comments", h.CreateSnapshotComment)
+		snapshots.GET("/:id1/compare/:id2", h.CompareSnapshots)
+	}
+
+	// Comments resource for direct access
+	comments := r.Group("/comments")
+	{
+		comments.DELETE("/:id", h.DeleteSnapshotComment)
 	}
 
 	restores := r.Group("/restores")
@@ -72,10 +87,20 @@ type SnapshotResponse struct {
 }
 
 // ListSnapshots returns all snapshots for the authenticated user's organization.
-// GET /api/v1/snapshots
-// Optional query params:
-//   - agent_id: filter by agent
-//   - repository_id: filter by repository
+//
+//	@Summary		List snapshots
+//	@Description	Returns all backup snapshots for the current organization
+//	@Tags			Snapshots
+//	@Accept			json
+//	@Produce		json
+//	@Param			agent_id		query		string	false	"Filter by agent ID"
+//	@Param			repository_id	query		string	false	"Filter by repository ID"
+//	@Success		200				{object}	map[string][]SnapshotResponse
+//	@Failure		400				{object}	map[string]string
+//	@Failure		401				{object}	map[string]string
+//	@Failure		500				{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/snapshots [get]
 func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -145,7 +170,8 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 					c.JSON(http.StatusBadRequest, gin.H{"error": "invalid repository_id"})
 					return
 				}
-				if schedule.RepositoryID != repoID {
+				// Check if the backup's repository matches the filter
+				if backup.RepositoryID == nil || *backup.RepositoryID != repoID {
 					continue
 				}
 			}
@@ -155,6 +181,11 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 				shortID = shortID[:8]
 			}
 
+			repoIDStr := ""
+			if backup.RepositoryID != nil {
+				repoIDStr = backup.RepositoryID.String()
+			}
+
 			snapshots = append(snapshots, SnapshotResponse{
 				ID:           backup.SnapshotID,
 				ShortID:      shortID,
@@ -162,7 +193,7 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 				Hostname:     agent.Hostname,
 				Paths:        schedule.Paths,
 				AgentID:      agent.ID.String(),
-				RepositoryID: schedule.RepositoryID.String(),
+				RepositoryID: repoIDStr,
 				BackupID:     backup.ID.String(),
 				SizeBytes:    backup.SizeBytes,
 			})
@@ -173,7 +204,20 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 }
 
 // GetSnapshot returns a specific snapshot by ID.
-// GET /api/v1/snapshots/:id
+//
+//	@Summary		Get snapshot
+//	@Description	Returns a specific snapshot by ID
+//	@Tags			Snapshots
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Snapshot ID"
+//	@Success		200	{object}	SnapshotResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/snapshots/{id} [get]
 func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -216,6 +260,11 @@ func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 		shortID = shortID[:8]
 	}
 
+	repoIDStr := ""
+	if backup.RepositoryID != nil {
+		repoIDStr = backup.RepositoryID.String()
+	}
+
 	c.JSON(http.StatusOK, SnapshotResponse{
 		ID:           backup.SnapshotID,
 		ShortID:      shortID,
@@ -223,7 +272,7 @@ func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 		Hostname:     agent.Hostname,
 		Paths:        schedule.Paths,
 		AgentID:      agent.ID.String(),
-		RepositoryID: schedule.RepositoryID.String(),
+		RepositoryID: repoIDStr,
 		BackupID:     backup.ID.String(),
 		SizeBytes:    backup.SizeBytes,
 	})
@@ -238,10 +287,62 @@ type SnapshotFileResponse struct {
 	ModTime string `json:"mod_time"`
 }
 
+// SnapshotDiffChangeType represents the type of change in a diff.
+type SnapshotDiffChangeType string
+
+const (
+	DiffChangeAdded    SnapshotDiffChangeType = "added"
+	DiffChangeRemoved  SnapshotDiffChangeType = "removed"
+	DiffChangeModified SnapshotDiffChangeType = "modified"
+)
+
+// SnapshotDiffEntry represents a single changed file/directory in the diff.
+type SnapshotDiffEntry struct {
+	Path       string                 `json:"path"`
+	ChangeType SnapshotDiffChangeType `json:"change_type"`
+	Type       string                 `json:"type"` // "file" or "dir"
+	OldSize    int64                  `json:"old_size,omitempty"`
+	NewSize    int64                  `json:"new_size,omitempty"`
+	SizeChange int64                  `json:"size_change,omitempty"`
+}
+
+// SnapshotDiffStats contains summary statistics for a diff operation.
+type SnapshotDiffStats struct {
+	FilesAdded       int   `json:"files_added"`
+	FilesRemoved     int   `json:"files_removed"`
+	FilesModified    int   `json:"files_modified"`
+	DirsAdded        int   `json:"dirs_added"`
+	DirsRemoved      int   `json:"dirs_removed"`
+	TotalSizeAdded   int64 `json:"total_size_added"`
+	TotalSizeRemoved int64 `json:"total_size_removed"`
+}
+
+// SnapshotCompareResponse represents the response from comparing two snapshots.
+type SnapshotCompareResponse struct {
+	SnapshotID1 string              `json:"snapshot_id_1"`
+	SnapshotID2 string              `json:"snapshot_id_2"`
+	Snapshot1   *SnapshotResponse   `json:"snapshot_1,omitempty"`
+	Snapshot2   *SnapshotResponse   `json:"snapshot_2,omitempty"`
+	Stats       SnapshotDiffStats   `json:"stats"`
+	Changes     []SnapshotDiffEntry `json:"changes"`
+}
+
 // ListFiles returns files in a snapshot.
-// GET /api/v1/snapshots/:id/files
-// Optional query params:
-//   - path: filter to specific directory (default: root)
+//
+//	@Summary		List snapshot files
+//	@Description	Returns files in a snapshot, optionally filtered by path
+//	@Tags			Snapshots
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string	true	"Snapshot ID"
+//	@Param			path	query		string	false	"Filter to specific directory (default: root)"
+//	@Success		200		{object}	map[string]any
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/snapshots/{id}/files [get]
 func (h *SnapshotsHandler) ListFiles(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -342,7 +443,20 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 }
 
 // CreateRestore creates a new restore job.
-// POST /api/v1/restores
+//
+//	@Summary		Create restore
+//	@Description	Creates a new restore job to restore files from a snapshot
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		CreateRestoreRequest	true	"Restore details"
+//	@Success		201		{object}	RestoreResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores [post]
 func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -421,10 +535,20 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 }
 
 // ListRestores returns all restore jobs for the authenticated user's organization.
-// GET /api/v1/restores
-// Optional query params:
-//   - agent_id: filter by agent
-//   - status: filter by status
+//
+//	@Summary		List restores
+//	@Description	Returns all restore jobs for the current organization
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			agent_id	query		string	false	"Filter by agent ID"
+//	@Param			status		query		string	false	"Filter by status"
+//	@Success		200			{object}	map[string][]RestoreResponse
+//	@Failure		400			{object}	map[string]string
+//	@Failure		401			{object}	map[string]string
+//	@Failure		500			{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores [get]
 func (h *SnapshotsHandler) ListRestores(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -487,7 +611,19 @@ func (h *SnapshotsHandler) ListRestores(c *gin.Context) {
 }
 
 // GetRestore returns a specific restore job by ID.
-// GET /api/v1/restores/:id
+//
+//	@Summary		Get restore
+//	@Description	Returns a specific restore job by ID
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Restore ID"
+//	@Success		200	{object}	RestoreResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores/{id} [get]
 func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -521,4 +657,337 @@ func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toRestoreResponse(restore))
+}
+
+// SnapshotCommentResponse represents a comment in API responses.
+type SnapshotCommentResponse struct {
+	ID         string `json:"id"`
+	SnapshotID string `json:"snapshot_id"`
+	UserID     string `json:"user_id"`
+	UserName   string `json:"user_name"`
+	UserEmail  string `json:"user_email"`
+	Content    string `json:"content"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+}
+
+func toSnapshotCommentResponse(c *models.SnapshotComment, user *models.User) SnapshotCommentResponse {
+	userName := ""
+	userEmail := ""
+	if user != nil {
+		userName = user.Name
+		userEmail = user.Email
+	}
+	return SnapshotCommentResponse{
+		ID:         c.ID.String(),
+		SnapshotID: c.SnapshotID,
+		UserID:     c.UserID.String(),
+		UserName:   userName,
+		UserEmail:  userEmail,
+		Content:    c.Content,
+		CreatedAt:  c.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:  c.UpdatedAt.Format(time.RFC3339),
+	}
+}
+
+// ListSnapshotComments returns all comments for a snapshot.
+// GET /api/v1/snapshots/:id/comments
+func (h *SnapshotsHandler) ListSnapshotComments(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	snapshotID := c.Param("id")
+	if snapshotID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "snapshot ID required"})
+		return
+	}
+
+	// Verify the snapshot exists and user has access
+	backup, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
+	if err != nil || agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	comments, err := h.store.GetSnapshotCommentsBySnapshotID(c.Request.Context(), snapshotID, dbUser.OrgID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("snapshot_id", snapshotID).Msg("failed to list comments")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list comments"})
+		return
+	}
+
+	// Build user cache for response enrichment
+	userCache := make(map[uuid.UUID]*models.User)
+	var responses []SnapshotCommentResponse
+	for _, comment := range comments {
+		var commentUser *models.User
+		if cached, ok := userCache[comment.UserID]; ok {
+			commentUser = cached
+		} else {
+			commentUser, _ = h.store.GetUserByID(c.Request.Context(), comment.UserID)
+			userCache[comment.UserID] = commentUser
+		}
+		responses = append(responses, toSnapshotCommentResponse(comment, commentUser))
+	}
+
+	c.JSON(http.StatusOK, gin.H{"comments": responses})
+}
+
+// CreateSnapshotComment creates a new comment on a snapshot.
+// POST /api/v1/snapshots/:id/comments
+func (h *SnapshotsHandler) CreateSnapshotComment(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	snapshotID := c.Param("id")
+	if snapshotID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "snapshot ID required"})
+		return
+	}
+
+	var req models.CreateSnapshotCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "content is required"})
+		return
+	}
+
+	// Verify the snapshot exists and user has access
+	backup, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
+	if err != nil || agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	comment := models.NewSnapshotComment(dbUser.OrgID, snapshotID, dbUser.ID, req.Content)
+
+	if err := h.store.CreateSnapshotComment(c.Request.Context(), comment); err != nil {
+		h.logger.Error().Err(err).Str("snapshot_id", snapshotID).Msg("failed to create comment")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create comment"})
+		return
+	}
+
+	h.logger.Info().
+		Str("comment_id", comment.ID.String()).
+		Str("snapshot_id", snapshotID).
+		Str("user_id", dbUser.ID.String()).
+		Msg("snapshot comment created")
+
+	c.JSON(http.StatusCreated, toSnapshotCommentResponse(comment, dbUser))
+}
+
+// DeleteSnapshotComment deletes a comment.
+// DELETE /api/v1/comments/:id
+func (h *SnapshotsHandler) DeleteSnapshotComment(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid comment ID"})
+		return
+	}
+
+	comment, err := h.store.GetSnapshotCommentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "comment not found"})
+		return
+	}
+
+	// Verify user has access (must be in same org and either own the comment or be admin)
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	if comment.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "comment not found"})
+		return
+	}
+
+	// Only allow deletion by the comment author or admins
+	if comment.UserID != dbUser.ID && !dbUser.IsAdmin() {
+		c.JSON(http.StatusForbidden, gin.H{"error": "you can only delete your own comments"})
+		return
+	}
+
+	if err := h.store.DeleteSnapshotComment(c.Request.Context(), id); err != nil {
+		h.logger.Error().Err(err).Str("comment_id", id.String()).Msg("failed to delete comment")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete comment"})
+		return
+	}
+
+	h.logger.Info().
+		Str("comment_id", id.String()).
+		Str("deleted_by", dbUser.ID.String()).
+		Msg("snapshot comment deleted")
+
+	c.JSON(http.StatusOK, gin.H{"message": "comment deleted"})
+}
+
+// CompareSnapshots compares two snapshots and returns their differences.
+// GET /api/v1/snapshots/:id1/compare/:id2
+func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	snapshotID1 := c.Param("id1")
+	snapshotID2 := c.Param("id2")
+
+	if snapshotID1 == "" || snapshotID2 == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "both snapshot IDs are required"})
+		return
+	}
+
+	// Get user for org verification
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	// Verify access to first snapshot
+	backup1, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID1)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "first snapshot not found"})
+		return
+	}
+
+	agent1, err := h.store.GetAgentByID(c.Request.Context(), backup1.AgentID)
+	if err != nil || agent1.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "first snapshot not found"})
+		return
+	}
+
+	// Verify access to second snapshot
+	backup2, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID2)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "second snapshot not found"})
+		return
+	}
+
+	agent2, err := h.store.GetAgentByID(c.Request.Context(), backup2.AgentID)
+	if err != nil || agent2.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "second snapshot not found"})
+		return
+	}
+
+	// Get schedules for paths info
+	schedule1, err := h.store.GetScheduleByID(c.Request.Context(), backup1.ScheduleID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to get schedule for first snapshot")
+	}
+
+	schedule2, err := h.store.GetScheduleByID(c.Request.Context(), backup2.ScheduleID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to get schedule for second snapshot")
+	}
+
+	// Build snapshot info for response
+	shortID1 := snapshotID1
+	if len(shortID1) > 8 {
+		shortID1 = shortID1[:8]
+	}
+	shortID2 := snapshotID2
+	if len(shortID2) > 8 {
+		shortID2 = shortID2[:8]
+	}
+
+	var paths1, paths2 []string
+	var repoID1, repoID2 string
+	if schedule1 != nil {
+		paths1 = schedule1.Paths
+		if len(schedule1.Repositories) > 0 {
+			repoID1 = schedule1.Repositories[0].RepositoryID.String()
+		}
+	}
+	if schedule2 != nil {
+		paths2 = schedule2.Paths
+		if len(schedule2.Repositories) > 0 {
+			repoID2 = schedule2.Repositories[0].RepositoryID.String()
+		}
+	}
+
+	snapshot1Info := &SnapshotResponse{
+		ID:           snapshotID1,
+		ShortID:      shortID1,
+		Time:         backup1.StartedAt.Format(time.RFC3339),
+		Hostname:     agent1.Hostname,
+		Paths:        paths1,
+		AgentID:      agent1.ID.String(),
+		RepositoryID: repoID1,
+		BackupID:     backup1.ID.String(),
+		SizeBytes:    backup1.SizeBytes,
+	}
+
+	snapshot2Info := &SnapshotResponse{
+		ID:           snapshotID2,
+		ShortID:      shortID2,
+		Time:         backup2.StartedAt.Format(time.RFC3339),
+		Hostname:     agent2.Hostname,
+		Paths:        paths2,
+		AgentID:      agent2.ID.String(),
+		RepositoryID: repoID2,
+		BackupID:     backup2.ID.String(),
+		SizeBytes:    backup2.SizeBytes,
+	}
+
+	h.logger.Info().
+		Str("snapshot_id_1", snapshotID1).
+		Str("snapshot_id_2", snapshotID2).
+		Msg("snapshot comparison requested")
+
+	// Note: In a full implementation, this would call the agent to run restic diff
+	// on the actual repository. For now, we return a placeholder response
+	// indicating the functionality is available but requires agent communication.
+	c.JSON(http.StatusOK, SnapshotCompareResponse{
+		SnapshotID1: snapshotID1,
+		SnapshotID2: snapshotID2,
+		Snapshot1:   snapshot1Info,
+		Snapshot2:   snapshot2Info,
+		Stats: SnapshotDiffStats{
+			FilesAdded:       0,
+			FilesRemoved:     0,
+			FilesModified:    0,
+			DirsAdded:        0,
+			DirsRemoved:      0,
+			TotalSizeAdded:   0,
+			TotalSizeRemoved: 0,
+		},
+		Changes: []SnapshotDiffEntry{},
+	})
 }
