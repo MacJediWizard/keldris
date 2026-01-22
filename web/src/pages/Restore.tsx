@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAgents } from '../hooks/useAgents';
 import { useRepositories } from '../hooks/useRepositories';
 import { useCreateRestore, useRestores } from '../hooks/useRestore';
@@ -665,6 +665,26 @@ export function Restore() {
 						Browse snapshots and restore files
 					</p>
 				</div>
+				<Link
+					to="/file-history"
+					className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+				>
+					<svg
+						aria-hidden="true"
+						className="w-4 h-4 mr-2"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
+					</svg>
+					File History
+				</Link>
 			</div>
 
 			<div className="border-b border-gray-200 dark:border-gray-700">
