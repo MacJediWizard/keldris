@@ -751,3 +751,55 @@ export interface VerificationsResponse {
 export interface VerificationSchedulesResponse {
 	schedules: VerificationSchedule[];
 }
+
+// Repository Import types
+export interface VerifyImportAccessRequest {
+	type: RepositoryType;
+	config: BackendConfig;
+	password: string;
+}
+
+export interface VerifyImportAccessResponse {
+	success: boolean;
+	message: string;
+}
+
+export interface ImportPreviewRequest {
+	type: RepositoryType;
+	config: BackendConfig;
+	password: string;
+}
+
+export interface SnapshotPreview {
+	id: string;
+	short_id: string;
+	time: string;
+	hostname: string;
+	username: string;
+	paths: string[];
+	tags?: string[];
+}
+
+export interface ImportPreviewResponse {
+	snapshot_count: number;
+	snapshots: SnapshotPreview[];
+	hostnames: string[];
+	total_size: number;
+	total_file_count: number;
+}
+
+export interface ImportRepositoryRequest {
+	name: string;
+	type: RepositoryType;
+	config: BackendConfig;
+	password: string;
+	escrow_enabled?: boolean;
+	snapshot_ids?: string[];
+	hostnames?: string[];
+	agent_id?: string;
+}
+
+export interface ImportRepositoryResponse {
+	repository: Repository;
+	snapshots_imported: number;
+}

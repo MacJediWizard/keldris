@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ImportRepositoryWizard } from '../components/features/ImportRepositoryWizard';
 import {
 	useCreateRepository,
 	useDeleteRepository,
@@ -1075,6 +1076,12 @@ export function Repositories() {
 		repositoryName: string;
 		password: string;
 	}>({ isOpen: false, repositoryName: '', password: '' });
+	const [showImportWizard, setShowImportWizard] = useState(false);
+	const [importSuccessModal, setImportSuccessModal] = useState<{
+		isOpen: boolean;
+		repositoryName: string;
+		snapshotsImported: number;
+	}>({ isOpen: false, repositoryName: '', snapshotsImported: 0 });
 
 	const { data: repositories, isLoading, isError } = useRepositories();
 	const deleteRepository = useDeleteRepository();
@@ -1140,6 +1147,18 @@ export function Repositories() {
 		});
 	};
 
+	const handleImportSuccess = (
+		repositoryName: string,
+		snapshotsImported: number,
+	) => {
+		setShowImportWizard(false);
+		setImportSuccessModal({
+			isOpen: true,
+			repositoryName,
+			snapshotsImported,
+		});
+	};
+
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
@@ -1149,30 +1168,53 @@ export function Repositories() {
 						Configure backup storage destinations
 					</p>
 				</div>
-				<button
-					type="button"
-					onClick={() => {
-						setSelectedType(undefined);
-						setShowAddModal(true);
-					}}
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						aria-hidden="true"
-						className="w-5 h-5"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
+				<div className="flex items-center gap-3">
+					<button
+						type="button"
+						onClick={() => setShowImportWizard(true)}
+						className="inline-flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
 					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 4v16m8-8H4"
-						/>
-					</svg>
-					Add Repository
-				</button>
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+							/>
+						</svg>
+						Import Existing
+					</button>
+					<button
+						type="button"
+						onClick={() => {
+							setSelectedType(undefined);
+							setShowAddModal(true);
+						}}
+						className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+					>
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M12 4v16m8-8H4"
+							/>
+						</svg>
+						Add Repository
+					</button>
+				</div>
 			</div>
 
 			<div className="bg-white rounded-lg border border-gray-200">
@@ -1337,6 +1379,74 @@ export function Repositories() {
 				repositoryName={recoveredKeyModal.repositoryName}
 				password={recoveredKeyModal.password}
 			/>
+
+			<ImportRepositoryWizard
+				isOpen={showImportWizard}
+				onClose={() => setShowImportWizard(false)}
+				onSuccess={handleImportSuccess}
+			/>
+
+			{importSuccessModal.isOpen && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+						<div className="flex items-center gap-3 mb-4">
+							<div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+								<svg
+									aria-hidden="true"
+									className="w-5 h-5 text-green-600"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M5 13l4 4L19 7"
+									/>
+								</svg>
+							</div>
+							<div>
+								<h3 className="text-lg font-semibold text-gray-900">
+									Repository Imported
+								</h3>
+								<p className="text-sm text-gray-500">
+									Successfully imported existing repository
+								</p>
+							</div>
+						</div>
+
+						<div className="bg-gray-50 rounded-lg p-4 mb-4">
+							<p className="text-sm text-gray-700">
+								<span className="font-medium">
+									{importSuccessModal.repositoryName}
+								</span>{' '}
+								has been imported with{' '}
+								<span className="font-medium">
+									{importSuccessModal.snapshotsImported}
+								</span>{' '}
+								snapshot{importSuccessModal.snapshotsImported !== 1 ? 's' : ''}.
+							</p>
+						</div>
+
+						<div className="flex justify-end">
+							<button
+								type="button"
+								onClick={() =>
+									setImportSuccessModal({
+										isOpen: false,
+										repositoryName: '',
+										snapshotsImported: 0,
+									})
+								}
+								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+							>
+								Done
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
