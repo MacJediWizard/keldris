@@ -4,9 +4,9 @@ import { SnapshotComments } from '../components/features/SnapshotComments';
 import { useAgents } from '../hooks/useAgents';
 import { useMe } from '../hooks/useAuth';
 import {
-	useLegalHolds,
 	useCreateLegalHold,
 	useDeleteLegalHold,
+	useLegalHolds,
 } from '../hooks/useLegalHolds';
 import { useRepositories } from '../hooks/useRepositories';
 import {
