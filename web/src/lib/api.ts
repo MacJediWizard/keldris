@@ -606,12 +606,16 @@ export const restoresApi = {
 
 // File History API
 export const fileHistoryApi = {
-	getHistory: async (params: FileHistoryParams): Promise<FileHistoryResponse> => {
+	getHistory: async (
+		params: FileHistoryParams,
+	): Promise<FileHistoryResponse> => {
 		const searchParams = new URLSearchParams();
 		searchParams.set('path', params.path);
 		searchParams.set('agent_id', params.agent_id);
 		searchParams.set('repository_id', params.repository_id);
-		return fetchApi<FileHistoryResponse>(`/files/history?${searchParams.toString()}`);
+		return fetchApi<FileHistoryResponse>(
+			`/files/history?${searchParams.toString()}`,
+		);
 	},
 };
 

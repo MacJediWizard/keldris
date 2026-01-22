@@ -60,9 +60,7 @@ function VersionRow({
 				{/* Timeline dot */}
 				<div
 					className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center ${
-						isLatest
-							? 'bg-indigo-600 text-white'
-							: 'bg-gray-200 text-gray-600'
+						isLatest ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'
 					}`}
 				>
 					<svg
