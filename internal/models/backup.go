@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,31 +30,33 @@ type ExcludedLargeFile struct {
 
 // Backup represents a single backup execution record.
 type Backup struct {
-	ID                 uuid.UUID           `json:"id"`
-	ScheduleID         uuid.UUID           `json:"schedule_id"`
-	AgentID            uuid.UUID           `json:"agent_id"`
-	RepositoryID       *uuid.UUID          `json:"repository_id,omitempty"`
-	SnapshotID         string              `json:"snapshot_id,omitempty"`
-	StartedAt          time.Time           `json:"started_at"`
-	CompletedAt        *time.Time          `json:"completed_at,omitempty"`
-	Status             BackupStatus        `json:"status"`
-	SizeBytes          *int64              `json:"size_bytes,omitempty"`
-	FilesNew           *int                `json:"files_new,omitempty"`
-	FilesChanged       *int                `json:"files_changed,omitempty"`
-	ErrorMessage       string              `json:"error_message,omitempty"`
-	RetentionApplied   bool                `json:"retention_applied"`
-	SnapshotsRemoved   *int                `json:"snapshots_removed,omitempty"`
-	SnapshotsKept      *int                `json:"snapshots_kept,omitempty"`
-	RetentionError     string              `json:"retention_error,omitempty"`
-	PreScriptOutput    string              `json:"pre_script_output,omitempty"`
-	PreScriptError     string              `json:"pre_script_error,omitempty"`
-	PostScriptOutput   string              `json:"post_script_output,omitempty"`
-	PostScriptError    string              `json:"post_script_error,omitempty"`
-	ExcludedLargeFiles []ExcludedLargeFile `json:"excluded_large_files,omitempty"` // Files excluded due to size limit
-	Resumed            bool                `json:"resumed"`                        // True if this backup was resumed from a checkpoint
-	CheckpointID       *uuid.UUID          `json:"checkpoint_id,omitempty"`        // Associated checkpoint if resumed
-	OriginalBackupID   *uuid.UUID          `json:"original_backup_id,omitempty"`   // Original backup that was interrupted
-	CreatedAt          time.Time           `json:"created_at"`
+	ID                      uuid.UUID           `json:"id"`
+	ScheduleID              uuid.UUID           `json:"schedule_id"`
+	AgentID                 uuid.UUID           `json:"agent_id"`
+	RepositoryID            *uuid.UUID          `json:"repository_id,omitempty"`
+	SnapshotID              string              `json:"snapshot_id,omitempty"`
+	StartedAt               time.Time           `json:"started_at"`
+	CompletedAt             *time.Time          `json:"completed_at,omitempty"`
+	Status                  BackupStatus        `json:"status"`
+	SizeBytes               *int64              `json:"size_bytes,omitempty"`
+	FilesNew                *int                `json:"files_new,omitempty"`
+	FilesChanged            *int                `json:"files_changed,omitempty"`
+	ErrorMessage            string              `json:"error_message,omitempty"`
+	RetentionApplied        bool                `json:"retention_applied"`
+	SnapshotsRemoved        *int                `json:"snapshots_removed,omitempty"`
+	SnapshotsKept           *int                `json:"snapshots_kept,omitempty"`
+	RetentionError          string              `json:"retention_error,omitempty"`
+	PreScriptOutput         string              `json:"pre_script_output,omitempty"`
+	PreScriptError          string              `json:"pre_script_error,omitempty"`
+	PostScriptOutput        string              `json:"post_script_output,omitempty"`
+	PostScriptError         string              `json:"post_script_error,omitempty"`
+	ExcludedLargeFiles      []ExcludedLargeFile `json:"excluded_large_files,omitempty"` // Files excluded due to size limit
+	Resumed                 bool                `json:"resumed"`                        // True if this backup was resumed from a checkpoint
+	CheckpointID            *uuid.UUID          `json:"checkpoint_id,omitempty"`        // Associated checkpoint if resumed
+	OriginalBackupID        *uuid.UUID          `json:"original_backup_id,omitempty"`   // Original backup that was interrupted
+	ClassificationLevel     string              `json:"classification_level,omitempty"` // Data classification level
+	ClassificationDataTypes []string            `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	CreatedAt               time.Time           `json:"created_at"`
 }
 
 // NewBackup creates a new Backup record for the given schedule, agent, and repository.
@@ -158,4 +161,21 @@ func (b *Backup) RecordPostScript(output string, err error) {
 // RecordExcludedLargeFiles records files that were excluded due to size limits.
 func (b *Backup) RecordExcludedLargeFiles(files []ExcludedLargeFile) {
 	b.ExcludedLargeFiles = files
+}
+
+// SetClassificationDataTypes sets the classification data types from JSON bytes.
+func (b *Backup) SetClassificationDataTypes(data []byte) error {
+	if len(data) == 0 {
+		b.ClassificationDataTypes = []string{"general"}
+		return nil
+	}
+	return json.Unmarshal(data, &b.ClassificationDataTypes)
+}
+
+// ClassificationDataTypesJSON returns the classification data types as JSON bytes.
+func (b *Backup) ClassificationDataTypesJSON() ([]byte, error) {
+	if len(b.ClassificationDataTypes) == 0 {
+		return []byte(`["general"]`), nil
+	}
+	return json.Marshal(b.ClassificationDataTypes)
 }
