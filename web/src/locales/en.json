@@ -55,6 +55,8 @@
     "schedules": "Schedules",
     "backups": "Backups",
     "restore": "Restore",
+    "fileSearch": "File Search",
+    "fileHistory": "File History",
     "alerts": "Alerts",
     "notifications": "Notifications",
     "auditLogs": "Audit Logs",

@@ -95,6 +95,8 @@ import type {
 	ExtendImmutabilityLockRequest,
 	FileHistoryParams,
 	FileHistoryResponse,
+	FileSearchParams,
+	FileSearchResponse,
 	FleetHealthSummary,
 	GeoRegion,
 	GeoReplicationConfig,
@@ -841,6 +843,42 @@ export const fileHistoryApi = {
 		searchParams.set('repository_id', params.repository_id);
 		return fetchApi<FileHistoryResponse>(
 			`/files/history?${searchParams.toString()}`,
+		);
+	},
+};
+
+// File Search API
+export const fileSearchApi = {
+	search: async (params: FileSearchParams): Promise<FileSearchResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', params.q);
+		searchParams.set('agent_id', params.agent_id);
+		searchParams.set('repository_id', params.repository_id);
+
+		if (params.path) {
+			searchParams.set('path', params.path);
+		}
+		if (params.snapshot_ids) {
+			searchParams.set('snapshot_ids', params.snapshot_ids);
+		}
+		if (params.date_from) {
+			searchParams.set('date_from', params.date_from);
+		}
+		if (params.date_to) {
+			searchParams.set('date_to', params.date_to);
+		}
+		if (params.size_min !== undefined) {
+			searchParams.set('size_min', params.size_min.toString());
+		}
+		if (params.size_max !== undefined) {
+			searchParams.set('size_max', params.size_max.toString());
+		}
+		if (params.limit !== undefined) {
+			searchParams.set('limit', params.limit.toString());
+		}
+
+		return fetchApi<FileSearchResponse>(
+			`/search/files?${searchParams.toString()}`,
 		);
 	},
 };

@@ -55,6 +55,8 @@
     "schedules": "Agendamentos",
     "backups": "Backups",
     "restore": "Restaurar",
+    "fileSearch": "Buscar arquivos",
+    "fileHistory": "Histórico de arquivos",
     "alerts": "Alertas",
     "notifications": "Notificações",
     "auditLogs": "Logs de auditoria",
