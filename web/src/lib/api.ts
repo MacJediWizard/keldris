@@ -49,6 +49,7 @@ import type {
 	CreateDRTestScheduleRequest,
 	CreateExcludePatternRequest,
 	CreateImmutabilityLockRequest,
+	CreateLegalHoldRequest,
 	CreateMaintenanceWindowRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
@@ -97,6 +98,8 @@ import type {
 	InviteMemberRequest,
 	InviteResponse,
 	KeyRecoveryResponse,
+	LegalHold,
+	LegalHoldsResponse,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
 	MembersResponse,
@@ -1741,4 +1744,29 @@ export const immutabilityApi = {
 		);
 		return response.locks ?? [];
 	},
+};
+
+// Legal Holds API
+export const legalHoldsApi = {
+	list: async (): Promise<LegalHold[]> => {
+		const response = await fetchApi<LegalHoldsResponse>('/legal-holds');
+		return response.legal_holds ?? [];
+	},
+
+	get: async (snapshotId: string): Promise<LegalHold> =>
+		fetchApi<LegalHold>(`/snapshots/${snapshotId}/hold`),
+
+	create: async (
+		snapshotId: string,
+		data: CreateLegalHoldRequest,
+	): Promise<LegalHold> =>
+		fetchApi<LegalHold>(`/snapshots/${snapshotId}/hold`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (snapshotId: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/snapshots/${snapshotId}/hold`, {
+			method: 'DELETE',
+		}),
 };
