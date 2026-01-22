@@ -1544,6 +1544,8 @@ export interface ReportPreviewResponse {
 		start: string;
 		end: string;
 	};
+}
+
 // Onboarding types
 export type OnboardingStep =
 	| 'welcome'
