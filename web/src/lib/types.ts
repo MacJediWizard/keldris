@@ -2086,3 +2086,22 @@ export interface UpdateRepositoryImmutabilitySettingsRequest {
 export interface ImmutabilityLocksResponse {
 	locks: ImmutabilityLock[];
 }
+
+// Legal Hold types
+export interface LegalHold {
+	id: string;
+	snapshot_id: string;
+	reason: string;
+	placed_by: string;
+	placed_by_name: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateLegalHoldRequest {
+	reason: string;
+}
+
+export interface LegalHoldsResponse {
+	legal_holds: LegalHold[];
+}
