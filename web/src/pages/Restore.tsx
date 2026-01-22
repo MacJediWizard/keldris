@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAgents } from '../hooks/useAgents';
 import { useRepositories } from '../hooks/useRepositories';
 import { useCreateRestore, useRestores } from '../hooks/useRestore';
@@ -14,6 +15,9 @@ import { formatBytes, formatDate, formatDateTime } from '../lib/utils';
 function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
+			<td className="px-6 py-4">
+				<div className="h-4 w-4 bg-gray-200 rounded" />
+			</td>
 			<td className="px-6 py-4">
 				<div className="h-4 w-20 bg-gray-200 rounded" />
 			</td>
@@ -74,6 +78,9 @@ interface SnapshotRowProps {
 	agentName?: string;
 	repoName?: string;
 	onSelect: (snapshot: Snapshot) => void;
+	isSelectedForCompare: boolean;
+	onToggleCompare: (snapshotId: string) => void;
+	compareSelectionCount: number;
 }
 
 function SnapshotRow({
@@ -81,9 +88,26 @@ function SnapshotRow({
 	agentName,
 	repoName,
 	onSelect,
+	isSelectedForCompare,
+	onToggleCompare,
+	compareSelectionCount,
 }: SnapshotRowProps) {
 	return (
 		<tr className="hover:bg-gray-50">
+			<td className="px-6 py-4">
+				<input
+					type="checkbox"
+					checked={isSelectedForCompare}
+					onChange={() => onToggleCompare(snapshot.id)}
+					disabled={!isSelectedForCompare && compareSelectionCount >= 2}
+					className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
+					title={
+						!isSelectedForCompare && compareSelectionCount >= 2
+							? 'Deselect a snapshot to select another'
+							: 'Select for comparison'
+					}
+				/>
+			</td>
 			<td className="px-6 py-4">
 				<code className="text-sm font-mono text-gray-900">
 					{snapshot.short_id}
@@ -536,6 +560,7 @@ function RestoreModal({
 }
 
 export function Restore() {
+	const navigate = useNavigate();
 	const [activeTab, setActiveTab] = useState<'snapshots' | 'restores'>(
 		'snapshots',
 	);
@@ -546,6 +571,9 @@ export function Restore() {
 	);
 	const [selectedRestore, setSelectedRestore] = useState<RestoreType | null>(
 		null,
+	);
+	const [compareSelection, setCompareSelection] = useState<Set<string>>(
+		new Set(),
 	);
 
 	const { data: agents } = useAgents();
@@ -590,6 +618,24 @@ export function Restore() {
 		);
 	};
 
+	const toggleCompareSelection = (snapshotId: string) => {
+		const newSelection = new Set(compareSelection);
+		if (newSelection.has(snapshotId)) {
+			newSelection.delete(snapshotId);
+		} else if (newSelection.size < 2) {
+			newSelection.add(snapshotId);
+		}
+		setCompareSelection(newSelection);
+	};
+
+	const handleCompare = () => {
+		if (compareSelection.size !== 2) return;
+		const [snapshot1, snapshot2] = Array.from(compareSelection);
+		navigate(
+			`/snapshots/compare?snapshot1=${snapshot1}&snapshot2=${snapshot2}`,
+		);
+	};
+
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
@@ -630,32 +676,65 @@ export function Restore() {
 
 			<div className="bg-white rounded-lg border border-gray-200">
 				<div className="p-6 border-b border-gray-200">
-					<div className="flex items-center gap-4">
-						<select
-							value={agentFilter}
-							onChange={(e) => setAgentFilter(e.target.value)}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Agents</option>
-							{agents?.map((agent) => (
-								<option key={agent.id} value={agent.id}>
-									{agent.hostname}
-								</option>
-							))}
-						</select>
-						{activeTab === 'snapshots' && (
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-4">
 							<select
-								value={repoFilter}
-								onChange={(e) => setRepoFilter(e.target.value)}
+								value={agentFilter}
+								onChange={(e) => setAgentFilter(e.target.value)}
 								className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							>
-								<option value="all">All Repositories</option>
-								{repositories?.map((repo) => (
-									<option key={repo.id} value={repo.id}>
-										{repo.name}
+								<option value="all">All Agents</option>
+								{agents?.map((agent) => (
+									<option key={agent.id} value={agent.id}>
+										{agent.hostname}
 									</option>
 								))}
 							</select>
+							{activeTab === 'snapshots' && (
+								<select
+									value={repoFilter}
+									onChange={(e) => setRepoFilter(e.target.value)}
+									className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								>
+									<option value="all">All Repositories</option>
+									{repositories?.map((repo) => (
+										<option key={repo.id} value={repo.id}>
+											{repo.name}
+										</option>
+									))}
+								</select>
+							)}
+						</div>
+						{activeTab === 'snapshots' && (
+							<div className="flex items-center gap-3">
+								{compareSelection.size > 0 && (
+									<span className="text-sm text-gray-500">
+										{compareSelection.size} selected
+									</span>
+								)}
+								<button
+									type="button"
+									onClick={handleCompare}
+									disabled={compareSelection.size !== 2}
+									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+								>
+									<svg
+										aria-hidden="true"
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+										/>
+									</svg>
+									Compare
+								</button>
+							</div>
 						)}
 					</div>
 				</div>
@@ -671,6 +750,9 @@ export function Restore() {
 							<table className="w-full">
 								<thead className="bg-gray-50 border-b border-gray-200">
 									<tr>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+											<span className="sr-only">Compare</span>
+										</th>
 										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 											Snapshot ID
 										</th>
@@ -701,6 +783,9 @@ export function Restore() {
 							<table className="w-full">
 								<thead className="bg-gray-50 border-b border-gray-200">
 									<tr>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+											<span className="sr-only">Compare</span>
+										</th>
 										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 											Snapshot ID
 										</th>
@@ -729,6 +814,9 @@ export function Restore() {
 											agentName={agentMap.get(snapshot.agent_id)}
 											repoName={repoMap.get(snapshot.repository_id)}
 											onSelect={setSelectedSnapshot}
+											isSelectedForCompare={compareSelection.has(snapshot.id)}
+											onToggleCompare={toggleCompareSelection}
+											compareSelectionCount={compareSelection.size}
 										/>
 									))}
 								</tbody>

@@ -379,6 +379,37 @@ export interface SnapshotFilesResponse {
 	message?: string;
 }
 
+// Snapshot comparison types
+export type SnapshotDiffChangeType = 'added' | 'removed' | 'modified';
+
+export interface SnapshotDiffEntry {
+	path: string;
+	change_type: SnapshotDiffChangeType;
+	type: 'file' | 'dir';
+	old_size?: number;
+	new_size?: number;
+	size_change?: number;
+}
+
+export interface SnapshotDiffStats {
+	files_added: number;
+	files_removed: number;
+	files_modified: number;
+	dirs_added: number;
+	dirs_removed: number;
+	total_size_added: number;
+	total_size_removed: number;
+}
+
+export interface SnapshotCompareResponse {
+	snapshot_id_1: string;
+	snapshot_id_2: string;
+	snapshot_1?: Snapshot;
+	snapshot_2?: Snapshot;
+	stats: SnapshotDiffStats;
+	changes: SnapshotDiffEntry[];
+}
+
 // Restore types
 export type RestoreStatus =
 	| 'pending'
