@@ -83,6 +83,10 @@ import type {
 	FileHistoryParams,
 	FileHistoryResponse,
 	FleetHealthSummary,
+	ImportPreviewRequest,
+	ImportPreviewResponse,
+	ImportRepositoryRequest,
+	ImportRepositoryResponse,
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
@@ -186,6 +190,8 @@ import type {
 	VerificationSchedulesResponse,
 	VerificationStatusResponse,
 	VerificationsResponse,
+	VerifyImportAccessRequest,
+	VerifyImportAccessResponse,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -449,6 +455,31 @@ export const repositoriesApi = {
 
 	recoverKey: async (id: string): Promise<KeyRecoveryResponse> =>
 		fetchApi<KeyRecoveryResponse>(`/repositories/${id}/key/recover`),
+};
+
+// Repository Import API
+export const repositoryImportApi = {
+	verifyAccess: async (
+		data: VerifyImportAccessRequest,
+	): Promise<VerifyImportAccessResponse> =>
+		fetchApi<VerifyImportAccessResponse>('/repositories/import/verify', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	preview: async (data: ImportPreviewRequest): Promise<ImportPreviewResponse> =>
+		fetchApi<ImportPreviewResponse>('/repositories/import/preview', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	import: async (
+		data: ImportRepositoryRequest,
+	): Promise<ImportRepositoryResponse> =>
+		fetchApi<ImportRepositoryResponse>('/repositories/import', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Schedules API
