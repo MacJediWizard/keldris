@@ -12,6 +12,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
 import { Notifications } from './pages/Notifications';
+import { Onboarding } from './pages/Onboarding';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSettings } from './pages/OrganizationSettings';
 import { Policies } from './pages/Policies';
@@ -72,6 +73,7 @@ function App() {
 						/>
 						<Route path="organization/maintenance" element={<Maintenance />} />
 						<Route path="organization/new" element={<NewOrganization />} />
+						<Route path="onboarding" element={<Onboarding />} />
 					</Route>
 				</Routes>
 			</BrowserRouter>

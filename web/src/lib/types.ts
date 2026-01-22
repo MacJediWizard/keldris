@@ -1545,3 +1545,22 @@ export interface ReportPreviewResponse {
 		end: string;
 	};
 }
+
+// Onboarding types
+export type OnboardingStep =
+	| 'welcome'
+	| 'organization'
+	| 'smtp'
+	| 'repository'
+	| 'agent'
+	| 'schedule'
+	| 'verify'
+	| 'complete';
+
+export interface OnboardingStatus {
+	needs_onboarding: boolean;
+	current_step: OnboardingStep;
+	completed_steps: OnboardingStep[];
+	skipped: boolean;
+	is_complete: boolean;
+}
