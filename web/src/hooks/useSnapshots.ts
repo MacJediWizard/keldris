@@ -30,3 +30,12 @@ export function useSnapshotFiles(snapshotId: string, path?: string) {
 		staleTime: 60 * 1000, // 1 minute (files don't change)
 	});
 }
+
+export function useSnapshotCompare(snapshotId1: string, snapshotId2: string) {
+	return useQuery({
+		queryKey: ['snapshots', 'compare', snapshotId1, snapshotId2],
+		queryFn: () => snapshotsApi.compare(snapshotId1, snapshotId2),
+		enabled: !!snapshotId1 && !!snapshotId2,
+		staleTime: 60 * 1000, // 1 minute (comparison results don't change)
+	});
+}
