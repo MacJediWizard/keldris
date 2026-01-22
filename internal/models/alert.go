@@ -23,6 +23,8 @@ const (
 	AlertTypeAgentHealthCritical AlertType = "agent_health_critical"
 	// AlertTypeReplicationLag indicates geo-replication has fallen behind.
 	AlertTypeReplicationLag AlertType = "replication_lag"
+	// AlertTypeRansomwareSuspected indicates potential ransomware activity was detected.
+	AlertTypeRansomwareSuspected AlertType = "ransomware_suspected"
 )
 
 // AlertSeverity represents the severity level of an alert.
