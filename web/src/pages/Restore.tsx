@@ -2,6 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SnapshotComments } from '../components/features/SnapshotComments';
 import { useAgents } from '../hooks/useAgents';
+import { useMe } from '../hooks/useAuth';
+import {
+	useLegalHolds,
+	useCreateLegalHold,
+	useDeleteLegalHold,
+} from '../hooks/useLegalHolds';
 import { useRepositories } from '../hooks/useRepositories';
 import { useCreateRestore, useRestores } from '../hooks/useRestore';
 import { useSnapshotComments } from '../hooks/useSnapshotComments';
@@ -105,6 +111,32 @@ function CommentIndicator({ snapshotId }: { snapshotId: string }) {
 	);
 }
 
+function HoldIndicator({ hasHold }: { hasHold: boolean }) {
+	if (!hasHold) return null;
+
+	return (
+		<span
+			className="inline-flex items-center ml-2 text-amber-500"
+			title="Legal hold - cannot be deleted"
+		>
+			<svg
+				aria-hidden="true"
+				className="w-4 h-4"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+				/>
+			</svg>
+		</span>
+	);
+}
+
 interface SnapshotRowProps {
 	snapshot: Snapshot;
 	agentName?: string;
@@ -113,6 +145,10 @@ interface SnapshotRowProps {
 	isSelectedForCompare: boolean;
 	onToggleCompare: (snapshotId: string) => void;
 	compareSelectionCount: number;
+	hasHold: boolean;
+	isAdmin: boolean;
+	onToggleHold: (snapshotId: string, hasHold: boolean) => void;
+	isHoldLoading: boolean;
 }
 
 function SnapshotRow({
@@ -123,6 +159,10 @@ function SnapshotRow({
 	isSelectedForCompare,
 	onToggleCompare,
 	compareSelectionCount,
+	hasHold,
+	isAdmin,
+	onToggleHold,
+	isHoldLoading,
 }: SnapshotRowProps) {
 	return (
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -145,6 +185,7 @@ function SnapshotRow({
 					<code className="text-sm font-mono text-gray-900">
 						{snapshot.short_id}
 					</code>
+					<HoldIndicator hasHold={hasHold} />
 					<CommentIndicator snapshotId={snapshot.id} />
 				</div>
 			</td>
@@ -161,13 +202,43 @@ function SnapshotRow({
 				{formatDate(snapshot.time)}
 			</td>
 			<td className="px-6 py-4 text-right">
-				<button
-					type="button"
-					onClick={() => onSelect(snapshot)}
-					className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
-				>
-					Restore
-				</button>
+				<div className="flex items-center justify-end gap-2">
+					{isAdmin && (
+						<button
+							type="button"
+							onClick={() => onToggleHold(snapshot.id, hasHold)}
+							disabled={isHoldLoading}
+							className={`p-1.5 rounded transition-colors ${
+								hasHold
+									? 'text-amber-600 hover:bg-amber-50'
+									: 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+							} disabled:opacity-50`}
+							title={hasHold ? 'Remove legal hold' : 'Place legal hold'}
+						>
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill={hasHold ? 'currentColor' : 'none'}
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+								/>
+							</svg>
+						</button>
+					)}
+					<button
+						type="button"
+						onClick={() => onSelect(snapshot)}
+						className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
+					>
+						Restore
+					</button>
+				</div>
 			</td>
 		</tr>
 	);
@@ -632,7 +703,12 @@ export function Restore() {
 	const [compareSelection, setCompareSelection] = useState<Set<string>>(
 		new Set(),
 	);
+	const [holdModalSnapshot, setHoldModalSnapshot] = useState<string | null>(
+		null,
+	);
+	const [holdReason, setHoldReason] = useState('');
 
+	const { data: user } = useMe();
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
 	const {
@@ -652,6 +728,17 @@ export function Restore() {
 	});
 	const createRestore = useCreateRestore();
 
+	// Legal holds
+	const { data: legalHolds } = useLegalHolds();
+	const createLegalHold = useCreateLegalHold();
+	const deleteLegalHold = useDeleteLegalHold();
+
+	const isAdmin =
+		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
+
+	// Build a set of snapshot IDs that have legal holds
+	const holdsSet = new Set(legalHolds?.map((h) => h.snapshot_id) ?? []);
+
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
 
@@ -670,6 +757,33 @@ export function Restore() {
 				onSuccess: () => {
 					setSelectedSnapshot(null);
 					setActiveTab('restores');
+				},
+			},
+		);
+	};
+
+	const handleToggleHold = (snapshotId: string, hasHold: boolean) => {
+		if (hasHold) {
+			// Remove hold
+			deleteLegalHold.mutate(snapshotId);
+		} else {
+			// Show modal to add hold
+			setHoldModalSnapshot(snapshotId);
+			setHoldReason('');
+		}
+	};
+
+	const handleCreateHold = () => {
+		if (!holdModalSnapshot || !holdReason.trim()) return;
+		createLegalHold.mutate(
+			{
+				snapshotId: holdModalSnapshot,
+				data: { reason: holdReason.trim() },
+			},
+			{
+				onSuccess: () => {
+					setHoldModalSnapshot(null);
+					setHoldReason('');
 				},
 			},
 		);
@@ -896,6 +1010,12 @@ export function Restore() {
 											isSelectedForCompare={compareSelection.has(snapshot.id)}
 											onToggleCompare={toggleCompareSelection}
 											compareSelectionCount={compareSelection.size}
+											hasHold={holdsSet.has(snapshot.id)}
+											isAdmin={isAdmin}
+											onToggleHold={handleToggleHold}
+											isHoldLoading={
+												createLegalHold.isPending || deleteLegalHold.isPending
+											}
 										/>
 									))}
 								</tbody>
@@ -1038,6 +1158,84 @@ export function Restore() {
 					agentName={agentMap.get(selectedRestore.agent_id)}
 					onClose={() => setSelectedRestore(null)}
 				/>
+			)}
+
+			{/* Legal Hold Modal */}
+			{holdModalSnapshot && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+						<div className="flex items-center gap-3 mb-4">
+							<div className="p-2 bg-amber-100 rounded-full">
+								<svg
+									aria-hidden="true"
+									className="w-6 h-6 text-amber-600"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+									/>
+								</svg>
+							</div>
+							<div>
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+									Place Legal Hold
+								</h3>
+								<p className="text-sm text-gray-500 dark:text-gray-400">
+									Snapshot {holdModalSnapshot.substring(0, 8)}...
+								</p>
+							</div>
+						</div>
+
+						<p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+							This will prevent the snapshot from being deleted by retention
+							policies or manual deletion. All hold actions are recorded in the
+							audit log.
+						</p>
+
+						<div className="mb-4">
+							<label
+								htmlFor="hold-reason"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Reason for hold
+							</label>
+							<textarea
+								id="hold-reason"
+								value={holdReason}
+								onChange={(e) => setHoldReason(e.target.value)}
+								placeholder="e.g., Legal discovery request #12345"
+								rows={3}
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+						</div>
+
+						<div className="flex justify-end gap-3">
+							<button
+								type="button"
+								onClick={() => {
+									setHoldModalSnapshot(null);
+									setHoldReason('');
+								}}
+								className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={handleCreateHold}
+								disabled={!holdReason.trim() || createLegalHold.isPending}
+								className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
+							>
+								{createLegalHold.isPending ? 'Placing Hold...' : 'Place Hold'}
+							</button>
+						</div>
+					</div>
+				</div>
 			)}
 		</div>
 	);
