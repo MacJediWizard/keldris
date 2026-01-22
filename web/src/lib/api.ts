@@ -21,6 +21,7 @@ import type {
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
 	CreateScheduleRequest,
+	CreateSSOGroupMappingRequest,
 	CreateVerificationScheduleRequest,
 	ErrorResponse,
 	InvitationsResponse,
@@ -57,6 +58,10 @@ import type {
 	Snapshot,
 	SnapshotFilesResponse,
 	SnapshotsResponse,
+	SSOGroupMapping,
+	SSOGroupMappingResponse,
+	SSOGroupMappingsResponse,
+	SSOSettings,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
 	StorageStatsSummary,
@@ -71,8 +76,11 @@ import type {
 	UpdateOrgRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
+	UpdateSSOGroupMappingRequest,
+	UpdateSSOSettingsRequest,
 	UpdateVerificationScheduleRequest,
 	User,
+	UserSSOGroups,
 	Verification,
 	VerificationSchedule,
 	VerificationSchedulesResponse,
@@ -749,4 +757,75 @@ export const verificationsApi = {
 		fetchApi<MessageResponse>(`/verification-schedules/${id}`, {
 			method: 'DELETE',
 		}),
+};
+
+// SSO Group Mappings API
+export const ssoGroupMappingsApi = {
+	list: async (orgId: string): Promise<SSOGroupMapping[]> => {
+		const response = await fetchApi<SSOGroupMappingsResponse>(
+			`/organizations/${orgId}/sso-group-mappings`,
+		);
+		return response.mappings ?? [];
+	},
+
+	get: async (orgId: string, id: string): Promise<SSOGroupMapping> => {
+		const response = await fetchApi<SSOGroupMappingResponse>(
+			`/organizations/${orgId}/sso-group-mappings/${id}`,
+		);
+		return response.mapping;
+	},
+
+	create: async (
+		orgId: string,
+		data: CreateSSOGroupMappingRequest,
+	): Promise<SSOGroupMapping> => {
+		const response = await fetchApi<SSOGroupMappingResponse>(
+			`/organizations/${orgId}/sso-group-mappings`,
+			{
+				method: 'POST',
+				body: JSON.stringify(data),
+			},
+		);
+		return response.mapping;
+	},
+
+	update: async (
+		orgId: string,
+		id: string,
+		data: UpdateSSOGroupMappingRequest,
+	): Promise<SSOGroupMapping> => {
+		const response = await fetchApi<SSOGroupMappingResponse>(
+			`/organizations/${orgId}/sso-group-mappings/${id}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		);
+		return response.mapping;
+	},
+
+	delete: async (orgId: string, id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/organizations/${orgId}/sso-group-mappings/${id}`,
+			{
+				method: 'DELETE',
+			},
+		),
+
+	// SSO Settings
+	getSettings: async (orgId: string): Promise<SSOSettings> =>
+		fetchApi<SSOSettings>(`/organizations/${orgId}/sso-settings`),
+
+	updateSettings: async (
+		orgId: string,
+		data: UpdateSSOSettingsRequest,
+	): Promise<SSOSettings> =>
+		fetchApi<SSOSettings>(`/organizations/${orgId}/sso-settings`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// User SSO Groups
+	getUserSSOGroups: async (userId: string): Promise<UserSSOGroups> =>
+		fetchApi<UserSSOGroups>(`/users/${userId}/sso-groups`),
 };

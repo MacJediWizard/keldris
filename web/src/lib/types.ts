@@ -231,6 +231,8 @@ export interface User {
 	name: string;
 	current_org_id?: string;
 	current_org_role?: string;
+	sso_groups?: string[];
+	sso_groups_synced_at?: string;
 }
 
 // Organization types
@@ -750,4 +752,50 @@ export interface VerificationsResponse {
 
 export interface VerificationSchedulesResponse {
 	schedules: VerificationSchedule[];
+}
+
+// SSO Group Mapping types
+export interface SSOGroupMapping {
+	id: string;
+	org_id: string;
+	oidc_group_name: string;
+	role: OrgRole;
+	auto_create_org: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateSSOGroupMappingRequest {
+	oidc_group_name: string;
+	role: OrgRole;
+	auto_create_org?: boolean;
+}
+
+export interface UpdateSSOGroupMappingRequest {
+	role?: OrgRole;
+	auto_create_org?: boolean;
+}
+
+export interface SSOGroupMappingResponse {
+	mapping: SSOGroupMapping;
+}
+
+export interface SSOGroupMappingsResponse {
+	mappings: SSOGroupMapping[];
+}
+
+export interface SSOSettings {
+	default_role: OrgRole | null;
+	auto_create_orgs: boolean;
+}
+
+export interface UpdateSSOSettingsRequest {
+	default_role?: OrgRole | null;
+	auto_create_orgs?: boolean;
+}
+
+export interface UserSSOGroups {
+	user_id: string;
+	oidc_groups: string[];
+	synced_at: string | null;
 }
