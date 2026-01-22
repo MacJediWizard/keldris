@@ -1,12 +1,12 @@
 import { useState } from 'react';
+import { useMe } from '../../hooks/useAuth';
 import {
 	useCreateSnapshotComment,
 	useDeleteSnapshotComment,
 	useSnapshotComments,
 } from '../../hooks/useSnapshotComments';
-import { useMe } from '../../hooks/useAuth';
-import { formatDateTime } from '../../lib/utils';
 import type { SnapshotComment } from '../../lib/types';
+import { formatDateTime } from '../../lib/utils';
 
 interface SnapshotCommentsProps {
 	snapshotId: string;
@@ -68,7 +68,11 @@ function CommentItem({
 export function SnapshotComments({ snapshotId }: SnapshotCommentsProps) {
 	const [newComment, setNewComment] = useState('');
 	const { data: user } = useMe();
-	const { data: comments, isLoading, isError } = useSnapshotComments(snapshotId);
+	const {
+		data: comments,
+		isLoading,
+		isError,
+	} = useSnapshotComments(snapshotId);
 	const createComment = useCreateSnapshotComment(snapshotId);
 	const deleteComment = useDeleteSnapshotComment(snapshotId);
 
