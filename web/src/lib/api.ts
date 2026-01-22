@@ -34,11 +34,17 @@ import type {
 	BuiltInPatternsResponse,
 	CategoriesResponse,
 	CategoryInfo,
+	CostAlert,
+	CostAlertsResponse,
+	CostForecastResponse,
+	CostHistoryResponse,
+	CostSummary,
 	CreateAgentGroupRequest,
 	CreateAgentRequest,
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
 	CreateBackupScriptRequest,
+	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
 	CreateExcludePatternRequest,
@@ -53,8 +59,10 @@ import type {
 	CreateRestoreRequest,
 	CreateScheduleRequest,
 	CreateSnapshotCommentRequest,
+	CreateStoragePricingRequest,
 	CreateTagRequest,
 	CreateVerificationScheduleRequest,
+	DefaultPricingResponse,
 	DRRunbook,
 	DRRunbookRenderResponse,
 	DRRunbooksResponse,
@@ -106,6 +114,8 @@ import type {
 	ReportSchedulesResponse,
 	RepositoriesResponse,
 	Repository,
+	RepositoryCostResponse,
+	RepositoryCostsResponse,
 	RepositoryGrowthResponse,
 	RepositoryHistoryResponse,
 	RepositoryStatsListItem,
@@ -130,6 +140,8 @@ import type {
 	StorageGrowthResponse,
 	StorageGrowthTrend,
 	StorageGrowthTrendResponse,
+	StoragePricing,
+	StoragePricingResponse,
 	StorageStatsSummary,
 	SwitchOrgRequest,
 	Tag,
@@ -140,6 +152,7 @@ import type {
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
 	UpdateBackupScriptRequest,
+	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
 	UpdateExcludePatternRequest,
 	UpdateMaintenanceWindowRequest,
@@ -151,6 +164,7 @@ import type {
 	UpdateReportScheduleRequest,
 	UpdateRepositoryRequest,
 	UpdateScheduleRequest,
+	UpdateStoragePricingRequest,
 	UpdateTagRequest,
 	UpdateUserPreferencesRequest,
 	UpdateVerificationScheduleRequest,
@@ -1425,5 +1439,85 @@ export const onboardingApi = {
 	skip: async (): Promise<OnboardingStatus> =>
 		fetchApi<OnboardingStatus>('/onboarding/skip', {
 			method: 'POST',
+		}),
+};
+
+// Cost Estimation API
+export const costsApi = {
+	getSummary: async (): Promise<CostSummary> =>
+		fetchApi<CostSummary>('/costs/summary'),
+
+	listRepositoryCosts: async (): Promise<RepositoryCostsResponse> =>
+		fetchApi<RepositoryCostsResponse>('/costs/repositories'),
+
+	getRepositoryCost: async (id: string): Promise<RepositoryCostResponse> =>
+		fetchApi<RepositoryCostResponse>(`/costs/repositories/${id}`),
+
+	getForecast: async (days = 30): Promise<CostForecastResponse> =>
+		fetchApi<CostForecastResponse>(`/costs/forecast?days=${days}`),
+
+	getHistory: async (days = 30): Promise<CostHistoryResponse> =>
+		fetchApi<CostHistoryResponse>(`/costs/history?days=${days}`),
+};
+
+// Pricing API
+export const pricingApi = {
+	list: async (): Promise<StoragePricing[]> => {
+		const response = await fetchApi<StoragePricingResponse>('/pricing');
+		return response.pricing ?? [];
+	},
+
+	getDefaults: async (): Promise<DefaultPricingResponse> =>
+		fetchApi<DefaultPricingResponse>('/pricing/defaults'),
+
+	create: async (data: CreateStoragePricingRequest): Promise<StoragePricing> =>
+		fetchApi<StoragePricing>('/pricing', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateStoragePricingRequest,
+	): Promise<StoragePricing> =>
+		fetchApi<StoragePricing>(`/pricing/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/pricing/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Cost Alerts API
+export const costAlertsApi = {
+	list: async (): Promise<CostAlert[]> => {
+		const response = await fetchApi<CostAlertsResponse>('/cost-alerts');
+		return response.alerts ?? [];
+	},
+
+	get: async (id: string): Promise<CostAlert> =>
+		fetchApi<CostAlert>(`/cost-alerts/${id}`),
+
+	create: async (data: CreateCostAlertRequest): Promise<CostAlert> =>
+		fetchApi<CostAlert>('/cost-alerts', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateCostAlertRequest,
+	): Promise<CostAlert> =>
+		fetchApi<CostAlert>(`/cost-alerts/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
+			method: 'DELETE',
 		}),
 };

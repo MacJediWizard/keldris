@@ -6107,3 +6107,321 @@ func (db *DB) GetSnapshotCommentCounts(ctx context.Context, snapshotIDs []string
 
 	return counts, nil
 }
+// Cost Estimation methods
+
+// GetStoragePricingByOrgID returns all custom storage pricing for an organization.
+func (db *DB) GetStoragePricingByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.StoragePricing, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, repository_type, storage_per_gb_month, egress_per_gb,
+		       operations_per_k, provider_name, provider_description, created_at, updated_at
+		FROM storage_pricing
+		WHERE org_id = $1
+		ORDER BY repository_type
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list storage pricing: %w", err)
+	}
+	defer rows.Close()
+
+	var pricing []*models.StoragePricing
+	for rows.Next() {
+		var p models.StoragePricing
+		var providerName, providerDesc *string
+		err := rows.Scan(
+			&p.ID, &p.OrgID, &p.RepositoryType, &p.StoragePerGBMonth,
+			&p.EgressPerGB, &p.OperationsPerK, &providerName, &providerDesc,
+			&p.CreatedAt, &p.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan storage pricing: %w", err)
+		}
+		if providerName != nil {
+			p.ProviderName = *providerName
+		}
+		if providerDesc != nil {
+			p.ProviderDescription = *providerDesc
+		}
+		pricing = append(pricing, &p)
+	}
+
+	return pricing, nil
+}
+
+// GetStoragePricingByType returns custom pricing for a specific repository type.
+func (db *DB) GetStoragePricingByType(ctx context.Context, orgID uuid.UUID, repoType string) (*models.StoragePricing, error) {
+	var p models.StoragePricing
+	var providerName, providerDesc *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, repository_type, storage_per_gb_month, egress_per_gb,
+		       operations_per_k, provider_name, provider_description, created_at, updated_at
+		FROM storage_pricing
+		WHERE org_id = $1 AND repository_type = $2
+	`, orgID, repoType).Scan(
+		&p.ID, &p.OrgID, &p.RepositoryType, &p.StoragePerGBMonth,
+		&p.EgressPerGB, &p.OperationsPerK, &providerName, &providerDesc,
+		&p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get storage pricing: %w", err)
+	}
+	if providerName != nil {
+		p.ProviderName = *providerName
+	}
+	if providerDesc != nil {
+		p.ProviderDescription = *providerDesc
+	}
+	return &p, nil
+}
+
+// CreateStoragePricing creates a new custom storage pricing record.
+func (db *DB) CreateStoragePricing(ctx context.Context, p *models.StoragePricing) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO storage_pricing (id, org_id, repository_type, storage_per_gb_month,
+		             egress_per_gb, operations_per_k, provider_name, provider_description,
+		             created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, p.ID, p.OrgID, p.RepositoryType, p.StoragePerGBMonth,
+		p.EgressPerGB, p.OperationsPerK, p.ProviderName, p.ProviderDescription,
+		p.CreatedAt, p.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create storage pricing: %w", err)
+	}
+	return nil
+}
+
+// UpdateStoragePricing updates an existing storage pricing record.
+func (db *DB) UpdateStoragePricing(ctx context.Context, p *models.StoragePricing) error {
+	p.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE storage_pricing
+		SET storage_per_gb_month = $2, egress_per_gb = $3, operations_per_k = $4,
+		    provider_name = $5, provider_description = $6, updated_at = $7
+		WHERE id = $1
+	`, p.ID, p.StoragePerGBMonth, p.EgressPerGB, p.OperationsPerK,
+		p.ProviderName, p.ProviderDescription, p.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update storage pricing: %w", err)
+	}
+	return nil
+}
+
+// DeleteStoragePricing deletes a storage pricing record.
+func (db *DB) DeleteStoragePricing(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM storage_pricing WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete storage pricing: %w", err)
+	}
+	return nil
+}
+
+// CreateCostEstimate creates a new cost estimate record.
+func (db *DB) CreateCostEstimate(ctx context.Context, e *models.CostEstimateRecord) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO cost_estimates (id, org_id, repository_id, storage_size_bytes,
+		             monthly_cost, yearly_cost, cost_per_gb, estimated_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, e.ID, e.OrgID, e.RepositoryID, e.StorageSizeBytes,
+		e.MonthlyCost, e.YearlyCost, e.CostPerGB, e.EstimatedAt, e.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create cost estimate: %w", err)
+	}
+	return nil
+}
+
+// GetLatestCostEstimates returns the latest cost estimate for each repository in an organization.
+func (db *DB) GetLatestCostEstimates(ctx context.Context, orgID uuid.UUID) ([]*models.CostEstimateRecord, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT DISTINCT ON (repository_id)
+		       id, org_id, repository_id, storage_size_bytes, monthly_cost,
+		       yearly_cost, cost_per_gb, estimated_at, created_at
+		FROM cost_estimates
+		WHERE org_id = $1
+		ORDER BY repository_id, estimated_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get latest cost estimates: %w", err)
+	}
+	defer rows.Close()
+
+	var estimates []*models.CostEstimateRecord
+	for rows.Next() {
+		var e models.CostEstimateRecord
+		err := rows.Scan(
+			&e.ID, &e.OrgID, &e.RepositoryID, &e.StorageSizeBytes,
+			&e.MonthlyCost, &e.YearlyCost, &e.CostPerGB, &e.EstimatedAt, &e.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan cost estimate: %w", err)
+		}
+		estimates = append(estimates, &e)
+	}
+
+	return estimates, nil
+}
+
+// GetCostEstimateHistory returns historical cost estimates for a repository.
+func (db *DB) GetCostEstimateHistory(ctx context.Context, repoID uuid.UUID, days int) ([]*models.CostEstimateRecord, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, repository_id, storage_size_bytes, monthly_cost,
+		       yearly_cost, cost_per_gb, estimated_at, created_at
+		FROM cost_estimates
+		WHERE repository_id = $1
+		AND estimated_at >= CURRENT_DATE - INTERVAL '1 day' * $2
+		ORDER BY estimated_at DESC
+	`, repoID, days)
+	if err != nil {
+		return nil, fmt.Errorf("get cost estimate history: %w", err)
+	}
+	defer rows.Close()
+
+	var estimates []*models.CostEstimateRecord
+	for rows.Next() {
+		var e models.CostEstimateRecord
+		err := rows.Scan(
+			&e.ID, &e.OrgID, &e.RepositoryID, &e.StorageSizeBytes,
+			&e.MonthlyCost, &e.YearlyCost, &e.CostPerGB, &e.EstimatedAt, &e.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan cost estimate: %w", err)
+		}
+		estimates = append(estimates, &e)
+	}
+
+	return estimates, nil
+}
+
+// GetCostAlertsByOrgID returns all cost alerts for an organization.
+func (db *DB) GetCostAlertsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.CostAlert, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, monthly_threshold, enabled, notify_on_exceed,
+		       notify_on_forecast, forecast_months, last_triggered_at, created_at, updated_at
+		FROM cost_alerts
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list cost alerts: %w", err)
+	}
+	defer rows.Close()
+
+	var alerts []*models.CostAlert
+	for rows.Next() {
+		var a models.CostAlert
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.Name, &a.MonthlyThreshold, &a.Enabled,
+			&a.NotifyOnExceed, &a.NotifyOnForecast, &a.ForecastMonths,
+			&a.LastTriggeredAt, &a.CreatedAt, &a.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan cost alert: %w", err)
+		}
+		alerts = append(alerts, &a)
+	}
+
+	return alerts, nil
+}
+
+// GetCostAlertByID returns a cost alert by ID.
+func (db *DB) GetCostAlertByID(ctx context.Context, id uuid.UUID) (*models.CostAlert, error) {
+	var a models.CostAlert
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, monthly_threshold, enabled, notify_on_exceed,
+		       notify_on_forecast, forecast_months, last_triggered_at, created_at, updated_at
+		FROM cost_alerts
+		WHERE id = $1
+	`, id).Scan(
+		&a.ID, &a.OrgID, &a.Name, &a.MonthlyThreshold, &a.Enabled,
+		&a.NotifyOnExceed, &a.NotifyOnForecast, &a.ForecastMonths,
+		&a.LastTriggeredAt, &a.CreatedAt, &a.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get cost alert: %w", err)
+	}
+	return &a, nil
+}
+
+// CreateCostAlert creates a new cost alert.
+func (db *DB) CreateCostAlert(ctx context.Context, a *models.CostAlert) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO cost_alerts (id, org_id, name, monthly_threshold, enabled,
+		             notify_on_exceed, notify_on_forecast, forecast_months,
+		             created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, a.ID, a.OrgID, a.Name, a.MonthlyThreshold, a.Enabled,
+		a.NotifyOnExceed, a.NotifyOnForecast, a.ForecastMonths,
+		a.CreatedAt, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create cost alert: %w", err)
+	}
+	return nil
+}
+
+// UpdateCostAlert updates an existing cost alert.
+func (db *DB) UpdateCostAlert(ctx context.Context, a *models.CostAlert) error {
+	a.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE cost_alerts
+		SET name = $2, monthly_threshold = $3, enabled = $4, notify_on_exceed = $5,
+		    notify_on_forecast = $6, forecast_months = $7, updated_at = $8
+		WHERE id = $1
+	`, a.ID, a.Name, a.MonthlyThreshold, a.Enabled,
+		a.NotifyOnExceed, a.NotifyOnForecast, a.ForecastMonths, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update cost alert: %w", err)
+	}
+	return nil
+}
+
+// DeleteCostAlert deletes a cost alert.
+func (db *DB) DeleteCostAlert(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM cost_alerts WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete cost alert: %w", err)
+	}
+	return nil
+}
+
+// UpdateCostAlertTriggered updates the last triggered timestamp for a cost alert.
+func (db *DB) UpdateCostAlertTriggered(ctx context.Context, id uuid.UUID) error {
+	now := time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE cost_alerts
+		SET last_triggered_at = $2, updated_at = $2
+		WHERE id = $1
+	`, id, now)
+	if err != nil {
+		return fmt.Errorf("update cost alert triggered: %w", err)
+	}
+	return nil
+}
+
+// GetEnabledCostAlerts returns all enabled cost alerts for an organization.
+func (db *DB) GetEnabledCostAlerts(ctx context.Context, orgID uuid.UUID) ([]*models.CostAlert, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, monthly_threshold, enabled, notify_on_exceed,
+		       notify_on_forecast, forecast_months, last_triggered_at, created_at, updated_at
+		FROM cost_alerts
+		WHERE org_id = $1 AND enabled = true
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled cost alerts: %w", err)
+	}
+	defer rows.Close()
+
+	var alerts []*models.CostAlert
+	for rows.Next() {
+		var a models.CostAlert
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.Name, &a.MonthlyThreshold, &a.Enabled,
+			&a.NotifyOnExceed, &a.NotifyOnForecast, &a.ForecastMonths,
+			&a.LastTriggeredAt, &a.CreatedAt, &a.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan cost alert: %w", err)
+		}
+		alerts = append(alerts, &a)
+	}
+
+	return alerts, nil
+}
