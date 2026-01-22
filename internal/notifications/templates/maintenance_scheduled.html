@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheduled Maintenance</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5;">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f4f4f5;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: #d97706; padding: 24px 32px;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Scheduled Maintenance</h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 32px;">
+                            <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.5;">
+                                A scheduled maintenance window has been configured. Backup operations will be paused during this time.
+                            </p>
+
+                            <!-- Alert Box -->
+                            <div style="background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+                                <div style="display: flex; align-items: center;">
+                                    <span style="color: #d97706; font-size: 20px; margin-right: 12px;">&#128736;</span>
+                                    <span style="color: #92400e; font-size: 14px; font-weight: 500;">All backups will be automatically paused during the maintenance window and will resume after it ends.</span>
+                                </div>
+                            </div>
+
+                            <!-- Summary Box -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f9fafb; border-radius: 6px; margin-bottom: 24px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Title</span>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                                    <span style="color: #111827; font-size: 14px; font-weight: 500;">{{.Title}}</span>
+                                                </td>
+                                            </tr>
+                                            {{if .Message}}
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Message</span>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                                    <span style="color: #111827; font-size: 14px;">{{.Message}}</span>
+                                                </td>
+                                            </tr>
+                                            {{end}}
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Starts At</span>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                                    <span style="color: #111827; font-size: 14px;">{{.StartsAt.Format "Jan 02, 2006 15:04 MST"}}</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Ends At</span>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                                    <span style="color: #111827; font-size: 14px;">{{.EndsAt.Format "Jan 02, 2006 15:04 MST"}}</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Duration</span>
+                                                </td>
+                                                <td style="padding: 8px 0; text-align: right;">
+                                                    <span style="color: #d97706; font-size: 14px; font-weight: 500;">{{.Duration}}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Information -->
+                            <p style="margin: 0 0 12px; color: #374151; font-size: 14px; font-weight: 600;">
+                                What to Expect
+                            </p>
+                            <ul style="margin: 0; padding-left: 20px; color: #6b7280; font-size: 14px; line-height: 1.8;">
+                                <li>Scheduled backups will be paused during the maintenance window</li>
+                                <li>Backups will automatically resume when maintenance ends</li>
+                                <li>No data will be lost during this period</li>
+                                <li>A banner will be displayed in the web interface</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 20px 32px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; color: #6b7280; font-size: 13px; text-align: center;">
+                                This notification was sent by Keldris Backup System
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
