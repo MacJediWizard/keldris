@@ -30,10 +30,10 @@ import { formatDate, getRepositoryTypeBadge } from '../lib/utils';
 
 function LoadingCard() {
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
 			<div className="flex items-start justify-between mb-4">
-				<div className="h-5 w-32 bg-gray-200 rounded" />
-				<div className="h-6 w-12 bg-gray-200 rounded-full" />
+				<div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+				<div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded-full" />
 			</div>
 			<div className="h-4 w-24 bg-gray-100 rounded" />
 		</div>
@@ -65,7 +65,7 @@ function FormField({
 		<div>
 			<label
 				htmlFor={id}
-				className="block text-sm font-medium text-gray-700 mb-1"
+				className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 			>
 				{label}
 				{required && <span className="text-red-500 ml-1">*</span>}
@@ -76,10 +76,14 @@ function FormField({
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				placeholder={placeholder}
-				className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+				className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 				required={required}
 			/>
-			{helpText && <p className="mt-1 text-xs text-gray-500">{helpText}</p>}
+			{helpText && (
+				<p className="mt-1 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+					{helpText}
+				</p>
+			)}
 		</div>
 	);
 }
@@ -109,7 +113,7 @@ function PasswordModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4">
 				<div className="flex items-center gap-3 mb-4">
 					<div className="flex-shrink-0 w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
 						<svg
@@ -128,23 +132,23 @@ function PasswordModal({
 						</svg>
 					</div>
 					<div>
-						<h3 className="text-lg font-semibold text-gray-900">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Repository Password
 						</h3>
-						<p className="text-sm text-gray-500">
+						<p className="text-sm text-gray-500 dark:text-gray-400">
 							Save this password - it will only be shown once
 						</p>
 					</div>
 				</div>
 
 				<div className="mb-4">
-					<p className="text-sm text-gray-600 mb-2">
+					<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
 						Repository <span className="font-medium">{repositoryName}</span> has
 						been created. Use this password to access your Restic repository:
 					</p>
 				</div>
 
-				<div className="bg-gray-50 rounded-lg p-4 mb-4">
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
 					<div className="flex items-center justify-between gap-4">
 						<code className="text-sm font-mono break-all flex-1">
 							{password}
@@ -452,7 +456,10 @@ function AddRepositoryModal({
 								onChange={(e) => setS3UseSsl(e.target.checked)}
 								className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 							/>
-							<label htmlFor="s3-use-ssl" className="text-sm text-gray-700">
+							<label
+								htmlFor="s3-use-ssl"
+								className="text-sm text-gray-700 dark:text-gray-300 dark:text-gray-600"
+							>
 								Use SSL/TLS
 							</label>
 						</div>
@@ -548,7 +555,7 @@ function AddRepositoryModal({
 						<div>
 							<label
 								htmlFor="sftp-private-key"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Private Key
 							</label>
@@ -557,10 +564,10 @@ function AddRepositoryModal({
 								value={sftpPrivateKey}
 								onChange={(e) => setSftpPrivateKey(e.target.value)}
 								placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-xs"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-xs"
 								rows={4}
 							/>
-							<p className="mt-1 text-xs text-gray-500">
+							<p className="mt-1 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 								Paste your SSH private key (PEM format)
 							</p>
 						</div>
@@ -640,7 +647,7 @@ function AddRepositoryModal({
 							type="password"
 							helpText="Your Dropbox App Secret (optional)"
 						/>
-						<p className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+						<p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 p-3 rounded-lg">
 							Dropbox backend requires rclone to be installed on the agent. You
 							can either pre-configure rclone with `rclone config` or provide
 							the OAuth token here.
@@ -655,8 +662,8 @@ function AddRepositoryModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-				<h3 className="text-lg font-semibold text-gray-900 mb-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 					Add Repository
 				</h3>
 				<form onSubmit={handleSubmit}>
@@ -672,7 +679,7 @@ function AddRepositoryModal({
 						<div>
 							<label
 								htmlFor="repo-type"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Type
 							</label>
@@ -680,7 +687,7 @@ function AddRepositoryModal({
 								id="repo-type"
 								value={type}
 								onChange={(e) => setType(e.target.value as RepositoryType)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							>
 								<option value="local">Local Filesystem</option>
 								<option value="s3">Amazon S3 / MinIO / Wasabi</option>
@@ -703,11 +710,11 @@ function AddRepositoryModal({
 							<div>
 								<label
 									htmlFor="escrow-enabled"
-									className="block text-sm font-medium text-gray-700"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 								>
 									Enable key escrow
 								</label>
-								<p className="text-xs text-gray-500">
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 									Store an encrypted copy of the password server-side for
 									recovery by administrators
 								</p>
@@ -775,7 +782,7 @@ function AddRepositoryModal({
 									onClose();
 									resetForm();
 								}}
-								className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+								className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 							>
 								Cancel
 							</button>
@@ -859,11 +866,11 @@ function RepositoryCard({
 	const consecutiveFails = verificationStatus?.consecutive_fails ?? 0;
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-start justify-between mb-4">
 				<div>
 					<h3 className="font-semibold text-gray-900">{repository.name}</h3>
-					<p className="text-sm text-gray-500">
+					<p className="text-sm text-gray-500 dark:text-gray-400">
 						Created {formatDate(repository.created_at)}
 					</p>
 				</div>
@@ -882,9 +889,11 @@ function RepositoryCard({
 			</div>
 
 			{/* Verification Status */}
-			<div className="mb-4 p-3 bg-gray-50 rounded-lg">
+			<div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
 				<div className="flex items-center justify-between mb-2">
-					<span className="text-sm font-medium text-gray-700">Integrity</span>
+					<span className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
+						Integrity
+					</span>
 					<span
 						className={`px-2 py-0.5 rounded-full text-xs font-medium ${verificationBadge.className}`}
 					>
@@ -892,7 +901,7 @@ function RepositoryCard({
 					</span>
 				</div>
 				{lastVerification && (
-					<p className="text-xs text-gray-500">
+					<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 						Last checked: {formatRelativeTime(lastVerification.started_at)}
 						{lastVerification.status === 'failed' &&
 							lastVerification.error_message && (
@@ -912,7 +921,7 @@ function RepositoryCard({
 					</p>
 				)}
 				{verificationStatus?.next_scheduled_at && (
-					<p className="text-xs text-gray-500 mt-1">
+					<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 						Next: {formatRelativeTime(verificationStatus.next_scheduled_at)}
 					</p>
 				)}
@@ -938,18 +947,18 @@ function RepositoryCard({
 				>
 					{isVerifying ? 'Verifying...' : 'Verify'}
 				</button>
-				<span className="text-gray-300">|</span>
+				<span className="text-gray-300 dark:text-gray-600">|</span>
 				<button
 					type="button"
 					onClick={() => onTest(repository.id)}
 					disabled={isTesting}
-					className="text-sm text-indigo-600 hover:text-indigo-800 font-medium disabled:opacity-50"
+					className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium disabled:opacity-50"
 				>
 					{isTesting ? 'Testing...' : 'Test'}
 				</button>
 				{repository.escrow_enabled && (
 					<>
-						<span className="text-gray-300">|</span>
+						<span className="text-gray-300 dark:text-gray-600">|</span>
 						<button
 							type="button"
 							onClick={() => onRecoverKey(repository.id)}
@@ -960,7 +969,7 @@ function RepositoryCard({
 						</button>
 					</>
 				)}
-				<span className="text-gray-300">|</span>
+				<span className="text-gray-300 dark:text-gray-600">|</span>
 				<button
 					type="button"
 					onClick={() => onDelete(repository.id)}
@@ -999,7 +1008,7 @@ function RecoveredKeyModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4">
 				<div className="flex items-center gap-3 mb-4">
 					<div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
 						<svg
@@ -1018,16 +1027,16 @@ function RecoveredKeyModal({
 						</svg>
 					</div>
 					<div>
-						<h3 className="text-lg font-semibold text-gray-900">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Recovered Password
 						</h3>
-						<p className="text-sm text-gray-500">
+						<p className="text-sm text-gray-500 dark:text-gray-400">
 							Password for repository: {repositoryName}
 						</p>
 					</div>
 				</div>
 
-				<div className="bg-gray-50 rounded-lg p-4 mb-4">
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
 					<div className="flex items-center justify-between gap-4">
 						<code className="text-sm font-mono break-all flex-1">
 							{password}
@@ -1163,8 +1172,10 @@ export function Repositories() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Repositories</h1>
-					<p className="text-gray-600 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Repositories
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Configure backup storage destinations
 					</p>
 				</div>
@@ -1217,22 +1228,22 @@ export function Repositories() {
 				</div>
 			</div>
 
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="p-6 border-b border-gray-200">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 					<div className="flex items-center gap-4">
 						<input
 							type="text"
 							placeholder="Search repositories..."
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
-							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 						<select
 							value={typeFilter}
 							onChange={(e) =>
 								setTypeFilter(e.target.value as RepositoryType | 'all')
 							}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="all">All Types</option>
 							<option value="local">Local</option>
@@ -1246,7 +1257,7 @@ export function Repositories() {
 				</div>
 
 				{isError ? (
-					<div className="p-12 text-center text-red-500">
+					<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
 						<p className="font-medium">Failed to load repositories</p>
 						<p className="text-sm">Please try refreshing the page</p>
 					</div>
@@ -1275,7 +1286,7 @@ export function Repositories() {
 						))}
 					</div>
 				) : (
-					<div className="p-12 text-center text-gray-500">
+					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
 						<svg
 							aria-hidden="true"
 							className="w-16 h-16 mx-auto mb-4 text-gray-300"
@@ -1290,7 +1301,7 @@ export function Repositories() {
 								d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
 							/>
 						</svg>
-						<h3 className="text-lg font-medium text-gray-900 mb-2">
+						<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
 							No repositories configured
 						</h3>
 						<p className="mb-4">Add a repository to store your backup data</p>
@@ -1300,48 +1311,68 @@ export function Repositories() {
 								onClick={() => handleTypeClick('local')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900">Local</p>
-								<p className="text-xs text-gray-500">Filesystem path</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									Local
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Filesystem path
+								</p>
 							</button>
 							<button
 								type="button"
 								onClick={() => handleTypeClick('s3')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900">S3</p>
-								<p className="text-xs text-gray-500">AWS / MinIO / Wasabi</p>
+								<p className="font-medium text-gray-900 dark:text-white">S3</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									AWS / MinIO / Wasabi
+								</p>
 							</button>
 							<button
 								type="button"
 								onClick={() => handleTypeClick('b2')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900">B2</p>
-								<p className="text-xs text-gray-500">Backblaze</p>
+								<p className="font-medium text-gray-900 dark:text-white">B2</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Backblaze
+								</p>
 							</button>
 							<button
 								type="button"
 								onClick={() => handleTypeClick('sftp')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900">SFTP</p>
-								<p className="text-xs text-gray-500">Remote server</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									SFTP
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Remote server
+								</p>
 							</button>
 							<button
 								type="button"
 								onClick={() => handleTypeClick('rest')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900">REST</p>
-								<p className="text-xs text-gray-500">Restic REST server</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									REST
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Restic REST server
+								</p>
 							</button>
 							<button
 								type="button"
 								onClick={() => handleTypeClick('dropbox')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900">Dropbox</p>
-								<p className="text-xs text-gray-500">Via rclone</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									Dropbox
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Via rclone
+								</p>
 							</button>
 						</div>
 					</div>

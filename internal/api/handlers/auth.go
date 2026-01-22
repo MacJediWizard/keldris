@@ -20,6 +20,16 @@ type UserStore interface {
 	GetOrCreateDefaultOrg(ctx context.Context) (*models.Organization, error)
 	GetMembershipsByUserID(ctx context.Context, userID uuid.UUID) ([]*models.OrgMembership, error)
 	CreateMembership(ctx context.Context, m *models.OrgMembership) error
+	// SSO group sync methods (implements auth.GroupSyncStore)
+	GetSSOGroupMappingsByGroupNames(ctx context.Context, groupNames []string) ([]*models.SSOGroupMapping, error)
+	GetSSOGroupMappingsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.SSOGroupMapping, error)
+	GetMembershipByUserAndOrg(ctx context.Context, userID, orgID uuid.UUID) (*models.OrgMembership, error)
+	UpdateMembershipRole(ctx context.Context, membershipID uuid.UUID, role models.OrgRole) error
+	UpsertUserSSOGroups(ctx context.Context, userID uuid.UUID, groups []string) error
+	GetUserSSOGroups(ctx context.Context, userID uuid.UUID) (*models.UserSSOGroups, error)
+	GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error)
+	GetOrganizationSSOSettings(ctx context.Context, orgID uuid.UUID) (defaultRole *string, autoCreateOrgs bool, err error)
+	CreateAuditLog(ctx context.Context, log *models.AuditLog) error
 }
 
 // AuthHandler handles authentication-related HTTP endpoints.
@@ -27,15 +37,20 @@ type AuthHandler struct {
 	oidc      *auth.OIDC
 	sessions  *auth.SessionStore
 	userStore UserStore
+	groupSync *auth.GroupSync
 	logger    zerolog.Logger
 }
 
 // NewAuthHandler creates a new AuthHandler.
 func NewAuthHandler(oidc *auth.OIDC, sessions *auth.SessionStore, userStore UserStore, logger zerolog.Logger) *AuthHandler {
+	// Create GroupSync using the userStore which implements GroupSyncStore
+	groupSync := auth.NewGroupSync(userStore, logger)
+
 	return &AuthHandler{
 		oidc:      oidc,
 		sessions:  sessions,
 		userStore: userStore,
+		groupSync: groupSync,
 		logger:    logger.With().Str("component", "auth_handler").Logger(),
 	}
 }
@@ -49,7 +64,14 @@ func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
 }
 
 // Login initiates the OIDC authentication flow.
-// GET /auth/login
+//
+//	@Summary		Initiate login
+//	@Description	Redirects to the OIDC provider for authentication. After successful authentication, user is redirected to /auth/callback.
+//	@Tags			Auth
+//	@Produce		html
+//	@Success		307	"Redirect to OIDC provider"
+//	@Failure		500	{object}	map[string]string
+//	@Router			/auth/login [get]
 func (h *AuthHandler) Login(c *gin.Context) {
 	state, err := auth.GenerateState()
 	if err != nil {
@@ -70,7 +92,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 // Callback handles the OIDC callback after authentication.
-// GET /auth/callback
+//
+//	@Summary		OIDC callback
+//	@Description	Handles the callback from the OIDC provider after authentication. Creates or updates user session.
+//	@Tags			Auth
+//	@Param			code	query	string	true	"Authorization code"
+//	@Param			state	query	string	true	"State parameter for CSRF protection"
+//	@Success		307		"Redirect to dashboard"
+//	@Failure		400		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Router			/auth/callback [get]
 func (h *AuthHandler) Callback(c *gin.Context) {
 	// Check for errors from the OIDC provider
 	if errParam := c.Query("error"); errParam != "" {
@@ -138,7 +169,38 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	// Get user's memberships to set current org
+	// Extract and sync OIDC groups
+	groups, err := h.groupSync.ExtractGroupsFromToken(c.Request.Context(), h.oidc, token)
+	if err != nil {
+		// Log the error but don't fail authentication
+		h.logger.Warn().Err(err).Str("user_id", user.ID.String()).Msg("failed to extract groups from token")
+	} else if len(groups) > 0 {
+		// Sync user's groups to memberships
+		syncResult, err := h.groupSync.SyncUserGroups(c.Request.Context(), user.ID, groups)
+		if err != nil {
+			h.logger.Warn().Err(err).Str("user_id", user.ID.String()).Msg("failed to sync user groups")
+		} else {
+			h.logger.Info().
+				Str("user_id", user.ID.String()).
+				Int("groups_received", len(syncResult.GroupsReceived)).
+				Int("memberships_added", len(syncResult.MembershipsAdded)).
+				Msg("user groups synced on login")
+
+			// Create audit log for group sync if any memberships were added
+			if len(syncResult.MembershipsAdded) > 0 {
+				for _, mapping := range syncResult.MembershipsAdded {
+					auditLog := models.NewAuditLog(mapping.OrgID, models.AuditActionCreate, "membership", models.AuditResultSuccess).
+						WithUser(user.ID).
+						WithDetails("SSO group sync: " + mapping.OIDCGroupName)
+					if err := h.userStore.CreateAuditLog(c.Request.Context(), auditLog); err != nil {
+						h.logger.Warn().Err(err).Msg("failed to create audit log for group sync")
+					}
+				}
+			}
+		}
+	}
+
+	// Get user's memberships to set current org (after group sync)
 	memberships, err := h.userStore.GetMembershipsByUserID(c.Request.Context(), user.ID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to get user memberships")
@@ -216,7 +278,16 @@ func (h *AuthHandler) findOrCreateUser(ctx context.Context, claims *auth.IDToken
 }
 
 // Logout terminates the user session.
-// POST /auth/logout
+//
+//	@Summary		Logout
+//	@Description	Terminates the current user session and clears the session cookie
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	sessionUser, err := h.sessions.GetUser(c.Request)
 	if err == nil {
@@ -236,15 +307,26 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 // MeResponse is the response for the /auth/me endpoint.
 type MeResponse struct {
-	ID             uuid.UUID `json:"id"`
-	Email          string    `json:"email"`
-	Name           string    `json:"name"`
-	CurrentOrgID   uuid.UUID `json:"current_org_id,omitempty"`
-	CurrentOrgRole string    `json:"current_org_role,omitempty"`
+	ID                uuid.UUID  `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Email             string     `json:"email" example:"user@example.com"`
+	Name              string     `json:"name" example:"John Doe"`
+	CurrentOrgID      uuid.UUID  `json:"current_org_id,omitempty" example:"550e8400-e29b-41d4-a716-446655440001"`
+	CurrentOrgRole    string     `json:"current_org_role,omitempty" example:"admin"`
+	SSOGroups         []string   `json:"sso_groups,omitempty"`
+	SSOGroupsSyncedAt *time.Time `json:"sso_groups_synced_at,omitempty"`
 }
 
 // Me returns the current authenticated user.
-// GET /auth/me
+//
+//	@Summary		Get current user
+//	@Description	Returns information about the currently authenticated user including their current organization
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	MeResponse
+//	@Failure		401	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/auth/me [get]
 func (h *AuthHandler) Me(c *gin.Context) {
 	sessionUser, err := h.sessions.GetUser(c.Request)
 	if err != nil {
@@ -252,11 +334,20 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, MeResponse{
+	response := MeResponse{
 		ID:             sessionUser.ID,
 		Email:          sessionUser.Email,
 		Name:           sessionUser.Name,
 		CurrentOrgID:   sessionUser.CurrentOrgID,
 		CurrentOrgRole: sessionUser.CurrentOrgRole,
-	})
+	}
+
+	// Fetch user's SSO groups if available
+	ssoGroups, err := h.userStore.GetUserSSOGroups(c.Request.Context(), sessionUser.ID)
+	if err == nil && ssoGroups != nil {
+		response.SSOGroups = ssoGroups.OIDCGroups
+		response.SSOGroupsSyncedAt = &ssoGroups.SyncedAt
+	}
+
+	c.JSON(http.StatusOK, response)
 }
