@@ -3,7 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { SnapshotComments } from '../components/features/SnapshotComments';
 import { useAgents } from '../hooks/useAgents';
 import { useRepositories } from '../hooks/useRepositories';
-import { useCreateRestore, useRestorePreview, useRestores } from '../hooks/useRestore';
+import {
+	useCreateRestore,
+	useRestorePreview,
+	useRestores,
+} from '../hooks/useRestore';
 import { useSnapshotComments } from '../hooks/useSnapshotComments';
 import { useSnapshotFiles, useSnapshots } from '../hooks/useSnapshots';
 import type {
@@ -426,19 +430,33 @@ function RestorePreviewDisplay({ preview }: RestorePreviewDisplayProps) {
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 				<div className="bg-gray-50 rounded-lg p-3">
 					<p className="text-xs text-gray-500 uppercase tracking-wide">Files</p>
-					<p className="text-lg font-semibold text-gray-900">{preview.total_files}</p>
+					<p className="text-lg font-semibold text-gray-900">
+						{preview.total_files}
+					</p>
 				</div>
 				<div className="bg-gray-50 rounded-lg p-3">
-					<p className="text-xs text-gray-500 uppercase tracking-wide">Directories</p>
-					<p className="text-lg font-semibold text-gray-900">{preview.total_dirs}</p>
+					<p className="text-xs text-gray-500 uppercase tracking-wide">
+						Directories
+					</p>
+					<p className="text-lg font-semibold text-gray-900">
+						{preview.total_dirs}
+					</p>
 				</div>
 				<div className="bg-gray-50 rounded-lg p-3">
-					<p className="text-xs text-gray-500 uppercase tracking-wide">Total Size</p>
-					<p className="text-lg font-semibold text-gray-900">{formatBytes(preview.total_size)}</p>
+					<p className="text-xs text-gray-500 uppercase tracking-wide">
+						Total Size
+					</p>
+					<p className="text-lg font-semibold text-gray-900">
+						{formatBytes(preview.total_size)}
+					</p>
 				</div>
 				<div className="bg-gray-50 rounded-lg p-3">
-					<p className="text-xs text-gray-500 uppercase tracking-wide">Disk Space</p>
-					<p className="text-lg font-semibold text-gray-900">{formatBytes(preview.disk_space_needed)}</p>
+					<p className="text-xs text-gray-500 uppercase tracking-wide">
+						Disk Space
+					</p>
+					<p className="text-lg font-semibold text-gray-900">
+						{formatBytes(preview.disk_space_needed)}
+					</p>
 				</div>
 			</div>
 
@@ -461,10 +479,12 @@ function RestorePreviewDisplay({ preview }: RestorePreviewDisplayProps) {
 						</svg>
 						<div>
 							<h4 className="font-medium text-yellow-800">
-								{preview.conflict_count} file{preview.conflict_count !== 1 ? 's' : ''} will be overwritten
+								{preview.conflict_count} file
+								{preview.conflict_count !== 1 ? 's' : ''} will be overwritten
 							</h4>
 							<p className="text-sm text-yellow-700 mt-1">
-								Existing files at the target location will be replaced with the backup versions.
+								Existing files at the target location will be replaced with the
+								backup versions.
 							</p>
 						</div>
 					</div>
@@ -480,19 +500,35 @@ function RestorePreviewDisplay({ preview }: RestorePreviewDisplayProps) {
 						<table className="w-full text-sm">
 							<thead className="bg-gray-50 sticky top-0">
 								<tr>
-									<th className="text-left px-3 py-2 text-xs font-medium text-gray-500 uppercase">Path</th>
-									<th className="text-left px-3 py-2 text-xs font-medium text-gray-500 uppercase w-20">Type</th>
-									<th className="text-right px-3 py-2 text-xs font-medium text-gray-500 uppercase w-24">Size</th>
-									<th className="text-center px-3 py-2 text-xs font-medium text-gray-500 uppercase w-20">Status</th>
+									<th className="text-left px-3 py-2 text-xs font-medium text-gray-500 uppercase">
+										Path
+									</th>
+									<th className="text-left px-3 py-2 text-xs font-medium text-gray-500 uppercase w-20">
+										Type
+									</th>
+									<th className="text-right px-3 py-2 text-xs font-medium text-gray-500 uppercase w-24">
+										Size
+									</th>
+									<th className="text-center px-3 py-2 text-xs font-medium text-gray-500 uppercase w-20">
+										Status
+									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-100">
 								{preview.files.map((file) => (
-									<tr key={file.path} className={file.has_conflict ? 'bg-yellow-50' : ''}>
-										<td className="px-3 py-2 font-mono text-xs truncate max-w-xs" title={file.path}>
+									<tr
+										key={file.path}
+										className={file.has_conflict ? 'bg-yellow-50' : ''}
+									>
+										<td
+											className="px-3 py-2 font-mono text-xs truncate max-w-xs"
+											title={file.path}
+										>
 											{file.path}
 										</td>
-										<td className="px-3 py-2 text-xs text-gray-500">{file.type}</td>
+										<td className="px-3 py-2 text-xs text-gray-500">
+											{file.type}
+										</td>
 										<td className="px-3 py-2 text-xs text-gray-500 text-right">
 											{file.type === 'file' ? formatBytes(file.size) : '-'}
 										</td>
@@ -532,7 +568,9 @@ function RestorePreviewDisplay({ preview }: RestorePreviewDisplayProps) {
 						/>
 					</svg>
 					<p className="font-medium">Preview not available</p>
-					<p className="text-sm">File details will be shown after the restore completes.</p>
+					<p className="text-sm">
+						File details will be shown after the restore completes.
+					</p>
 				</div>
 			)}
 		</div>
@@ -617,28 +655,46 @@ function RestoreModal({
 								{step === 'preview' ? 'Restore Preview' : 'Restore Snapshot'}
 							</h3>
 							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-								Snapshot {snapshot.short_id} from {formatDateTime(snapshot.time)}
+								Snapshot {snapshot.short_id} from{' '}
+								{formatDateTime(snapshot.time)}
 							</p>
 						</div>
 						{step === 'configure' && (
 							<div className="flex items-center gap-2 text-sm text-gray-500">
-								<span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-medium">1</span>
+								<span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-medium">
+									1
+								</span>
 								<span>Configure</span>
 								<span className="mx-1">→</span>
-								<span className="w-6 h-6 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-medium">2</span>
+								<span className="w-6 h-6 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-medium">
+									2
+								</span>
 								<span>Preview</span>
 							</div>
 						)}
 						{step === 'preview' && (
 							<div className="flex items-center gap-2 text-sm text-gray-500">
 								<span className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs">
-									<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+									<svg
+										aria-hidden="true"
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M5 13l4 4L19 7"
+										/>
 									</svg>
 								</span>
 								<span>Configure</span>
 								<span className="mx-1">→</span>
-								<span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-medium">2</span>
+								<span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-medium">
+									2
+								</span>
 								<span>Preview</span>
 							</div>
 						)}
@@ -766,7 +822,9 @@ function RestoreModal({
 							</button>
 							<button
 								type="submit"
-								disabled={previewMutation.isPending || (!useOriginalPath && !targetPath)}
+								disabled={
+									previewMutation.isPending || (!useOriginalPath && !targetPath)
+								}
 								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
 							>
 								{previewMutation.isPending ? (
@@ -803,7 +861,12 @@ function RestoreModal({
 											stroke="currentColor"
 											viewBox="0 0 24 24"
 										>
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M9 5l7 7-7 7"
+											/>
 										</svg>
 									</>
 								)}
@@ -831,7 +894,12 @@ function RestoreModal({
 									stroke="currentColor"
 									viewBox="0 0 24 24"
 								>
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M15 19l-7-7 7-7"
+									/>
 								</svg>
 								Back
 							</button>
