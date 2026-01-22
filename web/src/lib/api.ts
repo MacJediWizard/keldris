@@ -68,6 +68,8 @@ import type {
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
+	FileHistoryParams,
+	FileHistoryResponse,
 	FleetHealthSummary,
 	InvitationsResponse,
 	InviteMemberRequest,
@@ -600,6 +602,17 @@ export const restoresApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+};
+
+// File History API
+export const fileHistoryApi = {
+	getHistory: async (params: FileHistoryParams): Promise<FileHistoryResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('path', params.path);
+		searchParams.set('agent_id', params.agent_id);
+		searchParams.set('repository_id', params.repository_id);
+		return fetchApi<FileHistoryResponse>(`/files/history?${searchParams.toString()}`);
+	},
 };
 
 // Alerts API
