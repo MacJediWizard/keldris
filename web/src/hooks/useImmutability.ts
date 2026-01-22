@@ -31,7 +31,10 @@ export function useRepositoryImmutabilityLocks(repositoryId: string) {
 	});
 }
 
-export function useSnapshotImmutabilityStatus(snapshotId: string, repositoryId: string) {
+export function useSnapshotImmutabilityStatus(
+	snapshotId: string,
+	repositoryId: string,
+) {
 	return useQuery({
 		queryKey: ['immutability-status', snapshotId, repositoryId],
 		queryFn: () => immutabilityApi.getSnapshotStatus(snapshotId, repositoryId),
@@ -72,7 +75,10 @@ export function useExtendImmutabilityLock() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ id, data }: { id: string; data: ExtendImmutabilityLockRequest }) =>
+		mutationFn: ({
+			id,
+			data,
+		}: { id: string; data: ExtendImmutabilityLockRequest }) =>
 			immutabilityApi.extendLock(id, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['immutability-locks'] });

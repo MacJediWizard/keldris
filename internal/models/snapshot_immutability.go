@@ -69,7 +69,7 @@ func (s *SnapshotImmutability) RemainingDays() int {
 	if !s.IsLocked() {
 		return 0
 	}
-	remaining := s.LockedUntil.Sub(time.Now())
+	remaining := time.Until(s.LockedUntil)
 	return int(remaining.Hours() / 24)
 }
 
