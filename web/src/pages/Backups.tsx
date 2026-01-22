@@ -232,7 +232,10 @@ function BackupDetailsModal({
 								This backup was resumed from an interrupted backup.
 								{backup.original_backup_id && (
 									<span className="ml-1">
-										Original backup ID: <code className="font-mono text-xs">{backup.original_backup_id.slice(0, 8)}...</code>
+										Original backup ID:{' '}
+										<code className="font-mono text-xs">
+											{backup.original_backup_id.slice(0, 8)}...
+										</code>
 									</span>
 								)}
 							</p>
