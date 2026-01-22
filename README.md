@@ -182,6 +182,34 @@ make build
 
 ---
 
+## Editions
+
+Keldris is available in three editions:
+
+| Feature | Free | Pro | Enterprise |
+|---------|:----:|:---:|:----------:|
+| Encrypted backups (Restic) | ✓ | ✓ | ✓ |
+| Cross-platform agent | ✓ | ✓ | ✓ |
+| Web UI | ✓ | ✓ | ✓ |
+| Cron scheduling | ✓ | ✓ | ✓ |
+| Local & S3 storage | ✓ | ✓ | ✓ |
+| Basic OIDC auth | ✓ | ✓ | ✓ |
+| All storage backends | | ✓ | ✓ |
+| Advanced retention policies | | ✓ | ✓ |
+| Multi-organization | | ✓ | ✓ |
+| Webhook notifications | | ✓ | ✓ |
+| Advanced reporting | | ✓ | ✓ |
+| Priority email support | | ✓ | ✓ |
+| SAML/SSO providers | | | ✓ |
+| Audit compliance reports | | | ✓ |
+| Custom integrations | | | ✓ |
+| SLA & dedicated support | | | ✓ |
+| **Price** | **Free** | **$9/agent/mo** | **Contact us** |
+
+The Free edition is open-source under AGPLv3. Pro and Enterprise are commercial licenses.
+
+---
+
 ## Contributing
 
 PRs welcome once this is more stable. For now, feel free to open issues.
@@ -190,4 +218,6 @@ PRs welcome once this is more stable. For now, feel free to open issues.
 
 ## License
 
-AGPLv3 - See [LICENSE](LICENSE)
+AGPLv3 (Free edition) - See [LICENSE](LICENSE)
+
+Pro and Enterprise editions are available under commercial license.
