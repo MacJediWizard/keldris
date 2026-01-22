@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMe } from '../hooks/useAuth';
-import { useLegalHolds, useDeleteLegalHold } from '../hooks/useLegalHolds';
+import { useDeleteLegalHold, useLegalHolds } from '../hooks/useLegalHolds';
 import { formatDateTime } from '../lib/utils';
 
 function LoadingRow() {
@@ -257,9 +257,7 @@ export function LegalHolds() {
 						<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
 							No Legal Holds
 						</h3>
-						<p className="mb-4">
-							No snapshots are currently under legal hold.
-						</p>
+						<p className="mb-4">No snapshots are currently under legal hold.</p>
 						<p className="text-sm">
 							To place a legal hold on a snapshot, navigate to the{' '}
 							<Link to="/restore" className="text-indigo-600 hover:underline">
