@@ -12,6 +12,7 @@ import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
 import { FileHistory } from './pages/FileHistory';
+import { LegalHolds } from './pages/LegalHolds';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
 import { Notifications } from './pages/Notifications';
@@ -67,6 +68,7 @@ function App() {
 						<Route path="notifications" element={<Notifications />} />
 						<Route path="reports" element={<Reports />} />
 						<Route path="audit-logs" element={<AuditLogs />} />
+						<Route path="legal-holds" element={<LegalHolds />} />
 						<Route path="stats" element={<StorageStats />} />
 						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
 						<Route path="tags" element={<Tags />} />

@@ -41,6 +41,7 @@ type Schedule struct {
 	BackupWindow            *BackupWindow        `json:"backup_window,omitempty"`        // Allowed backup time window
 	ExcludedHours           []int                `json:"excluded_hours,omitempty"`       // Hours (0-23) when backups should not run
 	CompressionLevel        *string              `json:"compression_level,omitempty"`    // Compression level: off, auto, max
+	MaxFileSizeMB           *int                 `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
 	OnMountUnavailable      MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
 	ClassificationLevel     string               `json:"classification_level,omitempty"` // Data classification level: public, internal, confidential, restricted
 	ClassificationDataTypes []string             `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general

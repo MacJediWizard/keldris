@@ -153,6 +153,9 @@ func NewRouter(
 	snapshotsHandler := handlers.NewSnapshotsHandler(database, logger)
 	snapshotsHandler.RegisterRoutes(apiV1)
 
+	legalHoldsHandler := handlers.NewLegalHoldsHandler(database, logger)
+	legalHoldsHandler.RegisterRoutes(apiV1)
+
 	fileHistoryHandler := handlers.NewFileHistoryHandler(database, logger)
 	fileHistoryHandler.RegisterRoutes(apiV1)
 
@@ -203,6 +206,9 @@ func NewRouter(
 
 	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
 	maintenanceHandler.RegisterRoutes(apiV1)
+
+	ransomwareHandler := handlers.NewRansomwareHandler(database, logger)
+	ransomwareHandler.RegisterRoutes(apiV1)
 
 	// DR Runbook routes
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
