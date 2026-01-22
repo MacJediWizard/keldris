@@ -35,6 +35,31 @@ export interface RotateAPIKeyResponse {
 	api_key: string;
 }
 
+// Agent Registration Code types
+export interface CreateRegistrationCodeRequest {
+	hostname?: string;
+}
+
+export interface CreateRegistrationCodeResponse {
+	id: string;
+	code: string;
+	hostname?: string;
+	expires_at: string;
+}
+
+export interface PendingRegistration {
+	id: string;
+	hostname?: string;
+	code: string;
+	expires_at: string;
+	created_at: string;
+	created_by: string;
+}
+
+export interface PendingRegistrationsResponse {
+	registrations: PendingRegistration[];
+}
+
 // Repository types
 export type RepositoryType =
 	| 'local'

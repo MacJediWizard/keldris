@@ -140,6 +140,8 @@ func parseResourceFromPath(path string) (string, uuid.UUID) {
 	switch resourceType {
 	case "agents":
 		return "agent", resourceID
+	case "agent-registration-codes":
+		return "agent_registration_code", resourceID
 	case "repositories":
 		return "repository", resourceID
 	case "schedules":

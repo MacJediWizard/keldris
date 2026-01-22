@@ -17,6 +17,8 @@ import type {
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
+	CreateRegistrationCodeRequest,
+	CreateRegistrationCodeResponse,
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
@@ -41,6 +43,8 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	PendingRegistration,
+	PendingRegistrationsResponse,
 	RepositoriesResponse,
 	Repository,
 	RepositoryGrowthResponse,
@@ -177,6 +181,29 @@ export const agentsApi = {
 
 	revokeApiKey: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/agents/${id}/apikey`, {
+			method: 'DELETE',
+		}),
+};
+
+// Agent Registration Codes API
+export const agentRegistrationApi = {
+	createCode: async (
+		data: CreateRegistrationCodeRequest,
+	): Promise<CreateRegistrationCodeResponse> =>
+		fetchApi<CreateRegistrationCodeResponse>('/agent-registration-codes', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	listPending: async (): Promise<PendingRegistration[]> => {
+		const response = await fetchApi<PendingRegistrationsResponse>(
+			'/agent-registration-codes',
+		);
+		return response.registrations ?? [];
+	},
+
+	deleteCode: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agent-registration-codes/${id}`, {
 			method: 'DELETE',
 		}),
 };
