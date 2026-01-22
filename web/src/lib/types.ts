@@ -840,6 +840,39 @@ export interface SnapshotCommentsResponse {
 	comments: SnapshotComment[];
 }
 
+// Snapshot Mount types
+export type SnapshotMountStatus =
+	| 'pending'
+	| 'mounting'
+	| 'mounted'
+	| 'unmounting'
+	| 'unmounted'
+	| 'failed';
+
+export interface SnapshotMount {
+	id: string;
+	agent_id: string;
+	repository_id: string;
+	snapshot_id: string;
+	mount_path: string;
+	status: SnapshotMountStatus;
+	mounted_at?: string;
+	expires_at?: string;
+	unmounted_at?: string;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface MountSnapshotRequest {
+	agent_id: string;
+	repository_id: string;
+	timeout_minutes?: number;
+}
+
+export interface SnapshotMountsResponse {
+	mounts: SnapshotMount[];
+}
+
 // Restore types
 export type RestoreStatus =
 	| 'pending'
