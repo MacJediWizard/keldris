@@ -118,6 +118,7 @@ import type {
 	SearchFilter,
 	SearchResponse,
 	Snapshot,
+	SnapshotCompareResponse,
 	SnapshotFilesResponse,
 	SnapshotsResponse,
 	StorageGrowthPoint,
@@ -570,6 +571,9 @@ export const snapshotsApi = {
 			: `/snapshots/${id}/files`;
 		return fetchApi<SnapshotFilesResponse>(endpoint);
 	},
+
+	compare: async (id1: string, id2: string): Promise<SnapshotCompareResponse> =>
+		fetchApi<SnapshotCompareResponse>(`/snapshots/${id1}/compare/${id2}`),
 };
 
 // Restores API

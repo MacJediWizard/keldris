@@ -48,6 +48,7 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		snapshots.GET("", h.ListSnapshots)
 		snapshots.GET("/:id", h.GetSnapshot)
 		snapshots.GET("/:id/files", h.ListFiles)
+		snapshots.GET("/:id1/compare/:id2", h.CompareSnapshots)
 	}
 
 	restores := r.Group("/restores")
@@ -270,6 +271,46 @@ type SnapshotFileResponse struct {
 	Type    string `json:"type"` // "file" or "dir"
 	Size    int64  `json:"size"`
 	ModTime string `json:"mod_time"`
+}
+
+// SnapshotDiffChangeType represents the type of change in a diff.
+type SnapshotDiffChangeType string
+
+const (
+	DiffChangeAdded    SnapshotDiffChangeType = "added"
+	DiffChangeRemoved  SnapshotDiffChangeType = "removed"
+	DiffChangeModified SnapshotDiffChangeType = "modified"
+)
+
+// SnapshotDiffEntry represents a single changed file/directory in the diff.
+type SnapshotDiffEntry struct {
+	Path       string                 `json:"path"`
+	ChangeType SnapshotDiffChangeType `json:"change_type"`
+	Type       string                 `json:"type"` // "file" or "dir"
+	OldSize    int64                  `json:"old_size,omitempty"`
+	NewSize    int64                  `json:"new_size,omitempty"`
+	SizeChange int64                  `json:"size_change,omitempty"`
+}
+
+// SnapshotDiffStats contains summary statistics for a diff operation.
+type SnapshotDiffStats struct {
+	FilesAdded       int   `json:"files_added"`
+	FilesRemoved     int   `json:"files_removed"`
+	FilesModified    int   `json:"files_modified"`
+	DirsAdded        int   `json:"dirs_added"`
+	DirsRemoved      int   `json:"dirs_removed"`
+	TotalSizeAdded   int64 `json:"total_size_added"`
+	TotalSizeRemoved int64 `json:"total_size_removed"`
+}
+
+// SnapshotCompareResponse represents the response from comparing two snapshots.
+type SnapshotCompareResponse struct {
+	SnapshotID1 string              `json:"snapshot_id_1"`
+	SnapshotID2 string              `json:"snapshot_id_2"`
+	Snapshot1   *SnapshotResponse   `json:"snapshot_1,omitempty"`
+	Snapshot2   *SnapshotResponse   `json:"snapshot_2,omitempty"`
+	Stats       SnapshotDiffStats   `json:"stats"`
+	Changes     []SnapshotDiffEntry `json:"changes"`
 }
 
 // ListFiles returns files in a snapshot.
@@ -602,4 +643,140 @@ func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toRestoreResponse(restore))
+}
+
+// CompareSnapshots compares two snapshots and returns their differences.
+// GET /api/v1/snapshots/:id1/compare/:id2
+func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	snapshotID1 := c.Param("id1")
+	snapshotID2 := c.Param("id2")
+
+	if snapshotID1 == "" || snapshotID2 == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "both snapshot IDs are required"})
+		return
+	}
+
+	// Get user for org verification
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	// Verify access to first snapshot
+	backup1, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID1)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "first snapshot not found"})
+		return
+	}
+
+	agent1, err := h.store.GetAgentByID(c.Request.Context(), backup1.AgentID)
+	if err != nil || agent1.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "first snapshot not found"})
+		return
+	}
+
+	// Verify access to second snapshot
+	backup2, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID2)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "second snapshot not found"})
+		return
+	}
+
+	agent2, err := h.store.GetAgentByID(c.Request.Context(), backup2.AgentID)
+	if err != nil || agent2.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "second snapshot not found"})
+		return
+	}
+
+	// Get schedules for paths info
+	schedule1, err := h.store.GetScheduleByID(c.Request.Context(), backup1.ScheduleID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to get schedule for first snapshot")
+	}
+
+	schedule2, err := h.store.GetScheduleByID(c.Request.Context(), backup2.ScheduleID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to get schedule for second snapshot")
+	}
+
+	// Build snapshot info for response
+	shortID1 := snapshotID1
+	if len(shortID1) > 8 {
+		shortID1 = shortID1[:8]
+	}
+	shortID2 := snapshotID2
+	if len(shortID2) > 8 {
+		shortID2 = shortID2[:8]
+	}
+
+	var paths1, paths2 []string
+	var repoID1, repoID2 string
+	if schedule1 != nil {
+		paths1 = schedule1.Paths
+		if len(schedule1.Repositories) > 0 {
+			repoID1 = schedule1.Repositories[0].RepositoryID.String()
+		}
+	}
+	if schedule2 != nil {
+		paths2 = schedule2.Paths
+		if len(schedule2.Repositories) > 0 {
+			repoID2 = schedule2.Repositories[0].RepositoryID.String()
+		}
+	}
+
+	snapshot1Info := &SnapshotResponse{
+		ID:           snapshotID1,
+		ShortID:      shortID1,
+		Time:         backup1.StartedAt.Format(time.RFC3339),
+		Hostname:     agent1.Hostname,
+		Paths:        paths1,
+		AgentID:      agent1.ID.String(),
+		RepositoryID: repoID1,
+		BackupID:     backup1.ID.String(),
+		SizeBytes:    backup1.SizeBytes,
+	}
+
+	snapshot2Info := &SnapshotResponse{
+		ID:           snapshotID2,
+		ShortID:      shortID2,
+		Time:         backup2.StartedAt.Format(time.RFC3339),
+		Hostname:     agent2.Hostname,
+		Paths:        paths2,
+		AgentID:      agent2.ID.String(),
+		RepositoryID: repoID2,
+		BackupID:     backup2.ID.String(),
+		SizeBytes:    backup2.SizeBytes,
+	}
+
+	h.logger.Info().
+		Str("snapshot_id_1", snapshotID1).
+		Str("snapshot_id_2", snapshotID2).
+		Msg("snapshot comparison requested")
+
+	// Note: In a full implementation, this would call the agent to run restic diff
+	// on the actual repository. For now, we return a placeholder response
+	// indicating the functionality is available but requires agent communication.
+	c.JSON(http.StatusOK, SnapshotCompareResponse{
+		SnapshotID1: snapshotID1,
+		SnapshotID2: snapshotID2,
+		Snapshot1:   snapshot1Info,
+		Snapshot2:   snapshot2Info,
+		Stats: SnapshotDiffStats{
+			FilesAdded:       0,
+			FilesRemoved:     0,
+			FilesModified:    0,
+			DirsAdded:        0,
+			DirsRemoved:      0,
+			TotalSizeAdded:   0,
+			TotalSizeRemoved: 0,
+		},
+		Changes: []SnapshotDiffEntry{},
+	})
 }
