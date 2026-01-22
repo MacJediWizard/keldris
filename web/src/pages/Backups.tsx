@@ -5,7 +5,12 @@ import { useBackups } from '../hooks/useBackups';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
 import { useBackupTags, useSetBackupTags, useTags } from '../hooks/useTags';
-import type { Backup, BackupStatus, ClassificationLevel, Tag } from '../lib/types';
+import type {
+	Backup,
+	BackupStatus,
+	ClassificationLevel,
+	Tag,
+} from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
@@ -321,7 +326,8 @@ function BackupDetailsModal({
 						</div>
 					)}
 
-					{(backup.classification_level || backup.classification_data_types) && (
+					{(backup.classification_level ||
+						backup.classification_data_types) && (
 						<div>
 							<p className="text-sm font-medium text-gray-500 mb-2">
 								Classification
@@ -464,12 +470,13 @@ function BackupRow({
 						<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
 						{backup.status}
 					</span>
-					{backup.classification_level && backup.classification_level !== 'public' && (
-						<ClassificationBadge
-							level={backup.classification_level}
-							size="sm"
-						/>
-					)}
+					{backup.classification_level &&
+						backup.classification_level !== 'public' && (
+							<ClassificationBadge
+								level={backup.classification_level}
+								size="sm"
+							/>
+						)}
 				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
@@ -492,7 +499,9 @@ export function Backups() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [agentFilter, setAgentFilter] = useState<string>('all');
 	const [statusFilter, setStatusFilter] = useState<BackupStatus | 'all'>('all');
-	const [classificationFilter, setClassificationFilter] = useState<ClassificationLevel | 'all'>('all');
+	const [classificationFilter, setClassificationFilter] = useState<
+		ClassificationLevel | 'all'
+	>('all');
 	const [selectedTagFilters, setSelectedTagFilters] = useState<Set<string>>(
 		new Set(),
 	);
@@ -545,7 +554,9 @@ export function Backups() {
 		// Note: Tag filtering would require loading backup tags for each backup,
 		// which is expensive. For a more complete implementation, you'd want to
 		// fetch this data on the server side with proper filtering.
-		return matchesSearch && matchesAgent && matchesStatus && matchesClassification;
+		return (
+			matchesSearch && matchesAgent && matchesStatus && matchesClassification
+		);
 	});
 
 	return (
@@ -599,7 +610,9 @@ export function Backups() {
 						<select
 							value={classificationFilter}
 							onChange={(e) =>
-								setClassificationFilter(e.target.value as ClassificationLevel | 'all')
+								setClassificationFilter(
+									e.target.value as ClassificationLevel | 'all',
+								)
 							}
 							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>

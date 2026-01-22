@@ -113,7 +113,6 @@ import type {
 	NotificationChannel,
 	NotificationChannelWithPreferencesResponse,
 	NotificationChannelsResponse,
-	PathClassificationRule,
 	NotificationLog,
 	NotificationLogsResponse,
 	NotificationPreference,
@@ -125,6 +124,7 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	PathClassificationRule,
 	PendingRegistration,
 	PendingRegistrationsResponse,
 	PoliciesResponse,
@@ -1741,9 +1741,7 @@ export const classificationsApi = {
 		}),
 
 	// Schedule classifications
-	listScheduleClassifications: async (
-		level?: string,
-	): Promise<Schedule[]> => {
+	listScheduleClassifications: async (level?: string): Promise<Schedule[]> => {
 		const url = level
 			? `/classifications/schedules?level=${level}`
 			: '/classifications/schedules';
@@ -1788,9 +1786,7 @@ export const classificationsApi = {
 		}),
 
 	// Backup classifications
-	listBackupsByClassification: async (
-		level: string,
-	): Promise<Backup[]> => {
+	listBackupsByClassification: async (level: string): Promise<Backup[]> => {
 		const response = await fetchApi<{ backups: Backup[]; level: string }>(
 			`/classifications/backups?level=${level}`,
 		);

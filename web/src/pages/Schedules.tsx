@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
 import { ClassificationBadge } from '../components/ClassificationBadge';
+import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
@@ -818,8 +818,7 @@ function ScheduleRow({
 		(schedule.max_file_size_mb && schedule.max_file_size_mb > 0);
 
 	const hasClassification =
-		schedule.classification_level &&
-		schedule.classification_level !== 'public';
+		schedule.classification_level && schedule.classification_level !== 'public';
 
 	const hasBadges = hasResourceControls || policyName || hasClassification;
 
