@@ -212,6 +212,10 @@ func NewRouter(
 	drTestsHandler := handlers.NewDRTestsHandler(database, nil, logger)
 	drTestsHandler.RegisterRoutes(apiV1)
 
+	// Geo-Replication routes
+	geoReplicationHandler := handlers.NewGeoReplicationHandler(database, logger)
+	geoReplicationHandler.RegisterRoutes(apiV1)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)

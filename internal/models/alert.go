@@ -21,6 +21,8 @@ const (
 	AlertTypeAgentHealthWarning AlertType = "agent_health_warning"
 	// AlertTypeAgentHealthCritical indicates an agent's health status changed to critical.
 	AlertTypeAgentHealthCritical AlertType = "agent_health_critical"
+	// AlertTypeReplicationLag indicates geo-replication has fallen behind.
+	AlertTypeReplicationLag AlertType = "replication_lag"
 )
 
 // AlertSeverity represents the severity level of an alert.
@@ -152,10 +154,15 @@ type AlertRuleConfig struct {
 	MaxHoursSinceBackup int `json:"max_hours_since_backup,omitempty"`
 	// For storage_usage: percentage threshold
 	StorageUsagePercent int `json:"storage_usage_percent,omitempty"`
+	// For replication_lag: maximum snapshots behind before alert
+	MaxReplicationLagSnapshots int `json:"max_replication_lag_snapshots,omitempty"`
+	// For replication_lag: maximum hours behind before alert
+	MaxReplicationLagHours int `json:"max_replication_lag_hours,omitempty"`
 	// Target-specific filters
-	AgentIDs     []uuid.UUID `json:"agent_ids,omitempty"`
-	ScheduleIDs  []uuid.UUID `json:"schedule_ids,omitempty"`
-	RepositoryID *uuid.UUID  `json:"repository_id,omitempty"`
+	AgentIDs              []uuid.UUID `json:"agent_ids,omitempty"`
+	ScheduleIDs           []uuid.UUID `json:"schedule_ids,omitempty"`
+	RepositoryID          *uuid.UUID  `json:"repository_id,omitempty"`
+	GeoReplicationConfigs []uuid.UUID `json:"geo_replication_configs,omitempty"`
 }
 
 // AlertRule defines conditions that trigger alerts.
