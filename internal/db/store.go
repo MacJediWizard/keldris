@@ -588,7 +588,7 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
 		ORDER BY name
@@ -624,7 +624,7 @@ func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedu
 	row := db.Pool.QueryRow(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`, id)
@@ -687,12 +687,12 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 		INSERT INTO schedules (id, agent_id, agent_group_id, policy_id, name, cron_expression, paths,
 		                       excludes, retention_policy, bandwidth_limit_kbps,
 		                       backup_window_start, backup_window_end, excluded_hours,
-		                       compression_level, on_mount_unavailable, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+		                       compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 	`, schedule.ID, schedule.AgentID, schedule.AgentGroupID, schedule.PolicyID, schedule.Name,
 		schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
 		schedule.BandwidthLimitKB, windowStart, windowEnd, excludedHoursBytes,
-		schedule.CompressionLevel, mountBehavior, schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
+		schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior, schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create schedule: %w", err)
 	}
@@ -753,11 +753,11 @@ func (db *DB) UpdateSchedule(ctx context.Context, schedule *models.Schedule) err
 		SET policy_id = $2, name = $3, cron_expression = $4, paths = $5, excludes = $6,
 		    retention_policy = $7, bandwidth_limit_kbps = $8, backup_window_start = $9,
 		    backup_window_end = $10, excluded_hours = $11, compression_level = $12,
-		    on_mount_unavailable = $13, enabled = $14, updated_at = $15
+		    max_file_size_mb = $13, on_mount_unavailable = $14, enabled = $15, updated_at = $16
 		WHERE id = $1
 	`, schedule.ID, schedule.PolicyID, schedule.Name, schedule.CronExpression, pathsBytes,
 		excludesBytes, retentionBytes, schedule.BandwidthLimitKB, windowStart, windowEnd,
-		excludedHoursBytes, schedule.CompressionLevel, mountBehavior, schedule.Enabled, schedule.UpdatedAt)
+		excludedHoursBytes, schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior, schedule.Enabled, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update schedule: %w", err)
 	}
@@ -920,8 +920,8 @@ func scanSchedule(rows interface {
 	err := rows.Scan(
 		&s.ID, &s.AgentID, &agentGroupID, &s.PolicyID, &s.Name, &s.CronExpression,
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.BandwidthLimitKB,
-		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel, &mountBehavior,
-		&s.Enabled, &s.CreatedAt, &s.UpdatedAt,
+		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel, &s.MaxFileSizeMB,
+		&mountBehavior, &s.Enabled, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan schedule: %w", err)
@@ -1110,7 +1110,8 @@ func (db *DB) DeletePolicy(ctx context.Context, id uuid.UUID) error {
 func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
-		       retention_policy, enabled, created_at, updated_at
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE policy_id = $1
 		ORDER BY name
@@ -1183,7 +1184,7 @@ func (db *DB) GetBackupsByScheduleID(ctx context.Context, scheduleID uuid.UUID) 
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
 		       pre_script_output, pre_script_error, post_script_output, post_script_error,
-		       resumed, checkpoint_id, original_backup_id, created_at
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
 		WHERE schedule_id = $1
 		ORDER BY started_at DESC
@@ -1203,7 +1204,7 @@ func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*mo
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
 		       pre_script_output, pre_script_error, post_script_output, post_script_error,
-		       resumed, checkpoint_id, original_backup_id, created_at
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
 		WHERE agent_id = $1
 		ORDER BY started_at DESC
@@ -1220,12 +1221,13 @@ func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*mo
 func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, error) {
 	var b models.Backup
 	var statusStr string
+	var excludedLargeFilesJSON []byte
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
 		       pre_script_output, pre_script_error, post_script_output, post_script_error,
-		       resumed, checkpoint_id, original_backup_id, created_at
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
 		WHERE id = $1
 	`, id).Scan(
@@ -1234,30 +1236,44 @@ func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, 
 		&b.FilesChanged, &b.ErrorMessage,
 		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError,
 		&b.PreScriptOutput, &b.PreScriptError, &b.PostScriptOutput, &b.PostScriptError,
-		&b.Resumed, &b.CheckpointID, &b.OriginalBackupID, &b.CreatedAt,
+		&excludedLargeFilesJSON, &b.Resumed, &b.CheckpointID, &b.OriginalBackupID, &b.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get backup: %w", err)
 	}
 	b.Status = models.BackupStatus(statusStr)
+	if excludedLargeFilesJSON != nil {
+		if err := json.Unmarshal(excludedLargeFilesJSON, &b.ExcludedLargeFiles); err != nil {
+			return nil, fmt.Errorf("unmarshal excluded large files: %w", err)
+		}
+	}
 	return &b, nil
 }
 
 // CreateBackup creates a new backup record.
 func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
+	var excludedLargeFilesJSON []byte
+	if backup.ExcludedLargeFiles != nil {
+		var err error
+		excludedLargeFilesJSON, err = json.Marshal(backup.ExcludedLargeFiles)
+		if err != nil {
+			return fmt.Errorf("marshal excluded large files: %w", err)
+		}
+	}
+
 	_, err := db.Pool.Exec(ctx, `
 		INSERT INTO backups (id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		                     status, size_bytes, files_new, files_changed, error_message,
 		                     retention_applied, snapshots_removed, snapshots_kept, retention_error,
 		                     pre_script_output, pre_script_error, post_script_output, post_script_error,
-		                     resumed, checkpoint_id, original_backup_id, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+		                     excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
 	`, backup.ID, backup.ScheduleID, backup.AgentID, backup.RepositoryID, backup.SnapshotID,
 		backup.StartedAt, backup.CompletedAt, string(backup.Status),
 		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage,
 		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError,
 		backup.PreScriptOutput, backup.PreScriptError, backup.PostScriptOutput, backup.PostScriptError,
-		backup.Resumed, backup.CheckpointID, backup.OriginalBackupID, backup.CreatedAt)
+		excludedLargeFilesJSON, backup.Resumed, backup.CheckpointID, backup.OriginalBackupID, backup.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("create backup: %w", err)
 	}
@@ -1266,17 +1282,28 @@ func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
 
 // UpdateBackup updates an existing backup record.
 func (db *DB) UpdateBackup(ctx context.Context, backup *models.Backup) error {
+	var excludedLargeFilesJSON []byte
+	if backup.ExcludedLargeFiles != nil {
+		var err error
+		excludedLargeFilesJSON, err = json.Marshal(backup.ExcludedLargeFiles)
+		if err != nil {
+			return fmt.Errorf("marshal excluded large files: %w", err)
+		}
+	}
+
 	_, err := db.Pool.Exec(ctx, `
 		UPDATE backups
 		SET snapshot_id = $2, completed_at = $3, status = $4, size_bytes = $5,
 		    files_new = $6, files_changed = $7, error_message = $8,
 		    retention_applied = $9, snapshots_removed = $10, snapshots_kept = $11, retention_error = $12,
-		    pre_script_output = $13, pre_script_error = $14, post_script_output = $15, post_script_error = $16
+		    pre_script_output = $13, pre_script_error = $14, post_script_output = $15, post_script_error = $16,
+		    excluded_large_files = $17
 		WHERE id = $1
 	`, backup.ID, backup.SnapshotID, backup.CompletedAt, string(backup.Status),
 		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage,
 		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError,
-		backup.PreScriptOutput, backup.PreScriptError, backup.PostScriptOutput, backup.PostScriptError)
+		backup.PreScriptOutput, backup.PreScriptError, backup.PostScriptOutput, backup.PostScriptError,
+		excludedLargeFilesJSON)
 	if err != nil {
 		return fmt.Errorf("update backup: %w", err)
 	}
@@ -1300,18 +1327,24 @@ func scanBackups(rows interface {
 	for r.Next() {
 		var b models.Backup
 		var statusStr string
+		var excludedLargeFilesJSON []byte
 		err := r.Scan(
 			&b.ID, &b.ScheduleID, &b.AgentID, &b.RepositoryID, &b.SnapshotID, &b.StartedAt,
 			&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
 			&b.FilesChanged, &b.ErrorMessage,
 			&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError,
 			&b.PreScriptOutput, &b.PreScriptError, &b.PostScriptOutput, &b.PostScriptError,
-			&b.Resumed, &b.CheckpointID, &b.OriginalBackupID, &b.CreatedAt,
+			&excludedLargeFilesJSON, &b.Resumed, &b.CheckpointID, &b.OriginalBackupID, &b.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan backup: %w", err)
 		}
 		b.Status = models.BackupStatus(statusStr)
+		if excludedLargeFilesJSON != nil {
+			if err := json.Unmarshal(excludedLargeFilesJSON, &b.ExcludedLargeFiles); err != nil {
+				return nil, fmt.Errorf("unmarshal excluded large files: %w", err)
+			}
+		}
 		backups = append(backups, &b)
 	}
 
@@ -1483,12 +1516,13 @@ func (db *DB) UpdateReplicationStatus(ctx context.Context, rs *models.Replicatio
 func (db *DB) GetBackupBySnapshotID(ctx context.Context, snapshotID string) (*models.Backup, error) {
 	var b models.Backup
 	var statusStr string
+	var excludedLargeFilesJSON []byte
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
 		       pre_script_output, pre_script_error, post_script_output, post_script_error,
-		       resumed, checkpoint_id, original_backup_id, created_at
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
 		WHERE snapshot_id = $1
 	`, snapshotID).Scan(
@@ -1497,12 +1531,17 @@ func (db *DB) GetBackupBySnapshotID(ctx context.Context, snapshotID string) (*mo
 		&b.FilesChanged, &b.ErrorMessage,
 		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError,
 		&b.PreScriptOutput, &b.PreScriptError, &b.PostScriptOutput, &b.PostScriptError,
-		&b.Resumed, &b.CheckpointID, &b.OriginalBackupID, &b.CreatedAt,
+		&excludedLargeFilesJSON, &b.Resumed, &b.CheckpointID, &b.OriginalBackupID, &b.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get backup by snapshot ID: %w", err)
 	}
 	b.Status = models.BackupStatus(statusStr)
+	if excludedLargeFilesJSON != nil {
+		if err := json.Unmarshal(excludedLargeFilesJSON, &b.ExcludedLargeFiles); err != nil {
+			return nil, fmt.Errorf("unmarshal excluded large files: %w", err)
+		}
+	}
 	return &b, nil
 }
 
@@ -1935,7 +1974,7 @@ func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression, s.paths, s.excludes,
 		       s.retention_policy, s.bandwidth_limit_kbps, s.backup_window_start, s.backup_window_end,
-		       s.excluded_hours, s.compression_level, s.enabled, s.created_at, s.updated_at
+		       s.excluded_hours, s.compression_level, s.max_file_size_mb, s.on_mount_unavailable, s.enabled, s.created_at, s.updated_at
 		FROM schedules s
 		WHERE s.enabled = true
 		ORDER BY s.name
@@ -1962,7 +2001,7 @@ func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE enabled = true
 		ORDER BY name
@@ -4804,7 +4843,7 @@ func (db *DB) GetBackupsByTagIDs(ctx context.Context, tagIDs []uuid.UUID) ([]*mo
 		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
 		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
 		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
-		       b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
+		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
 		FROM backups b
 		JOIN backup_tags bt ON b.id = bt.backup_id
 		WHERE bt.tag_id = ANY($1)
@@ -5108,7 +5147,7 @@ func (db *DB) GetBackupsByOrgIDSince(ctx context.Context, orgID uuid.UUID, since
 		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
 		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
 		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
-		       b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
+		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
@@ -5679,7 +5718,7 @@ func (db *DB) GetBackupsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID
 		       b.files_changed, b.error_message,
 		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
 		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
-		       b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
+		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
@@ -5714,7 +5753,8 @@ func (db *DB) GetAlertsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID,
 func (db *DB) GetEnabledSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression,
-		       s.paths, s.excludes, s.retention_policy, s.enabled,
+		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps, s.backup_window_start, s.backup_window_end,
+		       s.excluded_hours, s.compression_level, s.max_file_size_mb, s.on_mount_unavailable, s.enabled,
 		       s.created_at, s.updated_at
 		FROM schedules s
 		JOIN agents a ON s.agent_id = a.id
@@ -5994,7 +6034,8 @@ func (db *DB) GetAgentsByGroupID(ctx context.Context, groupID uuid.UUID) ([]uuid
 func (db *DB) GetSchedulesByAgentGroupID(ctx context.Context, agentGroupID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
-		       retention_policy, enabled, created_at, updated_at
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_group_id = $1
 		ORDER BY name
