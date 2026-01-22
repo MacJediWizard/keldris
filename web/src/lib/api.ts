@@ -123,6 +123,7 @@ import type {
 	MaintenanceWindowsResponse,
 	MembersResponse,
 	MessageResponse,
+	MountSnapshotRequest,
 	NotificationChannel,
 	NotificationChannelWithPreferencesResponse,
 	NotificationChannelsResponse,
@@ -182,6 +183,8 @@ import type {
 	SnapshotCommentsResponse,
 	SnapshotCompareResponse,
 	SnapshotFilesResponse,
+	SnapshotMount,
+	SnapshotMountsResponse,
 	SnapshotsResponse,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
@@ -732,6 +735,43 @@ export const snapshotsApi = {
 
 	compare: async (id1: string, id2: string): Promise<SnapshotCompareResponse> =>
 		fetchApi<SnapshotCompareResponse>(`/snapshots/${id1}/compare/${id2}`),
+
+	mount: async (
+		snapshotId: string,
+		data: MountSnapshotRequest,
+	): Promise<SnapshotMount> =>
+		fetchApi<SnapshotMount>(`/snapshots/${snapshotId}/mount`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	unmount: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/snapshots/${snapshotId}/mount?agent_id=${agentId}`,
+			{
+				method: 'DELETE',
+			},
+		),
+
+	getMount: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<SnapshotMount> =>
+		fetchApi<SnapshotMount>(
+			`/snapshots/${snapshotId}/mount?agent_id=${agentId}`,
+		),
+};
+
+// Snapshot Mounts API
+export const snapshotMountsApi = {
+	list: async (agentId?: string): Promise<SnapshotMount[]> => {
+		const endpoint = agentId ? `/mounts?agent_id=${agentId}` : '/mounts';
+		const response = await fetchApi<SnapshotMountsResponse>(endpoint);
+		return response.mounts ?? [];
+	},
 };
 
 // Snapshot Comments API
