@@ -1,173 +1,58 @@
 # Keldris
 
-<p align="center">
-  <strong>Keeper of your data</strong><br>
-  Self-hosted backup solution with OIDC authentication, Restic engine, and enterprise features
-</p>
+Self-hosted backup management with OIDC auth. Built on Restic.
 
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#tech-stack">Tech Stack</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#documentation">Documentation</a> •
-  <a href="#license">License</a>
-</p>
+Built for teams that outgrew basic backup tools but don't want to pay enterprise pricing.
 
----
+> ⚠️ **Active development** - Not ready for production yet. Following along? Star the repo.
 
-> ⚠️ **UNDER ACTIVE DEVELOPMENT** - Keldris is currently being built. Features listed below are planned or in progress. Star this repo to follow along!
+## Why I'm building this
 
----
+I wanted a backup solution that could:
+- Use existing OIDC/SSO infrastructure (not another set of credentials)
+- Manage Restic repos across multiple machines from one UI
+- Actually tell me when backups fail
+- Handle multi-tenant environments properly
 
-## What is Keldris?
+...I couldn't find one. So I'm building it.
 
-Keldris is a self-hosted, agent-based backup solution designed for homelabs, small businesses, and enterprises. It provides centralized backup management with modern authentication, encrypted storage, and comprehensive monitoring.
+## What it does
 
-### Why Keldris?
-
-- **OIDC/SSO First** - Authentik, Keycloak, or any OIDC provider
-- **Agent-Based** - Lightweight Go agents on each machine
-- **Restic-Powered** - Battle-tested encryption and deduplication
-- **Multi-Tenant** - Organizations, roles, and permissions built-in
-- **Cloud & Local** - S3, B2, Dropbox, local storage, and more
+- **OIDC-first auth** - Authentik, Keycloak, whatever you use
+- **Agent-based** - Small Go binary on each machine, talks to central server
+- **Restic under the hood** - Encryption, deduplication, the good stuff
+- **Multi-tenant** - Orgs and RBAC if you need it
 
 ---
 
-## Features
+## Status
 
-### Core Backup Features
-| Feature | Status |
-|---------|--------|
-| Restic-powered encrypted backups | ✅ Done |
-| Scheduled backups (cron) | ✅ Done |
-| Multiple storage backends (Local, S3, B2, Dropbox) | 🚧 In Progress |
-| Retention policy automation | 🚧 In Progress |
-| Backup verification & integrity checks | 🚧 In Progress |
-| Bandwidth scheduling & limits | 🚧 In Progress |
-| Compression settings | 🚧 In Progress |
-| Pre/post backup scripts | 🚧 In Progress |
-| Exclude patterns library | 🚧 In Progress |
-| Multi-repository backup (primary + secondaries) | 🚧 In Progress |
-| Backup policies & templates | 🚧 In Progress |
+Tracking what's done and what's next.
 
-### Restore Features
-| Feature | Status |
-|---------|--------|
-| Full restore UI | 🚧 In Progress |
-| File/folder browser in snapshots | 🚧 In Progress |
-| Partial restore (single files) | 🚧 In Progress |
-| Cross-agent restore | 🚧 In Progress |
-| Snapshot comparison (diff) | 🚧 In Progress |
-| File version history | 🚧 In Progress |
-| Restore dry-run | 📋 Planned |
-| Snapshot mount (FUSE) | 📋 Planned |
+### Done
+- Restic-powered encrypted backups
+- Scheduled backups (cron)
+- OIDC authentication (Authentik-first)
+- Go agent (Linux, macOS, Windows)
+- Docker deployment
+- CI/CD with GitHub Actions
 
-### Agent Features
-| Feature | Status |
-|---------|--------|
-| Go agent (Linux, macOS, Windows) | ✅ Done |
-| Agent health monitoring | 🚧 In Progress |
-| Agent self-update | 🚧 In Progress |
-| Agent groups | 🚧 In Progress |
-| Agent details page | 🚧 In Progress |
-| Platform installers (systemd, launchd, Windows Service) | 🚧 In Progress |
-| Remote commands from UI | 📋 Planned |
-| Network drive support (NFS/SMB/CIFS) | 🚧 In Progress |
+### Working on now
+- Storage backends (S3, B2, Dropbox, local)
+- Retention policies
+- Restore UI with file browser
+- Agent health monitoring
+- Docker volume/compose backup
+- Email notifications
+- RBAC and multi-org
 
-### Docker & Container Support
-| Feature | Status |
-|---------|--------|
-| Docker volume backup | 🚧 In Progress |
-| Docker Compose stack backup | 🚧 In Progress |
-| Docker image backup | 📋 Planned |
-| Docker network backup | 📋 Planned |
-| Docker secrets backup | 📋 Planned |
-| Docker Swarm support | 📋 Planned |
-| Docker exec hooks (pre/post backup) | 🚧 In Progress |
-| Docker labels config | 📋 Planned |
-| Docker logs backup | 📋 Planned |
-| Docker health monitoring | 📋 Planned |
-| Komodo integration | 📋 Planned |
-| Test restore automation | 📋 Planned |
-| Test backup validation | 📋 Planned |
-
-### Authentication & Security
-| Feature | Status |
-|---------|--------|
-| OIDC authentication (Authentik-first) | ✅ Done |
-| Multi-organization support | 🚧 In Progress |
-| Role-based access control (RBAC) | 🚧 In Progress |
-| Agent API key authentication | 🚧 In Progress |
-| Backup encryption key management | 🚧 In Progress |
-| SSO group sync | 🚧 In Progress |
-| Two-factor agent registration | 🚧 In Progress |
-| Session management | 📋 Planned |
-| IP allowlist | 📋 Planned |
-| Audit logging | 🚧 In Progress |
-| Immutable backups | 📋 Planned |
-| Legal hold | 📋 Planned |
-
-### Monitoring & Alerts
-| Feature | Status |
-|---------|--------|
-| Metrics dashboard | 🚧 In Progress |
-| Monitoring & alerts | 🚧 In Progress |
-| Gatus-compatible health endpoints | 🚧 In Progress |
-| Email notifications | 🚧 In Progress |
-| Slack/Teams/Discord notifications | 📋 Planned |
-| Webhook notifications | 📋 Planned |
-| PagerDuty integration | 📋 Planned |
-| Scheduled reports (weekly/monthly) | 🚧 In Progress |
-| Deduplication stats | 🚧 In Progress |
-| Cost estimation | 🚧 In Progress |
-| SLA tracking | 📋 Planned |
-
-### Administration
-| Feature | Status |
-|---------|--------|
-| Superuser/admin panel | 📋 Planned |
-| System settings page | 📋 Planned |
-| User management | 📋 Planned |
-| Organization management | 📋 Planned |
-| Usage quotas | 📋 Planned |
-| License management | 📋 Planned |
-| Maintenance windows | 🚧 In Progress |
-
-### User Experience
-| Feature | Status |
-|---------|--------|
-| Dark mode | 🚧 In Progress |
-| Localization (multi-language) | 🚧 In Progress |
-| Onboarding wizard | 🚧 In Progress |
-| Tags & search | 🚧 In Progress |
-| Backup comments | 🚧 In Progress |
-| Keyboard shortcuts | 📋 Planned |
-| Global search | 🚧 In Progress |
-| Activity feed | 📋 Planned |
-| Favorites | 📋 Planned |
-
-### Disaster Recovery
-| Feature | Status |
-|---------|--------|
-| DR runbook generator | 🚧 In Progress |
-| Geo-redundancy | 📋 Planned |
-| Import existing Restic repos | 🚧 In Progress |
-
-### DevOps & Integration
-| Feature | Status |
-|---------|--------|
-| Docker deployment | ✅ Done |
-| CI/CD (GitHub Actions) | ✅ Done |
-| API documentation (OpenAPI) | 🚧 In Progress |
-| Prometheus metrics | 📋 Planned |
-| Terraform provider | 📋 Planned |
-| Ansible role | 📋 Planned |
-
-### Application-Specific Backup
-| Feature | Status |
-|---------|--------|
-| Pi-hole backup | 📋 Planned |
-| App hook templates (PostgreSQL, MySQL, MongoDB, Redis, etc.) | 🚧 In Progress |
+### On the roadmap
+- Snapshot mounting (FUSE)
+- Prometheus metrics
+- Slack/Discord/webhook notifications
+- Admin panel
+- DR runbooks
+- Import existing Restic repos
 
 ---
 
@@ -185,54 +70,19 @@ Keldris is a self-hosted, agent-based backup solution designed for homelabs, sma
 
 ---
 
-## Installation
+## Getting started
 
-> 🚧 **Coming Soon** - Installation instructions will be available when Keldris reaches beta.
+Not ready for general use yet. If you want to poke around:
 
-### Prerequisites (Planned)
-- Docker & Docker Compose
-- PostgreSQL 15+
-- OIDC Provider (Authentik, Keycloak, etc.)
-
-### Quick Start (Coming Soon)
 ```bash
-# Clone the repository
 git clone https://github.com/MacJediWizard/keldris.git
 cd keldris
-
-# Configure environment
 cp .env.example .env
 # Edit .env with your OIDC settings
-
-# Start with Docker
 docker-compose up -d
 ```
 
-### Agent Installation (Coming Soon)
-```bash
-# Linux
-curl -fsSL https://keldris.com/install.sh | sudo bash
-
-# macOS
-brew install keldris-agent
-
-# Windows
-winget install keldris-agent
-```
-
----
-
-## Documentation
-
-> 🚧 **Coming Soon** - Full documentation will be available at [docs.keldris.com](https://docs.keldris.com)
-
-- Installation Guide
-- OIDC Setup (Authentik, Keycloak)
-- Agent Deployment
-- Storage Backend Configuration
-- API Reference
-- Backup Strategies
-- Disaster Recovery
+You'll need Docker, PostgreSQL 15+, and an OIDC provider.
 
 ---
 
@@ -287,37 +137,10 @@ make build
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines (coming soon) before submitting PRs.
-
----
-
-## Roadmap
-
-- [x] Phase 1-4: Core functionality (Server, Agent, API, Frontend)
-- [ ] Phase 5: Extended features (Notifications, Storage backends, Retention)
-- [ ] Phase 6: Monitoring & Security (Alerts, Encryption, Audit logs)
-- [ ] Phase 7: Enterprise features (Multi-org, RBAC, DR)
-- [ ] Phase 8: Docker support (Volumes, Compose, Swarm)
-- [ ] Phase 9: Polish (Dark mode, Localization, Onboarding)
-- [ ] Beta Release
-- [ ] v1.0 Release
+PRs welcome once this is more stable. For now, feel free to open issues.
 
 ---
 
 ## License
 
 AGPLv3 - See [LICENSE](LICENSE)
-
----
-
-## Acknowledgments
-
-- [Restic](https://restic.net/) - The backup engine powering Keldris
-- [Authentik](https://goauthentik.io/) - Primary OIDC provider for development
-
----
-
-<p align="center">
-  <strong>Powered by NeuroHolocron</strong><br>
-  © MacJediWizard Consulting, Inc.
-</p>
