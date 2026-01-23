@@ -263,6 +263,7 @@ export function OrganizationSettings() {
 							{generateSupportBundle.isPending ? (
 								<>
 									<svg
+										aria-hidden="true"
 										className="animate-spin h-4 w-4"
 										fill="none"
 										viewBox="0 0 24 24"
@@ -286,6 +287,7 @@ export function OrganizationSettings() {
 							) : (
 								<>
 									<svg
+										aria-hidden="true"
 										className="w-4 h-4"
 										fill="none"
 										stroke="currentColor"
