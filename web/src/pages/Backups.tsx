@@ -1,6 +1,17 @@
 import { useState } from 'react';
+import { BulkActions, type BulkAction } from '../components/ui/BulkActions';
+import {
+	BulkOperationProgress,
+	useBulkOperation,
+} from '../components/ui/BulkOperationProgress';
+import {
+	BulkSelectCheckbox,
+	BulkSelectHeader,
+	BulkSelectToolbar,
+} from '../components/ui/BulkSelect';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
+import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
 import { useBackupTags, useSetBackupTags, useTags } from '../hooks/useTags';
@@ -17,6 +28,9 @@ import {
 function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
+			<td className="px-6 py-4 w-12">
+				<div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded" />
+			</td>
 			<td className="px-6 py-4">
 				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
@@ -370,6 +384,8 @@ interface BackupRowProps {
 	agentName?: string;
 	repoName?: string;
 	onViewDetails: (backup: Backup) => void;
+	isSelected: boolean;
+	onToggleSelect: () => void;
 }
 
 function BackupRow({
@@ -377,11 +393,18 @@ function BackupRow({
 	agentName,
 	repoName,
 	onViewDetails,
+	isSelected,
+	onToggleSelect,
 }: BackupRowProps) {
 	const statusColor = getBackupStatusColor(backup.status);
 
 	return (
-		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
+		<tr
+			className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}
+		>
+			<td className="px-6 py-4 w-12">
+				<BulkSelectCheckbox checked={isSelected} onChange={onToggleSelect} />
+			</td>
 			<td className="px-6 py-4">
 				<code className="text-sm font-mono text-gray-900 dark:text-white">
 					{truncateSnapshotId(backup.snapshot_id)}
@@ -428,12 +451,17 @@ export function Backups() {
 		new Set(),
 	);
 	const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null);
+	const [showAddTagModal, setShowAddTagModal] = useState(false);
+	const [selectedTagId, setSelectedTagId] = useState('');
 
 	const { data: backups, isLoading, isError } = useBackups();
 	const { data: agents } = useAgents();
 	const { data: schedules } = useSchedules();
 	const { data: repositories } = useRepositories();
 	const { data: allTags } = useTags();
+	const setBackupTags = useSetBackupTags();
+
+	const bulkOperation = useBulkOperation();
 
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
@@ -476,6 +504,58 @@ export function Backups() {
 		return matchesSearch && matchesAgent && matchesStatus;
 	});
 
+	const backupIds = filteredBackups?.map((b) => b.id) ?? [];
+	const bulkSelect = useBulkSelect(backupIds);
+
+	const bulkActions: BulkAction[] = [
+		{
+			id: 'add-tag',
+			label: 'Add Tag',
+			icon: (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"
+					/>
+				</svg>
+			),
+		},
+	];
+
+	const handleBulkAction = (actionId: string) => {
+		switch (actionId) {
+			case 'add-tag':
+				setShowAddTagModal(true);
+				break;
+		}
+	};
+
+	const handleBulkAddTag = async () => {
+		if (!selectedTagId) return;
+		setShowAddTagModal(false);
+
+		await bulkOperation.start(
+			[...bulkSelect.selectedIds],
+			async (backupId: string) => {
+				// Get current tags and add the new one
+				await setBackupTags.mutateAsync({
+					backupId,
+					data: { tag_ids: [selectedTagId] },
+				});
+			},
+		);
+		bulkSelect.clear();
+		setSelectedTagId('');
+	};
+
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
@@ -488,6 +568,23 @@ export function Backups() {
 					</p>
 				</div>
 			</div>
+
+			{/* Bulk Selection Toolbar */}
+			{bulkSelect.selectedCount > 0 && (
+				<BulkSelectToolbar
+					selectedCount={bulkSelect.selectedCount}
+					totalCount={backupIds.length}
+					onSelectAll={() => bulkSelect.selectAll(backupIds)}
+					onDeselectAll={bulkSelect.deselectAll}
+					itemLabel="backup"
+				>
+					<BulkActions
+						actions={bulkActions}
+						onAction={handleBulkAction}
+						label="Actions"
+					/>
+				</BulkSelectToolbar>
+			)}
 
 			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -559,6 +656,7 @@ export function Backups() {
 						<table className="w-full">
 							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 								<tr>
+									<th className="px-6 py-3 w-12" />
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Snapshot ID
 									</th>
@@ -594,6 +692,15 @@ export function Backups() {
 						<table className="w-full">
 							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 								<tr>
+									<th className="px-6 py-3 w-12">
+										<BulkSelectHeader
+											isAllSelected={bulkSelect.isAllSelected}
+											isPartiallySelected={bulkSelect.isPartiallySelected}
+											onToggleAll={() => bulkSelect.toggleAll(backupIds)}
+											selectedCount={bulkSelect.selectedCount}
+											totalCount={backupIds.length}
+										/>
+									</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Snapshot ID
 									</th>
@@ -625,6 +732,8 @@ export function Backups() {
 										agentName={agentMap.get(backup.agent_id)}
 										repoName={getRepoNameForBackup(backup)}
 										onViewDetails={setSelectedBackup}
+										isSelected={bulkSelect.isSelected(backup.id)}
+										onToggleSelect={() => bulkSelect.toggle(backup.id)}
 									/>
 								))}
 							</tbody>
@@ -633,6 +742,7 @@ export function Backups() {
 						<table className="w-full">
 							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 								<tr>
+									<th className="px-6 py-3 w-12" />
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Snapshot ID
 									</th>
@@ -659,7 +769,7 @@ export function Backups() {
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 								<tr>
 									<td
-										colSpan={7}
+										colSpan={8}
 										className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
 									>
 										<svg
@@ -699,6 +809,73 @@ export function Backups() {
 					onClose={() => setSelectedBackup(null)}
 				/>
 			)}
+
+			{/* Add Tag Modal */}
+			{showAddTagModal && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+							Add Tag
+						</h3>
+						<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+							Add a tag to {bulkSelect.selectedCount} backup
+							{bulkSelect.selectedCount !== 1 ? 's' : ''}.
+						</p>
+						<div className="mb-4">
+							<label
+								htmlFor="bulk-tag-select"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Tag
+							</label>
+							<select
+								id="bulk-tag-select"
+								value={selectedTagId}
+								onChange={(e) => setSelectedTagId(e.target.value)}
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="">Select a tag</option>
+								{allTags?.map((tag) => (
+									<option key={tag.id} value={tag.id}>
+										{tag.name}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="flex justify-end gap-3">
+							<button
+								type="button"
+								onClick={() => {
+									setShowAddTagModal(false);
+									setSelectedTagId('');
+								}}
+								className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={handleBulkAddTag}
+								disabled={!selectedTagId}
+								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+							>
+								Add Tag
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Bulk Operation Progress */}
+			<BulkOperationProgress
+				isOpen={bulkOperation.isRunning || bulkOperation.isComplete}
+				onClose={bulkOperation.reset}
+				title="Bulk Operation"
+				total={bulkOperation.total}
+				completed={bulkOperation.completed}
+				results={bulkOperation.results}
+				isComplete={bulkOperation.isComplete}
+			/>
 		</div>
 	);
 }
