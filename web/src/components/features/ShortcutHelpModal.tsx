@@ -76,9 +76,7 @@ export function ShortcutHelpModal({
 			<div
 				ref={modalRef}
 				className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden"
-				role="dialog"
 				aria-labelledby="shortcut-help-title"
-				aria-modal="true"
 				tabIndex={-1}
 			>
 				<div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">

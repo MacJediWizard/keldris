@@ -145,7 +145,9 @@ interface UseKeyboardShortcutsOptions {
 	enabled?: boolean;
 }
 
-export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) {
+export function useKeyboardShortcuts(
+	options: UseKeyboardShortcutsOptions = {},
+) {
 	const { onShowHelp, onCloseModal, enabled = true } = options;
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -166,31 +168,28 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 	}, [customShortcuts]);
 
 	// Check if current element should prevent shortcuts
-	const shouldPreventShortcut = useCallback(
-		(e: KeyboardEvent): boolean => {
-			const target = e.target as HTMLElement;
-			const tagName = target.tagName.toLowerCase();
+	const shouldPreventShortcut = useCallback((e: KeyboardEvent): boolean => {
+		const target = e.target as HTMLElement;
+		const tagName = target.tagName.toLowerCase();
 
-			// Allow shortcuts when:
-			// 1. Escape key (always allow for closing modals)
-			// 2. '?' key with Shift (always allow for help)
-			if (e.key === 'Escape') return false;
-			if (e.key === '?' && e.shiftKey) return false;
+		// Allow shortcuts when:
+		// 1. Escape key (always allow for closing modals)
+		// 2. '?' key with Shift (always allow for help)
+		if (e.key === 'Escape') return false;
+		if (e.key === '?' && e.shiftKey) return false;
 
-			// Prevent shortcuts in input elements
-			if (
-				tagName === 'input' ||
-				tagName === 'textarea' ||
-				tagName === 'select' ||
-				target.isContentEditable
-			) {
-				return true;
-			}
+		// Prevent shortcuts in input elements
+		if (
+			tagName === 'input' ||
+			tagName === 'textarea' ||
+			tagName === 'select' ||
+			target.isContentEditable
+		) {
+			return true;
+		}
 
-			return false;
-		},
-		[],
-	);
+		return false;
+	}, []);
 
 	// Execute shortcut action
 	const executeAction = useCallback(
@@ -256,7 +255,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 					onCloseModal?.();
 					// Also try clicking any visible close button
 					const closeButton = document.querySelector<HTMLButtonElement>(
-						'.fixed.inset-0 button[type="button"]:has(svg), [role="dialog"] button[aria-label*="close"], [role="dialog"] button[aria-label*="Close"]',
+						'.fixed.inset-0 button[type="button"]:has(svg)',
 					);
 					if (closeButton) {
 						closeButton.click();
@@ -301,7 +300,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 			if (shouldPreventShortcut(e)) {
 				// But allow Escape in modals
 				if (e.key === 'Escape') {
-					const modal = document.querySelector('.fixed.inset-0, [role="dialog"]');
+					const modal = document.querySelector('.fixed.inset-0');
 					if (modal) {
 						executeAction('closeModal');
 						return;
@@ -337,7 +336,12 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 			}
 
 			// Handle multi-key shortcuts (g + key)
-			if (e.key.toLowerCase() === 'g' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+			if (
+				e.key.toLowerCase() === 'g' &&
+				!e.ctrlKey &&
+				!e.metaKey &&
+				!e.altKey
+			) {
 				// Start key sequence
 				keySequence.current = ['g'];
 
@@ -375,12 +379,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 
 		window.addEventListener('keydown', handleKeyDown);
 		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [
-		enabled,
-		shouldPreventShortcut,
-		executeAction,
-		matchShortcut,
-	]);
+	}, [enabled, shouldPreventShortcut, executeAction, matchShortcut]);
 
 	// Update custom shortcuts
 	const updateCustomShortcut = useCallback(
