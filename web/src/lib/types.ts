@@ -200,6 +200,35 @@ export interface AgentHealthHistoryResponse {
 	history: AgentHealthHistory[];
 }
 
+// Agent Log types
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export interface AgentLog {
+	id: string;
+	agent_id: string;
+	org_id: string;
+	level: LogLevel;
+	message: string;
+	component?: string;
+	metadata?: Record<string, unknown>;
+	timestamp: string;
+	created_at: string;
+}
+
+export interface AgentLogsResponse {
+	logs: AgentLog[];
+	total_count: number;
+	has_more: boolean;
+}
+
+export interface AgentLogFilter {
+	level?: LogLevel;
+	component?: string;
+	search?: string;
+	limit?: number;
+	offset?: number;
+}
+
 // Repository types
 export type RepositoryType =
 	| 'local'
