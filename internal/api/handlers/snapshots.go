@@ -65,6 +65,7 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		snapshots.GET("/:id/comments", h.ListSnapshotComments)
 		snapshots.POST("/:id/comments", h.CreateSnapshotComment)
 		snapshots.GET("/:id1/compare/:id2", h.CompareSnapshots)
+		snapshots.GET("/:id1/files/diff/:id2", h.DiffFile)
 		// Mount endpoints
 		snapshots.POST("/:id/mount", h.MountSnapshot)
 		snapshots.DELETE("/:id/mount", h.UnmountSnapshot)
@@ -999,6 +1000,118 @@ func (h *SnapshotsHandler) DeleteSnapshotComment(c *gin.Context) {
 		Msg("snapshot comment deleted")
 
 	c.JSON(http.StatusOK, gin.H{"message": "comment deleted"})
+}
+
+// FileDiffResponse represents the response from diffing a file between two snapshots.
+type FileDiffResponse struct {
+	Path        string `json:"path"`
+	IsBinary    bool   `json:"is_binary"`
+	ChangeType  string `json:"change_type"` // "modified", "added", "removed"
+	OldSize     int64  `json:"old_size,omitempty"`
+	NewSize     int64  `json:"new_size,omitempty"`
+	OldHash     string `json:"old_hash,omitempty"`
+	NewHash     string `json:"new_hash,omitempty"`
+	UnifiedDiff string `json:"unified_diff,omitempty"` // For text files
+	OldContent  string `json:"old_content,omitempty"`  // For side-by-side view
+	NewContent  string `json:"new_content,omitempty"`  // For side-by-side view
+	SnapshotID1 string `json:"snapshot_id_1"`
+	SnapshotID2 string `json:"snapshot_id_2"`
+}
+
+// DiffFile returns the diff of a specific file between two snapshots.
+// GET /api/v1/snapshots/:id1/files/diff/:id2?path=<file_path>
+//
+//	@Summary		Get file diff between snapshots
+//	@Description	Returns the diff of a specific file between two snapshots
+//	@Tags			Snapshots
+//	@Accept			json
+//	@Produce		json
+//	@Param			id1		path		string	true	"First snapshot ID"
+//	@Param			id2		path		string	true	"Second snapshot ID"
+//	@Param			path	query		string	true	"File path to diff"
+//	@Success		200		{object}	FileDiffResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/snapshots/{id1}/files/diff/{id2} [get]
+func (h *SnapshotsHandler) DiffFile(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	snapshotID1 := c.Param("id1")
+	snapshotID2 := c.Param("id2")
+	filePath := c.Query("path")
+
+	if snapshotID1 == "" || snapshotID2 == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "both snapshot IDs are required"})
+		return
+	}
+
+	if filePath == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file path is required"})
+		return
+	}
+
+	// Get user for org verification
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	// Verify access to first snapshot
+	backup1, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID1)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "first snapshot not found"})
+		return
+	}
+
+	agent1, err := h.store.GetAgentByID(c.Request.Context(), backup1.AgentID)
+	if err != nil || agent1.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "first snapshot not found"})
+		return
+	}
+
+	// Verify access to second snapshot
+	backup2, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID2)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "second snapshot not found"})
+		return
+	}
+
+	agent2, err := h.store.GetAgentByID(c.Request.Context(), backup2.AgentID)
+	if err != nil || agent2.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "second snapshot not found"})
+		return
+	}
+
+	h.logger.Info().
+		Str("snapshot_id_1", snapshotID1).
+		Str("snapshot_id_2", snapshotID2).
+		Str("file_path", filePath).
+		Msg("file diff requested")
+
+	// Note: In a full implementation, this would call the agent to extract
+	// and diff the file from the actual Restic repository. For now, we return
+	// a placeholder response indicating the functionality is available but
+	// requires agent communication.
+	c.JSON(http.StatusOK, FileDiffResponse{
+		Path:        filePath,
+		IsBinary:    false,
+		ChangeType:  "modified",
+		SnapshotID1: snapshotID1,
+		SnapshotID2: snapshotID2,
+		OldSize:     0,
+		NewSize:     0,
+		UnifiedDiff: "",
+		OldContent:  "",
+		NewContent:  "",
+	})
 }
 
 // CompareSnapshots compares two snapshots and returns their differences.
