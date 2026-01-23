@@ -7,7 +7,10 @@ interface AgentLogViewerProps {
 	agentId: string;
 }
 
-const LOG_LEVEL_COLORS: Record<LogLevel, { bg: string; text: string; dot: string }> = {
+const LOG_LEVEL_COLORS: Record<
+	LogLevel,
+	{ bg: string; text: string; dot: string }
+> = {
 	debug: { bg: 'bg-gray-100', text: 'text-gray-700', dot: 'bg-gray-400' },
 	info: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-400' },
 	warn: { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-400' },
@@ -20,17 +23,10 @@ function LogRow({ log }: { log: AgentLog }) {
 
 	return (
 		<div className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-			<div
-				className="px-4 py-2 flex items-start gap-3 cursor-pointer"
+			<button
+				type="button"
+				className="w-full px-4 py-2 flex items-start gap-3 cursor-pointer text-left bg-transparent border-none"
 				onClick={() => setExpanded(!expanded)}
-				onKeyDown={(e) => {
-					if (e.key === 'Enter' || e.key === ' ') {
-						e.preventDefault();
-						setExpanded(!expanded);
-					}
-				}}
-				role="button"
-				tabIndex={0}
 			>
 				<span className="text-xs text-gray-400 whitespace-nowrap font-mono pt-0.5">
 					{formatDateTime(log.timestamp)}
@@ -63,7 +59,7 @@ function LogRow({ log }: { log: AgentLog }) {
 						d="M19 9l-7 7-7-7"
 					/>
 				</svg>
-			</div>
+			</button>
 			{expanded && log.metadata && Object.keys(log.metadata).length > 0 && (
 				<div className="px-4 pb-3 ml-[180px]">
 					<pre className="text-xs bg-gray-50 p-3 rounded-lg overflow-x-auto font-mono text-gray-600">
@@ -90,11 +86,13 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 	const hasMore = data?.has_more ?? false;
 
 	// Auto-scroll to bottom when new logs arrive
+	// biome-ignore lint/correctness/useExhaustiveDependencies: logsLength triggers scroll on new logs
 	useEffect(() => {
 		if (autoScroll && logsContainerRef.current) {
-			logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+			logsContainerRef.current.scrollTop =
+				logsContainerRef.current.scrollHeight;
 		}
-	}, [logs, autoScroll]);
+	}, [autoScroll, logs.length]);
 
 	const handleLevelChange = useCallback((level: LogLevel | '') => {
 		setFilter((prev) => ({
@@ -294,7 +292,8 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 
 			{/* Stats */}
 			<div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs text-gray-500">
-				{totalCount} log entries {filter.search && `matching "${filter.search}"`}
+				{totalCount} log entries{' '}
+				{filter.search && `matching "${filter.search}"`}
 				{filter.level && ` at ${filter.level} level`}
 			</div>
 
