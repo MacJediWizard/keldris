@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -869,25 +868,3 @@ func (h *ConfigExportHandler) UseTemplate(c *gin.Context) {
 	}
 }
 
-// toTemplateResponse converts template for JSON response (internal helper).
-func toTemplateResponse(template *models.ConfigTemplate) map[string]any {
-	var config map[string]any
-	if len(template.Config) > 0 {
-		json.Unmarshal(template.Config, &config)
-	}
-
-	return map[string]any{
-		"id":          template.ID,
-		"org_id":      template.OrgID,
-		"created_by":  template.CreatedByID,
-		"name":        template.Name,
-		"description": template.Description,
-		"type":        template.Type,
-		"visibility":  template.Visibility,
-		"tags":        template.Tags,
-		"config":      config,
-		"usage_count": template.UsageCount,
-		"created_at":  template.CreatedAt,
-		"updated_at":  template.UpdatedAt,
-	}
-}
