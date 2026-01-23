@@ -8,7 +8,12 @@ import {
 	useOrganizations,
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
+import {
+	ReadOnlyModeContext,
+	useReadOnlyModeValue,
+} from '../hooks/useReadOnlyMode';
 import { LanguageSelector } from './features/LanguageSelector';
+import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 
 interface NavItem {
 	path: string;
@@ -581,12 +586,30 @@ function LoadingScreen() {
 	);
 }
 
+function LayoutContent() {
+	return (
+		<div className="min-h-screen bg-gray-50 flex flex-col">
+			<MaintenanceCountdown />
+			<div className="flex flex-1">
+				<Sidebar />
+				<div className="flex-1 flex flex-col">
+					<Header />
+					<main className="flex-1 p-6">
+						<Outlet />
+					</main>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 export function Layout() {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const { isLoading, isError } = useMe();
 	const { data: onboardingStatus, isLoading: onboardingLoading } =
 		useOnboardingStatus();
+	const readOnlyModeValue = useReadOnlyModeValue();
 
 	// Redirect to onboarding if needed (but not if already on onboarding page)
 	useEffect(() => {
@@ -616,14 +639,8 @@ export function Layout() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-50 flex">
-			<Sidebar />
-			<div className="flex-1 flex flex-col">
-				<Header />
-				<main className="flex-1 p-6">
-					<Outlet />
-				</main>
-			</div>
-		</div>
+		<ReadOnlyModeContext.Provider value={readOnlyModeValue}>
+			<LayoutContent />
+		</ReadOnlyModeContext.Provider>
 	);
 }
