@@ -105,6 +105,10 @@ func NewRouter(
 	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)
 	versionHandler.RegisterPublicRoutes(r.Engine)
 
+	// Changelog endpoint (no auth required for public access)
+	changelogHandler := handlers.NewChangelogHandler("CHANGELOG.md", cfg.Version, logger)
+	changelogHandler.RegisterPublicRoutes(r.Engine)
+
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
@@ -120,6 +124,7 @@ func NewRouter(
 
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
+	changelogHandler.RegisterRoutes(apiV1)
 
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
 	orgsHandler.RegisterRoutes(apiV1)
