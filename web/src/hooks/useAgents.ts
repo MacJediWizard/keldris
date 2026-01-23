@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { agentsApi, schedulesApi } from '../lib/api';
-import type { CreateAgentRequest } from '../lib/types';
+import type { CreateAgentRequest, SetDebugModeRequest } from '../lib/types';
 
 export function useAgents() {
 	return useQuery({
@@ -115,5 +115,18 @@ export function useFleetHealth() {
 		queryKey: ['agents', 'fleet-health'],
 		queryFn: () => agentsApi.getFleetHealth(),
 		staleTime: 30 * 1000, // 30 seconds
+	});
+}
+
+export function useSetAgentDebugMode() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ id, data }: { id: string; data: SetDebugModeRequest }) =>
+			agentsApi.setDebugMode(id, data),
+		onSuccess: (_data, variables) => {
+			queryClient.invalidateQueries({ queryKey: ['agents'] });
+			queryClient.invalidateQueries({ queryKey: ['agents', variables.id] });
+		},
 	});
 }
