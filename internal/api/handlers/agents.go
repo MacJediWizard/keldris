@@ -6,7 +6,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/models"
@@ -31,6 +33,7 @@ type AgentStore interface {
 	GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error)
 	GetAgentHealthHistory(ctx context.Context, agentID uuid.UUID, limit int) ([]*models.AgentHealthHistory, error)
 	GetFleetHealthSummary(ctx context.Context, orgID uuid.UUID) (*models.FleetHealthSummary, error)
+	SetAgentDebugMode(ctx context.Context, id uuid.UUID, enabled bool, expiresAt *time.Time, enabledBy *uuid.UUID) error
 	GetAgentLogs(ctx context.Context, agentID uuid.UUID, filter *models.AgentLogFilter) ([]*models.AgentLog, int, error)
 }
 
@@ -64,6 +67,7 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		agents.GET("/:id/backups", h.Backups)
 		agents.GET("/:id/schedules", h.Schedules)
 		agents.GET("/:id/health-history", h.HealthHistory)
+		agents.POST("/:id/debug", h.SetDebugMode)
 		agents.GET("/:id/logs", h.Logs)
 	}
 }
@@ -291,13 +295,13 @@ type HeartbeatRequest struct {
 // Heartbeat updates an agent's last seen timestamp.
 //
 //	@Summary		Agent heartbeat
-//	@Description	Updates an agent's last seen timestamp and optionally updates OS information
+//	@Description	Updates an agent's last seen timestamp and optionally updates OS information. Returns debug configuration if debug mode is enabled.
 //	@Tags			Agents
 //	@Accept			json
 //	@Produce		json
 //	@Param			id		path		string				true	"Agent ID"
 //	@Param			request	body		HeartbeatRequest	false	"Heartbeat data"
-//	@Success		200		{object}	models.Agent
+//	@Success		200		{object}	models.HeartbeatResponse
 //	@Failure		400		{object}	map[string]string
 //	@Failure		401		{object}	map[string]string
 //	@Failure		404		{object}	map[string]string
@@ -358,7 +362,22 @@ func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, agent)
+	// Build response with debug config if enabled
+	response := models.HeartbeatResponse{
+		Agent: agent,
+	}
+
+	// Check if debug mode is enabled and not expired
+	if agent.DebugMode && !agent.IsDebugModeExpired() {
+		response.DebugConfig = &models.DebugConfig{
+			Enabled:             true,
+			LogLevel:            "debug",
+			IncludeResticOutput: true,
+			LogFileOperations:   true,
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // RotateAPIKeyResponse is the response for API key rotation.
@@ -768,6 +787,94 @@ func getParamInt(s string, result *int) (bool, error) {
 	}
 	*result = n
 	return true, nil
+}
+
+// SetDebugMode enables or disables debug mode on an agent.
+//
+//	@Summary		Set agent debug mode
+//	@Description	Enables or disables verbose/debug logging on an agent. When enabled, the agent will produce detailed logs including restic output and file operations. Debug mode auto-disables after the specified duration (default 4 hours).
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string						true	"Agent ID"
+//	@Param			request	body		models.SetDebugModeRequest	true	"Debug mode settings"
+//	@Success		200		{object}	models.SetDebugModeResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id}/debug [post]
+func (h *AgentsHandler) SetDebugMode(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	var req models.SetDebugModeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	var expiresAt *time.Time
+	var message string
+
+	if req.Enabled {
+		// Default to 4 hours if not specified
+		durationHours := req.DurationHours
+		if durationHours <= 0 {
+			durationHours = 4
+		}
+		expiry := time.Now().Add(time.Duration(durationHours) * time.Hour)
+		expiresAt = &expiry
+		message = fmt.Sprintf("Debug mode enabled for %d hours", durationHours)
+	} else {
+		message = "Debug mode disabled"
+	}
+
+	if err := h.store.SetAgentDebugMode(c.Request.Context(), id, req.Enabled, expiresAt, &user.ID); err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Bool("enabled", req.Enabled).Msg("failed to set debug mode")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to set debug mode"})
+		return
+	}
+
+	h.logger.Info().
+		Str("agent_id", id.String()).
+		Str("hostname", agent.Hostname).
+		Bool("enabled", req.Enabled).
+		Str("user_id", user.ID.String()).
+		Msg("debug mode changed")
+
+	c.JSON(http.StatusOK, models.SetDebugModeResponse{
+		DebugMode:          req.Enabled,
+		DebugModeExpiresAt: expiresAt,
+		Message:            message,
+	})
 }
 
 // Logs returns logs for a specific agent.
