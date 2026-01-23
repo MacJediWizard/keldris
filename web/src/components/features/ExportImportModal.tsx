@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
+	downloadExport,
 	useExportAgent,
 	useExportSchedule,
 	useImportConfig,
 	useValidateImport,
-	downloadExport,
 } from '../../hooks/useConfigExport';
 import { useLocale } from '../../hooks/useLocale';
 import type {
@@ -64,9 +64,7 @@ export function ExportImportModal({
 			}
 
 			const name =
-				type === 'agent'
-					? (item as Agent).hostname
-					: (item as Schedule).name;
+				type === 'agent' ? (item as Agent).hostname : (item as Schedule).name;
 			downloadExport(content, `${type}-${name}`, format);
 			onClose();
 		} catch {
@@ -142,8 +140,7 @@ export function ExportImportModal({
 
 	if (!isOpen) return null;
 
-	const isExporting =
-		exportAgent.isPending || exportSchedule.isPending;
+	const isExporting = exportAgent.isPending || exportSchedule.isPending;
 	const isValidating = validateImport.isPending;
 	const isImporting = importConfig.isPending;
 
@@ -160,6 +157,7 @@ export function ExportImportModal({
 						className="text-gray-400 hover:text-gray-600"
 					>
 						<svg
+							aria-hidden="true"
 							className="w-6 h-6"
 							fill="none"
 							stroke="currentColor"
@@ -188,6 +186,7 @@ export function ExportImportModal({
 					>
 						<span className="flex items-center justify-center gap-2">
 							<svg
+								aria-hidden="true"
 								className="w-4 h-4"
 								fill="none"
 								stroke="currentColor"
@@ -214,6 +213,7 @@ export function ExportImportModal({
 					>
 						<span className="flex items-center justify-center gap-2">
 							<svg
+								aria-hidden="true"
 								className="w-4 h-4"
 								fill="none"
 								stroke="currentColor"
@@ -248,9 +248,9 @@ export function ExportImportModal({
 								</div>
 
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-2">
+									<span className="block text-sm font-medium text-gray-700 mb-2">
 										Export Format
-									</label>
+									</span>
 									<div className="flex gap-4">
 										<label className="flex items-center gap-2">
 											<input
@@ -313,9 +313,9 @@ export function ExportImportModal({
 						{importStep === 'input' && (
 							<>
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-2">
+									<span className="block text-sm font-medium text-gray-700 mb-2">
 										Configuration File
-									</label>
+									</span>
 									<div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors">
 										<input
 											type="file"
@@ -324,11 +324,9 @@ export function ExportImportModal({
 											className="hidden"
 											id="config-file"
 										/>
-										<label
-											htmlFor="config-file"
-											className="cursor-pointer"
-										>
+										<label htmlFor="config-file" className="cursor-pointer">
 											<svg
+												aria-hidden="true"
 												className="w-12 h-12 mx-auto text-gray-400 mb-2"
 												fill="none"
 												stroke="currentColor"
@@ -343,9 +341,7 @@ export function ExportImportModal({
 											</svg>
 											<p className="text-sm text-gray-600">
 												Drop a file here or{' '}
-												<span className="text-indigo-600">
-													click to upload
-												</span>
+												<span className="text-indigo-600">click to upload</span>
 											</p>
 											<p className="text-xs text-gray-400 mt-1">
 												JSON or YAML format
@@ -355,10 +351,14 @@ export function ExportImportModal({
 								</div>
 
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-2">
+									<label
+										htmlFor="config-paste"
+										className="block text-sm font-medium text-gray-700 mb-2"
+									>
 										Or paste configuration:
 									</label>
 									<textarea
+										id="config-paste"
 										value={configText}
 										onChange={(e) => setConfigText(e.target.value)}
 										placeholder="Paste exported configuration here..."
@@ -368,10 +368,14 @@ export function ExportImportModal({
 
 								{type === 'schedule' && agents && agents.length > 0 && (
 									<div>
-										<label className="block text-sm font-medium text-gray-700 mb-2">
+										<label
+											htmlFor="target-agent"
+											className="block text-sm font-medium text-gray-700 mb-2"
+										>
 											Target Agent (for schedule imports)
 										</label>
 										<select
+											id="target-agent"
 											value={targetAgentId}
 											onChange={(e) => setTargetAgentId(e.target.value)}
 											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -418,6 +422,7 @@ export function ExportImportModal({
 									<div className="flex items-center gap-2">
 										{validationResult.valid ? (
 											<svg
+												aria-hidden="true"
 												className="w-5 h-5 text-green-600"
 												fill="none"
 												stroke="currentColor"
@@ -432,6 +437,7 @@ export function ExportImportModal({
 											</svg>
 										) : (
 											<svg
+												aria-hidden="true"
 												className="w-5 h-5 text-red-600"
 												fill="none"
 												stroke="currentColor"
@@ -462,12 +468,10 @@ export function ExportImportModal({
 								{validationResult.errors &&
 									validationResult.errors.length > 0 && (
 										<div className="bg-red-50 rounded-lg p-4">
-											<h4 className="font-medium text-red-800 mb-2">
-												Errors:
-											</h4>
+											<h4 className="font-medium text-red-800 mb-2">Errors:</h4>
 											<ul className="text-sm text-red-700 space-y-1">
-												{validationResult.errors.map((error, i) => (
-													<li key={i}>
+												{validationResult.errors.map((error) => (
+													<li key={`${error.field}-${error.message}`}>
 														<span className="font-medium">{error.field}:</span>{' '}
 														{error.message}
 													</li>
@@ -483,8 +487,8 @@ export function ExportImportModal({
 												Warnings:
 											</h4>
 											<ul className="text-sm text-yellow-700 space-y-1">
-												{validationResult.warnings.map((warning, i) => (
-													<li key={i}>{warning}</li>
+												{validationResult.warnings.map((warning) => (
+													<li key={warning}>{warning}</li>
 												))}
 											</ul>
 										</div>
@@ -497,21 +501,23 @@ export function ExportImportModal({
 												Conflicts Found:
 											</h4>
 											<ul className="text-sm text-orange-700 space-y-1">
-												{validationResult.conflicts.map((conflict, i) => (
-													<li key={i}>
-														<span className="font-medium">
-															{conflict.name}
-														</span>
+												{validationResult.conflicts.map((conflict) => (
+													<li key={conflict.name}>
+														<span className="font-medium">{conflict.name}</span>
 														: {conflict.message}
 													</li>
 												))}
 											</ul>
 
 											<div className="mt-3">
-												<label className="block text-sm font-medium text-orange-800 mb-2">
+												<label
+													htmlFor="conflict-resolution"
+													className="block text-sm font-medium text-orange-800 mb-2"
+												>
 													Conflict Resolution:
 												</label>
 												<select
+													id="conflict-resolution"
 													value={conflictResolution}
 													onChange={(e) =>
 														setConflictResolution(
@@ -520,18 +526,12 @@ export function ExportImportModal({
 													}
 													className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
 												>
-													<option value="skip">
-														Skip conflicting items
-													</option>
+													<option value="skip">Skip conflicting items</option>
 													<option value="replace">
 														Replace existing items
 													</option>
-													<option value="rename">
-														Rename imported items
-													</option>
-													<option value="fail">
-														Fail if any conflicts
-													</option>
+													<option value="rename">Rename imported items</option>
+													<option value="fail">Fail if any conflicts</option>
 												</select>
 											</div>
 										</div>
@@ -544,8 +544,8 @@ export function ExportImportModal({
 												Suggestions:
 											</h4>
 											<ul className="text-sm text-blue-700 space-y-1">
-												{validationResult.suggestions.map((suggestion, i) => (
-													<li key={i}>{suggestion}</li>
+												{validationResult.suggestions.map((suggestion) => (
+													<li key={suggestion}>{suggestion}</li>
 												))}
 											</ul>
 										</div>

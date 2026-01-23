@@ -47,7 +47,8 @@ interface CreateTemplateModalProps {
 function CreateTemplateModal({ isOpen, onClose }: CreateTemplateModalProps) {
 	const [name, setName] = useState('');
 	const [description, setDescription] = useState('');
-	const [visibility, setVisibility] = useState<TemplateVisibility>('organization');
+	const [visibility, setVisibility] =
+		useState<TemplateVisibility>('organization');
 	const [tags, setTags] = useState('');
 	const [config, setConfig] = useState('');
 
@@ -226,8 +227,13 @@ interface UseTemplateModalProps {
 	onClose: () => void;
 }
 
-function UseTemplateModal({ template, isOpen, onClose }: UseTemplateModalProps) {
-	const [conflictResolution, setConflictResolution] = useState<ConflictResolution>('skip');
+function UseTemplateModal({
+	template,
+	isOpen,
+	onClose,
+}: UseTemplateModalProps) {
+	const [conflictResolution, setConflictResolution] =
+		useState<ConflictResolution>('skip');
 	const useTemplate = useUseTemplate();
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -277,7 +283,9 @@ function UseTemplateModal({ template, isOpen, onClose }: UseTemplateModalProps) 
 						<select
 							id="conflict-resolution"
 							value={conflictResolution}
-							onChange={(e) => setConflictResolution(e.target.value as ConflictResolution)}
+							onChange={(e) =>
+								setConflictResolution(e.target.value as ConflictResolution)
+							}
 							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="skip">Skip conflicting items</option>
@@ -363,7 +371,6 @@ function getVisibilityIcon(visibility: TemplateVisibility): JSX.Element {
 					/>
 				</svg>
 			);
-		case 'private':
 		default:
 			return (
 				<svg
@@ -571,7 +578,9 @@ export function Templates() {
 						/>
 						<select
 							value={typeFilter}
-							onChange={(e) => setTypeFilter(e.target.value as ConfigType | 'all')}
+							onChange={(e) =>
+								setTypeFilter(e.target.value as ConfigType | 'all')
+							}
 							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="all">All Types</option>
