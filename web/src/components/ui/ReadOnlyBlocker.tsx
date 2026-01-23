@@ -30,6 +30,7 @@ export function ReadOnlyBlocker({
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
+					aria-hidden="true"
 				>
 					<path
 						strokeLinecap="round"
@@ -75,7 +76,11 @@ export function ReadOnlyDisabledButton({
 				onClick={isDisabled ? undefined : onClick}
 				disabled={isDisabled}
 				className={`${className} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-				title={isReadOnly ? `Read-only mode: ${maintenanceTitle ?? 'Maintenance in progress'}` : undefined}
+				title={
+					isReadOnly
+						? `Read-only mode: ${maintenanceTitle ?? 'Maintenance in progress'}`
+						: undefined
+				}
 			>
 				{children}
 			</button>
@@ -85,6 +90,7 @@ export function ReadOnlyDisabledButton({
 						className="w-4 h-4 text-amber-500"
 						fill="currentColor"
 						viewBox="0 0 20 20"
+						aria-hidden="true"
 					>
 						<path
 							fillRule="evenodd"

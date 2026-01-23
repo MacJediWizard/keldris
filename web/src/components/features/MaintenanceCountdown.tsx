@@ -199,9 +199,7 @@ export function MaintenanceCountdown() {
 					{showCountdown && countdown && (
 						<span
 							className={`font-mono px-2 py-0.5 rounded ${
-								countdown.isUrgent
-									? 'bg-white/30 animate-pulse'
-									: 'bg-white/20'
+								countdown.isUrgent ? 'bg-white/30 animate-pulse' : 'bg-white/20'
 							}`}
 						>
 							{countdown.display}
@@ -238,6 +236,7 @@ export function MaintenanceCountdown() {
 										fill="none"
 										stroke="currentColor"
 										viewBox="0 0 24 24"
+										aria-hidden="true"
 									>
 										<path
 											strokeLinecap="round"
