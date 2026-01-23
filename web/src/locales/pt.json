@@ -405,5 +405,30 @@
     "downloadFor": "Baixar para {{platform}}",
     "installCommands": "Comandos de instalação",
     "copyCommand": "Copiar comando"
+  },
+  "shortcuts": {
+    "title": "Atalhos de teclado",
+    "navigation": "Navegação",
+    "actions": "Ações",
+    "general": "Geral",
+    "hint": "Pressione ? a qualquer momento para mostrar esta ajuda",
+    "customizeTitle": "Personalizar atalhos",
+    "customizeDescription": "Clique em um atalho para personalizá-lo",
+    "resetToDefault": "Restaurar padrão",
+    "resetAll": "Restaurar todos",
+    "pressKey": "Pressione uma tecla...",
+    "actions": {
+      "goToDashboard": "Ir para o painel",
+      "goToAgents": "Ir para agentes",
+      "goToBackups": "Ir para backups",
+      "goToSchedules": "Ir para agendamentos",
+      "goToRepositories": "Ir para repositórios",
+      "goToAlerts": "Ir para alertas",
+      "goToRestore": "Ir para restaurar",
+      "focusSearch": "Focar na pesquisa",
+      "showHelp": "Mostrar atalhos de teclado",
+      "newItem": "Novo item (contexto-aware)",
+      "closeModal": "Fechar modal"
+    }
   }
 }

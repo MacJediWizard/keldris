@@ -660,6 +660,8 @@ export function Agents() {
 				<button
 					type="button"
 					onClick={() => setShowGenerateModal(true)}
+					data-action="register-agent"
+					title={`${t('agents.registerAgent')} (N)`}
 					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
 				>
 					<svg
