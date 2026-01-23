@@ -365,7 +365,8 @@ func (h *AlertsHandler) CreateRule(c *gin.Context) {
 
 	// Validate rule type
 	switch req.Type {
-	case models.AlertTypeAgentOffline, models.AlertTypeBackupSLA, models.AlertTypeStorageUsage:
+	case models.AlertTypeAgentOffline, models.AlertTypeBackupSLA, models.AlertTypeStorageUsage,
+		models.AlertTypeAgentHealthWarning, models.AlertTypeAgentHealthCritical, models.AlertTypeRansomwareSuspected:
 		// Valid
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid alert type"})
