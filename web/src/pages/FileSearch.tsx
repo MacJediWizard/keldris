@@ -4,7 +4,11 @@ import { useAgents } from '../hooks/useAgents';
 import { useFileSearch } from '../hooks/useFileSearch';
 import { useRepositories } from '../hooks/useRepositories';
 import { useCreateRestore } from '../hooks/useRestore';
-import type { FileSearchParams, FileSearchResult, SnapshotFileGroup } from '../lib/types';
+import type {
+	FileSearchParams,
+	FileSearchResult,
+	SnapshotFileGroup,
+} from '../lib/types';
 import { formatBytes, formatDateTime } from '../lib/utils';
 
 function LoadingSpinner() {
@@ -72,8 +76,12 @@ function FileResultRow({ file, onRestore }: FileResultRowProps) {
 						</svg>
 					)}
 					<div className="min-w-0">
-						<p className="font-medium text-gray-900 truncate">{file.file_name}</p>
-						<p className="text-xs text-gray-500 font-mono truncate">{file.file_path}</p>
+						<p className="font-medium text-gray-900 truncate">
+							{file.file_name}
+						</p>
+						<p className="text-xs text-gray-500 font-mono truncate">
+							{file.file_path}
+						</p>
 					</div>
 				</div>
 			</td>
@@ -119,8 +127,16 @@ interface SnapshotGroupCardProps {
 	onRestore: (file: FileSearchResult) => void;
 }
 
-function SnapshotGroupCard({ group, isExpanded, onToggle, onRestore }: SnapshotGroupCardProps) {
-	const shortId = group.snapshot_id.length > 8 ? group.snapshot_id.slice(0, 8) : group.snapshot_id;
+function SnapshotGroupCard({
+	group,
+	isExpanded,
+	onToggle,
+	onRestore,
+}: SnapshotGroupCardProps) {
+	const shortId =
+		group.snapshot_id.length > 8
+			? group.snapshot_id.slice(0, 8)
+			: group.snapshot_id;
 
 	return (
 		<div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -137,9 +153,7 @@ function SnapshotGroupCard({ group, isExpanded, onToggle, onRestore }: SnapshotG
 						<p className="font-medium text-gray-900">
 							{formatDateTime(group.snapshot_time)}
 						</p>
-						<p className="text-sm text-gray-500">
-							{group.hostname}
-						</p>
+						<p className="text-sm text-gray-500">{group.hostname}</p>
 					</div>
 				</div>
 				<div className="flex items-center gap-4">
@@ -215,7 +229,10 @@ function RestoreFileModal({
 }: RestoreFileModalProps) {
 	const [targetPath, setTargetPath] = useState('');
 	const [useOriginalPath, setUseOriginalPath] = useState(true);
-	const shortId = file.snapshot_id.length > 8 ? file.snapshot_id.slice(0, 8) : file.snapshot_id;
+	const shortId =
+		file.snapshot_id.length > 8
+			? file.snapshot_id.slice(0, 8)
+			: file.snapshot_id;
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -227,9 +244,7 @@ function RestoreFileModal({
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 			<div className="bg-white rounded-lg max-w-lg w-full mx-4">
 				<div className="p-6 border-b border-gray-200">
-					<h3 className="text-lg font-semibold text-gray-900">
-						Restore File
-					</h3>
+					<h3 className="text-lg font-semibold text-gray-900">Restore File</h3>
 					<p className="text-sm text-gray-500 mt-1">
 						Restore file from snapshot {shortId}
 					</p>
@@ -238,7 +253,9 @@ function RestoreFileModal({
 				<form onSubmit={handleSubmit} className="p-6 space-y-4">
 					<div>
 						<p className="text-sm font-medium text-gray-500">File</p>
-						<p className="font-mono text-gray-900 break-all">{file.file_path}</p>
+						<p className="font-mono text-gray-900 break-all">
+							{file.file_path}
+						</p>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
@@ -354,8 +371,12 @@ export function FileSearch() {
 	const [selectedAgentId, setSelectedAgentId] = useState(initialAgentId);
 	const [selectedRepoId, setSelectedRepoId] = useState(initialRepoId);
 	const [pathFilter, setPathFilter] = useState(initialPath);
-	const [expandedSnapshots, setExpandedSnapshots] = useState<Set<string>>(new Set());
-	const [selectedFile, setSelectedFile] = useState<FileSearchResult | null>(null);
+	const [expandedSnapshots, setExpandedSnapshots] = useState<Set<string>>(
+		new Set(),
+	);
+	const [selectedFile, setSelectedFile] = useState<FileSearchResult | null>(
+		null,
+	);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
@@ -406,7 +427,9 @@ export function FileSearch() {
 
 	const expandAll = () => {
 		if (searchData?.snapshots) {
-			setExpandedSnapshots(new Set(searchData.snapshots.map((g) => g.snapshot_id)));
+			setExpandedSnapshots(
+				new Set(searchData.snapshots.map((g) => g.snapshot_id)),
+			);
 		}
 	};
 
@@ -583,10 +606,18 @@ export function FileSearch() {
 											Search Results
 										</h2>
 										<p className="text-sm text-gray-500 mt-1">
-											Found <span className="font-medium">{searchData.total_count}</span> file
+											Found{' '}
+											<span className="font-medium">
+												{searchData.total_count}
+											</span>{' '}
+											file
 											{searchData.total_count !== 1 ? 's' : ''} in{' '}
-											<span className="font-medium">{searchData.snapshot_count}</span> snapshot
-											{searchData.snapshot_count !== 1 ? 's' : ''} matching "{searchData.query}"
+											<span className="font-medium">
+												{searchData.snapshot_count}
+											</span>{' '}
+											snapshot
+											{searchData.snapshot_count !== 1 ? 's' : ''} matching "
+											{searchData.query}"
 										</p>
 									</div>
 									{searchData.snapshot_count > 0 && (
@@ -663,11 +694,10 @@ export function FileSearch() {
 												d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 											/>
 										</svg>
-										<p className="font-medium text-gray-900">
-											No files found
-										</p>
+										<p className="font-medium text-gray-900">No files found</p>
 										<p className="text-sm">
-											No files matching "{searchData.query}" were found in any snapshot
+											No files matching "{searchData.query}" were found in any
+											snapshot
 										</p>
 									</div>
 								)}
@@ -694,7 +724,9 @@ export function FileSearch() {
 							d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 						/>
 					</svg>
-					<p className="font-medium text-gray-900">Search for files across snapshots</p>
+					<p className="font-medium text-gray-900">
+						Search for files across snapshots
+					</p>
 					<p className="text-sm">
 						Select an agent, repository, and enter a filename pattern to search
 					</p>
