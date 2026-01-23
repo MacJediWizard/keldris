@@ -9,13 +9,20 @@ import {
 	BulkSelectHeader,
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
+import { ClassificationBadge } from '../components/ClassificationBadge';
+import { BackupCalendar } from '../components/features/BackupCalendar';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
 import { useBackupTags, useSetBackupTags, useTags } from '../hooks/useTags';
-import type { Backup, BackupStatus, Tag } from '../lib/types';
+import type {
+	Backup,
+	BackupStatus,
+	ClassificationLevel,
+	Tag,
+} from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
@@ -24,6 +31,8 @@ import {
 	getBackupStatusColor,
 	truncateSnapshotId,
 } from '../lib/utils';
+
+type ViewMode = 'list' | 'calendar';
 
 function LoadingRow() {
 	return (
@@ -221,6 +230,41 @@ function BackupDetailsModal({
 				</div>
 
 				<div className="space-y-4">
+					{backup.resumed && (
+						<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+							<div className="flex items-center gap-2">
+								<svg
+									className="w-5 h-5 text-blue-500"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+									/>
+								</svg>
+								<p className="text-sm font-medium text-blue-700 dark:text-blue-400">
+									Resumed Backup
+								</p>
+							</div>
+							<p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
+								This backup was resumed from an interrupted backup.
+								{backup.original_backup_id && (
+									<span className="ml-1">
+										Original backup ID:{' '}
+										<code className="font-mono text-xs">
+											{backup.original_backup_id.slice(0, 8)}...
+										</code>
+									</span>
+								)}
+							</p>
+						</div>
+					)}
+
 					{backup.snapshot_id && (
 						<div>
 							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -296,6 +340,21 @@ function BackupDetailsModal({
 									{backup.files_changed ?? 0}
 								</p>
 							</div>
+						</div>
+					)}
+
+					{(backup.classification_level ||
+						backup.classification_data_types) && (
+						<div>
+							<p className="text-sm font-medium text-gray-500 mb-2">
+								Classification
+							</p>
+							<ClassificationBadge
+								level={backup.classification_level || 'public'}
+								dataTypes={backup.classification_data_types}
+								showDataTypes
+								size="md"
+							/>
 						</div>
 					)}
 
@@ -406,9 +465,19 @@ function BackupRow({
 				<BulkSelectCheckbox checked={isSelected} onChange={onToggleSelect} />
 			</td>
 			<td className="px-6 py-4">
-				<code className="text-sm font-mono text-gray-900 dark:text-white">
-					{truncateSnapshotId(backup.snapshot_id)}
-				</code>
+				<div className="flex items-center gap-2">
+					<code className="text-sm font-mono text-gray-900 dark:text-white">
+						{truncateSnapshotId(backup.snapshot_id)}
+					</code>
+					{backup.resumed && (
+						<span
+							className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+							title="This backup was resumed from an interrupted backup"
+						>
+							Resumed
+						</span>
+					)}
+				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
 				{agentName ?? 'Unknown'}
@@ -420,12 +489,21 @@ function BackupRow({
 				{formatBytes(backup.size_bytes)}
 			</td>
 			<td className="px-6 py-4">
-				<span
-					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
-				>
-					<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
-					{backup.status}
-				</span>
+				<div className="flex flex-col gap-1">
+					<span
+						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
+					>
+						<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
+						{backup.status}
+					</span>
+					{backup.classification_level &&
+						backup.classification_level !== 'public' && (
+							<ClassificationBadge
+								level={backup.classification_level}
+								size="sm"
+							/>
+						)}
+				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(backup.started_at)}
@@ -444,9 +522,13 @@ function BackupRow({
 }
 
 export function Backups() {
+	const [viewMode, setViewMode] = useState<ViewMode>('list');
 	const [searchQuery, setSearchQuery] = useState('');
 	const [agentFilter, setAgentFilter] = useState<string>('all');
 	const [statusFilter, setStatusFilter] = useState<BackupStatus | 'all'>('all');
+	const [classificationFilter, setClassificationFilter] = useState<
+		ClassificationLevel | 'all'
+	>('all');
 	const [selectedTagFilters, setSelectedTagFilters] = useState<Set<string>>(
 		new Set(),
 	);
@@ -498,10 +580,15 @@ export function Backups() {
 			agentFilter === 'all' || backup.agent_id === agentFilter;
 		const matchesStatus =
 			statusFilter === 'all' || backup.status === statusFilter;
+		const matchesClassification =
+			classificationFilter === 'all' ||
+			(backup.classification_level || 'public') === classificationFilter;
 		// Note: Tag filtering would require loading backup tags for each backup,
 		// which is expensive. For a more complete implementation, you'd want to
 		// fetch this data on the server side with proper filtering.
-		return matchesSearch && matchesAgent && matchesStatus;
+		return (
+			matchesSearch && matchesAgent && matchesStatus && matchesClassification
+		);
 	});
 
 	const backupIds = filteredBackups?.map((b) => b.id) ?? [];
@@ -567,10 +654,66 @@ export function Backups() {
 						View and manage backup snapshots
 					</p>
 				</div>
+				<div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+					<button
+						type="button"
+						onClick={() => setViewMode('list')}
+						className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+							viewMode === 'list'
+								? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+								: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+						}`}
+					>
+						<span className="flex items-center gap-1.5">
+							<svg
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+								aria-hidden="true"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M4 6h16M4 10h16M4 14h16M4 18h16"
+								/>
+							</svg>
+							List
+						</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => setViewMode('calendar')}
+						className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+							viewMode === 'calendar'
+								? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+								: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+						}`}
+					>
+						<span className="flex items-center gap-1.5">
+							<svg
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+								aria-hidden="true"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+								/>
+							</svg>
+							Calendar
+						</span>
+					</button>
+				</div>
 			</div>
 
-			{/* Bulk Selection Toolbar */}
-			{bulkSelect.selectedCount > 0 && (
+			{/* Bulk Selection Toolbar - only show in list view */}
+			{viewMode === 'list' && bulkSelect.selectedCount > 0 && (
 				<BulkSelectToolbar
 					selectedCount={bulkSelect.selectedCount}
 					totalCount={backupIds.length}
@@ -586,219 +729,238 @@ export function Backups() {
 				</BulkSelectToolbar>
 			)}
 
-			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
-					<div className="flex items-center gap-4 mb-4">
-						<input
-							type="text"
-							placeholder="Search by snapshot ID..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						/>
-						<select
-							value={agentFilter}
-							onChange={(e) => setAgentFilter(e.target.value)}
-							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Agents</option>
-							{agents?.map((agent) => (
-								<option key={agent.id} value={agent.id}>
-									{agent.hostname}
-								</option>
-							))}
-						</select>
-						<select
-							value={statusFilter}
-							onChange={(e) =>
-								setStatusFilter(e.target.value as BackupStatus | 'all')
-							}
-							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Status</option>
-							<option value="completed">Completed</option>
-							<option value="running">Running</option>
-							<option value="failed">Failed</option>
-							<option value="canceled">Canceled</option>
-						</select>
-					</div>
-					{allTags && allTags.length > 0 && (
-						<div className="flex items-center gap-2 flex-wrap">
-							<span className="text-sm text-gray-500">Filter by tags:</span>
-							{allTags.map((tag) => (
-								<TagChip
-									key={tag.id}
-									tag={tag}
-									selected={selectedTagFilters.has(tag.id)}
-									onClick={() => toggleTagFilter(tag.id)}
-								/>
-							))}
-							{selectedTagFilters.size > 0 && (
-								<button
-									type="button"
-									onClick={() => setSelectedTagFilters(new Set())}
-									className="text-sm text-gray-500 hover:text-gray-700"
-								>
-									Clear all
-								</button>
-							)}
+			{viewMode === 'calendar' ? (
+				<BackupCalendar onSelectBackup={setSelectedBackup} />
+			) : (
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+					<div className="p-6 border-b border-gray-200 dark:border-gray-700">
+						<div className="flex items-center gap-4 mb-4">
+							<input
+								type="text"
+								placeholder="Search by snapshot ID..."
+								value={searchQuery}
+								onChange={(e) => setSearchQuery(e.target.value)}
+								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+							<select
+								value={agentFilter}
+								onChange={(e) => setAgentFilter(e.target.value)}
+								className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="all">All Agents</option>
+								{agents?.map((agent) => (
+									<option key={agent.id} value={agent.id}>
+										{agent.hostname}
+									</option>
+								))}
+							</select>
+							<select
+								value={statusFilter}
+								onChange={(e) =>
+									setStatusFilter(e.target.value as BackupStatus | 'all')
+								}
+								className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="all">All Status</option>
+								<option value="completed">Completed</option>
+								<option value="running">Running</option>
+								<option value="failed">Failed</option>
+								<option value="canceled">Canceled</option>
+							</select>
+							<select
+								value={classificationFilter}
+								onChange={(e) =>
+									setClassificationFilter(
+										e.target.value as ClassificationLevel | 'all',
+									)
+								}
+								className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="all">All Classifications</option>
+								<option value="public">Public</option>
+								<option value="internal">Internal</option>
+								<option value="confidential">Confidential</option>
+								<option value="restricted">Restricted</option>
+							</select>
 						</div>
-					)}
-				</div>
-
-				<div className="overflow-x-auto">
-					{isError ? (
-						<div className="p-12 text-center text-red-500 dark:text-red-400">
-							<p className="font-medium">Failed to load backups</p>
-							<p className="text-sm">Please try refreshing the page</p>
-						</div>
-					) : isLoading ? (
-						<table className="w-full">
-							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-								<tr>
-									<th className="px-6 py-3 w-12" />
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Snapshot ID
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Agent
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Repository
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Size
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Status
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Created
-									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Actions
-									</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-								<LoadingRow />
-								<LoadingRow />
-								<LoadingRow />
-								<LoadingRow />
-								<LoadingRow />
-							</tbody>
-						</table>
-					) : filteredBackups && filteredBackups.length > 0 ? (
-						<table className="w-full">
-							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-								<tr>
-									<th className="px-6 py-3 w-12">
-										<BulkSelectHeader
-											isAllSelected={bulkSelect.isAllSelected}
-											isPartiallySelected={bulkSelect.isPartiallySelected}
-											onToggleAll={() => bulkSelect.toggleAll(backupIds)}
-											selectedCount={bulkSelect.selectedCount}
-											totalCount={backupIds.length}
-										/>
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Snapshot ID
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Agent
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Repository
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Size
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Status
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Created
-									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Actions
-									</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-								{filteredBackups.map((backup) => (
-									<BackupRow
-										key={backup.id}
-										backup={backup}
-										agentName={agentMap.get(backup.agent_id)}
-										repoName={getRepoNameForBackup(backup)}
-										onViewDetails={setSelectedBackup}
-										isSelected={bulkSelect.isSelected(backup.id)}
-										onToggleSelect={() => bulkSelect.toggle(backup.id)}
+						{allTags && allTags.length > 0 && (
+							<div className="flex items-center gap-2 flex-wrap">
+								<span className="text-sm text-gray-500">Filter by tags:</span>
+								{allTags.map((tag) => (
+									<TagChip
+										key={tag.id}
+										tag={tag}
+										selected={selectedTagFilters.has(tag.id)}
+										onClick={() => toggleTagFilter(tag.id)}
 									/>
 								))}
-							</tbody>
-						</table>
-					) : (
-						<table className="w-full">
-							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-								<tr>
-									<th className="px-6 py-3 w-12" />
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Snapshot ID
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Agent
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Repository
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Size
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Status
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Created
-									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Actions
-									</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-								<tr>
-									<td
-										colSpan={8}
-										className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+								{selectedTagFilters.size > 0 && (
+									<button
+										type="button"
+										onClick={() => setSelectedTagFilters(new Set())}
+										className="text-sm text-gray-500 hover:text-gray-700"
 									>
-										<svg
-											aria-hidden="true"
-											className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+										Clear all
+									</button>
+								)}
+							</div>
+						)}
+					</div>
+
+					<div className="overflow-x-auto">
+						{isError ? (
+							<div className="p-12 text-center text-red-500 dark:text-red-400">
+								<p className="font-medium">Failed to load backups</p>
+								<p className="text-sm">Please try refreshing the page</p>
+							</div>
+						) : isLoading ? (
+							<table className="w-full">
+								<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+									<tr>
+										<th className="px-6 py-3 w-12" />
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Snapshot ID
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Agent
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Repository
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Size
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Status
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Created
+										</th>
+										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Actions
+										</th>
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+									<LoadingRow />
+									<LoadingRow />
+									<LoadingRow />
+									<LoadingRow />
+									<LoadingRow />
+								</tbody>
+							</table>
+						) : filteredBackups && filteredBackups.length > 0 ? (
+							<table className="w-full">
+								<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+									<tr>
+										<th className="px-6 py-3 w-12">
+											<BulkSelectHeader
+												isAllSelected={bulkSelect.isAllSelected}
+												isPartiallySelected={bulkSelect.isPartiallySelected}
+												onToggleAll={() => bulkSelect.toggleAll(backupIds)}
+												selectedCount={bulkSelect.selectedCount}
+												totalCount={backupIds.length}
 											/>
-										</svg>
-										<p className="font-medium text-gray-900 dark:text-white">
-											No backups found
-										</p>
-										<p className="text-sm">
-											Backups will appear here once agents start running
-										</p>
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					)}
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Snapshot ID
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Agent
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Repository
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Size
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Status
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Created
+										</th>
+										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Actions
+										</th>
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+									{filteredBackups.map((backup) => (
+										<BackupRow
+											key={backup.id}
+											backup={backup}
+											agentName={agentMap.get(backup.agent_id)}
+											repoName={getRepoNameForBackup(backup)}
+											onViewDetails={setSelectedBackup}
+											isSelected={bulkSelect.isSelected(backup.id)}
+											onToggleSelect={() => bulkSelect.toggle(backup.id)}
+										/>
+									))}
+								</tbody>
+							</table>
+						) : (
+							<table className="w-full">
+								<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+									<tr>
+										<th className="px-6 py-3 w-12" />
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Snapshot ID
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Agent
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Repository
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Size
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Status
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Created
+										</th>
+										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Actions
+										</th>
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+									<tr>
+										<td
+											colSpan={8}
+											className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+										>
+											<svg
+												aria-hidden="true"
+												className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+												/>
+											</svg>
+											<p className="font-medium text-gray-900 dark:text-white">
+												No backups found
+											</p>
+											<p className="text-sm">
+												Backups will appear here once agents start running
+											</p>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						)}
+					</div>
 				</div>
-			</div>
+			)}
 
 			{selectedBackup && (
 				<BackupDetailsModal
