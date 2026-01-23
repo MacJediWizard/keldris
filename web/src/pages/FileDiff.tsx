@@ -1,7 +1,8 @@
-import { useSearchParams, Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+
+import { DiffViewer } from '../components/features/DiffViewer';
 import { useAgents } from '../hooks/useAgents';
 import { useFileDiff, useSnapshot } from '../hooks/useSnapshots';
-import { DiffViewer } from '../components/features/DiffViewer';
 import { formatDateTime } from '../lib/utils';
 
 export function FileDiff() {
@@ -192,7 +193,9 @@ export function FileDiff() {
 									d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 								/>
 							</svg>
-							<p className="text-red-600 font-medium">Failed to load file diff</p>
+							<p className="text-red-600 font-medium">
+								Failed to load file diff
+							</p>
 							<p className="text-gray-500 text-sm mt-1">
 								{error instanceof Error
 									? error.message

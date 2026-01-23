@@ -28,8 +28,8 @@ function parseUnifiedDiff(unifiedDiff: string): DiffLine[] {
 			// Parse hunk header: @@ -start,count +start,count @@
 			const match = line.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
 			if (match) {
-				oldLineNum = parseInt(match[1], 10) - 1;
-				newLineNum = parseInt(match[2], 10) - 1;
+				oldLineNum = Number.parseInt(match[1], 10) - 1;
+				newLineNum = Number.parseInt(match[2], 10) - 1;
 			}
 			lines.push({ type: 'header', content: line });
 		} else if (line.startsWith('---') || line.startsWith('+++')) {
@@ -139,7 +139,9 @@ function convertToSplitView(diffLines: DiffLine[]): SplitLine[] {
 	return result;
 }
 
-function getLineClass(type: 'added' | 'removed' | 'context' | 'header'): string {
+function getLineClass(
+	type: 'added' | 'removed' | 'context' | 'header',
+): string {
 	switch (type) {
 		case 'added':
 			return 'bg-green-50 text-green-900';
@@ -204,13 +206,17 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 						{diff.old_size !== undefined && (
 							<div>
 								<span className="text-gray-500">Old size: </span>
-								<span className="font-medium">{formatBytes(diff.old_size)}</span>
+								<span className="font-medium">
+									{formatBytes(diff.old_size)}
+								</span>
 							</div>
 						)}
 						{diff.new_size !== undefined && (
 							<div>
 								<span className="text-gray-500">New size: </span>
-								<span className="font-medium">{formatBytes(diff.new_size)}</span>
+								<span className="font-medium">
+									{formatBytes(diff.new_size)}
+								</span>
 							</div>
 						)}
 					</div>
@@ -318,13 +324,17 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 						{diff.old_size !== undefined && diff.old_size > 0 && (
 							<div>
 								<span className="text-gray-500">Old size: </span>
-								<span className="font-medium">{formatBytes(diff.old_size)}</span>
+								<span className="font-medium">
+									{formatBytes(diff.old_size)}
+								</span>
 							</div>
 						)}
 						{diff.new_size !== undefined && diff.new_size > 0 && (
 							<div>
 								<span className="text-gray-500">New size: </span>
-								<span className="font-medium">{formatBytes(diff.new_size)}</span>
+								<span className="font-medium">
+									{formatBytes(diff.new_size)}
+								</span>
 							</div>
 						)}
 					</div>
@@ -333,8 +343,11 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 				<div className="overflow-x-auto">
 					<table className="w-full text-sm font-mono">
 						<tbody>
-							{diffLines.map((line, index) => (
-								<tr key={index} className={getLineClass(line.type)}>
+							{diffLines.map((line) => (
+								<tr
+									key={`${line.type}-${line.oldLineNum ?? 'h'}-${line.newLineNum ?? 'h'}-${line.content.slice(0, 20)}`}
+									className={getLineClass(line.type)}
+								>
 									<td
 										className={`px-2 py-0 text-right select-none w-12 ${getLineNumClass(line.type)}`}
 									>
@@ -376,8 +389,10 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 							</tr>
 						</thead>
 						<tbody>
-							{splitLines.map((row, index) => (
-								<tr key={index}>
+							{splitLines.map((row) => (
+								<tr
+									key={`${row.left?.lineNum ?? 'e'}-${row.right?.lineNum ?? 'e'}-${row.left?.content.slice(0, 10) ?? row.right?.content.slice(0, 10)}`}
+								>
 									<td
 										className={`px-0 py-0 w-1/2 border-r border-gray-200 ${
 											row.left?.type === 'removed'
