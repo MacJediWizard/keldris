@@ -15,18 +15,12 @@ export function useFileSearch(params: FileSearchParams | null) {
 	return useQuery({
 		queryKey: ['file-search', params],
 		queryFn: () => {
-			if (
-				!params ||
-				!params.q ||
-				!params.agent_id ||
-				!params.repository_id
-			) {
+			if (!params || !params.q || !params.agent_id || !params.repository_id) {
 				return emptyResponse;
 			}
 			return fileSearchApi.search(params);
 		},
-		enabled:
-			!!params?.q && !!params?.agent_id && !!params?.repository_id,
+		enabled: !!params?.q && !!params?.agent_id && !!params?.repository_id,
 		staleTime: 60 * 1000, // 1 minute
 	});
 }
