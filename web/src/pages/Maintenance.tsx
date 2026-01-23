@@ -528,7 +528,10 @@ export function Maintenance() {
 													<button
 														type="button"
 														onClick={() =>
-															handleEmergencyOverride(w.id, w.emergency_override)
+															handleEmergencyOverride(
+																w.id,
+																w.emergency_override,
+															)
 														}
 														disabled={emergencyOverride.isPending}
 														className="text-green-600 hover:text-green-900 text-sm font-medium disabled:opacity-50"
