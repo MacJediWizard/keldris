@@ -6,6 +6,7 @@ import { AgentDetails } from './pages/AgentDetails';
 import { AgentGroups } from './pages/AgentGroups';
 import { Agents } from './pages/Agents';
 import { Alerts } from './pages/Alerts';
+import { Announcements } from './pages/Announcements';
 import { AuditLogs } from './pages/AuditLogs';
 import { Backups } from './pages/Backups';
 import { Classifications } from './pages/Classifications';
@@ -94,6 +95,10 @@ function App() {
 							element={<OrganizationSSOSettings />}
 						/>
 						<Route path="organization/maintenance" element={<Maintenance />} />
+						<Route
+							path="organization/announcements"
+							element={<Announcements />}
+						/>
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />
 						<Route path="onboarding" element={<Onboarding />} />
