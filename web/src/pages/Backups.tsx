@@ -635,221 +635,221 @@ export function Backups() {
 			{viewMode === 'calendar' ? (
 				<BackupCalendar onSelectBackup={setSelectedBackup} />
 			) : (
-			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
-					<div className="flex items-center gap-4 mb-4">
-						<input
-							type="text"
-							placeholder="Search by snapshot ID..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						/>
-						<select
-							value={agentFilter}
-							onChange={(e) => setAgentFilter(e.target.value)}
-							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Agents</option>
-							{agents?.map((agent) => (
-								<option key={agent.id} value={agent.id}>
-									{agent.hostname}
-								</option>
-							))}
-						</select>
-						<select
-							value={statusFilter}
-							onChange={(e) =>
-								setStatusFilter(e.target.value as BackupStatus | 'all')
-							}
-							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Status</option>
-							<option value="completed">Completed</option>
-							<option value="running">Running</option>
-							<option value="failed">Failed</option>
-							<option value="canceled">Canceled</option>
-						</select>
-						<select
-							value={classificationFilter}
-							onChange={(e) =>
-								setClassificationFilter(
-									e.target.value as ClassificationLevel | 'all',
-								)
-							}
-							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Classifications</option>
-							<option value="public">Public</option>
-							<option value="internal">Internal</option>
-							<option value="confidential">Confidential</option>
-							<option value="restricted">Restricted</option>
-						</select>
-					</div>
-					{allTags && allTags.length > 0 && (
-						<div className="flex items-center gap-2 flex-wrap">
-							<span className="text-sm text-gray-500">Filter by tags:</span>
-							{allTags.map((tag) => (
-								<TagChip
-									key={tag.id}
-									tag={tag}
-									selected={selectedTagFilters.has(tag.id)}
-									onClick={() => toggleTagFilter(tag.id)}
-								/>
-							))}
-							{selectedTagFilters.size > 0 && (
-								<button
-									type="button"
-									onClick={() => setSelectedTagFilters(new Set())}
-									className="text-sm text-gray-500 hover:text-gray-700"
-								>
-									Clear all
-								</button>
-							)}
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+					<div className="p-6 border-b border-gray-200 dark:border-gray-700">
+						<div className="flex items-center gap-4 mb-4">
+							<input
+								type="text"
+								placeholder="Search by snapshot ID..."
+								value={searchQuery}
+								onChange={(e) => setSearchQuery(e.target.value)}
+								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+							<select
+								value={agentFilter}
+								onChange={(e) => setAgentFilter(e.target.value)}
+								className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="all">All Agents</option>
+								{agents?.map((agent) => (
+									<option key={agent.id} value={agent.id}>
+										{agent.hostname}
+									</option>
+								))}
+							</select>
+							<select
+								value={statusFilter}
+								onChange={(e) =>
+									setStatusFilter(e.target.value as BackupStatus | 'all')
+								}
+								className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="all">All Status</option>
+								<option value="completed">Completed</option>
+								<option value="running">Running</option>
+								<option value="failed">Failed</option>
+								<option value="canceled">Canceled</option>
+							</select>
+							<select
+								value={classificationFilter}
+								onChange={(e) =>
+									setClassificationFilter(
+										e.target.value as ClassificationLevel | 'all',
+									)
+								}
+								className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="all">All Classifications</option>
+								<option value="public">Public</option>
+								<option value="internal">Internal</option>
+								<option value="confidential">Confidential</option>
+								<option value="restricted">Restricted</option>
+							</select>
 						</div>
-					)}
-				</div>
-
-				<div className="overflow-x-auto">
-					{isError ? (
-						<div className="p-12 text-center text-red-500 dark:text-red-400">
-							<p className="font-medium">Failed to load backups</p>
-							<p className="text-sm">Please try refreshing the page</p>
-						</div>
-					) : isLoading ? (
-						<table className="w-full">
-							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Snapshot ID
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Agent
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Repository
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Size
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Status
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Created
-									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Actions
-									</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-								<LoadingRow />
-								<LoadingRow />
-								<LoadingRow />
-								<LoadingRow />
-								<LoadingRow />
-							</tbody>
-						</table>
-					) : filteredBackups && filteredBackups.length > 0 ? (
-						<table className="w-full">
-							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Snapshot ID
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Agent
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Repository
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Size
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Status
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Created
-									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Actions
-									</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-								{filteredBackups.map((backup) => (
-									<BackupRow
-										key={backup.id}
-										backup={backup}
-										agentName={agentMap.get(backup.agent_id)}
-										repoName={getRepoNameForBackup(backup)}
-										onViewDetails={setSelectedBackup}
+						{allTags && allTags.length > 0 && (
+							<div className="flex items-center gap-2 flex-wrap">
+								<span className="text-sm text-gray-500">Filter by tags:</span>
+								{allTags.map((tag) => (
+									<TagChip
+										key={tag.id}
+										tag={tag}
+										selected={selectedTagFilters.has(tag.id)}
+										onClick={() => toggleTagFilter(tag.id)}
 									/>
 								))}
-							</tbody>
-						</table>
-					) : (
-						<table className="w-full">
-							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Snapshot ID
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Agent
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Repository
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Size
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Status
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Created
-									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Actions
-									</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-								<tr>
-									<td
-										colSpan={7}
-										className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+								{selectedTagFilters.size > 0 && (
+									<button
+										type="button"
+										onClick={() => setSelectedTagFilters(new Set())}
+										className="text-sm text-gray-500 hover:text-gray-700"
 									>
-										<svg
-											aria-hidden="true"
-											className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
+										Clear all
+									</button>
+								)}
+							</div>
+						)}
+					</div>
+
+					<div className="overflow-x-auto">
+						{isError ? (
+							<div className="p-12 text-center text-red-500 dark:text-red-400">
+								<p className="font-medium">Failed to load backups</p>
+								<p className="text-sm">Please try refreshing the page</p>
+							</div>
+						) : isLoading ? (
+							<table className="w-full">
+								<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+									<tr>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Snapshot ID
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Agent
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Repository
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Size
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Status
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Created
+										</th>
+										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Actions
+										</th>
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+									<LoadingRow />
+									<LoadingRow />
+									<LoadingRow />
+									<LoadingRow />
+									<LoadingRow />
+								</tbody>
+							</table>
+						) : filteredBackups && filteredBackups.length > 0 ? (
+							<table className="w-full">
+								<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+									<tr>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Snapshot ID
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Agent
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Repository
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Size
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Status
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Created
+										</th>
+										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Actions
+										</th>
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+									{filteredBackups.map((backup) => (
+										<BackupRow
+											key={backup.id}
+											backup={backup}
+											agentName={agentMap.get(backup.agent_id)}
+											repoName={getRepoNameForBackup(backup)}
+											onViewDetails={setSelectedBackup}
+										/>
+									))}
+								</tbody>
+							</table>
+						) : (
+							<table className="w-full">
+								<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+									<tr>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Snapshot ID
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Agent
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Repository
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Size
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Status
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Created
+										</th>
+										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+											Actions
+										</th>
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+									<tr>
+										<td
+											colSpan={7}
+											className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
 										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-											/>
-										</svg>
-										<p className="font-medium text-gray-900 dark:text-white">
-											No backups found
-										</p>
-										<p className="text-sm">
-											Backups will appear here once agents start running
-										</p>
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					)}
+											<svg
+												aria-hidden="true"
+												className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+												/>
+											</svg>
+											<p className="font-medium text-gray-900 dark:text-white">
+												No backups found
+											</p>
+											<p className="text-sm">
+												Backups will appear here once agents start running
+											</p>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						)}
+					</div>
 				</div>
-			</div>
 			)}
 
 			{selectedBackup && (
