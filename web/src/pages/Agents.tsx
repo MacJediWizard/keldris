@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AgentDownloads } from '../components/features/AgentDownloads';
+import { ExportImportModal } from '../components/features/ExportImportModal';
 import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
 import {
 	BulkOperationProgress,
@@ -617,6 +618,9 @@ export function Agents() {
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [showAddToGroupModal, setShowAddToGroupModal] = useState(false);
 	const [selectedGroupId, setSelectedGroupId] = useState('');
+	const [showExportModal, setShowExportModal] = useState(false);
+	const [selectedAgentForExport, setSelectedAgentForExport] =
+		useState<Agent | null>(null);
 
 	const { data: agents, isLoading, isError } = useAgents();
 	const { data: pendingRegistrations, isLoading: isPendingLoading } =
@@ -822,29 +826,55 @@ export function Agents() {
 					</h1>
 					<p className="text-gray-600 mt-1">{t('agents.subtitle')}</p>
 				</div>
-				<button
-					type="button"
-					onClick={() => setShowGenerateModal(true)}
-					data-action="register-agent"
-					title={`${t('agents.registerAgent')} (N)`}
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						aria-hidden="true"
-						className="w-5 h-5"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
+				<div className="flex items-center gap-3">
+					<button
+						type="button"
+						onClick={() => {
+							setSelectedAgentForExport(null);
+							setShowExportModal(true);
+						}}
+						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
 					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 4v16m8-8H4"
-						/>
-					</svg>
-					{t('agents.registerAgent')}
-				</button>
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+							/>
+						</svg>
+						Import
+					</button>
+					<button
+						type="button"
+						onClick={() => setShowGenerateModal(true)}
+						data-action="register-agent"
+						title={`${t('agents.registerAgent')} (N)`}
+						className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+					>
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M12 4v16m8-8H4"
+							/>
+						</svg>
+						{t('agents.registerAgent')}
+					</button>
+				</div>
 			</div>
 
 			{/* Pending Registrations Section */}
@@ -1189,6 +1219,16 @@ export function Agents() {
 
 			{/* Download section - always visible */}
 			<AgentDownloads showInstallCommands={true} />
+
+			<ExportImportModal
+				isOpen={showExportModal}
+				onClose={() => {
+					setShowExportModal(false);
+					setSelectedAgentForExport(null);
+				}}
+				type="agent"
+				item={selectedAgentForExport ?? undefined}
+			/>
 		</div>
 	);
 }

@@ -31,6 +31,7 @@ import { Schedules } from './pages/Schedules';
 import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
 import { Tags } from './pages/Tags';
+import { Templates } from './pages/Templates';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -61,6 +62,7 @@ function App() {
 						<Route path="repositories" element={<Repositories />} />
 						<Route path="schedules" element={<Schedules />} />
 						<Route path="policies" element={<Policies />} />
+						<Route path="templates" element={<Templates />} />
 						<Route path="backups" element={<Backups />} />
 						<Route path="dr-runbooks" element={<DRRunbooks />} />
 						<Route path="restore" element={<Restore />} />
