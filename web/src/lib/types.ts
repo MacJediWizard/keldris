@@ -2481,3 +2481,131 @@ export interface CreateAgentCommandRequest {
 export interface AgentCommandsResponse {
 	commands: AgentCommand[];
 }
+
+// Config Export/Import types
+export type ConfigType = 'agent' | 'schedule' | 'repository' | 'bundle';
+export type ExportFormat = 'json' | 'yaml';
+export type ConflictResolution = 'skip' | 'replace' | 'rename' | 'fail';
+export type TemplateType = 'schedule' | 'agent' | 'repository' | 'bundle';
+export type TemplateVisibility = 'private' | 'organization' | 'public';
+
+export interface ExportMetadata {
+	version: string;
+	type: ConfigType;
+	exported_at: string;
+	exported_by?: string;
+	description?: string;
+}
+
+export interface ExportBundleRequest {
+	agent_ids?: string[];
+	schedule_ids?: string[];
+	repository_ids?: string[];
+	format?: ExportFormat;
+	description?: string;
+}
+
+export interface ImportConfigRequest {
+	config: string;
+	format?: ExportFormat;
+	target_agent_id?: string;
+	repository_mappings?: Record<string, string>;
+	conflict_resolution?: ConflictResolution;
+}
+
+export interface ValidateImportRequest {
+	config: string;
+	format?: ExportFormat;
+}
+
+export interface ImportedItems {
+	agent_count: number;
+	agent_ids?: string[];
+	schedule_count: number;
+	schedule_ids?: string[];
+	repository_count: number;
+	repository_ids?: string[];
+}
+
+export interface SkippedItem {
+	type: ConfigType;
+	name: string;
+	reason: string;
+}
+
+export interface ImportError {
+	type: ConfigType;
+	name: string;
+	message: string;
+}
+
+export interface ImportResult {
+	success: boolean;
+	message: string;
+	imported: ImportedItems;
+	skipped?: SkippedItem[];
+	errors?: ImportError[];
+	warnings?: string[];
+}
+
+export interface ValidationError {
+	field: string;
+	message: string;
+}
+
+export interface Conflict {
+	type: ConfigType;
+	name: string;
+	existing_id: string;
+	existing_name: string;
+	message: string;
+}
+
+export interface ValidationResult {
+	valid: boolean;
+	errors?: ValidationError[];
+	warnings?: string[];
+	conflicts?: Conflict[];
+	suggestions?: string[];
+}
+
+// Config Template types
+export interface ConfigTemplate {
+	id: string;
+	org_id: string;
+	created_by_id: string;
+	name: string;
+	description?: string;
+	type: TemplateType;
+	visibility: TemplateVisibility;
+	tags?: string[];
+	config: Record<string, unknown>;
+	usage_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateTemplateRequest {
+	name: string;
+	description?: string;
+	config: string;
+	visibility?: TemplateVisibility;
+	tags?: string[];
+}
+
+export interface UpdateTemplateRequest {
+	name?: string;
+	description?: string;
+	visibility?: TemplateVisibility;
+	tags?: string[];
+}
+
+export interface UseTemplateRequest {
+	target_agent_id?: string;
+	repository_mappings?: Record<string, string>;
+	conflict_resolution?: ConflictResolution;
+}
+
+export interface ConfigTemplatesResponse {
+	templates: ConfigTemplate[];
+}

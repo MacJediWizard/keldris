@@ -216,6 +216,9 @@ func NewRouter(
 	ransomwareHandler := handlers.NewRansomwareHandler(database, logger)
 	ransomwareHandler.RegisterRoutes(apiV1)
 
+	configExportHandler := handlers.NewConfigExportHandler(database, logger)
+	configExportHandler.RegisterRoutes(apiV1)
+
 	// DR Runbook routes
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
 	drRunbooksHandler.RegisterRoutes(apiV1)
