@@ -143,6 +143,8 @@ import type {
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
+	SetDebugModeRequest,
+	SetDebugModeResponse,
 	Snapshot,
 	SnapshotComment,
 	SnapshotCommentsResponse,
@@ -321,6 +323,15 @@ export const agentsApi = {
 
 	getFleetHealth: async (): Promise<FleetHealthSummary> =>
 		fetchApi<FleetHealthSummary>('/agents/fleet-health'),
+
+	setDebugMode: async (
+		id: string,
+		data: SetDebugModeRequest,
+	): Promise<SetDebugModeResponse> =>
+		fetchApi<SetDebugModeResponse>(`/agents/${id}/debug`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 
 	listWithGroups: async (): Promise<AgentWithGroups[]> => {
 		const response = await fetchApi<AgentsWithGroupsResponse>(

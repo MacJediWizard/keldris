@@ -123,7 +123,9 @@ func (db *DB) CreateUser(ctx context.Context, user *models.User) error {
 func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
-		       health_status, health_metrics, health_checked_at, created_at, updated_at
+		       health_status, health_metrics, health_checked_at,
+		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
+		       created_at, updated_at
 		FROM agents
 		WHERE org_id = $1
 		ORDER BY hostname
@@ -144,7 +146,9 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		err := rows.Scan(
 			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 			&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
-			&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
+			&a.HealthCheckedAt,
+			&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
+			&a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
@@ -180,13 +184,17 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
-		       health_status, health_metrics, health_checked_at, created_at, updated_at
+		       health_status, health_metrics, health_checked_at,
+		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
+		       created_at, updated_at
 		FROM agents
 		WHERE id = $1
 	`, id).Scan(
 		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
-		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
+		&a.HealthCheckedAt,
+		&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
+		&a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent: %w", err)
@@ -219,13 +227,17 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
-		       health_status, health_metrics, health_checked_at, created_at, updated_at
+		       health_status, health_metrics, health_checked_at,
+		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
+		       created_at, updated_at
 		FROM agents
 		WHERE api_key_hash = $1
 	`, hash).Scan(
 		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
-		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
+		&a.HealthCheckedAt,
+		&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
+		&a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent by API key: %w", err)
@@ -339,6 +351,51 @@ func (db *DB) RevokeAgentAPIKey(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("agent not found")
 	}
 	return nil
+}
+
+// SetAgentDebugMode enables or disables debug mode on an agent.
+func (db *DB) SetAgentDebugMode(ctx context.Context, id uuid.UUID, enabled bool, expiresAt *time.Time, enabledBy *uuid.UUID) error {
+	now := time.Now()
+	var enabledAt *time.Time
+	if enabled {
+		enabledAt = &now
+	}
+
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agents
+		SET debug_mode = $2,
+		    debug_mode_expires_at = $3,
+		    debug_mode_enabled_at = $4,
+		    debug_mode_enabled_by = $5,
+		    updated_at = $6
+		WHERE id = $1
+	`, id, enabled, expiresAt, enabledAt, enabledBy, now)
+	if err != nil {
+		return fmt.Errorf("set agent debug mode: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("agent not found")
+	}
+	return nil
+}
+
+// DisableExpiredDebugModes disables debug mode on agents where the expiration has passed.
+func (db *DB) DisableExpiredDebugModes(ctx context.Context) (int64, error) {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agents
+		SET debug_mode = false,
+		    debug_mode_expires_at = NULL,
+		    debug_mode_enabled_at = NULL,
+		    debug_mode_enabled_by = NULL,
+		    updated_at = $1
+		WHERE debug_mode = true
+		  AND debug_mode_expires_at IS NOT NULL
+		  AND debug_mode_expires_at < $1
+	`, time.Now())
+	if err != nil {
+		return 0, fmt.Errorf("disable expired debug modes: %w", err)
+	}
+	return result.RowsAffected(), nil
 }
 
 // CreateAgentHealthHistory creates a new health history record.
