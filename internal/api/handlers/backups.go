@@ -3,11 +3,14 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"sort"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog"
 )
 
@@ -19,6 +22,8 @@ type BackupStore interface {
 	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
 	GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error)
 	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error)
+	GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error)
+	GetBackupsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]*models.Backup, error)
 }
 
 // BackupsHandler handles backup-related HTTP endpoints.
@@ -40,6 +45,7 @@ func (h *BackupsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	backups := r.Group("/backups")
 	{
 		backups.GET("", h.List)
+		backups.GET("/calendar", h.Calendar)
 		backups.GET("/:id", h.Get)
 	}
 }
@@ -221,4 +227,193 @@ func filterByStatus(backups []*models.Backup, status string) []*models.Backup {
 		}
 	}
 	return filtered
+}
+
+// BackupCalendarDay represents backup statistics for a single day.
+type BackupCalendarDay struct {
+	Date      string           `json:"date"`
+	Completed int              `json:"completed"`
+	Failed    int              `json:"failed"`
+	Running   int              `json:"running"`
+	Scheduled int              `json:"scheduled"`
+	Backups   []*models.Backup `json:"backups,omitempty"`
+}
+
+// ScheduledBackup represents a future scheduled backup.
+type ScheduledBackup struct {
+	ScheduleID   uuid.UUID `json:"schedule_id"`
+	ScheduleName string    `json:"schedule_name"`
+	AgentID      uuid.UUID `json:"agent_id"`
+	AgentName    string    `json:"agent_name"`
+	ScheduledAt  time.Time `json:"scheduled_at"`
+}
+
+// BackupCalendarResponse is the response for the calendar endpoint.
+type BackupCalendarResponse struct {
+	Days      []BackupCalendarDay `json:"days"`
+	Scheduled []ScheduledBackup   `json:"scheduled"`
+}
+
+// Calendar returns backup calendar data for a given month.
+//
+//	@Summary		Get backup calendar
+//	@Description	Returns backup statistics and scheduled backups for a given month
+//	@Tags			Backups
+//	@Accept			json
+//	@Produce		json
+//	@Param			month	query		string	true	"Month in YYYY-MM format"
+//	@Success		200		{object}	BackupCalendarResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/backups/calendar [get]
+func (h *BackupsHandler) Calendar(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	// Parse month parameter (YYYY-MM format)
+	monthParam := c.Query("month")
+	if monthParam == "" {
+		// Default to current month
+		now := time.Now()
+		monthParam = now.Format("2006-01")
+	}
+
+	// Parse the month
+	monthTime, err := time.Parse("2006-01", monthParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid month format, use YYYY-MM"})
+		return
+	}
+
+	// Calculate start and end of month
+	startOfMonth := monthTime
+	endOfMonth := monthTime.AddDate(0, 1, 0).Add(-time.Nanosecond)
+
+	// Get all backups for the month
+	backups, err := h.store.GetBackupsByOrgIDAndDateRange(c.Request.Context(), user.CurrentOrgID, startOfMonth, endOfMonth)
+	if err != nil {
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get backups for calendar")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get backup calendar"})
+		return
+	}
+
+	// Get all agents and their schedules
+	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), user.CurrentOrgID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get agents")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get backup calendar"})
+		return
+	}
+
+	// Create agent map for quick lookup
+	agentMap := make(map[uuid.UUID]*models.Agent)
+	for _, agent := range agents {
+		agentMap[agent.ID] = agent
+	}
+
+	// Group backups by date
+	backupsByDate := make(map[string][]*models.Backup)
+	for _, backup := range backups {
+		dateKey := backup.StartedAt.Format("2006-01-02")
+		backupsByDate[dateKey] = append(backupsByDate[dateKey], backup)
+	}
+
+	// Build days response
+	var days []BackupCalendarDay
+	for dateKey, dayBackups := range backupsByDate {
+		day := BackupCalendarDay{
+			Date:    dateKey,
+			Backups: dayBackups,
+		}
+		for _, b := range dayBackups {
+			switch b.Status {
+			case models.BackupStatusCompleted:
+				day.Completed++
+			case models.BackupStatusFailed:
+				day.Failed++
+			case models.BackupStatusRunning:
+				day.Running++
+			}
+		}
+		days = append(days, day)
+	}
+
+	// Sort days by date
+	sort.Slice(days, func(i, j int) bool {
+		return days[i].Date < days[j].Date
+	})
+
+	// Calculate future scheduled backups
+	var scheduled []ScheduledBackup
+	now := time.Now()
+
+	// Only calculate future schedules if we're looking at a month that includes the future
+	if endOfMonth.After(now) {
+		scheduleStart := now
+		if startOfMonth.After(now) {
+			scheduleStart = startOfMonth
+		}
+
+		for _, agent := range agents {
+			if agent.Status != models.AgentStatusActive {
+				continue
+			}
+
+			schedules, err := h.store.GetSchedulesByAgentID(c.Request.Context(), agent.ID)
+			if err != nil {
+				h.logger.Warn().Err(err).Str("agent_id", agent.ID.String()).Msg("failed to get schedules for agent")
+				continue
+			}
+
+			for _, schedule := range schedules {
+				if !schedule.Enabled {
+					continue
+				}
+
+				// Parse cron expression
+				parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+				cronSchedule, err := parser.Parse(schedule.CronExpression)
+				if err != nil {
+					h.logger.Warn().Err(err).Str("schedule_id", schedule.ID.String()).Msg("failed to parse cron expression")
+					continue
+				}
+
+				// Get next run times within the month
+				nextRun := scheduleStart
+				for i := 0; i < 100; i++ { // Limit iterations
+					nextRun = cronSchedule.Next(nextRun)
+					if nextRun.After(endOfMonth) {
+						break
+					}
+
+					scheduled = append(scheduled, ScheduledBackup{
+						ScheduleID:   schedule.ID,
+						ScheduleName: schedule.Name,
+						AgentID:      agent.ID,
+						AgentName:    agent.Hostname,
+						ScheduledAt:  nextRun,
+					})
+				}
+			}
+		}
+	}
+
+	// Sort scheduled backups by time
+	sort.Slice(scheduled, func(i, j int) bool {
+		return scheduled[i].ScheduledAt.Before(scheduled[j].ScheduledAt)
+	})
+
+	c.JSON(http.StatusOK, BackupCalendarResponse{
+		Days:      days,
+		Scheduled: scheduled,
+	})
 }
