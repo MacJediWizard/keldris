@@ -1,7 +1,5 @@
 import type {
 	ActiveMaintenanceResponse,
-	ChangelogEntry,
-	ChangelogResponse,
 	AddAgentToGroupRequest,
 	Agent,
 	AgentBackupsResponse,
@@ -43,6 +41,8 @@ import type {
 	BuiltInPatternsResponse,
 	CategoriesResponse,
 	CategoryInfo,
+	ChangelogEntry,
+	ChangelogResponse,
 	ClassificationLevelsResponse,
 	ClassificationRulesResponse,
 	ClassificationSummary,

@@ -10,7 +10,11 @@ interface WhatsNewModalProps {
 
 const SEEN_VERSION_KEY = 'keldris_seen_version';
 
-function ChangeList({ title, items, icon }: { title: string; items: string[]; icon: string }) {
+function ChangeList({
+	title,
+	items,
+	icon,
+}: { title: string; items: string[]; icon: string }) {
 	if (!items || items.length === 0) return null;
 
 	return (
@@ -20,8 +24,8 @@ function ChangeList({ title, items, icon }: { title: string; items: string[]; ic
 				{title}
 			</h4>
 			<ul className="space-y-1 pl-6">
-				{items.slice(0, 5).map((item, idx) => (
-					<li key={idx} className="text-sm text-gray-600 list-disc">
+				{items.slice(0, 5).map((item) => (
+					<li key={item} className="text-sm text-gray-600 list-disc">
 						{item}
 					</li>
 				))}
@@ -35,7 +39,11 @@ function ChangeList({ title, items, icon }: { title: string; items: string[]; ic
 	);
 }
 
-export function WhatsNewModal({ entry, currentVersion, onDismiss }: WhatsNewModalProps) {
+export function WhatsNewModal({
+	entry,
+	currentVersion,
+	onDismiss,
+}: WhatsNewModalProps) {
 	const [isOpen, setIsOpen] = useState(false);
 
 	useEffect(() => {
@@ -60,8 +68,9 @@ export function WhatsNewModal({ entry, currentVersion, onDismiss }: WhatsNewModa
 
 	const hasChanges =
 		(entry.added?.length ?? 0) +
-		(entry.changed?.length ?? 0) +
-		(entry.fixed?.length ?? 0) > 0;
+			(entry.changed?.length ?? 0) +
+			(entry.fixed?.length ?? 0) >
+		0;
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -112,9 +121,21 @@ export function WhatsNewModal({ entry, currentVersion, onDismiss }: WhatsNewModa
 				<div className="px-6 py-6 max-h-80 overflow-y-auto">
 					{hasChanges ? (
 						<>
-							<ChangeList title="New Features" items={entry.added ?? []} icon="+" />
-							<ChangeList title="Improvements" items={entry.changed ?? []} icon="~" />
-							<ChangeList title="Bug Fixes" items={entry.fixed ?? []} icon="*" />
+							<ChangeList
+								title="New Features"
+								items={entry.added ?? []}
+								icon="+"
+							/>
+							<ChangeList
+								title="Improvements"
+								items={entry.changed ?? []}
+								icon="~"
+							/>
+							<ChangeList
+								title="Bug Fixes"
+								items={entry.fixed ?? []}
+								icon="*"
+							/>
 						</>
 					) : (
 						<p className="text-gray-500 text-center py-4">
