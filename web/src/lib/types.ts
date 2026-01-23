@@ -54,6 +54,10 @@ export interface Agent {
 	health_status: HealthStatus;
 	health_metrics?: HealthMetrics;
 	health_checked_at?: string;
+	debug_mode: boolean;
+	debug_mode_expires_at?: string;
+	debug_mode_enabled_at?: string;
+	debug_mode_enabled_by?: string;
 	created_at: string;
 	updated_at: string;
 }
@@ -198,6 +202,25 @@ export interface AgentSchedulesResponse {
 
 export interface AgentHealthHistoryResponse {
 	history: AgentHealthHistory[];
+}
+
+// Debug mode types
+export interface SetDebugModeRequest {
+	enabled: boolean;
+	duration_hours?: number; // 0 means no auto-disable, default is 4
+}
+
+export interface SetDebugModeResponse {
+	debug_mode: boolean;
+	debug_mode_expires_at?: string;
+	message: string;
+}
+
+export interface DebugConfig {
+	enabled: boolean;
+	log_level: string;
+	include_restic_output: boolean;
+	log_file_operations: boolean;
 }
 
 // Agent Log types

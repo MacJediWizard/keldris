@@ -14,6 +14,7 @@ import {
 	useRevokeAgentApiKey,
 	useRotateAgentApiKey,
 	useRunSchedule,
+	useSetAgentDebugMode,
 } from '../hooks/useAgents';
 import type {
 	AgentCommand,
@@ -393,6 +394,7 @@ export function AgentDetails() {
 	const rotateApiKey = useRotateAgentApiKey();
 	const revokeApiKey = useRevokeAgentApiKey();
 	const runSchedule = useRunSchedule();
+	const setDebugMode = useSetAgentDebugMode();
 	const createCommand = useCreateAgentCommand();
 	const cancelCommand = useCancelAgentCommand();
 
@@ -438,6 +440,31 @@ export function AgentDetails() {
 	const handleRunSchedule = (scheduleId: string) => {
 		if (confirm('Run this backup schedule now?')) {
 			runSchedule.mutate(scheduleId);
+		}
+	};
+
+	const handleToggleDebugMode = () => {
+		if (!agent) return;
+
+		if (agent.debug_mode) {
+			if (confirm('Disable debug mode on this agent?')) {
+				setDebugMode.mutate({
+					id: agent.id,
+					data: { enabled: false },
+				});
+			}
+		} else {
+			const hours = prompt(
+				'Enable debug mode for how many hours? (default: 4)',
+				'4',
+			);
+			if (hours !== null) {
+				const durationHours = Number.parseInt(hours, 10) || 4;
+				setDebugMode.mutate({
+					id: agent.id,
+					data: { enabled: true, duration_hours: durationHours },
+				});
+			}
 		}
 	};
 
@@ -637,6 +664,41 @@ export function AgentDetails() {
 					</div>
 					<button
 						type="button"
+						onClick={handleToggleDebugMode}
+						disabled={setDebugMode.isPending}
+						className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
+							agent.debug_mode
+								? 'text-orange-700 bg-orange-50 border border-orange-200 hover:bg-orange-100'
+								: 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+						}`}
+						title={
+							agent.debug_mode
+								? `Debug mode active until ${agent.debug_mode_expires_at ? new Date(agent.debug_mode_expires_at).toLocaleString() : 'indefinitely'}`
+								: 'Enable verbose logging on this agent'
+						}
+					>
+						<svg
+							aria-hidden="true"
+							className="w-4 h-4"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+							/>
+						</svg>
+						{setDebugMode.isPending
+							? 'Updating...'
+							: agent.debug_mode
+								? 'Debug On'
+								: 'Debug Mode'}
+					</button>
+					<button
+						type="button"
 						onClick={handleRotateKey}
 						disabled={rotateApiKey.isPending}
 						className="inline-flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
@@ -703,6 +765,58 @@ export function AgentDetails() {
 					</button>
 				</div>
 			</div>
+
+			{/* Debug Mode Warning Banner */}
+			{agent.debug_mode && (
+				<div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+					<div className="flex items-start gap-3">
+						<div className="flex-shrink-0">
+							<svg
+								aria-hidden="true"
+								className="w-5 h-5 text-orange-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+								/>
+							</svg>
+						</div>
+						<div className="flex-1">
+							<h3 className="text-sm font-medium text-orange-800">
+								Debug Mode Active
+							</h3>
+							<p className="text-sm text-orange-700 mt-1">
+								This agent is running in debug mode with verbose logging
+								enabled. Detailed restic output and file operations are being
+								logged.
+								{agent.debug_mode_expires_at && (
+									<>
+										{' '}
+										Debug mode will auto-disable on{' '}
+										<strong>
+											{new Date(agent.debug_mode_expires_at).toLocaleString()}
+										</strong>
+										.
+									</>
+								)}
+							</p>
+						</div>
+						<button
+							type="button"
+							onClick={handleToggleDebugMode}
+							disabled={setDebugMode.isPending}
+							className="flex-shrink-0 text-sm font-medium text-orange-700 hover:text-orange-800 disabled:opacity-50"
+						>
+							{setDebugMode.isPending ? 'Disabling...' : 'Disable'}
+						</button>
+					</div>
+				</div>
+			)}
 
 			{/* Stats Cards */}
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

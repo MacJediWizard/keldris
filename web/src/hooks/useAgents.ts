@@ -4,6 +4,7 @@ import type {
 	AgentLogFilter,
 	CreateAgentCommandRequest,
 	CreateAgentRequest,
+	SetDebugModeRequest,
 } from '../lib/types';
 
 export function useAgents() {
@@ -119,6 +120,19 @@ export function useFleetHealth() {
 		queryKey: ['agents', 'fleet-health'],
 		queryFn: () => agentsApi.getFleetHealth(),
 		staleTime: 30 * 1000, // 30 seconds
+	});
+}
+
+export function useSetAgentDebugMode() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ id, data }: { id: string; data: SetDebugModeRequest }) =>
+			agentsApi.setDebugMode(id, data),
+		onSuccess: (_data, variables) => {
+			queryClient.invalidateQueries({ queryKey: ['agents'] });
+			queryClient.invalidateQueries({ queryKey: ['agents', variables.id] });
+		},
 	});
 }
 
