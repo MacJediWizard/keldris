@@ -1919,3 +1919,35 @@ export interface ImportRepositoryResponse {
 	repository: Repository;
 	snapshots_imported: number;
 }
+
+// Server Log types
+export type ServerLogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+
+export interface ServerLogEntry {
+	timestamp: string;
+	level: ServerLogLevel;
+	message: string;
+	component?: string;
+	fields?: Record<string, unknown>;
+}
+
+export interface ServerLogFilter {
+	level?: ServerLogLevel;
+	component?: string;
+	search?: string;
+	start_time?: string;
+	end_time?: string;
+	limit?: number;
+	offset?: number;
+}
+
+export interface ServerLogsResponse {
+	logs: ServerLogEntry[];
+	total_count: number;
+	limit: number;
+	offset: number;
+}
+
+export interface ServerLogComponentsResponse {
+	components: string[];
+}

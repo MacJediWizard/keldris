@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { AdminLogs } from './pages/AdminLogs';
 import { AgentDetails } from './pages/AgentDetails';
 import { AgentGroups } from './pages/AgentGroups';
 import { Agents } from './pages/Agents';
@@ -84,6 +85,7 @@ function App() {
 						/>
 						<Route path="organization/maintenance" element={<Maintenance />} />
 						<Route path="organization/new" element={<NewOrganization />} />
+						<Route path="admin/logs" element={<AdminLogs />} />
 						<Route path="onboarding" element={<Onboarding />} />
 					</Route>
 				</Routes>
