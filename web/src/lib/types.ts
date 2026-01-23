@@ -1868,6 +1868,49 @@ export interface FileHistoryParams {
 	repository_id: string;
 }
 
+// File Search types
+export interface FileSearchResult {
+	snapshot_id: string;
+	snapshot_time: string;
+	hostname: string;
+	file_name: string;
+	file_path: string;
+	file_size: number;
+	file_type: string;
+	mod_time: string;
+}
+
+export interface SnapshotFileGroup {
+	snapshot_id: string;
+	snapshot_time: string;
+	hostname: string;
+	file_count: number;
+	files: FileSearchResult[];
+}
+
+export interface FileSearchResponse {
+	query: string;
+	agent_id: string;
+	repository_id: string;
+	total_count: number;
+	snapshot_count: number;
+	snapshots: SnapshotFileGroup[];
+	message?: string;
+}
+
+export interface FileSearchParams {
+	q: string;
+	agent_id: string;
+	repository_id: string;
+	path?: string;
+	snapshot_ids?: string;
+	date_from?: string;
+	date_to?: string;
+	size_min?: number;
+	size_max?: number;
+	limit?: number;
+}
+
 // Cost Estimation types
 export interface StoragePricing {
 	id: string;

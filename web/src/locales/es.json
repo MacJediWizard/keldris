@@ -55,6 +55,8 @@
     "schedules": "Programaciones",
     "backups": "Copias de seguridad",
     "restore": "Restaurar",
+    "fileSearch": "Buscar archivos",
+    "fileHistory": "Historial de archivos",
     "alerts": "Alertas",
     "notifications": "Notificaciones",
     "auditLogs": "Registros de auditoría",
