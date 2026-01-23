@@ -20,6 +20,8 @@ import type {
 	AlertRule,
 	AlertRulesResponse,
 	AlertsResponse,
+	Announcement,
+	AnnouncementsResponse,
 	ApplyPolicyRequest,
 	ApplyPolicyResponse,
 	AssignTagsRequest,
@@ -55,6 +57,7 @@ import type {
 	CreateAgentRequest,
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
+	CreateAnnouncementRequest,
 	CreateBackupScriptRequest,
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
@@ -219,6 +222,7 @@ import type {
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
+	UpdateAnnouncementRequest,
 	UpdateBackupScriptRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
@@ -1416,6 +1420,49 @@ export const ssoGroupMappingsApi = {
 	// User SSO Groups
 	getUserSSOGroups: async (userId: string): Promise<UserSSOGroups> =>
 		fetchApi<UserSSOGroups>(`/users/${userId}/sso-groups`),
+};
+
+// Announcements API
+export const announcementsApi = {
+	list: async (): Promise<Announcement[]> => {
+		const response = await fetchApi<AnnouncementsResponse>('/announcements');
+		return response.announcements ?? [];
+	},
+
+	getActive: async (): Promise<Announcement[]> => {
+		const response = await fetchApi<AnnouncementsResponse>(
+			'/announcements/active',
+		);
+		return response.announcements ?? [];
+	},
+
+	get: async (id: string): Promise<Announcement> =>
+		fetchApi<Announcement>(`/announcements/${id}`),
+
+	create: async (data: CreateAnnouncementRequest): Promise<Announcement> =>
+		fetchApi<Announcement>('/announcements', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateAnnouncementRequest,
+	): Promise<Announcement> =>
+		fetchApi<Announcement>(`/announcements/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/announcements/${id}`, {
+			method: 'DELETE',
+		}),
+
+	dismiss: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/announcements/${id}/dismiss`, {
+			method: 'POST',
+		}),
 };
 
 // Maintenance Windows API
