@@ -54,6 +54,10 @@ export interface Agent {
 	health_status: HealthStatus;
 	health_metrics?: HealthMetrics;
 	health_checked_at?: string;
+	debug_mode: boolean;
+	debug_mode_expires_at?: string;
+	debug_mode_enabled_at?: string;
+	debug_mode_enabled_by?: string;
 	created_at: string;
 	updated_at: string;
 }
@@ -198,6 +202,54 @@ export interface AgentSchedulesResponse {
 
 export interface AgentHealthHistoryResponse {
 	history: AgentHealthHistory[];
+}
+
+// Debug mode types
+export interface SetDebugModeRequest {
+	enabled: boolean;
+	duration_hours?: number; // 0 means no auto-disable, default is 4
+}
+
+export interface SetDebugModeResponse {
+	debug_mode: boolean;
+	debug_mode_expires_at?: string;
+	message: string;
+}
+
+export interface DebugConfig {
+	enabled: boolean;
+	log_level: string;
+	include_restic_output: boolean;
+	log_file_operations: boolean;
+}
+
+// Agent Log types
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export interface AgentLog {
+	id: string;
+	agent_id: string;
+	org_id: string;
+	level: LogLevel;
+	message: string;
+	component?: string;
+	metadata?: Record<string, unknown>;
+	timestamp: string;
+	created_at: string;
+}
+
+export interface AgentLogsResponse {
+	logs: AgentLog[];
+	total_count: number;
+	has_more: boolean;
+}
+
+export interface AgentLogFilter {
+	level?: LogLevel;
+	component?: string;
+	search?: string;
+	limit?: number;
+	offset?: number;
 }
 
 // Repository types
@@ -364,7 +416,10 @@ export interface Schedule {
 	backup_window?: BackupWindow; // Allowed backup time window
 	excluded_hours?: number[]; // Hours (0-23) when backups should not run
 	compression_level?: CompressionLevel; // Compression level: off, auto, max
+	max_file_size_mb?: number; // Max file size in MB (0 = disabled)
 	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
+	classification_level?: string; // Data classification level
+	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -383,6 +438,7 @@ export interface CreateScheduleRequest {
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
 	compression_level?: CompressionLevel;
+	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
 	enabled?: boolean;
 }
@@ -398,12 +454,38 @@ export interface UpdateScheduleRequest {
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
 	compression_level?: CompressionLevel;
+	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
 	enabled?: boolean;
 }
 
 export interface RunScheduleResponse {
 	backup_id: string;
+	message: string;
+}
+
+// Dry run types
+export interface DryRunFile {
+	path: string;
+	type: 'file' | 'dir';
+	size: number;
+	action: 'new' | 'changed' | 'unchanged';
+}
+
+export interface DryRunExcluded {
+	path: string;
+	reason: string;
+}
+
+export interface DryRunResponse {
+	schedule_id: string;
+	total_files: number;
+	total_size: number;
+	new_files: number;
+	changed_files: number;
+	unchanged_files: number;
+	files_to_backup: DryRunFile[];
+	excluded_files: DryRunExcluded[];
 	message: string;
 }
 
@@ -470,6 +552,12 @@ export interface PoliciesResponse {
 // Backup types
 export type BackupStatus = 'running' | 'completed' | 'failed' | 'canceled';
 
+export interface ExcludedLargeFile {
+	path: string;
+	size_bytes: number;
+	size_mb: number;
+}
+
 export interface Backup {
 	id: string;
 	schedule_id: string;
@@ -491,7 +579,84 @@ export interface Backup {
 	pre_script_error?: string;
 	post_script_output?: string;
 	post_script_error?: string;
+	excluded_large_files?: ExcludedLargeFile[]; // Files excluded due to size limit
+	resumed: boolean;
+	checkpoint_id?: string;
+	original_backup_id?: string;
+	classification_level?: string;
+	classification_data_types?: string[];
 	created_at: string;
+}
+
+// Backup Checkpoint types for resumable backups
+export type CheckpointStatus = 'active' | 'completed' | 'canceled' | 'expired';
+
+export interface BackupCheckpoint {
+	id: string;
+	schedule_id: string;
+	agent_id: string;
+	repository_id: string;
+	backup_id?: string;
+	status: CheckpointStatus;
+	files_processed: number;
+	bytes_processed: number;
+	total_files?: number;
+	total_bytes?: number;
+	last_processed_path?: string;
+	error_message?: string;
+	resume_count: number;
+	expires_at?: string;
+	started_at: string;
+	last_updated_at: string;
+	created_at: string;
+}
+
+export interface ResumeInfo {
+	checkpoint: BackupCheckpoint;
+	progress_percent?: number;
+	files_processed: number;
+	bytes_processed: number;
+	total_files?: number;
+	total_bytes?: number;
+	interrupted_at: string;
+	interrupted_error?: string;
+	resume_count: number;
+	can_resume: boolean;
+}
+
+export interface IncompleteBackupsResponse {
+	checkpoints: BackupCheckpoint[];
+}
+
+export interface ResumeBackupRequest {
+	checkpoint_id: string;
+}
+
+export interface CancelCheckpointRequest {
+	checkpoint_id: string;
+}
+
+// Backup Calendar types
+export interface BackupCalendarDay {
+	date: string;
+	completed: number;
+	failed: number;
+	running: number;
+	scheduled: number;
+	backups?: Backup[];
+}
+
+export interface ScheduledBackup {
+	schedule_id: string;
+	schedule_name: string;
+	agent_id: string;
+	agent_name: string;
+	scheduled_at: string;
+}
+
+export interface BackupCalendarResponse {
+	days: BackupCalendarDay[];
+	scheduled: ScheduledBackup[];
 }
 
 // Backup Script types
@@ -675,6 +840,9 @@ export interface Snapshot {
 	repository_id: string;
 	backup_id?: string;
 	size_bytes?: number;
+	is_locked?: boolean;
+	locked_until?: string;
+	remaining_days?: number;
 }
 
 export interface SnapshotFile {
@@ -727,6 +895,22 @@ export interface SnapshotCompareResponse {
 	changes: SnapshotDiffEntry[];
 }
 
+// File diff types for comparing file content between snapshots
+export interface FileDiffResponse {
+	path: string;
+	is_binary: boolean;
+	change_type: 'added' | 'removed' | 'modified';
+	old_size?: number;
+	new_size?: number;
+	old_hash?: string;
+	new_hash?: string;
+	unified_diff?: string;
+	old_content?: string;
+	new_content?: string;
+	snapshot_id_1: string;
+	snapshot_id_2: string;
+}
+
 // Snapshot comment types
 export interface SnapshotComment {
 	id: string;
@@ -745,6 +929,39 @@ export interface CreateSnapshotCommentRequest {
 
 export interface SnapshotCommentsResponse {
 	comments: SnapshotComment[];
+}
+
+// Snapshot Mount types
+export type SnapshotMountStatus =
+	| 'pending'
+	| 'mounting'
+	| 'mounted'
+	| 'unmounting'
+	| 'unmounted'
+	| 'failed';
+
+export interface SnapshotMount {
+	id: string;
+	agent_id: string;
+	repository_id: string;
+	snapshot_id: string;
+	mount_path: string;
+	status: SnapshotMountStatus;
+	mounted_at?: string;
+	expires_at?: string;
+	unmounted_at?: string;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface MountSnapshotRequest {
+	agent_id: string;
+	repository_id: string;
+	timeout_minutes?: number;
+}
+
+export interface SnapshotMountsResponse {
+	mounts: SnapshotMount[];
 }
 
 // Restore types
@@ -777,6 +994,34 @@ export interface CreateRestoreRequest {
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+}
+
+export interface RestorePreviewRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	target_path: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+}
+
+export interface RestorePreviewFile {
+	path: string;
+	type: 'file' | 'dir';
+	size: number;
+	mod_time: string;
+	has_conflict: boolean;
+}
+
+export interface RestorePreview {
+	snapshot_id: string;
+	target_path: string;
+	total_files: number;
+	total_dirs: number;
+	total_size: number;
+	conflict_count: number;
+	files: RestorePreviewFile[];
+	disk_space_needed: number;
 }
 
 export interface RestoresResponse {
@@ -1146,6 +1391,11 @@ export interface MaintenanceWindow {
 	ends_at: string;
 	notify_before_minutes: number;
 	notification_sent: boolean;
+	read_only: boolean;
+	countdown_start_minutes: number;
+	emergency_override: boolean;
+	overridden_by?: string;
+	overridden_at?: string;
 	created_by?: string;
 	created_at: string;
 	updated_at: string;
@@ -1217,6 +1467,8 @@ export interface CreateMaintenanceWindowRequest {
 	starts_at: string;
 	ends_at: string;
 	notify_before_minutes?: number;
+	read_only?: boolean;
+	countdown_start_minutes?: number;
 }
 
 export interface UpdateMaintenanceWindowRequest {
@@ -1225,6 +1477,12 @@ export interface UpdateMaintenanceWindowRequest {
 	starts_at?: string;
 	ends_at?: string;
 	notify_before_minutes?: number;
+	read_only?: boolean;
+	countdown_start_minutes?: number;
+}
+
+export interface EmergencyOverrideRequest {
+	override: boolean;
 }
 
 export interface MaintenanceWindowsResponse {
@@ -1234,6 +1492,9 @@ export interface MaintenanceWindowsResponse {
 export interface ActiveMaintenanceResponse {
 	active: MaintenanceWindow | null;
 	upcoming: MaintenanceWindow | null;
+	read_only_mode: boolean;
+	show_countdown: boolean;
+	countdown_to?: string;
 }
 
 // DR Runbook types
@@ -1714,6 +1975,49 @@ export interface FileHistoryParams {
 	repository_id: string;
 }
 
+// File Search types
+export interface FileSearchResult {
+	snapshot_id: string;
+	snapshot_time: string;
+	hostname: string;
+	file_name: string;
+	file_path: string;
+	file_size: number;
+	file_type: string;
+	mod_time: string;
+}
+
+export interface SnapshotFileGroup {
+	snapshot_id: string;
+	snapshot_time: string;
+	hostname: string;
+	file_count: number;
+	files: FileSearchResult[];
+}
+
+export interface FileSearchResponse {
+	query: string;
+	agent_id: string;
+	repository_id: string;
+	total_count: number;
+	snapshot_count: number;
+	snapshots: SnapshotFileGroup[];
+	message?: string;
+}
+
+export interface FileSearchParams {
+	q: string;
+	agent_id: string;
+	repository_id: string;
+	path?: string;
+	snapshot_ids?: string;
+	date_from?: string;
+	date_to?: string;
+	size_min?: number;
+	size_max?: number;
+	limit?: number;
+}
+
 // Cost Estimation types
 export interface StoragePricing {
 	id: string;
@@ -1936,4 +2240,532 @@ export interface ChangelogEntry {
 export interface ChangelogResponse {
 	entries: ChangelogEntry[];
 	current_version: string;
+}
+
+// Server Log types
+export type ServerLogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+
+export interface ServerLogEntry {
+	timestamp: string;
+	level: ServerLogLevel;
+	message: string;
+	component?: string;
+	fields?: Record<string, unknown>;
+}
+
+export interface ServerLogFilter {
+	level?: ServerLogLevel;
+	component?: string;
+	search?: string;
+	start_time?: string;
+	end_time?: string;
+	limit?: number;
+	offset?: number;
+}
+
+export interface ServerLogsResponse {
+	logs: ServerLogEntry[];
+	total_count: number;
+	limit: number;
+	offset: number;
+}
+
+export interface ServerLogComponentsResponse {
+	components: string[];
+}
+
+// Classification types
+export type ClassificationLevel =
+	| 'public'
+	| 'internal'
+	| 'confidential'
+	| 'restricted';
+export type DataType = 'pii' | 'phi' | 'pci' | 'proprietary' | 'general';
+
+export interface ClassificationLevelInfo {
+	value: ClassificationLevel;
+	label: string;
+	description: string;
+	priority: number;
+}
+
+export interface DataTypeInfo {
+	value: DataType;
+	label: string;
+	description: string;
+}
+
+export interface PathClassificationRule {
+	id: string;
+	org_id: string;
+	pattern: string;
+	level: ClassificationLevel;
+	data_types: DataType[];
+	description?: string;
+	is_builtin: boolean;
+	priority: number;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+// Snapshot Immutability types
+export interface ImmutabilityLock {
+	id: string;
+	repository_id: string;
+	snapshot_id: string;
+	short_id: string;
+	locked_at: string;
+	locked_until: string;
+	locked_by?: string;
+	reason?: string;
+	remaining_days: number;
+	s3_object_lock_enabled: boolean;
+	created_at: string;
+}
+
+export interface ImmutabilityStatus {
+	is_locked: boolean;
+	locked_until?: string;
+	remaining_days?: number;
+	reason?: string;
+	locked_at?: string;
+}
+
+export interface RepositoryImmutabilitySettings {
+	enabled: boolean;
+	default_days?: number;
+}
+
+export interface CreateImmutabilityLockRequest {
+	repository_id: string;
+	snapshot_id: string;
+	days: number;
+	reason?: string;
+	enable_s3_lock?: boolean;
+}
+
+export interface ExtendImmutabilityLockRequest {
+	additional_days: number;
+	reason?: string;
+}
+
+export interface UpdateRepositoryImmutabilitySettingsRequest {
+	enabled: boolean;
+	default_days?: number;
+}
+
+export interface ImmutabilityLocksResponse {
+	locks: ImmutabilityLock[];
+}
+
+// Legal Hold types
+export interface LegalHold {
+	id: string;
+	snapshot_id: string;
+	reason: string;
+	placed_by: string;
+	placed_by_name: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreatePathClassificationRuleRequest {
+	pattern: string;
+	level: ClassificationLevel;
+	data_types?: DataType[];
+	description?: string;
+	priority?: number;
+}
+
+export interface UpdatePathClassificationRuleRequest {
+	pattern?: string;
+	level?: ClassificationLevel;
+	data_types?: DataType[];
+	description?: string;
+	priority?: number;
+	enabled?: boolean;
+}
+
+export interface SetScheduleClassificationRequest {
+	level: ClassificationLevel;
+	data_types?: DataType[];
+}
+
+export interface ClassificationSummary {
+	total_schedules: number;
+	total_backups: number;
+	by_level: Record<string, number>;
+	by_data_type: Record<string, number>;
+	restricted_count: number;
+	confidential_count: number;
+	internal_count: number;
+	public_count: number;
+}
+
+export interface ClassificationRulesResponse {
+	rules: PathClassificationRule[];
+}
+
+export interface ClassificationLevelsResponse {
+	levels: ClassificationLevelInfo[];
+}
+
+export interface DataTypesResponse {
+	data_types: DataTypeInfo[];
+}
+
+export interface ScheduleClassificationSummary {
+	id: string;
+	name: string;
+	level: ClassificationLevel;
+	data_types: DataType[];
+	paths: string[];
+	agent_id: string;
+}
+
+export interface ComplianceReport {
+	generated_at: string;
+	org_id: string;
+	summary: ClassificationSummary;
+	schedules_by_level: Record<string, ScheduleClassificationSummary[]>;
+}
+
+export interface CreateLegalHoldRequest {
+	reason: string;
+}
+
+export interface LegalHoldsResponse {
+	legal_holds: LegalHold[];
+}
+
+// Geo-Replication types
+export interface GeoRegion {
+	code: string;
+	name: string;
+	display_name: string;
+	latitude: number;
+	longitude: number;
+}
+
+export interface GeoRegionPair {
+	primary: GeoRegion;
+	secondary: GeoRegion;
+}
+
+export type GeoReplicationStatusType =
+	| 'pending'
+	| 'syncing'
+	| 'synced'
+	| 'failed'
+	| 'disabled';
+
+export interface ReplicationLag {
+	snapshots_behind: number;
+	time_behind_hours: number;
+	is_healthy: boolean;
+	last_sync_at?: string;
+}
+
+export interface GeoReplicationConfig {
+	id: string;
+	source_repository_id: string;
+	target_repository_id: string;
+	source_region: GeoRegion;
+	target_region: GeoRegion;
+	enabled: boolean;
+	status: GeoReplicationStatusType;
+	last_snapshot_id?: string;
+	last_sync_at?: string;
+	last_error?: string;
+	max_lag_snapshots: number;
+	max_lag_duration_hours: number;
+	alert_on_lag: boolean;
+	replication_lag?: ReplicationLag;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface GeoReplicationCreateRequest {
+	source_repository_id: string;
+	target_repository_id: string;
+	source_region: string;
+	target_region: string;
+	max_lag_snapshots?: number;
+	max_lag_duration_hours?: number;
+	alert_on_lag?: boolean;
+}
+
+export interface GeoReplicationUpdateRequest {
+	enabled?: boolean;
+	max_lag_snapshots?: number;
+	max_lag_duration_hours?: number;
+	alert_on_lag?: boolean;
+}
+
+export interface GeoReplicationEvent {
+	id: string;
+	config_id: string;
+	snapshot_id: string;
+	status: GeoReplicationStatusType;
+	started_at: string;
+	completed_at?: string;
+	duration_ms: number;
+	bytes_copied?: number;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface GeoReplicationSummary {
+	total_configs: number;
+	enabled_configs: number;
+	synced_count: number;
+	syncing_count: number;
+	pending_count: number;
+	failed_count: number;
+}
+
+export interface GeoReplicationRegionsResponse {
+	regions: GeoRegion[];
+	pairs: GeoRegionPair[];
+}
+
+export interface GeoReplicationConfigsResponse {
+	configs: GeoReplicationConfig[];
+}
+
+export interface GeoReplicationEventsResponse {
+	events: GeoReplicationEvent[];
+}
+
+export interface GeoReplicationSummaryResponse {
+	summary: GeoReplicationSummary;
+	regions: GeoRegion[];
+}
+
+export interface RepositoryReplicationStatusResponse {
+	configured: boolean;
+	config?: GeoReplicationConfig;
+	message?: string;
+}
+
+// Agent Command types
+export type CommandType = 'backup_now' | 'update' | 'restart' | 'diagnostics';
+export type CommandStatus =
+	| 'pending'
+	| 'acknowledged'
+	| 'running'
+	| 'completed'
+	| 'failed'
+	| 'timed_out'
+	| 'canceled';
+
+export interface CommandPayload {
+	schedule_id?: string;
+	target_version?: string;
+	diagnostic_types?: string[];
+}
+
+export interface CommandResult {
+	output?: string;
+	error?: string;
+	diagnostics?: Record<string, unknown>;
+	backup_id?: string;
+}
+
+export interface AgentCommand {
+	id: string;
+	agent_id: string;
+	org_id: string;
+	type: CommandType;
+	status: CommandStatus;
+	payload?: CommandPayload;
+	result?: CommandResult;
+	created_by?: string;
+	created_by_name?: string;
+	acknowledged_at?: string;
+	started_at?: string;
+	completed_at?: string;
+	timeout_at: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateAgentCommandRequest {
+	type: CommandType;
+	payload?: CommandPayload;
+}
+
+export interface AgentCommandsResponse {
+	commands: AgentCommand[];
+}
+
+// Config Export/Import types
+export type ConfigType = 'agent' | 'schedule' | 'repository' | 'bundle';
+export type ExportFormat = 'json' | 'yaml';
+export type ConflictResolution = 'skip' | 'replace' | 'rename' | 'fail';
+export type TemplateType = 'schedule' | 'agent' | 'repository' | 'bundle';
+export type TemplateVisibility = 'private' | 'organization' | 'public';
+
+export interface ExportMetadata {
+	version: string;
+	type: ConfigType;
+	exported_at: string;
+	exported_by?: string;
+	description?: string;
+}
+
+export interface ExportBundleRequest {
+	agent_ids?: string[];
+	schedule_ids?: string[];
+	repository_ids?: string[];
+	format?: ExportFormat;
+	description?: string;
+}
+
+export interface ImportConfigRequest {
+	config: string;
+	format?: ExportFormat;
+	target_agent_id?: string;
+	repository_mappings?: Record<string, string>;
+	conflict_resolution?: ConflictResolution;
+}
+
+export interface ValidateImportRequest {
+	config: string;
+	format?: ExportFormat;
+}
+
+export interface ImportedItems {
+	agent_count: number;
+	agent_ids?: string[];
+	schedule_count: number;
+	schedule_ids?: string[];
+	repository_count: number;
+	repository_ids?: string[];
+}
+
+export interface SkippedItem {
+	type: ConfigType;
+	name: string;
+	reason: string;
+}
+
+export interface ImportError {
+	type: ConfigType;
+	name: string;
+	message: string;
+}
+
+export interface ImportResult {
+	success: boolean;
+	message: string;
+	imported: ImportedItems;
+	skipped?: SkippedItem[];
+	errors?: ImportError[];
+	warnings?: string[];
+}
+
+export interface ValidationError {
+	field: string;
+	message: string;
+}
+
+export interface Conflict {
+	type: ConfigType;
+	name: string;
+	existing_id: string;
+	existing_name: string;
+	message: string;
+}
+
+export interface ValidationResult {
+	valid: boolean;
+	errors?: ValidationError[];
+	warnings?: string[];
+	conflicts?: Conflict[];
+	suggestions?: string[];
+}
+
+// Config Template types
+export interface ConfigTemplate {
+	id: string;
+	org_id: string;
+	created_by_id: string;
+	name: string;
+	description?: string;
+	type: TemplateType;
+	visibility: TemplateVisibility;
+	tags?: string[];
+	config: Record<string, unknown>;
+	usage_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateTemplateRequest {
+	name: string;
+	description?: string;
+	config: string;
+	visibility?: TemplateVisibility;
+	tags?: string[];
+}
+
+export interface UpdateTemplateRequest {
+	name?: string;
+	description?: string;
+	visibility?: TemplateVisibility;
+	tags?: string[];
+}
+
+export interface UseTemplateRequest {
+	target_agent_id?: string;
+	repository_mappings?: Record<string, string>;
+	conflict_resolution?: ConflictResolution;
+}
+
+export interface ConfigTemplatesResponse {
+	templates: ConfigTemplate[];
+}
+
+// Announcement types
+export type AnnouncementType = 'info' | 'warning' | 'critical';
+
+export interface Announcement {
+	id: string;
+	org_id: string;
+	title: string;
+	message?: string;
+	type: AnnouncementType;
+	dismissible: boolean;
+	starts_at?: string;
+	ends_at?: string;
+	active: boolean;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateAnnouncementRequest {
+	title: string;
+	message?: string;
+	type: AnnouncementType;
+	dismissible?: boolean;
+	starts_at?: string;
+	ends_at?: string;
+	active?: boolean;
+}
+
+export interface UpdateAnnouncementRequest {
+	title?: string;
+	message?: string;
+	type?: AnnouncementType;
+	dismissible?: boolean;
+	starts_at?: string;
+	ends_at?: string;
+	active?: boolean;
+}
+
+export interface AnnouncementsResponse {
+	announcements: Announcement[];
 }

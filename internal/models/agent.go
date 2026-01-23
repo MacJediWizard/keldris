@@ -68,19 +68,23 @@ type HealthIssue struct {
 
 // Agent represents a backup agent installed on a host.
 type Agent struct {
-	ID              uuid.UUID      `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
-	OrgID           uuid.UUID      `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440001"`
-	Hostname        string         `json:"hostname" example:"backup-server-01"`
-	APIKeyHash      string         `json:"-"` // Never expose in JSON
-	OSInfo          *OSInfo        `json:"os_info,omitempty"`
-	NetworkMounts   []NetworkMount `json:"network_mounts,omitempty"`
-	LastSeen        *time.Time     `json:"last_seen,omitempty"`
-	Status          AgentStatus    `json:"status" example:"active"`
-	HealthStatus    HealthStatus   `json:"health_status" example:"healthy"`
-	HealthMetrics   *HealthMetrics `json:"health_metrics,omitempty"`
-	HealthCheckedAt *time.Time     `json:"health_checked_at,omitempty"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
+	ID                   uuid.UUID      `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	OrgID                uuid.UUID      `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440001"`
+	Hostname             string         `json:"hostname" example:"backup-server-01"`
+	APIKeyHash           string         `json:"-"` // Never expose in JSON
+	OSInfo               *OSInfo        `json:"os_info,omitempty"`
+	NetworkMounts        []NetworkMount `json:"network_mounts,omitempty"`
+	LastSeen             *time.Time     `json:"last_seen,omitempty"`
+	Status               AgentStatus    `json:"status" example:"active"`
+	HealthStatus         HealthStatus   `json:"health_status" example:"healthy"`
+	HealthMetrics        *HealthMetrics `json:"health_metrics,omitempty"`
+	HealthCheckedAt      *time.Time     `json:"health_checked_at,omitempty"`
+	DebugMode            bool           `json:"debug_mode" example:"false"`
+	DebugModeExpiresAt   *time.Time     `json:"debug_mode_expires_at,omitempty"`
+	DebugModeEnabledAt   *time.Time     `json:"debug_mode_enabled_at,omitempty"`
+	DebugModeEnabledBy   *uuid.UUID     `json:"debug_mode_enabled_by,omitempty"`
+	CreatedAt            time.Time      `json:"created_at"`
+	UpdatedAt            time.Time      `json:"updated_at"`
 }
 
 // NewAgent creates a new Agent with the given details.
@@ -281,4 +285,55 @@ func (a *Agent) HealthMetricsJSON() ([]byte, error) {
 		return nil, nil
 	}
 	return json.Marshal(a.HealthMetrics)
+}
+
+// SetDebugMode enables debug mode on the agent with an expiration time.
+func (a *Agent) SetDebugMode(enabled bool, expiresAt *time.Time, enabledBy *uuid.UUID) {
+	now := time.Now()
+	a.DebugMode = enabled
+	a.UpdatedAt = now
+	if enabled {
+		a.DebugModeEnabledAt = &now
+		a.DebugModeExpiresAt = expiresAt
+		a.DebugModeEnabledBy = enabledBy
+	} else {
+		a.DebugModeEnabledAt = nil
+		a.DebugModeExpiresAt = nil
+		a.DebugModeEnabledBy = nil
+	}
+}
+
+// IsDebugModeExpired returns true if debug mode has expired.
+func (a *Agent) IsDebugModeExpired() bool {
+	if !a.DebugMode || a.DebugModeExpiresAt == nil {
+		return false
+	}
+	return time.Now().After(*a.DebugModeExpiresAt)
+}
+
+// SetDebugModeRequest is the request body for enabling/disabling debug mode.
+type SetDebugModeRequest struct {
+	Enabled      bool `json:"enabled" binding:"required" example:"true"`
+	DurationHours int  `json:"duration_hours,omitempty" example:"4"` // 0 means no auto-disable
+}
+
+// SetDebugModeResponse is the response for the debug mode endpoint.
+type SetDebugModeResponse struct {
+	DebugMode          bool       `json:"debug_mode" example:"true"`
+	DebugModeExpiresAt *time.Time `json:"debug_mode_expires_at,omitempty"`
+	Message            string     `json:"message" example:"Debug mode enabled for 4 hours"`
+}
+
+// HeartbeatResponse is the response for agent heartbeat with debug mode info.
+type HeartbeatResponse struct {
+	*Agent
+	DebugConfig *DebugConfig `json:"debug_config,omitempty"`
+}
+
+// DebugConfig contains debug mode configuration for the agent.
+type DebugConfig struct {
+	Enabled             bool   `json:"enabled" example:"true"`
+	LogLevel            string `json:"log_level" example:"debug"`
+	IncludeResticOutput bool   `json:"include_restic_output" example:"true"`
+	LogFileOperations   bool   `json:"log_file_operations" example:"true"`
 }
