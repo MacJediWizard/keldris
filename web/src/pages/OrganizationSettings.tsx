@@ -6,6 +6,7 @@ import {
 	useDeleteOrganization,
 	useUpdateOrganization,
 } from '../hooks/useOrganizations';
+import { useGenerateSupportBundle } from '../hooks/useSupport';
 import type { OrgRole } from '../lib/types';
 
 export function OrganizationSettings() {
@@ -14,6 +15,7 @@ export function OrganizationSettings() {
 	const { data: currentOrg, isLoading } = useCurrentOrganization();
 	const updateOrganization = useUpdateOrganization();
 	const deleteOrganization = useDeleteOrganization();
+	const generateSupportBundle = useGenerateSupportBundle();
 
 	const [name, setName] = useState('');
 	const [slug, setSlug] = useState('');
@@ -225,6 +227,93 @@ export function OrganizationSettings() {
 								</dd>
 							</div>
 						</dl>
+					)}
+				</div>
+			</div>
+
+			{/* Support Section */}
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+						Support
+					</h2>
+				</div>
+				<div className="p-6">
+					<div className="flex items-start justify-between">
+						<div>
+							<h3 className="font-medium text-gray-900 dark:text-white">
+								Generate Support Bundle
+							</h3>
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+								Download a diagnostic bundle containing sanitized logs,
+								configuration, and system information. This bundle can be shared
+								with support to help troubleshoot issues.
+							</p>
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+								Sensitive information like API keys and passwords are
+								automatically removed.
+							</p>
+						</div>
+						<button
+							type="button"
+							onClick={() => generateSupportBundle.mutate()}
+							disabled={generateSupportBundle.isPending}
+							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex-shrink-0 flex items-center gap-2"
+						>
+							{generateSupportBundle.isPending ? (
+								<>
+									<svg
+										aria-hidden="true"
+										className="animate-spin h-4 w-4"
+										fill="none"
+										viewBox="0 0 24 24"
+									>
+										<circle
+											className="opacity-25"
+											cx="12"
+											cy="12"
+											r="10"
+											stroke="currentColor"
+											strokeWidth="4"
+										/>
+										<path
+											className="opacity-75"
+											fill="currentColor"
+											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+										/>
+									</svg>
+									Generating...
+								</>
+							) : (
+								<>
+									<svg
+										aria-hidden="true"
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+										/>
+									</svg>
+									Download Bundle
+								</>
+							)}
+						</button>
+					</div>
+					{generateSupportBundle.isError && (
+						<p className="text-sm text-red-600 dark:text-red-400 mt-4">
+							Failed to generate support bundle. Please try again.
+						</p>
+					)}
+					{generateSupportBundle.isSuccess && (
+						<p className="text-sm text-green-600 dark:text-green-400 mt-4">
+							Support bundle downloaded successfully.
+						</p>
 					)}
 				</div>
 			</div>

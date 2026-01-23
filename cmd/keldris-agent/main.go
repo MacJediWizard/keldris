@@ -9,13 +9,19 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/backup"
+	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/support"
 	"github.com/MacJediWizard/keldris/internal/updater"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
@@ -82,6 +88,8 @@ Run 'keldris-agent register' to connect to a server.`,
 		newRestoreCmd(),
 		newUpdateCmd(),
 		newMountsCmd(),
+		newSnapshotMountCmd(),
+		newSupportBundleCmd(),
 	)
 
 	return rootCmd
@@ -567,4 +575,296 @@ func maskAPIKey(key string) string {
 		return "****"
 	}
 	return key[:4] + "****" + key[len(key)-4:]
+}
+
+func newSnapshotMountCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "snapshot-mount",
+		Short: "Mount and browse backup snapshots",
+		Long: `Mount backup snapshots as FUSE filesystems for browsing.
+
+This allows you to browse the contents of a backup snapshot as if it were
+a regular directory, making it easy to find and restore individual files.
+
+Note: FUSE support must be available on the system (macFUSE on macOS,
+FUSE on Linux).`,
+	}
+
+	cmd.AddCommand(
+		newSnapshotMountStartCmd(),
+		newSnapshotMountStopCmd(),
+		newSnapshotMountListCmd(),
+	)
+
+	return cmd
+}
+
+func newSupportBundleCmd() *cobra.Command {
+	var outputPath string
+
+	cmd := &cobra.Command{
+		Use:   "support-bundle",
+		Short: "Generate a support bundle for troubleshooting",
+		Long: `Generate a diagnostic bundle containing sanitized logs, configuration,
+and system information for troubleshooting.
+
+The bundle automatically removes sensitive information like API keys,
+passwords, and credentials. Review the contents before sharing if you
+have concerns about sensitive data.
+
+The generated zip file can be shared with support or attached to
+GitHub issues to help diagnose problems.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runSupportBundle(outputPath)
+		},
+	}
+
+	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output path for the bundle (default: current directory)")
+
+	return cmd
+}
+
+func newSnapshotMountStartCmd() *cobra.Command {
+	var (
+		snapshotID     string
+		repositoryPath string
+		password       string
+		timeout        time.Duration
+	)
+
+	cmd := &cobra.Command{
+		Use:   "start",
+		Short: "Mount a snapshot for browsing",
+		Long: `Mount a backup snapshot as a read-only FUSE filesystem.
+
+The snapshot will be mounted at a path under /tmp/keldris-mounts/<uuid>.
+After the timeout period, the mount will be automatically unmounted.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if snapshotID == "" {
+				return fmt.Errorf("snapshot ID is required (--snapshot)")
+			}
+			if repositoryPath == "" {
+				return fmt.Errorf("repository path is required (--repo)")
+			}
+			if password == "" {
+				// Prompt for password
+				fmt.Print("Repository password: ")
+				reader := bufio.NewReader(os.Stdin)
+				pw, err := reader.ReadString('\n')
+				if err != nil {
+					return fmt.Errorf("read password: %w", err)
+				}
+				password = strings.TrimSpace(pw)
+			}
+
+			// Create mount manager
+			mountBasePath := filepath.Join(os.TempDir(), "keldris-mounts")
+			if err := os.MkdirAll(mountBasePath, 0755); err != nil {
+				return fmt.Errorf("create mount base directory: %w", err)
+			}
+
+			logger := zerolog.New(os.Stderr).Level(zerolog.InfoLevel).With().Timestamp().Logger()
+			manager := backup.NewMountManager(mountBasePath, logger)
+
+			// Configure restic
+			cfg := backends.ResticConfig{
+				Repository: repositoryPath,
+				Password:   password,
+			}
+
+			mountID := uuid.New()
+			ctx := context.Background()
+
+			fmt.Printf("Mounting snapshot %s...\n", snapshotID)
+
+			info, err := manager.Mount(ctx, mountID, cfg, snapshotID, timeout)
+			if err != nil {
+				return fmt.Errorf("mount snapshot: %w", err)
+			}
+
+			fmt.Printf("\nSnapshot mounted successfully!\n")
+			fmt.Printf("Mount ID:   %s\n", info.ID)
+			fmt.Printf("Mount Path: %s\n", info.MountPath)
+			fmt.Printf("Expires:    %s\n", info.ExpiresAt.Format(time.RFC3339))
+			fmt.Println()
+			fmt.Printf("Browse your files at: %s\n", info.MountPath)
+			fmt.Println()
+			fmt.Println("Press Ctrl+C to unmount, or run 'keldris-agent snapshot-mount stop --id <mount-id>'")
+
+			// Wait for interrupt signal
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+			<-sigChan
+
+			fmt.Println("\nUnmounting...")
+			if err := manager.Unmount(ctx, info.ID); err != nil {
+				return fmt.Errorf("unmount: %w", err)
+			}
+			fmt.Println("Unmounted successfully.")
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&snapshotID, "snapshot", "", "Snapshot ID to mount (required)")
+	cmd.Flags().StringVar(&repositoryPath, "repo", "", "Repository path (required)")
+	cmd.Flags().StringVar(&password, "password", "", "Repository password (will prompt if not provided)")
+	cmd.Flags().DurationVar(&timeout, "timeout", 30*time.Minute, "Auto-unmount timeout (default 30m)")
+
+	return cmd
+}
+
+func newSnapshotMountStopCmd() *cobra.Command {
+	var mountID string
+
+	cmd := &cobra.Command{
+		Use:   "stop",
+		Short: "Unmount a mounted snapshot",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if mountID == "" {
+				return fmt.Errorf("mount ID is required (--id)")
+			}
+
+			id, err := uuid.Parse(mountID)
+			if err != nil {
+				return fmt.Errorf("invalid mount ID: %w", err)
+			}
+
+			mountBasePath := filepath.Join(os.TempDir(), "keldris-mounts")
+			logger := zerolog.New(os.Stderr).Level(zerolog.InfoLevel).With().Timestamp().Logger()
+			manager := backup.NewMountManager(mountBasePath, logger)
+
+			ctx := context.Background()
+			if err := manager.Unmount(ctx, id); err != nil {
+				return fmt.Errorf("unmount: %w", err)
+			}
+
+			fmt.Println("Unmounted successfully.")
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&mountID, "id", "", "Mount ID to unmount (required)")
+
+	return cmd
+}
+
+func newSnapshotMountListCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List active snapshot mounts",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mountBasePath := filepath.Join(os.TempDir(), "keldris-mounts")
+			logger := zerolog.New(os.Stderr).Level(zerolog.Disabled)
+			manager := backup.NewMountManager(mountBasePath, logger)
+
+			mounts := manager.ListMounts()
+
+			if len(mounts) == 0 {
+				fmt.Println("No active snapshot mounts")
+				return nil
+			}
+
+			fmt.Printf("%-36s %-20s %-50s %-25s\n", "MOUNT ID", "SNAPSHOT", "PATH", "EXPIRES")
+			fmt.Println(strings.Repeat("-", 135))
+			for _, m := range mounts {
+				fmt.Printf("%-36s %-20s %-50s %-25s\n",
+					m.ID.String(),
+					m.SnapshotID,
+					m.MountPath,
+					m.ExpiresAt.Format(time.RFC3339))
+			}
+
+			return nil
+		},
+	}
+}
+
+func runSupportBundle(outputPath string) error {
+	fmt.Println("Generating support bundle...")
+
+	cfg, err := config.LoadDefault()
+	if err != nil {
+		fmt.Printf("Warning: Could not load config: %v\n", err)
+	}
+
+	logger := zerolog.New(os.Stderr).Level(zerolog.Disabled)
+
+	opts := support.DefaultBundleOptions()
+	opts.IncludeAgentInfo = true
+	opts.IncludeServerInfo = false
+
+	// Try to find log directory
+	configDir, _ := config.DefaultConfigDir()
+	if configDir != "" {
+		logDir := filepath.Join(configDir, "logs")
+		if _, err := os.Stat(logDir); err == nil {
+			opts.LogDir = logDir
+		}
+	}
+
+	generator := support.NewGenerator(logger, opts)
+
+	bundleData := support.BundleData{
+		AgentInfo: &support.AgentInfo{
+			Version:   Version,
+			Commit:    Commit,
+			BuildDate: BuildDate,
+			AgentID:   cfg.AgentID,
+			Hostname:  cfg.Hostname,
+			ServerURL: cfg.ServerURL,
+		},
+		Config: &support.ConfigInfo{
+			ServerURL:       cfg.ServerURL,
+			AgentID:         cfg.AgentID,
+			Hostname:        cfg.Hostname,
+			AutoCheckUpdate: cfg.AutoCheckUpdate,
+		},
+		CustomData: make(map[string]any),
+	}
+
+	// Add system info to custom data
+	bundleData.CustomData["runtime"] = map[string]any{
+		"go_version":    runtime.Version(),
+		"os":            runtime.GOOS,
+		"arch":          runtime.GOARCH,
+		"num_cpu":       runtime.NumCPU(),
+		"num_goroutine": runtime.NumGoroutine(),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	data, info, err := generator.Generate(ctx, bundleData)
+	if err != nil {
+		return fmt.Errorf("generate bundle: %w", err)
+	}
+
+	// Determine output path
+	if outputPath == "" {
+		outputPath = info.Filename
+	} else {
+		// If output is a directory, use default filename inside it
+		stat, err := os.Stat(outputPath)
+		if err == nil && stat.IsDir() {
+			outputPath = filepath.Join(outputPath, info.Filename)
+		}
+	}
+
+	if err := os.WriteFile(outputPath, data, 0644); err != nil {
+		return fmt.Errorf("write bundle: %w", err)
+	}
+
+	fmt.Printf("\nSupport bundle generated: %s\n", outputPath)
+	fmt.Printf("Size: %d bytes\n", info.Size)
+	fmt.Println()
+	fmt.Println("This bundle contains sanitized diagnostic information.")
+	fmt.Println("To submit for support:")
+	fmt.Println("  1. Email to support@keldris.io")
+	fmt.Println("  2. Attach to a GitHub issue: https://github.com/MacJediWizard/keldris/issues")
+	fmt.Println()
+	fmt.Println("Please review the contents before sharing if you have concerns")
+	fmt.Println("about sensitive data.")
+
+	return nil
 }

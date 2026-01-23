@@ -3,25 +3,35 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
 import { useLatestChanges, useNewVersionAvailable } from '../hooks/useChangelog';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useLocale } from '../hooks/useLocale';
 import { useOnboardingStatus } from '../hooks/useOnboarding';
 import {
 	useOrganizations,
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
+import {
+	ReadOnlyModeContext,
+	useReadOnlyModeValue,
+} from '../hooks/useReadOnlyMode';
+import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { LanguageSelector } from './features/LanguageSelector';
+import { MaintenanceCountdown } from './features/MaintenanceCountdown';
+import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { WhatsNewModal } from './features/WhatsNewModal';
 
 interface NavItem {
 	path: string;
 	labelKey: string;
 	icon: React.ReactNode;
+	shortcut?: string;
 }
 
 const navItems: NavItem[] = [
 	{
 		path: '/',
 		labelKey: 'nav.dashboard',
+		shortcut: 'G D',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -42,6 +52,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/agents',
 		labelKey: 'nav.agents',
+		shortcut: 'G A',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -62,6 +73,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/repositories',
 		labelKey: 'nav.repositories',
+		shortcut: 'G R',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -82,6 +94,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/schedules',
 		labelKey: 'nav.schedules',
+		shortcut: 'G S',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -102,6 +115,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/backups',
 		labelKey: 'nav.backups',
+		shortcut: 'G B',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -122,6 +136,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/restore',
 		labelKey: 'nav.restore',
+		shortcut: 'G E',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -140,8 +155,49 @@ const navItems: NavItem[] = [
 		),
 	},
 	{
+		path: '/file-search',
+		labelKey: 'nav.fileSearch',
+		icon: (
+			<svg
+				aria-hidden="true"
+				className="w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+				/>
+			</svg>
+		),
+	},
+	{
+		path: '/file-history',
+		labelKey: 'nav.fileHistory',
+		icon: (
+			<svg
+				aria-hidden="true"
+				className="w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+				/>
+			</svg>
+		),
+	},
+	{
 		path: '/alerts',
 		labelKey: 'nav.alerts',
+		shortcut: 'G L',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -220,6 +276,26 @@ const navItems: NavItem[] = [
 		),
 	},
 	{
+		path: '/classifications',
+		labelKey: 'nav.classifications',
+		icon: (
+			<svg
+				aria-hidden="true"
+				className="w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+				/>
+			</svg>
+		),
+	},
+	{
 		path: '/costs',
 		labelKey: 'nav.costs',
 		icon: (
@@ -265,14 +341,28 @@ function Sidebar() {
 							<li key={item.path}>
 								<Link
 									to={item.path}
-									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+									title={
+										item.shortcut
+											? `${t(item.labelKey)} (${item.shortcut})`
+											: t(item.labelKey)
+									}
+									className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-colors ${
 										isActive
 											? 'bg-indigo-600 text-white'
 											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
 									}`}
 								>
-									{item.icon}
-									<span>{t(item.labelKey)}</span>
+									<span className="flex items-center gap-3">
+										{item.icon}
+										<span>{t(item.labelKey)}</span>
+									</span>
+									{item.shortcut && (
+										<span
+											className={`text-xs font-mono ${isActive ? 'text-indigo-200' : 'text-gray-500'}`}
+										>
+											{item.shortcut}
+										</span>
+									)}
 								</Link>
 							</li>
 						);
@@ -366,6 +456,84 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>SSO Group Sync</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/organization/announcements"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/announcements'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+										/>
+									</svg>
+									<span>Announcements</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/legal-holds"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/legal-holds'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+										/>
+									</svg>
+									<span>Legal Holds</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/admin/logs"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/admin/logs'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+										/>
+									</svg>
+									<span>Server Logs</span>
 								</Link>
 							</li>
 						</ul>
@@ -600,6 +768,14 @@ export function Layout() {
 		useOnboardingStatus();
 	const { latestEntry, currentVersion } = useLatestChanges();
 	const [showWhatsNew, setShowWhatsNew] = useState(true);
+	const readOnlyModeValue = useReadOnlyModeValue();
+	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+
+	const { shortcuts } = useKeyboardShortcuts({
+		onShowHelp: () => setShowShortcutHelp(true),
+		onCloseModal: () => setShowShortcutHelp(false),
+		enabled: !isLoading && !isError,
+	});
 
 	// Redirect to onboarding if needed (but not if already on onboarding page)
 	useEffect(() => {
@@ -629,21 +805,32 @@ export function Layout() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-50 flex">
-			<Sidebar />
-			<div className="flex-1 flex flex-col">
-				<Header />
-				<main className="flex-1 p-6">
-					<Outlet />
-				</main>
-			</div>
-			{showWhatsNew && (
-				<WhatsNewModal
-					entry={latestEntry ?? null}
-					currentVersion={currentVersion}
-					onDismiss={() => setShowWhatsNew(false)}
+		<ReadOnlyModeContext.Provider value={readOnlyModeValue}>
+			<div className="min-h-screen bg-gray-50 flex flex-col">
+				<MaintenanceCountdown />
+				<AnnouncementBanner />
+				<div className="flex flex-1">
+					<Sidebar />
+					<div className="flex-1 flex flex-col">
+						<Header />
+						<main className="flex-1 p-6">
+							<Outlet />
+						</main>
+					</div>
+				</div>
+				<ShortcutHelpModal
+					isOpen={showShortcutHelp}
+					onClose={() => setShowShortcutHelp(false)}
+					shortcuts={shortcuts}
 				/>
-			)}
-		</div>
+				{showWhatsNew && (
+					<WhatsNewModal
+						entry={latestEntry ?? null}
+						currentVersion={currentVersion}
+						onDismiss={() => setShowWhatsNew(false)}
+					/>
+				)}
+			</div>
+		</ReadOnlyModeContext.Provider>
 	);
 }
