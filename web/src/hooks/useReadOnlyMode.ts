@@ -1,21 +1,21 @@
 import { createContext, useContext } from 'react';
 import { useActiveMaintenance } from './useMaintenance';
 
-interface ReadOnlyModeContext {
+interface ReadOnlyModeContextValue {
 	isReadOnly: boolean;
 	maintenanceTitle?: string;
 	maintenanceMessage?: string;
 }
 
-const ReadOnlyModeContext = createContext<ReadOnlyModeContext>({
+const ReadOnlyModeContext = createContext<ReadOnlyModeContextValue>({
 	isReadOnly: false,
 });
 
-export function useReadOnlyMode(): ReadOnlyModeContext {
+export function useReadOnlyMode(): ReadOnlyModeContextValue {
 	return useContext(ReadOnlyModeContext);
 }
 
-export function useReadOnlyModeValue(): ReadOnlyModeContext {
+export function useReadOnlyModeValue(): ReadOnlyModeContextValue {
 	const { data } = useActiveMaintenance();
 
 	return {
@@ -25,4 +25,4 @@ export function useReadOnlyModeValue(): ReadOnlyModeContext {
 	};
 }
 
-export type { ReadOnlyModeContext };
+export { ReadOnlyModeContext };
