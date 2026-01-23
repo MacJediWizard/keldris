@@ -1,5 +1,7 @@
 import type {
 	ActiveMaintenanceResponse,
+	ChangelogEntry,
+	ChangelogResponse,
 	AddAgentToGroupRequest,
 	Agent,
 	AgentBackupsResponse,
@@ -1656,4 +1658,13 @@ export const costAlertsApi = {
 		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
 			method: 'DELETE',
 		}),
+};
+
+// Changelog API
+export const changelogApi = {
+	list: async (): Promise<ChangelogResponse> =>
+		fetchApi<ChangelogResponse>('/changelog'),
+
+	get: async (version: string): Promise<ChangelogEntry> =>
+		fetchApi<ChangelogEntry>(`/changelog/${version}`),
 };
