@@ -1090,9 +1090,8 @@ export function Schedules() {
 	);
 	const [dryRunError, setDryRunError] = useState<Error | null>(null);
 	const [showExportModal, setShowExportModal] = useState(false);
-	const [selectedScheduleForExport, setSelectedScheduleForExport] = useState<
-		Schedule | null
-	>(null);
+	const [selectedScheduleForExport, setSelectedScheduleForExport] =
+		useState<Schedule | null>(null);
 
 	const { data: schedules, isLoading, isError } = useSchedules();
 	const { data: agents } = useAgents();

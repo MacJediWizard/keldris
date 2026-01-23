@@ -75,9 +75,9 @@ import type {
 	CreateSSOGroupMappingRequest,
 	CreateScheduleRequest,
 	CreateSnapshotCommentRequest,
-	CreateTemplateRequest,
 	CreateStoragePricingRequest,
 	CreateTagRequest,
+	CreateTemplateRequest,
 	CreateVerificationScheduleRequest,
 	DRRunbook,
 	DRRunbookRenderResponse,
@@ -96,9 +96,9 @@ import type {
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
-	ExtendImmutabilityLockRequest,
 	ExportBundleRequest,
 	ExportFormat,
+	ExtendImmutabilityLockRequest,
 	FileDiffResponse,
 	FileHistoryParams,
 	FileHistoryResponse,
@@ -119,11 +119,11 @@ import type {
 	ImmutabilityLocksResponse,
 	ImmutabilityStatus,
 	ImportConfigRequest,
-	ImportResult,
 	ImportPreviewRequest,
 	ImportPreviewResponse,
 	ImportRepositoryRequest,
 	ImportRepositoryResponse,
+	ImportResult,
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
@@ -234,9 +234,9 @@ import type {
 	UpdateTemplateRequest,
 	UpdateUserPreferencesRequest,
 	UpdateVerificationScheduleRequest,
+	UseTemplateRequest,
 	User,
 	UserSSOGroups,
-	UseTemplateRequest,
 	ValidateImportRequest,
 	ValidationResult,
 	Verification,
@@ -2118,34 +2118,58 @@ export const geoReplicationApi = {
 // Config Export/Import API
 export const configExportApi = {
 	// Export endpoints
-	exportAgent: async (id: string, format: ExportFormat = 'json'): Promise<string> => {
-		const response = await fetch(`${API_BASE}/export/agents/${id}?format=${format}`, {
-			credentials: 'include',
-		});
+	exportAgent: async (
+		id: string,
+		format: ExportFormat = 'json',
+	): Promise<string> => {
+		const response = await fetch(
+			`${API_BASE}/export/agents/${id}?format=${format}`,
+			{
+				credentials: 'include',
+			},
+		);
 		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({ error: 'Export failed' }));
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
 			throw new ApiError(response.status, errorData.error);
 		}
 		return response.text();
 	},
 
-	exportSchedule: async (id: string, format: ExportFormat = 'json'): Promise<string> => {
-		const response = await fetch(`${API_BASE}/export/schedules/${id}?format=${format}`, {
-			credentials: 'include',
-		});
+	exportSchedule: async (
+		id: string,
+		format: ExportFormat = 'json',
+	): Promise<string> => {
+		const response = await fetch(
+			`${API_BASE}/export/schedules/${id}?format=${format}`,
+			{
+				credentials: 'include',
+			},
+		);
 		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({ error: 'Export failed' }));
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
 			throw new ApiError(response.status, errorData.error);
 		}
 		return response.text();
 	},
 
-	exportRepository: async (id: string, format: ExportFormat = 'json'): Promise<string> => {
-		const response = await fetch(`${API_BASE}/export/repositories/${id}?format=${format}`, {
-			credentials: 'include',
-		});
+	exportRepository: async (
+		id: string,
+		format: ExportFormat = 'json',
+	): Promise<string> => {
+		const response = await fetch(
+			`${API_BASE}/export/repositories/${id}?format=${format}`,
+			{
+				credentials: 'include',
+			},
+		);
 		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({ error: 'Export failed' }));
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
 			throw new ApiError(response.status, errorData.error);
 		}
 		return response.text();
@@ -2161,7 +2185,9 @@ export const configExportApi = {
 			body: JSON.stringify(data),
 		});
 		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({ error: 'Export failed' }));
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
 			throw new ApiError(response.status, errorData.error);
 		}
 		return response.text();
@@ -2174,7 +2200,9 @@ export const configExportApi = {
 			body: JSON.stringify(data),
 		}),
 
-	validateImport: async (data: ValidateImportRequest): Promise<ValidationResult> =>
+	validateImport: async (
+		data: ValidateImportRequest,
+	): Promise<ValidationResult> =>
 		fetchApi<ValidationResult>('/import/validate', {
 			method: 'POST',
 			body: JSON.stringify(data),
@@ -2197,7 +2225,10 @@ export const templatesApi = {
 			body: JSON.stringify(data),
 		}),
 
-	update: async (id: string, data: UpdateTemplateRequest): Promise<ConfigTemplate> =>
+	update: async (
+		id: string,
+		data: UpdateTemplateRequest,
+	): Promise<ConfigTemplate> =>
 		fetchApi<ConfigTemplate>(`/templates/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(data),
@@ -2208,7 +2239,10 @@ export const templatesApi = {
 			method: 'DELETE',
 		}),
 
-	use: async (id: string, data: UseTemplateRequest = {}): Promise<ImportResult> =>
+	use: async (
+		id: string,
+		data: UseTemplateRequest = {},
+	): Promise<ImportResult> =>
 		fetchApi<ImportResult>(`/templates/${id}/use`, {
 			method: 'POST',
 			body: JSON.stringify(data),

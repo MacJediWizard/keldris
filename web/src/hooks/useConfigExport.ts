@@ -34,7 +34,8 @@ export function useExportRepository() {
 
 export function useExportBundle() {
 	return useMutation({
-		mutationFn: (data: ExportBundleRequest) => configExportApi.exportBundle(data),
+		mutationFn: (data: ExportBundleRequest) =>
+			configExportApi.exportBundle(data),
 	});
 }
 
@@ -42,7 +43,8 @@ export function useExportBundle() {
 export function useImportConfig() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (data: ImportConfigRequest) => configExportApi.importConfig(data),
+		mutationFn: (data: ImportConfigRequest) =>
+			configExportApi.importConfig(data),
 		onSuccess: (result: ImportResult) => {
 			if (result.success) {
 				// Invalidate relevant queries based on what was imported
@@ -139,7 +141,11 @@ export function useUseTemplate() {
 }
 
 // Helper function to download exported config as file
-export function downloadExport(content: string, filename: string, format: ExportFormat = 'json') {
+export function downloadExport(
+	content: string,
+	filename: string,
+	format: ExportFormat = 'json',
+) {
 	const blob = new Blob([content], {
 		type: format === 'yaml' ? 'application/x-yaml' : 'application/json',
 	});
