@@ -12,6 +12,7 @@ import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
 import { FileHistory } from './pages/FileHistory';
+import { FileSearch } from './pages/FileSearch';
 import { LegalHolds } from './pages/LegalHolds';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
@@ -63,6 +64,7 @@ function App() {
 						<Route path="dr-runbooks" element={<DRRunbooks />} />
 						<Route path="restore" element={<Restore />} />
 						<Route path="file-history" element={<FileHistory />} />
+						<Route path="file-search" element={<FileSearch />} />
 						<Route path="snapshots/compare" element={<SnapshotCompare />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
