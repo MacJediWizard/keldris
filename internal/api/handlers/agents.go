@@ -34,6 +34,7 @@ type AgentStore interface {
 	GetAgentHealthHistory(ctx context.Context, agentID uuid.UUID, limit int) ([]*models.AgentHealthHistory, error)
 	GetFleetHealthSummary(ctx context.Context, orgID uuid.UUID) (*models.FleetHealthSummary, error)
 	SetAgentDebugMode(ctx context.Context, id uuid.UUID, enabled bool, expiresAt *time.Time, enabledBy *uuid.UUID) error
+	GetAgentLogs(ctx context.Context, agentID uuid.UUID, filter *models.AgentLogFilter) ([]*models.AgentLog, int, error)
 }
 
 // AgentsHandler handles agent-related HTTP endpoints.
@@ -67,6 +68,7 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		agents.GET("/:id/schedules", h.Schedules)
 		agents.GET("/:id/health-history", h.HealthHistory)
 		agents.POST("/:id/debug", h.SetDebugMode)
+		agents.GET("/:id/logs", h.Logs)
 	}
 }
 
@@ -872,5 +874,93 @@ func (h *AgentsHandler) SetDebugMode(c *gin.Context) {
 		DebugMode:          req.Enabled,
 		DebugModeExpiresAt: expiresAt,
 		Message:            message,
+	})
+}
+
+// Logs returns logs for a specific agent.
+//
+//	@Summary		Get agent logs
+//	@Description	Returns logs for an agent with optional filtering
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path		string	true	"Agent ID"
+//	@Param			level		query		string	false	"Log level filter (debug, info, warn, error)"
+//	@Param			component	query		string	false	"Component filter"
+//	@Param			search		query		string	false	"Search text in log messages"
+//	@Param			limit		query		int		false	"Number of records to return (default 100, max 1000)"
+//	@Param			offset		query		int		false	"Pagination offset"
+//	@Success		200			{object}	models.AgentLogsResponse
+//	@Failure		400			{object}	map[string]string
+//	@Failure		401			{object}	map[string]string
+//	@Failure		404			{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id}/logs [get]
+func (h *AgentsHandler) Logs(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Build filter from query params
+	filter := &models.AgentLogFilter{}
+
+	if level := c.Query("level"); level != "" {
+		filter.Level = models.LogLevel(level)
+	}
+	if component := c.Query("component"); component != "" {
+		filter.Component = component
+	}
+	if search := c.Query("search"); search != "" {
+		filter.Search = search
+	}
+	if limitParam := c.Query("limit"); limitParam != "" {
+		if l, err := parseIntParam(limitParam); err == nil && l > 0 {
+			filter.Limit = l
+		}
+	}
+	if offsetParam := c.Query("offset"); offsetParam != "" {
+		if o, err := parseIntParam(offsetParam); err == nil && o >= 0 {
+			filter.Offset = o
+		}
+	}
+
+	logs, totalCount, err := h.store.GetAgentLogs(c.Request.Context(), id, filter)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to get agent logs")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get agent logs"})
+		return
+	}
+
+	hasMore := filter.Offset+len(logs) < totalCount
+
+	c.JSON(http.StatusOK, models.AgentLogsResponse{
+		Logs:       logs,
+		TotalCount: totalCount,
+		HasMore:    hasMore,
 	})
 }
