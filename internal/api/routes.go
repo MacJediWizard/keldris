@@ -244,6 +244,10 @@ func NewRouter(
 	classificationsHandler := handlers.NewClassificationsHandler(database, logger)
 	classificationsHandler.RegisterRoutes(apiV1)
 
+	// Support bundle routes
+	supportHandler := handlers.NewSupportHandler(cfg.Version, cfg.Commit, cfg.BuildDate, "", logger)
+	supportHandler.RegisterRoutes(apiV1)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
