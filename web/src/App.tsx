@@ -7,6 +7,7 @@ import { Agents } from './pages/Agents';
 import { Alerts } from './pages/Alerts';
 import { AuditLogs } from './pages/AuditLogs';
 import { Backups } from './pages/Backups';
+import { Changelog } from './pages/Changelog';
 import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
@@ -85,6 +86,7 @@ function App() {
 						<Route path="organization/maintenance" element={<Maintenance />} />
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="onboarding" element={<Onboarding />} />
+						<Route path="changelog" element={<Changelog />} />
 					</Route>
 				</Routes>
 			</BrowserRouter>

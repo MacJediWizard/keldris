@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
+import { useLatestChanges, useNewVersionAvailable } from '../hooks/useChangelog';
 import { useLocale } from '../hooks/useLocale';
 import { useOnboardingStatus } from '../hooks/useOnboarding';
 import {
@@ -9,6 +10,7 @@ import {
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
 import { LanguageSelector } from './features/LanguageSelector';
+import { WhatsNewModal } from './features/WhatsNewModal';
 
 interface NavItem {
 	path: string;
@@ -243,6 +245,7 @@ function Sidebar() {
 	const location = useLocation();
 	const { data: user } = useMe();
 	const { t } = useLocale();
+	const { hasNewVersion, latestVersion } = useNewVersionAvailable();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
@@ -370,9 +373,17 @@ function Sidebar() {
 				)}
 			</nav>
 			<div className="p-4 border-t border-gray-800">
-				<p className="text-xs text-gray-500">
-					{t('common.version', { version: '0.0.1' })}
-				</p>
+				<Link
+					to="/changelog"
+					className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+				>
+					<span>{t('common.version', { version: '0.0.1' })}</span>
+					{hasNewVersion && (
+						<span className="px-1.5 py-0.5 text-[10px] font-medium bg-indigo-600 text-white rounded-full">
+							v{latestVersion} available
+						</span>
+					)}
+				</Link>
 			</div>
 		</aside>
 	);
@@ -587,6 +598,8 @@ export function Layout() {
 	const { isLoading, isError } = useMe();
 	const { data: onboardingStatus, isLoading: onboardingLoading } =
 		useOnboardingStatus();
+	const { latestEntry, currentVersion } = useLatestChanges();
+	const [showWhatsNew, setShowWhatsNew] = useState(true);
 
 	// Redirect to onboarding if needed (but not if already on onboarding page)
 	useEffect(() => {
@@ -624,6 +637,13 @@ export function Layout() {
 					<Outlet />
 				</main>
 			</div>
+			{showWhatsNew && (
+				<WhatsNewModal
+					entry={latestEntry ?? null}
+					currentVersion={currentVersion}
+					onDismiss={() => setShowWhatsNew(false)}
+				/>
+			)}
 		</div>
 	);
 }

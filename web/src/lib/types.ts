@@ -1919,3 +1919,21 @@ export interface ImportRepositoryResponse {
 	repository: Repository;
 	snapshots_imported: number;
 }
+
+// Changelog types
+export interface ChangelogEntry {
+	version: string;
+	date: string;
+	added?: string[];
+	changed?: string[];
+	deprecated?: string[];
+	removed?: string[];
+	fixed?: string[];
+	security?: string[];
+	is_unreleased?: boolean;
+}
+
+export interface ChangelogResponse {
+	entries: ChangelogEntry[];
+	current_version: string;
+}
