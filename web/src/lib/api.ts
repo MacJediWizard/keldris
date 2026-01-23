@@ -25,6 +25,7 @@ import type {
 	AuditLogFilter,
 	AuditLogsResponse,
 	Backup,
+	BackupCalendarResponse,
 	BackupDurationTrend,
 	BackupDurationTrendResponse,
 	BackupScript,
@@ -667,6 +668,9 @@ export const backupsApi = {
 
 	get: async (id: string): Promise<Backup> =>
 		fetchApi<Backup>(`/backups/${id}`),
+
+	getCalendar: async (month: string): Promise<BackupCalendarResponse> =>
+		fetchApi<BackupCalendarResponse>(`/backups/calendar?month=${month}`),
 };
 
 // Backup Scripts API
