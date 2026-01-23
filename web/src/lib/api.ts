@@ -1841,6 +1841,20 @@ export const pricingApi = {
 		}),
 };
 
+// Support API
+export const supportApi = {
+	generateBundle: async (): Promise<Blob> => {
+		const response = await fetch(`${API_BASE}/support/bundle`, {
+			method: 'POST',
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to generate support bundle');
+		}
+		return response.blob();
+	},
+};
+
 // Cost Alerts API
 export const costAlertsApi = {
 	list: async (): Promise<CostAlert[]> => {
