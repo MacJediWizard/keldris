@@ -75,3 +75,9 @@ export function useReplicationStatus(scheduleId: string) {
 		staleTime: 30 * 1000, // 30 seconds
 	});
 }
+
+export function useDryRunSchedule() {
+	return useMutation({
+		mutationFn: (id: string) => schedulesApi.dryRun(id),
+	});
+}
