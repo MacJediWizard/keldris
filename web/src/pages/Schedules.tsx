@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ClassificationBadge } from '../components/ClassificationBadge';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
+import { ExportImportModal } from '../components/features/ExportImportModal';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
 import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
@@ -804,6 +805,7 @@ interface ScheduleRowProps {
 	onRun: (id: string) => void;
 	onDryRun: (id: string) => void;
 	onEditScripts: (id: string) => void;
+	onExport: (schedule: Schedule) => void;
 	isUpdating: boolean;
 	isDeleting: boolean;
 	isRunning: boolean;
@@ -822,6 +824,7 @@ function ScheduleRow({
 	onRun,
 	onDryRun,
 	onEditScripts,
+	onExport,
 	isUpdating,
 	isDeleting,
 	isRunning,
@@ -1041,8 +1044,16 @@ function ScheduleRow({
 					<span className="text-gray-300 dark:text-gray-600">|</span>
 					<button
 						type="button"
+						onClick={() => onExport(schedule)}
+						className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm font-medium"
+					>
+						Export
+					</button>
+					<span className="text-gray-300 dark:text-gray-600">|</span>
+					<button
+						type="button"
 						onClick={() => onEditScripts(schedule.id)}
-						className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+						className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm font-medium"
 					>
 						Scripts
 					</button>
@@ -1078,6 +1089,10 @@ export function Schedules() {
 		null,
 	);
 	const [dryRunError, setDryRunError] = useState<Error | null>(null);
+	const [showExportModal, setShowExportModal] = useState(false);
+	const [selectedScheduleForExport, setSelectedScheduleForExport] = useState<
+		Schedule | null
+	>(null);
 
 	const { data: schedules, isLoading, isError } = useSchedules();
 	const { data: agents } = useAgents();
@@ -1317,29 +1332,55 @@ export function Schedules() {
 						Configure automated backup jobs
 					</p>
 				</div>
-				<button
-					type="button"
-					onClick={() => setShowCreateModal(true)}
-					data-action="create-schedule"
-					title="Create Schedule (N)"
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						aria-hidden="true"
-						className="w-5 h-5"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
+				<div className="flex items-center gap-3">
+					<button
+						type="button"
+						onClick={() => {
+							setSelectedScheduleForExport(null);
+							setShowExportModal(true);
+						}}
+						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 4v16m8-8H4"
-						/>
-					</svg>
-					Create Schedule
-				</button>
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+							/>
+						</svg>
+						Import
+					</button>
+					<button
+						type="button"
+						onClick={() => setShowCreateModal(true)}
+						data-action="create-schedule"
+						title="Create Schedule (N)"
+						className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+					>
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M12 4v16m8-8H4"
+							/>
+						</svg>
+						Create Schedule
+					</button>
+				</div>
 			</div>
 
 			{/* Bulk Selection Toolbar */}
@@ -1467,6 +1508,10 @@ export function Schedules() {
 										onRun={handleRun}
 										onDryRun={handleDryRun}
 										onEditScripts={setEditingScriptsScheduleId}
+										onExport={(s) => {
+											setSelectedScheduleForExport(s);
+											setShowExportModal(true);
+										}}
 										isUpdating={updateSchedule.isPending}
 										isDeleting={deleteSchedule.isPending}
 										isRunning={runSchedule.isPending}
@@ -1625,6 +1670,17 @@ export function Schedules() {
 				results={dryRunResults}
 				isLoading={dryRunSchedule.isPending}
 				error={dryRunError}
+			/>
+
+			<ExportImportModal
+				isOpen={showExportModal}
+				onClose={() => {
+					setShowExportModal(false);
+					setSelectedScheduleForExport(null);
+				}}
+				type="schedule"
+				item={selectedScheduleForExport ?? undefined}
+				agents={agents}
 			/>
 		</div>
 	);

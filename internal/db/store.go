@@ -8518,3 +8518,183 @@ func scanSnapshotMounts(rows interface {
 
 	return mounts, nil
 }
+
+// Config Template methods
+
+// CreateConfigTemplate creates a new config template.
+func (db *DB) CreateConfigTemplate(ctx context.Context, template *models.ConfigTemplate) error {
+	tagsJSON, err := template.TagsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal tags: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO config_templates (
+			id, org_id, created_by_id, name, description, type, visibility,
+			tags, config, usage_count, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`,
+		template.ID, template.OrgID, template.CreatedByID, template.Name,
+		template.Description, template.Type, template.Visibility,
+		tagsJSON, template.Config, template.UsageCount, template.CreatedAt, template.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("create config template: %w", err)
+	}
+	return nil
+}
+
+// GetConfigTemplateByID returns a config template by ID.
+func (db *DB) GetConfigTemplateByID(ctx context.Context, id uuid.UUID) (*models.ConfigTemplate, error) {
+	var template models.ConfigTemplate
+	var tagsBytes []byte
+	var typeStr, visibilityStr string
+
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, created_by_id, name, description, type, visibility,
+		       tags, config, usage_count, created_at, updated_at
+		FROM config_templates
+		WHERE id = $1
+	`, id).Scan(
+		&template.ID, &template.OrgID, &template.CreatedByID, &template.Name,
+		&template.Description, &typeStr, &visibilityStr,
+		&tagsBytes, &template.Config, &template.UsageCount, &template.CreatedAt, &template.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get config template: %w", err)
+	}
+
+	template.Type = models.TemplateType(typeStr)
+	template.Visibility = models.TemplateVisibility(visibilityStr)
+
+	if err := template.SetTags(tagsBytes); err != nil {
+		return nil, fmt.Errorf("unmarshal tags: %w", err)
+	}
+
+	return &template, nil
+}
+
+// GetConfigTemplatesByOrgID returns all config templates for an organization.
+func (db *DB) GetConfigTemplatesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.ConfigTemplate, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, created_by_id, name, description, type, visibility,
+		       tags, config, usage_count, created_at, updated_at
+		FROM config_templates
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list config templates: %w", err)
+	}
+	defer rows.Close()
+
+	return scanConfigTemplates(rows)
+}
+
+// GetPublicConfigTemplates returns all public config templates.
+func (db *DB) GetPublicConfigTemplates(ctx context.Context) ([]*models.ConfigTemplate, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, created_by_id, name, description, type, visibility,
+		       tags, config, usage_count, created_at, updated_at
+		FROM config_templates
+		WHERE visibility = 'public'
+		ORDER BY usage_count DESC, created_at DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list public config templates: %w", err)
+	}
+	defer rows.Close()
+
+	return scanConfigTemplates(rows)
+}
+
+// GetConfigTemplatesByType returns config templates filtered by type.
+func (db *DB) GetConfigTemplatesByType(ctx context.Context, orgID uuid.UUID, templateType models.TemplateType) ([]*models.ConfigTemplate, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, created_by_id, name, description, type, visibility,
+		       tags, config, usage_count, created_at, updated_at
+		FROM config_templates
+		WHERE (org_id = $1 OR visibility = 'public') AND type = $2
+		ORDER BY usage_count DESC, created_at DESC
+	`, orgID, templateType)
+	if err != nil {
+		return nil, fmt.Errorf("list config templates by type: %w", err)
+	}
+	defer rows.Close()
+
+	return scanConfigTemplates(rows)
+}
+
+// UpdateConfigTemplate updates a config template.
+func (db *DB) UpdateConfigTemplate(ctx context.Context, template *models.ConfigTemplate) error {
+	tagsJSON, err := template.TagsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal tags: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE config_templates
+		SET name = $2, description = $3, visibility = $4, tags = $5, updated_at = $6
+		WHERE id = $1
+	`, template.ID, template.Name, template.Description, template.Visibility, tagsJSON, template.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update config template: %w", err)
+	}
+	return nil
+}
+
+// DeleteConfigTemplate deletes a config template.
+func (db *DB) DeleteConfigTemplate(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM config_templates WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete config template: %w", err)
+	}
+	return nil
+}
+
+// IncrementTemplateUsageCount increments the usage count for a template.
+func (db *DB) IncrementTemplateUsageCount(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE config_templates
+		SET usage_count = usage_count + 1, updated_at = NOW()
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("increment template usage count: %w", err)
+	}
+	return nil
+}
+
+// scanConfigTemplates scans rows into config templates.
+func scanConfigTemplates(rows pgx.Rows) ([]*models.ConfigTemplate, error) {
+	var templates []*models.ConfigTemplate
+	for rows.Next() {
+		var template models.ConfigTemplate
+		var tagsBytes []byte
+		var typeStr, visibilityStr string
+
+		err := rows.Scan(
+			&template.ID, &template.OrgID, &template.CreatedByID, &template.Name,
+			&template.Description, &typeStr, &visibilityStr,
+			&tagsBytes, &template.Config, &template.UsageCount, &template.CreatedAt, &template.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan config template: %w", err)
+		}
+
+		template.Type = models.TemplateType(typeStr)
+		template.Visibility = models.TemplateVisibility(visibilityStr)
+
+		if err := template.SetTags(tagsBytes); err != nil {
+			return nil, fmt.Errorf("unmarshal tags: %w", err)
+		}
+
+		templates = append(templates, &template)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate config templates: %w", err)
+	}
+
+	return templates, nil
+}
