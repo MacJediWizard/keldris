@@ -1022,6 +1022,8 @@ export function Schedules() {
 				<button
 					type="button"
 					onClick={() => setShowCreateModal(true)}
+					data-action="create-schedule"
+					title="Create Schedule (N)"
 					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
 				>
 					<svg
