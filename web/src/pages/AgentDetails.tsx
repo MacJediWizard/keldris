@@ -791,8 +791,9 @@ export function AgentDetails() {
 								Debug Mode Active
 							</h3>
 							<p className="text-sm text-orange-700 mt-1">
-								This agent is running in debug mode with verbose logging enabled.
-								Detailed restic output and file operations are being logged.
+								This agent is running in debug mode with verbose logging
+								enabled. Detailed restic output and file operations are being
+								logged.
 								{agent.debug_mode_expires_at && (
 									<>
 										{' '}
