@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useLocale } from '../hooks/useLocale';
 import { useOnboardingStatus } from '../hooks/useOnboarding';
 import {
@@ -9,17 +10,20 @@ import {
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
 import { LanguageSelector } from './features/LanguageSelector';
+import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 
 interface NavItem {
 	path: string;
 	labelKey: string;
 	icon: React.ReactNode;
+	shortcut?: string;
 }
 
 const navItems: NavItem[] = [
 	{
 		path: '/',
 		labelKey: 'nav.dashboard',
+		shortcut: 'G D',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -40,6 +44,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/agents',
 		labelKey: 'nav.agents',
+		shortcut: 'G A',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -60,6 +65,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/repositories',
 		labelKey: 'nav.repositories',
+		shortcut: 'G R',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -80,6 +86,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/schedules',
 		labelKey: 'nav.schedules',
+		shortcut: 'G S',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -100,6 +107,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/backups',
 		labelKey: 'nav.backups',
+		shortcut: 'G B',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -120,6 +128,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/restore',
 		labelKey: 'nav.restore',
+		shortcut: 'G E',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -180,6 +189,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/alerts',
 		labelKey: 'nav.alerts',
+		shortcut: 'G L',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -322,14 +332,28 @@ function Sidebar() {
 							<li key={item.path}>
 								<Link
 									to={item.path}
-									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+									title={
+										item.shortcut
+											? `${t(item.labelKey)} (${item.shortcut})`
+											: t(item.labelKey)
+									}
+									className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-colors ${
 										isActive
 											? 'bg-indigo-600 text-white'
 											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
 									}`}
 								>
-									{item.icon}
-									<span>{t(item.labelKey)}</span>
+									<span className="flex items-center gap-3">
+										{item.icon}
+										<span>{t(item.labelKey)}</span>
+									</span>
+									{item.shortcut && (
+										<span
+											className={`text-xs font-mono ${isActive ? 'text-indigo-200' : 'text-gray-500'}`}
+										>
+											{item.shortcut}
+										</span>
+									)}
 								</Link>
 							</li>
 						);
@@ -673,6 +697,13 @@ export function Layout() {
 	const { isLoading, isError } = useMe();
 	const { data: onboardingStatus, isLoading: onboardingLoading } =
 		useOnboardingStatus();
+	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+
+	const { shortcuts } = useKeyboardShortcuts({
+		onShowHelp: () => setShowShortcutHelp(true),
+		onCloseModal: () => setShowShortcutHelp(false),
+		enabled: !isLoading && !isError,
+	});
 
 	// Redirect to onboarding if needed (but not if already on onboarding page)
 	useEffect(() => {
@@ -710,6 +741,11 @@ export function Layout() {
 					<Outlet />
 				</main>
 			</div>
+			<ShortcutHelpModal
+				isOpen={showShortcutHelp}
+				onClose={() => setShowShortcutHelp(false)}
+				shortcuts={shortcuts}
+			/>
 		</div>
 	);
 }
