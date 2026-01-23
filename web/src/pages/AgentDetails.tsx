@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AgentLogViewer } from '../components/features/AgentLogViewer';
 import {
 	useAgent,
 	useAgentBackups,
@@ -257,7 +258,7 @@ export function AgentDetails() {
 	const navigate = useNavigate();
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState<
-		'overview' | 'backups' | 'schedules' | 'health'
+		'overview' | 'backups' | 'schedules' | 'health' | 'logs'
 	>('overview');
 
 	const { data: agent, isLoading: agentLoading } = useAgent(id ?? '');
@@ -637,6 +638,17 @@ export function AgentDetails() {
 						}`}
 					>
 						Health
+					</button>
+					<button
+						type="button"
+						onClick={() => setActiveTab('logs')}
+						className={`py-4 px-1 border-b-2 font-medium text-sm ${
+							activeTab === 'logs'
+								? 'border-indigo-500 text-indigo-600'
+								: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+						}`}
+					>
+						Logs
 					</button>
 				</nav>
 			</div>
@@ -1365,6 +1377,8 @@ export function AgentDetails() {
 					</div>
 				</div>
 			)}
+
+			{activeTab === 'logs' && <AgentLogViewer agentId={id ?? ''} />}
 
 			{/* API Key Modal */}
 			{newApiKey && (
