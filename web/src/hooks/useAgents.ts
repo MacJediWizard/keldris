@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { agentsApi, schedulesApi } from '../lib/api';
-import type { CreateAgentRequest } from '../lib/types';
+import type { AgentLogFilter, CreateAgentRequest } from '../lib/types';
 
 export function useAgents() {
 	return useQuery({
@@ -115,5 +115,15 @@ export function useFleetHealth() {
 		queryKey: ['agents', 'fleet-health'],
 		queryFn: () => agentsApi.getFleetHealth(),
 		staleTime: 30 * 1000, // 30 seconds
+	});
+}
+
+export function useAgentLogs(id: string, filter?: AgentLogFilter) {
+	return useQuery({
+		queryKey: ['agents', id, 'logs', filter],
+		queryFn: () => agentsApi.getLogs(id, filter),
+		enabled: !!id,
+		staleTime: 5 * 1000, // 5 seconds for more real-time updates
+		refetchInterval: 10 * 1000, // Poll every 10 seconds for new logs
 	});
 }

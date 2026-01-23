@@ -23,6 +23,7 @@ type AgentAPIStore interface {
 	CreateAlert(ctx context.Context, alert *models.Alert) error
 	GetAlertByResourceAndType(ctx context.Context, orgID uuid.UUID, resourceType models.ResourceType, resourceID uuid.UUID, alertType models.AlertType) (*models.Alert, error)
 	ResolveAlertsByResource(ctx context.Context, resourceType models.ResourceType, resourceID uuid.UUID) error
+	CreateAgentLogs(ctx context.Context, logs []*models.AgentLog) error
 }
 
 // AgentAPIHandler handles agent-facing API endpoints (authenticated via API key).
@@ -43,6 +44,7 @@ func NewAgentAPIHandler(store AgentAPIStore, logger zerolog.Logger) *AgentAPIHan
 // This group should have APIKeyMiddleware applied.
 func (h *AgentAPIHandler) RegisterRoutes(r *gin.RouterGroup) {
 	r.POST("/health", h.ReportHealth)
+	r.POST("/logs", h.PushLogs)
 }
 
 // AgentHealthReport is the request body for agent health reporting.
@@ -363,4 +365,59 @@ func (h *AgentAPIHandler) handleHealthStatusChange(ctx context.Context, agent *m
 		Str("alert_type", string(alertType)).
 		Str("severity", string(severity)).
 		Msg("health alert created")
+}
+
+// PushLogsResponse is the response for log push operations.
+type PushLogsResponse struct {
+	Acknowledged bool   `json:"acknowledged"`
+	Count        int    `json:"count"`
+	AgentID      string `json:"agent_id"`
+}
+
+// PushLogs handles batched log submissions from agents.
+// POST /api/v1/agent/logs
+func (h *AgentAPIHandler) PushLogs(c *gin.Context) {
+	agent := middleware.RequireAgent(c)
+	if agent == nil {
+		return
+	}
+
+	var req models.AgentLogBatch
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	// Convert entries to log records
+	logs := make([]*models.AgentLog, 0, len(req.Logs))
+	for _, entry := range req.Logs {
+		log := models.NewAgentLog(agent.ID, agent.OrgID, entry.Level, entry.Message)
+		log.Component = entry.Component
+		log.Metadata = entry.Metadata
+		if !entry.Timestamp.IsZero() {
+			log.Timestamp = entry.Timestamp
+		}
+		logs = append(logs, log)
+	}
+
+	if err := h.store.CreateAgentLogs(c.Request.Context(), logs); err != nil {
+		h.logger.Error().Err(err).
+			Str("agent_id", agent.ID.String()).
+			Int("log_count", len(logs)).
+			Msg("failed to store agent logs")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to store logs"})
+		return
+	}
+
+	h.logger.Debug().
+		Str("agent_id", agent.ID.String()).
+		Str("hostname", agent.Hostname).
+		Int("log_count", len(logs)).
+		Msg("agent logs received")
+
+	c.JSON(http.StatusOK, PushLogsResponse{
+		Acknowledged: true,
+		Count:        len(logs),
+		AgentID:      agent.ID.String(),
+	})
 }
