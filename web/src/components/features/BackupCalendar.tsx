@@ -1,7 +1,11 @@
-import { useState, useMemo } from 'react';
-import { useBackupCalendar } from '../../hooks/useBackupCalendar';
+import { useMemo, useState } from 'react';
 import { useAgents } from '../../hooks/useAgents';
-import type { Backup, BackupCalendarDay, ScheduledBackup } from '../../lib/types';
+import { useBackupCalendar } from '../../hooks/useBackupCalendar';
+import type {
+	Backup,
+	BackupCalendarDay,
+	ScheduledBackup,
+} from '../../lib/types';
 import { formatDateTime, getBackupStatusColor } from '../../lib/utils';
 
 interface BackupCalendarProps {
@@ -259,12 +263,11 @@ function DayDetailsModal({
 					</div>
 				)}
 
-				{!calendarDay &&
-					scheduledBackups.length === 0 && (
-						<p className="text-center text-gray-500 dark:text-gray-400 py-4">
-							No backups or scheduled runs for this day
-						</p>
-					)}
+				{!calendarDay && scheduledBackups.length === 0 && (
+					<p className="text-center text-gray-500 dark:text-gray-400 py-4">
+						No backups or scheduled runs for this day
+					</p>
+				)}
 
 				<div className="flex justify-end mt-6">
 					<button
@@ -280,7 +283,10 @@ function DayDetailsModal({
 	);
 }
 
-export function BackupCalendar({ onSelectBackup, compact }: BackupCalendarProps) {
+export function BackupCalendar({
+	onSelectBackup,
+	compact,
+}: BackupCalendarProps) {
 	const [currentDate, setCurrentDate] = useState(() => new Date());
 	const [selectedDate, setSelectedDate] = useState<string | null>(null);
 	const { data: agents } = useAgents();
@@ -307,21 +313,25 @@ export function BackupCalendar({ onSelectBackup, compact }: BackupCalendarProps)
 
 	const dayMap = useMemo(() => {
 		const map = new Map<string, BackupCalendarDay>();
-		calendarData?.days.forEach((day) => {
-			map.set(day.date, day);
-		});
+		if (calendarData?.days) {
+			for (const day of calendarData.days) {
+				map.set(day.date, day);
+			}
+		}
 		return map;
 	}, [calendarData?.days]);
 
 	const scheduledByDate = useMemo(() => {
 		const map = new Map<string, ScheduledBackup[]>();
-		calendarData?.scheduled?.forEach((s) => {
-			const date = s.scheduled_at.split('T')[0];
-			if (!map.has(date)) {
-				map.set(date, []);
+		if (calendarData?.scheduled) {
+			for (const s of calendarData.scheduled) {
+				const date = s.scheduled_at.split('T')[0];
+				if (!map.has(date)) {
+					map.set(date, []);
+				}
+				map.get(date)?.push(s);
 			}
-			map.get(date)!.push(s);
-		});
+		}
 		return map;
 	}, [calendarData?.scheduled]);
 
@@ -345,6 +355,12 @@ export function BackupCalendar({ onSelectBackup, compact }: BackupCalendarProps)
 	const weekDays = compact
 		? ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 		: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+	// Static skeleton keys for loading state
+	const skeletonKeys = useMemo(
+		() => Array.from({ length: 35 }, (_, i) => `skeleton-${i}`),
+		[],
+	);
 
 	// Generate calendar grid
 	const calendarDays: {
@@ -386,9 +402,11 @@ export function BackupCalendar({ onSelectBackup, compact }: BackupCalendarProps)
 		});
 	}
 
-	const selectedCalendarDay = selectedDate ? dayMap.get(selectedDate) : undefined;
+	const selectedCalendarDay = selectedDate
+		? dayMap.get(selectedDate)
+		: undefined;
 	const selectedScheduled = selectedDate
-		? scheduledByDate.get(selectedDate) ?? []
+		? (scheduledByDate.get(selectedDate) ?? [])
 		: [];
 
 	return (
@@ -490,9 +508,9 @@ export function BackupCalendar({ onSelectBackup, compact }: BackupCalendarProps)
 						))}
 					</div>
 					<div className="grid grid-cols-7 gap-1">
-						{Array.from({ length: 35 }).map((_, i) => (
+						{skeletonKeys.map((key) => (
 							<div
-								key={i}
+								key={key}
 								className={`${compact ? 'h-8' : 'h-16'} bg-gray-100 dark:bg-gray-700 rounded`}
 							/>
 						))}
@@ -511,18 +529,20 @@ export function BackupCalendar({ onSelectBackup, compact }: BackupCalendarProps)
 						))}
 					</div>
 					<div className="grid grid-cols-7 gap-1">
-						{calendarDays.map(({ day, isCurrentMonth: isCurrent, dateString }) => (
-							<CalendarDayCell
-								key={dateString}
-								day={day}
-								isCurrentMonth={isCurrent}
-								isToday={isCurrent && isCurrentMonth && day === todayDate}
-								calendarDay={dayMap.get(dateString)}
-								scheduledBackups={scheduledByDate.get(dateString) ?? []}
-								onClick={() => isCurrent && setSelectedDate(dateString)}
-								compact={compact}
-							/>
-						))}
+						{calendarDays.map(
+							({ day, isCurrentMonth: isCurrent, dateString }) => (
+								<CalendarDayCell
+									key={dateString}
+									day={day}
+									isCurrentMonth={isCurrent}
+									isToday={isCurrent && isCurrentMonth && day === todayDate}
+									calendarDay={dayMap.get(dateString)}
+									scheduledBackups={scheduledByDate.get(dateString) ?? []}
+									onClick={() => isCurrent && setSelectedDate(dateString)}
+									compact={compact}
+								/>
+							),
+						)}
 					</div>
 				</>
 			)}
