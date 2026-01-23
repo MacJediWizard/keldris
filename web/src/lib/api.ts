@@ -93,6 +93,7 @@ import type {
 	ExcludePattern,
 	ExcludePatternsResponse,
 	ExtendImmutabilityLockRequest,
+	FileDiffResponse,
 	FileHistoryParams,
 	FileHistoryResponse,
 	FileSearchParams,
@@ -737,6 +738,15 @@ export const snapshotsApi = {
 
 	compare: async (id1: string, id2: string): Promise<SnapshotCompareResponse> =>
 		fetchApi<SnapshotCompareResponse>(`/snapshots/${id1}/compare/${id2}`),
+
+	diffFile: async (
+		id1: string,
+		id2: string,
+		path: string,
+	): Promise<FileDiffResponse> =>
+		fetchApi<FileDiffResponse>(
+			`/snapshots/${id1}/files/diff/${id2}?path=${encodeURIComponent(path)}`,
+		),
 
 	mount: async (
 		snapshotId: string,
