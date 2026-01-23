@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AgentDownloads } from '../components/features/AgentDownloads';
-import { BulkActions, type BulkAction } from '../components/ui/BulkActions';
+import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
 import {
 	BulkOperationProgress,
 	useBulkOperation,
@@ -756,10 +756,7 @@ export function Agents() {
 		const agentScheduleMap = new Map<string, string>();
 		if (schedules) {
 			for (const schedule of schedules) {
-				if (
-					bulkSelect.selectedIds.has(schedule.agent_id) &&
-					schedule.enabled
-				) {
+				if (bulkSelect.selectedIds.has(schedule.agent_id) && schedule.enabled) {
 					agentScheduleMap.set(schedule.agent_id, schedule.id);
 				}
 			}

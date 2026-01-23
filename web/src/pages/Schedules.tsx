@@ -4,7 +4,7 @@ import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor'
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
-import { BulkActions, type BulkAction } from '../components/ui/BulkActions';
+import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
 import {
 	BulkOperationProgress,
 	useBulkOperation,
@@ -1560,8 +1560,8 @@ export function Schedules() {
 						</h3>
 						<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
 							Apply a policy template to {bulkSelect.selectedCount} schedule
-							{bulkSelect.selectedCount !== 1 ? 's' : ''}. This will update their
-							retention, paths, excludes, and bandwidth settings.
+							{bulkSelect.selectedCount !== 1 ? 's' : ''}. This will update
+							their retention, paths, excludes, and bandwidth settings.
 						</p>
 						<div className="mb-4">
 							<label
