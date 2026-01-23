@@ -25,4 +25,4 @@ export function useReadOnlyModeValue(): ReadOnlyModeContext {
 	};
 }
 
-export { ReadOnlyModeContext };
+export type { ReadOnlyModeContext };
