@@ -1506,10 +1506,13 @@ export const maintenanceApi = {
 		id: string,
 		override: boolean,
 	): Promise<MaintenanceWindow> =>
-		fetchApi<MaintenanceWindow>(`/maintenance-windows/${id}/emergency-override`, {
-			method: 'POST',
-			body: JSON.stringify({ override }),
-		}),
+		fetchApi<MaintenanceWindow>(
+			`/maintenance-windows/${id}/emergency-override`,
+			{
+				method: 'POST',
+				body: JSON.stringify({ override }),
+			},
+		),
 };
 
 // Exclude Patterns API
