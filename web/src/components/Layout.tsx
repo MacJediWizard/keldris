@@ -9,6 +9,7 @@ import {
 	useOrganizations,
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
+import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { LanguageSelector } from './features/LanguageSelector';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 
@@ -451,6 +452,32 @@ function Sidebar() {
 							</li>
 							<li>
 								<Link
+									to="/organization/announcements"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/announcements'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+										/>
+									</svg>
+									<span>Announcements</span>
+								</Link>
+							</li>
+							<li>
+								<Link
 									to="/legal-holds"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/legal-holds'
@@ -762,6 +789,7 @@ export function Layout() {
 		<div className="min-h-screen bg-gray-50 flex">
 			<Sidebar />
 			<div className="flex-1 flex flex-col">
+				<AnnouncementBanner />
 				<Header />
 				<main className="flex-1 p-6">
 					<Outlet />

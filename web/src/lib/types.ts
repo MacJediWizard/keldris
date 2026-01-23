@@ -2693,3 +2693,45 @@ export interface UseTemplateRequest {
 export interface ConfigTemplatesResponse {
 	templates: ConfigTemplate[];
 }
+
+// Announcement types
+export type AnnouncementType = 'info' | 'warning' | 'critical';
+
+export interface Announcement {
+	id: string;
+	org_id: string;
+	title: string;
+	message?: string;
+	type: AnnouncementType;
+	dismissible: boolean;
+	starts_at?: string;
+	ends_at?: string;
+	active: boolean;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateAnnouncementRequest {
+	title: string;
+	message?: string;
+	type: AnnouncementType;
+	dismissible?: boolean;
+	starts_at?: string;
+	ends_at?: string;
+	active?: boolean;
+}
+
+export interface UpdateAnnouncementRequest {
+	title?: string;
+	message?: string;
+	type?: AnnouncementType;
+	dismissible?: boolean;
+	starts_at?: string;
+	ends_at?: string;
+	active?: boolean;
+}
+
+export interface AnnouncementsResponse {
+	announcements: Announcement[];
+}

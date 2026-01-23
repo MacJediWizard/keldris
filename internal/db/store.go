@@ -8897,3 +8897,142 @@ func scanConfigTemplates(rows pgx.Rows) ([]*models.ConfigTemplate, error) {
 
 	return templates, nil
 }
+
+// Announcement methods
+
+// GetAnnouncementByID returns an announcement by ID.
+func (db *DB) GetAnnouncementByID(ctx context.Context, id uuid.UUID) (*models.Announcement, error) {
+	var a models.Announcement
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, title, message, type, dismissible, starts_at, ends_at,
+		       active, created_by, created_at, updated_at
+		FROM announcements
+		WHERE id = $1
+	`, id).Scan(
+		&a.ID, &a.OrgID, &a.Title, &a.Message, &a.Type, &a.Dismissible,
+		&a.StartsAt, &a.EndsAt, &a.Active, &a.CreatedBy, &a.CreatedAt, &a.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get announcement: %w", err)
+	}
+	return &a, nil
+}
+
+// ListAnnouncementsByOrg returns all announcements for an organization.
+func (db *DB) ListAnnouncementsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.Announcement, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, title, message, type, dismissible, starts_at, ends_at,
+		       active, created_by, created_at, updated_at
+		FROM announcements
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list announcements: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAnnouncements(rows)
+}
+
+// ListActiveAnnouncements returns active announcements for an organization that the user hasn't dismissed.
+// It respects scheduled start/end times.
+func (db *DB) ListActiveAnnouncements(ctx context.Context, orgID uuid.UUID, userID uuid.UUID, now time.Time) ([]*models.Announcement, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT a.id, a.org_id, a.title, a.message, a.type, a.dismissible, a.starts_at, a.ends_at,
+		       a.active, a.created_by, a.created_at, a.updated_at
+		FROM announcements a
+		LEFT JOIN announcement_dismissals d ON a.id = d.announcement_id AND d.user_id = $3
+		WHERE a.org_id = $1
+		  AND a.active = true
+		  AND d.id IS NULL
+		  AND (a.starts_at IS NULL OR a.starts_at <= $2)
+		  AND (a.ends_at IS NULL OR a.ends_at > $2)
+		ORDER BY
+		  CASE a.type
+		    WHEN 'critical' THEN 1
+		    WHEN 'warning' THEN 2
+		    ELSE 3
+		  END,
+		  a.created_at DESC
+	`, orgID, now, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list active announcements: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAnnouncements(rows)
+}
+
+// CreateAnnouncement creates a new announcement.
+func (db *DB) CreateAnnouncement(ctx context.Context, a *models.Announcement) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO announcements (id, org_id, title, message, type, dismissible, starts_at, ends_at,
+		            active, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, a.ID, a.OrgID, a.Title, a.Message, a.Type, a.Dismissible, a.StartsAt, a.EndsAt,
+		a.Active, a.CreatedBy, a.CreatedAt, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create announcement: %w", err)
+	}
+	return nil
+}
+
+// UpdateAnnouncement updates an existing announcement.
+func (db *DB) UpdateAnnouncement(ctx context.Context, a *models.Announcement) error {
+	a.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE announcements
+		SET title = $2, message = $3, type = $4, dismissible = $5, starts_at = $6, ends_at = $7,
+		    active = $8, updated_at = $9
+		WHERE id = $1
+	`, a.ID, a.Title, a.Message, a.Type, a.Dismissible, a.StartsAt, a.EndsAt, a.Active, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update announcement: %w", err)
+	}
+	return nil
+}
+
+// DeleteAnnouncement deletes an announcement and its dismissals.
+func (db *DB) DeleteAnnouncement(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM announcements WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete announcement: %w", err)
+	}
+	return nil
+}
+
+// CreateAnnouncementDismissal records a user's dismissal of an announcement.
+func (db *DB) CreateAnnouncementDismissal(ctx context.Context, d *models.AnnouncementDismissal) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO announcement_dismissals (id, org_id, announcement_id, user_id, dismissed_at)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (announcement_id, user_id) DO NOTHING
+	`, d.ID, d.OrgID, d.AnnouncementID, d.UserID, d.DismissedAt)
+	if err != nil {
+		return fmt.Errorf("create announcement dismissal: %w", err)
+	}
+	return nil
+}
+
+// scanAnnouncements scans rows into announcements.
+func scanAnnouncements(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.Announcement, error) {
+	var announcements []*models.Announcement
+	for rows.Next() {
+		var a models.Announcement
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.Title, &a.Message, &a.Type, &a.Dismissible,
+			&a.StartsAt, &a.EndsAt, &a.Active, &a.CreatedBy, &a.CreatedAt, &a.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan announcement: %w", err)
+		}
+		announcements = append(announcements, &a)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate announcements: %w", err)
+	}
+
+	return announcements, nil
+}
