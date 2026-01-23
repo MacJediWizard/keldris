@@ -190,6 +190,9 @@ import type {
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
+	ServerLogComponentsResponse,
+	ServerLogFilter,
+	ServerLogsResponse,
 	SetScheduleClassificationRequest,
 	Snapshot,
 	SnapshotComment,
@@ -248,9 +251,6 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
-	ServerLogFilter,
-	ServerLogsResponse,
-	ServerLogComponentsResponse,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -1863,9 +1863,7 @@ export const costAlertsApi = {
 
 // Server Logs API (Admin only)
 export const serverLogsApi = {
-	list: async (
-		filter?: ServerLogFilter,
-	): Promise<ServerLogsResponse> => {
+	list: async (filter?: ServerLogFilter): Promise<ServerLogsResponse> => {
 		const searchParams = new URLSearchParams();
 		if (filter?.level) searchParams.set('level', filter.level);
 		if (filter?.component) searchParams.set('component', filter.component);
