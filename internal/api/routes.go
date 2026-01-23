@@ -7,6 +7,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/logs"
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -32,6 +33,8 @@ type Config struct {
 	VerificationTrigger handlers.VerificationTrigger
 	// ReportScheduler for report generation and sending (optional).
 	ReportScheduler *reports.Scheduler
+	// LogBuffer for server log capture and viewing (optional).
+	LogBuffer *logs.LogBuffer
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -212,6 +215,12 @@ func NewRouter(
 
 	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
 	maintenanceHandler.RegisterRoutes(apiV1)
+
+	// Server logs handler for admin (requires LogBuffer)
+	if cfg.LogBuffer != nil {
+		serverLogsHandler := handlers.NewServerLogsHandler(database, cfg.LogBuffer, logger)
+		serverLogsHandler.RegisterRoutes(apiV1)
+	}
 
 	ransomwareHandler := handlers.NewRansomwareHandler(database, logger)
 	ransomwareHandler.RegisterRoutes(apiV1)
