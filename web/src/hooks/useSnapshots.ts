@@ -39,3 +39,16 @@ export function useSnapshotCompare(snapshotId1: string, snapshotId2: string) {
 		staleTime: 60 * 1000, // 1 minute (comparison results don't change)
 	});
 }
+
+export function useFileDiff(
+	snapshotId1: string,
+	snapshotId2: string,
+	filePath: string,
+) {
+	return useQuery({
+		queryKey: ['snapshots', 'file-diff', snapshotId1, snapshotId2, filePath],
+		queryFn: () => snapshotsApi.diffFile(snapshotId1, snapshotId2, filePath),
+		enabled: !!snapshotId1 && !!snapshotId2 && !!filePath,
+		staleTime: 60 * 1000, // 1 minute (file diff results don't change)
+	});
+}
