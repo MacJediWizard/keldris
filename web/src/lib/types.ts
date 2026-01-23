@@ -584,6 +584,29 @@ export interface CancelCheckpointRequest {
 	checkpoint_id: string;
 }
 
+// Backup Calendar types
+export interface BackupCalendarDay {
+	date: string;
+	completed: number;
+	failed: number;
+	running: number;
+	scheduled: number;
+	backups?: Backup[];
+}
+
+export interface ScheduledBackup {
+	schedule_id: string;
+	schedule_name: string;
+	agent_id: string;
+	agent_name: string;
+	scheduled_at: string;
+}
+
+export interface BackupCalendarResponse {
+	days: BackupCalendarDay[];
+	scheduled: ScheduledBackup[];
+}
+
 // Backup Script types
 export type BackupScriptType =
 	| 'pre_backup'

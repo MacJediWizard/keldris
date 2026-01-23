@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ClassificationBadge } from '../components/ClassificationBadge';
+import { BackupCalendar } from '../components/features/BackupCalendar';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useRepositories } from '../hooks/useRepositories';
@@ -19,6 +20,8 @@ import {
 	getBackupStatusColor,
 	truncateSnapshotId,
 } from '../lib/utils';
+
+type ViewMode = 'list' | 'calendar';
 
 function LoadingRow() {
 	return (
@@ -496,6 +499,7 @@ function BackupRow({
 }
 
 export function Backups() {
+	const [viewMode, setViewMode] = useState<ViewMode>('list');
 	const [searchQuery, setSearchQuery] = useState('');
 	const [agentFilter, setAgentFilter] = useState<string>('all');
 	const [statusFilter, setStatusFilter] = useState<BackupStatus | 'all'>('all');
@@ -570,8 +574,67 @@ export function Backups() {
 						View and manage backup snapshots
 					</p>
 				</div>
+				<div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+					<button
+						type="button"
+						onClick={() => setViewMode('list')}
+						className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+							viewMode === 'list'
+								? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+								: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+						}`}
+					>
+						<span className="flex items-center gap-1.5">
+							<svg
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+								aria-hidden="true"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M4 6h16M4 10h16M4 14h16M4 18h16"
+								/>
+							</svg>
+							List
+						</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => setViewMode('calendar')}
+						className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+							viewMode === 'calendar'
+								? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+								: 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+						}`}
+					>
+						<span className="flex items-center gap-1.5">
+							<svg
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+								aria-hidden="true"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+								/>
+							</svg>
+							Calendar
+						</span>
+					</button>
+				</div>
 			</div>
 
+			{viewMode === 'calendar' ? (
+				<BackupCalendar onSelectBackup={setSelectedBackup} />
+			) : (
 			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 					<div className="flex items-center gap-4 mb-4">
@@ -787,6 +850,7 @@ export function Backups() {
 					)}
 				</div>
 			</div>
+			)}
 
 			{selectedBackup && (
 				<BackupDetailsModal
