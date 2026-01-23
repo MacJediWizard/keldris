@@ -4,7 +4,19 @@ import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor'
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
+import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
+import {
+	BulkOperationProgress,
+	useBulkOperation,
+} from '../components/ui/BulkOperationProgress';
+import {
+	BulkSelectCheckbox,
+	BulkSelectHeader,
+	BulkSelectToolbar,
+} from '../components/ui/BulkSelect';
+import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { useAgents } from '../hooks/useAgents';
+import { useBulkSelect } from '../hooks/useBulkSelect';
 import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
 import {
@@ -26,6 +38,9 @@ import type {
 function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
+			<td className="px-6 py-4 w-12">
+				<div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded" />
+			</td>
 			<td className="px-6 py-4">
 				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
@@ -422,7 +437,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						{/* Retention Policy Section */}
 						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
 							<div className="flex items-center justify-between mb-3">
-								<span className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 									Retention Policy
 								</span>
 								<button
@@ -793,6 +808,8 @@ interface ScheduleRowProps {
 	isDeleting: boolean;
 	isRunning: boolean;
 	isDryRunning: boolean;
+	isSelected: boolean;
+	onToggleSelect: () => void;
 }
 
 function ScheduleRow({
@@ -809,6 +826,8 @@ function ScheduleRow({
 	isDeleting,
 	isRunning,
 	isDryRunning,
+	isSelected,
+	onToggleSelect,
 }: ScheduleRowProps) {
 	const hasResourceControls =
 		schedule.bandwidth_limit_kb ||
@@ -823,7 +842,12 @@ function ScheduleRow({
 	const hasBadges = hasResourceControls || policyName || hasClassification;
 
 	return (
-		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
+		<tr
+			className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}
+		>
+			<td className="px-6 py-4 w-12">
+				<BulkSelectCheckbox checked={isSelected} onChange={onToggleSelect} />
+			</td>
 			<td className="px-6 py-4">
 				<div className="font-medium text-gray-900 dark:text-white">
 					{schedule.name}
@@ -1046,6 +1070,9 @@ export function Schedules() {
 	const [editingScriptsScheduleId, setEditingScriptsScheduleId] = useState<
 		string | null
 	>(null);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [showApplyPolicyModal, setShowApplyPolicyModal] = useState(false);
+	const [selectedPolicyId, setSelectedPolicyId] = useState('');
 	const [showDryRunModal, setShowDryRunModal] = useState(false);
 	const [dryRunResults, setDryRunResults] = useState<DryRunResponse | null>(
 		null,
@@ -1061,6 +1088,8 @@ export function Schedules() {
 	const runSchedule = useRunSchedule();
 	const dryRunSchedule = useDryRunSchedule();
 
+	const bulkOperation = useBulkOperation();
+
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
 	const policyMap = new Map(policies?.map((p) => [p.id, p.name]));
@@ -1075,6 +1104,173 @@ export function Schedules() {
 			(statusFilter === 'paused' && !schedule.enabled);
 		return matchesSearch && matchesStatus;
 	});
+
+	const scheduleIds = filteredSchedules?.map((s) => s.id) ?? [];
+	const bulkSelect = useBulkSelect(scheduleIds);
+
+	const bulkActions: BulkAction[] = [
+		{
+			id: 'enable',
+			label: 'Enable',
+			icon: (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M5 13l4 4L19 7"
+					/>
+				</svg>
+			),
+		},
+		{
+			id: 'disable',
+			label: 'Disable',
+			icon: (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+					/>
+				</svg>
+			),
+		},
+		{
+			id: 'apply-policy',
+			label: 'Apply Policy',
+			icon: (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+					/>
+				</svg>
+			),
+		},
+		{
+			id: 'delete',
+			label: 'Delete',
+			variant: 'danger',
+			icon: (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+					/>
+				</svg>
+			),
+			requiresConfirmation: true,
+		},
+	];
+
+	const handleBulkAction = (actionId: string) => {
+		switch (actionId) {
+			case 'delete':
+				setShowDeleteConfirm(true);
+				break;
+			case 'enable':
+				handleBulkEnable(true);
+				break;
+			case 'disable':
+				handleBulkEnable(false);
+				break;
+			case 'apply-policy':
+				setShowApplyPolicyModal(true);
+				break;
+		}
+	};
+
+	const handleBulkDelete = async () => {
+		setShowDeleteConfirm(false);
+		await bulkOperation.start(
+			[...bulkSelect.selectedIds],
+			async (id: string) => {
+				await deleteSchedule.mutateAsync(id);
+			},
+		);
+		bulkSelect.clear();
+	};
+
+	const handleBulkEnable = async (enabled: boolean) => {
+		await bulkOperation.start(
+			[...bulkSelect.selectedIds],
+			async (id: string) => {
+				await updateSchedule.mutateAsync({ id, data: { enabled } });
+			},
+		);
+		bulkSelect.clear();
+	};
+
+	const handleBulkApplyPolicy = async () => {
+		if (!selectedPolicyId) return;
+		setShowApplyPolicyModal(false);
+
+		const policy = policies?.find((p) => p.id === selectedPolicyId);
+		if (!policy) return;
+
+		await bulkOperation.start(
+			[...bulkSelect.selectedIds],
+			async (id: string) => {
+				const updateData: Parameters<typeof updateSchedule.mutateAsync>[0] = {
+					id,
+					data: {},
+				};
+
+				if (policy.retention_policy) {
+					updateData.data.retention_policy = policy.retention_policy;
+				}
+				if (policy.paths) {
+					updateData.data.paths = policy.paths;
+				}
+				if (policy.excludes) {
+					updateData.data.excludes = policy.excludes;
+				}
+				if (policy.bandwidth_limit_kb) {
+					updateData.data.bandwidth_limit_kb = policy.bandwidth_limit_kb;
+				}
+				if (policy.backup_window) {
+					updateData.data.backup_window = policy.backup_window;
+				}
+				if (policy.excluded_hours) {
+					updateData.data.excluded_hours = policy.excluded_hours;
+				}
+
+				await updateSchedule.mutateAsync(updateData);
+			},
+		);
+		bulkSelect.clear();
+		setSelectedPolicyId('');
+	};
 
 	const handleToggle = (id: string, enabled: boolean) => {
 		updateSchedule.mutate({ id, data: { enabled } });
@@ -1146,6 +1342,23 @@ export function Schedules() {
 				</button>
 			</div>
 
+			{/* Bulk Selection Toolbar */}
+			{bulkSelect.selectedCount > 0 && (
+				<BulkSelectToolbar
+					selectedCount={bulkSelect.selectedCount}
+					totalCount={scheduleIds.length}
+					onSelectAll={() => bulkSelect.selectAll(scheduleIds)}
+					onDeselectAll={bulkSelect.deselectAll}
+					itemLabel="schedule"
+				>
+					<BulkActions
+						actions={bulkActions}
+						onAction={handleBulkAction}
+						label="Actions"
+					/>
+				</BulkSelectToolbar>
+			)}
+
 			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 					<div className="flex items-center gap-4">
@@ -1171,7 +1384,7 @@ export function Schedules() {
 				</div>
 
 				{isError ? (
-					<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
+					<div className="p-12 text-center text-red-500 dark:text-red-400">
 						<p className="font-medium">Failed to load schedules</p>
 						<p className="text-sm">Please try refreshing the page</p>
 					</div>
@@ -1179,6 +1392,7 @@ export function Schedules() {
 					<table className="w-full">
 						<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 							<tr>
+								<th className="px-6 py-3 w-12" />
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Schedule
 								</th>
@@ -1206,6 +1420,15 @@ export function Schedules() {
 					<table className="w-full">
 						<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 							<tr>
+								<th className="px-6 py-3 w-12">
+									<BulkSelectHeader
+										isAllSelected={bulkSelect.isAllSelected}
+										isPartiallySelected={bulkSelect.isPartiallySelected}
+										onToggleAll={() => bulkSelect.toggleAll(scheduleIds)}
+										selectedCount={bulkSelect.selectedCount}
+										totalCount={scheduleIds.length}
+									/>
+								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Schedule
 								</th>
@@ -1248,6 +1471,8 @@ export function Schedules() {
 										isDeleting={deleteSchedule.isPending}
 										isRunning={runSchedule.isPending}
 										isDryRunning={dryRunSchedule.isPending}
+										isSelected={bulkSelect.isSelected(schedule.id)}
+										onToggleSelect={() => bulkSelect.toggle(schedule.id)}
 									/>
 								);
 							})}
@@ -1274,7 +1499,7 @@ export function Schedules() {
 						</h3>
 						<p className="mb-4">Create a schedule to automate your backups</p>
 						<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-w-md mx-auto text-left space-y-2">
-							<p className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
+							<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
 								Common schedules:
 							</p>
 							<div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
@@ -1313,6 +1538,86 @@ export function Schedules() {
 					onClose={() => setEditingScriptsScheduleId(null)}
 				/>
 			)}
+
+			{/* Bulk Delete Confirmation Modal */}
+			<ConfirmationModal
+				isOpen={showDeleteConfirm}
+				onClose={() => setShowDeleteConfirm(false)}
+				onConfirm={handleBulkDelete}
+				title="Delete Schedules"
+				message="Are you sure you want to delete the selected schedules? This action cannot be undone."
+				confirmLabel="Delete"
+				variant="danger"
+				itemCount={bulkSelect.selectedCount}
+			/>
+
+			{/* Apply Policy Modal */}
+			{showApplyPolicyModal && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+							Apply Policy
+						</h3>
+						<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+							Apply a policy template to {bulkSelect.selectedCount} schedule
+							{bulkSelect.selectedCount !== 1 ? 's' : ''}. This will update
+							their retention, paths, excludes, and bandwidth settings.
+						</p>
+						<div className="mb-4">
+							<label
+								htmlFor="bulk-policy-select"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Policy
+							</label>
+							<select
+								id="bulk-policy-select"
+								value={selectedPolicyId}
+								onChange={(e) => setSelectedPolicyId(e.target.value)}
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="">Select a policy</option>
+								{policies?.map((policy) => (
+									<option key={policy.id} value={policy.id}>
+										{policy.name}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="flex justify-end gap-3">
+							<button
+								type="button"
+								onClick={() => {
+									setShowApplyPolicyModal(false);
+									setSelectedPolicyId('');
+								}}
+								className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={handleBulkApplyPolicy}
+								disabled={!selectedPolicyId}
+								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+							>
+								Apply Policy
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Bulk Operation Progress */}
+			<BulkOperationProgress
+				isOpen={bulkOperation.isRunning || bulkOperation.isComplete}
+				onClose={bulkOperation.reset}
+				title="Bulk Operation"
+				total={bulkOperation.total}
+				completed={bulkOperation.completed}
+				results={bulkOperation.results}
+				isComplete={bulkOperation.isComplete}
+			/>
 
 			<DryRunResultsModal
 				isOpen={showDryRunModal}
