@@ -820,6 +820,22 @@ export interface SnapshotCompareResponse {
 	changes: SnapshotDiffEntry[];
 }
 
+// File diff types for comparing file content between snapshots
+export interface FileDiffResponse {
+	path: string;
+	is_binary: boolean;
+	change_type: 'added' | 'removed' | 'modified';
+	old_size?: number;
+	new_size?: number;
+	old_hash?: string;
+	new_hash?: string;
+	unified_diff?: string;
+	old_content?: string;
+	new_content?: string;
+	snapshot_id_1: string;
+	snapshot_id_2: string;
+}
+
 // Snapshot comment types
 export interface SnapshotComment {
 	id: string;
