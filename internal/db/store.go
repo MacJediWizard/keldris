@@ -7000,6 +7000,148 @@ func scanImportedSnapshots(rows interface{ Next() bool; Scan(dest ...interface{}
 	return snapshots, nil
 }
 
+// CreateAgentLogs inserts multiple log entries for an agent.
+func (db *DB) CreateAgentLogs(ctx context.Context, logs []*models.AgentLog) error {
+	if len(logs) == 0 {
+		return nil
+	}
+
+	batch := &pgx.Batch{}
+	for _, log := range logs {
+		metadataBytes, err := log.MetadataJSON()
+		if err != nil {
+			return fmt.Errorf("marshal metadata: %w", err)
+		}
+		batch.Queue(`
+			INSERT INTO agent_logs (id, agent_id, org_id, level, message, component, metadata, timestamp, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		`, log.ID, log.AgentID, log.OrgID, string(log.Level), log.Message, log.Component, metadataBytes, log.Timestamp, log.CreatedAt)
+	}
+
+	results := db.Pool.SendBatch(ctx, batch)
+	defer results.Close()
+
+	for range logs {
+		if _, err := results.Exec(); err != nil {
+			return fmt.Errorf("create agent log: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// GetAgentLogs returns logs for an agent with optional filtering.
+func (db *DB) GetAgentLogs(ctx context.Context, agentID uuid.UUID, filter *models.AgentLogFilter) ([]*models.AgentLog, int, error) {
+	if filter == nil {
+		filter = &models.AgentLogFilter{}
+	}
+	if filter.Limit <= 0 {
+		filter.Limit = 100
+	}
+	if filter.Limit > 1000 {
+		filter.Limit = 1000
+	}
+
+	// Build the query with optional filters
+	var args []interface{}
+	args = append(args, agentID)
+	argIndex := 2
+
+	whereClause := "WHERE agent_id = $1"
+
+	if filter.Level != "" {
+		whereClause += fmt.Sprintf(" AND level = $%d", argIndex)
+		args = append(args, string(filter.Level))
+		argIndex++
+	}
+
+	if filter.Component != "" {
+		whereClause += fmt.Sprintf(" AND component = $%d", argIndex)
+		args = append(args, filter.Component)
+		argIndex++
+	}
+
+	if filter.Search != "" {
+		whereClause += fmt.Sprintf(" AND to_tsvector('english', message) @@ plainto_tsquery('english', $%d)", argIndex)
+		args = append(args, filter.Search)
+		argIndex++
+	}
+
+	if !filter.Since.IsZero() {
+		whereClause += fmt.Sprintf(" AND timestamp >= $%d", argIndex)
+		args = append(args, filter.Since)
+		argIndex++
+	}
+
+	if !filter.Until.IsZero() {
+		whereClause += fmt.Sprintf(" AND timestamp <= $%d", argIndex)
+		args = append(args, filter.Until)
+		argIndex++
+	}
+
+	// Count total matching logs
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM agent_logs %s", whereClause)
+	var totalCount int
+	if err := db.Pool.QueryRow(ctx, countQuery, args...).Scan(&totalCount); err != nil {
+		return nil, 0, fmt.Errorf("count agent logs: %w", err)
+	}
+
+	// Fetch logs with pagination
+	args = append(args, filter.Limit, filter.Offset)
+	query := fmt.Sprintf(`
+		SELECT id, agent_id, org_id, level, message, component, metadata, timestamp, created_at
+		FROM agent_logs
+		%s
+		ORDER BY timestamp DESC
+		LIMIT $%d OFFSET $%d
+	`, whereClause, argIndex, argIndex+1)
+
+	rows, err := db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get agent logs: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []*models.AgentLog
+	for rows.Next() {
+		var log models.AgentLog
+		var levelStr string
+		var metadataBytes []byte
+		err := rows.Scan(
+			&log.ID, &log.AgentID, &log.OrgID, &levelStr,
+			&log.Message, &log.Component, &metadataBytes,
+			&log.Timestamp, &log.CreatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("scan agent log: %w", err)
+		}
+		log.Level = models.LogLevel(levelStr)
+		if len(metadataBytes) > 0 {
+			if err := log.SetMetadata(metadataBytes); err != nil {
+				db.logger.Warn().Err(err).Str("log_id", log.ID.String()).Msg("failed to parse log metadata")
+			}
+		}
+		logs = append(logs, &log)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate agent logs: %w", err)
+	}
+
+	return logs, totalCount, nil
+}
+
+// DeleteAgentLogsBefore deletes agent logs older than the given timestamp.
+func (db *DB) DeleteAgentLogsBefore(ctx context.Context, before time.Time) (int64, error) {
+	result, err := db.Pool.Exec(ctx, `
+		DELETE FROM agent_logs WHERE timestamp < $1
+	`, before)
+	if err != nil {
+		return 0, fmt.Errorf("delete agent logs: %w", err)
+	}
+	return result.RowsAffected(), nil
+}
+
 // Backup Checkpoint methods
 
 // CreateCheckpoint creates a new backup checkpoint.

@@ -8,6 +8,8 @@ import type {
 	AgentGroup,
 	AgentGroupsResponse,
 	AgentHealthHistoryResponse,
+	AgentLogFilter,
+	AgentLogsResponse,
 	AgentSchedulesResponse,
 	AgentStatsResponse,
 	AgentWithGroups,
@@ -381,6 +383,22 @@ export const agentsApi = {
 			'/agents/with-groups',
 		);
 		return response.agents ?? [];
+	},
+
+	getLogs: async (
+		id: string,
+		filter?: AgentLogFilter,
+	): Promise<AgentLogsResponse> => {
+		const params = new URLSearchParams();
+		if (filter?.level) params.set('level', filter.level);
+		if (filter?.component) params.set('component', filter.component);
+		if (filter?.search) params.set('search', filter.search);
+		if (filter?.limit) params.set('limit', filter.limit.toString());
+		if (filter?.offset) params.set('offset', filter.offset.toString());
+		const queryString = params.toString();
+		return fetchApi<AgentLogsResponse>(
+			`/agents/${id}/logs${queryString ? `?${queryString}` : ''}`,
+		);
 	},
 
 	// Command methods
