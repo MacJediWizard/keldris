@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
-import { useLatestChanges, useNewVersionAvailable } from '../hooks/useChangelog';
+import {
+	useLatestChanges,
+	useNewVersionAvailable,
+} from '../hooks/useChangelog';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useLocale } from '../hooks/useLocale';
 import { useOnboardingStatus } from '../hooks/useOnboarding';

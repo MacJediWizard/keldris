@@ -45,14 +45,16 @@ function ChangeSection({
 	return (
 		<div className={`rounded-lg border p-4 ${colorClasses[color]}`}>
 			<h4 className="font-medium mb-2 flex items-center gap-2">
-				<span className={`px-2 py-0.5 text-xs font-medium rounded ${badgeClasses[color]}`}>
+				<span
+					className={`px-2 py-0.5 text-xs font-medium rounded ${badgeClasses[color]}`}
+				>
 					{title}
 				</span>
 				<span className="text-xs text-gray-500">({items.length})</span>
 			</h4>
 			<ul className="space-y-1">
-				{items.map((item, idx) => (
-					<li key={idx} className="text-sm flex items-start gap-2">
+				{items.map((item) => (
+					<li key={item} className="text-sm flex items-start gap-2">
 						<span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-current flex-shrink-0" />
 						<span>{item}</span>
 					</li>
@@ -140,15 +142,33 @@ function VersionCard({
 			{isExpanded && (
 				<div className="px-6 pb-6 border-t border-gray-100 pt-4">
 					{!hasChanges ? (
-						<p className="text-gray-500 text-sm italic">No changes documented yet.</p>
+						<p className="text-gray-500 text-sm italic">
+							No changes documented yet.
+						</p>
 					) : (
 						<div className="grid gap-4 md:grid-cols-2">
 							<ChangeSection title="Added" items={entry.added} color="green" />
-							<ChangeSection title="Changed" items={entry.changed} color="yellow" />
+							<ChangeSection
+								title="Changed"
+								items={entry.changed}
+								color="yellow"
+							/>
 							<ChangeSection title="Fixed" items={entry.fixed} color="blue" />
-							<ChangeSection title="Deprecated" items={entry.deprecated} color="orange" />
-							<ChangeSection title="Removed" items={entry.removed} color="red" />
-							<ChangeSection title="Security" items={entry.security} color="purple" />
+							<ChangeSection
+								title="Deprecated"
+								items={entry.deprecated}
+								color="orange"
+							/>
+							<ChangeSection
+								title="Removed"
+								items={entry.removed}
+								color="red"
+							/>
+							<ChangeSection
+								title="Security"
+								items={entry.security}
+								color="purple"
+							/>
 						</div>
 					)}
 				</div>
@@ -159,7 +179,9 @@ function VersionCard({
 
 export function Changelog() {
 	const { data, isLoading, error } = useChangelog();
-	const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set());
+	const [expandedVersions, setExpandedVersions] = useState<Set<string>>(
+		new Set(),
+	);
 
 	const toggleVersion = (version: string) => {
 		setExpandedVersions((prev) => {
@@ -194,7 +216,10 @@ export function Changelog() {
 				</div>
 				<div className="space-y-4">
 					{[1, 2, 3].map((i) => (
-						<div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />
+						<div
+							key={i}
+							className="h-20 bg-gray-100 rounded-lg animate-pulse"
+						/>
 					))}
 				</div>
 			</div>
@@ -206,7 +231,9 @@ export function Changelog() {
 			<div className="space-y-6">
 				<div>
 					<h1 className="text-2xl font-bold text-gray-900">Changelog</h1>
-					<p className="text-gray-600 mt-1">Version history and release notes</p>
+					<p className="text-gray-600 mt-1">
+						Version history and release notes
+					</p>
 				</div>
 				<div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
 					<p>Failed to load changelog. Please try again later.</p>
