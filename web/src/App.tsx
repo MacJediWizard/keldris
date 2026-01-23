@@ -7,10 +7,14 @@ import { Agents } from './pages/Agents';
 import { Alerts } from './pages/Alerts';
 import { AuditLogs } from './pages/AuditLogs';
 import { Backups } from './pages/Backups';
+import { Classifications } from './pages/Classifications';
 import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
+import { FileDiff } from './pages/FileDiff';
 import { FileHistory } from './pages/FileHistory';
+import { FileSearch } from './pages/FileSearch';
+import { LegalHolds } from './pages/LegalHolds';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
 import { Notifications } from './pages/Notifications';
@@ -61,14 +65,18 @@ function App() {
 						<Route path="dr-runbooks" element={<DRRunbooks />} />
 						<Route path="restore" element={<Restore />} />
 						<Route path="file-history" element={<FileHistory />} />
+						<Route path="file-search" element={<FileSearch />} />
 						<Route path="snapshots/compare" element={<SnapshotCompare />} />
+						<Route path="snapshots/file-diff" element={<FileDiff />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
 						<Route path="reports" element={<Reports />} />
 						<Route path="audit-logs" element={<AuditLogs />} />
+						<Route path="legal-holds" element={<LegalHolds />} />
 						<Route path="stats" element={<StorageStats />} />
 						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
 						<Route path="tags" element={<Tags />} />
+						<Route path="classifications" element={<Classifications />} />
 						<Route path="costs" element={<CostEstimation />} />
 						<Route
 							path="organization/members"

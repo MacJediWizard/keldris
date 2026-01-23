@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { restoresApi } from '../lib/api';
-import type { CreateRestoreRequest } from '../lib/types';
+import type { CreateRestoreRequest, RestorePreviewRequest } from '../lib/types';
 
 export interface RestoresFilter {
 	agent_id?: string;
@@ -39,5 +39,11 @@ export function useCreateRestore() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['restores'] });
 		},
+	});
+}
+
+export function useRestorePreview() {
+	return useMutation({
+		mutationFn: (data: RestorePreviewRequest) => restoresApi.preview(data),
 	});
 }

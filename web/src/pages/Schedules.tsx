@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { ClassificationBadge } from '../components/ClassificationBadge';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
+import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
 import { BulkActions, type BulkAction } from '../components/ui/BulkActions';
@@ -20,12 +22,14 @@ import { useRepositories } from '../hooks/useRepositories';
 import {
 	useCreateSchedule,
 	useDeleteSchedule,
+	useDryRunSchedule,
 	useRunSchedule,
 	useSchedules,
 	useUpdateSchedule,
 } from '../hooks/useSchedules';
 import type {
 	CompressionLevel,
+	DryRunResponse,
 	MountBehavior,
 	Schedule,
 	ScheduleRepositoryRequest,
@@ -86,6 +90,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	const [compressionLevel, setCompressionLevel] = useState<
 		CompressionLevel | ''
 	>('');
+	const [maxFileSizeMb, setMaxFileSizeMb] = useState('');
 	const [onMountUnavailable, setOnMountUnavailable] =
 		useState<MountBehavior>('fail');
 	const [showAdvanced, setShowAdvanced] = useState(false);
@@ -186,6 +191,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			if (compressionLevel) {
 				data.compression_level = compressionLevel;
 			}
+			if (maxFileSizeMb && Number.parseInt(maxFileSizeMb, 10) > 0) {
+				data.max_file_size_mb = Number.parseInt(maxFileSizeMb, 10);
+			}
 			if (onMountUnavailable !== 'fail') {
 				data.on_mount_unavailable = onMountUnavailable;
 			}
@@ -211,6 +219,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			setWindowEnd('');
 			setExcludedHours([]);
 			setCompressionLevel('');
+			setMaxFileSizeMb('');
 			setOnMountUnavailable('fail');
 			setShowAdvanced(false);
 			// Reset exclude patterns state
@@ -428,7 +437,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						{/* Retention Policy Section */}
 						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
 							<div className="flex items-center justify-between mb-3">
-								<span className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 									Retention Policy
 								</span>
 								<button
@@ -684,6 +693,29 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 										</p>
 									</div>
 
+									{/* Max File Size */}
+									<div>
+										<label
+											htmlFor="max-file-size"
+											className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+										>
+											Max File Size (MB)
+										</label>
+										<input
+											type="number"
+											id="max-file-size"
+											value={maxFileSizeMb}
+											onChange={(e) => setMaxFileSizeMb(e.target.value)}
+											placeholder="e.g., 100 (leave empty for no limit)"
+											min="0"
+											className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										/>
+										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+											Files larger than this will be automatically excluded from
+											backup. Leave empty or 0 for no limit.
+										</p>
+									</div>
+
 									{/* Network Mount Behavior */}
 									<div>
 										<label
@@ -770,10 +802,12 @@ interface ScheduleRowProps {
 	onToggle: (id: string, enabled: boolean) => void;
 	onDelete: (id: string) => void;
 	onRun: (id: string) => void;
+	onDryRun: (id: string) => void;
 	onEditScripts: (id: string) => void;
 	isUpdating: boolean;
 	isDeleting: boolean;
 	isRunning: boolean;
+	isDryRunning: boolean;
 	isSelected: boolean;
 	onToggleSelect: () => void;
 }
@@ -786,10 +820,12 @@ function ScheduleRow({
 	onToggle,
 	onDelete,
 	onRun,
+	onDryRun,
 	onEditScripts,
 	isUpdating,
 	isDeleting,
 	isRunning,
+	isDryRunning,
 	isSelected,
 	onToggleSelect,
 }: ScheduleRowProps) {
@@ -797,9 +833,13 @@ function ScheduleRow({
 		schedule.bandwidth_limit_kb ||
 		schedule.backup_window ||
 		(schedule.excluded_hours && schedule.excluded_hours.length > 0) ||
-		schedule.compression_level;
+		schedule.compression_level ||
+		(schedule.max_file_size_mb && schedule.max_file_size_mb > 0);
 
-	const hasBadges = hasResourceControls || policyName;
+	const hasClassification =
+		schedule.classification_level && schedule.classification_level !== 'public';
+
+	const hasBadges = hasResourceControls || policyName || hasClassification;
 
 	return (
 		<tr
@@ -818,6 +858,14 @@ function ScheduleRow({
 				</div>
 				{hasBadges && (
 					<div className="mt-1 flex flex-wrap gap-1.5">
+						{hasClassification && (
+							<ClassificationBadge
+								level={schedule.classification_level}
+								dataTypes={schedule.classification_data_types}
+								showDataTypes
+								size="sm"
+							/>
+						)}
 						{policyName && (
 							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-indigo-50 text-indigo-700 rounded">
 								<svg
@@ -922,6 +970,25 @@ function ScheduleRow({
 										: 'Auto compression'}
 							</span>
 						)}
+						{schedule.max_file_size_mb && schedule.max_file_size_mb > 0 && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-50 text-orange-700 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+									/>
+								</svg>
+								Max {schedule.max_file_size_mb} MB
+							</span>
+						)}
 					</div>
 				)}
 			</td>
@@ -965,6 +1032,15 @@ function ScheduleRow({
 					<span className="text-gray-300 dark:text-gray-600">|</span>
 					<button
 						type="button"
+						onClick={() => onDryRun(schedule.id)}
+						disabled={isDryRunning}
+						className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 text-sm font-medium disabled:opacity-50"
+					>
+						{isDryRunning ? 'Simulating...' : 'Dry Run'}
+					</button>
+					<span className="text-gray-300 dark:text-gray-600">|</span>
+					<button
+						type="button"
 						onClick={() => onEditScripts(schedule.id)}
 						className="text-gray-600 hover:text-gray-800 text-sm font-medium"
 					>
@@ -997,6 +1073,11 @@ export function Schedules() {
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [showApplyPolicyModal, setShowApplyPolicyModal] = useState(false);
 	const [selectedPolicyId, setSelectedPolicyId] = useState('');
+	const [showDryRunModal, setShowDryRunModal] = useState(false);
+	const [dryRunResults, setDryRunResults] = useState<DryRunResponse | null>(
+		null,
+	);
+	const [dryRunError, setDryRunError] = useState<Error | null>(null);
 
 	const { data: schedules, isLoading, isError } = useSchedules();
 	const { data: agents } = useAgents();
@@ -1005,6 +1086,7 @@ export function Schedules() {
 	const updateSchedule = useUpdateSchedule();
 	const deleteSchedule = useDeleteSchedule();
 	const runSchedule = useRunSchedule();
+	const dryRunSchedule = useDryRunSchedule();
 
 	const bulkOperation = useBulkOperation();
 
@@ -1204,6 +1286,26 @@ export function Schedules() {
 		runSchedule.mutate(id);
 	};
 
+	const handleDryRun = (id: string) => {
+		setDryRunResults(null);
+		setDryRunError(null);
+		setShowDryRunModal(true);
+		dryRunSchedule.mutate(id, {
+			onSuccess: (data) => {
+				setDryRunResults(data);
+			},
+			onError: (error) => {
+				setDryRunError(error as Error);
+			},
+		});
+	};
+
+	const handleCloseDryRunModal = () => {
+		setShowDryRunModal(false);
+		setDryRunResults(null);
+		setDryRunError(null);
+	};
+
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
@@ -1218,6 +1320,8 @@ export function Schedules() {
 				<button
 					type="button"
 					onClick={() => setShowCreateModal(true)}
+					data-action="create-schedule"
+					title="Create Schedule (N)"
 					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
 				>
 					<svg
@@ -1280,7 +1384,7 @@ export function Schedules() {
 				</div>
 
 				{isError ? (
-					<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
+					<div className="p-12 text-center text-red-500 dark:text-red-400">
 						<p className="font-medium">Failed to load schedules</p>
 						<p className="text-sm">Please try refreshing the page</p>
 					</div>
@@ -1361,10 +1465,12 @@ export function Schedules() {
 										onToggle={handleToggle}
 										onDelete={handleDelete}
 										onRun={handleRun}
+										onDryRun={handleDryRun}
 										onEditScripts={setEditingScriptsScheduleId}
 										isUpdating={updateSchedule.isPending}
 										isDeleting={deleteSchedule.isPending}
 										isRunning={runSchedule.isPending}
+										isDryRunning={dryRunSchedule.isPending}
 										isSelected={bulkSelect.isSelected(schedule.id)}
 										onToggleSelect={() => bulkSelect.toggle(schedule.id)}
 									/>
@@ -1393,7 +1499,7 @@ export function Schedules() {
 						</h3>
 						<p className="mb-4">Create a schedule to automate your backups</p>
 						<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-w-md mx-auto text-left space-y-2">
-							<p className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
+							<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
 								Common schedules:
 							</p>
 							<div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
@@ -1511,6 +1617,14 @@ export function Schedules() {
 				completed={bulkOperation.completed}
 				results={bulkOperation.results}
 				isComplete={bulkOperation.isComplete}
+			/>
+
+			<DryRunResultsModal
+				isOpen={showDryRunModal}
+				onClose={handleCloseDryRunModal}
+				results={dryRunResults}
+				isLoading={dryRunSchedule.isPending}
+				error={dryRunError}
 			/>
 		</div>
 	);
