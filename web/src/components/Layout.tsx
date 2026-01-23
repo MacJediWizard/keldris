@@ -272,7 +272,11 @@ function Sidebar() {
 							<li key={item.path}>
 								<Link
 									to={item.path}
-									title={item.shortcut ? `${t(item.labelKey)} (${item.shortcut})` : t(item.labelKey)}
+									title={
+										item.shortcut
+											? `${t(item.labelKey)} (${item.shortcut})`
+											: t(item.labelKey)
+									}
 									className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-colors ${
 										isActive
 											? 'bg-indigo-600 text-white'
@@ -284,7 +288,9 @@ function Sidebar() {
 										<span>{t(item.labelKey)}</span>
 									</span>
 									{item.shortcut && (
-										<span className={`text-xs font-mono ${isActive ? 'text-indigo-200' : 'text-gray-500'}`}>
+										<span
+											className={`text-xs font-mono ${isActive ? 'text-indigo-200' : 'text-gray-500'}`}
+										>
 											{item.shortcut}
 										</span>
 									)}

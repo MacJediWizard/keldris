@@ -81,12 +81,9 @@ function ShortcutEditor({
 							className="w-32 px-3 py-1.5 text-sm border border-indigo-500 rounded-lg bg-indigo-50 text-center focus:outline-none"
 							placeholder={t('shortcuts.pressKey')}
 							value={
-								capturedKeys.length > 0
-									? capturedKeys.join(' + ') + '...'
-									: ''
+								capturedKeys.length > 0 ? `${capturedKeys.join(' + ')}...` : ''
 							}
 							onKeyDown={handleKeyCapture}
-							autoFocus
 							readOnly
 						/>
 						<button
@@ -199,9 +196,7 @@ export function KeyboardShortcutsSettings({
 		>
 			<div
 				className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden"
-				role="dialog"
 				aria-labelledby="shortcut-settings-title"
-				aria-modal="true"
 			>
 				<div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
 					<div>
