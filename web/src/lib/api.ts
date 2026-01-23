@@ -1493,6 +1493,7 @@ export const maintenanceApi = {
 			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
+
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/maintenance-windows/${id}`, {
 			method: 'DELETE',
@@ -1500,6 +1501,18 @@ export const maintenanceApi = {
 
 	getActive: async (): Promise<ActiveMaintenanceResponse> =>
 		fetchApi<ActiveMaintenanceResponse>('/maintenance/active'),
+
+	emergencyOverride: async (
+		id: string,
+		override: boolean,
+	): Promise<MaintenanceWindow> =>
+		fetchApi<MaintenanceWindow>(
+			`/maintenance-windows/${id}/emergency-override`,
+			{
+				method: 'POST',
+				body: JSON.stringify({ override }),
+			},
+		),
 };
 
 // Exclude Patterns API

@@ -3737,12 +3737,14 @@ func (db *DB) GetMaintenanceWindowByID(ctx context.Context, id uuid.UUID) (*mode
 	var m models.MaintenanceWindow
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
-		       notification_sent, created_by, created_at, updated_at
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
 		FROM maintenance_windows
 		WHERE id = $1
 	`, id).Scan(
 		&m.ID, &m.OrgID, &m.Title, &m.Message, &m.StartsAt, &m.EndsAt,
-		&m.NotifyBeforeMinutes, &m.NotificationSent, &m.CreatedBy,
+		&m.NotifyBeforeMinutes, &m.NotificationSent, &m.ReadOnly, &m.CountdownStartMinutes,
+		&m.EmergencyOverride, &m.OverriddenBy, &m.OverriddenAt, &m.CreatedBy,
 		&m.CreatedAt, &m.UpdatedAt,
 	)
 	if err != nil {
@@ -3755,7 +3757,8 @@ func (db *DB) GetMaintenanceWindowByID(ctx context.Context, id uuid.UUID) (*mode
 func (db *DB) ListMaintenanceWindowsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.MaintenanceWindow, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
-		       notification_sent, created_by, created_at, updated_at
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
 		FROM maintenance_windows
 		WHERE org_id = $1
 		ORDER BY starts_at DESC
@@ -3772,7 +3775,8 @@ func (db *DB) ListMaintenanceWindowsByOrg(ctx context.Context, orgID uuid.UUID) 
 func (db *DB) ListActiveMaintenanceWindows(ctx context.Context, orgID uuid.UUID, now time.Time) ([]*models.MaintenanceWindow, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
-		       notification_sent, created_by, created_at, updated_at
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
 		FROM maintenance_windows
 		WHERE org_id = $1
 		  AND starts_at <= $2
@@ -3792,7 +3796,8 @@ func (db *DB) ListUpcomingMaintenanceWindows(ctx context.Context, orgID uuid.UUI
 	notifyTime := now.Add(time.Duration(withinMinutes) * time.Minute)
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
-		       notification_sent, created_by, created_at, updated_at
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
 		FROM maintenance_windows
 		WHERE org_id = $1
 		  AND starts_at > $2
@@ -3811,7 +3816,8 @@ func (db *DB) ListUpcomingMaintenanceWindows(ctx context.Context, orgID uuid.UUI
 func (db *DB) ListPendingMaintenanceNotifications(ctx context.Context) ([]*models.MaintenanceWindow, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
-		       notification_sent, created_by, created_at, updated_at
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
 		FROM maintenance_windows
 		WHERE notification_sent = false
 		  AND starts_at > NOW()
@@ -3830,10 +3836,12 @@ func (db *DB) ListPendingMaintenanceNotifications(ctx context.Context) ([]*model
 func (db *DB) CreateMaintenanceWindow(ctx context.Context, m *models.MaintenanceWindow) error {
 	_, err := db.Pool.Exec(ctx, `
 		INSERT INTO maintenance_windows (id, org_id, title, message, starts_at, ends_at,
-		            notify_before_minutes, notification_sent, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		            notify_before_minutes, notification_sent, read_only, countdown_start_minutes,
+		            emergency_override, overridden_by, overridden_at, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	`, m.ID, m.OrgID, m.Title, m.Message, m.StartsAt, m.EndsAt,
-		m.NotifyBeforeMinutes, m.NotificationSent, m.CreatedBy, m.CreatedAt, m.UpdatedAt)
+		m.NotifyBeforeMinutes, m.NotificationSent, m.ReadOnly, m.CountdownStartMinutes,
+		m.EmergencyOverride, m.OverriddenBy, m.OverriddenAt, m.CreatedBy, m.CreatedAt, m.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create maintenance window: %w", err)
 	}
@@ -3934,10 +3942,13 @@ func (db *DB) UpdateMaintenanceWindow(ctx context.Context, m *models.Maintenance
 	_, err := db.Pool.Exec(ctx, `
 		UPDATE maintenance_windows
 		SET title = $2, message = $3, starts_at = $4, ends_at = $5,
-		    notify_before_minutes = $6, notification_sent = $7, updated_at = $8
+		    notify_before_minutes = $6, notification_sent = $7, read_only = $8,
+		    countdown_start_minutes = $9, emergency_override = $10,
+		    overridden_by = $11, overridden_at = $12, updated_at = $13
 		WHERE id = $1
 	`, m.ID, m.Title, m.Message, m.StartsAt, m.EndsAt,
-		m.NotifyBeforeMinutes, m.NotificationSent, m.UpdatedAt)
+		m.NotifyBeforeMinutes, m.NotificationSent, m.ReadOnly, m.CountdownStartMinutes,
+		m.EmergencyOverride, m.OverriddenBy, m.OverriddenAt, m.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update maintenance window: %w", err)
 	}
@@ -4072,6 +4083,57 @@ func (db *DB) MarkMaintenanceNotificationSent(ctx context.Context, id uuid.UUID)
 	return nil
 }
 
+// SetMaintenanceEmergencyOverride sets or clears the emergency override for a maintenance window.
+func (db *DB) SetMaintenanceEmergencyOverride(ctx context.Context, id uuid.UUID, override bool, userID uuid.UUID) error {
+	now := time.Now()
+	var overriddenBy *uuid.UUID
+	var overriddenAt *time.Time
+	if override {
+		overriddenBy = &userID
+		overriddenAt = &now
+	}
+
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE maintenance_windows
+		SET emergency_override = $2, overridden_by = $3, overridden_at = $4, updated_at = $5
+		WHERE id = $1
+	`, id, override, overriddenBy, overriddenAt, now)
+	if err != nil {
+		return fmt.Errorf("set maintenance emergency override: %w", err)
+	}
+	return nil
+}
+
+// GetActiveReadOnlyWindow returns the currently active read-only maintenance window for an org.
+func (db *DB) GetActiveReadOnlyWindow(ctx context.Context, orgID uuid.UUID, now time.Time) (*models.MaintenanceWindow, error) {
+	var m models.MaintenanceWindow
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
+		FROM maintenance_windows
+		WHERE org_id = $1
+		  AND read_only = true
+		  AND emergency_override = false
+		  AND starts_at <= $2
+		  AND ends_at > $2
+		ORDER BY ends_at ASC
+		LIMIT 1
+	`, orgID, now).Scan(
+		&m.ID, &m.OrgID, &m.Title, &m.Message, &m.StartsAt, &m.EndsAt,
+		&m.NotifyBeforeMinutes, &m.NotificationSent, &m.ReadOnly, &m.CountdownStartMinutes,
+		&m.EmergencyOverride, &m.OverriddenBy, &m.OverriddenAt, &m.CreatedBy,
+		&m.CreatedAt, &m.UpdatedAt,
+	)
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get active read-only maintenance window: %w", err)
+	}
+	return &m, nil
+}
+
 // SeedBuiltinExcludePatterns inserts or updates the built-in exclude patterns from the library.
 func (db *DB) SeedBuiltinExcludePatterns(ctx context.Context, patterns []*models.ExcludePattern) error {
 	for _, ep := range patterns {
@@ -4111,7 +4173,8 @@ func scanMaintenanceWindows(rows interface {
 		var m models.MaintenanceWindow
 		err := r.Scan(
 			&m.ID, &m.OrgID, &m.Title, &m.Message, &m.StartsAt, &m.EndsAt,
-			&m.NotifyBeforeMinutes, &m.NotificationSent, &m.CreatedBy,
+			&m.NotifyBeforeMinutes, &m.NotificationSent, &m.ReadOnly, &m.CountdownStartMinutes,
+			&m.EmergencyOverride, &m.OverriddenBy, &m.OverriddenAt, &m.CreatedBy,
 			&m.CreatedAt, &m.UpdatedAt,
 		)
 		if err != nil {

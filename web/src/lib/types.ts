@@ -1391,6 +1391,11 @@ export interface MaintenanceWindow {
 	ends_at: string;
 	notify_before_minutes: number;
 	notification_sent: boolean;
+	read_only: boolean;
+	countdown_start_minutes: number;
+	emergency_override: boolean;
+	overridden_by?: string;
+	overridden_at?: string;
 	created_by?: string;
 	created_at: string;
 	updated_at: string;
@@ -1462,6 +1467,8 @@ export interface CreateMaintenanceWindowRequest {
 	starts_at: string;
 	ends_at: string;
 	notify_before_minutes?: number;
+	read_only?: boolean;
+	countdown_start_minutes?: number;
 }
 
 export interface UpdateMaintenanceWindowRequest {
@@ -1470,6 +1477,12 @@ export interface UpdateMaintenanceWindowRequest {
 	starts_at?: string;
 	ends_at?: string;
 	notify_before_minutes?: number;
+	read_only?: boolean;
+	countdown_start_minutes?: number;
+}
+
+export interface EmergencyOverrideRequest {
+	override: boolean;
 }
 
 export interface MaintenanceWindowsResponse {
@@ -1479,6 +1492,9 @@ export interface MaintenanceWindowsResponse {
 export interface ActiveMaintenanceResponse {
 	active: MaintenanceWindow | null;
 	upcoming: MaintenanceWindow | null;
+	read_only_mode: boolean;
+	show_countdown: boolean;
+	countdown_to?: string;
 }
 
 // DR Runbook types
