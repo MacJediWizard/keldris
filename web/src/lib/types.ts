@@ -464,6 +464,24 @@ export interface RunScheduleResponse {
 	message: string;
 }
 
+// Clone schedule types
+export interface CloneScheduleRequest {
+	name?: string;
+	target_agent_id?: string;
+	target_repo_ids?: string[];
+}
+
+export interface BulkCloneScheduleRequest {
+	schedule_id: string;
+	target_agent_ids: string[];
+	name_prefix?: string;
+}
+
+export interface BulkCloneResponse {
+	schedules: Schedule[];
+	errors?: string[];
+}
+
 // Dry run types
 export interface DryRunFile {
 	path: string;
