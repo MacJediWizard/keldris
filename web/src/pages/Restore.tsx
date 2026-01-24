@@ -19,6 +19,7 @@ import {
 import { useSnapshotComments } from '../hooks/useSnapshotComments';
 import { useSnapshotFiles, useSnapshots } from '../hooks/useSnapshots';
 import type {
+	Agent,
 	CloudRestoreProgress,
 	CloudRestoreTarget,
 	CloudRestoreTargetType,
@@ -269,10 +270,16 @@ function SnapshotRow({
 interface RestoreRowProps {
 	restore: RestoreType;
 	agentName?: string;
+	sourceAgentName?: string;
 	onViewDetails: (restore: RestoreType) => void;
 }
 
-function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
+function RestoreRow({
+	restore,
+	agentName,
+	sourceAgentName,
+	onViewDetails,
+}: RestoreRowProps) {
 	const statusColor = getRestoreStatusColor(restore.status);
 
 	return (
@@ -283,18 +290,51 @@ function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
 				</code>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-900">
-				{agentName ?? 'Unknown'}
+				<div className="flex items-center gap-1">
+					{agentName ?? 'Unknown'}
+					{restore.is_cross_agent && (
+						<span
+							className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800"
+							title={`Cross-agent restore from ${sourceAgentName ?? 'unknown'}`}
+						>
+							<svg
+								aria-hidden="true"
+								className="w-3 h-3 mr-0.5"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+								/>
+							</svg>
+							cross
+						</span>
+					)}
+				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
 				{restore.target_path}
 			</td>
 			<td className="px-6 py-4">
-				<span
-					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
-				>
-					<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
-					{restore.status}
-				</span>
+				<div className="flex items-center gap-2">
+					<span
+						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
+					>
+						<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
+						{restore.status}
+					</span>
+					{restore.progress && restore.status === 'running' && (
+						<span className="text-xs text-gray-500">
+							{restore.progress.total_bytes
+								? `${Math.round((restore.progress.bytes_restored / restore.progress.total_bytes) * 100)}%`
+								: `${formatBytes(restore.progress.bytes_restored)}`}
+						</span>
+					)}
+				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(restore.created_at)}
@@ -315,23 +355,46 @@ function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
 interface RestoreDetailsModalProps {
 	restore: RestoreType;
 	agentName?: string;
+	sourceAgentName?: string;
 	onClose: () => void;
 }
 
 function RestoreDetailsModal({
 	restore,
 	agentName,
+	sourceAgentName,
 	onClose,
 }: RestoreDetailsModalProps) {
 	const statusColor = getRestoreStatusColor(restore.status);
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-						Restore Details
-					</h3>
+					<div className="flex items-center gap-2">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+							Restore Details
+						</h3>
+						{restore.is_cross_agent && (
+							<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+								<svg
+									aria-hidden="true"
+									className="w-3 h-3 mr-1"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+									/>
+								</svg>
+								Cross-Agent
+							</span>
+						)}
+					</div>
 					<span
 						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
 					>
@@ -348,13 +411,41 @@ function RestoreDetailsModal({
 						<p className="font-mono text-gray-900">{restore.snapshot_id}</p>
 					</div>
 
-					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-								Agent
-							</p>
-							<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
+					{restore.is_cross_agent ? (
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Source Agent
+								</p>
+								<p className="text-gray-900">{sourceAgentName ?? 'Unknown'}</p>
+							</div>
+							<div>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Target Agent
+								</p>
+								<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
+							</div>
 						</div>
+					) : (
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Agent
+								</p>
+								<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
+							</div>
+							<div>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Created
+								</p>
+								<p className="text-gray-900">
+									{formatDateTime(restore.created_at)}
+								</p>
+							</div>
+						</div>
+					)}
+
+					{restore.is_cross_agent && (
 						<div>
 							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 								Created
@@ -363,7 +454,7 @@ function RestoreDetailsModal({
 								{formatDateTime(restore.created_at)}
 							</p>
 						</div>
-					</div>
+					)}
 
 					<div>
 						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -373,6 +464,39 @@ function RestoreDetailsModal({
 							{restore.target_path}
 						</p>
 					</div>
+
+					{restore.path_mappings && restore.path_mappings.length > 0 && (
+						<div>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Path Mappings
+							</p>
+							<div className="mt-1 space-y-1">
+								{restore.path_mappings.map((mapping) => (
+									<div
+										key={`${mapping.source_path}-${mapping.target_path}`}
+										className="flex items-center gap-2 text-sm font-mono"
+									>
+										<span className="text-gray-600">{mapping.source_path}</span>
+										<svg
+											aria-hidden="true"
+											className="w-4 h-4 text-gray-400"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M13 7l5 5m0 0l-5 5m5-5H6"
+											/>
+										</svg>
+										<span className="text-gray-900">{mapping.target_path}</span>
+									</div>
+								))}
+							</div>
+						</div>
+					)}
 
 					{restore.include_paths && restore.include_paths.length > 0 && (
 						<div>
@@ -386,6 +510,49 @@ function RestoreDetailsModal({
 									</li>
 								))}
 							</ul>
+						</div>
+					)}
+
+					{restore.progress && (
+						<div>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+								Progress
+							</p>
+							<div className="bg-gray-50 rounded-lg p-3 space-y-2">
+								{restore.progress.total_bytes && (
+									<div className="w-full bg-gray-200 rounded-full h-2">
+										<div
+											className="bg-indigo-600 h-2 rounded-full transition-all"
+											style={{
+												width: `${Math.min(100, Math.round((restore.progress.bytes_restored / restore.progress.total_bytes) * 100))}%`,
+											}}
+										/>
+									</div>
+								)}
+								<div className="grid grid-cols-2 gap-2 text-sm">
+									<div>
+										<span className="text-gray-500">Files:</span>{' '}
+										<span className="text-gray-900">
+											{restore.progress.files_restored}
+											{restore.progress.total_files &&
+												` / ${restore.progress.total_files}`}
+										</span>
+									</div>
+									<div>
+										<span className="text-gray-500">Bytes:</span>{' '}
+										<span className="text-gray-900">
+											{formatBytes(restore.progress.bytes_restored)}
+											{restore.progress.total_bytes &&
+												` / ${formatBytes(restore.progress.total_bytes)}`}
+										</span>
+									</div>
+								</div>
+								{restore.progress.current_file && (
+									<div className="text-xs text-gray-500 truncate">
+										Current: {restore.progress.current_file}
+									</div>
+								)}
+							</div>
 						</div>
 					)}
 
@@ -1368,8 +1535,14 @@ interface RestoreModalProps {
 	snapshot: Snapshot;
 	agentName?: string;
 	repoName?: string;
+	agents?: Agent[];
 	onClose: () => void;
-	onSubmit: (targetPath: string, includePaths: string[]) => void;
+	onSubmit: (
+		targetPath: string,
+		includePaths: string[],
+		targetAgentId?: string,
+		pathMappings?: Array<{ source_path: string; target_path: string }>,
+	) => void;
 	onCloudSubmit: (
 		includePaths: string[],
 		cloudTarget: CloudRestoreTarget,
@@ -1383,6 +1556,7 @@ function RestoreModal({
 	snapshot,
 	agentName,
 	repoName,
+	agents,
 	onClose,
 	onSubmit,
 	onCloudSubmit,
@@ -1399,6 +1573,11 @@ function RestoreModal({
 		type: 's3',
 	});
 	const [verifyUpload, setVerifyUpload] = useState(true);
+	const [enableCrossAgent, setEnableCrossAgent] = useState(false);
+	const [targetAgentId, setTargetAgentId] = useState(snapshot.agent_id);
+	const [pathMappings, setPathMappings] = useState<
+		Array<{ id: string; source_path: string; target_path: string }>
+	>([]);
 
 	const { data: filesData } = useSnapshotFiles(snapshot.id);
 	const previewMutation = useRestorePreview();
@@ -1406,6 +1585,8 @@ function RestoreModal({
 		cloudRestoreId ?? '',
 		!!cloudRestoreId && step === 'restoring',
 	);
+
+	const isCrossAgent = enableCrossAgent && targetAgentId !== snapshot.agent_id;
 
 	const togglePath = (path: string) => {
 		const newSelected = new Set(selectedPaths);
@@ -1417,18 +1598,44 @@ function RestoreModal({
 		setSelectedPaths(newSelected);
 	};
 
+	const addPathMapping = () => {
+		setPathMappings([
+			...pathMappings,
+			{ id: crypto.randomUUID(), source_path: '', target_path: '' },
+		]);
+	};
+
+	const updatePathMapping = (
+		id: string,
+		field: 'source_path' | 'target_path',
+		value: string,
+	) => {
+		setPathMappings(
+			pathMappings.map((m) => (m.id === id ? { ...m, [field]: value } : m)),
+		);
+	};
+
+	const removePathMapping = (id: string) => {
+		setPathMappings(pathMappings.filter((m) => m.id !== id));
+	};
+
 	const handlePreview = async (e: React.FormEvent) => {
 		e.preventDefault();
 		const finalTargetPath = useOriginalPath ? '/' : targetPath;
 		const includePaths = Array.from(selectedPaths);
+		const validMappings = pathMappings
+			.filter((m) => m.source_path && m.target_path)
+			.map(({ source_path, target_path }) => ({ source_path, target_path }));
 
 		try {
 			const result = await previewMutation.mutateAsync({
 				snapshot_id: snapshot.id,
-				agent_id: snapshot.agent_id,
+				agent_id: isCrossAgent ? targetAgentId : snapshot.agent_id,
+				source_agent_id: isCrossAgent ? snapshot.agent_id : undefined,
 				repository_id: snapshot.repository_id,
 				target_path: finalTargetPath,
 				include_paths: includePaths.length > 0 ? includePaths : undefined,
+				path_mappings: validMappings.length > 0 ? validMappings : undefined,
 			});
 			setPreview(result);
 			setStep('preview');
@@ -1439,13 +1646,21 @@ function RestoreModal({
 
 	const handleRestore = () => {
 		const includePaths = Array.from(selectedPaths);
+		const validMappings = pathMappings
+			.filter((m) => m.source_path && m.target_path)
+			.map(({ source_path, target_path }) => ({ source_path, target_path }));
 		setStep('restoring');
 
 		if (restoreType === 'cloud') {
 			onCloudSubmit(includePaths, cloudTarget, verifyUpload);
 		} else {
 			const finalTargetPath = useOriginalPath ? '/' : targetPath;
-			onSubmit(finalTargetPath, includePaths);
+			onSubmit(
+				finalTargetPath,
+				includePaths,
+				isCrossAgent ? targetAgentId : undefined,
+				validMappings.length > 0 ? validMappings : undefined,
+			);
 		}
 	};
 
@@ -1564,6 +1779,143 @@ function RestoreModal({
 									))}
 								</ul>
 							</div>
+
+							{/* Cross-Agent Restore Option */}
+							{agents && agents.length > 1 && (
+								<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+									<label className="flex items-center">
+										<input
+											type="checkbox"
+											checked={enableCrossAgent}
+											onChange={(e) => {
+												setEnableCrossAgent(e.target.checked);
+												if (!e.target.checked) {
+													setTargetAgentId(snapshot.agent_id);
+													setPathMappings([]);
+												}
+											}}
+											className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+										/>
+										<span className="ml-2 text-sm font-medium text-gray-900 dark:text-white">
+											Restore to a different agent
+										</span>
+									</label>
+									{enableCrossAgent && (
+										<div className="mt-3 space-y-3">
+											<div>
+												<label
+													htmlFor="target-agent-select"
+													className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+												>
+													Target Agent
+												</label>
+												<select
+													id="target-agent-select"
+													value={targetAgentId}
+													onChange={(e) => setTargetAgentId(e.target.value)}
+													className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+												>
+													{agents.map((agent) => (
+														<option key={agent.id} value={agent.id}>
+															{agent.hostname}
+															{agent.id === snapshot.agent_id
+																? ' (original)'
+																: ''}
+														</option>
+													))}
+												</select>
+											</div>
+
+											{isCrossAgent && (
+												<div>
+													<div className="flex items-center justify-between mb-2">
+														<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+															Path Mappings (optional)
+														</span>
+														<button
+															type="button"
+															onClick={addPathMapping}
+															className="text-sm text-indigo-600 hover:text-indigo-700"
+														>
+															+ Add mapping
+														</button>
+													</div>
+													<p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+														Map source paths to different target paths
+													</p>
+													{pathMappings.map((mapping) => (
+														<div
+															key={mapping.id}
+															className="flex items-center gap-2 mb-2"
+														>
+															<input
+																type="text"
+																value={mapping.source_path}
+																onChange={(e) =>
+																	updatePathMapping(
+																		mapping.id,
+																		'source_path',
+																		e.target.value,
+																	)
+																}
+																placeholder="/source/path"
+																className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded text-sm font-mono"
+															/>
+															<svg
+																aria-hidden="true"
+																className="w-4 h-4 text-gray-400 flex-shrink-0"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	strokeLinecap="round"
+																	strokeLinejoin="round"
+																	strokeWidth={2}
+																	d="M13 7l5 5m0 0l-5 5m5-5H6"
+																/>
+															</svg>
+															<input
+																type="text"
+																value={mapping.target_path}
+																onChange={(e) =>
+																	updatePathMapping(
+																		mapping.id,
+																		'target_path',
+																		e.target.value,
+																	)
+																}
+																placeholder="/target/path"
+																className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded text-sm font-mono"
+															/>
+															<button
+																type="button"
+																onClick={() => removePathMapping(mapping.id)}
+																className="text-red-500 hover:text-red-700 p-1"
+															>
+																<svg
+																	aria-hidden="true"
+																	className="w-4 h-4"
+																	fill="none"
+																	stroke="currentColor"
+																	viewBox="0 0 24 24"
+																>
+																	<path
+																		strokeLinecap="round"
+																		strokeLinejoin="round"
+																		strokeWidth={2}
+																		d="M6 18L18 6M6 6l12 12"
+																	/>
+																</svg>
+															</button>
+														</div>
+													))}
+												</div>
+											)}
+										</div>
+									)}
+								</div>
+							)}
 
 							<div>
 								<p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -2026,16 +2378,27 @@ export function Restore() {
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
 
-	const handleRestore = (targetPath: string, includePaths: string[]) => {
+	const handleRestore = (
+		targetPath: string,
+		includePaths: string[],
+		targetAgentId?: string,
+		pathMappings?: Array<{ source_path: string; target_path: string }>,
+	) => {
 		if (!selectedSnapshot) return;
+
+		const isCrossAgent =
+			targetAgentId && targetAgentId !== selectedSnapshot.agent_id;
 
 		createRestore.mutate(
 			{
 				snapshot_id: selectedSnapshot.id,
-				agent_id: selectedSnapshot.agent_id,
+				agent_id: isCrossAgent ? targetAgentId : selectedSnapshot.agent_id,
+				source_agent_id: isCrossAgent ? selectedSnapshot.agent_id : undefined,
 				repository_id: selectedSnapshot.repository_id,
 				target_path: targetPath,
 				include_paths: includePaths.length > 0 ? includePaths : undefined,
+				path_mappings:
+					pathMappings && pathMappings.length > 0 ? pathMappings : undefined,
 			},
 			{
 				onSuccess: () => {
@@ -2422,6 +2785,11 @@ export function Restore() {
 										key={restore.id}
 										restore={restore}
 										agentName={agentMap.get(restore.agent_id)}
+										sourceAgentName={
+											restore.source_agent_id
+												? agentMap.get(restore.source_agent_id)
+												: undefined
+										}
 										onViewDetails={setSelectedRestore}
 									/>
 								))}
@@ -2459,6 +2827,7 @@ export function Restore() {
 					snapshot={selectedSnapshot}
 					agentName={agentMap.get(selectedSnapshot.agent_id)}
 					repoName={repoMap.get(selectedSnapshot.repository_id)}
+					agents={agents}
 					onClose={() => {
 						setSelectedSnapshot(null);
 						setCloudRestoreId(undefined);
@@ -2474,6 +2843,11 @@ export function Restore() {
 				<RestoreDetailsModal
 					restore={selectedRestore}
 					agentName={agentMap.get(selectedRestore.agent_id)}
+					sourceAgentName={
+						selectedRestore.source_agent_id
+							? agentMap.get(selectedRestore.source_agent_id)
+							: undefined
+					}
 					onClose={() => setSelectedRestore(null)}
 				/>
 			)}

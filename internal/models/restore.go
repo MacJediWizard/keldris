@@ -27,6 +27,21 @@ const (
 	RestoreStatusVerifying RestoreStatus = "verifying"
 )
 
+// PathMapping represents a mapping from source path to target path for cross-agent restores.
+type PathMapping struct {
+	SourcePath string `json:"source_path"`
+	TargetPath string `json:"target_path"`
+}
+
+// RestoreProgress tracks the progress of a restore operation.
+type RestoreProgress struct {
+	FilesRestored int64  `json:"files_restored"`
+	BytesRestored int64  `json:"bytes_restored"`
+	TotalFiles    *int64 `json:"total_files,omitempty"`
+	TotalBytes    *int64 `json:"total_bytes,omitempty"`
+	CurrentFile   string `json:"current_file,omitempty"`
+}
+
 // CloudRestoreTargetType represents the type of cloud storage target.
 type CloudRestoreTargetType string
 
@@ -79,13 +94,16 @@ func (p *CloudRestoreProgress) PercentComplete() float64 {
 // Restore represents a restore job execution record.
 type Restore struct {
 	ID           uuid.UUID     `json:"id"`
-	AgentID      uuid.UUID     `json:"agent_id"`
+	AgentID      uuid.UUID     `json:"agent_id"`                       // Target agent (where restore executes)
+	SourceAgentID *uuid.UUID   `json:"source_agent_id,omitempty"`      // Source agent for cross-agent restores
 	RepositoryID uuid.UUID     `json:"repository_id"`
 	SnapshotID   string        `json:"snapshot_id"`
 	TargetPath   string        `json:"target_path"`
 	IncludePaths []string      `json:"include_paths,omitempty"`
 	ExcludePaths []string      `json:"exclude_paths,omitempty"`
+	PathMappings []PathMapping `json:"path_mappings,omitempty"`        // Path remapping for cross-agent restores
 	Status       RestoreStatus `json:"status"`
+	Progress     *RestoreProgress `json:"progress,omitempty"`          // Real-time progress tracking
 	StartedAt    *time.Time    `json:"started_at,omitempty"`
 	CompletedAt  *time.Time    `json:"completed_at,omitempty"`
 	ErrorMessage string        `json:"error_message,omitempty"`
@@ -189,6 +207,25 @@ func NewCloudRestore(agentID, repositoryID uuid.UUID, snapshotID string, include
 	}
 }
 
+// NewCrossRestore creates a new cross-agent Restore job.
+func NewCrossRestore(sourceAgentID, targetAgentID, repositoryID uuid.UUID, snapshotID, targetPath string, includePaths, excludePaths []string, pathMappings []PathMapping) *Restore {
+	now := time.Now()
+	return &Restore{
+		ID:            uuid.New(),
+		AgentID:       targetAgentID,
+		SourceAgentID: &sourceAgentID,
+		RepositoryID:  repositoryID,
+		SnapshotID:    snapshotID,
+		TargetPath:    targetPath,
+		IncludePaths:  includePaths,
+		ExcludePaths:  excludePaths,
+		PathMappings:  pathMappings,
+		Status:        RestoreStatusPending,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+}
+
 // Start marks the restore as running.
 func (r *Restore) Start() {
 	now := time.Now()
@@ -259,4 +296,38 @@ func (r *Restore) IsComplete() bool {
 	return r.Status == RestoreStatusCompleted ||
 		r.Status == RestoreStatusFailed ||
 		r.Status == RestoreStatusCanceled
+}
+
+// IsCrossAgentRestore returns true if this is a cross-agent restore.
+func (r *Restore) IsCrossAgentRestore() bool {
+	return r.SourceAgentID != nil && *r.SourceAgentID != r.AgentID
+}
+
+// GetSourceAgentID returns the source agent ID (same as AgentID for same-agent restores).
+func (r *Restore) GetSourceAgentID() uuid.UUID {
+	if r.SourceAgentID != nil {
+		return *r.SourceAgentID
+	}
+	return r.AgentID
+}
+
+// UpdateProgress updates the restore progress.
+func (r *Restore) UpdateProgress(filesRestored, bytesRestored int64, currentFile string) {
+	if r.Progress == nil {
+		r.Progress = &RestoreProgress{}
+	}
+	r.Progress.FilesRestored = filesRestored
+	r.Progress.BytesRestored = bytesRestored
+	r.Progress.CurrentFile = currentFile
+	r.UpdatedAt = time.Now()
+}
+
+// SetTotalProgress sets the total files and bytes for progress tracking.
+func (r *Restore) SetTotalProgress(totalFiles, totalBytes int64) {
+	if r.Progress == nil {
+		r.Progress = &RestoreProgress{}
+	}
+	r.Progress.TotalFiles = &totalFiles
+	r.Progress.TotalBytes = &totalBytes
+	r.UpdatedAt = time.Now()
 }
