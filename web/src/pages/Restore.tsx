@@ -515,7 +515,7 @@ function FileBrowser({
 	// Check if a path's parent is selected
 	const isParentSelected = (path: string): boolean => {
 		for (const selectedPath of selectedPaths) {
-			if (path !== selectedPath && path.startsWith(selectedPath + '/')) {
+			if (path !== selectedPath && path.startsWith(`${selectedPath}/`)) {
 				return true;
 			}
 		}
@@ -617,7 +617,7 @@ function RestorePreviewDisplay({ preview }: RestorePreviewDisplayProps) {
 				</h4>
 				<p className="text-sm text-blue-700 dark:text-blue-300">
 					{hasSelectedPaths
-						? `Restoring ${preview.selected_paths!.length} selected item(s) to ${preview.target_path === '/' ? 'original location' : preview.target_path}`
+						? `Restoring ${preview.selected_paths?.length} selected item(s) to ${preview.target_path === '/' ? 'original location' : preview.target_path}`
 						: `Restoring all files to ${preview.target_path === '/' ? 'original location' : preview.target_path}`}
 				</p>
 			</div>
@@ -628,7 +628,7 @@ function RestorePreviewDisplay({ preview }: RestorePreviewDisplayProps) {
 						Selected Paths
 					</p>
 					<ul className="space-y-1">
-						{preview.selected_paths!.map((path) => (
+						{preview.selected_paths?.map((path) => (
 							<li
 								key={path}
 								className="text-sm font-mono text-gray-700 dark:text-gray-300 flex items-center gap-2"
@@ -1008,7 +1008,8 @@ function RestoreModal({
 									Select files to restore (optional)
 								</p>
 								<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">
-									Leave empty to restore all files, or select specific files/folders
+									Leave empty to restore all files, or select specific
+									files/folders
 								</p>
 								{filesData?.files && filesData.files.length > 0 ? (
 									<FileBrowser
@@ -1031,7 +1032,7 @@ function RestoreModal({
 												if (selectedPaths.has(f.path)) return true;
 												// Check if parent is selected
 												for (const path of selectedPaths) {
-													if (f.path.startsWith(path + '/')) return true;
+													if (f.path.startsWith(`${path}/`)) return true;
 												}
 												return false;
 											})
