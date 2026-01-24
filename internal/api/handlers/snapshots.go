@@ -89,7 +89,9 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		restores.GET("", h.ListRestores)
 		restores.POST("", h.CreateRestore)
 		restores.POST("/preview", h.PreviewRestore)
+		restores.POST("/cloud", h.CreateCloudRestore)
 		restores.GET("/:id", h.GetRestore)
+		restores.GET("/:id/progress", h.GetCloudRestoreProgress)
 	}
 }
 
@@ -424,6 +426,47 @@ type CreateRestoreRequest struct {
 	ExcludePaths []string `json:"exclude_paths,omitempty"`
 }
 
+// CloudRestoreTargetRequest represents the cloud storage target for a restore operation.
+type CloudRestoreTargetRequest struct {
+	Type string `json:"type" binding:"required"` // "s3", "b2", or "restic"
+	// S3/B2 configuration
+	Bucket          string `json:"bucket,omitempty"`
+	Prefix          string `json:"prefix,omitempty"`
+	Region          string `json:"region,omitempty"`
+	Endpoint        string `json:"endpoint,omitempty"`
+	AccessKeyID     string `json:"access_key_id,omitempty"`
+	SecretAccessKey string `json:"secret_access_key,omitempty"`
+	UseSSL          bool   `json:"use_ssl,omitempty"`
+	// B2 specific
+	AccountID      string `json:"account_id,omitempty"`
+	ApplicationKey string `json:"application_key,omitempty"`
+	// Restic repository configuration
+	Repository         string `json:"repository,omitempty"`
+	RepositoryPassword string `json:"repository_password,omitempty"`
+}
+
+// CreateCloudRestoreRequest is the request body for creating a cloud restore job.
+type CreateCloudRestoreRequest struct {
+	SnapshotID   string                    `json:"snapshot_id" binding:"required"`
+	AgentID      string                    `json:"agent_id" binding:"required"`
+	RepositoryID string                    `json:"repository_id" binding:"required"`
+	IncludePaths []string                  `json:"include_paths,omitempty"`
+	ExcludePaths []string                  `json:"exclude_paths,omitempty"`
+	CloudTarget  CloudRestoreTargetRequest `json:"cloud_target" binding:"required"`
+	VerifyUpload bool                      `json:"verify_upload,omitempty"`
+}
+
+// CloudRestoreProgressResponse represents the progress of a cloud restore upload operation.
+type CloudRestoreProgressResponse struct {
+	TotalFiles       int64   `json:"total_files"`
+	TotalBytes       int64   `json:"total_bytes"`
+	UploadedFiles    int64   `json:"uploaded_files"`
+	UploadedBytes    int64   `json:"uploaded_bytes"`
+	CurrentFile      string  `json:"current_file,omitempty"`
+	PercentComplete  float64 `json:"percent_complete"`
+	VerifiedChecksum bool    `json:"verified_checksum"`
+}
+
 // RestorePreviewRequest is the request body for previewing a restore operation.
 type RestorePreviewRequest struct {
 	SnapshotID   string   `json:"snapshot_id" binding:"required"`
@@ -471,6 +514,12 @@ type RestoreResponse struct {
 	CompletedAt  string   `json:"completed_at,omitempty"`
 	ErrorMessage string   `json:"error_message,omitempty"`
 	CreatedAt    string   `json:"created_at"`
+	// Cloud restore fields
+	IsCloudRestore      bool                          `json:"is_cloud_restore,omitempty"`
+	CloudTarget         *CloudRestoreTargetRequest    `json:"cloud_target,omitempty"`
+	CloudProgress       *CloudRestoreProgressResponse `json:"cloud_progress,omitempty"`
+	CloudTargetLocation string                        `json:"cloud_target_location,omitempty"`
+	VerifyUpload        bool                          `json:"verify_upload,omitempty"`
 }
 
 func toRestoreResponse(r *models.Restore) RestoreResponse {
@@ -492,6 +541,39 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 	if r.CompletedAt != nil {
 		resp.CompletedAt = r.CompletedAt.Format(time.RFC3339)
 	}
+
+	// Add cloud restore fields
+	if r.IsCloudRestore() {
+		resp.IsCloudRestore = true
+		resp.CloudTargetLocation = r.CloudTargetLocation
+		resp.VerifyUpload = r.VerifyUpload
+
+		if r.CloudTarget != nil {
+			resp.CloudTarget = &CloudRestoreTargetRequest{
+				Type:       string(r.CloudTarget.Type),
+				Bucket:     r.CloudTarget.Bucket,
+				Prefix:     r.CloudTarget.Prefix,
+				Region:     r.CloudTarget.Region,
+				Endpoint:   r.CloudTarget.Endpoint,
+				UseSSL:     r.CloudTarget.UseSSL,
+				Repository: r.CloudTarget.Repository,
+				// Note: Credentials are not included in responses for security
+			}
+		}
+
+		if r.CloudProgress != nil {
+			resp.CloudProgress = &CloudRestoreProgressResponse{
+				TotalFiles:       r.CloudProgress.TotalFiles,
+				TotalBytes:       r.CloudProgress.TotalBytes,
+				UploadedFiles:    r.CloudProgress.UploadedFiles,
+				UploadedBytes:    r.CloudProgress.UploadedBytes,
+				CurrentFile:      r.CloudProgress.CurrentFile,
+				PercentComplete:  r.CloudProgress.PercentComplete(),
+				VerifiedChecksum: r.CloudProgress.VerifiedChecksum,
+			}
+		}
+	}
+
 	return resp
 }
 
@@ -682,6 +764,226 @@ func (h *SnapshotsHandler) PreviewRestore(c *gin.Context) {
 		DiskSpaceNeeded: 0,
 		SelectedPaths:   req.IncludePaths,
 		SelectedSize:    0,
+	})
+}
+
+// CreateCloudRestore creates a new restore job that uploads to cloud storage.
+//
+//	@Summary		Create cloud restore
+//	@Description	Creates a new restore job that restores files from a snapshot and uploads to cloud storage (S3, B2, or another Restic repository)
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		CreateCloudRestoreRequest	true	"Cloud restore details"
+//	@Success		201		{object}	RestoreResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores/cloud [post]
+func (h *SnapshotsHandler) CreateCloudRestore(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	var req CreateCloudRestoreRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	// Validate cloud target type
+	targetType := models.CloudRestoreTargetType(req.CloudTarget.Type)
+	switch targetType {
+	case models.CloudTargetS3:
+		if req.CloudTarget.Bucket == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "bucket is required for S3 target"})
+			return
+		}
+		if req.CloudTarget.AccessKeyID == "" || req.CloudTarget.SecretAccessKey == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "access_key_id and secret_access_key are required for S3 target"})
+			return
+		}
+	case models.CloudTargetB2:
+		if req.CloudTarget.Bucket == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "bucket is required for B2 target"})
+			return
+		}
+		if req.CloudTarget.AccountID == "" || req.CloudTarget.ApplicationKey == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "account_id and application_key are required for B2 target"})
+			return
+		}
+	case models.CloudTargetRestic:
+		if req.CloudTarget.Repository == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "repository is required for Restic target"})
+			return
+		}
+		if req.CloudTarget.RepositoryPassword == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "repository_password is required for Restic target"})
+			return
+		}
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cloud target type: must be 's3', 'b2', or 'restic'"})
+		return
+	}
+
+	// Parse IDs
+	agentID, err := uuid.Parse(req.AgentID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent_id"})
+		return
+	}
+
+	repositoryID, err := uuid.Parse(req.RepositoryID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid repository_id"})
+		return
+	}
+
+	// Verify user access to agent
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	if agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify repository access
+	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repositoryID)
+	if err != nil || repo.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
+		return
+	}
+
+	// Verify snapshot exists
+	_, err = h.store.GetBackupBySnapshotID(c.Request.Context(), req.SnapshotID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	// Create cloud restore target
+	cloudTarget := &models.CloudRestoreTarget{
+		Type:               targetType,
+		Bucket:             req.CloudTarget.Bucket,
+		Prefix:             req.CloudTarget.Prefix,
+		Region:             req.CloudTarget.Region,
+		Endpoint:           req.CloudTarget.Endpoint,
+		AccessKeyID:        req.CloudTarget.AccessKeyID,
+		SecretAccessKey:    req.CloudTarget.SecretAccessKey,
+		UseSSL:             req.CloudTarget.UseSSL,
+		AccountID:          req.CloudTarget.AccountID,
+		ApplicationKey:     req.CloudTarget.ApplicationKey,
+		Repository:         req.CloudTarget.Repository,
+		RepositoryPassword: req.CloudTarget.RepositoryPassword,
+	}
+
+	// Create cloud restore job
+	restore := models.NewCloudRestore(agentID, repositoryID, req.SnapshotID, req.IncludePaths, req.ExcludePaths, cloudTarget, req.VerifyUpload)
+
+	if err := h.store.CreateRestore(c.Request.Context(), restore); err != nil {
+		h.logger.Error().Err(err).Msg("failed to create cloud restore job")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create cloud restore job"})
+		return
+	}
+
+	h.logger.Info().
+		Str("restore_id", restore.ID.String()).
+		Str("snapshot_id", req.SnapshotID).
+		Str("agent_id", req.AgentID).
+		Str("cloud_target_type", string(targetType)).
+		Bool("verify_upload", req.VerifyUpload).
+		Msg("cloud restore job created")
+
+	c.JSON(http.StatusCreated, toRestoreResponse(restore))
+}
+
+// GetCloudRestoreProgress returns the progress of a cloud restore upload operation.
+//
+//	@Summary		Get cloud restore progress
+//	@Description	Returns the current progress of a cloud restore upload operation
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Restore ID"
+//	@Success		200	{object}	CloudRestoreProgressResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores/{id}/progress [get]
+func (h *SnapshotsHandler) GetCloudRestoreProgress(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid restore ID"})
+		return
+	}
+
+	restore, err := h.store.GetRestoreByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
+		return
+	}
+
+	// Verify access through agent
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), restore.AgentID)
+	if err != nil || agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
+		return
+	}
+
+	// Check if this is a cloud restore
+	if !restore.IsCloudRestore() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "this is not a cloud restore operation"})
+		return
+	}
+
+	// Return progress
+	if restore.CloudProgress == nil {
+		c.JSON(http.StatusOK, CloudRestoreProgressResponse{
+			TotalFiles:       0,
+			TotalBytes:       0,
+			UploadedFiles:    0,
+			UploadedBytes:    0,
+			PercentComplete:  0,
+			VerifiedChecksum: false,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, CloudRestoreProgressResponse{
+		TotalFiles:       restore.CloudProgress.TotalFiles,
+		TotalBytes:       restore.CloudProgress.TotalBytes,
+		UploadedFiles:    restore.CloudProgress.UploadedFiles,
+		UploadedBytes:    restore.CloudProgress.UploadedBytes,
+		CurrentFile:      restore.CloudProgress.CurrentFile,
+		PercentComplete:  restore.CloudProgress.PercentComplete(),
+		VerifiedChecksum: restore.CloudProgress.VerifiedChecksum,
 	})
 }
 
