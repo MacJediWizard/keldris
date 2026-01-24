@@ -39,6 +39,8 @@ import type {
 	BackupsResponse,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
+	BulkCloneResponse,
+	BulkCloneScheduleRequest,
 	CategoriesResponse,
 	CategoryInfo,
 	ChangelogEntry,
@@ -46,6 +48,7 @@ import type {
 	ClassificationLevelsResponse,
 	ClassificationRulesResponse,
 	ClassificationSummary,
+	CloneScheduleRequest,
 	ComplianceReport,
 	ConfigTemplate,
 	ConfigTemplatesResponse,
@@ -650,6 +653,20 @@ export const schedulesApi = {
 		);
 		return response.replication_status ?? [];
 	},
+
+	clone: async (id: string, data: CloneScheduleRequest): Promise<Schedule> =>
+		fetchApi<Schedule>(`/schedules/${id}/clone`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	bulkClone: async (
+		data: BulkCloneScheduleRequest,
+	): Promise<BulkCloneResponse> =>
+		fetchApi<BulkCloneResponse>('/schedules/bulk-clone', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Policies API
