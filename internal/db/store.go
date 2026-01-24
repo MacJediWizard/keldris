@@ -2105,13 +2105,14 @@ func (db *DB) GetLatestBackupByScheduleID(ctx context.Context, scheduleID uuid.U
 
 // Restore methods
 
-// GetRestoresByAgentID returns all restores for an agent.
+// GetRestoresByAgentID returns all restores for an agent (as either source or target).
 func (db *DB) GetRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Restore, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
-		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
+		SELECT id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
+		       exclude_paths, path_mappings, status, files_restored, bytes_restored, total_files,
+		       total_bytes, current_file, started_at, completed_at, error_message, created_at, updated_at
 		FROM restores
-		WHERE agent_id = $1
+		WHERE agent_id = $1 OR source_agent_id = $1
 		ORDER BY created_at DESC
 	`, agentID)
 	if err != nil {
@@ -2126,16 +2127,21 @@ func (db *DB) GetRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*m
 func (db *DB) GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore, error) {
 	var r models.Restore
 	var statusStr string
-	var includePathsBytes, excludePathsBytes []byte
+	var includePathsBytes, excludePathsBytes, pathMappingsBytes []byte
+	var filesRestored, bytesRestored int64
+	var totalFiles, totalBytes *int64
+	var currentFile *string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
-		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
+		SELECT id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
+		       exclude_paths, path_mappings, status, files_restored, bytes_restored, total_files,
+		       total_bytes, current_file, started_at, completed_at, error_message, created_at, updated_at
 		FROM restores
 		WHERE id = $1
 	`, id).Scan(
-		&r.ID, &r.AgentID, &r.RepositoryID, &r.SnapshotID, &r.TargetPath,
-		&includePathsBytes, &excludePathsBytes, &statusStr, &r.StartedAt,
-		&r.CompletedAt, &r.ErrorMessage, &r.CreatedAt, &r.UpdatedAt,
+		&r.ID, &r.AgentID, &r.SourceAgentID, &r.RepositoryID, &r.SnapshotID, &r.TargetPath,
+		&includePathsBytes, &excludePathsBytes, &pathMappingsBytes, &statusStr,
+		&filesRestored, &bytesRestored, &totalFiles, &totalBytes, &currentFile,
+		&r.StartedAt, &r.CompletedAt, &r.ErrorMessage, &r.CreatedAt, &r.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get restore: %w", err)
@@ -2146,6 +2152,21 @@ func (db *DB) GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore
 	}
 	if err := parseStringSlice(excludePathsBytes, &r.ExcludePaths); err != nil {
 		return nil, fmt.Errorf("parse exclude paths: %w", err)
+	}
+	if err := parsePathMappings(pathMappingsBytes, &r.PathMappings); err != nil {
+		return nil, fmt.Errorf("parse path mappings: %w", err)
+	}
+	// Build progress if there's any progress data
+	if filesRestored > 0 || bytesRestored > 0 || totalFiles != nil || totalBytes != nil {
+		r.Progress = &models.RestoreProgress{
+			FilesRestored: filesRestored,
+			BytesRestored: bytesRestored,
+			TotalFiles:    totalFiles,
+			TotalBytes:    totalBytes,
+		}
+		if currentFile != nil {
+			r.Progress.CurrentFile = *currentFile
+		}
 	}
 	return &r, nil
 }
@@ -2162,12 +2183,17 @@ func (db *DB) CreateRestore(ctx context.Context, restore *models.Restore) error 
 		return fmt.Errorf("marshal exclude paths: %w", err)
 	}
 
+	pathMappingsBytes, err := toPathMappingsJSONBytes(restore.PathMappings)
+	if err != nil {
+		return fmt.Errorf("marshal path mappings: %w", err)
+	}
+
 	_, err = db.Pool.Exec(ctx, `
-		INSERT INTO restores (id, agent_id, repository_id, snapshot_id, target_path, include_paths,
-		                      exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-	`, restore.ID, restore.AgentID, restore.RepositoryID, restore.SnapshotID,
-		restore.TargetPath, includePathsBytes, excludePathsBytes,
+		INSERT INTO restores (id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
+		                      exclude_paths, path_mappings, status, started_at, completed_at, error_message, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+	`, restore.ID, restore.AgentID, restore.SourceAgentID, restore.RepositoryID, restore.SnapshotID,
+		restore.TargetPath, includePathsBytes, excludePathsBytes, pathMappingsBytes,
 		string(restore.Status), restore.StartedAt, restore.CompletedAt,
 		restore.ErrorMessage, restore.CreatedAt, restore.UpdatedAt)
 	if err != nil {
@@ -2179,12 +2205,29 @@ func (db *DB) CreateRestore(ctx context.Context, restore *models.Restore) error 
 // UpdateRestore updates an existing restore record.
 func (db *DB) UpdateRestore(ctx context.Context, restore *models.Restore) error {
 	restore.UpdatedAt = time.Now()
+
+	var filesRestored, bytesRestored int64
+	var totalFiles, totalBytes *int64
+	var currentFile *string
+	if restore.Progress != nil {
+		filesRestored = restore.Progress.FilesRestored
+		bytesRestored = restore.Progress.BytesRestored
+		totalFiles = restore.Progress.TotalFiles
+		totalBytes = restore.Progress.TotalBytes
+		if restore.Progress.CurrentFile != "" {
+			currentFile = &restore.Progress.CurrentFile
+		}
+	}
+
 	_, err := db.Pool.Exec(ctx, `
 		UPDATE restores
-		SET status = $2, started_at = $3, completed_at = $4, error_message = $5, updated_at = $6
+		SET status = $2, started_at = $3, completed_at = $4, error_message = $5,
+		    files_restored = $6, bytes_restored = $7, total_files = $8, total_bytes = $9,
+		    current_file = $10, updated_at = $11
 		WHERE id = $1
 	`, restore.ID, string(restore.Status), restore.StartedAt, restore.CompletedAt,
-		restore.ErrorMessage, restore.UpdatedAt)
+		restore.ErrorMessage, filesRestored, bytesRestored, totalFiles, totalBytes,
+		currentFile, restore.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update restore: %w", err)
 	}
@@ -2644,10 +2687,14 @@ func scanRestores(rows interface {
 	for r.Next() {
 		var restore models.Restore
 		var statusStr string
-		var includePathsBytes, excludePathsBytes []byte
+		var includePathsBytes, excludePathsBytes, pathMappingsBytes []byte
+		var filesRestored, bytesRestored int64
+		var totalFiles, totalBytes *int64
+		var currentFile *string
 		if err := r.Scan(
-			&restore.ID, &restore.AgentID, &restore.RepositoryID, &restore.SnapshotID,
-			&restore.TargetPath, &includePathsBytes, &excludePathsBytes, &statusStr,
+			&restore.ID, &restore.AgentID, &restore.SourceAgentID, &restore.RepositoryID, &restore.SnapshotID,
+			&restore.TargetPath, &includePathsBytes, &excludePathsBytes, &pathMappingsBytes, &statusStr,
+			&filesRestored, &bytesRestored, &totalFiles, &totalBytes, &currentFile,
 			&restore.StartedAt, &restore.CompletedAt, &restore.ErrorMessage,
 			&restore.CreatedAt, &restore.UpdatedAt,
 		); err != nil {
@@ -2659,6 +2706,21 @@ func scanRestores(rows interface {
 		}
 		if err := parseStringSlice(excludePathsBytes, &restore.ExcludePaths); err != nil {
 			return nil, fmt.Errorf("parse exclude paths: %w", err)
+		}
+		if err := parsePathMappings(pathMappingsBytes, &restore.PathMappings); err != nil {
+			return nil, fmt.Errorf("parse path mappings: %w", err)
+		}
+		// Build progress if there's any progress data
+		if filesRestored > 0 || bytesRestored > 0 || totalFiles != nil || totalBytes != nil {
+			restore.Progress = &models.RestoreProgress{
+				FilesRestored: filesRestored,
+				BytesRestored: bytesRestored,
+				TotalFiles:    totalFiles,
+				TotalBytes:    totalBytes,
+			}
+			if currentFile != nil {
+				restore.Progress.CurrentFile = *currentFile
+			}
 		}
 		restores = append(restores, &restore)
 	}
@@ -2678,6 +2740,22 @@ func toJSONBytes(slice []string) ([]byte, error) {
 
 // parseStringSlice parses JSON bytes into a string slice.
 func parseStringSlice(data []byte, dest *[]string) error {
+	if len(data) == 0 {
+		return nil
+	}
+	return json.Unmarshal(data, dest)
+}
+
+// toPathMappingsJSONBytes converts path mappings to JSON bytes for database storage.
+func toPathMappingsJSONBytes(mappings []models.PathMapping) ([]byte, error) {
+	if len(mappings) == 0 {
+		return nil, nil
+	}
+	return json.Marshal(mappings)
+}
+
+// parsePathMappings parses JSON bytes into path mappings.
+func parsePathMappings(data []byte, dest *[]models.PathMapping) error {
 	if len(data) == 0 {
 		return nil
 	}
