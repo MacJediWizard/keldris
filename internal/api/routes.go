@@ -29,6 +29,8 @@ type Config struct {
 	Version   string
 	Commit    string
 	BuildDate string
+	// ServerURL is the base URL of the server for generating registration links.
+	ServerURL string
 	// VerificationTrigger for manually triggering verifications (optional).
 	VerificationTrigger handlers.VerificationTrigger
 	// ReportScheduler for report generation and sending (optional).
@@ -142,6 +144,10 @@ func NewRouter(
 
 	agentGroupsHandler := handlers.NewAgentGroupsHandler(database, logger)
 	agentGroupsHandler.RegisterRoutes(apiV1)
+
+	// Agent CSV import for fleet deployment
+	agentImportHandler := handlers.NewAgentImportHandler(database, cfg.ServerURL, logger)
+	agentImportHandler.RegisterRoutes(apiV1)
 
 	reposHandler := handlers.NewRepositoriesHandler(database, keyManager, logger)
 	reposHandler.RegisterRoutes(apiV1)
