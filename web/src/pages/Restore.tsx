@@ -789,7 +789,9 @@ function CloudRestoreProgressDisplay({
 	return (
 		<div className="space-y-4">
 			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-				<h4 className="font-medium text-blue-900 mb-2">Cloud Restore Progress</h4>
+				<h4 className="font-medium text-blue-900 mb-2">
+					Cloud Restore Progress
+				</h4>
 				<p className="text-sm text-blue-700">{statusLabel}</p>
 			</div>
 
@@ -979,25 +981,37 @@ function CloudRestoreTargetForm({
 				<>
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label
+								htmlFor="cloud-bucket"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
 								Bucket
 							</label>
 							<input
 								type="text"
+								id="cloud-bucket"
 								value={target.bucket || ''}
-								onChange={(e) => onChange({ ...target, bucket: e.target.value })}
+								onChange={(e) =>
+									onChange({ ...target, bucket: e.target.value })
+								}
 								placeholder="my-backup-bucket"
 								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							/>
 						</div>
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label
+								htmlFor="cloud-prefix"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
 								Prefix (optional)
 							</label>
 							<input
 								type="text"
+								id="cloud-prefix"
 								value={target.prefix || ''}
-								onChange={(e) => onChange({ ...target, prefix: e.target.value })}
+								onChange={(e) =>
+									onChange({ ...target, prefix: e.target.value })
+								}
 								placeholder="restores/2024/"
 								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							/>
@@ -1006,24 +1020,34 @@ function CloudRestoreTargetForm({
 
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label
+								htmlFor="cloud-region"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
 								Region
 							</label>
 							<input
 								type="text"
+								id="cloud-region"
 								value={target.region || ''}
-								onChange={(e) => onChange({ ...target, region: e.target.value })}
+								onChange={(e) =>
+									onChange({ ...target, region: e.target.value })
+								}
 								placeholder={target.type === 'b2' ? 'us-west-002' : 'us-east-1'}
 								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							/>
 						</div>
 						{target.type === 's3' && (
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="cloud-endpoint"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Endpoint (optional)
 								</label>
 								<input
 									type="text"
+									id="cloud-endpoint"
 									value={target.endpoint || ''}
 									onChange={(e) =>
 										onChange({ ...target, endpoint: e.target.value })
@@ -1038,11 +1062,15 @@ function CloudRestoreTargetForm({
 					{target.type === 's3' ? (
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="cloud-access-key"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Access Key ID
 								</label>
 								<input
 									type="text"
+									id="cloud-access-key"
 									value={target.access_key_id || ''}
 									onChange={(e) =>
 										onChange({ ...target, access_key_id: e.target.value })
@@ -1052,11 +1080,15 @@ function CloudRestoreTargetForm({
 								/>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="cloud-secret-key"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Secret Access Key
 								</label>
 								<input
 									type="password"
+									id="cloud-secret-key"
 									value={target.secret_access_key || ''}
 									onChange={(e) =>
 										onChange({ ...target, secret_access_key: e.target.value })
@@ -1069,11 +1101,15 @@ function CloudRestoreTargetForm({
 					) : (
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="cloud-account-id"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Account ID
 								</label>
 								<input
 									type="text"
+									id="cloud-account-id"
 									value={target.account_id || ''}
 									onChange={(e) =>
 										onChange({ ...target, account_id: e.target.value })
@@ -1083,11 +1119,15 @@ function CloudRestoreTargetForm({
 								/>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="cloud-app-key"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Application Key
 								</label>
 								<input
 									type="password"
+									id="cloud-app-key"
 									value={target.application_key || ''}
 									onChange={(e) =>
 										onChange({ ...target, application_key: e.target.value })
@@ -1104,11 +1144,15 @@ function CloudRestoreTargetForm({
 			{target.type === 'restic' && (
 				<>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label
+							htmlFor="cloud-repository"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
 							Target Repository
 						</label>
 						<input
 							type="text"
+							id="cloud-repository"
 							value={target.repository || ''}
 							onChange={(e) =>
 								onChange({ ...target, repository: e.target.value })
@@ -1121,11 +1165,15 @@ function CloudRestoreTargetForm({
 						</p>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label
+							htmlFor="cloud-repo-password"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
 							Repository Password
 						</label>
 						<input
 							type="password"
+							id="cloud-repo-password"
 							value={target.repository_password || ''}
 							onChange={(e) =>
 								onChange({ ...target, repository_password: e.target.value })
