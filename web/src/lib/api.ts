@@ -8,8 +8,14 @@ import type {
 	AgentGroup,
 	AgentGroupsResponse,
 	AgentHealthHistoryResponse,
+	AgentImportJobResult,
+	AgentImportPreviewResponse,
+	AgentImportResponse,
+	AgentImportTemplateResponse,
 	AgentLogFilter,
 	AgentLogsResponse,
+	AgentRegistrationScriptRequest,
+	AgentRegistrationScriptResponse,
 	AgentSchedulesResponse,
 	AgentStatsResponse,
 	AgentWithGroups,
@@ -604,6 +610,116 @@ export const repositoryImportApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+};
+
+// Agent Import API
+export const agentImportApi = {
+	preview: async (
+		file: File,
+		options: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+		} = {},
+	): Promise<AgentImportPreviewResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options.hasHeader !== undefined)
+			formData.append('has_header', String(options.hasHeader));
+		if (options.hostnameCol !== undefined)
+			formData.append('hostname_col', String(options.hostnameCol));
+		if (options.groupCol !== undefined)
+			formData.append('group_col', String(options.groupCol));
+		if (options.tagsCol !== undefined)
+			formData.append('tags_col', String(options.tagsCol));
+		if (options.configCol !== undefined)
+			formData.append('config_col', String(options.configCol));
+
+		const response = await fetch(`${API_BASE}/agents/import/preview`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportPreviewResponse>(response);
+	},
+
+	import: async (
+		file: File,
+		options: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+			createMissingGroups?: boolean;
+			tokenExpiryHours?: number;
+		} = {},
+	): Promise<AgentImportResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options.hasHeader !== undefined)
+			formData.append('has_header', String(options.hasHeader));
+		if (options.hostnameCol !== undefined)
+			formData.append('hostname_col', String(options.hostnameCol));
+		if (options.groupCol !== undefined)
+			formData.append('group_col', String(options.groupCol));
+		if (options.tagsCol !== undefined)
+			formData.append('tags_col', String(options.tagsCol));
+		if (options.configCol !== undefined)
+			formData.append('config_col', String(options.configCol));
+		if (options.createMissingGroups !== undefined)
+			formData.append(
+				'create_missing_groups',
+				String(options.createMissingGroups),
+			);
+		if (options.tokenExpiryHours !== undefined)
+			formData.append('token_expiry_hours', String(options.tokenExpiryHours));
+
+		const response = await fetch(`${API_BASE}/agents/import`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportResponse>(response);
+	},
+
+	getTemplate: async (format?: 'json' | 'csv'): Promise<AgentImportTemplateResponse> => {
+		const endpoint = format ? `/agents/import/template?format=${format}` : '/agents/import/template';
+		return fetchApi<AgentImportTemplateResponse>(endpoint);
+	},
+
+	downloadTemplate: async (): Promise<Blob> => {
+		const response = await fetch(`${API_BASE}/agents/import/template?format=csv`, {
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to download template');
+		}
+		return response.blob();
+	},
+
+	generateScript: async (
+		data: AgentRegistrationScriptRequest,
+	): Promise<AgentRegistrationScriptResponse> =>
+		fetchApi<AgentRegistrationScriptResponse>('/agents/import/script', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	exportTokens: async (results: AgentImportJobResult[]): Promise<Blob> => {
+		const response = await fetch(
+			`${API_BASE}/agents/import/tokens/export?results=${encodeURIComponent(JSON.stringify(results))}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export tokens');
+		}
+		return response.blob();
+	},
 };
 
 // Schedules API
