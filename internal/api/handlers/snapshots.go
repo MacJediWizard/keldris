@@ -453,6 +453,8 @@ type RestorePreviewResponse struct {
 	ConflictCount   int                          `json:"conflict_count"`
 	Files           []RestorePreviewFileResponse `json:"files"`
 	DiskSpaceNeeded int64                        `json:"disk_space_needed"`
+	SelectedPaths   []string                     `json:"selected_paths,omitempty"`
+	SelectedSize    int64                        `json:"selected_size,omitempty"`
 }
 
 // RestoreResponse represents a restore job in API responses.
@@ -662,6 +664,7 @@ func (h *SnapshotsHandler) PreviewRestore(c *gin.Context) {
 		Str("snapshot_id", req.SnapshotID).
 		Str("agent_id", req.AgentID).
 		Str("target_path", req.TargetPath).
+		Strs("include_paths", req.IncludePaths).
 		Msg("restore preview requested")
 
 	// Note: In a full implementation, this would communicate with the agent
@@ -677,6 +680,8 @@ func (h *SnapshotsHandler) PreviewRestore(c *gin.Context) {
 		ConflictCount:   0,
 		Files:           []RestorePreviewFileResponse{},
 		DiskSpaceNeeded: 0,
+		SelectedPaths:   req.IncludePaths,
+		SelectedSize:    0,
 	})
 }
 
