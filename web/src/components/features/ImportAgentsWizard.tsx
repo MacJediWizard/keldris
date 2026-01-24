@@ -45,10 +45,10 @@ export function ImportAgentsWizard({
 
 	// Preview and results state
 	const [preview, setPreview] = useState<AgentImportPreviewResponse | null>(
-		null
+		null,
 	);
 	const [importResult, setImportResult] = useState<AgentImportResponse | null>(
-		null
+		null,
 	);
 	const [selectedScript, setSelectedScript] = useState<{
 		hostname: string;
@@ -146,7 +146,7 @@ export function ImportAgentsWizard({
 			await downloadTemplate.mutateAsync();
 		} catch (err) {
 			setError(
-				err instanceof Error ? err.message : 'Failed to download template'
+				err instanceof Error ? err.message : 'Failed to download template',
 			);
 		}
 	};
@@ -170,7 +170,7 @@ export function ImportAgentsWizard({
 			setScriptContent(result.script);
 		} catch (err) {
 			setError(
-				err instanceof Error ? err.message : 'Failed to generate script'
+				err instanceof Error ? err.message : 'Failed to generate script',
 			);
 		}
 	};
@@ -211,10 +211,10 @@ export function ImportAgentsWizard({
 	const getNewGroupNames = (): string[] => {
 		if (!preview) return [];
 		const existingNames = new Set(
-			existingGroups?.map((g) => g.name.toLowerCase()) || []
+			existingGroups?.map((g) => g.name.toLowerCase()) || [],
 		);
 		return preview.detected_groups.filter(
-			(g) => !existingNames.has(g.toLowerCase())
+			(g) => !existingNames.has(g.toLowerCase()),
 		);
 	};
 
@@ -252,7 +252,9 @@ export function ImportAgentsWizard({
 				onDragOver={handleDragOver}
 				onDrop={handleDrop}
 				className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-					file ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-indigo-300'
+					file
+						? 'border-green-300 bg-green-50'
+						: 'border-gray-300 hover:border-indigo-300'
 				}`}
 			>
 				{file ? (
@@ -562,45 +564,45 @@ export function ImportAgentsWizard({
 						Preview (first 10 entries)
 					</h4>
 					<div className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-48 overflow-y-auto">
-						{preview.entries.slice(0, 10).map((entry: AgentImportPreviewEntry) => (
-							<div
-								key={entry.row_number}
-								className={`p-3 text-sm ${
-									entry.is_valid ? '' : 'bg-red-50'
-								}`}
-							>
-								<div className="flex items-center justify-between">
-									<span className="font-medium text-gray-900">
-										{entry.hostname || '(empty)'}
-									</span>
-									<span className="text-xs text-gray-500">
-										Row {entry.row_number}
-									</span>
+						{preview.entries
+							.slice(0, 10)
+							.map((entry: AgentImportPreviewEntry) => (
+								<div
+									key={entry.row_number}
+									className={`p-3 text-sm ${entry.is_valid ? '' : 'bg-red-50'}`}
+								>
+									<div className="flex items-center justify-between">
+										<span className="font-medium text-gray-900">
+											{entry.hostname || '(empty)'}
+										</span>
+										<span className="text-xs text-gray-500">
+											Row {entry.row_number}
+										</span>
+									</div>
+									{entry.group_name && (
+										<span className="text-xs text-gray-500">
+											Group: {entry.group_name}
+										</span>
+									)}
+									{entry.tags && entry.tags.length > 0 && (
+										<div className="flex gap-1 mt-1">
+											{entry.tags.map((tag) => (
+												<span
+													key={tag}
+													className="px-1 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
+												>
+													{tag}
+												</span>
+											))}
+										</div>
+									)}
+									{!entry.is_valid && entry.errors && (
+										<div className="mt-1 text-xs text-red-600">
+											{entry.errors.join('; ')}
+										</div>
+									)}
 								</div>
-								{entry.group_name && (
-									<span className="text-xs text-gray-500">
-										Group: {entry.group_name}
-									</span>
-								)}
-								{entry.tags && entry.tags.length > 0 && (
-									<div className="flex gap-1 mt-1">
-										{entry.tags.map((tag) => (
-											<span
-												key={tag}
-												className="px-1 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
-											>
-												{tag}
-											</span>
-										))}
-									</div>
-								)}
-								{!entry.is_valid && entry.errors && (
-									<div className="mt-1 text-xs text-red-600">
-										{entry.errors.join('; ')}
-									</div>
-								)}
-							</div>
-						))}
+							))}
 					</div>
 				</div>
 
@@ -650,10 +652,10 @@ export function ImportAgentsWizard({
 		if (!importResult) return null;
 
 		const successfulResults = importResult.results.filter(
-			(r: AgentImportJobResult) => r.success
+			(r: AgentImportJobResult) => r.success,
 		);
 		const failedResults = importResult.results.filter(
-			(r: AgentImportJobResult) => !r.success
+			(r: AgentImportJobResult) => !r.success,
 		);
 
 		return (
@@ -714,23 +716,24 @@ export function ImportAgentsWizard({
 					</div>
 				</div>
 
-				{importResult.groups_created && importResult.groups_created.length > 0 && (
-					<div>
-						<h4 className="text-sm font-medium text-gray-700 mb-2">
-							Groups Created
-						</h4>
-						<div className="flex flex-wrap gap-2">
-							{importResult.groups_created.map((group) => (
-								<span
-									key={group}
-									className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm"
-								>
-									{group}
-								</span>
-							))}
+				{importResult.groups_created &&
+					importResult.groups_created.length > 0 && (
+						<div>
+							<h4 className="text-sm font-medium text-gray-700 mb-2">
+								Groups Created
+							</h4>
+							<div className="flex flex-wrap gap-2">
+								{importResult.groups_created.map((group) => (
+									<span
+										key={group}
+										className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm"
+									>
+										{group}
+									</span>
+								))}
+							</div>
 						</div>
-					</div>
-				)}
+					)}
 
 				{successfulResults.length > 0 && (
 					<div>
@@ -773,7 +776,7 @@ export function ImportAgentsWizard({
 											onClick={() =>
 												handleGenerateScript(
 													result.hostname,
-													result.registration_code || ''
+													result.registration_code || '',
 												)
 											}
 											className="text-xs text-indigo-600 hover:text-indigo-700"
@@ -889,7 +892,13 @@ export function ImportAgentsWizard({
 		return false;
 	};
 
-	const stepOrder: WizardStep[] = ['upload', 'mapping', 'preview', 'importing', 'results'];
+	const stepOrder: WizardStep[] = [
+		'upload',
+		'mapping',
+		'preview',
+		'importing',
+		'results',
+	];
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
