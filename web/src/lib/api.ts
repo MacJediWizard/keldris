@@ -49,6 +49,7 @@ import type {
 	ClassificationRulesResponse,
 	ClassificationSummary,
 	CloneScheduleRequest,
+	CloudRestoreProgress,
 	ComplianceReport,
 	ConfigTemplate,
 	ConfigTemplatesResponse,
@@ -64,6 +65,7 @@ import type {
 	CreateAlertRuleRequest,
 	CreateAnnouncementRequest,
 	CreateBackupScriptRequest,
+	CreateCloudRestoreRequest,
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
@@ -910,6 +912,15 @@ export const restoresApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+
+	createCloud: async (data: CreateCloudRestoreRequest): Promise<Restore> =>
+		fetchApi<Restore>('/restores/cloud', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getProgress: async (id: string): Promise<CloudRestoreProgress> =>
+		fetchApi<CloudRestoreProgress>(`/restores/${id}/progress`),
 };
 
 // File History API

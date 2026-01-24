@@ -988,39 +988,109 @@ export type RestoreStatus =
 	| 'running'
 	| 'completed'
 	| 'failed'
-	| 'canceled';
+	| 'canceled'
+	| 'uploading'
+	| 'verifying';
+
+// Cloud restore target types
+export type CloudRestoreTargetType = 's3' | 'b2' | 'restic';
+
+export interface CloudRestoreTarget {
+	type: CloudRestoreTargetType;
+	// S3/B2 configuration
+	bucket?: string;
+	prefix?: string;
+	region?: string;
+	endpoint?: string;
+	access_key_id?: string;
+	secret_access_key?: string;
+	use_ssl?: boolean;
+	// B2 specific
+	account_id?: string;
+	application_key?: string;
+	// Restic repository configuration
+	repository?: string;
+	repository_password?: string;
+}
+
+export interface CloudRestoreProgress {
+	total_files: number;
+	total_bytes: number;
+	uploaded_files: number;
+	uploaded_bytes: number;
+	current_file?: string;
+	percent_complete: number;
+	verified_checksum: boolean;
+}
+
+export interface PathMapping {
+	source_path: string;
+	target_path: string;
+}
+
+export interface RestoreProgress {
+	files_restored: number;
+	bytes_restored: number;
+	total_files?: number;
+	total_bytes?: number;
+	current_file?: string;
+}
 
 export interface Restore {
 	id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	snapshot_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
 	status: RestoreStatus;
+	progress?: RestoreProgress; // Real-time progress tracking
+	is_cross_agent: boolean;
 	started_at?: string;
 	completed_at?: string;
 	error_message?: string;
 	created_at: string;
+	// Cloud restore fields
+	is_cloud_restore?: boolean;
+	cloud_target?: CloudRestoreTarget;
+	cloud_progress?: CloudRestoreProgress;
+	cloud_target_location?: string;
+	verify_upload?: boolean;
 }
 
 export interface CreateRestoreRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
+}
+
+export interface CreateCloudRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+	cloud_target: CloudRestoreTarget;
+	verify_upload?: boolean;
 }
 
 export interface RestorePreviewRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[];
 }
 
 export interface RestorePreviewFile {
@@ -1040,6 +1110,8 @@ export interface RestorePreview {
 	conflict_count: number;
 	files: RestorePreviewFile[];
 	disk_space_needed: number;
+	selected_paths?: string[];
+	selected_size?: number;
 }
 
 export interface RestoresResponse {
