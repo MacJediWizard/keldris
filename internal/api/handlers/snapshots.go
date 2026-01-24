@@ -416,14 +416,22 @@ func (h *SnapshotsHandler) ListFiles(c *gin.Context) {
 	})
 }
 
+// PathMappingRequest represents a path mapping in API requests.
+type PathMappingRequest struct {
+	SourcePath string `json:"source_path" binding:"required"`
+	TargetPath string `json:"target_path" binding:"required"`
+}
+
 // CreateRestoreRequest is the request body for creating a restore job.
 type CreateRestoreRequest struct {
-	SnapshotID   string   `json:"snapshot_id" binding:"required"`
-	AgentID      string   `json:"agent_id" binding:"required"`
-	RepositoryID string   `json:"repository_id" binding:"required"`
-	TargetPath   string   `json:"target_path" binding:"required"`
-	IncludePaths []string `json:"include_paths,omitempty"`
-	ExcludePaths []string `json:"exclude_paths,omitempty"`
+	SnapshotID    string               `json:"snapshot_id" binding:"required"`
+	AgentID       string               `json:"agent_id" binding:"required"`               // Target agent (where restore executes)
+	SourceAgentID string               `json:"source_agent_id,omitempty"`                 // Source agent for cross-agent restores
+	RepositoryID  string               `json:"repository_id" binding:"required"`
+	TargetPath    string               `json:"target_path" binding:"required"`
+	IncludePaths  []string             `json:"include_paths,omitempty"`
+	ExcludePaths  []string             `json:"exclude_paths,omitempty"`
+	PathMappings  []PathMappingRequest `json:"path_mappings,omitempty"`                   // Path remapping for cross-agent restores
 }
 
 // CloudRestoreTargetRequest represents the cloud storage target for a restore operation.
@@ -469,12 +477,14 @@ type CloudRestoreProgressResponse struct {
 
 // RestorePreviewRequest is the request body for previewing a restore operation.
 type RestorePreviewRequest struct {
-	SnapshotID   string   `json:"snapshot_id" binding:"required"`
-	AgentID      string   `json:"agent_id" binding:"required"`
-	RepositoryID string   `json:"repository_id" binding:"required"`
-	TargetPath   string   `json:"target_path" binding:"required"`
-	IncludePaths []string `json:"include_paths,omitempty"`
-	ExcludePaths []string `json:"exclude_paths,omitempty"`
+	SnapshotID    string               `json:"snapshot_id" binding:"required"`
+	AgentID       string               `json:"agent_id" binding:"required"`               // Target agent
+	SourceAgentID string               `json:"source_agent_id,omitempty"`                 // Source agent for cross-agent restores
+	RepositoryID  string               `json:"repository_id" binding:"required"`
+	TargetPath    string               `json:"target_path" binding:"required"`
+	IncludePaths  []string             `json:"include_paths,omitempty"`
+	ExcludePaths  []string             `json:"exclude_paths,omitempty"`
+	PathMappings  []PathMappingRequest `json:"path_mappings,omitempty"`
 }
 
 // RestorePreviewFileResponse represents a file in the restore preview.
@@ -500,20 +510,39 @@ type RestorePreviewResponse struct {
 	SelectedSize    int64                        `json:"selected_size,omitempty"`
 }
 
+// PathMappingResponse represents a path mapping in API responses.
+type PathMappingResponse struct {
+	SourcePath string `json:"source_path"`
+	TargetPath string `json:"target_path"`
+}
+
+// RestoreProgressResponse represents restore progress in API responses.
+type RestoreProgressResponse struct {
+	FilesRestored int64  `json:"files_restored"`
+	BytesRestored int64  `json:"bytes_restored"`
+	TotalFiles    *int64 `json:"total_files,omitempty"`
+	TotalBytes    *int64 `json:"total_bytes,omitempty"`
+	CurrentFile   string `json:"current_file,omitempty"`
+}
+
 // RestoreResponse represents a restore job in API responses.
 type RestoreResponse struct {
-	ID           string   `json:"id"`
-	AgentID      string   `json:"agent_id"`
-	RepositoryID string   `json:"repository_id"`
-	SnapshotID   string   `json:"snapshot_id"`
-	TargetPath   string   `json:"target_path"`
-	IncludePaths []string `json:"include_paths,omitempty"`
-	ExcludePaths []string `json:"exclude_paths,omitempty"`
-	Status       string   `json:"status"`
-	StartedAt    string   `json:"started_at,omitempty"`
-	CompletedAt  string   `json:"completed_at,omitempty"`
-	ErrorMessage string   `json:"error_message,omitempty"`
-	CreatedAt    string   `json:"created_at"`
+	ID             string                   `json:"id"`
+	AgentID        string                   `json:"agent_id"`                      // Target agent
+	SourceAgentID  string                   `json:"source_agent_id,omitempty"`     // Source agent for cross-agent restores
+	RepositoryID   string                   `json:"repository_id"`
+	SnapshotID     string                   `json:"snapshot_id"`
+	TargetPath     string                   `json:"target_path"`
+	IncludePaths   []string                 `json:"include_paths,omitempty"`
+	ExcludePaths   []string                 `json:"exclude_paths,omitempty"`
+	PathMappings   []PathMappingResponse    `json:"path_mappings,omitempty"`
+	Status         string                   `json:"status"`
+	Progress       *RestoreProgressResponse `json:"progress,omitempty"`
+	IsCrossAgent   bool                     `json:"is_cross_agent"`
+	StartedAt      string                   `json:"started_at,omitempty"`
+	CompletedAt    string                   `json:"completed_at,omitempty"`
+	ErrorMessage   string                   `json:"error_message,omitempty"`
+	CreatedAt      string                   `json:"created_at"`
 	// Cloud restore fields
 	IsCloudRestore      bool                          `json:"is_cloud_restore,omitempty"`
 	CloudTarget         *CloudRestoreTargetRequest    `json:"cloud_target,omitempty"`
@@ -532,14 +561,33 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 		IncludePaths: r.IncludePaths,
 		ExcludePaths: r.ExcludePaths,
 		Status:       string(r.Status),
+		IsCrossAgent: r.IsCrossAgentRestore(),
 		ErrorMessage: r.ErrorMessage,
 		CreatedAt:    r.CreatedAt.Format(time.RFC3339),
+	}
+	if r.SourceAgentID != nil {
+		resp.SourceAgentID = r.SourceAgentID.String()
 	}
 	if r.StartedAt != nil {
 		resp.StartedAt = r.StartedAt.Format(time.RFC3339)
 	}
 	if r.CompletedAt != nil {
 		resp.CompletedAt = r.CompletedAt.Format(time.RFC3339)
+	}
+	if r.Progress != nil {
+		resp.Progress = &RestoreProgressResponse{
+			FilesRestored: r.Progress.FilesRestored,
+			BytesRestored: r.Progress.BytesRestored,
+			TotalFiles:    r.Progress.TotalFiles,
+			TotalBytes:    r.Progress.TotalBytes,
+			CurrentFile:   r.Progress.CurrentFile,
+		}
+	}
+	for _, pm := range r.PathMappings {
+		resp.PathMappings = append(resp.PathMappings, PathMappingResponse{
+			SourcePath: pm.SourcePath,
+			TargetPath: pm.TargetPath,
+		})
 	}
 
 	// Add cloud restore fields
@@ -580,7 +628,7 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 // CreateRestore creates a new restore job.
 //
 //	@Summary		Create restore
-//	@Description	Creates a new restore job to restore files from a snapshot
+//	@Description	Creates a new restore job to restore files from a snapshot. Supports cross-agent restores by specifying source_agent_id.
 //	@Tags			Restores
 //	@Accept			json
 //	@Produce		json
@@ -604,8 +652,8 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		return
 	}
 
-	// Parse IDs
-	agentID, err := uuid.Parse(req.AgentID)
+	// Parse target agent ID (where restore will execute)
+	targetAgentID, err := uuid.Parse(req.AgentID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent_id"})
 		return
@@ -617,7 +665,18 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		return
 	}
 
-	// Verify user access to agent
+	// Parse source agent ID if provided (for cross-agent restores)
+	var sourceAgentID uuid.UUID
+	isCrossAgent := req.SourceAgentID != ""
+	if isCrossAgent {
+		sourceAgentID, err = uuid.Parse(req.SourceAgentID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid source_agent_id"})
+			return
+		}
+	}
+
+	// Verify user access
 	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
@@ -625,15 +684,28 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		return
 	}
 
-	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
+	// Verify access to target agent
+	targetAgent, err := h.store.GetAgentByID(c.Request.Context(), targetAgentID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "target agent not found"})
+		return
+	}
+	if targetAgent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "target agent not found"})
 		return
 	}
 
-	if agent.OrgID != dbUser.OrgID {
-		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
-		return
+	// For cross-agent restores, verify access to source agent
+	if isCrossAgent {
+		sourceAgent, err := h.store.GetAgentByID(c.Request.Context(), sourceAgentID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "source agent not found"})
+			return
+		}
+		if sourceAgent.OrgID != dbUser.OrgID {
+			c.JSON(http.StatusNotFound, gin.H{"error": "source agent not found"})
+			return
+		}
 	}
 
 	// Verify repository access
@@ -650,8 +722,22 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		return
 	}
 
+	// Convert path mappings
+	var pathMappings []models.PathMapping
+	for _, pm := range req.PathMappings {
+		pathMappings = append(pathMappings, models.PathMapping{
+			SourcePath: pm.SourcePath,
+			TargetPath: pm.TargetPath,
+		})
+	}
+
 	// Create restore job
-	restore := models.NewRestore(agentID, repositoryID, req.SnapshotID, req.TargetPath, req.IncludePaths, req.ExcludePaths)
+	var restore *models.Restore
+	if isCrossAgent {
+		restore = models.NewCrossRestore(sourceAgentID, targetAgentID, repositoryID, req.SnapshotID, req.TargetPath, req.IncludePaths, req.ExcludePaths, pathMappings)
+	} else {
+		restore = models.NewRestore(targetAgentID, repositoryID, req.SnapshotID, req.TargetPath, req.IncludePaths, req.ExcludePaths)
+	}
 
 	if err := h.store.CreateRestore(c.Request.Context(), restore); err != nil {
 		h.logger.Error().Err(err).Msg("failed to create restore job")
@@ -659,12 +745,16 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		return
 	}
 
-	h.logger.Info().
+	logEvent := h.logger.Info().
 		Str("restore_id", restore.ID.String()).
 		Str("snapshot_id", req.SnapshotID).
-		Str("agent_id", req.AgentID).
+		Str("target_agent_id", req.AgentID).
 		Str("target_path", req.TargetPath).
-		Msg("restore job created")
+		Bool("is_cross_agent", isCrossAgent)
+	if isCrossAgent {
+		logEvent = logEvent.Str("source_agent_id", req.SourceAgentID)
+	}
+	logEvent.Msg("restore job created")
 
 	c.JSON(http.StatusCreated, toRestoreResponse(restore))
 }
