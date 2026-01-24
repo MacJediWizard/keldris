@@ -978,7 +978,7 @@ func (h *SchedulesHandler) BulkClone(c *gin.Context) {
 		}
 
 		// Generate name
-		name := source.Name
+		var name string
 		if req.NamePrefix != "" {
 			name = req.NamePrefix + " - " + agent.Hostname
 		} else {
