@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import { ExportImportModal } from '../components/features/ExportImportModal';
+import { ImportAgentsWizard } from '../components/features/ImportAgentsWizard';
 import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
 import {
 	BulkOperationProgress,
@@ -621,6 +622,8 @@ export function Agents() {
 	const [showExportModal, setShowExportModal] = useState(false);
 	const [selectedAgentForExport, setSelectedAgentForExport] =
 		useState<Agent | null>(null);
+	const [showBulkImportWizard, setShowBulkImportWizard] = useState(false);
+	const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
 
 	const { data: agents, isLoading, isError } = useAgents();
 	const { data: pendingRegistrations, isLoading: isPendingLoading } =
@@ -829,6 +832,28 @@ export function Agents() {
 				<div className="flex items-center gap-3">
 					<button
 						type="button"
+						onClick={() => setShowBulkImportWizard(true)}
+						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+						title="Import agents from CSV file"
+					>
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+							/>
+						</svg>
+						Bulk Import
+					</button>
+					<button
+						type="button"
 						onClick={() => {
 							setSelectedAgentForExport(null);
 							setShowExportModal(true);
@@ -849,7 +874,7 @@ export function Agents() {
 								d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
 							/>
 						</svg>
-						Import
+						Import Config
 					</button>
 					<button
 						type="button"
@@ -1229,6 +1254,59 @@ export function Agents() {
 				type="agent"
 				item={selectedAgentForExport ?? undefined}
 			/>
+
+			<ImportAgentsWizard
+				isOpen={showBulkImportWizard}
+				onClose={() => setShowBulkImportWizard(false)}
+				onSuccess={(importedCount, failedCount) => {
+					setImportSuccessMessage(
+						`Successfully imported ${importedCount} agent${importedCount !== 1 ? 's' : ''}${failedCount > 0 ? ` (${failedCount} failed)` : ''}`
+					);
+					setTimeout(() => setImportSuccessMessage(null), 5000);
+				}}
+			/>
+
+			{importSuccessMessage && (
+				<div className="fixed bottom-4 right-4 bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg z-50">
+					<div className="flex items-center gap-3">
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5 text-green-500"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
+						</svg>
+						<span className="text-sm text-green-800">{importSuccessMessage}</span>
+						<button
+							type="button"
+							onClick={() => setImportSuccessMessage(null)}
+							className="text-green-600 hover:text-green-800"
+						>
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M6 18L18 6M6 6l12 12"
+								/>
+							</svg>
+						</button>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
