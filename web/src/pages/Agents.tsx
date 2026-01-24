@@ -623,7 +623,9 @@ export function Agents() {
 	const [selectedAgentForExport, setSelectedAgentForExport] =
 		useState<Agent | null>(null);
 	const [showBulkImportWizard, setShowBulkImportWizard] = useState(false);
-	const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
+	const [importSuccessMessage, setImportSuccessMessage] = useState<
+		string | null
+	>(null);
 
 	const { data: agents, isLoading, isError } = useAgents();
 	const { data: pendingRegistrations, isLoading: isPendingLoading } =
@@ -1260,7 +1262,7 @@ export function Agents() {
 				onClose={() => setShowBulkImportWizard(false)}
 				onSuccess={(importedCount, failedCount) => {
 					setImportSuccessMessage(
-						`Successfully imported ${importedCount} agent${importedCount !== 1 ? 's' : ''}${failedCount > 0 ? ` (${failedCount} failed)` : ''}`
+						`Successfully imported ${importedCount} agent${importedCount !== 1 ? 's' : ''}${failedCount > 0 ? ` (${failedCount} failed)` : ''}`,
 					);
 					setTimeout(() => setImportSuccessMessage(null), 5000);
 				}}
@@ -1283,7 +1285,9 @@ export function Agents() {
 								d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
 							/>
 						</svg>
-						<span className="text-sm text-green-800">{importSuccessMessage}</span>
+						<span className="text-sm text-green-800">
+							{importSuccessMessage}
+						</span>
 						<button
 							type="button"
 							onClick={() => setImportSuccessMessage(null)}

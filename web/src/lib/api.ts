@@ -685,15 +685,22 @@ export const agentImportApi = {
 		return handleResponse<AgentImportResponse>(response);
 	},
 
-	getTemplate: async (format?: 'json' | 'csv'): Promise<AgentImportTemplateResponse> => {
-		const endpoint = format ? `/agents/import/template?format=${format}` : '/agents/import/template';
+	getTemplate: async (
+		format?: 'json' | 'csv',
+	): Promise<AgentImportTemplateResponse> => {
+		const endpoint = format
+			? `/agents/import/template?format=${format}`
+			: '/agents/import/template';
 		return fetchApi<AgentImportTemplateResponse>(endpoint);
 	},
 
 	downloadTemplate: async (): Promise<Blob> => {
-		const response = await fetch(`${API_BASE}/agents/import/template?format=csv`, {
-			credentials: 'include',
-		});
+		const response = await fetch(
+			`${API_BASE}/agents/import/template?format=csv`,
+			{
+				credentials: 'include',
+			},
+		);
 		if (!response.ok) {
 			throw new ApiError(response.status, 'Failed to download template');
 		}
