@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ImportRepositoryWizard } from '../components/features/ImportRepositoryWizard';
+import { useMe } from '../hooks/useAuth';
+import { useOrganizations } from '../hooks/useOrganizations';
 import {
 	useCloneRepository,
 	useCreateRepository,
@@ -9,8 +11,6 @@ import {
 	useTestConnection,
 	useTestRepository,
 } from '../hooks/useRepositories';
-import { useMe } from '../hooks/useAuth';
-import { useOrganizations } from '../hooks/useOrganizations';
 import {
 	useTriggerVerification,
 	useVerificationStatus,
@@ -1172,7 +1172,6 @@ function CloneRepositoryModal({
 					...(dropboxAppKey ? { app_key: dropboxAppKey } : {}),
 					...(dropboxAppSecret ? { app_secret: dropboxAppSecret } : {}),
 				};
-			case 'local':
 			default:
 				return {};
 		}
@@ -1325,7 +1324,6 @@ function CloneRepositoryModal({
 					</>
 				);
 
-			case 'local':
 			default:
 				return (
 					<p className="text-sm text-gray-500 dark:text-gray-400">
@@ -1342,8 +1340,9 @@ function CloneRepositoryModal({
 					Clone Repository
 				</h3>
 				<p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-					Create a copy of <span className="font-medium">{repository.name}</span>{' '}
-					with new credentials.
+					Create a copy of{' '}
+					<span className="font-medium">{repository.name}</span> with new
+					credentials.
 				</p>
 				<form onSubmit={handleSubmit}>
 					<div className="space-y-4">
@@ -1367,9 +1366,7 @@ function CloneRepositoryModal({
 								<select
 									id="clone-target-org"
 									value={targetOrgId ?? ''}
-									onChange={(e) =>
-										setTargetOrgId(e.target.value || undefined)
-									}
+									onChange={(e) => setTargetOrgId(e.target.value || undefined)}
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								>
 									<option value="">Current organization</option>
