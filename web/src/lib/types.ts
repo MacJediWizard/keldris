@@ -970,7 +970,40 @@ export type RestoreStatus =
 	| 'running'
 	| 'completed'
 	| 'failed'
-	| 'canceled';
+	| 'canceled'
+	| 'uploading'
+	| 'verifying';
+
+// Cloud restore target types
+export type CloudRestoreTargetType = 's3' | 'b2' | 'restic';
+
+export interface CloudRestoreTarget {
+	type: CloudRestoreTargetType;
+	// S3/B2 configuration
+	bucket?: string;
+	prefix?: string;
+	region?: string;
+	endpoint?: string;
+	access_key_id?: string;
+	secret_access_key?: string;
+	use_ssl?: boolean;
+	// B2 specific
+	account_id?: string;
+	application_key?: string;
+	// Restic repository configuration
+	repository?: string;
+	repository_password?: string;
+}
+
+export interface CloudRestoreProgress {
+	total_files: number;
+	total_bytes: number;
+	uploaded_files: number;
+	uploaded_bytes: number;
+	current_file?: string;
+	percent_complete: number;
+	verified_checksum: boolean;
+}
 
 export interface Restore {
 	id: string;
@@ -985,6 +1018,12 @@ export interface Restore {
 	completed_at?: string;
 	error_message?: string;
 	created_at: string;
+	// Cloud restore fields
+	is_cloud_restore?: boolean;
+	cloud_target?: CloudRestoreTarget;
+	cloud_progress?: CloudRestoreProgress;
+	cloud_target_location?: string;
+	verify_upload?: boolean;
 }
 
 export interface CreateRestoreRequest {
@@ -994,6 +1033,16 @@ export interface CreateRestoreRequest {
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+}
+
+export interface CreateCloudRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+	cloud_target: CloudRestoreTarget;
+	verify_upload?: boolean;
 }
 
 export interface RestorePreviewRequest {
