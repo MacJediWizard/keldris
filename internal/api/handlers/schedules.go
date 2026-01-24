@@ -51,6 +51,8 @@ func (h *SchedulesHandler) RegisterRoutes(r *gin.RouterGroup) {
 		schedules.POST("/:id/run", h.Run)
 		schedules.POST("/:id/dry-run", h.DryRun)
 		schedules.GET("/:id/replication", h.GetReplicationStatus)
+		schedules.POST("/:id/clone", h.Clone)
+		schedules.POST("/bulk-clone", h.BulkClone)
 	}
 }
 
@@ -94,6 +96,26 @@ type UpdateScheduleRequest struct {
 	MaxFileSizeMB      *int                        `json:"max_file_size_mb,omitempty"` // Max file size in MB (0 = disabled)
 	OnMountUnavailable *string                     `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
 	Enabled            *bool                       `json:"enabled,omitempty"`
+}
+
+// CloneScheduleRequest is the request body for cloning a schedule.
+type CloneScheduleRequest struct {
+	Name              string      `json:"name,omitempty"`               // Optional new name (default: "Copy of X")
+	TargetAgentID     *uuid.UUID  `json:"target_agent_id,omitempty"`    // Optional target agent (default: same agent)
+	TargetRepoIDs     []uuid.UUID `json:"target_repo_ids,omitempty"`    // Optional target repositories (default: same repos)
+}
+
+// BulkCloneScheduleRequest is the request body for cloning a schedule to multiple agents.
+type BulkCloneScheduleRequest struct {
+	ScheduleID    uuid.UUID   `json:"schedule_id" binding:"required"`
+	TargetAgentIDs []uuid.UUID `json:"target_agent_ids" binding:"required,min=1"`
+	NamePrefix     string      `json:"name_prefix,omitempty"` // Optional prefix for cloned schedule names
+}
+
+// BulkCloneResponse is the response for bulk clone operations.
+type BulkCloneResponse struct {
+	Schedules []*models.Schedule `json:"schedules"`
+	Errors    []string           `json:"errors,omitempty"`
 }
 
 // List returns all schedules for agents in the authenticated user's organization.
@@ -758,4 +780,255 @@ func (h *SchedulesHandler) GetReplicationStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"replication_status": statuses})
+}
+
+// Clone creates a copy of an existing schedule.
+//
+//	@Summary		Clone schedule
+//	@Description	Creates a copy of an existing schedule, optionally targeting a different agent or repository
+//	@Tags			Schedules
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string					true	"Schedule ID to clone"
+//	@Param			request	body		CloneScheduleRequest	true	"Clone options"
+//	@Success		201		{object}	models.Schedule
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/schedules/{id}/clone [post]
+func (h *SchedulesHandler) Clone(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
+		return
+	}
+
+	var req CloneScheduleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	// Get the source schedule
+	source, err := h.store.GetScheduleByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
+		return
+	}
+
+	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, source); err != nil {
+		return
+	}
+
+	// Determine target agent
+	targetAgentID := source.AgentID
+	if req.TargetAgentID != nil {
+		// Verify target agent belongs to user's org
+		agent, err := h.store.GetAgentByID(c.Request.Context(), *req.TargetAgentID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "target agent not found"})
+			return
+		}
+		if agent.OrgID != user.CurrentOrgID {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "target agent not found"})
+			return
+		}
+		targetAgentID = *req.TargetAgentID
+	}
+
+	// Determine name
+	name := req.Name
+	if name == "" {
+		name = "Copy of " + source.Name
+	}
+
+	// Create new schedule with copied settings
+	cloned := models.NewSchedule(targetAgentID, name, source.CronExpression, source.Paths)
+	cloned.Excludes = source.Excludes
+	cloned.RetentionPolicy = source.RetentionPolicy
+	cloned.BandwidthLimitKB = source.BandwidthLimitKB
+	cloned.BackupWindow = source.BackupWindow
+	cloned.ExcludedHours = source.ExcludedHours
+	cloned.CompressionLevel = source.CompressionLevel
+	cloned.MaxFileSizeMB = source.MaxFileSizeMB
+	cloned.OnMountUnavailable = source.OnMountUnavailable
+	cloned.ClassificationLevel = source.ClassificationLevel
+	cloned.ClassificationDataTypes = source.ClassificationDataTypes
+	cloned.Enabled = source.Enabled
+
+	// Handle repositories
+	if len(req.TargetRepoIDs) > 0 {
+		// Verify all target repositories belong to user's org
+		var scheduleRepos []models.ScheduleRepository
+		for i, repoID := range req.TargetRepoIDs {
+			repo, err := h.store.GetRepositoryByID(c.Request.Context(), repoID)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "repository not found: " + repoID.String()})
+				return
+			}
+			if repo.OrgID != user.CurrentOrgID {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "repository not found: " + repoID.String()})
+				return
+			}
+			scheduleRepos = append(scheduleRepos, models.ScheduleRepository{
+				RepositoryID: repoID,
+				Priority:     i,
+				Enabled:      true,
+			})
+		}
+		cloned.Repositories = scheduleRepos
+	} else {
+		// Copy repositories from source
+		var scheduleRepos []models.ScheduleRepository
+		for _, repo := range source.Repositories {
+			scheduleRepos = append(scheduleRepos, models.ScheduleRepository{
+				RepositoryID: repo.RepositoryID,
+				Priority:     repo.Priority,
+				Enabled:      repo.Enabled,
+			})
+		}
+		cloned.Repositories = scheduleRepos
+	}
+
+	if err := h.store.CreateSchedule(c.Request.Context(), cloned); err != nil {
+		h.logger.Error().Err(err).Str("source_id", id.String()).Msg("failed to clone schedule")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to clone schedule"})
+		return
+	}
+
+	h.logger.Info().
+		Str("source_id", id.String()).
+		Str("cloned_id", cloned.ID.String()).
+		Str("name", name).
+		Str("target_agent_id", targetAgentID.String()).
+		Msg("schedule cloned")
+
+	c.JSON(http.StatusCreated, cloned)
+}
+
+// BulkClone clones a schedule to multiple target agents.
+//
+//	@Summary		Bulk clone schedule
+//	@Description	Creates copies of a schedule for multiple target agents
+//	@Tags			Schedules
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		BulkCloneScheduleRequest	true	"Bulk clone options"
+//	@Success		201		{object}	BulkCloneResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/schedules/bulk-clone [post]
+func (h *SchedulesHandler) BulkClone(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	var req BulkCloneScheduleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	// Get the source schedule
+	source, err := h.store.GetScheduleByID(c.Request.Context(), req.ScheduleID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
+		return
+	}
+
+	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, source); err != nil {
+		return
+	}
+
+	var clonedSchedules []*models.Schedule
+	var errors []string
+
+	for _, targetAgentID := range req.TargetAgentIDs {
+		// Verify target agent belongs to user's org
+		agent, err := h.store.GetAgentByID(c.Request.Context(), targetAgentID)
+		if err != nil {
+			errors = append(errors, "agent not found: "+targetAgentID.String())
+			continue
+		}
+		if agent.OrgID != user.CurrentOrgID {
+			errors = append(errors, "agent not found: "+targetAgentID.String())
+			continue
+		}
+
+		// Generate name
+		name := source.Name
+		if req.NamePrefix != "" {
+			name = req.NamePrefix + " - " + agent.Hostname
+		} else {
+			name = source.Name + " (" + agent.Hostname + ")"
+		}
+
+		// Create new schedule with copied settings
+		cloned := models.NewSchedule(targetAgentID, name, source.CronExpression, source.Paths)
+		cloned.Excludes = source.Excludes
+		cloned.RetentionPolicy = source.RetentionPolicy
+		cloned.BandwidthLimitKB = source.BandwidthLimitKB
+		cloned.BackupWindow = source.BackupWindow
+		cloned.ExcludedHours = source.ExcludedHours
+		cloned.CompressionLevel = source.CompressionLevel
+		cloned.MaxFileSizeMB = source.MaxFileSizeMB
+		cloned.OnMountUnavailable = source.OnMountUnavailable
+		cloned.ClassificationLevel = source.ClassificationLevel
+		cloned.ClassificationDataTypes = source.ClassificationDataTypes
+		cloned.Enabled = source.Enabled
+
+		// Copy repositories from source
+		var scheduleRepos []models.ScheduleRepository
+		for _, repo := range source.Repositories {
+			scheduleRepos = append(scheduleRepos, models.ScheduleRepository{
+				RepositoryID: repo.RepositoryID,
+				Priority:     repo.Priority,
+				Enabled:      repo.Enabled,
+			})
+		}
+		cloned.Repositories = scheduleRepos
+
+		if err := h.store.CreateSchedule(c.Request.Context(), cloned); err != nil {
+			h.logger.Error().Err(err).
+				Str("source_id", req.ScheduleID.String()).
+				Str("target_agent_id", targetAgentID.String()).
+				Msg("failed to clone schedule to agent")
+			errors = append(errors, "failed to clone to agent "+agent.Hostname+": "+err.Error())
+			continue
+		}
+
+		clonedSchedules = append(clonedSchedules, cloned)
+		h.logger.Info().
+			Str("source_id", req.ScheduleID.String()).
+			Str("cloned_id", cloned.ID.String()).
+			Str("target_agent_id", targetAgentID.String()).
+			Msg("schedule cloned to agent")
+	}
+
+	c.JSON(http.StatusCreated, BulkCloneResponse{
+		Schedules: clonedSchedules,
+		Errors:    errors,
+	})
 }
