@@ -1020,16 +1020,16 @@ export interface RestoreProgress {
 
 export interface Restore {
 	id: string;
-	agent_id: string;                    // Target agent (where restore executes)
-	source_agent_id?: string;            // Source agent for cross-agent restores
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	snapshot_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
-	path_mappings?: PathMapping[];       // Path remapping for cross-agent restores
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
 	status: RestoreStatus;
-	progress?: RestoreProgress;          // Real-time progress tracking
+	progress?: RestoreProgress; // Real-time progress tracking
 	is_cross_agent: boolean;
 	started_at?: string;
 	completed_at?: string;
@@ -1045,13 +1045,13 @@ export interface Restore {
 
 export interface CreateRestoreRequest {
 	snapshot_id: string;
-	agent_id: string;                    // Target agent (where restore executes)
-	source_agent_id?: string;            // Source agent for cross-agent restores
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
-	path_mappings?: PathMapping[];       // Path remapping for cross-agent restores
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
 }
 
 export interface CreateCloudRestoreRequest {
@@ -1066,8 +1066,8 @@ export interface CreateCloudRestoreRequest {
 
 export interface RestorePreviewRequest {
 	snapshot_id: string;
-	agent_id: string;                    // Target agent
-	source_agent_id?: string;            // Source agent for cross-agent restores
+	agent_id: string; // Target agent
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];

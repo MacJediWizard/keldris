@@ -274,7 +274,12 @@ interface RestoreRowProps {
 	onViewDetails: (restore: RestoreType) => void;
 }
 
-function RestoreRow({ restore, agentName, sourceAgentName, onViewDetails }: RestoreRowProps) {
+function RestoreRow({
+	restore,
+	agentName,
+	sourceAgentName,
+	onViewDetails,
+}: RestoreRowProps) {
 	const statusColor = getRestoreStatusColor(restore.status);
 
 	return (
@@ -292,8 +297,19 @@ function RestoreRow({ restore, agentName, sourceAgentName, onViewDetails }: Rest
 							className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800"
 							title={`Cross-agent restore from ${sourceAgentName ?? 'unknown'}`}
 						>
-							<svg aria-hidden="true" className="w-3 h-3 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+							<svg
+								aria-hidden="true"
+								className="w-3 h-3 mr-0.5"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+								/>
 							</svg>
 							cross
 						</span>
@@ -361,8 +377,19 @@ function RestoreDetailsModal({
 						</h3>
 						{restore.is_cross_agent && (
 							<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-								<svg aria-hidden="true" className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+								<svg
+									aria-hidden="true"
+									className="w-3 h-3 mr-1"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+									/>
 								</svg>
 								Cross-Agent
 							</span>
@@ -444,11 +471,25 @@ function RestoreDetailsModal({
 								Path Mappings
 							</p>
 							<div className="mt-1 space-y-1">
-								{restore.path_mappings.map((mapping, idx) => (
-									<div key={idx} className="flex items-center gap-2 text-sm font-mono">
+								{restore.path_mappings.map((mapping) => (
+									<div
+										key={`${mapping.source_path}-${mapping.target_path}`}
+										className="flex items-center gap-2 text-sm font-mono"
+									>
 										<span className="text-gray-600">{mapping.source_path}</span>
-										<svg aria-hidden="true" className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+										<svg
+											aria-hidden="true"
+											className="w-4 h-4 text-gray-400"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M13 7l5 5m0 0l-5 5m5-5H6"
+											/>
 										</svg>
 										<span className="text-gray-900">{mapping.target_path}</span>
 									</div>
@@ -493,14 +534,16 @@ function RestoreDetailsModal({
 										<span className="text-gray-500">Files:</span>{' '}
 										<span className="text-gray-900">
 											{restore.progress.files_restored}
-											{restore.progress.total_files && ` / ${restore.progress.total_files}`}
+											{restore.progress.total_files &&
+												` / ${restore.progress.total_files}`}
 										</span>
 									</div>
 									<div>
 										<span className="text-gray-500">Bytes:</span>{' '}
 										<span className="text-gray-900">
 											{formatBytes(restore.progress.bytes_restored)}
-											{restore.progress.total_bytes && ` / ${formatBytes(restore.progress.total_bytes)}`}
+											{restore.progress.total_bytes &&
+												` / ${formatBytes(restore.progress.total_bytes)}`}
 										</span>
 									</div>
 								</div>
@@ -1494,7 +1537,12 @@ interface RestoreModalProps {
 	repoName?: string;
 	agents?: Agent[];
 	onClose: () => void;
-	onSubmit: (targetPath: string, includePaths: string[], targetAgentId?: string, pathMappings?: Array<{source_path: string; target_path: string}>) => void;
+	onSubmit: (
+		targetPath: string,
+		includePaths: string[],
+		targetAgentId?: string,
+		pathMappings?: Array<{ source_path: string; target_path: string }>,
+	) => void;
 	onCloudSubmit: (
 		includePaths: string[],
 		cloudTarget: CloudRestoreTarget,
@@ -1527,7 +1575,9 @@ function RestoreModal({
 	const [verifyUpload, setVerifyUpload] = useState(true);
 	const [enableCrossAgent, setEnableCrossAgent] = useState(false);
 	const [targetAgentId, setTargetAgentId] = useState(snapshot.agent_id);
-	const [pathMappings, setPathMappings] = useState<Array<{source_path: string; target_path: string}>>([]);
+	const [pathMappings, setPathMappings] = useState<
+		Array<{ id: string; source_path: string; target_path: string }>
+	>([]);
 
 	const { data: filesData } = useSnapshotFiles(snapshot.id);
 	const previewMutation = useRestorePreview();
@@ -1549,24 +1599,33 @@ function RestoreModal({
 	};
 
 	const addPathMapping = () => {
-		setPathMappings([...pathMappings, { source_path: '', target_path: '' }]);
+		setPathMappings([
+			...pathMappings,
+			{ id: crypto.randomUUID(), source_path: '', target_path: '' },
+		]);
 	};
 
-	const updatePathMapping = (index: number, field: 'source_path' | 'target_path', value: string) => {
-		const newMappings = [...pathMappings];
-		newMappings[index][field] = value;
-		setPathMappings(newMappings);
+	const updatePathMapping = (
+		id: string,
+		field: 'source_path' | 'target_path',
+		value: string,
+	) => {
+		setPathMappings(
+			pathMappings.map((m) => (m.id === id ? { ...m, [field]: value } : m)),
+		);
 	};
 
-	const removePathMapping = (index: number) => {
-		setPathMappings(pathMappings.filter((_, i) => i !== index));
+	const removePathMapping = (id: string) => {
+		setPathMappings(pathMappings.filter((m) => m.id !== id));
 	};
 
 	const handlePreview = async (e: React.FormEvent) => {
 		e.preventDefault();
 		const finalTargetPath = useOriginalPath ? '/' : targetPath;
 		const includePaths = Array.from(selectedPaths);
-		const validMappings = pathMappings.filter(m => m.source_path && m.target_path);
+		const validMappings = pathMappings
+			.filter((m) => m.source_path && m.target_path)
+			.map(({ source_path, target_path }) => ({ source_path, target_path }));
 
 		try {
 			const result = await previewMutation.mutateAsync({
@@ -1587,7 +1646,9 @@ function RestoreModal({
 
 	const handleRestore = () => {
 		const includePaths = Array.from(selectedPaths);
-		const validMappings = pathMappings.filter(m => m.source_path && m.target_path);
+		const validMappings = pathMappings
+			.filter((m) => m.source_path && m.target_path)
+			.map(({ source_path, target_path }) => ({ source_path, target_path }));
 		setStep('restoring');
 
 		if (restoreType === 'cloud') {
@@ -1598,7 +1659,7 @@ function RestoreModal({
 				finalTargetPath,
 				includePaths,
 				isCrossAgent ? targetAgentId : undefined,
-				validMappings.length > 0 ? validMappings : undefined
+				validMappings.length > 0 ? validMappings : undefined,
 			);
 		}
 	};
@@ -1742,10 +1803,14 @@ function RestoreModal({
 									{enableCrossAgent && (
 										<div className="mt-3 space-y-3">
 											<div>
-												<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+												<label
+													htmlFor="target-agent-select"
+													className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+												>
 													Target Agent
 												</label>
 												<select
+													id="target-agent-select"
 													value={targetAgentId}
 													onChange={(e) => setTargetAgentId(e.target.value)}
 													className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -1753,7 +1818,9 @@ function RestoreModal({
 													{agents.map((agent) => (
 														<option key={agent.id} value={agent.id}>
 															{agent.hostname}
-															{agent.id === snapshot.agent_id ? ' (original)' : ''}
+															{agent.id === snapshot.agent_id
+																? ' (original)'
+																: ''}
 														</option>
 													))}
 												</select>
@@ -1762,9 +1829,9 @@ function RestoreModal({
 											{isCrossAgent && (
 												<div>
 													<div className="flex items-center justify-between mb-2">
-														<label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+														<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 															Path Mappings (optional)
-														</label>
+														</span>
 														<button
 															type="button"
 															onClick={addPathMapping}
@@ -1776,32 +1843,69 @@ function RestoreModal({
 													<p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
 														Map source paths to different target paths
 													</p>
-													{pathMappings.map((mapping, idx) => (
-														<div key={idx} className="flex items-center gap-2 mb-2">
+													{pathMappings.map((mapping) => (
+														<div
+															key={mapping.id}
+															className="flex items-center gap-2 mb-2"
+														>
 															<input
 																type="text"
 																value={mapping.source_path}
-																onChange={(e) => updatePathMapping(idx, 'source_path', e.target.value)}
+																onChange={(e) =>
+																	updatePathMapping(
+																		mapping.id,
+																		'source_path',
+																		e.target.value,
+																	)
+																}
 																placeholder="/source/path"
 																className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded text-sm font-mono"
 															/>
-															<svg aria-hidden="true" className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+															<svg
+																aria-hidden="true"
+																className="w-4 h-4 text-gray-400 flex-shrink-0"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+															>
+																<path
+																	strokeLinecap="round"
+																	strokeLinejoin="round"
+																	strokeWidth={2}
+																	d="M13 7l5 5m0 0l-5 5m5-5H6"
+																/>
 															</svg>
 															<input
 																type="text"
 																value={mapping.target_path}
-																onChange={(e) => updatePathMapping(idx, 'target_path', e.target.value)}
+																onChange={(e) =>
+																	updatePathMapping(
+																		mapping.id,
+																		'target_path',
+																		e.target.value,
+																	)
+																}
 																placeholder="/target/path"
 																className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded text-sm font-mono"
 															/>
 															<button
 																type="button"
-																onClick={() => removePathMapping(idx)}
+																onClick={() => removePathMapping(mapping.id)}
 																className="text-red-500 hover:text-red-700 p-1"
 															>
-																<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+																<svg
+																	aria-hidden="true"
+																	className="w-4 h-4"
+																	fill="none"
+																	stroke="currentColor"
+																	viewBox="0 0 24 24"
+																>
+																	<path
+																		strokeLinecap="round"
+																		strokeLinejoin="round"
+																		strokeWidth={2}
+																		d="M6 18L18 6M6 6l12 12"
+																	/>
 																</svg>
 															</button>
 														</div>
@@ -2278,11 +2382,12 @@ export function Restore() {
 		targetPath: string,
 		includePaths: string[],
 		targetAgentId?: string,
-		pathMappings?: Array<{source_path: string; target_path: string}>
+		pathMappings?: Array<{ source_path: string; target_path: string }>,
 	) => {
 		if (!selectedSnapshot) return;
 
-		const isCrossAgent = targetAgentId && targetAgentId !== selectedSnapshot.agent_id;
+		const isCrossAgent =
+			targetAgentId && targetAgentId !== selectedSnapshot.agent_id;
 
 		createRestore.mutate(
 			{
@@ -2292,7 +2397,8 @@ export function Restore() {
 				repository_id: selectedSnapshot.repository_id,
 				target_path: targetPath,
 				include_paths: includePaths.length > 0 ? includePaths : undefined,
-				path_mappings: pathMappings && pathMappings.length > 0 ? pathMappings : undefined,
+				path_mappings:
+					pathMappings && pathMappings.length > 0 ? pathMappings : undefined,
 			},
 			{
 				onSuccess: () => {
@@ -2679,7 +2785,11 @@ export function Restore() {
 										key={restore.id}
 										restore={restore}
 										agentName={agentMap.get(restore.agent_id)}
-										sourceAgentName={restore.source_agent_id ? agentMap.get(restore.source_agent_id) : undefined}
+										sourceAgentName={
+											restore.source_agent_id
+												? agentMap.get(restore.source_agent_id)
+												: undefined
+										}
 										onViewDetails={setSelectedRestore}
 									/>
 								))}
@@ -2733,7 +2843,11 @@ export function Restore() {
 				<RestoreDetailsModal
 					restore={selectedRestore}
 					agentName={agentMap.get(selectedRestore.agent_id)}
-					sourceAgentName={selectedRestore.source_agent_id ? agentMap.get(selectedRestore.source_agent_id) : undefined}
+					sourceAgentName={
+						selectedRestore.source_agent_id
+							? agentMap.get(selectedRestore.source_agent_id)
+							: undefined
+					}
 					onClose={() => setSelectedRestore(null)}
 				/>
 			)}
