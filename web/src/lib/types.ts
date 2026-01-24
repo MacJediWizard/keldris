@@ -1022,6 +1022,8 @@ export interface RestorePreview {
 	conflict_count: number;
 	files: RestorePreviewFile[];
 	disk_space_needed: number;
+	selected_paths?: string[];
+	selected_size?: number;
 }
 
 export interface RestoresResponse {

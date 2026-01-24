@@ -426,6 +426,7 @@ interface FileTreeItemProps {
 	selectedPaths: Set<string>;
 	onToggle: (path: string) => void;
 	depth: number;
+	isParentSelected?: boolean;
 }
 
 function FileTreeItem({
@@ -433,25 +434,31 @@ function FileTreeItem({
 	selectedPaths,
 	onToggle,
 	depth,
+	isParentSelected = false,
 }: FileTreeItemProps) {
 	const isSelected = selectedPaths.has(file.path);
+	const isEffectivelySelected = isSelected || isParentSelected;
 
 	return (
 		<div
-			className="flex items-center py-1 hover:bg-gray-50 rounded"
+			className={`flex items-center py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors ${
+				isEffectivelySelected ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''
+			}`}
 			style={{ paddingLeft: `${depth * 16 + 8}px` }}
 		>
 			<input
 				type="checkbox"
-				checked={isSelected}
+				checked={isEffectivelySelected}
 				onChange={() => onToggle(file.path)}
-				className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+				disabled={isParentSelected}
+				className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
+				title={isParentSelected ? 'Included via parent folder' : undefined}
 			/>
-			<span className="ml-2 flex items-center">
+			<span className="ml-2 flex items-center flex-1 min-w-0">
 				{file.type === 'dir' ? (
 					<svg
 						aria-hidden="true"
-						className="w-4 h-4 text-yellow-500 mr-1"
+						className="w-4 h-4 text-yellow-500 mr-1.5 flex-shrink-0"
 						fill="currentColor"
 						viewBox="0 0 20 20"
 					>
@@ -460,7 +467,7 @@ function FileTreeItem({
 				) : (
 					<svg
 						aria-hidden="true"
-						className="w-4 h-4 text-gray-400 mr-1"
+						className="w-4 h-4 text-gray-400 mr-1.5 flex-shrink-0"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -473,11 +480,121 @@ function FileTreeItem({
 						/>
 					</svg>
 				)}
-				<span className="text-sm text-gray-900">{file.name}</span>
+				<span className="text-sm text-gray-900 dark:text-gray-100 truncate">
+					{file.name}
+				</span>
 			</span>
-			<span className="ml-auto text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+			<span className="ml-2 text-xs text-gray-500 dark:text-gray-400 tabular-nums flex-shrink-0">
 				{file.type === 'file' ? formatBytes(file.size) : ''}
 			</span>
+		</div>
+	);
+}
+
+interface FileBrowserProps {
+	files: SnapshotFile[];
+	selectedPaths: Set<string>;
+	onToggle: (path: string) => void;
+	onSelectAll: () => void;
+	onClearAll: () => void;
+	totalSize: number;
+	selectedSize: number;
+	selectedCount: number;
+}
+
+function FileBrowser({
+	files,
+	selectedPaths,
+	onToggle,
+	onSelectAll,
+	onClearAll,
+	totalSize,
+	selectedSize,
+	selectedCount,
+}: FileBrowserProps) {
+	// Check if a path's parent is selected
+	const isParentSelected = (path: string): boolean => {
+		for (const selectedPath of selectedPaths) {
+			if (path !== selectedPath && path.startsWith(selectedPath + '/')) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	return (
+		<div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+			<div className="bg-gray-50 dark:bg-gray-700 px-3 py-2 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
+				<div className="flex items-center gap-3">
+					<span className="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+						Files
+					</span>
+					<span className="text-xs text-gray-500 dark:text-gray-400">
+						{files.length} items ({formatBytes(totalSize)})
+					</span>
+				</div>
+				<div className="flex items-center gap-2">
+					<button
+						type="button"
+						onClick={onSelectAll}
+						className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+					>
+						Select All
+					</button>
+					<span className="text-gray-300 dark:text-gray-500">|</span>
+					<button
+						type="button"
+						onClick={onClearAll}
+						className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+					>
+						Clear
+					</button>
+				</div>
+			</div>
+			<div className="max-h-64 overflow-y-auto bg-white dark:bg-gray-800">
+				{files.length > 0 ? (
+					files.map((file) => (
+						<FileTreeItem
+							key={file.path}
+							file={file}
+							selectedPaths={selectedPaths}
+							onToggle={onToggle}
+							depth={0}
+							isParentSelected={isParentSelected(file.path)}
+						/>
+					))
+				) : (
+					<div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+						No files available for selection
+					</div>
+				)}
+			</div>
+			{selectedCount > 0 && (
+				<div className="bg-indigo-50 dark:bg-indigo-900/30 px-3 py-2 border-t border-indigo-100 dark:border-indigo-800 flex items-center justify-between">
+					<div className="flex items-center gap-2">
+						<svg
+							aria-hidden="true"
+							className="w-4 h-4 text-indigo-600 dark:text-indigo-400"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M5 13l4 4L19 7"
+							/>
+						</svg>
+						<span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+							{selectedCount} item{selectedCount !== 1 ? 's' : ''} selected
+						</span>
+					</div>
+					<span className="text-sm text-indigo-600 dark:text-indigo-400 tabular-nums">
+						{formatBytes(selectedSize)}
+					</span>
+				</div>
+			)}
 		</div>
 	);
 }
@@ -489,43 +606,84 @@ interface RestorePreviewDisplayProps {
 }
 
 function RestorePreviewDisplay({ preview }: RestorePreviewDisplayProps) {
+	const hasSelectedPaths =
+		preview.selected_paths && preview.selected_paths.length > 0;
+
 	return (
 		<div className="space-y-4">
-			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-				<h4 className="font-medium text-blue-900 mb-2">Restore Preview</h4>
-				<p className="text-sm text-blue-700">
-					Review what will be restored before proceeding.
+			<div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+				<h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+					Restore Preview
+				</h4>
+				<p className="text-sm text-blue-700 dark:text-blue-300">
+					{hasSelectedPaths
+						? `Restoring ${preview.selected_paths!.length} selected item(s) to ${preview.target_path === '/' ? 'original location' : preview.target_path}`
+						: `Restoring all files to ${preview.target_path === '/' ? 'original location' : preview.target_path}`}
 				</p>
 			</div>
 
+			{hasSelectedPaths && (
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+					<p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+						Selected Paths
+					</p>
+					<ul className="space-y-1">
+						{preview.selected_paths!.map((path) => (
+							<li
+								key={path}
+								className="text-sm font-mono text-gray-700 dark:text-gray-300 flex items-center gap-2"
+							>
+								<svg
+									aria-hidden="true"
+									className="w-4 h-4 text-indigo-500"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M5 13l4 4L19 7"
+									/>
+								</svg>
+								{path}
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-				<div className="bg-gray-50 rounded-lg p-3">
-					<p className="text-xs text-gray-500 uppercase tracking-wide">Files</p>
-					<p className="text-lg font-semibold text-gray-900">
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+					<p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+						Files
+					</p>
+					<p className="text-lg font-semibold text-gray-900 dark:text-white">
 						{preview.total_files}
 					</p>
 				</div>
-				<div className="bg-gray-50 rounded-lg p-3">
-					<p className="text-xs text-gray-500 uppercase tracking-wide">
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+					<p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
 						Directories
 					</p>
-					<p className="text-lg font-semibold text-gray-900">
+					<p className="text-lg font-semibold text-gray-900 dark:text-white">
 						{preview.total_dirs}
 					</p>
 				</div>
-				<div className="bg-gray-50 rounded-lg p-3">
-					<p className="text-xs text-gray-500 uppercase tracking-wide">
-						Total Size
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+					<p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+						{hasSelectedPaths ? 'Selected Size' : 'Total Size'}
 					</p>
-					<p className="text-lg font-semibold text-gray-900">
-						{formatBytes(preview.total_size)}
+					<p className="text-lg font-semibold text-gray-900 dark:text-white">
+						{formatBytes(preview.selected_size ?? preview.total_size)}
 					</p>
 				</div>
-				<div className="bg-gray-50 rounded-lg p-3">
-					<p className="text-xs text-gray-500 uppercase tracking-wide">
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+					<p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
 						Disk Space
 					</p>
-					<p className="text-lg font-semibold text-gray-900">
+					<p className="text-lg font-semibold text-gray-900 dark:text-white">
 						{formatBytes(preview.disk_space_needed)}
 					</p>
 				</div>
@@ -850,30 +1008,46 @@ function RestoreModal({
 									Select files to restore (optional)
 								</p>
 								<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">
-									Leave empty to restore all files
+									Leave empty to restore all files, or select specific files/folders
 								</p>
-								<div className="border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto bg-gray-50">
-									{filesData?.files && filesData.files.length > 0 ? (
-										filesData.files.map((file) => (
-											<FileTreeItem
-												key={file.path}
-												file={file}
-												selectedPaths={selectedPaths}
-												onToggle={togglePath}
-												depth={0}
-											/>
-										))
-									) : (
-										<p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+								{filesData?.files && filesData.files.length > 0 ? (
+									<FileBrowser
+										files={filesData.files}
+										selectedPaths={selectedPaths}
+										onToggle={togglePath}
+										onSelectAll={() => {
+											const allPaths = new Set(
+												filesData.files.map((f) => f.path),
+											);
+											setSelectedPaths(allPaths);
+										}}
+										onClearAll={() => setSelectedPaths(new Set())}
+										totalSize={filesData.files.reduce(
+											(acc, f) => acc + (f.type === 'file' ? f.size : 0),
+											0,
+										)}
+										selectedSize={filesData.files
+											.filter((f) => {
+												if (selectedPaths.has(f.path)) return true;
+												// Check if parent is selected
+												for (const path of selectedPaths) {
+													if (f.path.startsWith(path + '/')) return true;
+												}
+												return false;
+											})
+											.reduce(
+												(acc, f) => acc + (f.type === 'file' ? f.size : 0),
+												0,
+											)}
+										selectedCount={selectedPaths.size}
+									/>
+								) : (
+									<div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
+										<p className="text-sm text-gray-500 dark:text-gray-400 text-center">
 											{filesData?.message ||
 												'File listing not available. All files will be restored.'}
 										</p>
-									)}
-								</div>
-								{selectedPaths.size > 0 && (
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-										{selectedPaths.size} item(s) selected
-									</p>
+									</div>
 								)}
 							</div>
 
