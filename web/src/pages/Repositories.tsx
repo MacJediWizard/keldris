@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ImportRepositoryWizard } from '../components/features/ImportRepositoryWizard';
 import {
+	useCloneRepository,
 	useCreateRepository,
 	useDeleteRepository,
 	useRecoverRepositoryKey,
@@ -8,12 +9,15 @@ import {
 	useTestConnection,
 	useTestRepository,
 } from '../hooks/useRepositories';
+import { useMe } from '../hooks/useAuth';
+import { useOrganizations } from '../hooks/useOrganizations';
 import {
 	useTriggerVerification,
 	useVerificationStatus,
 } from '../hooks/useVerifications';
 import type {
 	B2BackendConfig,
+	CloneRepositoryResponse,
 	CreateRepositoryResponse,
 	DropboxBackendConfig,
 	LocalBackendConfig,
@@ -837,6 +841,7 @@ interface RepositoryCardProps {
 	onTest: (id: string) => void;
 	onVerify: (id: string, type: VerificationType) => void;
 	onRecoverKey: (id: string) => void;
+	onClone: (repository: Repository) => void;
 	isDeleting: boolean;
 	isTesting: boolean;
 	isVerifying: boolean;
@@ -850,6 +855,7 @@ function RepositoryCard({
 	onTest,
 	onVerify,
 	onRecoverKey,
+	onClone,
 	isDeleting,
 	isTesting,
 	isVerifying,
@@ -972,6 +978,14 @@ function RepositoryCard({
 				<span className="text-gray-300 dark:text-gray-600">|</span>
 				<button
 					type="button"
+					onClick={() => onClone(repository)}
+					className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+				>
+					Clone
+				</button>
+				<span className="text-gray-300 dark:text-gray-600">|</span>
+				<button
+					type="button"
 					onClick={() => onDelete(repository.id)}
 					disabled={isDeleting}
 					className="text-sm text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
@@ -1065,6 +1079,348 @@ function RecoveredKeyModal({
 	);
 }
 
+interface CloneRepositoryModalProps {
+	isOpen: boolean;
+	onClose: () => void;
+	onSuccess: (response: CloneRepositoryResponse) => void;
+	repository: Repository | null;
+	isAdmin: boolean;
+}
+
+function CloneRepositoryModal({
+	isOpen,
+	onClose,
+	onSuccess,
+	repository,
+	isAdmin,
+}: CloneRepositoryModalProps) {
+	const [name, setName] = useState('');
+	const [targetOrgId, setTargetOrgId] = useState<string | undefined>(undefined);
+
+	// Credential fields based on repository type
+	// S3
+	const [s3AccessKey, setS3AccessKey] = useState('');
+	const [s3SecretKey, setS3SecretKey] = useState('');
+
+	// B2
+	const [b2AccountId, setB2AccountId] = useState('');
+	const [b2AppKey, setB2AppKey] = useState('');
+
+	// SFTP
+	const [sftpPassword, setSftpPassword] = useState('');
+	const [sftpPrivateKey, setSftpPrivateKey] = useState('');
+
+	// REST
+	const [restUsername, setRestUsername] = useState('');
+	const [restPassword, setRestPassword] = useState('');
+
+	// Dropbox
+	const [dropboxToken, setDropboxToken] = useState('');
+	const [dropboxAppKey, setDropboxAppKey] = useState('');
+	const [dropboxAppSecret, setDropboxAppSecret] = useState('');
+
+	const { data: organizations } = useOrganizations();
+	const cloneRepository = useCloneRepository();
+
+	// Reset form when modal opens with new repository
+	useEffect(() => {
+		if (isOpen && repository) {
+			setName(`${repository.name} (Copy)`);
+			setTargetOrgId(undefined);
+			// Reset credential fields
+			setS3AccessKey('');
+			setS3SecretKey('');
+			setB2AccountId('');
+			setB2AppKey('');
+			setSftpPassword('');
+			setSftpPrivateKey('');
+			setRestUsername('');
+			setRestPassword('');
+			setDropboxToken('');
+			setDropboxAppKey('');
+			setDropboxAppSecret('');
+		}
+	}, [isOpen, repository]);
+
+	const buildCredentials = (): Record<string, unknown> => {
+		if (!repository) return {};
+
+		switch (repository.type) {
+			case 's3':
+				return {
+					access_key_id: s3AccessKey,
+					secret_access_key: s3SecretKey,
+				};
+			case 'b2':
+				return {
+					account_id: b2AccountId,
+					application_key: b2AppKey,
+				};
+			case 'sftp':
+				return {
+					...(sftpPassword ? { password: sftpPassword } : {}),
+					...(sftpPrivateKey ? { private_key: sftpPrivateKey } : {}),
+				};
+			case 'rest':
+				return {
+					...(restUsername ? { username: restUsername } : {}),
+					...(restPassword ? { password: restPassword } : {}),
+				};
+			case 'dropbox':
+				return {
+					...(dropboxToken ? { token: dropboxToken } : {}),
+					...(dropboxAppKey ? { app_key: dropboxAppKey } : {}),
+					...(dropboxAppSecret ? { app_secret: dropboxAppSecret } : {}),
+				};
+			case 'local':
+			default:
+				return {};
+		}
+	};
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!repository) return;
+
+		try {
+			const response = await cloneRepository.mutateAsync({
+				id: repository.id,
+				data: {
+					name,
+					credentials: buildCredentials(),
+					...(targetOrgId ? { target_org_id: targetOrgId } : {}),
+				},
+			});
+			onSuccess(response);
+		} catch {
+			// Error handled by mutation
+		}
+	};
+
+	if (!isOpen || !repository) return null;
+
+	const renderCredentialFields = () => {
+		switch (repository.type) {
+			case 's3':
+				return (
+					<>
+						<FormField
+							label="Access Key ID"
+							id="clone-s3-access-key"
+							value={s3AccessKey}
+							onChange={setS3AccessKey}
+							placeholder="AKIAIOSFODNN7EXAMPLE"
+							required
+						/>
+						<FormField
+							label="Secret Access Key"
+							id="clone-s3-secret-key"
+							value={s3SecretKey}
+							onChange={setS3SecretKey}
+							type="password"
+							required
+						/>
+					</>
+				);
+
+			case 'b2':
+				return (
+					<>
+						<FormField
+							label="Account ID"
+							id="clone-b2-account-id"
+							value={b2AccountId}
+							onChange={setB2AccountId}
+							placeholder="0012345678abcdef"
+							required
+						/>
+						<FormField
+							label="Application Key"
+							id="clone-b2-app-key"
+							value={b2AppKey}
+							onChange={setB2AppKey}
+							type="password"
+							required
+						/>
+					</>
+				);
+
+			case 'sftp':
+				return (
+					<>
+						<FormField
+							label="Password"
+							id="clone-sftp-password"
+							value={sftpPassword}
+							onChange={setSftpPassword}
+							type="password"
+							helpText="Password or private key required"
+						/>
+						<div>
+							<label
+								htmlFor="clone-sftp-private-key"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Private Key
+							</label>
+							<textarea
+								id="clone-sftp-private-key"
+								value={sftpPrivateKey}
+								onChange={(e) => setSftpPrivateKey(e.target.value)}
+								placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-xs"
+								rows={4}
+							/>
+						</div>
+					</>
+				);
+
+			case 'rest':
+				return (
+					<>
+						<FormField
+							label="Username"
+							id="clone-rest-username"
+							value={restUsername}
+							onChange={setRestUsername}
+							placeholder="backup"
+							helpText="Optional authentication"
+						/>
+						<FormField
+							label="Password"
+							id="clone-rest-password"
+							value={restPassword}
+							onChange={setRestPassword}
+							type="password"
+						/>
+					</>
+				);
+
+			case 'dropbox':
+				return (
+					<>
+						<FormField
+							label="Token"
+							id="clone-dropbox-token"
+							value={dropboxToken}
+							onChange={setDropboxToken}
+							type="password"
+							helpText="OAuth token from rclone config"
+						/>
+						<FormField
+							label="App Key"
+							id="clone-dropbox-app-key"
+							value={dropboxAppKey}
+							onChange={setDropboxAppKey}
+							helpText="Your Dropbox App Key (optional)"
+						/>
+						<FormField
+							label="App Secret"
+							id="clone-dropbox-app-secret"
+							value={dropboxAppSecret}
+							onChange={setDropboxAppSecret}
+							type="password"
+							helpText="Your Dropbox App Secret (optional)"
+						/>
+					</>
+				);
+
+			case 'local':
+			default:
+				return (
+					<p className="text-sm text-gray-500 dark:text-gray-400">
+						Local repositories do not require credentials.
+					</p>
+				);
+		}
+	};
+
+	return (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+					Clone Repository
+				</h3>
+				<p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+					Create a copy of <span className="font-medium">{repository.name}</span>{' '}
+					with new credentials.
+				</p>
+				<form onSubmit={handleSubmit}>
+					<div className="space-y-4">
+						<FormField
+							label="Name"
+							id="clone-repo-name"
+							value={name}
+							onChange={setName}
+							placeholder="e.g., primary-backup-copy"
+							required
+						/>
+
+						{isAdmin && organizations && organizations.length > 1 && (
+							<div>
+								<label
+									htmlFor="clone-target-org"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Target Organization
+								</label>
+								<select
+									id="clone-target-org"
+									value={targetOrgId ?? ''}
+									onChange={(e) =>
+										setTargetOrgId(e.target.value || undefined)
+									}
+									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								>
+									<option value="">Current organization</option>
+									{organizations.map((org) => (
+										<option key={org.id} value={org.id}>
+											{org.name}
+										</option>
+									))}
+								</select>
+								<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+									Admin only: Clone to a different organization
+								</p>
+							</div>
+						)}
+
+						<hr className="my-4" />
+						<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+							New Credentials
+						</p>
+						{renderCredentialFields()}
+					</div>
+
+					{cloneRepository.isError && (
+						<p className="text-sm text-red-600 mt-4">
+							Failed to clone repository. Please check your credentials and try
+							again.
+						</p>
+					)}
+
+					<div className="flex justify-end items-center mt-6 gap-3">
+						<button
+							type="button"
+							onClick={onClose}
+							className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={cloneRepository.isPending}
+							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+						>
+							{cloneRepository.isPending ? 'Cloning...' : 'Clone Repository'}
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	);
+}
+
 export function Repositories() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [typeFilter, setTypeFilter] = useState<RepositoryType | 'all'>('all');
@@ -1091,12 +1447,20 @@ export function Repositories() {
 		repositoryName: string;
 		snapshotsImported: number;
 	}>({ isOpen: false, repositoryName: '', snapshotsImported: 0 });
+	const [cloneModal, setCloneModal] = useState<{
+		isOpen: boolean;
+		repository: Repository | null;
+	}>({ isOpen: false, repository: null });
 
+	const { data: user } = useMe();
 	const { data: repositories, isLoading, isError } = useRepositories();
 	const deleteRepository = useDeleteRepository();
 	const testRepository = useTestRepository();
 	const triggerVerification = useTriggerVerification();
 	const recoverKey = useRecoverRepositoryKey();
+
+	const isAdmin =
+		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
 	const filteredRepositories = repositories?.filter((repo) => {
 		const matchesSearch = repo.name
@@ -1139,6 +1503,19 @@ export function Repositories() {
 		} catch {
 			alert('Failed to recover key. You may not have permission.');
 		}
+	};
+
+	const handleClone = (repository: Repository) => {
+		setCloneModal({ isOpen: true, repository });
+	};
+
+	const handleCloneSuccess = (response: CloneRepositoryResponse) => {
+		setCloneModal({ isOpen: false, repository: null });
+		setPasswordModal({
+			isOpen: true,
+			repositoryName: response.repository.name,
+			password: response.password,
+		});
 	};
 
 	const handleTypeClick = (type: RepositoryType) => {
@@ -1279,6 +1656,7 @@ export function Repositories() {
 								onTest={handleTest}
 								onVerify={handleVerify}
 								onRecoverKey={handleRecoverKey}
+								onClone={handleClone}
 								isDeleting={deleteRepository.isPending}
 								isTesting={testRepository.isPending}
 								isVerifying={triggerVerification.isPending}
@@ -1417,6 +1795,14 @@ export function Repositories() {
 				isOpen={showImportWizard}
 				onClose={() => setShowImportWizard(false)}
 				onSuccess={handleImportSuccess}
+			/>
+
+			<CloneRepositoryModal
+				isOpen={cloneModal.isOpen}
+				onClose={() => setCloneModal({ isOpen: false, repository: null })}
+				onSuccess={handleCloneSuccess}
+				repository={cloneModal.repository}
+				isAdmin={isAdmin}
 			/>
 
 			{importSuccessModal.isOpen && (
