@@ -26,6 +26,7 @@ import { Onboarding } from './pages/Onboarding';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
+import { PasswordPolicies } from './pages/PasswordPolicies';
 import { Policies } from './pages/Policies';
 import { RateLimitDashboard } from './pages/RateLimitDashboard';
 import Reports from './pages/Reports';
@@ -106,6 +107,10 @@ function App() {
 						<Route
 							path="organization/ip-allowlist"
 							element={<IPAllowlistSettings />}
+						/>
+						<Route
+							path="organization/password-policies"
+							element={<PasswordPolicies />}
 						/>
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />

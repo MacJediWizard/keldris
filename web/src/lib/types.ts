@@ -3043,3 +3043,78 @@ export interface RevokeSessionsResponse {
 	message: string;
 	revoked_count?: number;
 }
+
+// Password Policy types
+export interface PasswordPolicy {
+	id: string;
+	org_id: string;
+	min_length: number;
+	require_uppercase: boolean;
+	require_lowercase: boolean;
+	require_number: boolean;
+	require_special: boolean;
+	max_age_days?: number;
+	history_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface PasswordRequirements {
+	min_length: number;
+	require_uppercase: boolean;
+	require_lowercase: boolean;
+	require_number: boolean;
+	require_special: boolean;
+	max_age_days?: number;
+	description: string;
+}
+
+export interface PasswordPolicyResponse {
+	policy: PasswordPolicy;
+	requirements: PasswordRequirements;
+}
+
+export interface UpdatePasswordPolicyRequest {
+	min_length?: number;
+	require_uppercase?: boolean;
+	require_lowercase?: boolean;
+	require_number?: boolean;
+	require_special?: boolean;
+	max_age_days?: number;
+	history_count?: number;
+}
+
+export interface PasswordValidationResult {
+	valid: boolean;
+	errors?: string[];
+	warnings?: string[];
+}
+
+export interface ChangePasswordRequest {
+	current_password: string;
+	new_password: string;
+}
+
+export interface PasswordExpirationInfo {
+	is_expired: boolean;
+	expires_at?: string;
+	days_until_expiry?: number;
+	must_change_now: boolean;
+	warn_days_remaining: number;
+}
+
+export interface PasswordLoginRequest {
+	email: string;
+	password: string;
+}
+
+export interface PasswordLoginResponse {
+	id: string;
+	email: string;
+	name: string;
+	current_org_id?: string;
+	current_org_role?: string;
+	password_expired?: boolean;
+	must_change_password?: boolean;
+	expires_at?: string;
+}
