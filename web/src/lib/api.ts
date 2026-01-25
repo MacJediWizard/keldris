@@ -43,6 +43,7 @@ import type {
 	BackupSuccessRate,
 	BackupSuccessRatesResponse,
 	BackupsResponse,
+	BlockedRequestsResponse,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
 	BulkCloneResponse,
@@ -80,6 +81,7 @@ import type {
 	CreateDRTestScheduleRequest,
 	CreateExcludePatternRequest,
 	CreateIPAllowlistRequest,
+	CreateIPBanRequest,
 	CreateImmutabilityLockRequest,
 	CreateLegalHoldRequest,
 	CreateMaintenanceWindowRequest,
@@ -88,6 +90,7 @@ import type {
 	CreateOrgRequest,
 	CreatePathClassificationRuleRequest,
 	CreatePolicyRequest,
+	CreateRateLimitConfigRequest,
 	CreateRegistrationCodeRequest,
 	CreateRegistrationCodeResponse,
 	CreateReportScheduleRequest,
@@ -140,6 +143,8 @@ import type {
 	IPAllowlist,
 	IPAllowlistSettings,
 	IPAllowlistsResponse,
+	IPBan,
+	IPBansResponse,
 	IPBlockedAttemptsResponse,
 	ImmutabilityLock,
 	ImmutabilityLocksResponse,
@@ -186,7 +191,10 @@ import type {
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	RateLimitConfig,
+	RateLimitConfigsResponse,
 	RateLimitDashboardStats,
+	RateLimitStatsResponse,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -266,6 +274,7 @@ import type {
 	UpdatePasswordPolicyRequest,
 	UpdatePathClassificationRuleRequest,
 	UpdatePolicyRequest,
+	UpdateRateLimitConfigRequest,
 	UpdateReportScheduleRequest,
 	UpdateRepositoryImmutabilitySettingsRequest,
 	UpdateRepositoryRequest,
@@ -291,15 +300,6 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
-	RateLimitConfig,
-	RateLimitConfigsResponse,
-	CreateRateLimitConfigRequest,
-	UpdateRateLimitConfigRequest,
-	RateLimitStatsResponse,
-	BlockedRequestsResponse,
-	IPBan,
-	IPBansResponse,
-	CreateIPBanRequest,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -2695,7 +2695,9 @@ export const rateLimitConfigsApi = {
 	get: async (id: string): Promise<RateLimitConfig> =>
 		fetchApi<RateLimitConfig>(`/admin/rate-limit-configs/${id}`),
 
-	create: async (data: CreateRateLimitConfigRequest): Promise<RateLimitConfig> =>
+	create: async (
+		data: CreateRateLimitConfigRequest,
+	): Promise<RateLimitConfig> =>
 		fetchApi<RateLimitConfig>('/admin/rate-limit-configs', {
 			method: 'POST',
 			body: JSON.stringify(data),
