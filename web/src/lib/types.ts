@@ -340,6 +340,17 @@ export interface UpdateRepositoryRequest {
 	config?: Record<string, unknown>;
 }
 
+export interface CloneRepositoryRequest {
+	name: string;
+	credentials: Record<string, unknown>;
+	target_org_id?: string;
+}
+
+export interface CloneRepositoryResponse {
+	repository: Repository;
+	password: string;
+}
+
 export interface TestRepositoryResponse {
 	success: boolean;
 	message: string;
@@ -462,6 +473,24 @@ export interface UpdateScheduleRequest {
 export interface RunScheduleResponse {
 	backup_id: string;
 	message: string;
+}
+
+// Clone schedule types
+export interface CloneScheduleRequest {
+	name?: string;
+	target_agent_id?: string;
+	target_repo_ids?: string[];
+}
+
+export interface BulkCloneScheduleRequest {
+	schedule_id: string;
+	target_agent_ids: string[];
+	name_prefix?: string;
+}
+
+export interface BulkCloneResponse {
+	schedules: Schedule[];
+	errors?: string[];
 }
 
 // Dry run types
@@ -970,39 +999,109 @@ export type RestoreStatus =
 	| 'running'
 	| 'completed'
 	| 'failed'
-	| 'canceled';
+	| 'canceled'
+	| 'uploading'
+	| 'verifying';
+
+// Cloud restore target types
+export type CloudRestoreTargetType = 's3' | 'b2' | 'restic';
+
+export interface CloudRestoreTarget {
+	type: CloudRestoreTargetType;
+	// S3/B2 configuration
+	bucket?: string;
+	prefix?: string;
+	region?: string;
+	endpoint?: string;
+	access_key_id?: string;
+	secret_access_key?: string;
+	use_ssl?: boolean;
+	// B2 specific
+	account_id?: string;
+	application_key?: string;
+	// Restic repository configuration
+	repository?: string;
+	repository_password?: string;
+}
+
+export interface CloudRestoreProgress {
+	total_files: number;
+	total_bytes: number;
+	uploaded_files: number;
+	uploaded_bytes: number;
+	current_file?: string;
+	percent_complete: number;
+	verified_checksum: boolean;
+}
+
+export interface PathMapping {
+	source_path: string;
+	target_path: string;
+}
+
+export interface RestoreProgress {
+	files_restored: number;
+	bytes_restored: number;
+	total_files?: number;
+	total_bytes?: number;
+	current_file?: string;
+}
 
 export interface Restore {
 	id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	snapshot_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
 	status: RestoreStatus;
+	progress?: RestoreProgress; // Real-time progress tracking
+	is_cross_agent: boolean;
 	started_at?: string;
 	completed_at?: string;
 	error_message?: string;
 	created_at: string;
+	// Cloud restore fields
+	is_cloud_restore?: boolean;
+	cloud_target?: CloudRestoreTarget;
+	cloud_progress?: CloudRestoreProgress;
+	cloud_target_location?: string;
+	verify_upload?: boolean;
 }
 
 export interface CreateRestoreRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
+}
+
+export interface CreateCloudRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+	cloud_target: CloudRestoreTarget;
+	verify_upload?: boolean;
 }
 
 export interface RestorePreviewRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[];
 }
 
 export interface RestorePreviewFile {
@@ -1022,6 +1121,8 @@ export interface RestorePreview {
 	conflict_count: number;
 	files: RestorePreviewFile[];
 	disk_space_needed: number;
+	selected_paths?: string[];
+	selected_size?: number;
 }
 
 export interface RestoresResponse {
@@ -2728,6 +2829,29 @@ export interface ConfigTemplatesResponse {
 	templates: ConfigTemplate[];
 }
 
+// Rate Limit types
+export interface RateLimitClientStats {
+	client_ip: string;
+	total_requests: number;
+	rejected_count: number;
+	last_request: string;
+}
+
+export interface EndpointRateLimitInfo {
+	pattern: string;
+	limit: number;
+	period: string;
+}
+
+export interface RateLimitDashboardStats {
+	default_limit: number;
+	default_period: string;
+	endpoint_configs: EndpointRateLimitInfo[];
+	client_stats: RateLimitClientStats[];
+	total_requests: number;
+	total_rejected: number;
+}
+
 // Announcement types
 export type AnnouncementType = 'info' | 'warning' | 'critical';
 
@@ -2837,4 +2961,85 @@ export interface IPAllowlistsResponse {
 export interface IPBlockedAttemptsResponse {
 	attempts: IPBlockedAttempt[];
 	total: number;
+}
+
+// Agent Import types
+export interface AgentImportPreviewEntry {
+	row_number: number;
+	hostname: string;
+	group_name?: string;
+	tags?: string[];
+	config?: Record<string, string>;
+	is_valid: boolean;
+	errors?: string[];
+}
+
+export interface AgentImportPreviewResponse {
+	total_rows: number;
+	valid_rows: number;
+	invalid_rows: number;
+	entries: AgentImportPreviewEntry[];
+	detected_groups: string[];
+	detected_tags: string[];
+}
+
+export interface AgentImportJobResult {
+	row_number: number;
+	hostname: string;
+	agent_id?: string;
+	group_id?: string;
+	group_name?: string;
+	registration_code?: string;
+	expires_at?: string;
+	success: boolean;
+	error_message?: string;
+}
+
+export interface AgentImportResponse {
+	job_id: string;
+	total_agents: number;
+	imported_count: number;
+	failed_count: number;
+	results: AgentImportJobResult[];
+	groups_created?: string[];
+}
+
+export interface AgentImportTemplateResponse {
+	headers: string[];
+	examples: string[][];
+}
+
+export interface AgentRegistrationScriptRequest {
+	hostname: string;
+	registration_code: string;
+}
+
+export interface AgentRegistrationScriptResponse {
+	script: string;
+	hostname: string;
+	registration_code: string;
+	expires_at: string;
+}
+
+// User Sessions
+export interface UserSession {
+	id: string;
+	user_id: string;
+	ip_address?: string;
+	user_agent?: string;
+	created_at: string;
+	last_active_at: string;
+	expires_at?: string;
+	revoked: boolean;
+	revoked_at?: string;
+	is_current?: boolean;
+}
+
+export interface UserSessionsResponse {
+	sessions: UserSession[];
+}
+
+export interface RevokeSessionsResponse {
+	message: string;
+	revoked_count?: number;
 }
