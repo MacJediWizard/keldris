@@ -291,6 +291,15 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
+	RateLimitConfig,
+	RateLimitConfigsResponse,
+	CreateRateLimitConfigRequest,
+	UpdateRateLimitConfigRequest,
+	RateLimitStatsResponse,
+	BlockedRequestsResponse,
+	IPBan,
+	IPBansResponse,
+	CreateIPBanRequest,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -2668,10 +2677,68 @@ export const ipAllowlistsApi = {
 		),
 };
 
-// Rate Limits API (Admin only)
+// Rate Limits Dashboard API (Admin only)
 export const rateLimitsApi = {
 	getDashboardStats: async (): Promise<RateLimitDashboardStats> =>
 		fetchApi<RateLimitDashboardStats>('/admin/rate-limits'),
+};
+
+// Rate Limit Config Management API
+export const rateLimitConfigsApi = {
+	list: async (): Promise<RateLimitConfig[]> => {
+		const response = await fetchApi<RateLimitConfigsResponse>(
+			'/admin/rate-limit-configs',
+		);
+		return response.configs ?? [];
+	},
+
+	get: async (id: string): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>(`/admin/rate-limit-configs/${id}`),
+
+	create: async (data: CreateRateLimitConfigRequest): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>('/admin/rate-limit-configs', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateRateLimitConfigRequest,
+	): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>(`/admin/rate-limit-configs/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/rate-limit-configs/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getStats: async (): Promise<RateLimitStatsResponse> =>
+		fetchApi<RateLimitStatsResponse>('/admin/rate-limit-configs/stats'),
+
+	listBlocked: async (): Promise<BlockedRequestsResponse> =>
+		fetchApi<BlockedRequestsResponse>('/admin/rate-limit-configs/blocked'),
+};
+
+// IP Bans API
+export const ipBansApi = {
+	list: async (): Promise<IPBan[]> => {
+		const response = await fetchApi<IPBansResponse>('/admin/ip-bans');
+		return response.bans ?? [];
+	},
+
+	create: async (data: CreateIPBanRequest): Promise<IPBan> =>
+		fetchApi<IPBan>('/admin/ip-bans', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/ip-bans/${id}`, {
+			method: 'DELETE',
+		}),
 };
 
 // User Sessions API

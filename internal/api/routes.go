@@ -278,6 +278,10 @@ func NewRouter(
 	rateLimitHandler := handlers.NewRateLimitHandler(database, logger)
 	rateLimitHandler.RegisterRoutes(apiV1)
 
+	// Rate limit config management routes
+	rateLimitsHandler := handlers.NewRateLimitsHandler(database, logger)
+	rateLimitsHandler.RegisterRoutes(apiV1)
+
 	// User sessions management routes
 	userSessionsHandler := handlers.NewUserSessionsHandler(database, logger)
 	userSessionsHandler.RegisterRoutes(apiV1)

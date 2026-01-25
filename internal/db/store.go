@@ -9401,3 +9401,359 @@ func scanIPBlockedAttempts(rows interface{ Next() bool; Scan(dest ...interface{}
 
 	return attempts, nil
 }
+
+// Rate Limit Config methods
+
+// ListRateLimitConfigs returns all rate limit configs for an organization.
+func (db *DB) ListRateLimitConfigs(ctx context.Context, orgID uuid.UUID) ([]*models.RateLimitConfig, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled,
+		       created_by, created_at, updated_at
+		FROM rate_limit_configs
+		WHERE org_id = $1
+		ORDER BY endpoint ASC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list rate limit configs: %w", err)
+	}
+	defer rows.Close()
+
+	return scanRateLimitConfigs(rows)
+}
+
+// GetRateLimitConfigByID returns a rate limit config by ID.
+func (db *DB) GetRateLimitConfigByID(ctx context.Context, id uuid.UUID) (*models.RateLimitConfig, error) {
+	var c models.RateLimitConfig
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled,
+		       created_by, created_at, updated_at
+		FROM rate_limit_configs
+		WHERE id = $1
+	`, id).Scan(
+		&c.ID, &c.OrgID, &c.Endpoint, &c.RequestsPerPeriod, &c.PeriodSeconds,
+		&c.Enabled, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get rate limit config: %w", err)
+	}
+	return &c, nil
+}
+
+// GetRateLimitConfigByEndpoint returns a rate limit config for a specific endpoint.
+func (db *DB) GetRateLimitConfigByEndpoint(ctx context.Context, orgID uuid.UUID, endpoint string) (*models.RateLimitConfig, error) {
+	var c models.RateLimitConfig
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled,
+		       created_by, created_at, updated_at
+		FROM rate_limit_configs
+		WHERE org_id = $1 AND endpoint = $2
+	`, orgID, endpoint).Scan(
+		&c.ID, &c.OrgID, &c.Endpoint, &c.RequestsPerPeriod, &c.PeriodSeconds,
+		&c.Enabled, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get rate limit config by endpoint: %w", err)
+	}
+	return &c, nil
+}
+
+// CreateRateLimitConfig creates a new rate limit config.
+func (db *DB) CreateRateLimitConfig(ctx context.Context, c *models.RateLimitConfig) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO rate_limit_configs (id, org_id, endpoint, requests_per_period, period_seconds,
+		            enabled, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, c.ID, c.OrgID, c.Endpoint, c.RequestsPerPeriod, c.PeriodSeconds,
+		c.Enabled, c.CreatedBy, c.CreatedAt, c.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create rate limit config: %w", err)
+	}
+	return nil
+}
+
+// UpdateRateLimitConfig updates an existing rate limit config.
+func (db *DB) UpdateRateLimitConfig(ctx context.Context, c *models.RateLimitConfig) error {
+	c.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE rate_limit_configs
+		SET requests_per_period = $2, period_seconds = $3, enabled = $4, updated_at = $5
+		WHERE id = $1
+	`, c.ID, c.RequestsPerPeriod, c.PeriodSeconds, c.Enabled, c.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update rate limit config: %w", err)
+	}
+	return nil
+}
+
+// DeleteRateLimitConfig deletes a rate limit config.
+func (db *DB) DeleteRateLimitConfig(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM rate_limit_configs
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete rate limit config: %w", err)
+	}
+	return nil
+}
+
+// scanRateLimitConfigs scans rows into rate limit config structs.
+func scanRateLimitConfigs(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.RateLimitConfig, error) {
+	var configs []*models.RateLimitConfig
+	for rows.Next() {
+		var c models.RateLimitConfig
+		err := rows.Scan(
+			&c.ID, &c.OrgID, &c.Endpoint, &c.RequestsPerPeriod, &c.PeriodSeconds,
+			&c.Enabled, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan rate limit config: %w", err)
+		}
+		configs = append(configs, &c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rate limit configs: %w", err)
+	}
+
+	return configs, nil
+}
+
+// Blocked Request methods
+
+// RecordBlockedRequest records a blocked request for statistics.
+func (db *DB) RecordBlockedRequest(ctx context.Context, orgID *uuid.UUID, ipAddress, endpoint, userAgent, reason string) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO blocked_requests (id, org_id, ip_address, endpoint, user_agent, blocked_at, reason)
+		VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+	`, uuid.New(), orgID, ipAddress, endpoint, userAgent, reason)
+	if err != nil {
+		return fmt.Errorf("record blocked request: %w", err)
+	}
+	return nil
+}
+
+// GetRateLimitStats returns rate limiting statistics for an organization.
+func (db *DB) GetRateLimitStats(ctx context.Context, orgID uuid.UUID) (*models.RateLimitStats, error) {
+	stats := &models.RateLimitStats{}
+
+	// Get blocked today count
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM blocked_requests
+		WHERE (org_id = $1 OR org_id IS NULL)
+		  AND blocked_at >= CURRENT_DATE
+	`, orgID).Scan(&stats.BlockedToday)
+	if err != nil {
+		return nil, fmt.Errorf("get blocked today count: %w", err)
+	}
+
+	// Get top blocked IPs
+	rows, err := db.Pool.Query(ctx, `
+		SELECT ip_address, COUNT(*) as count
+		FROM blocked_requests
+		WHERE (org_id = $1 OR org_id IS NULL)
+		  AND blocked_at >= CURRENT_DATE - INTERVAL '7 days'
+		GROUP BY ip_address
+		ORDER BY count DESC
+		LIMIT 10
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get top blocked IPs: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var ip models.IPBlockCount
+		if err := rows.Scan(&ip.IPAddress, &ip.Count); err != nil {
+			return nil, fmt.Errorf("scan blocked IP: %w", err)
+		}
+		stats.TopBlockedIPs = append(stats.TopBlockedIPs, ip)
+	}
+
+	// Get top blocked endpoints
+	rows2, err := db.Pool.Query(ctx, `
+		SELECT endpoint, COUNT(*) as count
+		FROM blocked_requests
+		WHERE (org_id = $1 OR org_id IS NULL)
+		  AND blocked_at >= CURRENT_DATE - INTERVAL '7 days'
+		GROUP BY endpoint
+		ORDER BY count DESC
+		LIMIT 10
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get top blocked endpoints: %w", err)
+	}
+	defer rows2.Close()
+
+	for rows2.Next() {
+		var route models.RouteBlockCount
+		if err := rows2.Scan(&route.Endpoint, &route.Count); err != nil {
+			return nil, fmt.Errorf("scan blocked endpoint: %w", err)
+		}
+		stats.TopBlockedRoutes = append(stats.TopBlockedRoutes, route)
+	}
+
+	return stats, nil
+}
+
+// ListRecentBlockedRequests returns recent blocked requests.
+func (db *DB) ListRecentBlockedRequests(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.BlockedRequest, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, endpoint, user_agent, blocked_at, reason
+		FROM blocked_requests
+		WHERE org_id = $1 OR org_id IS NULL
+		ORDER BY blocked_at DESC
+		LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list blocked requests: %w", err)
+	}
+	defer rows.Close()
+
+	var requests []*models.BlockedRequest
+	for rows.Next() {
+		var r models.BlockedRequest
+		if err := rows.Scan(&r.ID, &r.OrgID, &r.IPAddress, &r.Endpoint, &r.UserAgent, &r.BlockedAt, &r.Reason); err != nil {
+			return nil, fmt.Errorf("scan blocked request: %w", err)
+		}
+		requests = append(requests, &r)
+	}
+
+	return requests, nil
+}
+
+// IP Ban methods
+
+// ListIPBans returns all IP bans for an organization.
+func (db *DB) ListIPBans(ctx context.Context, orgID uuid.UUID) ([]*models.IPBan, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at
+		FROM ip_bans
+		WHERE org_id = $1 OR org_id IS NULL
+		ORDER BY banned_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list IP bans: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPBans(rows)
+}
+
+// ListActiveIPBans returns active IP bans.
+func (db *DB) ListActiveIPBans(ctx context.Context, orgID uuid.UUID) ([]*models.IPBan, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at
+		FROM ip_bans
+		WHERE (org_id = $1 OR org_id IS NULL)
+		  AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY banned_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list active IP bans: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPBans(rows)
+}
+
+// GetIPBan returns an IP ban by IP address.
+func (db *DB) GetIPBan(ctx context.Context, ipAddress string) (*models.IPBan, error) {
+	var b models.IPBan
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at
+		FROM ip_bans
+		WHERE ip_address = $1
+		  AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY banned_at DESC
+		LIMIT 1
+	`, ipAddress).Scan(
+		&b.ID, &b.OrgID, &b.IPAddress, &b.Reason, &b.BanCount,
+		&b.BannedBy, &b.BannedAt, &b.ExpiresAt, &b.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get IP ban: %w", err)
+	}
+	return &b, nil
+}
+
+// CreateIPBan creates a new IP ban.
+func (db *DB) CreateIPBan(ctx context.Context, b *models.IPBan) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO ip_bans (id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, b.ID, b.OrgID, b.IPAddress, b.Reason, b.BanCount, b.BannedBy, b.BannedAt, b.ExpiresAt, b.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create IP ban: %w", err)
+	}
+	return nil
+}
+
+// DeleteIPBan removes an IP ban.
+func (db *DB) DeleteIPBan(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM ip_bans
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete IP ban: %w", err)
+	}
+	return nil
+}
+
+// IncrementIPBanCount increments the ban count for repeat offenders.
+func (db *DB) IncrementIPBanCount(ctx context.Context, ipAddress string) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		UPDATE ip_bans
+		SET ban_count = ban_count + 1
+		WHERE ip_address = $1
+		RETURNING ban_count
+	`, ipAddress).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("increment IP ban count: %w", err)
+	}
+	return count, nil
+}
+
+// GetBlockedRequestCountForIP returns the number of blocked requests for an IP in a time window.
+func (db *DB) GetBlockedRequestCountForIP(ctx context.Context, ipAddress string, since time.Time) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM blocked_requests
+		WHERE ip_address = $1
+		  AND blocked_at >= $2
+	`, ipAddress, since).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("get blocked request count for IP: %w", err)
+	}
+	return count, nil
+}
+
+// scanIPBans scans rows into IP ban structs.
+func scanIPBans(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.IPBan, error) {
+	var bans []*models.IPBan
+	for rows.Next() {
+		var b models.IPBan
+		err := rows.Scan(
+			&b.ID, &b.OrgID, &b.IPAddress, &b.Reason, &b.BanCount,
+			&b.BannedBy, &b.BannedAt, &b.ExpiresAt, &b.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan IP ban: %w", err)
+		}
+		bans = append(bans, &b)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate IP bans: %w", err)
+	}
+
+	return bans, nil
+}

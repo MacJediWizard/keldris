@@ -2910,6 +2910,19 @@ export interface IPAllowlist {
 	updated_at: string;
 }
 
+// Rate Limit types
+export interface RateLimitConfig {
+	id: string;
+	org_id: string;
+	endpoint: string;
+	requests_per_period: number;
+	period_seconds: number;
+	enabled: boolean;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
 export interface IPAllowlistSettings {
 	id: string;
 	org_id: string;
@@ -3117,4 +3130,77 @@ export interface PasswordLoginResponse {
 	password_expired?: boolean;
 	must_change_password?: boolean;
 	expires_at?: string;
+}
+
+export interface CreateRateLimitConfigRequest {
+	endpoint: string;
+	requests_per_period: number;
+	period_seconds: number;
+	enabled?: boolean;
+}
+
+export interface UpdateRateLimitConfigRequest {
+	requests_per_period?: number;
+	period_seconds?: number;
+	enabled?: boolean;
+}
+
+export interface RateLimitConfigsResponse {
+	configs: RateLimitConfig[];
+}
+
+export interface BlockedRequest {
+	id: string;
+	org_id?: string;
+	ip_address: string;
+	endpoint: string;
+	user_agent?: string;
+	blocked_at: string;
+	reason: string;
+}
+
+export interface IPBlockCount {
+	ip_address: string;
+	count: number;
+}
+
+export interface RouteBlockCount {
+	endpoint: string;
+	count: number;
+}
+
+export interface RateLimitStats {
+	blocked_today: number;
+	top_blocked_ips: IPBlockCount[];
+	top_blocked_endpoints: RouteBlockCount[];
+}
+
+export interface RateLimitStatsResponse {
+	stats: RateLimitStats;
+}
+
+export interface BlockedRequestsResponse {
+	blocked_requests: BlockedRequest[];
+}
+
+export interface IPBan {
+	id: string;
+	org_id?: string;
+	ip_address: string;
+	reason: string;
+	ban_count: number;
+	banned_by?: string;
+	banned_at: string;
+	expires_at?: string;
+	created_at: string;
+}
+
+export interface CreateIPBanRequest {
+	ip_address: string;
+	reason: string;
+	duration_minutes?: number;
+}
+
+export interface IPBansResponse {
+	bans: IPBan[];
 }
