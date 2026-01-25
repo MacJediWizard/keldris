@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { usePasswordRequirements, useValidatePassword } from '../hooks/usePasswordPolicy';
+import {
+	usePasswordRequirements,
+	useValidatePassword,
+} from '../hooks/usePasswordPolicy';
 
 interface PasswordRequirementsProps {
 	password: string;
@@ -18,6 +21,7 @@ export function PasswordRequirements({
 		warnings?: string[];
 	} | null>(null);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: validatePassword.mutate is stable from TanStack Query
 	useEffect(() => {
 		if (password && showValidation && password.length >= 3) {
 			const timer = setTimeout(() => {
@@ -26,9 +30,8 @@ export function PasswordRequirements({
 				});
 			}, 300);
 			return () => clearTimeout(timer);
-		} else {
-			setValidationResult(null);
 		}
+		setValidationResult(null);
 	}, [password, showValidation]);
 
 	if (isLoading) {
@@ -79,8 +82,8 @@ export function PasswordRequirements({
 				Password Requirements
 			</div>
 			<ul className="space-y-1.5">
-				{checkRequirements.map((req, index) => (
-					<li key={index} className="flex items-center gap-2">
+				{checkRequirements.map((req) => (
+					<li key={req.label} className="flex items-center gap-2">
 						{password.length > 0 ? (
 							req.met ? (
 								<svg
@@ -138,21 +141,23 @@ export function PasswordRequirements({
 				))}
 			</ul>
 
-			{validationResult && !validationResult.valid && validationResult.errors && (
-				<div className="mt-3 bg-red-50 border border-red-200 rounded-md p-3">
-					<div className="text-sm text-red-700">
-						{validationResult.errors.map((error, index) => (
-							<p key={index}>{error}</p>
-						))}
+			{validationResult &&
+				!validationResult.valid &&
+				validationResult.errors && (
+					<div className="mt-3 bg-red-50 border border-red-200 rounded-md p-3">
+						<div className="text-sm text-red-700">
+							{validationResult.errors.map((error) => (
+								<p key={error}>{error}</p>
+							))}
+						</div>
 					</div>
-				</div>
-			)}
+				)}
 
 			{validationResult?.warnings && validationResult.warnings.length > 0 && (
 				<div className="mt-3 bg-amber-50 border border-amber-200 rounded-md p-3">
 					<div className="text-sm text-amber-700">
-						{validationResult.warnings.map((warning, index) => (
-							<p key={index}>{warning}</p>
+						{validationResult.warnings.map((warning) => (
+							<p key={warning}>{warning}</p>
 						))}
 					</div>
 				</div>

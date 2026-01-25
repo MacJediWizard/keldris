@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useMe } from '../hooks/useAuth';
 import {
 	usePasswordPolicy,
@@ -40,7 +40,10 @@ export function PasswordPolicies() {
 	const currentUserRole = (user?.current_org_role ?? 'member') as OrgRole;
 	const isAdmin = currentUserRole === 'owner' || currentUserRole === 'admin';
 
-	const handleChange = (field: keyof UpdatePasswordPolicyRequest, value: boolean | number | undefined) => {
+	const handleChange = (
+		field: keyof UpdatePasswordPolicyRequest,
+		value: boolean | number | undefined,
+	) => {
 		setFormData({ ...formData, [field]: value });
 		setHasChanges(true);
 	};
@@ -156,13 +159,18 @@ export function PasswordPolicies() {
 									id="min_length"
 									value={formData.min_length}
 									onChange={(e) =>
-										handleChange('min_length', Number.parseInt(e.target.value, 10))
+										handleChange(
+											'min_length',
+											Number.parseInt(e.target.value, 10),
+										)
 									}
 									min={6}
 									max={128}
 									className="block w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 								/>
-								<span className="text-sm text-gray-500">characters (6-128)</span>
+								<span className="text-sm text-gray-500">
+									characters (6-128)
+								</span>
 							</div>
 						</div>
 
@@ -263,7 +271,7 @@ export function PasswordPolicies() {
 										const value = e.target.value;
 										handleChange(
 											'max_age_days',
-											value === '' ? undefined : Number.parseInt(value, 10)
+											value === '' ? undefined : Number.parseInt(value, 10),
 										);
 									}}
 									min={0}
@@ -294,7 +302,10 @@ export function PasswordPolicies() {
 									id="history_count"
 									value={formData.history_count}
 									onChange={(e) =>
-										handleChange('history_count', Number.parseInt(e.target.value, 10))
+										handleChange(
+											'history_count',
+											Number.parseInt(e.target.value, 10),
+										)
 									}
 									min={0}
 									max={24}
@@ -305,7 +316,8 @@ export function PasswordPolicies() {
 								</span>
 							</div>
 							<p className="mt-1 text-xs text-gray-500">
-								Prevents users from reusing recent passwords. Set to 0 to disable.
+								Prevents users from reusing recent passwords. Set to 0 to
+								disable.
 							</p>
 						</div>
 
@@ -339,27 +351,62 @@ export function PasswordPolicies() {
 				</h3>
 				<ul className="text-sm text-gray-600 space-y-2">
 					<li className="flex items-start gap-2">
-						<svg className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						<svg
+							className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+							aria-hidden="true"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
 						</svg>
 						<span>
-							These policies apply to users who log in with email and password, not OIDC/SSO users.
+							These policies apply to users who log in with email and password,
+							not OIDC/SSO users.
 						</span>
 					</li>
 					<li className="flex items-start gap-2">
-						<svg className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						<svg
+							className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+							aria-hidden="true"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
 						</svg>
 						<span>
 							Changes take effect immediately for new password changes.
 						</span>
 					</li>
 					<li className="flex items-start gap-2">
-						<svg className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						<svg
+							className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+							aria-hidden="true"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
 						</svg>
 						<span>
-							Existing passwords are not affected until the user changes their password.
+							Existing passwords are not affected until the user changes their
+							password.
 						</span>
 					</li>
 				</ul>
