@@ -234,6 +234,10 @@ func NewRouter(
 	announcementsHandler := handlers.NewAnnouncementsHandler(database, logger)
 	announcementsHandler.RegisterRoutes(apiV1)
 
+	// Password policies handler for non-OIDC authentication
+	passwordPoliciesHandler := handlers.NewPasswordPoliciesHandler(database, logger)
+	passwordPoliciesHandler.RegisterRoutes(apiV1)
+
 	// Server logs handler for admin (requires LogBuffer)
 	if cfg.LogBuffer != nil {
 		serverLogsHandler := handlers.NewServerLogsHandler(database, cfg.LogBuffer, logger)
