@@ -17,6 +17,7 @@ import {
 	ReadOnlyModeContext,
 	useReadOnlyModeValue,
 } from '../hooks/useReadOnlyMode';
+import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { LanguageSelector } from './features/LanguageSelector';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
@@ -515,6 +516,32 @@ function Sidebar() {
 							</li>
 							<li>
 								<Link
+									to="/organization/password-policies"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/password-policies'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+										/>
+									</svg>
+									<span>Password Policy</span>
+								</Link>
+							</li>
+							<li>
+								<Link
 									to="/legal-holds"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/legal-holds'
@@ -885,6 +912,7 @@ export function Layout() {
 			<div className="min-h-screen bg-gray-50 flex flex-col">
 				<MaintenanceCountdown />
 				<AnnouncementBanner />
+				<PasswordExpirationBanner />
 				<div className="flex flex-1">
 					<Sidebar />
 					<div className="flex-1 flex flex-col">
