@@ -1,0 +1,30 @@
+# Keldris Agent Systemd Service
+# Managed by Ansible - do not edit manually
+[Unit]
+Description=Keldris Backup Agent
+Documentation=https://keldris.io/docs
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart={{ keldris_install_dir }}/{{ keldris_binary_name }} daemon
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier={{ keldris_service_name }}
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ReadWritePaths={{ keldris_config_dir }} /var/log
+
+# Environment
+Environment=KELDRIS_CONFIG_DIR={{ keldris_config_dir }}
+
+[Install]
+WantedBy=multi-user.target

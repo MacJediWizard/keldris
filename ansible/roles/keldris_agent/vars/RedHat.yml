@@ -1,0 +1,5 @@
+# Keldris Agent Role - RedHat/CentOS Variables
+---
+keldris_package_dependencies:
+  - curl
+  - ca-certificates

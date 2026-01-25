@@ -1,0 +1,18 @@
+# Keldris Agent Deployment Playbook
+# Deploys and configures the Keldris backup agent on target hosts
+---
+- name: Deploy Keldris Agent
+  hosts: backup_clients
+  gather_facts: true
+
+  vars:
+    # Override these in your inventory or pass via -e
+    keldris_server_url: "{{ lookup('env', 'KELDRIS_SERVER_URL') }}"
+    keldris_api_key: "{{ lookup('env', 'KELDRIS_API_KEY') }}"
+
+  roles:
+    - role: keldris_agent
+      vars:
+        keldris_agent_version: "latest"
+        keldris_auto_check_update: true
+        keldris_register_agent: true
