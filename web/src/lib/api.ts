@@ -49,6 +49,7 @@ import type {
 	BulkCloneScheduleRequest,
 	CategoriesResponse,
 	CategoryInfo,
+	ChangePasswordRequest,
 	ChangelogEntry,
 	ChangelogResponse,
 	ClassificationLevelsResponse,
@@ -174,6 +175,12 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	PasswordExpirationInfo,
+	PasswordLoginRequest,
+	PasswordLoginResponse,
+	PasswordPolicyResponse,
+	PasswordRequirements,
+	PasswordValidationResult,
 	PathClassificationRule,
 	PendingRegistration,
 	PendingRegistrationsResponse,
@@ -256,6 +263,7 @@ import type {
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
+	UpdatePasswordPolicyRequest,
 	UpdatePathClassificationRuleRequest,
 	UpdatePolicyRequest,
 	UpdateReportScheduleRequest,
@@ -2681,5 +2689,50 @@ export const userSessionsApi = {
 	revokeAll: async (): Promise<RevokeSessionsResponse> =>
 		fetchApi<RevokeSessionsResponse>('/users/me/sessions', {
 			method: 'DELETE',
+		}),
+};
+
+// Password Policies API
+export const passwordPoliciesApi = {
+	get: async (): Promise<PasswordPolicyResponse> =>
+		fetchApi<PasswordPolicyResponse>('/password-policies'),
+
+	update: async (
+		data: UpdatePasswordPolicyRequest,
+	): Promise<PasswordPolicyResponse> =>
+		fetchApi<PasswordPolicyResponse>('/password-policies', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	getRequirements: async (): Promise<PasswordRequirements> =>
+		fetchApi<PasswordRequirements>('/password-policies/requirements'),
+
+	validatePassword: async (
+		password: string,
+	): Promise<PasswordValidationResult> =>
+		fetchApi<PasswordValidationResult>('/password-policies/validate', {
+			method: 'POST',
+			body: JSON.stringify({ password }),
+		}),
+};
+
+// Password management API
+export const passwordApi = {
+	changePassword: async (
+		data: ChangePasswordRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/password/change', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getExpiration: async (): Promise<PasswordExpirationInfo> =>
+		fetchApi<PasswordExpirationInfo>('/password/expiration'),
+
+	login: async (data: PasswordLoginRequest): Promise<PasswordLoginResponse> =>
+		fetchApi<PasswordLoginResponse>('/auth/login/password', {
+			method: 'POST',
+			body: JSON.stringify(data),
 		}),
 };
