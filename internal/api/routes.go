@@ -256,6 +256,10 @@ func NewRouter(
 	supportHandler := handlers.NewSupportHandler(cfg.Version, cfg.Commit, cfg.BuildDate, "", logger)
 	supportHandler.RegisterRoutes(apiV1)
 
+	// Rate limit dashboard routes (admin only)
+	rateLimitHandler := handlers.NewRateLimitHandler(database, logger)
+	rateLimitHandler.RegisterRoutes(apiV1)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)

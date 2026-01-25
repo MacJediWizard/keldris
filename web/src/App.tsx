@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AdminLogs } from './pages/AdminLogs';
+import { RateLimitDashboard } from './pages/RateLimitDashboard';
 import { AgentDetails } from './pages/AgentDetails';
 import { AgentGroups } from './pages/AgentGroups';
 import { Agents } from './pages/Agents';
@@ -102,6 +103,7 @@ function App() {
 						/>
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />
+						<Route path="admin/rate-limits" element={<RateLimitDashboard />} />
 						<Route path="onboarding" element={<Onboarding />} />
 						<Route path="changelog" element={<Changelog />} />
 					</Route>
