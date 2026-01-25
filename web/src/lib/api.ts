@@ -263,7 +263,10 @@ import type {
 	UpdateVerificationScheduleRequest,
 	UseTemplateRequest,
 	User,
+	UserSession,
+	UserSessionsResponse,
 	UserSSOGroups,
+	RevokeSessionsResponse,
 	ValidateImportRequest,
 	ValidationResult,
 	Verification,
@@ -2605,4 +2608,24 @@ export const templatesApi = {
 export const rateLimitsApi = {
 	getDashboardStats: async (): Promise<RateLimitDashboardStats> =>
 		fetchApi<RateLimitDashboardStats>('/admin/rate-limits'),
+};
+
+// User Sessions API
+export const userSessionsApi = {
+	list: async (): Promise<UserSession[]> => {
+		const response = await fetchApi<UserSessionsResponse>(
+			'/users/me/sessions',
+		);
+		return response.sessions ?? [];
+	},
+
+	revoke: async (id: string): Promise<RevokeSessionsResponse> =>
+		fetchApi<RevokeSessionsResponse>(`/users/me/sessions/${id}`, {
+			method: 'DELETE',
+		}),
+
+	revokeAll: async (): Promise<RevokeSessionsResponse> =>
+		fetchApi<RevokeSessionsResponse>('/users/me/sessions', {
+			method: 'DELETE',
+		}),
 };

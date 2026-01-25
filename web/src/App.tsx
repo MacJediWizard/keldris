@@ -36,6 +36,7 @@ import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
 import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
+import { UserSessions } from './pages/UserSessions';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -104,6 +105,7 @@ function App() {
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />
 						<Route path="admin/rate-limits" element={<RateLimitDashboard />} />
+						<Route path="account/sessions" element={<UserSessions />} />
 						<Route path="onboarding" element={<Onboarding />} />
 						<Route path="changelog" element={<Changelog />} />
 					</Route>

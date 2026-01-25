@@ -2951,3 +2951,26 @@ export interface AgentRegistrationScriptResponse {
 	registration_code: string;
 	expires_at: string;
 }
+
+// User Sessions
+export interface UserSession {
+	id: string;
+	user_id: string;
+	ip_address?: string;
+	user_agent?: string;
+	created_at: string;
+	last_active_at: string;
+	expires_at?: string;
+	revoked: boolean;
+	revoked_at?: string;
+	is_current?: boolean;
+}
+
+export interface UserSessionsResponse {
+	sessions: UserSession[];
+}
+
+export interface RevokeSessionsResponse {
+	message: string;
+	revoked_count?: number;
+}
