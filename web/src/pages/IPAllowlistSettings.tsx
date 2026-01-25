@@ -3,8 +3,8 @@ import { useMe } from '../hooks/useAuth';
 import {
 	useCreateIPAllowlist,
 	useDeleteIPAllowlist,
-	useIPAllowlists,
 	useIPAllowlistSettings,
+	useIPAllowlists,
 	useIPBlockedAttempts,
 	useUpdateIPAllowlist,
 	useUpdateIPAllowlistSettings,
@@ -188,7 +188,10 @@ export function IPAllowlistSettings() {
 									onChange={(e) => setLocalEnabled(e.target.checked)}
 									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
 								/>
-								<label htmlFor="enabled" className="text-sm text-gray-700 dark:text-gray-300">
+								<label
+									htmlFor="enabled"
+									className="text-sm text-gray-700 dark:text-gray-300"
+								>
 									Enable IP allowlist enforcement
 								</label>
 							</div>
@@ -336,7 +339,9 @@ export function IPAllowlistSettings() {
 									<th className="pb-3 font-medium">Description</th>
 									<th className="pb-3 font-medium">Type</th>
 									<th className="pb-3 font-medium">Status</th>
-									{canEdit && <th className="pb-3 font-medium text-right">Actions</th>}
+									{canEdit && (
+										<th className="pb-3 font-medium text-right">Actions</th>
+									)}
 								</tr>
 							</thead>
 							<tbody>
@@ -527,7 +532,9 @@ export function IPAllowlistSettings() {
 								<select
 									id="type"
 									value={newType}
-									onChange={(e) => setNewType(e.target.value as IPAllowlistType)}
+									onChange={(e) =>
+										setNewType(e.target.value as IPAllowlistType)
+									}
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 								>
 									{typeOptions.map((type) => (
