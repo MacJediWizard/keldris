@@ -198,6 +198,7 @@ import type {
 	RestorePreview,
 	RestorePreviewRequest,
 	RestoresResponse,
+	RevokeSessionsResponse,
 	RotateAPIKeyResponse,
 	RunDRTestRequest,
 	RunScheduleResponse,
@@ -263,10 +264,9 @@ import type {
 	UpdateVerificationScheduleRequest,
 	UseTemplateRequest,
 	User,
+	UserSSOGroups,
 	UserSession,
 	UserSessionsResponse,
-	UserSSOGroups,
-	RevokeSessionsResponse,
 	ValidateImportRequest,
 	ValidationResult,
 	Verification,
@@ -2613,9 +2613,7 @@ export const rateLimitsApi = {
 // User Sessions API
 export const userSessionsApi = {
 	list: async (): Promise<UserSession[]> => {
-		const response = await fetchApi<UserSessionsResponse>(
-			'/users/me/sessions',
-		);
+		const response = await fetchApi<UserSessionsResponse>('/users/me/sessions');
 		return response.sessions ?? [];
 	},
 
