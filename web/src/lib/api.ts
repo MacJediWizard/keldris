@@ -22,6 +22,7 @@ import type {
 	AlertsResponse,
 	Announcement,
 	AnnouncementsResponse,
+	RateLimitDashboardStats,
 	ApplyPolicyRequest,
 	ApplyPolicyResponse,
 	AssignTagsRequest,
@@ -2436,4 +2437,10 @@ export const templatesApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+};
+
+// Rate Limits API (Admin only)
+export const rateLimitsApi = {
+	getDashboardStats: async (): Promise<RateLimitDashboardStats> =>
+		fetchApi<RateLimitDashboardStats>('/admin/rate-limits'),
 };
