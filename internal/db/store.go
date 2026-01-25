@@ -9099,3 +9099,227 @@ func scanAnnouncements(rows interface{ Next() bool; Scan(dest ...interface{}) er
 
 	return announcements, nil
 }
+
+// ========== IP Allowlist Methods ==========
+
+// GetIPAllowlistByID returns an IP allowlist entry by ID.
+func (db *DB) GetIPAllowlistByID(ctx context.Context, id uuid.UUID) (*models.IPAllowlist, error) {
+	var a models.IPAllowlist
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at
+		FROM ip_allowlists
+		WHERE id = $1
+	`, id).Scan(
+		&a.ID, &a.OrgID, &a.CIDR, &a.Description, &a.Type, &a.Enabled,
+		&a.CreatedBy, &a.UpdatedBy, &a.CreatedAt, &a.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get ip allowlist: %w", err)
+	}
+	return &a, nil
+}
+
+// ListIPAllowlistsByOrg returns all IP allowlist entries for an organization.
+func (db *DB) ListIPAllowlistsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.IPAllowlist, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at
+		FROM ip_allowlists
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list ip allowlists: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPAllowlists(rows)
+}
+
+// ListEnabledIPAllowlistsByOrg returns enabled IP allowlist entries for an organization by type.
+func (db *DB) ListEnabledIPAllowlistsByOrg(ctx context.Context, orgID uuid.UUID, allowlistType models.IPAllowlistType) ([]*models.IPAllowlist, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at
+		FROM ip_allowlists
+		WHERE org_id = $1 AND enabled = true AND (type = $2 OR type = 'both')
+		ORDER BY created_at DESC
+	`, orgID, allowlistType)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled ip allowlists: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPAllowlists(rows)
+}
+
+// CreateIPAllowlist creates a new IP allowlist entry.
+func (db *DB) CreateIPAllowlist(ctx context.Context, a *models.IPAllowlist) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO ip_allowlists (id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, a.ID, a.OrgID, a.CIDR, a.Description, a.Type, a.Enabled, a.CreatedBy, a.UpdatedBy, a.CreatedAt, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create ip allowlist: %w", err)
+	}
+	return nil
+}
+
+// UpdateIPAllowlist updates an existing IP allowlist entry.
+func (db *DB) UpdateIPAllowlist(ctx context.Context, a *models.IPAllowlist) error {
+	a.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE ip_allowlists
+		SET cidr = $2, description = $3, type = $4, enabled = $5, updated_by = $6, updated_at = $7
+		WHERE id = $1
+	`, a.ID, a.CIDR, a.Description, a.Type, a.Enabled, a.UpdatedBy, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update ip allowlist: %w", err)
+	}
+	return nil
+}
+
+// DeleteIPAllowlist deletes an IP allowlist entry.
+func (db *DB) DeleteIPAllowlist(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM ip_allowlists WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete ip allowlist: %w", err)
+	}
+	return nil
+}
+
+// GetIPAllowlistSettings returns the IP allowlist settings for an organization.
+func (db *DB) GetIPAllowlistSettings(ctx context.Context, orgID uuid.UUID) (*models.IPAllowlistSettings, error) {
+	var s models.IPAllowlistSettings
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, enabled, enforce_for_ui, enforce_for_agent, allow_admin_bypass, created_at, updated_at
+		FROM ip_allowlist_settings
+		WHERE org_id = $1
+	`, orgID).Scan(
+		&s.ID, &s.OrgID, &s.Enabled, &s.EnforceForUI, &s.EnforceForAgent, &s.AllowAdminBypass, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get ip allowlist settings: %w", err)
+	}
+	return &s, nil
+}
+
+// GetOrCreateIPAllowlistSettings returns existing settings or creates default settings.
+func (db *DB) GetOrCreateIPAllowlistSettings(ctx context.Context, orgID uuid.UUID) (*models.IPAllowlistSettings, error) {
+	settings, err := db.GetIPAllowlistSettings(ctx, orgID)
+	if err == nil {
+		return settings, nil
+	}
+
+	// Create default settings
+	settings = models.NewIPAllowlistSettings(orgID)
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO ip_allowlist_settings (id, org_id, enabled, enforce_for_ui, enforce_for_agent, allow_admin_bypass, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (org_id) DO NOTHING
+	`, settings.ID, settings.OrgID, settings.Enabled, settings.EnforceForUI, settings.EnforceForAgent, settings.AllowAdminBypass, settings.CreatedAt, settings.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create ip allowlist settings: %w", err)
+	}
+
+	// Re-fetch to get the actual values (in case of conflict)
+	return db.GetIPAllowlistSettings(ctx, orgID)
+}
+
+// UpdateIPAllowlistSettings updates the IP allowlist settings for an organization.
+func (db *DB) UpdateIPAllowlistSettings(ctx context.Context, s *models.IPAllowlistSettings) error {
+	s.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE ip_allowlist_settings
+		SET enabled = $2, enforce_for_ui = $3, enforce_for_agent = $4, allow_admin_bypass = $5, updated_at = $6
+		WHERE org_id = $1
+	`, s.OrgID, s.Enabled, s.EnforceForUI, s.EnforceForAgent, s.AllowAdminBypass, s.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update ip allowlist settings: %w", err)
+	}
+	return nil
+}
+
+// CreateIPBlockedAttempt records a blocked access attempt.
+func (db *DB) CreateIPBlockedAttempt(ctx context.Context, b *models.IPBlockedAttempt) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO ip_blocked_attempts (id, org_id, ip_address, request_type, path, user_id, agent_id, reason, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, b.ID, b.OrgID, b.IPAddress, b.RequestType, b.Path, b.UserID, b.AgentID, b.Reason, b.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create ip blocked attempt: %w", err)
+	}
+	return nil
+}
+
+// ListIPBlockedAttemptsByOrg returns blocked attempts for an organization.
+func (db *DB) ListIPBlockedAttemptsByOrg(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.IPBlockedAttempt, int, error) {
+	// Get total count
+	var total int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM ip_blocked_attempts WHERE org_id = $1
+	`, orgID).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count ip blocked attempts: %w", err)
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, request_type, path, user_id, agent_id, reason, created_at
+		FROM ip_blocked_attempts
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`, orgID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list ip blocked attempts: %w", err)
+	}
+	defer rows.Close()
+
+	attempts, err := scanIPBlockedAttempts(rows)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return attempts, total, nil
+}
+
+// scanIPAllowlists scans rows into IP allowlist entries.
+func scanIPAllowlists(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.IPAllowlist, error) {
+	var allowlists []*models.IPAllowlist
+	for rows.Next() {
+		var a models.IPAllowlist
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.CIDR, &a.Description, &a.Type, &a.Enabled,
+			&a.CreatedBy, &a.UpdatedBy, &a.CreatedAt, &a.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan ip allowlist: %w", err)
+		}
+		allowlists = append(allowlists, &a)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ip allowlists: %w", err)
+	}
+
+	return allowlists, nil
+}
+
+// scanIPBlockedAttempts scans rows into blocked attempt records.
+func scanIPBlockedAttempts(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.IPBlockedAttempt, error) {
+	var attempts []*models.IPBlockedAttempt
+	for rows.Next() {
+		var b models.IPBlockedAttempt
+		err := rows.Scan(
+			&b.ID, &b.OrgID, &b.IPAddress, &b.RequestType, &b.Path, &b.UserID, &b.AgentID, &b.Reason, &b.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan ip blocked attempt: %w", err)
+		}
+		attempts = append(attempts, &b)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ip blocked attempts: %w", err)
+	}
+
+	return attempts, nil
+}
