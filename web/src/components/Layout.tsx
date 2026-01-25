@@ -17,10 +17,10 @@ import {
 	ReadOnlyModeContext,
 	useReadOnlyModeValue,
 } from '../hooks/useReadOnlyMode';
+import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { LanguageSelector } from './features/LanguageSelector';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
-import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { WhatsNewModal } from './features/WhatsNewModal';
 
