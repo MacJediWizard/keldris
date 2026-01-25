@@ -266,6 +266,10 @@ func NewRouter(
 	rateLimitHandler := handlers.NewRateLimitHandler(database, logger)
 	rateLimitHandler.RegisterRoutes(apiV1)
 
+	// User sessions management routes
+	userSessionsHandler := handlers.NewUserSessionsHandler(database, logger)
+	userSessionsHandler.RegisterRoutes(apiV1)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
