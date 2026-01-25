@@ -119,6 +119,10 @@ func NewRouter(
 	apiV1.Use(middleware.AuthMiddleware(sessions, logger))
 	apiV1.Use(middleware.AuditMiddleware(database, logger))
 
+	// Create IP filter for IP-based access control
+	ipFilter := middleware.NewIPFilter(database, logger)
+	apiV1.Use(middleware.IPFilterMiddleware(ipFilter, logger))
+
 	// Create RBAC for permission checks
 	rbac := auth.NewRBAC(database)
 
@@ -256,11 +260,16 @@ func NewRouter(
 	supportHandler := handlers.NewSupportHandler(cfg.Version, cfg.Commit, cfg.BuildDate, "", logger)
 	supportHandler.RegisterRoutes(apiV1)
 
+	// IP allowlists routes
+	ipAllowlistsHandler := handlers.NewIPAllowlistsHandler(database, ipFilter, logger)
+	ipAllowlistsHandler.RegisterRoutes(apiV1)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
 	agentAPI := r.Engine.Group("/api/v1/agent")
 	agentAPI.Use(middleware.APIKeyMiddleware(apiKeyValidator, logger))
+	agentAPI.Use(middleware.IPFilterAgentMiddleware(ipFilter, logger))
 
 	agentAPIHandler := handlers.NewAgentAPIHandler(database, logger)
 	agentAPIHandler.RegisterRoutes(agentAPI)

@@ -2769,3 +2769,72 @@ export interface UpdateAnnouncementRequest {
 export interface AnnouncementsResponse {
 	announcements: Announcement[];
 }
+
+// IP Allowlist types
+export type IPAllowlistType = 'ui' | 'agent' | 'both';
+
+export interface IPAllowlist {
+	id: string;
+	org_id: string;
+	cidr: string;
+	description?: string;
+	type: IPAllowlistType;
+	enabled: boolean;
+	created_by?: string;
+	updated_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface IPAllowlistSettings {
+	id: string;
+	org_id: string;
+	enabled: boolean;
+	enforce_for_ui: boolean;
+	enforce_for_agent: boolean;
+	allow_admin_bypass: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface IPBlockedAttempt {
+	id: string;
+	org_id: string;
+	ip_address: string;
+	request_type: string;
+	path?: string;
+	user_id?: string;
+	agent_id?: string;
+	reason?: string;
+	created_at: string;
+}
+
+export interface CreateIPAllowlistRequest {
+	cidr: string;
+	description?: string;
+	type: IPAllowlistType;
+	enabled?: boolean;
+}
+
+export interface UpdateIPAllowlistRequest {
+	cidr?: string;
+	description?: string;
+	type?: IPAllowlistType;
+	enabled?: boolean;
+}
+
+export interface UpdateIPAllowlistSettingsRequest {
+	enabled?: boolean;
+	enforce_for_ui?: boolean;
+	enforce_for_agent?: boolean;
+	allow_admin_bypass?: boolean;
+}
+
+export interface IPAllowlistsResponse {
+	allowlists: IPAllowlist[];
+}
+
+export interface IPBlockedAttemptsResponse {
+	attempts: IPBlockedAttempt[];
+	total: number;
+}

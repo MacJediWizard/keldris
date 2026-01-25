@@ -17,6 +17,7 @@ import { Dashboard } from './pages/Dashboard';
 import { FileDiff } from './pages/FileDiff';
 import { FileHistory } from './pages/FileHistory';
 import { FileSearch } from './pages/FileSearch';
+import { IPAllowlistSettings } from './pages/IPAllowlistSettings';
 import { LegalHolds } from './pages/LegalHolds';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
@@ -99,6 +100,10 @@ function App() {
 						<Route
 							path="organization/announcements"
 							element={<Announcements />}
+						/>
+						<Route
+							path="organization/ip-allowlist"
+							element={<IPAllowlistSettings />}
 						/>
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />
