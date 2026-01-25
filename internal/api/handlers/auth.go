@@ -3,6 +3,8 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"time"
 
@@ -30,6 +32,9 @@ type UserStore interface {
 	GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error)
 	GetOrganizationSSOSettings(ctx context.Context, orgID uuid.UUID) (defaultRole *string, autoCreateOrgs bool, err error)
 	CreateAuditLog(ctx context.Context, log *models.AuditLog) error
+	// User session tracking methods
+	CreateUserSession(ctx context.Context, session *models.UserSession) error
+	RevokeUserSession(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
 
 // AuthHandler handles authentication-related HTTP endpoints.
@@ -216,6 +221,23 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		currentOrgRole = string(memberships[0].Role)
 	}
 
+	// Create a session record in the database
+	sessionRecordID := uuid.New()
+	sessionTokenHash := generateSessionTokenHash(sessionRecordID)
+	ipAddress := c.ClientIP()
+	userAgent := c.Request.UserAgent()
+
+	// Calculate session expiration (24 hours by default, matching cookie)
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	userSession := models.NewUserSession(user.ID, sessionTokenHash, ipAddress, userAgent, &expiresAt)
+	userSession.ID = sessionRecordID
+
+	if err := h.userStore.CreateUserSession(c.Request.Context(), userSession); err != nil {
+		h.logger.Error().Err(err).Msg("failed to create user session record")
+		// Continue anyway - session tracking is not critical for authentication
+	}
+
 	// Store user in session
 	sessionUser := &auth.SessionUser{
 		ID:              user.ID,
@@ -225,6 +247,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		AuthenticatedAt: time.Now(),
 		CurrentOrgID:    currentOrgID,
 		CurrentOrgRole:  currentOrgRole,
+		SessionRecordID: sessionRecordID,
 	}
 
 	if err := h.sessions.SetUser(c.Request, c.Writer, sessionUser); err != nil {
@@ -236,6 +259,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	h.logger.Info().
 		Str("user_id", user.ID.String()).
 		Str("email", user.Email).
+		Str("session_id", sessionRecordID.String()).
 		Msg("user authenticated successfully")
 
 	// Redirect to frontend dashboard
@@ -294,6 +318,15 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		h.logger.Info().
 			Str("user_id", sessionUser.ID.String()).
 			Msg("user logging out")
+
+		// Revoke the session record in the database
+		if sessionUser.SessionRecordID != uuid.Nil {
+			if err := h.userStore.RevokeUserSession(c.Request.Context(), sessionUser.SessionRecordID, sessionUser.ID); err != nil {
+				h.logger.Warn().Err(err).
+					Str("session_id", sessionUser.SessionRecordID.String()).
+					Msg("failed to revoke session record")
+			}
+		}
 	}
 
 	if err := h.sessions.ClearUser(c.Request, c.Writer); err != nil {
@@ -303,6 +336,12 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "logged out successfully"})
+}
+
+// generateSessionTokenHash creates a hash from a session ID for storage.
+func generateSessionTokenHash(sessionID uuid.UUID) string {
+	hash := sha256.Sum256([]byte(sessionID.String()))
+	return hex.EncodeToString(hash[:])
 }
 
 // MeResponse is the response for the /auth/me endpoint.

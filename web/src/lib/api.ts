@@ -8,8 +8,14 @@ import type {
 	AgentGroup,
 	AgentGroupsResponse,
 	AgentHealthHistoryResponse,
+	AgentImportJobResult,
+	AgentImportPreviewResponse,
+	AgentImportResponse,
+	AgentImportTemplateResponse,
 	AgentLogFilter,
 	AgentLogsResponse,
+	AgentRegistrationScriptRequest,
+	AgentRegistrationScriptResponse,
 	AgentSchedulesResponse,
 	AgentStatsResponse,
 	AgentWithGroups,
@@ -39,6 +45,8 @@ import type {
 	BackupsResponse,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
+	BulkCloneResponse,
+	BulkCloneScheduleRequest,
 	CategoriesResponse,
 	CategoryInfo,
 	ChangelogEntry,
@@ -46,6 +54,10 @@ import type {
 	ClassificationLevelsResponse,
 	ClassificationRulesResponse,
 	ClassificationSummary,
+	CloneRepositoryRequest,
+	CloneRepositoryResponse,
+	CloneScheduleRequest,
+	CloudRestoreProgress,
 	ComplianceReport,
 	ConfigTemplate,
 	ConfigTemplatesResponse,
@@ -61,6 +73,7 @@ import type {
 	CreateAlertRuleRequest,
 	CreateAnnouncementRequest,
 	CreateBackupScriptRequest,
+	CreateCloudRestoreRequest,
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
@@ -161,6 +174,7 @@ import type {
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	RateLimitDashboardStats,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -184,6 +198,7 @@ import type {
 	RestorePreview,
 	RestorePreviewRequest,
 	RestoresResponse,
+	RevokeSessionsResponse,
 	RotateAPIKeyResponse,
 	RunDRTestRequest,
 	RunScheduleResponse,
@@ -250,6 +265,8 @@ import type {
 	UseTemplateRequest,
 	User,
 	UserSSOGroups,
+	UserSession,
+	UserSessionsResponse,
 	ValidateImportRequest,
 	ValidationResult,
 	Verification,
@@ -586,6 +603,15 @@ export const repositoriesApi = {
 
 	recoverKey: async (id: string): Promise<KeyRecoveryResponse> =>
 		fetchApi<KeyRecoveryResponse>(`/repositories/${id}/key/recover`),
+
+	clone: async (
+		id: string,
+		data: CloneRepositoryRequest,
+	): Promise<CloneRepositoryResponse> =>
+		fetchApi<CloneRepositoryResponse>(`/repositories/${id}/clone`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Repository Import API
@@ -611,6 +637,123 @@ export const repositoryImportApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+};
+
+// Agent Import API
+export const agentImportApi = {
+	preview: async (
+		file: File,
+		options: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+		} = {},
+	): Promise<AgentImportPreviewResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options.hasHeader !== undefined)
+			formData.append('has_header', String(options.hasHeader));
+		if (options.hostnameCol !== undefined)
+			formData.append('hostname_col', String(options.hostnameCol));
+		if (options.groupCol !== undefined)
+			formData.append('group_col', String(options.groupCol));
+		if (options.tagsCol !== undefined)
+			formData.append('tags_col', String(options.tagsCol));
+		if (options.configCol !== undefined)
+			formData.append('config_col', String(options.configCol));
+
+		const response = await fetch(`${API_BASE}/agents/import/preview`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportPreviewResponse>(response);
+	},
+
+	import: async (
+		file: File,
+		options: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+			createMissingGroups?: boolean;
+			tokenExpiryHours?: number;
+		} = {},
+	): Promise<AgentImportResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options.hasHeader !== undefined)
+			formData.append('has_header', String(options.hasHeader));
+		if (options.hostnameCol !== undefined)
+			formData.append('hostname_col', String(options.hostnameCol));
+		if (options.groupCol !== undefined)
+			formData.append('group_col', String(options.groupCol));
+		if (options.tagsCol !== undefined)
+			formData.append('tags_col', String(options.tagsCol));
+		if (options.configCol !== undefined)
+			formData.append('config_col', String(options.configCol));
+		if (options.createMissingGroups !== undefined)
+			formData.append(
+				'create_missing_groups',
+				String(options.createMissingGroups),
+			);
+		if (options.tokenExpiryHours !== undefined)
+			formData.append('token_expiry_hours', String(options.tokenExpiryHours));
+
+		const response = await fetch(`${API_BASE}/agents/import`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportResponse>(response);
+	},
+
+	getTemplate: async (
+		format?: 'json' | 'csv',
+	): Promise<AgentImportTemplateResponse> => {
+		const endpoint = format
+			? `/agents/import/template?format=${format}`
+			: '/agents/import/template';
+		return fetchApi<AgentImportTemplateResponse>(endpoint);
+	},
+
+	downloadTemplate: async (): Promise<Blob> => {
+		const response = await fetch(
+			`${API_BASE}/agents/import/template?format=csv`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to download template');
+		}
+		return response.blob();
+	},
+
+	generateScript: async (
+		data: AgentRegistrationScriptRequest,
+	): Promise<AgentRegistrationScriptResponse> =>
+		fetchApi<AgentRegistrationScriptResponse>('/agents/import/script', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	exportTokens: async (results: AgentImportJobResult[]): Promise<Blob> => {
+		const response = await fetch(
+			`${API_BASE}/agents/import/tokens/export?results=${encodeURIComponent(JSON.stringify(results))}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export tokens');
+		}
+		return response.blob();
+	},
 };
 
 // Schedules API
@@ -657,6 +800,20 @@ export const schedulesApi = {
 		);
 		return response.replication_status ?? [];
 	},
+
+	clone: async (id: string, data: CloneScheduleRequest): Promise<Schedule> =>
+		fetchApi<Schedule>(`/schedules/${id}/clone`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	bulkClone: async (
+		data: BulkCloneScheduleRequest,
+	): Promise<BulkCloneResponse> =>
+		fetchApi<BulkCloneResponse>('/schedules/bulk-clone', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Policies API
@@ -900,6 +1057,15 @@ export const restoresApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+
+	createCloud: async (data: CreateCloudRestoreRequest): Promise<Restore> =>
+		fetchApi<Restore>('/restores/cloud', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getProgress: async (id: string): Promise<CloudRestoreProgress> =>
+		fetchApi<CloudRestoreProgress>(`/restores/${id}/progress`),
 };
 
 // File History API
@@ -2492,4 +2658,28 @@ export const ipAllowlistsApi = {
 		fetchApi<IPBlockedAttemptsResponse>(
 			`/ip-blocked-attempts?limit=${limit}&offset=${offset}`,
 		),
+};
+
+// Rate Limits API (Admin only)
+export const rateLimitsApi = {
+	getDashboardStats: async (): Promise<RateLimitDashboardStats> =>
+		fetchApi<RateLimitDashboardStats>('/admin/rate-limits'),
+};
+
+// User Sessions API
+export const userSessionsApi = {
+	list: async (): Promise<UserSession[]> => {
+		const response = await fetchApi<UserSessionsResponse>('/users/me/sessions');
+		return response.sessions ?? [];
+	},
+
+	revoke: async (id: string): Promise<RevokeSessionsResponse> =>
+		fetchApi<RevokeSessionsResponse>(`/users/me/sessions/${id}`, {
+			method: 'DELETE',
+		}),
+
+	revokeAll: async (): Promise<RevokeSessionsResponse> =>
+		fetchApi<RevokeSessionsResponse>('/users/me/sessions', {
+			method: 'DELETE',
+		}),
 };

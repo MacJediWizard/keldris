@@ -1,0 +1,42 @@
+# Keldris Agent Role - Default Variables
+---
+# Server connection settings (required)
+keldris_server_url: ""
+keldris_api_key: ""
+
+# Agent version to install
+# Use "latest" to download the most recent version
+keldris_agent_version: "latest"
+
+# Download base URL for agent binaries
+keldris_download_url: "https://releases.keldris.io/agent"
+
+# Installation paths
+keldris_install_dir: "/usr/local/bin"
+keldris_binary_name: "keldris-agent"
+
+# Configuration settings
+keldris_config_dir_linux: "/etc/keldris"
+keldris_config_dir_macos: "{{ ansible_env.HOME }}/.config/keldris"
+keldris_auto_check_update: true
+keldris_hostname: "{{ ansible_hostname }}"
+
+# Service settings
+keldris_service_name: "keldris-agent"
+keldris_service_enabled: true
+keldris_service_started: true
+
+# Linux-specific (systemd)
+keldris_systemd_service_file: "/etc/systemd/system/{{ keldris_service_name }}.service"
+
+# macOS-specific (launchd)
+keldris_launchd_label: "io.keldris.agent"
+keldris_launchd_plist_dir: "{{ ansible_env.HOME }}/Library/LaunchAgents"
+keldris_launchd_plist_file: "{{ keldris_launchd_plist_dir }}/{{ keldris_launchd_label }}.plist"
+
+# Registration settings
+keldris_register_agent: true
+keldris_force_registration: false
+
+# Security settings
+keldris_remove_quarantine: true  # macOS only: remove quarantine attribute from downloaded binary

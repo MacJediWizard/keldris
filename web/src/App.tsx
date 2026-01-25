@@ -27,6 +27,7 @@ import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
 import { Policies } from './pages/Policies';
+import { RateLimitDashboard } from './pages/RateLimitDashboard';
 import Reports from './pages/Reports';
 import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
@@ -36,6 +37,7 @@ import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
 import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
+import { UserSessions } from './pages/UserSessions';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -107,6 +109,8 @@ function App() {
 						/>
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />
+						<Route path="admin/rate-limits" element={<RateLimitDashboard />} />
+						<Route path="account/sessions" element={<UserSessions />} />
 						<Route path="onboarding" element={<Onboarding />} />
 						<Route path="changelog" element={<Changelog />} />
 					</Route>
