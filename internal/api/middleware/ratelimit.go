@@ -235,7 +235,7 @@ func rateLimitMiddleware(manager *RateLimitManager) gin.HandlerFunc {
 
 			// Calculate Retry-After in seconds
 			resetTime := time.Unix(ctx.Reset, 0)
-			retryAfter := resetTime.Sub(time.Now()).Seconds()
+			retryAfter := time.Until(resetTime).Seconds()
 			if retryAfter < 1 {
 				retryAfter = 1
 			}
