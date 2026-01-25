@@ -31,9 +31,7 @@ function StatCard({
 			<div className="text-sm font-medium text-gray-500 dark:text-gray-400">
 				{title}
 			</div>
-			<div
-				className={`text-2xl font-bold mt-1 ${color} dark:text-white`}
-			>
+			<div className={`text-2xl font-bold mt-1 ${color} dark:text-white`}>
 				{value}
 			</div>
 			{subtitle && (
@@ -59,9 +57,10 @@ export function RateLimitDashboard() {
 		);
 	}
 
-	const rejectionRate = stats && stats.total_requests > 0
-		? ((stats.total_rejected / stats.total_requests) * 100).toFixed(2)
-		: '0.00';
+	const rejectionRate =
+		stats && stats.total_requests > 0
+			? ((stats.total_rejected / stats.total_requests) * 100).toFixed(2)
+			: '0.00';
 
 	return (
 		<div className="space-y-6">
@@ -124,7 +123,11 @@ export function RateLimitDashboard() {
 						<StatCard
 							title="Rejection Rate"
 							value={`${rejectionRate}%`}
-							color={Number.parseFloat(rejectionRate) > 5 ? 'text-red-600' : 'text-green-600'}
+							color={
+								Number.parseFloat(rejectionRate) > 5
+									? 'text-red-600'
+									: 'text-green-600'
+							}
 						/>
 					</>
 				) : null}
@@ -235,9 +238,13 @@ export function RateLimitDashboard() {
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 								{stats.client_stats.map((client: RateLimitClientStats) => {
-									const clientRejectionRate = client.total_requests > 0
-										? ((client.rejected_count / client.total_requests) * 100).toFixed(2)
-										: '0.00';
+									const clientRejectionRate =
+										client.total_requests > 0
+											? (
+													(client.rejected_count / client.total_requests) *
+													100
+												).toFixed(2)
+											: '0.00';
 									return (
 										<tr
 											key={client.client_ip}
@@ -266,15 +273,17 @@ export function RateLimitDashboard() {
 														Number.parseFloat(clientRejectionRate) > 10
 															? 'text-red-600 dark:text-red-400 font-medium'
 															: Number.parseFloat(clientRejectionRate) > 5
-															? 'text-yellow-600 dark:text-yellow-400'
-															: 'text-green-600 dark:text-green-400'
+																? 'text-yellow-600 dark:text-yellow-400'
+																: 'text-green-600 dark:text-green-400'
 													}
 												>
 													{clientRejectionRate}%
 												</span>
 											</td>
 											<td className="px-6 py-4 text-gray-500 dark:text-gray-400">
-												{client.last_request ? formatDateTime(client.last_request) : '-'}
+												{client.last_request
+													? formatDateTime(client.last_request)
+													: '-'}
 											</td>
 										</tr>
 									);
@@ -312,29 +321,38 @@ export function RateLimitDashboard() {
 					Rate Limit Headers
 				</h3>
 				<p className="text-blue-700 dark:text-blue-300 mb-4">
-					All API responses include rate limit information in the following headers:
+					All API responses include rate limit information in the following
+					headers:
 				</p>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
 					<div className="bg-white dark:bg-gray-800 rounded p-4 border border-blue-200 dark:border-blue-800">
-						<code className="font-mono text-blue-800 dark:text-blue-200">X-RateLimit-Limit</code>
+						<code className="font-mono text-blue-800 dark:text-blue-200">
+							X-RateLimit-Limit
+						</code>
 						<p className="text-gray-600 dark:text-gray-400 mt-1">
 							Maximum number of requests allowed in the time window
 						</p>
 					</div>
 					<div className="bg-white dark:bg-gray-800 rounded p-4 border border-blue-200 dark:border-blue-800">
-						<code className="font-mono text-blue-800 dark:text-blue-200">X-RateLimit-Remaining</code>
+						<code className="font-mono text-blue-800 dark:text-blue-200">
+							X-RateLimit-Remaining
+						</code>
 						<p className="text-gray-600 dark:text-gray-400 mt-1">
 							Number of requests remaining in the current window
 						</p>
 					</div>
 					<div className="bg-white dark:bg-gray-800 rounded p-4 border border-blue-200 dark:border-blue-800">
-						<code className="font-mono text-blue-800 dark:text-blue-200">X-RateLimit-Reset</code>
+						<code className="font-mono text-blue-800 dark:text-blue-200">
+							X-RateLimit-Reset
+						</code>
 						<p className="text-gray-600 dark:text-gray-400 mt-1">
 							Unix timestamp when the rate limit window resets
 						</p>
 					</div>
 					<div className="bg-white dark:bg-gray-800 rounded p-4 border border-blue-200 dark:border-blue-800">
-						<code className="font-mono text-blue-800 dark:text-blue-200">Retry-After</code>
+						<code className="font-mono text-blue-800 dark:text-blue-200">
+							Retry-After
+						</code>
 						<p className="text-gray-600 dark:text-gray-400 mt-1">
 							Seconds to wait before retrying (only on 429 responses)
 						</p>
