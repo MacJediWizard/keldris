@@ -1,0 +1,20 @@
+# Keldris Agent Role - Configuration Tasks
+---
+- name: Ensure config directory exists
+  ansible.builtin.file:
+    path: "{{ keldris_config_dir }}"
+    state: directory
+    mode: "{{ '0750' if ansible_system == 'Linux' else '0700' }}"
+    owner: "{{ 'root' if ansible_system == 'Linux' else ansible_user_id }}"
+    group: "{{ 'root' if ansible_system == 'Linux' else 'staff' }}"
+  become: "{{ ansible_system == 'Linux' }}"
+
+- name: Deploy agent configuration
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ keldris_config_dir }}/config.yml"
+    mode: "0600"
+    owner: "{{ 'root' if ansible_system == 'Linux' else ansible_user_id }}"
+    group: "{{ 'root' if ansible_system == 'Linux' else 'staff' }}"
+  become: "{{ ansible_system == 'Linux' }}"
+  notify: Restart keldris-agent

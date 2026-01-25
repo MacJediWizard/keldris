@@ -1,0 +1,26 @@
+# Keldris Agent Role - Handlers
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: ansible_system == "Linux"
+
+- name: Restart keldris-agent
+  block:
+    - name: Restart systemd service
+      ansible.builtin.systemd:
+        name: "{{ keldris_service_name }}"
+        state: restarted
+      when: ansible_system == "Linux"
+
+    - name: Restart launchd service
+      block:
+        - name: Unload launchd service
+          ansible.builtin.command: launchctl unload "{{ keldris_launchd_plist_file }}"
+          failed_when: false
+          changed_when: false
+
+        - name: Load launchd service
+          ansible.builtin.command: launchctl load -w "{{ keldris_launchd_plist_file }}"
+          changed_when: true
+      when: ansible_system == "Darwin"
