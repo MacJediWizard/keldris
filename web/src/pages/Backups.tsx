@@ -11,6 +11,8 @@ import {
 	BulkSelectHeader,
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
+import { HelpTooltip } from '../components/ui/HelpTooltip';
+import { statusHelp } from '../lib/help-content';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useBulkSelect } from '../hooks/useBulkSelect';
@@ -221,11 +223,34 @@ function BackupDetailsModal({
 					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Backup Details
 					</h3>
-					<span
-						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
-					>
-						<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
-						{backup.status}
+					<span className="inline-flex items-center gap-1.5">
+						<span
+							className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
+						>
+							<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
+							{backup.status}
+						</span>
+						<HelpTooltip
+							content={
+								backup.status === 'completed'
+									? statusHelp.backupCompleted.content
+									: backup.status === 'running'
+										? statusHelp.backupRunning.content
+										: backup.status === 'failed'
+											? statusHelp.backupFailed.content
+											: statusHelp.backupCanceled.content
+							}
+							title={
+								backup.status === 'completed'
+									? statusHelp.backupCompleted.title
+									: backup.status === 'running'
+										? statusHelp.backupRunning.title
+										: backup.status === 'failed'
+											? statusHelp.backupFailed.title
+											: statusHelp.backupCanceled.title
+							}
+							position="left"
+						/>
 					</span>
 				</div>
 
@@ -490,11 +515,34 @@ function BackupRow({
 			</td>
 			<td className="px-6 py-4">
 				<div className="flex flex-col gap-1">
-					<span
-						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
-					>
-						<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
-						{backup.status}
+					<span className="inline-flex items-center gap-1.5">
+						<span
+							className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
+						>
+							<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
+							{backup.status}
+						</span>
+						<HelpTooltip
+							content={
+								backup.status === 'completed'
+									? statusHelp.backupCompleted.content
+									: backup.status === 'running'
+										? statusHelp.backupRunning.content
+										: backup.status === 'failed'
+											? statusHelp.backupFailed.content
+											: statusHelp.backupCanceled.content
+							}
+							title={
+								backup.status === 'completed'
+									? statusHelp.backupCompleted.title
+									: backup.status === 'running'
+										? statusHelp.backupRunning.title
+										: backup.status === 'failed'
+											? statusHelp.backupFailed.title
+											: statusHelp.backupCanceled.title
+							}
+							position="right"
+						/>
 					</span>
 					{backup.classification_level &&
 						backup.classification_level !== 'public' && (
