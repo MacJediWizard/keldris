@@ -16,6 +16,10 @@ import {
 	useRunSchedule,
 	useSetAgentDebugMode,
 } from '../hooks/useAgents';
+import {
+	useAgentConcurrency,
+	useUpdateAgentConcurrency,
+} from '../hooks/useBackupQueue';
 import type {
 	AgentCommand,
 	AgentHealthHistory,
@@ -397,6 +401,13 @@ export function AgentDetails() {
 	const setDebugMode = useSetAgentDebugMode();
 	const createCommand = useCreateAgentCommand();
 	const cancelCommand = useCancelAgentCommand();
+
+	// Concurrency hooks
+	const { data: concurrencyData, isLoading: concurrencyLoading } =
+		useAgentConcurrency(id ?? '');
+	const updateConcurrency = useUpdateAgentConcurrency();
+	const [isEditingConcurrency, setIsEditingConcurrency] = useState(false);
+	const [concurrencyLimit, setConcurrencyLimit] = useState<string>('');
 
 	const stats = statsResponse?.stats;
 	const backups = backupsResponse?.backups ?? [];
@@ -919,6 +930,123 @@ export function AgentDetails() {
 						</p>
 					</div>
 				</div>
+			</div>
+
+			{/* Backup Concurrency Settings */}
+			<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="flex items-center justify-between mb-4">
+					<h2 className="text-lg font-semibold text-gray-900">
+						Backup Concurrency
+					</h2>
+					{!isEditingConcurrency && (
+						<button
+							type="button"
+							onClick={() => {
+								setConcurrencyLimit(
+									concurrencyData?.max_concurrent_backups?.toString() ?? '',
+								);
+								setIsEditingConcurrency(true);
+							}}
+							className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+						>
+							Edit
+						</button>
+					)}
+				</div>
+				{isEditingConcurrency ? (
+					<form
+						onSubmit={async (e) => {
+							e.preventDefault();
+							const limit =
+								concurrencyLimit === ''
+									? null
+									: Number.parseInt(concurrencyLimit, 10);
+							await updateConcurrency.mutateAsync({
+								agentId: id ?? '',
+								data: {
+									max_concurrent_backups: limit === null ? undefined : limit,
+								},
+							});
+							setIsEditingConcurrency(false);
+						}}
+						className="space-y-4"
+					>
+						<div>
+							<label
+								htmlFor="concurrencyLimit"
+								className="block text-sm font-medium text-gray-700 mb-1"
+							>
+								Maximum Concurrent Backups
+							</label>
+							<input
+								type="number"
+								id="concurrencyLimit"
+								value={concurrencyLimit}
+								onChange={(e) => setConcurrencyLimit(e.target.value)}
+								min="0"
+								placeholder="Use organization default"
+								className="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+							<p className="mt-1 text-xs text-gray-500">
+								Leave empty to use organization default. When the limit is
+								reached, new backups will be queued.
+							</p>
+						</div>
+						{updateConcurrency.isError && (
+							<p className="text-sm text-red-600">
+								Failed to update concurrency limit. Please try again.
+							</p>
+						)}
+						<div className="flex gap-3">
+							<button
+								type="submit"
+								disabled={updateConcurrency.isPending}
+								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+							>
+								{updateConcurrency.isPending ? 'Saving...' : 'Save'}
+							</button>
+							<button
+								type="button"
+								onClick={() => setIsEditingConcurrency(false)}
+								className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+							>
+								Cancel
+							</button>
+						</div>
+					</form>
+				) : (
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+						<div>
+							<p className="text-sm text-gray-600">Max Concurrent Backups</p>
+							<p className="font-medium text-gray-900">
+								{concurrencyLoading ? (
+									<span className="h-4 w-16 bg-gray-200 rounded animate-pulse inline-block" />
+								) : concurrencyData?.max_concurrent_backups != null ? (
+									concurrencyData.max_concurrent_backups
+								) : (
+									<span className="text-gray-500">Use org default</span>
+								)}
+							</p>
+						</div>
+						<div>
+							<p className="text-sm text-gray-600">Currently Running</p>
+							<p className="font-medium text-gray-900">
+								{concurrencyData?.running_count ?? 0}
+							</p>
+						</div>
+						<div>
+							<p className="text-sm text-gray-600">Queued</p>
+							<p className="font-medium text-gray-900">
+								{concurrencyData?.queued_count ?? 0}
+								{(concurrencyData?.queued_count ?? 0) > 0 && (
+									<span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+										Waiting
+									</span>
+								)}
+							</p>
+						</div>
+					</div>
+				)}
 			</div>
 
 			{/* Tabs */}

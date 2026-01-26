@@ -1,0 +1,9 @@
+# Keldris Agent Configuration
+# Managed by Ansible - do not edit manually
+---
+server_url: {{ keldris_server_url | to_json }}
+api_key: {{ keldris_api_key | to_json }}
+{% if keldris_hostname is defined and keldris_hostname %}
+hostname: {{ keldris_hostname | to_json }}
+{% endif %}
+auto_check_update: {{ keldris_auto_check_update | bool | lower }}

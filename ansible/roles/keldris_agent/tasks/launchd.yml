@@ -1,0 +1,29 @@
+# Keldris Agent Role - Launchd Service Setup (macOS)
+---
+- name: Ensure LaunchAgents directory exists
+  ansible.builtin.file:
+    path: "{{ keldris_launchd_plist_dir }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ ansible_user_id }}"
+    group: staff
+
+- name: Stop existing launchd service
+  ansible.builtin.command: launchctl unload "{{ keldris_launchd_plist_file }}"
+  failed_when: false
+  changed_when: false
+  when: keldris_service_started | bool
+
+- name: Deploy launchd plist file
+  ansible.builtin.template:
+    src: io.keldris.agent.plist.j2
+    dest: "{{ keldris_launchd_plist_file }}"
+    mode: "0644"
+    owner: "{{ ansible_user_id }}"
+    group: staff
+  notify: Restart keldris-agent
+
+- name: Load launchd service
+  ansible.builtin.command: launchctl load -w "{{ keldris_launchd_plist_file }}"
+  changed_when: true
+  when: keldris_service_enabled | bool and keldris_service_started | bool

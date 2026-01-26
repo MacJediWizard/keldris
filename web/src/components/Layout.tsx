@@ -17,6 +17,7 @@ import {
 	ReadOnlyModeContext,
 	useReadOnlyModeValue,
 } from '../hooks/useReadOnlyMode';
+import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { LanguageSelector } from './features/LanguageSelector';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
@@ -214,6 +215,26 @@ const navItems: NavItem[] = [
 					strokeLinejoin="round"
 					strokeWidth={2}
 					d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+				/>
+			</svg>
+		),
+	},
+	{
+		path: '/downtime',
+		labelKey: 'nav.downtime',
+		icon: (
+			<svg
+				aria-hidden="true"
+				className="w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
 				/>
 			</svg>
 		),
@@ -489,6 +510,58 @@ function Sidebar() {
 							</li>
 							<li>
 								<Link
+									to="/organization/ip-allowlist"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/ip-allowlist'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+										/>
+									</svg>
+									<span>IP Allowlist</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/organization/password-policies"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/password-policies'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+										/>
+									</svg>
+									<span>Password Policy</span>
+								</Link>
+							</li>
+							<li>
+								<Link
 									to="/legal-holds"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/legal-holds'
@@ -515,6 +588,32 @@ function Sidebar() {
 							</li>
 							<li>
 								<Link
+									to="/lifecycle-policies"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/lifecycle-policies'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+										/>
+									</svg>
+									<span>Lifecycle Policies</span>
+								</Link>
+							</li>
+							<li>
+								<Link
 									to="/admin/logs"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/admin/logs'
@@ -537,6 +636,32 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Server Logs</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/admin/rate-limits"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/admin/rate-limits'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M13 10V3L4 14h7v7l9-11h-7z"
+										/>
+									</svg>
+									<span>Rate Limits</span>
 								</Link>
 							</li>
 						</ul>
@@ -736,6 +861,27 @@ function Header() {
 									<p className="text-xs text-gray-500 truncate">{user.email}</p>
 								</div>
 							)}
+							<Link
+								to="/account/sessions"
+								onClick={() => setShowDropdown(false)}
+								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+							>
+								<svg
+									aria-hidden="true"
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+									/>
+								</svg>
+								Active Sessions
+							</Link>
 							<button
 								type="button"
 								onClick={() => logout.mutate()}
@@ -812,6 +958,7 @@ export function Layout() {
 			<div className="min-h-screen bg-gray-50 flex flex-col">
 				<MaintenanceCountdown />
 				<AnnouncementBanner />
+				<PasswordExpirationBanner />
 				<div className="flex flex-1">
 					<Sidebar />
 					<div className="flex-1 flex flex-col">
