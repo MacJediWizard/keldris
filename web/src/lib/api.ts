@@ -44,15 +44,15 @@ import type {
 	BackupSuccessRatesResponse,
 	BackupsResponse,
 	BlockedRequestsResponse,
-	BulkCloneResponse,
-	BulkCloneScheduleRequest,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
+	BulkCloneResponse,
+	BulkCloneScheduleRequest,
 	CategoriesResponse,
 	CategoryInfo,
+	ChangePasswordRequest,
 	ChangelogEntry,
 	ChangelogResponse,
-	ChangePasswordRequest,
 	ClassificationLevelsResponse,
 	ClassificationRulesResponse,
 	ClassificationSummary,
@@ -81,9 +81,9 @@ import type {
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
 	CreateExcludePatternRequest,
-	CreateImmutabilityLockRequest,
 	CreateIPAllowlistRequest,
 	CreateIPBanRequest,
+	CreateImmutabilityLockRequest,
 	CreateLegalHoldRequest,
 	CreateLifecyclePolicyRequest,
 	CreateMaintenanceWindowRequest,
@@ -143,16 +143,16 @@ import type {
 	GeoReplicationSummary,
 	GeoReplicationSummaryResponse,
 	GeoReplicationUpdateRequest,
-	ImmutabilityLock,
-	ImmutabilityLocksResponse,
-	ImmutabilityStatus,
-	ImportConfigRequest,
 	IPAllowlist,
 	IPAllowlistSettings,
 	IPAllowlistsResponse,
 	IPBan,
 	IPBansResponse,
 	IPBlockedAttemptsResponse,
+	ImmutabilityLock,
+	ImmutabilityLocksResponse,
+	ImmutabilityStatus,
+	ImportConfigRequest,
 	ImportPreviewRequest,
 	ImportPreviewResponse,
 	ImportRepositoryRequest,
@@ -168,8 +168,8 @@ import type {
 	LifecycleDeletionEventsResponse,
 	LifecycleDryRunRequest,
 	LifecycleDryRunResult,
-	LifecyclePolicy,
 	LifecyclePoliciesResponse,
+	LifecyclePolicy,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
 	MembersResponse,
@@ -271,9 +271,9 @@ import type {
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
-	UpdateConcurrencyRequest,
 	UpdateAnnouncementRequest,
 	UpdateBackupScriptRequest,
+	UpdateConcurrencyRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
 	UpdateEntityMetadataRequest,
@@ -304,9 +304,9 @@ import type {
 	UpdateVerificationScheduleRequest,
 	UseTemplateRequest,
 	User,
+	UserSSOGroups,
 	UserSession,
 	UserSessionsResponse,
-	UserSSOGroups,
 	ValidateImportRequest,
 	ValidationResult,
 	Verification,
@@ -717,16 +717,15 @@ export const schedulesApi = {
 		return response.replication_status ?? [];
 	},
 
-	clone: async (
-		id: string,
-		data: CloneScheduleRequest,
-	): Promise<Schedule> =>
+	clone: async (id: string, data: CloneScheduleRequest): Promise<Schedule> =>
 		fetchApi<Schedule>(`/schedules/${id}/clone`, {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
 
-	bulkClone: async (data: BulkCloneScheduleRequest): Promise<BulkCloneResponse> =>
+	bulkClone: async (
+		data: BulkCloneScheduleRequest,
+	): Promise<BulkCloneResponse> =>
 		fetchApi<BulkCloneResponse>('/schedules/bulk-clone', {
 			method: 'POST',
 			body: JSON.stringify(data),
@@ -2667,9 +2666,12 @@ export const agentImportApi = {
 		),
 
 	downloadTemplate: async (): Promise<Blob> => {
-		const response = await fetch(`${API_BASE}/agents/import/template/download`, {
-			credentials: 'include',
-		});
+		const response = await fetch(
+			`${API_BASE}/agents/import/template/download`,
+			{
+				credentials: 'include',
+			},
+		);
 		if (!response.ok) {
 			throw new ApiError(response.status, 'Failed to download template');
 		}
@@ -2833,7 +2835,9 @@ export const lifecyclePoliciesApi = {
 			method: 'POST',
 		}),
 
-	preview: async (data: LifecycleDryRunRequest): Promise<LifecycleDryRunResult> =>
+	preview: async (
+		data: LifecycleDryRunRequest,
+	): Promise<LifecycleDryRunResult> =>
 		fetchApi<LifecycleDryRunResult>('/lifecycle-policies/preview', {
 			method: 'POST',
 			body: JSON.stringify(data),
@@ -2852,7 +2856,9 @@ export const lifecyclePoliciesApi = {
 		return response.events ?? [];
 	},
 
-	listOrgDeletions: async (limit?: number): Promise<LifecycleDeletionEvent[]> => {
+	listOrgDeletions: async (
+		limit?: number,
+	): Promise<LifecycleDeletionEvent[]> => {
 		const params = new URLSearchParams();
 		if (limit) params.set('limit', limit.toString());
 		const query = params.toString();
@@ -2865,7 +2871,9 @@ export const lifecyclePoliciesApi = {
 
 // Password API
 export const passwordApi = {
-	changePassword: async (data: ChangePasswordRequest): Promise<MessageResponse> =>
+	changePassword: async (
+		data: ChangePasswordRequest,
+	): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>('/auth/password', {
 			method: 'POST',
 			body: JSON.stringify(data),
@@ -2932,7 +2940,9 @@ export const rateLimitConfigsApi = {
 	get: async (id: string): Promise<RateLimitConfig> =>
 		fetchApi<RateLimitConfig>(`/rate-limit-configs/${id}`),
 
-	create: async (data: CreateRateLimitConfigRequest): Promise<RateLimitConfig> =>
+	create: async (
+		data: CreateRateLimitConfigRequest,
+	): Promise<RateLimitConfig> =>
 		fetchApi<RateLimitConfig>('/rate-limit-configs', {
 			method: 'POST',
 			body: JSON.stringify(data),
