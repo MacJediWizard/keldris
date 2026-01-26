@@ -266,6 +266,10 @@ func NewRouter(
 	classificationsHandler := handlers.NewClassificationsHandler(database, logger)
 	classificationsHandler.RegisterRoutes(apiV1)
 
+	// Storage Tiering routes (scheduler is nil for now, will be set up when tiering scheduler is integrated)
+	storageTiersHandler := handlers.NewStorageTiersHandler(database, nil, logger)
+	storageTiersHandler.RegisterRoutes(apiV1)
+
 	// Support bundle routes
 	supportHandler := handlers.NewSupportHandler(cfg.Version, cfg.Commit, cfg.BuildDate, "", logger)
 	supportHandler.RegisterRoutes(apiV1)
