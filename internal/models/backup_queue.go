@@ -6,30 +6,30 @@ import (
 	"github.com/google/uuid"
 )
 
-// BackupQueueStatus represents the status of a queued backup.
-type BackupQueueStatus string
+// ConcurrencyQueueStatus represents the status of a backup in the concurrency queue.
+type ConcurrencyQueueStatus string
 
 const (
-	// BackupQueueStatusQueued indicates the backup is waiting in queue.
-	BackupQueueStatusQueued BackupQueueStatus = "queued"
-	// BackupQueueStatusStarted indicates the backup has been started.
-	BackupQueueStatusStarted BackupQueueStatus = "started"
-	// BackupQueueStatusCanceled indicates the queued backup was canceled.
-	BackupQueueStatusCanceled BackupQueueStatus = "canceled"
+	// ConcurrencyQueueStatusQueued indicates the backup is waiting in queue.
+	ConcurrencyQueueStatusQueued ConcurrencyQueueStatus = "queued"
+	// ConcurrencyQueueStatusStarted indicates the backup has been started.
+	ConcurrencyQueueStatusStarted ConcurrencyQueueStatus = "started"
+	// ConcurrencyQueueStatusCanceled indicates the queued backup was canceled.
+	ConcurrencyQueueStatusCanceled ConcurrencyQueueStatus = "canceled"
 )
 
-// BackupQueueEntry represents a backup waiting in the queue.
+// BackupQueueEntry represents a backup waiting in the concurrency queue.
 type BackupQueueEntry struct {
-	ID            uuid.UUID         `json:"id"`
-	OrgID         uuid.UUID         `json:"org_id"`
-	AgentID       uuid.UUID         `json:"agent_id"`
-	ScheduleID    uuid.UUID         `json:"schedule_id"`
-	Priority      int               `json:"priority"` // Higher values = higher priority
-	QueuedAt      time.Time         `json:"queued_at"`
-	StartedAt     *time.Time        `json:"started_at,omitempty"`
-	Status        BackupQueueStatus `json:"status"`
-	QueuePosition int               `json:"queue_position,omitempty"` // Calculated position
-	CreatedAt     time.Time         `json:"created_at"`
+	ID            uuid.UUID              `json:"id"`
+	OrgID         uuid.UUID              `json:"org_id"`
+	AgentID       uuid.UUID              `json:"agent_id"`
+	ScheduleID    uuid.UUID              `json:"schedule_id"`
+	Priority      int                    `json:"priority"` // Higher values = higher priority
+	QueuedAt      time.Time              `json:"queued_at"`
+	StartedAt     *time.Time             `json:"started_at,omitempty"`
+	Status        ConcurrencyQueueStatus `json:"status"`
+	QueuePosition int                    `json:"queue_position,omitempty"` // Calculated position
+	CreatedAt     time.Time              `json:"created_at"`
 }
 
 // BackupQueueEntryWithDetails extends BackupQueueEntry with related info.
@@ -49,7 +49,7 @@ func NewBackupQueueEntry(orgID, agentID, scheduleID uuid.UUID, priority int) *Ba
 		ScheduleID: scheduleID,
 		Priority:   priority,
 		QueuedAt:   now,
-		Status:     BackupQueueStatusQueued,
+		Status:     ConcurrencyQueueStatusQueued,
 		CreatedAt:  now,
 	}
 }
@@ -58,12 +58,12 @@ func NewBackupQueueEntry(orgID, agentID, scheduleID uuid.UUID, priority int) *Ba
 func (e *BackupQueueEntry) MarkStarted() {
 	now := time.Now()
 	e.StartedAt = &now
-	e.Status = BackupQueueStatusStarted
+	e.Status = ConcurrencyQueueStatusStarted
 }
 
 // Cancel marks the queue entry as canceled.
 func (e *BackupQueueEntry) Cancel() {
-	e.Status = BackupQueueStatusCanceled
+	e.Status = ConcurrencyQueueStatusCanceled
 }
 
 // ConcurrencyStatus represents the current backup concurrency state.
@@ -81,11 +81,12 @@ type ConcurrencyStatus struct {
 	EstimatedWaitMinutes int       `json:"estimated_wait_minutes,omitempty"` // Estimated wait time
 }
 
-// BackupQueueSummary provides queue statistics.
-type BackupQueueSummary struct {
-	TotalQueued   int `json:"total_queued"`
-	ByOrg         map[uuid.UUID]int `json:"by_org,omitempty"`
-	ByAgent       map[uuid.UUID]int `json:"by_agent,omitempty"`
-	OldestQueued  *time.Time `json:"oldest_queued,omitempty"`
-	AvgWaitMinutes float64 `json:"avg_wait_minutes"`
+// ConcurrencyQueueSummary provides queue statistics for concurrency limiting.
+type ConcurrencyQueueSummary struct {
+	TotalQueued    int               `json:"total_queued"`
+	TotalRunning   int               `json:"total_running"`
+	ByOrg          map[uuid.UUID]int `json:"by_org,omitempty"`
+	ByAgent        map[uuid.UUID]int `json:"by_agent,omitempty"`
+	OldestQueued   *time.Time        `json:"oldest_queued,omitempty"`
+	AvgWaitMinutes float64           `json:"avg_wait_minutes"`
 }

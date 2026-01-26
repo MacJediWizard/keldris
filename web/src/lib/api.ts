@@ -12,8 +12,14 @@ import type {
 	AgentGroup,
 	AgentGroupsResponse,
 	AgentHealthHistoryResponse,
+	AgentImportJobResult,
+	AgentImportPreviewResponse,
+	AgentImportResponse,
+	AgentImportTemplateResponse,
 	AgentLogFilter,
 	AgentLogsResponse,
+	AgentRegistrationScriptRequest,
+	AgentRegistrationScriptResponse,
 	AgentSchedulesResponse,
 	AgentStatsResponse,
 	AgentWithGroups,
@@ -41,15 +47,23 @@ import type {
 	BackupSuccessRate,
 	BackupSuccessRatesResponse,
 	BackupsResponse,
+	BlockedRequestsResponse,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
+	BulkCloneResponse,
+	BulkCloneScheduleRequest,
 	CategoriesResponse,
 	CategoryInfo,
+	ChangePasswordRequest,
 	ChangelogEntry,
 	ChangelogResponse,
 	ClassificationLevelsResponse,
 	ClassificationRulesResponse,
 	ClassificationSummary,
+	CloneRepositoryRequest,
+	CloneRepositoryResponse,
+	CloneScheduleRequest,
+	CloudRestoreProgress,
 	ComplianceReport,
 	ConfigTemplate,
 	ConfigTemplatesResponse,
@@ -65,10 +79,13 @@ import type {
 	CreateAlertRuleRequest,
 	CreateAnnouncementRequest,
 	CreateBackupScriptRequest,
+	CreateCloudRestoreRequest,
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
 	CreateExcludePatternRequest,
+	CreateIPAllowlistRequest,
+	CreateIPBanRequest,
 	CreateImmutabilityLockRequest,
 	CreateLegalHoldRequest,
 	CreateMaintenanceWindowRequest,
@@ -77,6 +94,7 @@ import type {
 	CreateOrgRequest,
 	CreatePathClassificationRuleRequest,
 	CreatePolicyRequest,
+	CreateRateLimitConfigRequest,
 	CreateRegistrationCodeRequest,
 	CreateRegistrationCodeResponse,
 	CreateReportScheduleRequest,
@@ -126,6 +144,12 @@ import type {
 	GeoReplicationSummary,
 	GeoReplicationSummaryResponse,
 	GeoReplicationUpdateRequest,
+	IPAllowlist,
+	IPAllowlistSettings,
+	IPAllowlistsResponse,
+	IPBan,
+	IPBansResponse,
+	IPBlockedAttemptsResponse,
 	ImmutabilityLock,
 	ImmutabilityLocksResponse,
 	ImmutabilityStatus,
@@ -160,11 +184,21 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	PasswordExpirationInfo,
+	PasswordLoginRequest,
+	PasswordLoginResponse,
+	PasswordPolicyResponse,
+	PasswordRequirements,
+	PasswordValidationResult,
 	PathClassificationRule,
 	PendingRegistration,
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	RateLimitConfig,
+	RateLimitConfigsResponse,
+	RateLimitDashboardStats,
+	RateLimitStatsResponse,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -188,6 +222,7 @@ import type {
 	RestorePreview,
 	RestorePreviewRequest,
 	RestoresResponse,
+	RevokeSessionsResponse,
 	RotateAPIKeyResponse,
 	RunDRTestRequest,
 	RunScheduleResponse,
@@ -233,13 +268,17 @@ import type {
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
 	UpdateExcludePatternRequest,
+	UpdateIPAllowlistRequest,
+	UpdateIPAllowlistSettingsRequest,
 	UpdateMaintenanceWindowRequest,
 	UpdateMemberRequest,
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
+	UpdatePasswordPolicyRequest,
 	UpdatePathClassificationRuleRequest,
 	UpdatePolicyRequest,
+	UpdateRateLimitConfigRequest,
 	UpdateReportScheduleRequest,
 	UpdateRepositoryImmutabilitySettingsRequest,
 	UpdateRepositoryRequest,
@@ -254,6 +293,8 @@ import type {
 	UseTemplateRequest,
 	User,
 	UserSSOGroups,
+	UserSession,
+	UserSessionsResponse,
 	ValidateImportRequest,
 	ValidationResult,
 	Verification,
@@ -583,6 +624,15 @@ export const repositoriesApi = {
 
 	recoverKey: async (id: string): Promise<KeyRecoveryResponse> =>
 		fetchApi<KeyRecoveryResponse>(`/repositories/${id}/key/recover`),
+
+	clone: async (
+		id: string,
+		data: CloneRepositoryRequest,
+	): Promise<CloneRepositoryResponse> =>
+		fetchApi<CloneRepositoryResponse>(`/repositories/${id}/clone`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Repository Import API
@@ -608,6 +658,123 @@ export const repositoryImportApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+};
+
+// Agent Import API
+export const agentImportApi = {
+	preview: async (
+		file: File,
+		options: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+		} = {},
+	): Promise<AgentImportPreviewResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options.hasHeader !== undefined)
+			formData.append('has_header', String(options.hasHeader));
+		if (options.hostnameCol !== undefined)
+			formData.append('hostname_col', String(options.hostnameCol));
+		if (options.groupCol !== undefined)
+			formData.append('group_col', String(options.groupCol));
+		if (options.tagsCol !== undefined)
+			formData.append('tags_col', String(options.tagsCol));
+		if (options.configCol !== undefined)
+			formData.append('config_col', String(options.configCol));
+
+		const response = await fetch(`${API_BASE}/agents/import/preview`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportPreviewResponse>(response);
+	},
+
+	import: async (
+		file: File,
+		options: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+			createMissingGroups?: boolean;
+			tokenExpiryHours?: number;
+		} = {},
+	): Promise<AgentImportResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options.hasHeader !== undefined)
+			formData.append('has_header', String(options.hasHeader));
+		if (options.hostnameCol !== undefined)
+			formData.append('hostname_col', String(options.hostnameCol));
+		if (options.groupCol !== undefined)
+			formData.append('group_col', String(options.groupCol));
+		if (options.tagsCol !== undefined)
+			formData.append('tags_col', String(options.tagsCol));
+		if (options.configCol !== undefined)
+			formData.append('config_col', String(options.configCol));
+		if (options.createMissingGroups !== undefined)
+			formData.append(
+				'create_missing_groups',
+				String(options.createMissingGroups),
+			);
+		if (options.tokenExpiryHours !== undefined)
+			formData.append('token_expiry_hours', String(options.tokenExpiryHours));
+
+		const response = await fetch(`${API_BASE}/agents/import`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportResponse>(response);
+	},
+
+	getTemplate: async (
+		format?: 'json' | 'csv',
+	): Promise<AgentImportTemplateResponse> => {
+		const endpoint = format
+			? `/agents/import/template?format=${format}`
+			: '/agents/import/template';
+		return fetchApi<AgentImportTemplateResponse>(endpoint);
+	},
+
+	downloadTemplate: async (): Promise<Blob> => {
+		const response = await fetch(
+			`${API_BASE}/agents/import/template?format=csv`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to download template');
+		}
+		return response.blob();
+	},
+
+	generateScript: async (
+		data: AgentRegistrationScriptRequest,
+	): Promise<AgentRegistrationScriptResponse> =>
+		fetchApi<AgentRegistrationScriptResponse>('/agents/import/script', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	exportTokens: async (results: AgentImportJobResult[]): Promise<Blob> => {
+		const response = await fetch(
+			`${API_BASE}/agents/import/tokens/export?results=${encodeURIComponent(JSON.stringify(results))}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export tokens');
+		}
+		return response.blob();
+	},
 };
 
 // Schedules API
@@ -654,6 +821,20 @@ export const schedulesApi = {
 		);
 		return response.replication_status ?? [];
 	},
+
+	clone: async (id: string, data: CloneScheduleRequest): Promise<Schedule> =>
+		fetchApi<Schedule>(`/schedules/${id}/clone`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	bulkClone: async (
+		data: BulkCloneScheduleRequest,
+	): Promise<BulkCloneResponse> =>
+		fetchApi<BulkCloneResponse>('/schedules/bulk-clone', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Policies API
@@ -897,6 +1078,15 @@ export const restoresApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+
+	createCloud: async (data: CreateCloudRestoreRequest): Promise<Restore> =>
+		fetchApi<Restore>('/restores/cloud', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getProgress: async (id: string): Promise<CloudRestoreProgress> =>
+		fetchApi<CloudRestoreProgress>(`/restores/${id}/progress`),
 };
 
 // File History API
@@ -2460,6 +2650,121 @@ export const backupQueueApi = {
 		}),
 };
 
+export const ipAllowlistsApi = {
+	list: async (): Promise<IPAllowlist[]> => {
+		const response = await fetchApi<IPAllowlistsResponse>('/ip-allowlists');
+		return response.allowlists ?? [];
+	},
+
+	get: async (id: string): Promise<IPAllowlist> =>
+		fetchApi<IPAllowlist>(`/ip-allowlists/${id}`),
+
+	create: async (data: CreateIPAllowlistRequest): Promise<IPAllowlist> =>
+		fetchApi<IPAllowlist>('/ip-allowlists', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateIPAllowlistRequest,
+	): Promise<IPAllowlist> =>
+		fetchApi<IPAllowlist>(`/ip-allowlists/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/ip-allowlists/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getSettings: async (): Promise<IPAllowlistSettings> =>
+		fetchApi<IPAllowlistSettings>('/ip-allowlist-settings'),
+
+	updateSettings: async (
+		data: UpdateIPAllowlistSettingsRequest,
+	): Promise<IPAllowlistSettings> =>
+		fetchApi<IPAllowlistSettings>('/ip-allowlist-settings', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	listBlockedAttempts: async (
+		limit = 50,
+		offset = 0,
+	): Promise<IPBlockedAttemptsResponse> =>
+		fetchApi<IPBlockedAttemptsResponse>(
+			`/ip-blocked-attempts?limit=${limit}&offset=${offset}`,
+		),
+};
+
+// Rate Limits Dashboard API (Admin only)
+export const rateLimitsApi = {
+	getDashboardStats: async (): Promise<RateLimitDashboardStats> =>
+		fetchApi<RateLimitDashboardStats>('/admin/rate-limits'),
+};
+
+// Rate Limit Config Management API
+export const rateLimitConfigsApi = {
+	list: async (): Promise<RateLimitConfig[]> => {
+		const response = await fetchApi<RateLimitConfigsResponse>(
+			'/admin/rate-limit-configs',
+		);
+		return response.configs ?? [];
+	},
+
+	get: async (id: string): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>(`/admin/rate-limit-configs/${id}`),
+
+	create: async (
+		data: CreateRateLimitConfigRequest,
+	): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>('/admin/rate-limit-configs', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateRateLimitConfigRequest,
+	): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>(`/admin/rate-limit-configs/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/rate-limit-configs/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getStats: async (): Promise<RateLimitStatsResponse> =>
+		fetchApi<RateLimitStatsResponse>('/admin/rate-limit-configs/stats'),
+
+	listBlocked: async (): Promise<BlockedRequestsResponse> =>
+		fetchApi<BlockedRequestsResponse>('/admin/rate-limit-configs/blocked'),
+};
+
+// IP Bans API
+export const ipBansApi = {
+	list: async (): Promise<IPBan[]> => {
+		const response = await fetchApi<IPBansResponse>('/admin/ip-bans');
+		return response.bans ?? [];
+	},
+
+	create: async (data: CreateIPBanRequest): Promise<IPBan> =>
+		fetchApi<IPBan>('/admin/ip-bans', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/ip-bans/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
 // Concurrency API
 export const concurrencyApi = {
 	getOrgConcurrency: async (orgId: string): Promise<ConcurrencyResponse> =>
@@ -2483,6 +2788,69 @@ export const concurrencyApi = {
 	): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/agents/${agentId}/concurrency`, {
 			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+};
+
+// User Sessions API
+export const userSessionsApi = {
+	list: async (): Promise<UserSession[]> => {
+		const response = await fetchApi<UserSessionsResponse>('/users/me/sessions');
+		return response.sessions ?? [];
+	},
+
+	revoke: async (id: string): Promise<RevokeSessionsResponse> =>
+		fetchApi<RevokeSessionsResponse>(`/users/me/sessions/${id}`, {
+			method: 'DELETE',
+		}),
+
+	revokeAll: async (): Promise<RevokeSessionsResponse> =>
+		fetchApi<RevokeSessionsResponse>('/users/me/sessions', {
+			method: 'DELETE',
+		}),
+};
+
+// Password Policies API
+export const passwordPoliciesApi = {
+	get: async (): Promise<PasswordPolicyResponse> =>
+		fetchApi<PasswordPolicyResponse>('/password-policies'),
+
+	update: async (
+		data: UpdatePasswordPolicyRequest,
+	): Promise<PasswordPolicyResponse> =>
+		fetchApi<PasswordPolicyResponse>('/password-policies', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	getRequirements: async (): Promise<PasswordRequirements> =>
+		fetchApi<PasswordRequirements>('/password-policies/requirements'),
+
+	validatePassword: async (
+		password: string,
+	): Promise<PasswordValidationResult> =>
+		fetchApi<PasswordValidationResult>('/password-policies/validate', {
+			method: 'POST',
+			body: JSON.stringify({ password }),
+		}),
+};
+
+// Password management API
+export const passwordApi = {
+	changePassword: async (
+		data: ChangePasswordRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/password/change', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getExpiration: async (): Promise<PasswordExpirationInfo> =>
+		fetchApi<PasswordExpirationInfo>('/password/expiration'),
+
+	login: async (data: PasswordLoginRequest): Promise<PasswordLoginResponse> =>
+		fetchApi<PasswordLoginResponse>('/auth/login/password', {
+			method: 'POST',
 			body: JSON.stringify(data),
 		}),
 };
