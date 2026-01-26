@@ -44,10 +44,15 @@ export function useUpdateOrgConcurrency() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ orgId, data }: { orgId: string; data: UpdateConcurrencyRequest }) =>
+		mutationFn: ({
+			orgId,
+			data,
+		}: { orgId: string; data: UpdateConcurrencyRequest }) =>
 			concurrencyApi.updateOrgConcurrency(orgId, data),
 		onSuccess: (_, { orgId }) => {
-			queryClient.invalidateQueries({ queryKey: ['concurrency', 'org', orgId] });
+			queryClient.invalidateQueries({
+				queryKey: ['concurrency', 'org', orgId],
+			});
 			queryClient.invalidateQueries({ queryKey: ['backup-queue'] });
 		},
 	});
@@ -66,10 +71,15 @@ export function useUpdateAgentConcurrency() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ agentId, data }: { agentId: string; data: UpdateConcurrencyRequest }) =>
+		mutationFn: ({
+			agentId,
+			data,
+		}: { agentId: string; data: UpdateConcurrencyRequest }) =>
 			concurrencyApi.updateAgentConcurrency(agentId, data),
 		onSuccess: (_, { agentId }) => {
-			queryClient.invalidateQueries({ queryKey: ['concurrency', 'agent', agentId] });
+			queryClient.invalidateQueries({
+				queryKey: ['concurrency', 'agent', agentId],
+			});
 			queryClient.invalidateQueries({ queryKey: ['backup-queue'] });
 		},
 	});

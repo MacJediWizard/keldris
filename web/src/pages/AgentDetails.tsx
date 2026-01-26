@@ -943,7 +943,7 @@ export function AgentDetails() {
 							type="button"
 							onClick={() => {
 								setConcurrencyLimit(
-									concurrencyData?.max_concurrent_backups?.toString() ?? ''
+									concurrencyData?.max_concurrent_backups?.toString() ?? '',
 								);
 								setIsEditingConcurrency(true);
 							}}
@@ -958,12 +958,13 @@ export function AgentDetails() {
 						onSubmit={async (e) => {
 							e.preventDefault();
 							const limit =
-								concurrencyLimit === '' ? null : parseInt(concurrencyLimit, 10);
+								concurrencyLimit === ''
+									? null
+									: Number.parseInt(concurrencyLimit, 10);
 							await updateConcurrency.mutateAsync({
 								agentId: id ?? '',
 								data: {
-									max_concurrent_backups:
-										limit === null ? undefined : limit,
+									max_concurrent_backups: limit === null ? undefined : limit,
 								},
 							});
 							setIsEditingConcurrency(false);
