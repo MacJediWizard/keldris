@@ -3706,3 +3706,36 @@ export interface MetadataSearchResult {
 export interface MetadataSearchResponse {
 	results: MetadataSearchResult[];
 }
+
+// Saved Filter types
+export interface SavedFilter {
+	id: string;
+	user_id: string;
+	org_id: string;
+	name: string;
+	entity_type: string;
+	filters: Record<string, unknown>;
+	shared: boolean;
+	is_default: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateSavedFilterRequest {
+	name: string;
+	entity_type: string;
+	filters: Record<string, unknown>;
+	shared?: boolean;
+	is_default?: boolean;
+}
+
+export interface UpdateSavedFilterRequest {
+	name?: string;
+	filters?: Record<string, unknown>;
+	shared?: boolean;
+	is_default?: boolean;
+}
+
+export interface SavedFiltersResponse {
+	filters: SavedFilter[];
+}
