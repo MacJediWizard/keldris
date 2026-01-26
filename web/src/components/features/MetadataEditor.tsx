@@ -167,7 +167,10 @@ function MetadataField({
 
 	return (
 		<div>
-			<label htmlFor={fieldId} className="block text-sm font-medium text-gray-700">
+			<label
+				htmlFor={fieldId}
+				className="block text-sm font-medium text-gray-700"
+			>
 				{schema.name}
 				{schema.required && <span className="text-red-500 ml-1">*</span>}
 			</label>

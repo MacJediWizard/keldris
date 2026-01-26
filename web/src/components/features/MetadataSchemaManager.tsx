@@ -161,7 +161,7 @@ function SchemaCard({ schema, onEdit, onDelete, isDeleting }: SchemaCardProps) {
 				</div>
 				<div className="text-sm text-gray-500 mt-1">
 					Key:{' '}
-				<code className="bg-gray-100 px-1 rounded">{schema.field_key}</code>
+					<code className="bg-gray-100 px-1 rounded">{schema.field_key}</code>
 					{schema.description && <span> - {schema.description}</span>}
 				</div>
 				{schema.field_type === 'select' && schema.options && (
@@ -267,8 +267,7 @@ function SchemaForm({
 				fieldType === 'select'
 					? options.filter((o) => o.value && o.label)
 					: undefined,
-			validation:
-				Object.keys(validation).length > 0 ? validation : undefined,
+			validation: Object.keys(validation).length > 0 ? validation : undefined,
 		};
 
 		await onSave(data);
@@ -281,7 +280,10 @@ function SchemaForm({
 		>
 			<div className="grid grid-cols-2 gap-4">
 				<div>
-					<label htmlFor="schema-field-name" className="block text-sm font-medium text-gray-700">
+					<label
+						htmlFor="schema-field-name"
+						className="block text-sm font-medium text-gray-700"
+					>
 						Field Name <span className="text-red-500">*</span>
 					</label>
 					<input
@@ -295,7 +297,10 @@ function SchemaForm({
 					/>
 				</div>
 				<div>
-					<label htmlFor="schema-field-key" className="block text-sm font-medium text-gray-700">
+					<label
+						htmlFor="schema-field-key"
+						className="block text-sm font-medium text-gray-700"
+					>
 						Field Key <span className="text-red-500">*</span>
 					</label>
 					<input
@@ -316,7 +321,10 @@ function SchemaForm({
 
 			<div className="grid grid-cols-2 gap-4">
 				<div>
-					<label htmlFor="schema-field-type" className="block text-sm font-medium text-gray-700">
+					<label
+						htmlFor="schema-field-type"
+						className="block text-sm font-medium text-gray-700"
+					>
 						Field Type <span className="text-red-500">*</span>
 					</label>
 					<select
@@ -333,7 +341,10 @@ function SchemaForm({
 					</select>
 				</div>
 				<div>
-					<label htmlFor="schema-description" className="block text-sm font-medium text-gray-700">
+					<label
+						htmlFor="schema-description"
+						className="block text-sm font-medium text-gray-700"
+					>
 						Description
 					</label>
 					<input
@@ -354,7 +365,10 @@ function SchemaForm({
 					</span>
 					<div className="space-y-2">
 						{options.map((option, index) => (
-							<div key={`option-${index}-${option.value || 'empty'}`} className="flex items-center gap-2">
+							<div
+								key={`option-${index}-${option.value || 'empty'}`}
+								className="flex items-center gap-2"
+							>
 								<input
 									type="text"
 									value={option.value}
@@ -400,7 +414,10 @@ function SchemaForm({
 			{fieldType === 'text' && (
 				<div className="grid grid-cols-2 gap-4">
 					<div>
-						<label htmlFor="schema-min-length" className="block text-sm font-medium text-gray-700">
+						<label
+							htmlFor="schema-min-length"
+							className="block text-sm font-medium text-gray-700"
+						>
 							Min Length
 						</label>
 						<input
@@ -420,7 +437,10 @@ function SchemaForm({
 						/>
 					</div>
 					<div>
-						<label htmlFor="schema-max-length" className="block text-sm font-medium text-gray-700">
+						<label
+							htmlFor="schema-max-length"
+							className="block text-sm font-medium text-gray-700"
+						>
 							Max Length
 						</label>
 						<input
@@ -445,7 +465,10 @@ function SchemaForm({
 			{fieldType === 'number' && (
 				<div className="grid grid-cols-2 gap-4">
 					<div>
-						<label htmlFor="schema-min-value" className="block text-sm font-medium text-gray-700">
+						<label
+							htmlFor="schema-min-value"
+							className="block text-sm font-medium text-gray-700"
+						>
 							Minimum Value
 						</label>
 						<input
@@ -462,7 +485,10 @@ function SchemaForm({
 						/>
 					</div>
 					<div>
-						<label htmlFor="schema-max-value" className="block text-sm font-medium text-gray-700">
+						<label
+							htmlFor="schema-max-value"
+							className="block text-sm font-medium text-gray-700"
+						>
 							Maximum Value
 						</label>
 						<input
