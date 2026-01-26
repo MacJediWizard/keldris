@@ -78,6 +78,8 @@ import type {
 	CreateBackupScriptRequest,
 	CreateCloudRestoreRequest,
 	CreateCostAlertRequest,
+	CreateDowntimeAlertRequest,
+	CreateDowntimeEventRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
 	CreateExcludePatternRequest,
@@ -122,16 +124,11 @@ import type {
 	DashboardStats,
 	DataTypesResponse,
 	DefaultPricingResponse,
-	DryRunResponse,
 	DowntimeAlert,
 	DowntimeAlertsResponse,
 	DowntimeEvent,
 	DowntimeEventsResponse,
-	CreateDowntimeEventRequest,
-	UpdateDowntimeEventRequest,
-	ResolveDowntimeEventRequest,
-	CreateDowntimeAlertRequest,
-	UpdateDowntimeAlertRequest,
+	DryRunResponse,
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
@@ -191,6 +188,7 @@ import type {
 	MetadataSchema,
 	MetadataSchemasResponse,
 	MetadataSearchResponse,
+	MonthlyUptimeReport,
 	MountSnapshotRequest,
 	NotificationChannel,
 	NotificationChannelWithPreferencesResponse,
@@ -244,6 +242,7 @@ import type {
 	RepositoryStatsListItem,
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
+	ResolveDowntimeEventRequest,
 	Restore,
 	RestorePreview,
 	RestorePreviewRequest,
@@ -297,6 +296,8 @@ import type {
 	UpdateConcurrencyRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
+	UpdateDowntimeAlertRequest,
+	UpdateDowntimeEventRequest,
 	UpdateEntityMetadataRequest,
 	UpdateExcludePatternRequest,
 	UpdateIPAllowlistRequest,
@@ -325,11 +326,10 @@ import type {
 	UpdateTemplateRequest,
 	UpdateUserPreferencesRequest,
 	UpdateVerificationScheduleRequest,
-	UseTemplateRequest,
 	UptimeBadge,
 	UptimeBadgesResponse,
 	UptimeSummary,
-	MonthlyUptimeReport,
+	UseTemplateRequest,
 	User,
 	UserSSOGroups,
 	UserSession,
@@ -3184,9 +3184,7 @@ export const uptimeApi = {
 // Downtime Alerts API
 export const downtimeAlertsApi = {
 	list: async (): Promise<DowntimeAlert[]> => {
-		const response = await fetchApi<DowntimeAlertsResponse>(
-			'/downtime-alerts',
-		);
+		const response = await fetchApi<DowntimeAlertsResponse>('/downtime-alerts');
 		return response.alerts ?? [];
 	},
 
