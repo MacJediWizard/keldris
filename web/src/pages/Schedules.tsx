@@ -21,6 +21,8 @@ import { useBulkSelect } from '../hooks/useBulkSelect';
 import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
 import {
+	useBulkCloneSchedule,
+	useCloneSchedule,
 	useCreateSchedule,
 	useDeleteSchedule,
 	useDryRunSchedule,
@@ -29,9 +31,11 @@ import {
 	useUpdateSchedule,
 } from '../hooks/useSchedules';
 import type {
+	Agent,
 	CompressionLevel,
 	DryRunResponse,
 	MountBehavior,
+	Repository,
 	Schedule,
 	SchedulePriority,
 	ScheduleRepositoryRequest,
@@ -857,6 +861,413 @@ function formatBackupWindow(window?: { start?: string; end?: string }):
 	return `${start} - ${end}`;
 }
 
+interface CloneScheduleModalProps {
+	isOpen: boolean;
+	onClose: () => void;
+	schedule: Schedule | null;
+	agents: Agent[];
+	repositories: Repository[];
+	onClone: (params: {
+		id: string;
+		data: {
+			name?: string;
+			target_agent_id?: string;
+			target_repo_ids?: string[];
+		};
+	}) => Promise<Schedule>;
+	isCloning: boolean;
+}
+
+function CloneScheduleModal({
+	isOpen,
+	onClose,
+	schedule,
+	agents,
+	repositories,
+	onClone,
+	isCloning,
+}: CloneScheduleModalProps) {
+	const [name, setName] = useState('');
+	const [targetAgentId, setTargetAgentId] = useState('');
+	const [targetRepoIds, setTargetRepoIds] = useState<string[]>([]);
+	const [useCustomRepos, setUseCustomRepos] = useState(false);
+
+	// Reset form when modal opens
+	useState(() => {
+		if (isOpen && schedule) {
+			setName(`Copy of ${schedule.name}`);
+			setTargetAgentId(schedule.agent_id);
+			setTargetRepoIds(
+				schedule.repositories?.map((r) => r.repository_id) ?? [],
+			);
+			setUseCustomRepos(false);
+		}
+	});
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!schedule) return;
+
+		try {
+			await onClone({
+				id: schedule.id,
+				data: {
+					name: name || undefined,
+					target_agent_id:
+						targetAgentId !== schedule.agent_id ? targetAgentId : undefined,
+					target_repo_ids: useCustomRepos ? targetRepoIds : undefined,
+				},
+			});
+			onClose();
+		} catch {
+			// Error handled by mutation
+		}
+	};
+
+	const handleRepoToggle = (repoId: string) => {
+		setTargetRepoIds((prev) =>
+			prev.includes(repoId)
+				? prev.filter((id) => id !== repoId)
+				: [...prev, repoId],
+		);
+	};
+
+	if (!isOpen || !schedule) return null;
+
+	return (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+					Clone Schedule
+				</h3>
+				<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+					Create a copy of "{schedule.name}" with the same settings.
+				</p>
+				<form onSubmit={handleSubmit}>
+					<div className="space-y-4">
+						<div>
+							<label
+								htmlFor="clone-name"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								New Name
+							</label>
+							<input
+								type="text"
+								id="clone-name"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								placeholder={`Copy of ${schedule.name}`}
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+						</div>
+						<div>
+							<label
+								htmlFor="clone-agent"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Target Agent
+							</label>
+							<select
+								id="clone-agent"
+								value={targetAgentId}
+								onChange={(e) => setTargetAgentId(e.target.value)}
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								{agents.map((agent) => (
+									<option key={agent.id} value={agent.id}>
+										{agent.hostname}
+										{agent.id === schedule.agent_id ? ' (same)' : ''}
+									</option>
+								))}
+							</select>
+						</div>
+						<div>
+							<label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+								<input
+									type="checkbox"
+									checked={useCustomRepos}
+									onChange={(e) => setUseCustomRepos(e.target.checked)}
+									className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+								/>
+								Change target repositories
+							</label>
+						</div>
+						{useCustomRepos && (
+							<div>
+								<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									Select Repositories
+								</span>
+								<div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg p-2 space-y-1">
+									{repositories.map((repo) => (
+										<label
+											key={repo.id}
+											className="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer"
+										>
+											<input
+												type="checkbox"
+												checked={targetRepoIds.includes(repo.id)}
+												onChange={() => handleRepoToggle(repo.id)}
+												className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+											/>
+											<span className="text-sm text-gray-700 dark:text-gray-300">
+												{repo.name}
+											</span>
+										</label>
+									))}
+								</div>
+							</div>
+						)}
+					</div>
+					<div className="flex justify-end gap-3 mt-6">
+						<button
+							type="button"
+							onClick={onClose}
+							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={isCloning}
+							className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+						>
+							{isCloning ? 'Cloning...' : 'Clone Schedule'}
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	);
+}
+
+interface BulkCloneScheduleModalProps {
+	isOpen: boolean;
+	onClose: () => void;
+	schedule: Schedule | null;
+	agents: Agent[];
+	onBulkClone: (data: {
+		schedule_id: string;
+		target_agent_ids: string[];
+		name_prefix?: string;
+	}) => Promise<{ schedules: Schedule[]; errors?: string[] }>;
+	isBulkCloning: boolean;
+}
+
+function BulkCloneScheduleModal({
+	isOpen,
+	onClose,
+	schedule,
+	agents,
+	onBulkClone,
+	isBulkCloning,
+}: BulkCloneScheduleModalProps) {
+	const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
+	const [namePrefix, setNamePrefix] = useState('');
+	const [cloneResult, setCloneResult] = useState<{
+		schedules: Schedule[];
+		errors?: string[];
+	} | null>(null);
+
+	// Reset form when modal opens
+	useState(() => {
+		if (isOpen && schedule) {
+			setSelectedAgentIds([]);
+			setNamePrefix('');
+			setCloneResult(null);
+		}
+	});
+
+	const handleAgentToggle = (agentId: string) => {
+		setSelectedAgentIds((prev) =>
+			prev.includes(agentId)
+				? prev.filter((id) => id !== agentId)
+				: [...prev, agentId],
+		);
+	};
+
+	const handleSelectAll = () => {
+		if (!schedule) return;
+		const otherAgents = agents
+			.filter((a) => a.id !== schedule.agent_id)
+			.map((a) => a.id);
+		setSelectedAgentIds(otherAgents);
+	};
+
+	const handleDeselectAll = () => {
+		setSelectedAgentIds([]);
+	};
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!schedule || selectedAgentIds.length === 0) return;
+
+		try {
+			const result = await onBulkClone({
+				schedule_id: schedule.id,
+				target_agent_ids: selectedAgentIds,
+				name_prefix: namePrefix || undefined,
+			});
+			setCloneResult(result);
+		} catch {
+			// Error handled by mutation
+		}
+	};
+
+	if (!isOpen || !schedule) return null;
+
+	const otherAgents = agents.filter((a) => a.id !== schedule.agent_id);
+
+	return (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+					Clone Schedule to Multiple Agents
+				</h3>
+				{cloneResult ? (
+					<div className="space-y-4">
+						<div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+							<p className="text-green-800 dark:text-green-200 font-medium">
+								Successfully cloned to {cloneResult.schedules.length} agent
+								{cloneResult.schedules.length !== 1 ? 's' : ''}
+							</p>
+						</div>
+						{cloneResult.errors && cloneResult.errors.length > 0 && (
+							<div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+								<p className="text-red-800 dark:text-red-200 font-medium mb-2">
+									Errors:
+								</p>
+								<ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300">
+									{cloneResult.errors.map((error, i) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: Error list order is stable
+										<li key={i}>{error}</li>
+									))}
+								</ul>
+							</div>
+						)}
+						<div className="flex justify-end">
+							<button
+								type="button"
+								onClick={onClose}
+								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+							>
+								Done
+							</button>
+						</div>
+					</div>
+				) : (
+					<form onSubmit={handleSubmit}>
+						<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+							Clone "{schedule.name}" to multiple agents at once.
+						</p>
+						<div className="space-y-4">
+							<div>
+								<label
+									htmlFor="bulk-clone-prefix"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Name Prefix (optional)
+								</label>
+								<input
+									type="text"
+									id="bulk-clone-prefix"
+									value={namePrefix}
+									onChange={(e) => setNamePrefix(e.target.value)}
+									placeholder={schedule.name}
+									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+								<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+									Cloned schedules will be named "{namePrefix || schedule.name}{' '}
+									(agent hostname)"
+								</p>
+							</div>
+							<div>
+								<div className="flex items-center justify-between mb-2">
+									<span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+										Select Target Agents
+									</span>
+									<div className="flex gap-2">
+										<button
+											type="button"
+											onClick={handleSelectAll}
+											className="text-xs text-indigo-600 hover:text-indigo-800"
+										>
+											Select All
+										</button>
+										<span className="text-gray-300">|</span>
+										<button
+											type="button"
+											onClick={handleDeselectAll}
+											className="text-xs text-indigo-600 hover:text-indigo-800"
+										>
+											Deselect All
+										</button>
+									</div>
+								</div>
+								<div className="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg p-2 space-y-1">
+									{otherAgents.length === 0 ? (
+										<p className="text-sm text-gray-500 dark:text-gray-400 p-2">
+											No other agents available
+										</p>
+									) : (
+										otherAgents.map((agent) => (
+											<label
+												key={agent.id}
+												className="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer"
+											>
+												<input
+													type="checkbox"
+													checked={selectedAgentIds.includes(agent.id)}
+													onChange={() => handleAgentToggle(agent.id)}
+													className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+												/>
+												<span className="text-sm text-gray-700 dark:text-gray-300">
+													{agent.hostname}
+												</span>
+												<span
+													className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
+														agent.status === 'active'
+															? 'bg-green-100 text-green-800'
+															: 'bg-gray-100 text-gray-600'
+													}`}
+												>
+													{agent.status}
+												</span>
+											</label>
+										))
+									)}
+								</div>
+								<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+									{selectedAgentIds.length} agent
+									{selectedAgentIds.length !== 1 ? 's' : ''} selected
+								</p>
+							</div>
+						</div>
+						<div className="flex justify-end gap-3 mt-6">
+							<button
+								type="button"
+								onClick={onClose}
+								className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								type="submit"
+								disabled={isBulkCloning || selectedAgentIds.length === 0}
+								className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+							>
+								{isBulkCloning
+									? 'Cloning...'
+									: `Clone to ${selectedAgentIds.length} Agent${selectedAgentIds.length !== 1 ? 's' : ''}`}
+							</button>
+						</div>
+					</form>
+				)}
+			</div>
+		</div>
+	);
+}
+
 interface ScheduleRowProps {
 	schedule: Schedule;
 	agentName?: string;
@@ -868,6 +1279,7 @@ interface ScheduleRowProps {
 	onDryRun: (id: string) => void;
 	onEditScripts: (id: string) => void;
 	onExport: (schedule: Schedule) => void;
+	onClone: (schedule: Schedule) => void;
 	isUpdating: boolean;
 	isDeleting: boolean;
 	isRunning: boolean;
@@ -887,6 +1299,7 @@ function ScheduleRow({
 	onDryRun,
 	onEditScripts,
 	onExport,
+	onClone,
 	isUpdating,
 	isDeleting,
 	isRunning,
@@ -1178,7 +1591,15 @@ function ScheduleRow({
 					>
 						Scripts
 					</button>
-					<span className="text-gray-300">|</span>
+					<span className="text-gray-300 dark:text-gray-600">|</span>
+					<button
+						type="button"
+						onClick={() => onClone(schedule)}
+						className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 text-sm font-medium"
+					>
+						Clone
+					</button>
+					<span className="text-gray-300 dark:text-gray-600">|</span>
 					<button
 						type="button"
 						onClick={() => onDelete(schedule.id)}
@@ -1213,6 +1634,10 @@ export function Schedules() {
 	const [showExportModal, setShowExportModal] = useState(false);
 	const [selectedScheduleForExport, setSelectedScheduleForExport] =
 		useState<Schedule | null>(null);
+	const [showCloneModal, setShowCloneModal] = useState(false);
+	const [selectedScheduleForClone, setSelectedScheduleForClone] =
+		useState<Schedule | null>(null);
+	const [showBulkCloneModal, setShowBulkCloneModal] = useState(false);
 
 	const { data: schedules, isLoading, isError } = useSchedules();
 	const { data: agents } = useAgents();
@@ -1222,6 +1647,8 @@ export function Schedules() {
 	const deleteSchedule = useDeleteSchedule();
 	const runSchedule = useRunSchedule();
 	const dryRunSchedule = useDryRunSchedule();
+	const cloneSchedule = useCloneSchedule();
+	const bulkCloneSchedule = useBulkCloneSchedule();
 
 	const bulkOperation = useBulkOperation();
 
@@ -1305,6 +1732,26 @@ export function Schedules() {
 			),
 		},
 		{
+			id: 'clone-to-agents',
+			label: 'Clone to Agents',
+			icon: (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+					/>
+				</svg>
+			),
+		},
+		{
 			id: 'delete',
 			label: 'Delete',
 			variant: 'danger',
@@ -1341,6 +1788,17 @@ export function Schedules() {
 				break;
 			case 'apply-policy':
 				setShowApplyPolicyModal(true);
+				break;
+			case 'clone-to-agents':
+				// Only allow bulk clone when exactly one schedule is selected
+				if (bulkSelect.selectedCount === 1) {
+					const selectedId = [...bulkSelect.selectedIds][0];
+					const schedule = schedules?.find((s) => s.id === selectedId);
+					if (schedule) {
+						setSelectedScheduleForClone(schedule);
+						setShowBulkCloneModal(true);
+					}
+				}
 				break;
 		}
 	};
@@ -1439,6 +1897,22 @@ export function Schedules() {
 		setShowDryRunModal(false);
 		setDryRunResults(null);
 		setDryRunError(null);
+	};
+
+	const handleClone = (schedule: Schedule) => {
+		setSelectedScheduleForClone(schedule);
+		setShowCloneModal(true);
+	};
+
+	const handleCloseCloneModal = () => {
+		setShowCloneModal(false);
+		setSelectedScheduleForClone(null);
+	};
+
+	const handleCloseBulkCloneModal = () => {
+		setShowBulkCloneModal(false);
+		setSelectedScheduleForClone(null);
+		bulkSelect.clear();
 	};
 
 	return (
@@ -1632,6 +2106,7 @@ export function Schedules() {
 											setSelectedScheduleForExport(s);
 											setShowExportModal(true);
 										}}
+										onClone={handleClone}
 										isUpdating={updateSchedule.isPending}
 										isDeleting={deleteSchedule.isPending}
 										isRunning={runSchedule.isPending}
@@ -1801,6 +2276,27 @@ export function Schedules() {
 				type="schedule"
 				item={selectedScheduleForExport ?? undefined}
 				agents={agents}
+			/>
+
+			{/* Clone Schedule Modal */}
+			<CloneScheduleModal
+				isOpen={showCloneModal}
+				onClose={handleCloseCloneModal}
+				schedule={selectedScheduleForClone}
+				agents={agents ?? []}
+				repositories={repositories ?? []}
+				onClone={cloneSchedule.mutateAsync}
+				isCloning={cloneSchedule.isPending}
+			/>
+
+			{/* Bulk Clone Schedule Modal */}
+			<BulkCloneScheduleModal
+				isOpen={showBulkCloneModal}
+				onClose={handleCloseBulkCloneModal}
+				schedule={selectedScheduleForClone}
+				agents={agents ?? []}
+				onBulkClone={bulkCloneSchedule.mutateAsync}
+				isBulkCloning={bulkCloneSchedule.isPending}
 			/>
 		</div>
 	);

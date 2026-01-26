@@ -340,6 +340,17 @@ export interface UpdateRepositoryRequest {
 	config?: Record<string, unknown>;
 }
 
+export interface CloneRepositoryRequest {
+	name: string;
+	credentials: Record<string, unknown>;
+	target_org_id?: string;
+}
+
+export interface CloneRepositoryResponse {
+	repository: Repository;
+	password: string;
+}
+
 export interface TestRepositoryResponse {
 	success: boolean;
 	message: string;
@@ -470,6 +481,24 @@ export interface UpdateScheduleRequest {
 export interface RunScheduleResponse {
 	backup_id: string;
 	message: string;
+}
+
+// Clone schedule types
+export interface CloneScheduleRequest {
+	name?: string;
+	target_agent_id?: string;
+	target_repo_ids?: string[];
+}
+
+export interface BulkCloneScheduleRequest {
+	schedule_id: string;
+	target_agent_ids: string[];
+	name_prefix?: string;
+}
+
+export interface BulkCloneResponse {
+	schedules: Schedule[];
+	errors?: string[];
 }
 
 // Dry run types
@@ -978,39 +1007,109 @@ export type RestoreStatus =
 	| 'running'
 	| 'completed'
 	| 'failed'
-	| 'canceled';
+	| 'canceled'
+	| 'uploading'
+	| 'verifying';
+
+// Cloud restore target types
+export type CloudRestoreTargetType = 's3' | 'b2' | 'restic';
+
+export interface CloudRestoreTarget {
+	type: CloudRestoreTargetType;
+	// S3/B2 configuration
+	bucket?: string;
+	prefix?: string;
+	region?: string;
+	endpoint?: string;
+	access_key_id?: string;
+	secret_access_key?: string;
+	use_ssl?: boolean;
+	// B2 specific
+	account_id?: string;
+	application_key?: string;
+	// Restic repository configuration
+	repository?: string;
+	repository_password?: string;
+}
+
+export interface CloudRestoreProgress {
+	total_files: number;
+	total_bytes: number;
+	uploaded_files: number;
+	uploaded_bytes: number;
+	current_file?: string;
+	percent_complete: number;
+	verified_checksum: boolean;
+}
+
+export interface PathMapping {
+	source_path: string;
+	target_path: string;
+}
+
+export interface RestoreProgress {
+	files_restored: number;
+	bytes_restored: number;
+	total_files?: number;
+	total_bytes?: number;
+	current_file?: string;
+}
 
 export interface Restore {
 	id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	snapshot_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
 	status: RestoreStatus;
+	progress?: RestoreProgress; // Real-time progress tracking
+	is_cross_agent: boolean;
 	started_at?: string;
 	completed_at?: string;
 	error_message?: string;
 	created_at: string;
+	// Cloud restore fields
+	is_cloud_restore?: boolean;
+	cloud_target?: CloudRestoreTarget;
+	cloud_progress?: CloudRestoreProgress;
+	cloud_target_location?: string;
+	verify_upload?: boolean;
 }
 
 export interface CreateRestoreRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
+}
+
+export interface CreateCloudRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+	cloud_target: CloudRestoreTarget;
+	verify_upload?: boolean;
 }
 
 export interface RestorePreviewRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[];
 }
 
 export interface RestorePreviewFile {
@@ -1030,6 +1129,8 @@ export interface RestorePreview {
 	conflict_count: number;
 	files: RestorePreviewFile[];
 	disk_space_needed: number;
+	selected_paths?: string[];
+	selected_size?: number;
 }
 
 export interface RestoresResponse {
@@ -2736,6 +2837,29 @@ export interface ConfigTemplatesResponse {
 	templates: ConfigTemplate[];
 }
 
+// Rate Limit types
+export interface RateLimitClientStats {
+	client_ip: string;
+	total_requests: number;
+	rejected_count: number;
+	last_request: string;
+}
+
+export interface EndpointRateLimitInfo {
+	pattern: string;
+	limit: number;
+	period: string;
+}
+
+export interface RateLimitDashboardStats {
+	default_limit: number;
+	default_period: string;
+	endpoint_configs: EndpointRateLimitInfo[];
+	client_stats: RateLimitClientStats[];
+	total_requests: number;
+	total_rejected: number;
+}
+
 // Announcement types
 export type AnnouncementType = 'info' | 'warning' | 'critical';
 
@@ -2804,4 +2928,315 @@ export interface BackupQueueSummary {
 export interface BackupQueueResponse {
 	queue: BackupQueueItem[];
 	summary: BackupQueueSummary;
+}
+
+// IP Allowlist types
+export type IPAllowlistType = 'ui' | 'agent' | 'both';
+
+export interface IPAllowlist {
+	id: string;
+	org_id: string;
+	cidr: string;
+	description?: string;
+	type: IPAllowlistType;
+	enabled: boolean;
+	created_by?: string;
+	updated_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+// Rate Limit types
+export interface RateLimitConfig {
+	id: string;
+	org_id: string;
+	endpoint: string;
+	requests_per_period: number;
+	period_seconds: number;
+	enabled: boolean;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface IPAllowlistSettings {
+	id: string;
+	org_id: string;
+	enabled: boolean;
+	enforce_for_ui: boolean;
+	enforce_for_agent: boolean;
+	allow_admin_bypass: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface IPBlockedAttempt {
+	id: string;
+	org_id: string;
+	ip_address: string;
+	request_type: string;
+	path?: string;
+	user_id?: string;
+	agent_id?: string;
+	reason?: string;
+	created_at: string;
+}
+
+export interface CreateIPAllowlistRequest {
+	cidr: string;
+	description?: string;
+	type: IPAllowlistType;
+	enabled?: boolean;
+}
+
+export interface UpdateIPAllowlistRequest {
+	cidr?: string;
+	description?: string;
+	type?: IPAllowlistType;
+	enabled?: boolean;
+}
+
+export interface UpdateIPAllowlistSettingsRequest {
+	enabled?: boolean;
+	enforce_for_ui?: boolean;
+	enforce_for_agent?: boolean;
+	allow_admin_bypass?: boolean;
+}
+
+export interface IPAllowlistsResponse {
+	allowlists: IPAllowlist[];
+}
+
+export interface IPBlockedAttemptsResponse {
+	attempts: IPBlockedAttempt[];
+	total: number;
+}
+
+// Agent Import types
+export interface AgentImportPreviewEntry {
+	row_number: number;
+	hostname: string;
+	group_name?: string;
+	tags?: string[];
+	config?: Record<string, string>;
+	is_valid: boolean;
+	errors?: string[];
+}
+
+export interface AgentImportPreviewResponse {
+	total_rows: number;
+	valid_rows: number;
+	invalid_rows: number;
+	entries: AgentImportPreviewEntry[];
+	detected_groups: string[];
+	detected_tags: string[];
+}
+
+export interface AgentImportJobResult {
+	row_number: number;
+	hostname: string;
+	agent_id?: string;
+	group_id?: string;
+	group_name?: string;
+	registration_code?: string;
+	expires_at?: string;
+	success: boolean;
+	error_message?: string;
+}
+
+export interface AgentImportResponse {
+	job_id: string;
+	total_agents: number;
+	imported_count: number;
+	failed_count: number;
+	results: AgentImportJobResult[];
+	groups_created?: string[];
+}
+
+export interface AgentImportTemplateResponse {
+	headers: string[];
+	examples: string[][];
+}
+
+export interface AgentRegistrationScriptRequest {
+	hostname: string;
+	registration_code: string;
+}
+
+export interface AgentRegistrationScriptResponse {
+	script: string;
+	hostname: string;
+	registration_code: string;
+	expires_at: string;
+}
+
+// User Sessions
+export interface UserSession {
+	id: string;
+	user_id: string;
+	ip_address?: string;
+	user_agent?: string;
+	created_at: string;
+	last_active_at: string;
+	expires_at?: string;
+	revoked: boolean;
+	revoked_at?: string;
+	is_current?: boolean;
+}
+
+export interface UserSessionsResponse {
+	sessions: UserSession[];
+}
+
+export interface RevokeSessionsResponse {
+	message: string;
+	revoked_count?: number;
+}
+
+// Password Policy types
+export interface PasswordPolicy {
+	id: string;
+	org_id: string;
+	min_length: number;
+	require_uppercase: boolean;
+	require_lowercase: boolean;
+	require_number: boolean;
+	require_special: boolean;
+	max_age_days?: number;
+	history_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface PasswordRequirements {
+	min_length: number;
+	require_uppercase: boolean;
+	require_lowercase: boolean;
+	require_number: boolean;
+	require_special: boolean;
+	max_age_days?: number;
+	description: string;
+}
+
+export interface PasswordPolicyResponse {
+	policy: PasswordPolicy;
+	requirements: PasswordRequirements;
+}
+
+export interface UpdatePasswordPolicyRequest {
+	min_length?: number;
+	require_uppercase?: boolean;
+	require_lowercase?: boolean;
+	require_number?: boolean;
+	require_special?: boolean;
+	max_age_days?: number;
+	history_count?: number;
+}
+
+export interface PasswordValidationResult {
+	valid: boolean;
+	errors?: string[];
+	warnings?: string[];
+}
+
+export interface ChangePasswordRequest {
+	current_password: string;
+	new_password: string;
+}
+
+export interface PasswordExpirationInfo {
+	is_expired: boolean;
+	expires_at?: string;
+	days_until_expiry?: number;
+	must_change_now: boolean;
+	warn_days_remaining: number;
+}
+
+export interface PasswordLoginRequest {
+	email: string;
+	password: string;
+}
+
+export interface PasswordLoginResponse {
+	id: string;
+	email: string;
+	name: string;
+	current_org_id?: string;
+	current_org_role?: string;
+	password_expired?: boolean;
+	must_change_password?: boolean;
+	expires_at?: string;
+}
+
+export interface CreateRateLimitConfigRequest {
+	endpoint: string;
+	requests_per_period: number;
+	period_seconds: number;
+	enabled?: boolean;
+}
+
+export interface UpdateRateLimitConfigRequest {
+	requests_per_period?: number;
+	period_seconds?: number;
+	enabled?: boolean;
+}
+
+export interface RateLimitConfigsResponse {
+	configs: RateLimitConfig[];
+}
+
+export interface BlockedRequest {
+	id: string;
+	org_id?: string;
+	ip_address: string;
+	endpoint: string;
+	user_agent?: string;
+	blocked_at: string;
+	reason: string;
+}
+
+export interface IPBlockCount {
+	ip_address: string;
+	count: number;
+}
+
+export interface RouteBlockCount {
+	endpoint: string;
+	count: number;
+}
+
+export interface RateLimitStats {
+	blocked_today: number;
+	top_blocked_ips: IPBlockCount[];
+	top_blocked_endpoints: RouteBlockCount[];
+}
+
+export interface RateLimitStatsResponse {
+	stats: RateLimitStats;
+}
+
+export interface BlockedRequestsResponse {
+	blocked_requests: BlockedRequest[];
+}
+
+export interface IPBan {
+	id: string;
+	org_id?: string;
+	ip_address: string;
+	reason: string;
+	ban_count: number;
+	banned_by?: string;
+	banned_at: string;
+	expires_at?: string;
+	created_at: string;
+}
+
+export interface CreateIPBanRequest {
+	ip_address: string;
+	reason: string;
+	duration_minutes?: number;
+}
+
+export interface IPBansResponse {
+	bans: IPBan[];
 }

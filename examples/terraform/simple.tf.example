@@ -1,0 +1,79 @@
+# Simple Keldris Terraform Example
+#
+# This is a minimal example showing how to set up a single server
+# with a backup schedule.
+
+terraform {
+  required_providers {
+    keldris = {
+      source  = "MacJediWizard/keldris"
+      version = "~> 1.0"
+    }
+  }
+}
+
+provider "keldris" {
+  url     = "https://keldris.example.com"
+  api_key = var.api_key
+}
+
+variable "api_key" {
+  description = "Keldris API key"
+  type        = string
+  sensitive   = true
+}
+
+# Create a local backup repository
+resource "keldris_repository" "local" {
+  name = "local-backups"
+  type = "local"
+
+  local_path = "/mnt/backups"
+}
+
+# Create a backup agent
+resource "keldris_agent" "server" {
+  hostname = "my-server"
+}
+
+# Create a daily backup schedule
+resource "keldris_schedule" "daily" {
+  name            = "Daily Backup"
+  agent_id        = keldris_agent.server.id
+  cron_expression = "0 2 * * *"  # Daily at 2 AM
+
+  paths = [
+    "/home",
+    "/var/www"
+  ]
+
+  excludes = [
+    "*.tmp",
+    "*.log"
+  ]
+
+  retention_policy {
+    keep_last  = 5
+    keep_daily = 7
+  }
+
+  repositories {
+    repository_id = keldris_repository.local.id
+    priority      = 0
+    enabled       = true
+  }
+
+  enabled = true
+}
+
+# Output the agent API key (save this!)
+output "agent_api_key" {
+  value     = keldris_agent.server.api_key
+  sensitive = true
+}
+
+# Output the repository password (save this!)
+output "repository_password" {
+  value     = keldris_repository.local.password
+  sensitive = true
+}

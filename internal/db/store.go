@@ -2132,13 +2132,14 @@ func (db *DB) GetLatestBackupByScheduleID(ctx context.Context, scheduleID uuid.U
 
 // Restore methods
 
-// GetRestoresByAgentID returns all restores for an agent.
+// GetRestoresByAgentID returns all restores for an agent (as either source or target).
 func (db *DB) GetRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Restore, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
-		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
+		SELECT id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
+		       exclude_paths, path_mappings, status, files_restored, bytes_restored, total_files,
+		       total_bytes, current_file, started_at, completed_at, error_message, created_at, updated_at
 		FROM restores
-		WHERE agent_id = $1
+		WHERE agent_id = $1 OR source_agent_id = $1
 		ORDER BY created_at DESC
 	`, agentID)
 	if err != nil {
@@ -2153,16 +2154,21 @@ func (db *DB) GetRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*m
 func (db *DB) GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore, error) {
 	var r models.Restore
 	var statusStr string
-	var includePathsBytes, excludePathsBytes []byte
+	var includePathsBytes, excludePathsBytes, pathMappingsBytes []byte
+	var filesRestored, bytesRestored int64
+	var totalFiles, totalBytes *int64
+	var currentFile *string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
-		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
+		SELECT id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
+		       exclude_paths, path_mappings, status, files_restored, bytes_restored, total_files,
+		       total_bytes, current_file, started_at, completed_at, error_message, created_at, updated_at
 		FROM restores
 		WHERE id = $1
 	`, id).Scan(
-		&r.ID, &r.AgentID, &r.RepositoryID, &r.SnapshotID, &r.TargetPath,
-		&includePathsBytes, &excludePathsBytes, &statusStr, &r.StartedAt,
-		&r.CompletedAt, &r.ErrorMessage, &r.CreatedAt, &r.UpdatedAt,
+		&r.ID, &r.AgentID, &r.SourceAgentID, &r.RepositoryID, &r.SnapshotID, &r.TargetPath,
+		&includePathsBytes, &excludePathsBytes, &pathMappingsBytes, &statusStr,
+		&filesRestored, &bytesRestored, &totalFiles, &totalBytes, &currentFile,
+		&r.StartedAt, &r.CompletedAt, &r.ErrorMessage, &r.CreatedAt, &r.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get restore: %w", err)
@@ -2173,6 +2179,21 @@ func (db *DB) GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore
 	}
 	if err := parseStringSlice(excludePathsBytes, &r.ExcludePaths); err != nil {
 		return nil, fmt.Errorf("parse exclude paths: %w", err)
+	}
+	if err := parsePathMappings(pathMappingsBytes, &r.PathMappings); err != nil {
+		return nil, fmt.Errorf("parse path mappings: %w", err)
+	}
+	// Build progress if there's any progress data
+	if filesRestored > 0 || bytesRestored > 0 || totalFiles != nil || totalBytes != nil {
+		r.Progress = &models.RestoreProgress{
+			FilesRestored: filesRestored,
+			BytesRestored: bytesRestored,
+			TotalFiles:    totalFiles,
+			TotalBytes:    totalBytes,
+		}
+		if currentFile != nil {
+			r.Progress.CurrentFile = *currentFile
+		}
 	}
 	return &r, nil
 }
@@ -2189,12 +2210,17 @@ func (db *DB) CreateRestore(ctx context.Context, restore *models.Restore) error 
 		return fmt.Errorf("marshal exclude paths: %w", err)
 	}
 
+	pathMappingsBytes, err := toPathMappingsJSONBytes(restore.PathMappings)
+	if err != nil {
+		return fmt.Errorf("marshal path mappings: %w", err)
+	}
+
 	_, err = db.Pool.Exec(ctx, `
-		INSERT INTO restores (id, agent_id, repository_id, snapshot_id, target_path, include_paths,
-		                      exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-	`, restore.ID, restore.AgentID, restore.RepositoryID, restore.SnapshotID,
-		restore.TargetPath, includePathsBytes, excludePathsBytes,
+		INSERT INTO restores (id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
+		                      exclude_paths, path_mappings, status, started_at, completed_at, error_message, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+	`, restore.ID, restore.AgentID, restore.SourceAgentID, restore.RepositoryID, restore.SnapshotID,
+		restore.TargetPath, includePathsBytes, excludePathsBytes, pathMappingsBytes,
 		string(restore.Status), restore.StartedAt, restore.CompletedAt,
 		restore.ErrorMessage, restore.CreatedAt, restore.UpdatedAt)
 	if err != nil {
@@ -2206,12 +2232,29 @@ func (db *DB) CreateRestore(ctx context.Context, restore *models.Restore) error 
 // UpdateRestore updates an existing restore record.
 func (db *DB) UpdateRestore(ctx context.Context, restore *models.Restore) error {
 	restore.UpdatedAt = time.Now()
+
+	var filesRestored, bytesRestored int64
+	var totalFiles, totalBytes *int64
+	var currentFile *string
+	if restore.Progress != nil {
+		filesRestored = restore.Progress.FilesRestored
+		bytesRestored = restore.Progress.BytesRestored
+		totalFiles = restore.Progress.TotalFiles
+		totalBytes = restore.Progress.TotalBytes
+		if restore.Progress.CurrentFile != "" {
+			currentFile = &restore.Progress.CurrentFile
+		}
+	}
+
 	_, err := db.Pool.Exec(ctx, `
 		UPDATE restores
-		SET status = $2, started_at = $3, completed_at = $4, error_message = $5, updated_at = $6
+		SET status = $2, started_at = $3, completed_at = $4, error_message = $5,
+		    files_restored = $6, bytes_restored = $7, total_files = $8, total_bytes = $9,
+		    current_file = $10, updated_at = $11
 		WHERE id = $1
 	`, restore.ID, string(restore.Status), restore.StartedAt, restore.CompletedAt,
-		restore.ErrorMessage, restore.UpdatedAt)
+		restore.ErrorMessage, filesRestored, bytesRestored, totalFiles, totalBytes,
+		currentFile, restore.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update restore: %w", err)
 	}
@@ -2671,10 +2714,14 @@ func scanRestores(rows interface {
 	for r.Next() {
 		var restore models.Restore
 		var statusStr string
-		var includePathsBytes, excludePathsBytes []byte
+		var includePathsBytes, excludePathsBytes, pathMappingsBytes []byte
+		var filesRestored, bytesRestored int64
+		var totalFiles, totalBytes *int64
+		var currentFile *string
 		if err := r.Scan(
-			&restore.ID, &restore.AgentID, &restore.RepositoryID, &restore.SnapshotID,
-			&restore.TargetPath, &includePathsBytes, &excludePathsBytes, &statusStr,
+			&restore.ID, &restore.AgentID, &restore.SourceAgentID, &restore.RepositoryID, &restore.SnapshotID,
+			&restore.TargetPath, &includePathsBytes, &excludePathsBytes, &pathMappingsBytes, &statusStr,
+			&filesRestored, &bytesRestored, &totalFiles, &totalBytes, &currentFile,
 			&restore.StartedAt, &restore.CompletedAt, &restore.ErrorMessage,
 			&restore.CreatedAt, &restore.UpdatedAt,
 		); err != nil {
@@ -2686,6 +2733,21 @@ func scanRestores(rows interface {
 		}
 		if err := parseStringSlice(excludePathsBytes, &restore.ExcludePaths); err != nil {
 			return nil, fmt.Errorf("parse exclude paths: %w", err)
+		}
+		if err := parsePathMappings(pathMappingsBytes, &restore.PathMappings); err != nil {
+			return nil, fmt.Errorf("parse path mappings: %w", err)
+		}
+		// Build progress if there's any progress data
+		if filesRestored > 0 || bytesRestored > 0 || totalFiles != nil || totalBytes != nil {
+			restore.Progress = &models.RestoreProgress{
+				FilesRestored: filesRestored,
+				BytesRestored: bytesRestored,
+				TotalFiles:    totalFiles,
+				TotalBytes:    totalBytes,
+			}
+			if currentFile != nil {
+				restore.Progress.CurrentFile = *currentFile
+			}
 		}
 		restores = append(restores, &restore)
 	}
@@ -2705,6 +2767,22 @@ func toJSONBytes(slice []string) ([]byte, error) {
 
 // parseStringSlice parses JSON bytes into a string slice.
 func parseStringSlice(data []byte, dest *[]string) error {
+	if len(data) == 0 {
+		return nil
+	}
+	return json.Unmarshal(data, dest)
+}
+
+// toPathMappingsJSONBytes converts path mappings to JSON bytes for database storage.
+func toPathMappingsJSONBytes(mappings []models.PathMapping) ([]byte, error) {
+	if len(mappings) == 0 {
+		return nil, nil
+	}
+	return json.Marshal(mappings)
+}
+
+// parsePathMappings parses JSON bytes into path mappings.
+func parsePathMappings(data []byte, dest *[]models.PathMapping) error {
 	if len(data) == 0 {
 		return nil
 	}
@@ -9126,4 +9204,584 @@ func scanAnnouncements(rows interface{ Next() bool; Scan(dest ...interface{}) er
 	}
 
 	return announcements, nil
+}
+
+// ========== IP Allowlist Methods ==========
+
+// GetIPAllowlistByID returns an IP allowlist entry by ID.
+func (db *DB) GetIPAllowlistByID(ctx context.Context, id uuid.UUID) (*models.IPAllowlist, error) {
+	var a models.IPAllowlist
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at
+		FROM ip_allowlists
+		WHERE id = $1
+	`, id).Scan(
+		&a.ID, &a.OrgID, &a.CIDR, &a.Description, &a.Type, &a.Enabled,
+		&a.CreatedBy, &a.UpdatedBy, &a.CreatedAt, &a.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get ip allowlist: %w", err)
+	}
+	return &a, nil
+}
+
+// ListIPAllowlistsByOrg returns all IP allowlist entries for an organization.
+func (db *DB) ListIPAllowlistsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.IPAllowlist, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at
+		FROM ip_allowlists
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list ip allowlists: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPAllowlists(rows)
+}
+
+// ListEnabledIPAllowlistsByOrg returns enabled IP allowlist entries for an organization by type.
+func (db *DB) ListEnabledIPAllowlistsByOrg(ctx context.Context, orgID uuid.UUID, allowlistType models.IPAllowlistType) ([]*models.IPAllowlist, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at
+		FROM ip_allowlists
+		WHERE org_id = $1 AND enabled = true AND (type = $2 OR type = 'both')
+		ORDER BY created_at DESC
+	`, orgID, allowlistType)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled ip allowlists: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPAllowlists(rows)
+}
+
+// CreateIPAllowlist creates a new IP allowlist entry.
+func (db *DB) CreateIPAllowlist(ctx context.Context, a *models.IPAllowlist) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO ip_allowlists (id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, a.ID, a.OrgID, a.CIDR, a.Description, a.Type, a.Enabled, a.CreatedBy, a.UpdatedBy, a.CreatedAt, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create ip allowlist: %w", err)
+	}
+	return nil
+}
+
+// UpdateIPAllowlist updates an existing IP allowlist entry.
+func (db *DB) UpdateIPAllowlist(ctx context.Context, a *models.IPAllowlist) error {
+	a.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE ip_allowlists
+		SET cidr = $2, description = $3, type = $4, enabled = $5, updated_by = $6, updated_at = $7
+		WHERE id = $1
+	`, a.ID, a.CIDR, a.Description, a.Type, a.Enabled, a.UpdatedBy, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update ip allowlist: %w", err)
+	}
+	return nil
+}
+
+// DeleteIPAllowlist deletes an IP allowlist entry.
+func (db *DB) DeleteIPAllowlist(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM ip_allowlists WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete ip allowlist: %w", err)
+	}
+	return nil
+}
+
+// GetIPAllowlistSettings returns the IP allowlist settings for an organization.
+func (db *DB) GetIPAllowlistSettings(ctx context.Context, orgID uuid.UUID) (*models.IPAllowlistSettings, error) {
+	var s models.IPAllowlistSettings
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, enabled, enforce_for_ui, enforce_for_agent, allow_admin_bypass, created_at, updated_at
+		FROM ip_allowlist_settings
+		WHERE org_id = $1
+	`, orgID).Scan(
+		&s.ID, &s.OrgID, &s.Enabled, &s.EnforceForUI, &s.EnforceForAgent, &s.AllowAdminBypass, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get ip allowlist settings: %w", err)
+	}
+	return &s, nil
+}
+
+// GetOrCreateIPAllowlistSettings returns existing settings or creates default settings.
+func (db *DB) GetOrCreateIPAllowlistSettings(ctx context.Context, orgID uuid.UUID) (*models.IPAllowlistSettings, error) {
+	settings, err := db.GetIPAllowlistSettings(ctx, orgID)
+	if err == nil {
+		return settings, nil
+	}
+
+	// Create default settings
+	settings = models.NewIPAllowlistSettings(orgID)
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO ip_allowlist_settings (id, org_id, enabled, enforce_for_ui, enforce_for_agent, allow_admin_bypass, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (org_id) DO NOTHING
+	`, settings.ID, settings.OrgID, settings.Enabled, settings.EnforceForUI, settings.EnforceForAgent, settings.AllowAdminBypass, settings.CreatedAt, settings.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create ip allowlist settings: %w", err)
+	}
+
+	// Re-fetch to get the actual values (in case of conflict)
+	return db.GetIPAllowlistSettings(ctx, orgID)
+}
+
+// UpdateIPAllowlistSettings updates the IP allowlist settings for an organization.
+func (db *DB) UpdateIPAllowlistSettings(ctx context.Context, s *models.IPAllowlistSettings) error {
+	s.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE ip_allowlist_settings
+		SET enabled = $2, enforce_for_ui = $3, enforce_for_agent = $4, allow_admin_bypass = $5, updated_at = $6
+		WHERE org_id = $1
+	`, s.OrgID, s.Enabled, s.EnforceForUI, s.EnforceForAgent, s.AllowAdminBypass, s.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update ip allowlist settings: %w", err)
+	}
+	return nil
+}
+
+// CreateIPBlockedAttempt records a blocked access attempt.
+func (db *DB) CreateIPBlockedAttempt(ctx context.Context, b *models.IPBlockedAttempt) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO ip_blocked_attempts (id, org_id, ip_address, request_type, path, user_id, agent_id, reason, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, b.ID, b.OrgID, b.IPAddress, b.RequestType, b.Path, b.UserID, b.AgentID, b.Reason, b.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create ip blocked attempt: %w", err)
+	}
+	return nil
+}
+
+// ListIPBlockedAttemptsByOrg returns blocked attempts for an organization.
+func (db *DB) ListIPBlockedAttemptsByOrg(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.IPBlockedAttempt, int, error) {
+	// Get total count
+	var total int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM ip_blocked_attempts WHERE org_id = $1
+	`, orgID).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count ip blocked attempts: %w", err)
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, request_type, path, user_id, agent_id, reason, created_at
+		FROM ip_blocked_attempts
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`, orgID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list ip blocked attempts: %w", err)
+	}
+	defer rows.Close()
+
+	attempts, err := scanIPBlockedAttempts(rows)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return attempts, total, nil
+}
+
+// scanIPAllowlists scans rows into IP allowlist entries.
+func scanIPAllowlists(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.IPAllowlist, error) {
+	var allowlists []*models.IPAllowlist
+	for rows.Next() {
+		var a models.IPAllowlist
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.CIDR, &a.Description, &a.Type, &a.Enabled,
+			&a.CreatedBy, &a.UpdatedBy, &a.CreatedAt, &a.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan ip allowlist: %w", err)
+		}
+		allowlists = append(allowlists, &a)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ip allowlists: %w", err)
+	}
+
+	return allowlists, nil
+}
+
+// scanIPBlockedAttempts scans rows into blocked attempt records.
+func scanIPBlockedAttempts(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.IPBlockedAttempt, error) {
+	var attempts []*models.IPBlockedAttempt
+	for rows.Next() {
+		var b models.IPBlockedAttempt
+		err := rows.Scan(
+			&b.ID, &b.OrgID, &b.IPAddress, &b.RequestType, &b.Path, &b.UserID, &b.AgentID, &b.Reason, &b.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan ip blocked attempt: %w", err)
+		}
+		attempts = append(attempts, &b)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ip blocked attempts: %w", err)
+	}
+
+	return attempts, nil
+}
+
+// Rate Limit Config methods
+
+// ListRateLimitConfigs returns all rate limit configs for an organization.
+func (db *DB) ListRateLimitConfigs(ctx context.Context, orgID uuid.UUID) ([]*models.RateLimitConfig, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled,
+		       created_by, created_at, updated_at
+		FROM rate_limit_configs
+		WHERE org_id = $1
+		ORDER BY endpoint ASC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list rate limit configs: %w", err)
+	}
+	defer rows.Close()
+
+	return scanRateLimitConfigs(rows)
+}
+
+// GetRateLimitConfigByID returns a rate limit config by ID.
+func (db *DB) GetRateLimitConfigByID(ctx context.Context, id uuid.UUID) (*models.RateLimitConfig, error) {
+	var c models.RateLimitConfig
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled,
+		       created_by, created_at, updated_at
+		FROM rate_limit_configs
+		WHERE id = $1
+	`, id).Scan(
+		&c.ID, &c.OrgID, &c.Endpoint, &c.RequestsPerPeriod, &c.PeriodSeconds,
+		&c.Enabled, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get rate limit config: %w", err)
+	}
+	return &c, nil
+}
+
+// GetRateLimitConfigByEndpoint returns a rate limit config for a specific endpoint.
+func (db *DB) GetRateLimitConfigByEndpoint(ctx context.Context, orgID uuid.UUID, endpoint string) (*models.RateLimitConfig, error) {
+	var c models.RateLimitConfig
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled,
+		       created_by, created_at, updated_at
+		FROM rate_limit_configs
+		WHERE org_id = $1 AND endpoint = $2
+	`, orgID, endpoint).Scan(
+		&c.ID, &c.OrgID, &c.Endpoint, &c.RequestsPerPeriod, &c.PeriodSeconds,
+		&c.Enabled, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get rate limit config by endpoint: %w", err)
+	}
+	return &c, nil
+}
+
+// CreateRateLimitConfig creates a new rate limit config.
+func (db *DB) CreateRateLimitConfig(ctx context.Context, c *models.RateLimitConfig) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO rate_limit_configs (id, org_id, endpoint, requests_per_period, period_seconds,
+		            enabled, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, c.ID, c.OrgID, c.Endpoint, c.RequestsPerPeriod, c.PeriodSeconds,
+		c.Enabled, c.CreatedBy, c.CreatedAt, c.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create rate limit config: %w", err)
+	}
+	return nil
+}
+
+// UpdateRateLimitConfig updates an existing rate limit config.
+func (db *DB) UpdateRateLimitConfig(ctx context.Context, c *models.RateLimitConfig) error {
+	c.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE rate_limit_configs
+		SET requests_per_period = $2, period_seconds = $3, enabled = $4, updated_at = $5
+		WHERE id = $1
+	`, c.ID, c.RequestsPerPeriod, c.PeriodSeconds, c.Enabled, c.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update rate limit config: %w", err)
+	}
+	return nil
+}
+
+// DeleteRateLimitConfig deletes a rate limit config.
+func (db *DB) DeleteRateLimitConfig(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM rate_limit_configs
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete rate limit config: %w", err)
+	}
+	return nil
+}
+
+// scanRateLimitConfigs scans rows into rate limit config structs.
+func scanRateLimitConfigs(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.RateLimitConfig, error) {
+	var configs []*models.RateLimitConfig
+	for rows.Next() {
+		var c models.RateLimitConfig
+		err := rows.Scan(
+			&c.ID, &c.OrgID, &c.Endpoint, &c.RequestsPerPeriod, &c.PeriodSeconds,
+			&c.Enabled, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan rate limit config: %w", err)
+		}
+		configs = append(configs, &c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rate limit configs: %w", err)
+	}
+
+	return configs, nil
+}
+
+// Blocked Request methods
+
+// RecordBlockedRequest records a blocked request for statistics.
+func (db *DB) RecordBlockedRequest(ctx context.Context, orgID *uuid.UUID, ipAddress, endpoint, userAgent, reason string) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO blocked_requests (id, org_id, ip_address, endpoint, user_agent, blocked_at, reason)
+		VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+	`, uuid.New(), orgID, ipAddress, endpoint, userAgent, reason)
+	if err != nil {
+		return fmt.Errorf("record blocked request: %w", err)
+	}
+	return nil
+}
+
+// GetRateLimitStats returns rate limiting statistics for an organization.
+func (db *DB) GetRateLimitStats(ctx context.Context, orgID uuid.UUID) (*models.RateLimitStats, error) {
+	stats := &models.RateLimitStats{}
+
+	// Get blocked today count
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM blocked_requests
+		WHERE (org_id = $1 OR org_id IS NULL)
+		  AND blocked_at >= CURRENT_DATE
+	`, orgID).Scan(&stats.BlockedToday)
+	if err != nil {
+		return nil, fmt.Errorf("get blocked today count: %w", err)
+	}
+
+	// Get top blocked IPs
+	rows, err := db.Pool.Query(ctx, `
+		SELECT ip_address, COUNT(*) as count
+		FROM blocked_requests
+		WHERE (org_id = $1 OR org_id IS NULL)
+		  AND blocked_at >= CURRENT_DATE - INTERVAL '7 days'
+		GROUP BY ip_address
+		ORDER BY count DESC
+		LIMIT 10
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get top blocked IPs: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var ip models.IPBlockCount
+		if err := rows.Scan(&ip.IPAddress, &ip.Count); err != nil {
+			return nil, fmt.Errorf("scan blocked IP: %w", err)
+		}
+		stats.TopBlockedIPs = append(stats.TopBlockedIPs, ip)
+	}
+
+	// Get top blocked endpoints
+	rows2, err := db.Pool.Query(ctx, `
+		SELECT endpoint, COUNT(*) as count
+		FROM blocked_requests
+		WHERE (org_id = $1 OR org_id IS NULL)
+		  AND blocked_at >= CURRENT_DATE - INTERVAL '7 days'
+		GROUP BY endpoint
+		ORDER BY count DESC
+		LIMIT 10
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get top blocked endpoints: %w", err)
+	}
+	defer rows2.Close()
+
+	for rows2.Next() {
+		var route models.RouteBlockCount
+		if err := rows2.Scan(&route.Endpoint, &route.Count); err != nil {
+			return nil, fmt.Errorf("scan blocked endpoint: %w", err)
+		}
+		stats.TopBlockedRoutes = append(stats.TopBlockedRoutes, route)
+	}
+
+	return stats, nil
+}
+
+// ListRecentBlockedRequests returns recent blocked requests.
+func (db *DB) ListRecentBlockedRequests(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.BlockedRequest, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, endpoint, user_agent, blocked_at, reason
+		FROM blocked_requests
+		WHERE org_id = $1 OR org_id IS NULL
+		ORDER BY blocked_at DESC
+		LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list blocked requests: %w", err)
+	}
+	defer rows.Close()
+
+	var requests []*models.BlockedRequest
+	for rows.Next() {
+		var r models.BlockedRequest
+		if err := rows.Scan(&r.ID, &r.OrgID, &r.IPAddress, &r.Endpoint, &r.UserAgent, &r.BlockedAt, &r.Reason); err != nil {
+			return nil, fmt.Errorf("scan blocked request: %w", err)
+		}
+		requests = append(requests, &r)
+	}
+
+	return requests, nil
+}
+
+// IP Ban methods
+
+// ListIPBans returns all IP bans for an organization.
+func (db *DB) ListIPBans(ctx context.Context, orgID uuid.UUID) ([]*models.IPBan, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at
+		FROM ip_bans
+		WHERE org_id = $1 OR org_id IS NULL
+		ORDER BY banned_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list IP bans: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPBans(rows)
+}
+
+// ListActiveIPBans returns active IP bans.
+func (db *DB) ListActiveIPBans(ctx context.Context, orgID uuid.UUID) ([]*models.IPBan, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at
+		FROM ip_bans
+		WHERE (org_id = $1 OR org_id IS NULL)
+		  AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY banned_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list active IP bans: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPBans(rows)
+}
+
+// GetIPBan returns an IP ban by IP address.
+func (db *DB) GetIPBan(ctx context.Context, ipAddress string) (*models.IPBan, error) {
+	var b models.IPBan
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at
+		FROM ip_bans
+		WHERE ip_address = $1
+		  AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY banned_at DESC
+		LIMIT 1
+	`, ipAddress).Scan(
+		&b.ID, &b.OrgID, &b.IPAddress, &b.Reason, &b.BanCount,
+		&b.BannedBy, &b.BannedAt, &b.ExpiresAt, &b.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get IP ban: %w", err)
+	}
+	return &b, nil
+}
+
+// CreateIPBan creates a new IP ban.
+func (db *DB) CreateIPBan(ctx context.Context, b *models.IPBan) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO ip_bans (id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, b.ID, b.OrgID, b.IPAddress, b.Reason, b.BanCount, b.BannedBy, b.BannedAt, b.ExpiresAt, b.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create IP ban: %w", err)
+	}
+	return nil
+}
+
+// DeleteIPBan removes an IP ban.
+func (db *DB) DeleteIPBan(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM ip_bans
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete IP ban: %w", err)
+	}
+	return nil
+}
+
+// IncrementIPBanCount increments the ban count for repeat offenders.
+func (db *DB) IncrementIPBanCount(ctx context.Context, ipAddress string) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		UPDATE ip_bans
+		SET ban_count = ban_count + 1
+		WHERE ip_address = $1
+		RETURNING ban_count
+	`, ipAddress).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("increment IP ban count: %w", err)
+	}
+	return count, nil
+}
+
+// GetBlockedRequestCountForIP returns the number of blocked requests for an IP in a time window.
+func (db *DB) GetBlockedRequestCountForIP(ctx context.Context, ipAddress string, since time.Time) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM blocked_requests
+		WHERE ip_address = $1
+		  AND blocked_at >= $2
+	`, ipAddress, since).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("get blocked request count for IP: %w", err)
+	}
+	return count, nil
+}
+
+// scanIPBans scans rows into IP ban structs.
+func scanIPBans(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.IPBan, error) {
+	var bans []*models.IPBan
+	for rows.Next() {
+		var b models.IPBan
+		err := rows.Scan(
+			&b.ID, &b.OrgID, &b.IPAddress, &b.Reason, &b.BanCount,
+			&b.BannedBy, &b.BannedAt, &b.ExpiresAt, &b.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan IP ban: %w", err)
+		}
+		bans = append(bans, &b)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate IP bans: %w", err)
+	}
+
+	return bans, nil
 }
