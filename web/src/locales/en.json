@@ -58,6 +58,7 @@
     "fileSearch": "File Search",
     "fileHistory": "File History",
     "alerts": "Alerts",
+    "downtime": "Downtime History",
     "notifications": "Notifications",
     "notificationRules": "Notification Rules",
     "auditLogs": "Audit Logs",
