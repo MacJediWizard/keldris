@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMe } from '../hooks/useAuth';
 import {
+	useBackupQueueSummary,
 	useOrgConcurrency,
 	useUpdateOrgConcurrency,
-	useBackupQueueSummary,
 } from '../hooks/useBackupQueue';
 import {
 	useCurrentOrganization,
@@ -30,7 +30,8 @@ export function OrganizationSettings() {
 	const [isEditingConcurrency, setIsEditingConcurrency] = useState(false);
 	const [concurrencyLimit, setConcurrencyLimit] = useState<string>('');
 
-	const { data: concurrencyData, isLoading: concurrencyLoading } = useOrgConcurrency(user?.current_org_id ?? '');
+	const { data: concurrencyData, isLoading: concurrencyLoading } =
+		useOrgConcurrency(user?.current_org_id ?? '');
 	const { data: queueSummary } = useBackupQueueSummary();
 	const updateOrgConcurrency = useUpdateOrgConcurrency();
 
@@ -80,7 +81,7 @@ export function OrganizationSettings() {
 
 	const handleEditConcurrency = () => {
 		setConcurrencyLimit(
-			concurrencyData?.max_concurrent_backups?.toString() ?? ''
+			concurrencyData?.max_concurrent_backups?.toString() ?? '',
 		);
 		setIsEditingConcurrency(true);
 	};
@@ -88,7 +89,8 @@ export function OrganizationSettings() {
 	const handleSaveConcurrency = async (e: React.FormEvent) => {
 		e.preventDefault();
 		try {
-			const limit = concurrencyLimit === '' ? null : parseInt(concurrencyLimit, 10);
+			const limit =
+				concurrencyLimit === '' ? null : Number.parseInt(concurrencyLimit, 10);
 			await updateOrgConcurrency.mutateAsync({
 				orgId,
 				data: { max_concurrent_backups: limit === null ? undefined : limit },
@@ -300,7 +302,8 @@ export function OrganizationSettings() {
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								/>
 								<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-									Leave empty for unlimited. When the limit is reached, new backups will be queued.
+									Leave empty for unlimited. When the limit is reached, new
+									backups will be queued.
 								</p>
 							</div>
 							{updateOrgConcurrency.isError && (
@@ -321,7 +324,9 @@ export function OrganizationSettings() {
 									disabled={updateOrgConcurrency.isPending}
 									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 								>
-									{updateOrgConcurrency.isPending ? 'Saving...' : 'Save Changes'}
+									{updateOrgConcurrency.isPending
+										? 'Saving...'
+										: 'Save Changes'}
 								</button>
 							</div>
 						</form>
@@ -337,7 +342,9 @@ export function OrganizationSettings() {
 									) : concurrencyData?.max_concurrent_backups != null ? (
 										concurrencyData.max_concurrent_backups
 									) : (
-										<span className="text-gray-500 dark:text-gray-400">Unlimited</span>
+										<span className="text-gray-500 dark:text-gray-400">
+											Unlimited
+										</span>
 									)}
 								</dd>
 							</div>
@@ -367,9 +374,14 @@ export function OrganizationSettings() {
 							{queueSummary && queueSummary.total_queued > 0 && (
 								<div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
 									<p className="text-sm text-yellow-800 dark:text-yellow-200">
-										{queueSummary.total_queued} backup(s) are queued waiting for a slot.
+										{queueSummary.total_queued} backup(s) are queued waiting for
+										a slot.
 										{queueSummary.avg_wait_minutes > 0 && (
-											<> Average wait time: {Math.round(queueSummary.avg_wait_minutes)} minutes.</>
+											<>
+												{' '}
+												Average wait time:{' '}
+												{Math.round(queueSummary.avg_wait_minutes)} minutes.
+											</>
 										)}
 									</p>
 								</div>
