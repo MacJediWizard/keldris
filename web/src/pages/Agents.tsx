@@ -12,6 +12,8 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { HelpTooltip } from '../components/ui/HelpTooltip';
+import { statusHelp } from '../lib/help-content';
 import { useAddAgentToGroup, useAgentGroups } from '../hooks/useAgentGroups';
 import {
 	useCreateRegistrationCode,
@@ -519,11 +521,34 @@ function AgentRow({
 				)}
 			</td>
 			<td className="px-6 py-4">
-				<span
-					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
-				>
-					<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
-					{agent.status}
+				<span className="inline-flex items-center gap-1.5">
+					<span
+						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
+					>
+						<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
+						{agent.status}
+					</span>
+					<HelpTooltip
+						content={
+							agent.status === 'active'
+								? statusHelp.agentActive.content
+								: agent.status === 'offline'
+									? statusHelp.agentOffline.content
+									: agent.status === 'pending'
+										? statusHelp.agentPending.content
+										: statusHelp.agentDisabled.content
+						}
+						title={
+							agent.status === 'active'
+								? statusHelp.agentActive.title
+								: agent.status === 'offline'
+									? statusHelp.agentOffline.title
+									: agent.status === 'pending'
+										? statusHelp.agentPending.title
+										: statusHelp.agentDisabled.title
+						}
+						position="right"
+					/>
 				</span>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500">
