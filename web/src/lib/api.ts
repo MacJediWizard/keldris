@@ -101,6 +101,7 @@ import type {
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
 	CreateSSOGroupMappingRequest,
+	CreateSavedFilterRequest,
 	CreateScheduleRequest,
 	CreateSnapshotCommentRequest,
 	CreateStoragePricingRequest,
@@ -238,6 +239,8 @@ import type {
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
 	SSOSettings,
+	SavedFilter,
+	SavedFiltersResponse,
 	Schedule,
 	SchedulesResponse,
 	SearchFilter,
@@ -296,6 +299,7 @@ import type {
 	UpdateRepositoryRequest,
 	UpdateSSOGroupMappingRequest,
 	UpdateSSOSettingsRequest,
+	UpdateSavedFilterRequest,
 	UpdateScheduleRequest,
 	UpdateStoragePricingRequest,
 	UpdateTagRequest,
@@ -2989,6 +2993,40 @@ export const userSessionsApi = {
 
 	revokeAll: async (): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>('/user-sessions', {
+			method: 'DELETE',
+		}),
+};
+
+// Saved Filters API
+export const savedFiltersApi = {
+	list: async (entityType?: string): Promise<SavedFilter[]> => {
+		const endpoint = entityType
+			? `/filters?entity_type=${entityType}`
+			: '/filters';
+		const response = await fetchApi<SavedFiltersResponse>(endpoint);
+		return response.filters ?? [];
+	},
+
+	get: async (id: string): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>(`/filters/${id}`),
+
+	create: async (data: CreateSavedFilterRequest): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>('/filters', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateSavedFilterRequest,
+	): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>(`/filters/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/filters/${id}`, {
 			method: 'DELETE',
 		}),
 };

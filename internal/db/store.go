@@ -9112,6 +9112,146 @@ func scanAnnouncements(rows interface{ Next() bool; Scan(dest ...interface{}) er
 	return announcements, nil
 }
 
+// Saved Filter methods
+
+// GetSavedFiltersByUserAndOrg returns all saved filters for a user in an organization,
+// including shared filters from other users.
+func (db *DB) GetSavedFiltersByUserAndOrg(ctx context.Context, userID, orgID uuid.UUID, entityType string) ([]*models.SavedFilter, error) {
+	query := `
+		SELECT id, user_id, org_id, name, entity_type, filters, shared, is_default, created_at, updated_at
+		FROM saved_filters
+		WHERE org_id = $1 AND (user_id = $2 OR shared = TRUE)
+	`
+	args := []interface{}{orgID, userID}
+
+	if entityType != "" {
+		query += ` AND entity_type = $3`
+		args = append(args, entityType)
+	}
+
+	query += ` ORDER BY name`
+
+	rows, err := db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list saved filters: %w", err)
+	}
+	defer rows.Close()
+
+	var filters []*models.SavedFilter
+	for rows.Next() {
+		var f models.SavedFilter
+		err := rows.Scan(
+			&f.ID, &f.UserID, &f.OrgID, &f.Name, &f.EntityType,
+			&f.Filters, &f.Shared, &f.IsDefault, &f.CreatedAt, &f.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan saved filter: %w", err)
+		}
+		filters = append(filters, &f)
+	}
+
+	return filters, nil
+}
+
+// GetSavedFilterByID returns a saved filter by ID.
+func (db *DB) GetSavedFilterByID(ctx context.Context, id uuid.UUID) (*models.SavedFilter, error) {
+	var f models.SavedFilter
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, user_id, org_id, name, entity_type, filters, shared, is_default, created_at, updated_at
+		FROM saved_filters
+		WHERE id = $1
+	`, id).Scan(
+		&f.ID, &f.UserID, &f.OrgID, &f.Name, &f.EntityType,
+		&f.Filters, &f.Shared, &f.IsDefault, &f.CreatedAt, &f.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get saved filter: %w", err)
+	}
+	return &f, nil
+}
+
+// GetDefaultSavedFilter returns the default filter for a user/entity type.
+func (db *DB) GetDefaultSavedFilter(ctx context.Context, userID, orgID uuid.UUID, entityType string) (*models.SavedFilter, error) {
+	var f models.SavedFilter
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, user_id, org_id, name, entity_type, filters, shared, is_default, created_at, updated_at
+		FROM saved_filters
+		WHERE user_id = $1 AND org_id = $2 AND entity_type = $3 AND is_default = TRUE
+	`, userID, orgID, entityType).Scan(
+		&f.ID, &f.UserID, &f.OrgID, &f.Name, &f.EntityType,
+		&f.Filters, &f.Shared, &f.IsDefault, &f.CreatedAt, &f.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get default saved filter: %w", err)
+	}
+	return &f, nil
+}
+
+// CreateSavedFilter creates a new saved filter.
+func (db *DB) CreateSavedFilter(ctx context.Context, f *models.SavedFilter) error {
+	return db.ExecTx(ctx, func(tx pgx.Tx) error {
+		// If setting as default, clear existing default for this user/entity type
+		if f.IsDefault {
+			_, err := tx.Exec(ctx, `
+				UPDATE saved_filters
+				SET is_default = FALSE, updated_at = NOW()
+				WHERE user_id = $1 AND org_id = $2 AND entity_type = $3 AND is_default = TRUE
+			`, f.UserID, f.OrgID, f.EntityType)
+			if err != nil {
+				return fmt.Errorf("clear existing default: %w", err)
+			}
+		}
+
+		_, err := tx.Exec(ctx, `
+			INSERT INTO saved_filters (id, user_id, org_id, name, entity_type, filters, shared, is_default, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		`, f.ID, f.UserID, f.OrgID, f.Name, f.EntityType, f.Filters, f.Shared, f.IsDefault, f.CreatedAt, f.UpdatedAt)
+		if err != nil {
+			return fmt.Errorf("create saved filter: %w", err)
+		}
+		return nil
+	})
+}
+
+// UpdateSavedFilter updates an existing saved filter.
+func (db *DB) UpdateSavedFilter(ctx context.Context, f *models.SavedFilter) error {
+	return db.ExecTx(ctx, func(tx pgx.Tx) error {
+		// If setting as default, clear existing default for this user/entity type
+		if f.IsDefault {
+			_, err := tx.Exec(ctx, `
+				UPDATE saved_filters
+				SET is_default = FALSE, updated_at = NOW()
+				WHERE user_id = $1 AND org_id = $2 AND entity_type = $3 AND is_default = TRUE AND id != $4
+			`, f.UserID, f.OrgID, f.EntityType, f.ID)
+			if err != nil {
+				return fmt.Errorf("clear existing default: %w", err)
+			}
+		}
+
+		_, err := tx.Exec(ctx, `
+			UPDATE saved_filters
+			SET name = $1, filters = $2, shared = $3, is_default = $4, updated_at = NOW()
+			WHERE id = $5
+		`, f.Name, f.Filters, f.Shared, f.IsDefault, f.ID)
+		if err != nil {
+			return fmt.Errorf("update saved filter: %w", err)
+		}
+		return nil
+	})
+}
+
+// DeleteSavedFilter deletes a saved filter.
+func (db *DB) DeleteSavedFilter(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM saved_filters WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete saved filter: %w", err)
+	}
+	return nil
+}
+
 // ========== IP Allowlist Methods ==========
 
 // GetIPAllowlistByID returns an IP allowlist entry by ID.
