@@ -41,31 +41,77 @@ const tierConfig: Record<
 	},
 };
 
-function TierIcon({ tier, className }: { tier: StorageTierType; className?: string }) {
+function TierIcon({
+	tier,
+	className,
+}: { tier: StorageTierType; className?: string }) {
 	switch (tier) {
 		case 'hot':
 			return (
-				<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
+				<svg
+					className={className}
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"
+					/>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"
+					/>
 				</svg>
 			);
 		case 'warm':
 			return (
-				<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+				<svg
+					className={className}
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+					/>
 				</svg>
 			);
 		case 'cold':
 			return (
-				<svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+				<svg
+					className={className}
+					fill="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
 					<path d="M12 2l1.09 3.26L16 6l-2.91.74L12 10l-1.09-3.26L8 6l2.91-.74L12 2zM4.18 8.18l2.26 1.16L7.6 12l-1.16 2.66-2.26 1.16L6.74 13H4v-2h2.74l-2.56 2.82zM19.82 8.18l-2.26 1.16L16.4 12l1.16 2.66 2.26 1.16L17.26 13H20v-2h-2.74l2.56 2.82zM12 14l-1.09 3.26L8 18l2.91.74L12 22l1.09-3.26L16 18l-2.91-.74L12 14z" />
 				</svg>
 			);
 		case 'archive':
 			return (
-				<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+				<svg
+					className={className}
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+					/>
 				</svg>
 			);
 	}
@@ -78,7 +124,8 @@ export function StorageTierBadge({
 	size = 'sm',
 }: StorageTierBadgeProps) {
 	const config = tierConfig[tier] || tierConfig.hot;
-	const sizeClasses = size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-sm px-2.5 py-1';
+	const sizeClasses =
+		size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-sm px-2.5 py-1';
 	const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4';
 
 	return (
@@ -211,7 +258,8 @@ export function ColdRestoreStatusBadge({
 	size = 'sm',
 }: ColdRestoreStatusBadgeProps) {
 	const config = restoreStatusConfig[status] || restoreStatusConfig.pending;
-	const sizeClasses = size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-sm px-2.5 py-1';
+	const sizeClasses =
+		size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-sm px-2.5 py-1';
 
 	const formatTime = (dateStr: string): string => {
 		const date = new Date(dateStr);
