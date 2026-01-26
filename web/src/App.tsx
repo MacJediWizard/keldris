@@ -31,6 +31,7 @@ import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
 import { Restore } from './pages/Restore';
 import { Schedules } from './pages/Schedules';
+import { SLA } from './pages/SLA';
 import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
 import { Tags } from './pages/Tags';
@@ -83,6 +84,7 @@ function App() {
 						<Route path="tags" element={<Tags />} />
 						<Route path="classifications" element={<Classifications />} />
 						<Route path="costs" element={<CostEstimation />} />
+						<Route path="sla" element={<SLA />} />
 						<Route
 							path="organization/members"
 							element={<OrganizationMembers />}

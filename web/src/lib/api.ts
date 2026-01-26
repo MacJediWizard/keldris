@@ -259,6 +259,22 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
+	SLAWithAssignments,
+	SLADefinitionsResponse,
+	SLAAssignment,
+	SLAAssignmentsResponse,
+	SLACompliance,
+	SLAComplianceResponse,
+	SLABreach,
+	SLABreachesResponse,
+	SLADashboardStats,
+	SLADashboardResponse,
+	SLAReport,
+	SLAReportResponse,
+	CreateSLADefinitionRequest,
+	UpdateSLADefinitionRequest,
+	AssignSLARequest,
+	AcknowledgeBreachRequest,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -2436,4 +2452,122 @@ export const templatesApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+};
+
+// SLA API
+export const slaApi = {
+	// SLA Definitions
+	list: async (): Promise<SLAWithAssignments[]> => {
+		const response = await fetchApi<SLADefinitionsResponse>('/slas');
+		return response.slas ?? [];
+	},
+
+	get: async (id: string): Promise<SLAWithAssignments> =>
+		fetchApi<SLAWithAssignments>(`/slas/${id}`),
+
+	create: async (data: CreateSLADefinitionRequest): Promise<SLAWithAssignments> =>
+		fetchApi<SLAWithAssignments>('/slas', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateSLADefinitionRequest,
+	): Promise<SLAWithAssignments> =>
+		fetchApi<SLAWithAssignments>(`/slas/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/slas/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// SLA Assignments
+	listAssignments: async (slaId: string): Promise<SLAAssignment[]> => {
+		const response = await fetchApi<SLAAssignmentsResponse>(
+			`/slas/${slaId}/assignments`,
+		);
+		return response.assignments ?? [];
+	},
+
+	createAssignment: async (
+		slaId: string,
+		data: AssignSLARequest,
+	): Promise<SLAAssignment> =>
+		fetchApi<SLAAssignment>(`/slas/${slaId}/assignments`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	deleteAssignment: async (
+		slaId: string,
+		assignmentId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/slas/${slaId}/assignments/${assignmentId}`, {
+			method: 'DELETE',
+		}),
+
+	// SLA Compliance
+	getCompliance: async (slaId: string): Promise<SLACompliance[]> => {
+		const response = await fetchApi<SLAComplianceResponse>(
+			`/slas/${slaId}/compliance`,
+		);
+		return response.compliance ?? [];
+	},
+
+	listOrgCompliance: async (): Promise<SLACompliance[]> => {
+		const response = await fetchApi<SLAComplianceResponse>('/sla-compliance');
+		return response.compliance ?? [];
+	},
+
+	// SLA Breaches
+	listBreaches: async (): Promise<SLABreach[]> => {
+		const response = await fetchApi<SLABreachesResponse>('/sla-breaches');
+		return response.breaches ?? [];
+	},
+
+	listActiveBreaches: async (): Promise<SLABreach[]> => {
+		const response = await fetchApi<SLABreachesResponse>('/sla-breaches/active');
+		return response.breaches ?? [];
+	},
+
+	listBreachesBySLA: async (slaId: string): Promise<SLABreach[]> => {
+		const response = await fetchApi<SLABreachesResponse>(
+			`/slas/${slaId}/breaches`,
+		);
+		return response.breaches ?? [];
+	},
+
+	getBreach: async (id: string): Promise<SLABreach> =>
+		fetchApi<SLABreach>(`/sla-breaches/${id}`),
+
+	acknowledgeBreach: async (
+		id: string,
+		data?: AcknowledgeBreachRequest,
+	): Promise<SLABreach> =>
+		fetchApi<SLABreach>(`/sla-breaches/${id}/acknowledge`, {
+			method: 'POST',
+			body: JSON.stringify(data ?? {}),
+		}),
+
+	resolveBreach: async (id: string): Promise<SLABreach> =>
+		fetchApi<SLABreach>(`/sla-breaches/${id}/resolve`, {
+			method: 'POST',
+		}),
+
+	// SLA Dashboard
+	getDashboard: async (): Promise<SLADashboardStats> => {
+		const response = await fetchApi<SLADashboardResponse>('/sla-dashboard');
+		return response.stats;
+	},
+
+	// SLA Report
+	getReport: async (month?: string): Promise<SLAReport> => {
+		const url = month ? `/sla-report?month=${month}` : '/sla-report';
+		const response = await fetchApi<SLAReportResponse>(url);
+		return response.report;
+	},
 };
