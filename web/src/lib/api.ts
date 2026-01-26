@@ -2922,7 +2922,9 @@ export const lifecyclePoliciesApi = {
 		return response.events ?? [];
 	},
 
-	listOrgDeletions: async (limit?: number): Promise<LifecycleDeletionEvent[]> => {
+	listOrgDeletions: async (
+		limit?: number,
+	): Promise<LifecycleDeletionEvent[]> => {
 		const params = new URLSearchParams();
 		if (limit) params.set('limit', limit.toString());
 		const query = params.toString() ? `?${params.toString()}` : '';

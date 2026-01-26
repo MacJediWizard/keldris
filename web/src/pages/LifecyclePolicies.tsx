@@ -59,10 +59,7 @@ function RetentionRuleEditor({
 	onChange,
 	onRemove,
 }: RetentionRuleEditorProps) {
-	const updateRetention = (
-		field: keyof RetentionDuration,
-		value: number,
-	) => {
+	const updateRetention = (field: keyof RetentionDuration, value: number) => {
 		onChange({
 			...rule,
 			retention: { ...rule.retention, [field]: value },
@@ -104,14 +101,21 @@ function RetentionRuleEditor({
 
 			<div className="grid grid-cols-2 gap-4">
 				<div>
-					<label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+					<label
+						htmlFor={`min-retention-${rule.level}`}
+						className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+					>
 						Minimum Retention (days)
 					</label>
 					<input
+						id={`min-retention-${rule.level}`}
 						type="number"
 						value={rule.retention.min_days}
 						onChange={(e) =>
-							updateRetention('min_days', Number.parseInt(e.target.value, 10) || 0)
+							updateRetention(
+								'min_days',
+								Number.parseInt(e.target.value, 10) || 0,
+							)
 						}
 						min="0"
 						className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm"
@@ -121,14 +125,21 @@ function RetentionRuleEditor({
 					</p>
 				</div>
 				<div>
-					<label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+					<label
+						htmlFor={`max-retention-${rule.level}`}
+						className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+					>
 						Maximum Retention (days)
 					</label>
 					<input
+						id={`max-retention-${rule.level}`}
 						type="number"
 						value={rule.retention.max_days}
 						onChange={(e) =>
-							updateRetention('max_days', Number.parseInt(e.target.value, 10) || 0)
+							updateRetention(
+								'max_days',
+								Number.parseInt(e.target.value, 10) || 0,
+							)
 						}
 						min="0"
 						className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm"
@@ -189,7 +200,9 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 			setName('');
 			setDescription('');
 			setStatus('draft');
-			setRules([{ level: 'public', retention: { min_days: 30, max_days: 90 } }]);
+			setRules([
+				{ level: 'public', retention: { min_days: 30, max_days: 90 } },
+			]);
 		} catch {
 			// Error handled by mutation
 		}
@@ -250,7 +263,9 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 							<select
 								id="policy-status"
 								value={status}
-								onChange={(e) => setStatus(e.target.value as LifecyclePolicyStatus)}
+								onChange={(e) =>
+									setStatus(e.target.value as LifecyclePolicyStatus)
+								}
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500"
 							>
 								<option value="draft">Draft (not enforced)</option>
@@ -261,9 +276,9 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 
 						<div>
 							<div className="flex items-center justify-between mb-2">
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+								<span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
 									Retention Rules by Classification
-								</label>
+								</span>
 								<button
 									type="button"
 									onClick={addRule}
@@ -275,7 +290,7 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 							<div className="space-y-3">
 								{rules.map((rule, index) => (
 									<RetentionRuleEditor
-										key={index}
+										key={`${rule.level}-${index}`}
 										rule={rule}
 										onChange={(r) => updateRule(index, r)}
 										onRemove={() => removeRule(index)}
@@ -336,7 +351,8 @@ function DryRunModal({ policy, isOpen, onClose }: DryRunModalProps) {
 					Dry Run: {policy.name}
 				</h3>
 				<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-					Preview what snapshots would be affected by this policy without making any changes.
+					Preview what snapshots would be affected by this policy without making
+					any changes.
 				</p>
 
 				{!result ? (
@@ -391,6 +407,7 @@ function DryRunModal({ policy, isOpen, onClose }: DryRunModalProps) {
 							<div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
 								<div className="flex items-center gap-2">
 									<svg
+										aria-hidden="true"
 										className="w-5 h-5 text-amber-500"
 										fill="none"
 										stroke="currentColor"
@@ -404,7 +421,8 @@ function DryRunModal({ policy, isOpen, onClose }: DryRunModalProps) {
 										/>
 									</svg>
 									<span className="font-medium text-amber-800 dark:text-amber-200">
-										{result.hold_count} snapshot(s) under legal hold - cannot be deleted
+										{result.hold_count} snapshot(s) under legal hold - cannot be
+										deleted
 									</span>
 								</div>
 							</div>
@@ -441,7 +459,9 @@ function DryRunModal({ policy, isOpen, onClose }: DryRunModalProps) {
 													<td className="px-4 py-2 font-mono text-xs">
 														{eval_item.snapshot_id.substring(0, 12)}...
 													</td>
-													<td className="px-4 py-2">{eval_item.snapshot_age_days}d</td>
+													<td className="px-4 py-2">
+														{eval_item.snapshot_age_days}d
+													</td>
 													<td className="px-4 py-2 capitalize">
 														{eval_item.classification_level}
 													</td>
@@ -510,13 +530,20 @@ function getStatusColor(status: LifecyclePolicyStatus): string {
 
 export function LifecyclePolicies() {
 	const { data: user } = useMe();
-	const { data: policies, isLoading, isError, refetch } = useLifecyclePolicies();
+	const {
+		data: policies,
+		isLoading,
+		isError,
+		refetch,
+	} = useLifecyclePolicies();
 	const { data: deletions } = useOrgLifecycleDeletions(10);
 	const deletePolicy = useDeleteLifecyclePolicy();
 	const updatePolicy = useUpdateLifecyclePolicy();
 
 	const [showCreateModal, setShowCreateModal] = useState(false);
-	const [dryRunPolicy, setDryRunPolicy] = useState<LifecyclePolicy | null>(null);
+	const [dryRunPolicy, setDryRunPolicy] = useState<LifecyclePolicy | null>(
+		null,
+	);
 	const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
 	const isAdmin =
@@ -527,6 +554,7 @@ export function LifecyclePolicies() {
 			<div className="space-y-6">
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center">
 					<svg
+						aria-hidden="true"
 						className="w-16 h-16 mx-auto mb-4 text-gray-300"
 						fill="none"
 						stroke="currentColor"
@@ -563,7 +591,10 @@ export function LifecyclePolicies() {
 		const newStatus: LifecyclePolicyStatus =
 			policy.status === 'active' ? 'disabled' : 'active';
 		try {
-			await updatePolicy.mutateAsync({ id: policy.id, data: { status: newStatus } });
+			await updatePolicy.mutateAsync({
+				id: policy.id,
+				data: { status: newStatus },
+			});
 		} catch {
 			// Error handling is managed by the mutation
 		}
@@ -587,6 +618,7 @@ export function LifecyclePolicies() {
 						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 					>
 						<svg
+							aria-hidden="true"
 							className="w-4 h-4"
 							fill="none"
 							stroke="currentColor"
@@ -607,6 +639,7 @@ export function LifecyclePolicies() {
 						className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
 					>
 						<svg
+							aria-hidden="true"
 							className="w-4 h-4"
 							fill="none"
 							stroke="currentColor"
@@ -771,6 +804,7 @@ export function LifecyclePolicies() {
 				) : (
 					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
 						<svg
+							aria-hidden="true"
 							className="w-16 h-16 mx-auto mb-4 text-gray-300"
 							fill="none"
 							stroke="currentColor"
@@ -853,6 +887,7 @@ export function LifecyclePolicies() {
 			<div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-4">
 				<div className="flex items-start gap-3">
 					<svg
+						aria-hidden="true"
 						className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0"
 						fill="none"
 						stroke="currentColor"
@@ -869,20 +904,20 @@ export function LifecyclePolicies() {
 						<p className="font-medium mb-1">About Lifecycle Policies</p>
 						<ul className="list-disc list-inside space-y-1">
 							<li>
-								<strong>Minimum retention</strong> ensures compliance by preventing
-								deletion before the required period.
+								<strong>Minimum retention</strong> ensures compliance by
+								preventing deletion before the required period.
 							</li>
 							<li>
-								<strong>Maximum retention</strong> enables automatic cleanup of old
-								snapshots to manage storage.
+								<strong>Maximum retention</strong> enables automatic cleanup of
+								old snapshots to manage storage.
 							</li>
 							<li>
 								Snapshots under <strong>legal hold</strong> are never deleted
 								regardless of policy settings.
 							</li>
 							<li>
-								Use <strong>dry run</strong> to preview what would be affected before
-								activating a policy.
+								Use <strong>dry run</strong> to preview what would be affected
+								before activating a policy.
 							</li>
 						</ul>
 					</div>
