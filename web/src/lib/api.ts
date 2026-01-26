@@ -1,4 +1,5 @@
 import type {
+	AcknowledgeBreachRequest,
 	ActiveMaintenanceResponse,
 	AddAgentToGroupRequest,
 	Agent,
@@ -28,6 +29,7 @@ import type {
 	AnnouncementsResponse,
 	ApplyPolicyRequest,
 	ApplyPolicyResponse,
+	AssignSLARequest,
 	AssignTagsRequest,
 	AuditLog,
 	AuditLogFilter,
@@ -103,6 +105,7 @@ import type {
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
+	CreateSLADefinitionRequest,
 	CreateSSOGroupMappingRequest,
 	CreateSavedFilterRequest,
 	CreateScheduleRequest,
@@ -250,6 +253,18 @@ import type {
 	RotateAPIKeyResponse,
 	RunDRTestRequest,
 	RunScheduleResponse,
+	SLAAssignment,
+	SLAAssignmentsResponse,
+	SLABreach,
+	SLABreachesResponse,
+	SLACompliance,
+	SLAComplianceResponse,
+	SLADashboardResponse,
+	SLADashboardStats,
+	SLADefinitionsResponse,
+	SLAReport,
+	SLAReportResponse,
+	SLAWithAssignments,
 	SSOGroupMapping,
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
@@ -317,6 +332,7 @@ import type {
 	UpdateReportScheduleRequest,
 	UpdateRepositoryImmutabilitySettingsRequest,
 	UpdateRepositoryRequest,
+	UpdateSLADefinitionRequest,
 	UpdateSSOGroupMappingRequest,
 	UpdateSSOSettingsRequest,
 	UpdateSavedFilterRequest,
@@ -343,22 +359,6 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
-	SLAWithAssignments,
-	SLADefinitionsResponse,
-	SLAAssignment,
-	SLAAssignmentsResponse,
-	SLACompliance,
-	SLAComplianceResponse,
-	SLABreach,
-	SLABreachesResponse,
-	SLADashboardStats,
-	SLADashboardResponse,
-	SLAReport,
-	SLAReportResponse,
-	CreateSLADefinitionRequest,
-	UpdateSLADefinitionRequest,
-	AssignSLARequest,
-	AcknowledgeBreachRequest,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -3239,7 +3239,9 @@ export const slaApi = {
 	get: async (id: string): Promise<SLAWithAssignments> =>
 		fetchApi<SLAWithAssignments>(`/slas/${id}`),
 
-	create: async (data: CreateSLADefinitionRequest): Promise<SLAWithAssignments> =>
+	create: async (
+		data: CreateSLADefinitionRequest,
+	): Promise<SLAWithAssignments> =>
 		fetchApi<SLAWithAssignments>('/slas', {
 			method: 'POST',
 			body: JSON.stringify(data),
@@ -3304,7 +3306,9 @@ export const slaApi = {
 	},
 
 	listActiveBreaches: async (): Promise<SLABreach[]> => {
-		const response = await fetchApi<SLABreachesResponse>('/sla-breaches/active');
+		const response = await fetchApi<SLABreachesResponse>(
+			'/sla-breaches/active',
+		);
 		return response.breaches ?? [];
 	},
 
