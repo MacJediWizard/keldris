@@ -3497,3 +3497,114 @@ export interface ColdRestoreRequestsResponse {
 export interface TierCostReportsResponse {
 	reports: TierCostReport[];
 }
+// Lifecycle Policy types
+export type LifecyclePolicyStatus = 'active' | 'draft' | 'disabled';
+
+export interface RetentionDuration {
+	min_days: number;
+	max_days: number;
+}
+
+export interface DataTypeOverride {
+	data_type: DataType;
+	retention: RetentionDuration;
+}
+
+export interface ClassificationRetention {
+	level: ClassificationLevel;
+	retention: RetentionDuration;
+	data_type_overrides?: DataTypeOverride[];
+}
+
+export interface LifecyclePolicy {
+	id: string;
+	name: string;
+	description?: string;
+	status: LifecyclePolicyStatus;
+	rules: ClassificationRetention[];
+	repository_ids?: string[];
+	schedule_ids?: string[];
+	last_evaluated_at?: string;
+	last_deletion_at?: string;
+	deletion_count: number;
+	bytes_reclaimed: number;
+	created_by: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateLifecyclePolicyRequest {
+	name: string;
+	description?: string;
+	status?: LifecyclePolicyStatus;
+	rules: ClassificationRetention[];
+	repository_ids?: string[];
+	schedule_ids?: string[];
+}
+
+export interface UpdateLifecyclePolicyRequest {
+	name?: string;
+	description?: string;
+	status?: LifecyclePolicyStatus;
+	rules?: ClassificationRetention[];
+	repository_ids?: string[];
+	schedule_ids?: string[];
+}
+
+export interface LifecycleDryRunRequest {
+	policy_id?: string;
+	rules?: ClassificationRetention[];
+	repository_ids?: string[];
+	schedule_ids?: string[];
+}
+
+export type LifecycleAction = 'keep' | 'can_delete' | 'must_delete' | 'hold';
+
+export interface LifecycleSnapshotEvaluation {
+	snapshot_id: string;
+	action: LifecycleAction;
+	reason: string;
+	snapshot_age_days: number;
+	min_retention_days: number;
+	max_retention_days: number;
+	days_until_deletable: number;
+	days_until_auto_delete: number;
+	classification_level: ClassificationLevel;
+	is_on_legal_hold: boolean;
+	size_bytes?: number;
+	snapshot_time: string;
+	repository_id: string;
+	schedule_name?: string;
+}
+
+export interface LifecycleDryRunResult {
+	evaluated_at: string;
+	policy_id?: string;
+	total_snapshots: number;
+	keep_count: number;
+	can_delete_count: number;
+	must_delete_count: number;
+	hold_count: number;
+	total_size_to_delete: number;
+	evaluations: LifecycleSnapshotEvaluation[];
+}
+
+export interface LifecycleDeletionEvent {
+	id: string;
+	org_id: string;
+	policy_id: string;
+	snapshot_id: string;
+	repository_id: string;
+	reason: string;
+	size_bytes: number;
+	deleted_by: string;
+	deleted_at: string;
+}
+
+export interface LifecyclePoliciesResponse {
+	policies: LifecyclePolicy[];
+}
+
+export interface LifecycleDeletionEventsResponse {
+	events: LifecycleDeletionEvent[];
+}
