@@ -1,0 +1,41 @@
+# Keldris Agent Role - Main Tasks
+---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - keldris_server_url | length > 0
+      - keldris_api_key | length > 0
+    fail_msg: "keldris_server_url and keldris_api_key are required"
+    quiet: true
+
+- name: Set OS-specific variables
+  ansible.builtin.include_vars: "{{ item }}"
+  with_first_found:
+    - files:
+        - "{{ ansible_os_family }}.yml"
+        - "{{ ansible_system }}.yml"
+      paths:
+        - "{{ role_path }}/vars"
+      skip: true
+
+- name: Set config directory based on OS
+  ansible.builtin.set_fact:
+    keldris_config_dir: "{{ keldris_config_dir_linux if ansible_system == 'Linux' else keldris_config_dir_macos }}"
+
+- name: Install agent binary
+  ansible.builtin.include_tasks: install.yml
+
+- name: Configure agent
+  ansible.builtin.include_tasks: configure.yml
+
+- name: Setup systemd service (Linux)
+  ansible.builtin.include_tasks: systemd.yml
+  when: ansible_system == "Linux"
+
+- name: Setup launchd service (macOS)
+  ansible.builtin.include_tasks: launchd.yml
+  when: ansible_system == "Darwin"
+
+- name: Register agent with server
+  ansible.builtin.include_tasks: register.yml
+  when: keldris_register_agent | bool

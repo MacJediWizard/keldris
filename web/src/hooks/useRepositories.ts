@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { repositoriesApi } from '../lib/api';
 import type {
+	CloneRepositoryRequest,
 	CreateRepositoryRequest,
 	TestConnectionRequest,
 	UpdateRepositoryRequest,
@@ -73,5 +74,22 @@ export function useTestConnection() {
 export function useRecoverRepositoryKey() {
 	return useMutation({
 		mutationFn: (id: string) => repositoriesApi.recoverKey(id),
+	});
+}
+
+export function useCloneRepository() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: CloneRepositoryRequest;
+		}) => repositoriesApi.clone(id, data),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['repositories'] });
+		},
 	});
 }

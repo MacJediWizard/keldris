@@ -1,0 +1,5 @@
+# Keldris Agent Role - Debian/Ubuntu Variables
+---
+keldris_package_dependencies:
+  - curl
+  - ca-certificates

@@ -1,0 +1,45 @@
+# Keldris Agent Inventory Example
+# Copy this file to inventory.yml and customize for your environment
+---
+all:
+  vars:
+    # Global settings (can be overridden per host)
+    keldris_server_url: "https://backup.example.com"
+    keldris_api_key: "your-api-key-here"
+    keldris_agent_version: "latest"
+
+  children:
+    backup_clients:
+      hosts:
+        # Linux servers with systemd
+        linux-server-1:
+          ansible_host: 192.168.1.10
+          ansible_user: admin
+          ansible_become: true
+
+        linux-server-2:
+          ansible_host: 192.168.1.11
+          ansible_user: admin
+          ansible_become: true
+
+        # macOS workstations
+        macos-workstation-1:
+          ansible_host: 192.168.1.20
+          ansible_user: user
+          # macOS typically doesn't need become for user-level launchd
+
+      children:
+        linux_servers:
+          hosts:
+            linux-server-1:
+            linux-server-2:
+          vars:
+            # Linux-specific settings
+            keldris_config_dir_linux: "/etc/keldris"
+
+        macos_workstations:
+          hosts:
+            macos-workstation-1:
+          vars:
+            # macOS-specific settings
+            keldris_remove_quarantine: true
