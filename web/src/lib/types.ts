@@ -2908,7 +2908,13 @@ export interface BackupQueueItem {
 	schedule_id: string;
 	agent_id: string;
 	priority: SchedulePriority;
-	status: 'pending' | 'running' | 'completed' | 'failed' | 'preempted' | 'canceled';
+	status:
+		| 'pending'
+		| 'running'
+		| 'completed'
+		| 'failed'
+		| 'preempted'
+		| 'canceled';
 	queued_at: string;
 	started_at?: string;
 	completed_at?: string;
