@@ -414,6 +414,8 @@ export interface BackupWindow {
 
 export type CompressionLevel = 'off' | 'auto' | 'max';
 
+export type SchedulePriority = 1 | 2 | 3; // 1=high, 2=medium, 3=low
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
@@ -431,6 +433,8 @@ export interface Schedule {
 	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
 	classification_level?: string; // Data classification level
 	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
+	priority: SchedulePriority; // Backup priority: 1=high, 2=medium, 3=low
+	preemptible: boolean; // Can be preempted by higher priority backups
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -451,6 +455,8 @@ export interface CreateScheduleRequest {
 	compression_level?: CompressionLevel;
 	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
+	priority?: SchedulePriority;
+	preemptible?: boolean;
 	enabled?: boolean;
 }
 
@@ -467,6 +473,8 @@ export interface UpdateScheduleRequest {
 	compression_level?: CompressionLevel;
 	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
+	priority?: SchedulePriority;
+	preemptible?: boolean;
 	enabled?: boolean;
 }
 
@@ -2892,6 +2900,40 @@ export interface UpdateAnnouncementRequest {
 
 export interface AnnouncementsResponse {
 	announcements: Announcement[];
+}
+
+// Backup Queue types for priority management
+export interface BackupQueueItem {
+	id: string;
+	schedule_id: string;
+	agent_id: string;
+	priority: SchedulePriority;
+	status:
+		| 'pending'
+		| 'running'
+		| 'completed'
+		| 'failed'
+		| 'preempted'
+		| 'canceled';
+	queued_at: string;
+	started_at?: string;
+	completed_at?: string;
+	preempted_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface BackupQueueSummary {
+	total_pending: number;
+	total_running: number;
+	high_priority: number;
+	medium_priority: number;
+	low_priority: number;
+}
+
+export interface BackupQueueResponse {
+	queue: BackupQueueItem[];
+	summary: BackupQueueSummary;
 }
 
 // IP Allowlist types
