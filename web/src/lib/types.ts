@@ -2769,3 +2769,161 @@ export interface UpdateAnnouncementRequest {
 export interface AnnouncementsResponse {
 	announcements: Announcement[];
 }
+
+// Downtime types
+export type ComponentType = 'agent' | 'server' | 'repository' | 'service';
+export type DowntimeSeverity = 'info' | 'warning' | 'critical';
+export type BadgeType = '7d' | '30d' | '90d' | '365d';
+
+export interface DowntimeEvent {
+	id: string;
+	org_id: string;
+	component_type: ComponentType;
+	component_id?: string;
+	component_name: string;
+	started_at: string;
+	ended_at?: string;
+	duration_seconds?: number;
+	severity: DowntimeSeverity;
+	cause?: string;
+	notes?: string;
+	resolved_by?: string;
+	auto_detected: boolean;
+	alert_id?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface UptimeStats {
+	id: string;
+	org_id: string;
+	component_type: ComponentType;
+	component_id?: string;
+	component_name: string;
+	period_start: string;
+	period_end: string;
+	total_seconds: number;
+	downtime_seconds: number;
+	uptime_percent: number;
+	incident_count: number;
+	created_at: string;
+}
+
+export interface UptimeBadge {
+	id: string;
+	org_id: string;
+	component_type?: ComponentType;
+	component_id?: string;
+	component_name?: string;
+	badge_type: BadgeType;
+	uptime_percent: number;
+	last_updated: string;
+	created_at: string;
+}
+
+export interface DowntimeAlert {
+	id: string;
+	org_id: string;
+	name: string;
+	enabled: boolean;
+	uptime_threshold: number;
+	evaluation_period: string;
+	component_type?: ComponentType;
+	notify_on_breach: boolean;
+	notify_on_recovery: boolean;
+	last_triggered_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface ComponentUptime {
+	component_type: ComponentType;
+	component_id?: string;
+	component_name: string;
+	status: string;
+	uptime_percent_7d: number;
+	uptime_percent_30d: number;
+	incident_count_30d: number;
+	last_incident_at?: string;
+}
+
+export interface UptimeSummary {
+	total_components: number;
+	components_up: number;
+	components_down: number;
+	active_incidents: number;
+	overall_uptime_7d: number;
+	overall_uptime_30d: number;
+	overall_uptime_90d: number;
+	badges?: UptimeBadge[];
+	recent_incidents?: DowntimeEvent[];
+	component_breakdown?: ComponentUptime[];
+}
+
+export interface DailyUptime {
+	date: string;
+	uptime_percent: number;
+	downtime_seconds: number;
+	incident_count: number;
+}
+
+export interface MonthlyUptimeReport {
+	org_id: string;
+	month: string;
+	year: number;
+	month_num: number;
+	overall_uptime: number;
+	total_downtime_seconds: number;
+	incident_count: number;
+	most_affected?: ComponentUptime[];
+	daily_breakdown?: DailyUptime[];
+	generated_at: string;
+}
+
+export interface CreateDowntimeEventRequest {
+	component_type: ComponentType;
+	component_id?: string;
+	component_name: string;
+	severity: DowntimeSeverity;
+	cause?: string;
+}
+
+export interface UpdateDowntimeEventRequest {
+	severity?: DowntimeSeverity;
+	cause?: string;
+	notes?: string;
+}
+
+export interface ResolveDowntimeEventRequest {
+	notes?: string;
+}
+
+export interface CreateDowntimeAlertRequest {
+	name: string;
+	uptime_threshold: number;
+	evaluation_period: string;
+	component_type?: ComponentType;
+	notify_on_breach?: boolean;
+	notify_on_recovery?: boolean;
+}
+
+export interface UpdateDowntimeAlertRequest {
+	name?: string;
+	enabled?: boolean;
+	uptime_threshold?: number;
+	evaluation_period?: string;
+	notify_on_breach?: boolean;
+	notify_on_recovery?: boolean;
+}
+
+export interface DowntimeEventsResponse {
+	events: DowntimeEvent[];
+}
+
+export interface UptimeBadgesResponse {
+	badges: UptimeBadge[];
+}
+
+export interface DowntimeAlertsResponse {
+	alerts: DowntimeAlert[];
+}
