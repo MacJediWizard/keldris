@@ -76,16 +76,16 @@ export function HelpTooltip({
 		const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
 		return parts.map((part, index) => {
 			if (part.startsWith('**') && part.endsWith('**')) {
-				// biome-ignore lint/suspicious/noArrayIndexKey: Static text parsing, order never changes
 				return (
+					// biome-ignore lint/suspicious/noArrayIndexKey: Static text parsing, order never changes
 					<strong key={index} className="font-semibold text-white">
 						{part.slice(2, -2)}
 					</strong>
 				);
 			}
 			if (part.startsWith('`') && part.endsWith('`')) {
-				// biome-ignore lint/suspicious/noArrayIndexKey: Static text parsing, order never changes
 				return (
+					// biome-ignore lint/suspicious/noArrayIndexKey: Static text parsing, order never changes
 					<code
 						key={index}
 						className="px-1 py-0.5 bg-gray-700 dark:bg-gray-600 rounded text-xs font-mono"
