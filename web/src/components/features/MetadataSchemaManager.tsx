@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
-	useMetadataSchemas,
 	useCreateMetadataSchema,
-	useUpdateMetadataSchema,
 	useDeleteMetadataSchema,
 	useMetadataFieldTypes,
+	useMetadataSchemas,
+	useUpdateMetadataSchema,
 } from '../../hooks/useMetadata';
 import type {
 	CreateMetadataSchemaRequest,
@@ -160,7 +160,8 @@ function SchemaCard({ schema, onEdit, onDelete, isDeleting }: SchemaCardProps) {
 					)}
 				</div>
 				<div className="text-sm text-gray-500 mt-1">
-					Key: <code className="bg-gray-100 px-1 rounded">{schema.field_key}</code>
+					Key:{' '}
+				<code className="bg-gray-100 px-1 rounded">{schema.field_key}</code>
 					{schema.description && <span> - {schema.description}</span>}
 				</div>
 				{schema.field_type === 'select' && schema.options && (
@@ -280,10 +281,11 @@ function SchemaForm({
 		>
 			<div className="grid grid-cols-2 gap-4">
 				<div>
-					<label className="block text-sm font-medium text-gray-700">
+					<label htmlFor="schema-field-name" className="block text-sm font-medium text-gray-700">
 						Field Name <span className="text-red-500">*</span>
 					</label>
 					<input
+						id="schema-field-name"
 						type="text"
 						value={name}
 						onChange={(e) => handleNameChange(e.target.value)}
@@ -293,10 +295,11 @@ function SchemaForm({
 					/>
 				</div>
 				<div>
-					<label className="block text-sm font-medium text-gray-700">
+					<label htmlFor="schema-field-key" className="block text-sm font-medium text-gray-700">
 						Field Key <span className="text-red-500">*</span>
 					</label>
 					<input
+						id="schema-field-key"
 						type="text"
 						value={fieldKey}
 						onChange={(e) => setFieldKey(e.target.value)}
@@ -313,10 +316,11 @@ function SchemaForm({
 
 			<div className="grid grid-cols-2 gap-4">
 				<div>
-					<label className="block text-sm font-medium text-gray-700">
+					<label htmlFor="schema-field-type" className="block text-sm font-medium text-gray-700">
 						Field Type <span className="text-red-500">*</span>
 					</label>
 					<select
+						id="schema-field-type"
 						value={fieldType}
 						onChange={(e) => setFieldType(e.target.value as MetadataFieldType)}
 						className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
@@ -329,10 +333,11 @@ function SchemaForm({
 					</select>
 				</div>
 				<div>
-					<label className="block text-sm font-medium text-gray-700">
+					<label htmlFor="schema-description" className="block text-sm font-medium text-gray-700">
 						Description
 					</label>
 					<input
+						id="schema-description"
 						type="text"
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
@@ -344,12 +349,12 @@ function SchemaForm({
 
 			{fieldType === 'select' && (
 				<div>
-					<label className="block text-sm font-medium text-gray-700 mb-2">
+					<span className="block text-sm font-medium text-gray-700 mb-2">
 						Options <span className="text-red-500">*</span>
-					</label>
+					</span>
 					<div className="space-y-2">
 						{options.map((option, index) => (
-							<div key={index} className="flex items-center gap-2">
+							<div key={`option-${index}-${option.value || 'empty'}`} className="flex items-center gap-2">
 								<input
 									type="text"
 									value={option.value}
@@ -357,6 +362,7 @@ function SchemaForm({
 										handleOptionChange(index, 'value', e.target.value)
 									}
 									placeholder="Value"
+									aria-label={`Option ${index + 1} value`}
 									className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 								/>
 								<input
@@ -366,6 +372,7 @@ function SchemaForm({
 										handleOptionChange(index, 'label', e.target.value)
 									}
 									placeholder="Label"
+									aria-label={`Option ${index + 1} label`}
 									className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 								/>
 								{options.length > 1 && (
@@ -393,10 +400,11 @@ function SchemaForm({
 			{fieldType === 'text' && (
 				<div className="grid grid-cols-2 gap-4">
 					<div>
-						<label className="block text-sm font-medium text-gray-700">
+						<label htmlFor="schema-min-length" className="block text-sm font-medium text-gray-700">
 							Min Length
 						</label>
 						<input
+							id="schema-min-length"
 							type="number"
 							min="0"
 							value={validation.min_length ?? ''}
@@ -412,10 +420,11 @@ function SchemaForm({
 						/>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700">
+						<label htmlFor="schema-max-length" className="block text-sm font-medium text-gray-700">
 							Max Length
 						</label>
 						<input
+							id="schema-max-length"
 							type="number"
 							min="0"
 							value={validation.max_length ?? ''}
@@ -436,10 +445,11 @@ function SchemaForm({
 			{fieldType === 'number' && (
 				<div className="grid grid-cols-2 gap-4">
 					<div>
-						<label className="block text-sm font-medium text-gray-700">
+						<label htmlFor="schema-min-value" className="block text-sm font-medium text-gray-700">
 							Minimum Value
 						</label>
 						<input
+							id="schema-min-value"
 							type="number"
 							value={validation.min ?? ''}
 							onChange={(e) =>
@@ -452,10 +462,11 @@ function SchemaForm({
 						/>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700">
+						<label htmlFor="schema-max-value" className="block text-sm font-medium text-gray-700">
 							Maximum Value
 						</label>
 						<input
+							id="schema-max-value"
 							type="number"
 							value={validation.max ?? ''}
 							onChange={(e) =>

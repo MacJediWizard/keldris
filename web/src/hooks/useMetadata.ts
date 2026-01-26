@@ -87,7 +87,7 @@ export function useUpdateMetadataSchema() {
 export function useDeleteMetadataSchema() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ id, entityType }: { id: string; entityType: MetadataEntityType }) =>
+		mutationFn: ({ id }: { id: string; entityType: MetadataEntityType }) =>
 			metadataApi.deleteSchema(id),
 		onSuccess: (_, { entityType }) => {
 			queryClient.invalidateQueries({

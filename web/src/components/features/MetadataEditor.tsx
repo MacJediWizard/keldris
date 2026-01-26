@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useMetadataSchemas } from '../../hooks/useMetadata';
 import type { MetadataEntityType, MetadataSchema } from '../../lib/types';
 
@@ -72,11 +72,14 @@ function MetadataField({
 	onChange,
 	disabled = false,
 }: MetadataFieldProps) {
+	const fieldId = `metadata-${schema.id}`;
+
 	const renderField = () => {
 		switch (schema.field_type) {
 			case 'text':
 				return (
 					<input
+						id={fieldId}
 						type="text"
 						value={(value as string) || ''}
 						onChange={(e) => onChange(e.target.value)}
@@ -89,6 +92,7 @@ function MetadataField({
 			case 'number':
 				return (
 					<input
+						id={fieldId}
 						type="number"
 						value={(value as number) ?? ''}
 						onChange={(e) =>
@@ -105,6 +109,7 @@ function MetadataField({
 			case 'date':
 				return (
 					<input
+						id={fieldId}
 						type="date"
 						value={(value as string) || ''}
 						onChange={(e) => onChange(e.target.value || undefined)}
@@ -118,6 +123,7 @@ function MetadataField({
 			case 'select':
 				return (
 					<select
+						id={fieldId}
 						value={(value as string) || ''}
 						onChange={(e) => onChange(e.target.value || undefined)}
 						disabled={disabled}
@@ -161,7 +167,7 @@ function MetadataField({
 
 	return (
 		<div>
-			<label className="block text-sm font-medium text-gray-700">
+			<label htmlFor={fieldId} className="block text-sm font-medium text-gray-700">
 				{schema.name}
 				{schema.required && <span className="text-red-500 ml-1">*</span>}
 			</label>
