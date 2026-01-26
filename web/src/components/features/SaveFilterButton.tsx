@@ -40,7 +40,9 @@ export function SaveFilterButton({
 
 	const hasFilters = Object.keys(filters).some((key) => {
 		const value = filters[key];
-		return value !== undefined && value !== null && value !== '' && value !== 'all';
+		return (
+			value !== undefined && value !== null && value !== '' && value !== 'all'
+		);
 	});
 
 	if (!hasFilters) return null;
@@ -105,7 +107,6 @@ export function SaveFilterButton({
 									onChange={(e) => setName(e.target.value)}
 									placeholder="e.g., Failed Backups Last Week"
 									className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-									autoFocus
 								/>
 							</div>
 

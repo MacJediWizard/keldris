@@ -25,9 +25,12 @@ export function useCreateSavedFilter() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (data: CreateSavedFilterRequest) => savedFiltersApi.create(data),
+		mutationFn: (data: CreateSavedFilterRequest) =>
+			savedFiltersApi.create(data),
 		onSuccess: (filter) => {
-			queryClient.invalidateQueries({ queryKey: ['savedFilters', filter.entity_type] });
+			queryClient.invalidateQueries({
+				queryKey: ['savedFilters', filter.entity_type],
+			});
 			queryClient.invalidateQueries({ queryKey: ['savedFilters', undefined] });
 		},
 	});
@@ -37,7 +40,10 @@ export function useUpdateSavedFilter() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ id, data }: { id: string; data: UpdateSavedFilterRequest }) =>
+		mutationFn: ({
+			id,
+			data,
+		}: { id: string; data: UpdateSavedFilterRequest }) =>
 			savedFiltersApi.update(id, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['savedFilters'] });
