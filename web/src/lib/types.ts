@@ -3608,3 +3608,96 @@ export interface LifecyclePoliciesResponse {
 export interface LifecycleDeletionEventsResponse {
 	events: LifecycleDeletionEvent[];
 }
+
+// Metadata types
+export type MetadataEntityType = 'agent' | 'repository' | 'schedule';
+export type MetadataFieldType = 'text' | 'number' | 'date' | 'select' | 'boolean';
+
+export interface MetadataValidationRules {
+	min_length?: number;
+	max_length?: number;
+	pattern?: string;
+	min?: number;
+	max?: number;
+	min_date?: string;
+	max_date?: string;
+}
+
+export interface MetadataSelectOption {
+	value: string;
+	label: string;
+}
+
+export interface MetadataSchema {
+	id: string;
+	org_id: string;
+	entity_type: MetadataEntityType;
+	name: string;
+	field_key: string;
+	field_type: MetadataFieldType;
+	description?: string;
+	required: boolean;
+	default_value?: unknown;
+	options?: MetadataSelectOption[];
+	validation?: MetadataValidationRules;
+	display_order: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateMetadataSchemaRequest {
+	entity_type: MetadataEntityType;
+	name: string;
+	field_key: string;
+	field_type: MetadataFieldType;
+	description?: string;
+	required?: boolean;
+	default_value?: unknown;
+	options?: MetadataSelectOption[];
+	validation?: MetadataValidationRules;
+	display_order?: number;
+}
+
+export interface UpdateMetadataSchemaRequest {
+	name?: string;
+	description?: string;
+	required?: boolean;
+	default_value?: unknown;
+	options?: MetadataSelectOption[];
+	validation?: MetadataValidationRules;
+	display_order?: number;
+}
+
+export interface MetadataSchemasResponse {
+	schemas: MetadataSchema[];
+}
+
+export interface MetadataFieldTypesResponse {
+	types: {
+		type: MetadataFieldType;
+		label: string;
+		description: string;
+	}[];
+}
+
+export interface MetadataEntityTypesResponse {
+	types: {
+		type: MetadataEntityType;
+		label: string;
+	}[];
+}
+
+export interface UpdateEntityMetadataRequest {
+	metadata: Record<string, unknown>;
+}
+
+export interface MetadataSearchResult {
+	entity_type: MetadataEntityType;
+	entity_id: string;
+	entity_name: string;
+	metadata: Record<string, unknown>;
+}
+
+export interface MetadataSearchResponse {
+	results: MetadataSearchResult[];
+}
