@@ -86,10 +86,7 @@ export function HelpTooltip({
 			if (part.startsWith('`') && part.endsWith('`')) {
 				return (
 					// biome-ignore lint/suspicious/noArrayIndexKey: Static text parsing, order never changes
-					<code
-						key={index}
-						className="px-1 py-0.5 bg-gray-700 dark:bg-gray-600 rounded text-xs font-mono"
-					>
+					<code key={index} className="px-1 py-0.5 bg-gray-700 dark:bg-gray-600 rounded text-xs font-mono">
 						{part.slice(1, -1)}
 					</code>
 				);
