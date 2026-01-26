@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { downtimeApi, uptimeApi, downtimeAlertsApi } from '../lib/api';
+import { downtimeAlertsApi, downtimeApi, uptimeApi } from '../lib/api';
 import type {
-	CreateDowntimeEventRequest,
-	UpdateDowntimeEventRequest,
-	ResolveDowntimeEventRequest,
 	CreateDowntimeAlertRequest,
+	CreateDowntimeEventRequest,
+	ResolveDowntimeEventRequest,
 	UpdateDowntimeAlertRequest,
+	UpdateDowntimeEventRequest,
 } from '../lib/types';
 
 // Downtime Event hooks

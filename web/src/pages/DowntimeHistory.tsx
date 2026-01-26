@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import {
-	useDowntimeEvents,
 	useActiveDowntime,
-	useUptimeSummary,
-	useResolveDowntimeEvent,
+	useDowntimeEvents,
 	useMonthlyUptimeReport,
+	useResolveDowntimeEvent,
+	useUptimeSummary,
 } from '../hooks/useDowntime';
 import type {
+	ComponentType,
 	DowntimeEvent,
 	DowntimeSeverity,
-	ComponentType,
 } from '../lib/types';
-import { formatDateTime, formatDate } from '../lib/utils';
+import { formatDate, formatDateTime } from '../lib/utils';
 
 function LoadingCard() {
 	return (
@@ -286,7 +286,7 @@ function TimelineView({ events }: { events: DowntimeEvent[] }) {
 		<div className="relative">
 			<div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
 			<div className="space-y-6">
-				{events.map((event, index) => {
+				{events.map((event) => {
 					const severityColor = getSeverityColor(event.severity);
 					const isActive = !event.ended_at;
 					return (
@@ -337,10 +337,16 @@ function TimelineView({ events }: { events: DowntimeEvent[] }) {
 
 export function DowntimeHistory() {
 	const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
-	const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'resolved'>('all');
-	const [severityFilter, setSeverityFilter] = useState<DowntimeSeverity | 'all'>('all');
-	const [componentFilter, setComponentFilter] = useState<ComponentType | 'all'>('all');
-	const [selectedMonth, setSelectedMonth] = useState(() => {
+	const [statusFilter, setStatusFilter] = useState<
+		'all' | 'active' | 'resolved'
+	>('all');
+	const [severityFilter, setSeverityFilter] = useState<
+		DowntimeSeverity | 'all'
+	>('all');
+	const [componentFilter, setComponentFilter] = useState<ComponentType | 'all'>(
+		'all',
+	);
+	const [selectedMonth] = useState(() => {
 		const now = new Date();
 		return { year: now.getFullYear(), month: now.getMonth() + 1 };
 	});
