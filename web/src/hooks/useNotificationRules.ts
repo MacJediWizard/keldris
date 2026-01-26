@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationRulesApi } from '../lib/api';
 import type {
 	CreateNotificationRuleRequest,
-	UpdateNotificationRuleRequest,
 	TestNotificationRuleRequest,
+	UpdateNotificationRuleRequest,
 } from '../lib/types';
 
 // Rules hooks

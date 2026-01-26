@@ -15,6 +15,14 @@ import type {
 	RuleTriggerType,
 } from '../lib/types';
 
+interface ActionWithId extends RuleAction {
+	_id: string;
+}
+
+function generateId(): string {
+	return Math.random().toString(36).substring(2, 11);
+}
+
 const TRIGGER_TYPES: { value: RuleTriggerType; label: string }[] = [
 	{ value: 'backup_failed', label: 'Backup Failed' },
 	{ value: 'backup_success', label: 'Backup Success' },
@@ -74,8 +82,10 @@ function AddRuleModal({ isOpen, onClose, editRule }: AddRuleModalProps) {
 	const [timeWindow, setTimeWindow] = useState(
 		editRule?.conditions.time_window_minutes ?? 60,
 	);
-	const [actions, setActions] = useState<RuleAction[]>(
-		editRule?.actions || [{ type: 'notify_channel' }],
+	const [actions, setActions] = useState<ActionWithId[]>(
+		editRule?.actions.map((a) => ({ ...a, _id: generateId() })) || [
+			{ type: 'notify_channel', _id: generateId() },
+		],
 	);
 
 	const { data: channels } = useNotificationChannels();
@@ -88,12 +98,23 @@ function AddRuleModal({ isOpen, onClose, editRule }: AddRuleModalProps) {
 			count,
 			time_window_minutes: timeWindow,
 		};
+		// Strip _id from actions before sending to API
+		const cleanActions: RuleAction[] = actions.map(
+			({ _id, ...rest }) => rest as RuleAction,
+		);
 
 		try {
 			if (editRule) {
 				await updateRule.mutateAsync({
 					id: editRule.id,
-					data: { name, description, enabled, priority, conditions, actions },
+					data: {
+						name,
+						description,
+						enabled,
+						priority,
+						conditions,
+						actions: cleanActions,
+					},
 				});
 			} else {
 				await createRule.mutateAsync({
@@ -103,7 +124,7 @@ function AddRuleModal({ isOpen, onClose, editRule }: AddRuleModalProps) {
 					enabled,
 					priority,
 					conditions,
-					actions,
+					actions: cleanActions,
 				});
 			}
 			resetForm();
@@ -121,11 +142,11 @@ function AddRuleModal({ isOpen, onClose, editRule }: AddRuleModalProps) {
 		setPriority(0);
 		setCount(3);
 		setTimeWindow(60);
-		setActions([{ type: 'notify_channel' }]);
+		setActions([{ type: 'notify_channel', _id: generateId() }]);
 	};
 
 	const addAction = () => {
-		setActions([...actions, { type: 'notify_channel' }]);
+		setActions([...actions, { type: 'notify_channel', _id: generateId() }]);
 	};
 
 	const removeAction = (index: number) => {
@@ -272,7 +293,7 @@ function AddRuleModal({ isOpen, onClose, editRule }: AddRuleModalProps) {
 							<div className="space-y-3">
 								{actions.map((action, index) => (
 									<div
-										key={index}
+										key={action._id}
 										className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
 									>
 										<div className="flex items-center gap-3 mb-2">
@@ -408,9 +429,7 @@ function AddRuleModal({ isOpen, onClose, editRule }: AddRuleModalProps) {
 									id="priority"
 									min={0}
 									value={priority}
-									onChange={(e) =>
-										setPriority(Number.parseInt(e.target.value))
-									}
+									onChange={(e) => setPriority(Number.parseInt(e.target.value))}
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								/>
 								<p className="text-xs text-gray-500 mt-1">
@@ -561,7 +580,9 @@ function RuleRow({ rule, onEdit, onDelete, isDeleting }: RuleRowProps) {
 
 export function NotificationRules() {
 	const [showAddModal, setShowAddModal] = useState(false);
-	const [editingRule, setEditingRule] = useState<NotificationRule | undefined>();
+	const [editingRule, setEditingRule] = useState<
+		NotificationRule | undefined
+	>();
 
 	const { data: rules, isLoading, isError } = useNotificationRules();
 	const deleteRule = useDeleteNotificationRule();
@@ -722,7 +743,8 @@ export function NotificationRules() {
 				<p className="text-sm text-blue-700 dark:text-blue-300">
 					Create a rule with trigger &quot;Backup Failed&quot;, condition
 					&quot;3 events in 60 minutes&quot;, and action &quot;Escalate to
-					PagerDuty&quot; to automatically escalate when backups fail repeatedly.
+					PagerDuty&quot; to automatically escalate when backups fail
+					repeatedly.
 				</p>
 			</div>
 
