@@ -38,6 +38,7 @@ import {
 } from '../lib/help-content';
 import type {
 	Agent,
+	BackupType,
 	CompressionLevel,
 	DryRunResponse,
 	MountBehavior,
@@ -85,6 +86,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	>([]);
 	const [cronExpression, setCronExpression] = useState('0 2 * * *');
 	const [paths, setPaths] = useState('/home');
+	// Backup type state
+	const [backupType, setBackupType] = useState<BackupType>('file');
+	// Docker backup options state
+	const [dockerVolumeIds, setDockerVolumeIds] = useState<string[]>([]);
+	const [dockerPauseContainers, setDockerPauseContainers] = useState(false);
+	const [dockerIncludeConfigs, setDockerIncludeConfigs] = useState(true);
 	// Policy template state
 	const [selectedPolicyId, setSelectedPolicyId] = useState('');
 	// Retention policy state
@@ -181,12 +188,22 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				name,
 				agent_id: agentId,
 				repositories: selectedRepos,
+				backup_type: backupType,
 				cron_expression: cronExpression,
-				paths: paths.split('\n').filter((p) => p.trim()),
+				paths: backupType === 'file' ? paths.split('\n').filter((p) => p.trim()) : undefined,
 				excludes: excludes.length > 0 ? excludes : undefined,
 				retention_policy: retentionPolicy,
 				enabled: true,
 			};
+
+			// Add Docker-specific options
+			if (backupType === 'docker') {
+				data.docker_options = {
+					volume_ids: dockerVolumeIds.length > 0 ? dockerVolumeIds : undefined,
+					pause_containers: dockerPauseContainers,
+					include_container_configs: dockerIncludeConfigs,
+				};
+			}
 
 			if (bandwidthLimitKb && Number.parseInt(bandwidthLimitKb, 10) > 0) {
 				data.bandwidth_limit_kb = Number.parseInt(bandwidthLimitKb, 10);
@@ -229,6 +246,11 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			setSelectedPolicyId('');
 			setCronExpression('0 2 * * *');
 			setPaths('/home');
+			// Reset backup type state
+			setBackupType('file');
+			setDockerVolumeIds([]);
+			setDockerPauseContainers(false);
+			setDockerIncludeConfigs(true);
 			// Reset retention policy state
 			setShowRetention(false);
 			setKeepLast(5);
@@ -326,7 +348,49 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								onChange={setSelectedRepos}
 							/>
 						</div>
-						{policies && policies.length > 0 && (
+						{/* Backup Type Selector */}
+						<div>
+							<label
+								htmlFor="schedule-backup-type"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Backup Type
+							</label>
+							<div className="flex gap-4">
+								<label className="flex items-center gap-2 cursor-pointer">
+									<input
+										type="radio"
+										name="backup-type"
+										value="file"
+										checked={backupType === 'file'}
+										onChange={() => setBackupType('file')}
+										className="text-indigo-600 focus:ring-indigo-500"
+									/>
+									<span className="text-sm text-gray-700 dark:text-gray-300">
+										File/Directory Backup
+									</span>
+								</label>
+								<label className="flex items-center gap-2 cursor-pointer">
+									<input
+										type="radio"
+										name="backup-type"
+										value="docker"
+										checked={backupType === 'docker'}
+										onChange={() => setBackupType('docker')}
+										className="text-indigo-600 focus:ring-indigo-500"
+									/>
+									<span className="text-sm text-gray-700 dark:text-gray-300">
+										Docker Volumes
+									</span>
+								</label>
+							</div>
+							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+								{backupType === 'file'
+									? 'Back up files and directories from the agent'
+									: 'Back up Docker volumes and container configurations'}
+							</p>
+						</div>
+						{policies && policies.length > 0 && backupType === 'file' && (
 							<div>
 								<FormLabelWithHelp
 									htmlFor="schedule-policy"
@@ -375,26 +439,109 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								Examples: 0 2 * * * (daily at 2 AM), 0 */6 * * * (every 6 hours)
 							</p>
 						</div>
-						<div>
-							<FormLabelWithHelp
-								htmlFor="schedule-paths"
-								label="Paths to Backup (one per line)"
-								helpContent={scheduleHelp.paths.content}
-								helpTitle={scheduleHelp.paths.title}
-								required
-							/>
-							<textarea
-								id="schedule-paths"
-								value={paths}
-								onChange={(e) => setPaths(e.target.value)}
-								placeholder="/home&#10;/etc&#10;/var/www"
-								rows={3}
-								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
-								required
-							/>
-						</div>
+						{/* File Backup: Paths Section */}
+						{backupType === 'file' && (
+							<div>
+								<FormLabelWithHelp
+									htmlFor="schedule-paths"
+									label="Paths to Backup (one per line)"
+									helpContent={scheduleHelp.paths.content}
+									helpTitle={scheduleHelp.paths.title}
+									required
+								/>
+								<textarea
+									id="schedule-paths"
+									value={paths}
+									onChange={(e) => setPaths(e.target.value)}
+									placeholder="/home&#10;/etc&#10;/var/www"
+									rows={3}
+									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+									required
+								/>
+							</div>
+						)}
 
-						{/* Exclude Patterns Section */}
+						{/* Docker Backup: Options Section */}
+						{backupType === 'docker' && (
+							<div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+								<div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+									<svg
+										className="w-5 h-5 text-blue-500"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										aria-hidden="true"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+										/>
+									</svg>
+									Docker Backup Options
+								</div>
+
+								{/* Volume Selection Info */}
+								<div>
+									<p className="text-sm text-gray-600 dark:text-gray-400">
+										All Docker volumes on the selected agent will be backed up.
+										Volume selection will be available once the agent reports
+										Docker information.
+									</p>
+								</div>
+
+								{/* Pause Containers Option */}
+								<div className="flex items-start gap-3">
+									<input
+										type="checkbox"
+										id="docker-pause-containers"
+										checked={dockerPauseContainers}
+										onChange={(e) => setDockerPauseContainers(e.target.checked)}
+										className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+									/>
+									<div>
+										<label
+											htmlFor="docker-pause-containers"
+											className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+										>
+											Pause containers during backup
+										</label>
+										<p className="text-xs text-gray-500 dark:text-gray-400">
+											Pauses running containers while backing up volumes for
+											data consistency. Containers will be automatically
+											unpaused after backup completes.
+										</p>
+									</div>
+								</div>
+
+								{/* Include Container Configs Option */}
+								<div className="flex items-start gap-3">
+									<input
+										type="checkbox"
+										id="docker-include-configs"
+										checked={dockerIncludeConfigs}
+										onChange={(e) => setDockerIncludeConfigs(e.target.checked)}
+										className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+									/>
+									<div>
+										<label
+											htmlFor="docker-include-configs"
+											className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+										>
+											Include container configurations
+										</label>
+										<p className="text-xs text-gray-500 dark:text-gray-400">
+											Backs up container configurations (docker inspect) as
+											JSON files for easier restoration.
+										</p>
+									</div>
+								</div>
+							</div>
+						)}
+
+						{/* Exclude Patterns Section (File backups only) */}
+						{backupType === 'file' && (
 						<div className="border-t border-gray-200 pt-4">
 							<div className="flex items-center justify-between mb-2">
 								<span className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
@@ -471,6 +618,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								</p>
 							)}
 						</div>
+						)}
 
 						{/* Retention Policy Section */}
 						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
