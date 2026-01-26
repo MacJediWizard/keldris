@@ -340,6 +340,17 @@ export interface UpdateRepositoryRequest {
 	config?: Record<string, unknown>;
 }
 
+export interface CloneRepositoryRequest {
+	name: string;
+	credentials: Record<string, unknown>;
+	target_org_id?: string;
+}
+
+export interface CloneRepositoryResponse {
+	repository: Repository;
+	password: string;
+}
+
 export interface TestRepositoryResponse {
 	success: boolean;
 	message: string;
@@ -403,6 +414,8 @@ export interface BackupWindow {
 
 export type CompressionLevel = 'off' | 'auto' | 'max';
 
+export type SchedulePriority = 1 | 2 | 3; // 1=high, 2=medium, 3=low
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
@@ -420,6 +433,8 @@ export interface Schedule {
 	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
 	classification_level?: string; // Data classification level
 	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
+	priority: SchedulePriority; // Backup priority: 1=high, 2=medium, 3=low
+	preemptible: boolean; // Can be preempted by higher priority backups
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -440,6 +455,8 @@ export interface CreateScheduleRequest {
 	compression_level?: CompressionLevel;
 	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
+	priority?: SchedulePriority;
+	preemptible?: boolean;
 	enabled?: boolean;
 }
 
@@ -456,12 +473,32 @@ export interface UpdateScheduleRequest {
 	compression_level?: CompressionLevel;
 	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
+	priority?: SchedulePriority;
+	preemptible?: boolean;
 	enabled?: boolean;
 }
 
 export interface RunScheduleResponse {
 	backup_id: string;
 	message: string;
+}
+
+// Clone schedule types
+export interface CloneScheduleRequest {
+	name?: string;
+	target_agent_id?: string;
+	target_repo_ids?: string[];
+}
+
+export interface BulkCloneScheduleRequest {
+	schedule_id: string;
+	target_agent_ids: string[];
+	name_prefix?: string;
+}
+
+export interface BulkCloneResponse {
+	schedules: Schedule[];
+	errors?: string[];
 }
 
 // Dry run types
@@ -970,39 +1007,109 @@ export type RestoreStatus =
 	| 'running'
 	| 'completed'
 	| 'failed'
-	| 'canceled';
+	| 'canceled'
+	| 'uploading'
+	| 'verifying';
+
+// Cloud restore target types
+export type CloudRestoreTargetType = 's3' | 'b2' | 'restic';
+
+export interface CloudRestoreTarget {
+	type: CloudRestoreTargetType;
+	// S3/B2 configuration
+	bucket?: string;
+	prefix?: string;
+	region?: string;
+	endpoint?: string;
+	access_key_id?: string;
+	secret_access_key?: string;
+	use_ssl?: boolean;
+	// B2 specific
+	account_id?: string;
+	application_key?: string;
+	// Restic repository configuration
+	repository?: string;
+	repository_password?: string;
+}
+
+export interface CloudRestoreProgress {
+	total_files: number;
+	total_bytes: number;
+	uploaded_files: number;
+	uploaded_bytes: number;
+	current_file?: string;
+	percent_complete: number;
+	verified_checksum: boolean;
+}
+
+export interface PathMapping {
+	source_path: string;
+	target_path: string;
+}
+
+export interface RestoreProgress {
+	files_restored: number;
+	bytes_restored: number;
+	total_files?: number;
+	total_bytes?: number;
+	current_file?: string;
+}
 
 export interface Restore {
 	id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	snapshot_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
 	status: RestoreStatus;
+	progress?: RestoreProgress; // Real-time progress tracking
+	is_cross_agent: boolean;
 	started_at?: string;
 	completed_at?: string;
 	error_message?: string;
 	created_at: string;
+	// Cloud restore fields
+	is_cloud_restore?: boolean;
+	cloud_target?: CloudRestoreTarget;
+	cloud_progress?: CloudRestoreProgress;
+	cloud_target_location?: string;
+	verify_upload?: boolean;
 }
 
 export interface CreateRestoreRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
+}
+
+export interface CreateCloudRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+	cloud_target: CloudRestoreTarget;
+	verify_upload?: boolean;
 }
 
 export interface RestorePreviewRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[];
 }
 
 export interface RestorePreviewFile {
@@ -1022,6 +1129,8 @@ export interface RestorePreview {
 	conflict_count: number;
 	files: RestorePreviewFile[];
 	disk_space_needed: number;
+	selected_paths?: string[];
+	selected_size?: number;
 }
 
 export interface RestoresResponse {
@@ -2728,6 +2837,29 @@ export interface ConfigTemplatesResponse {
 	templates: ConfigTemplate[];
 }
 
+// Rate Limit types
+export interface RateLimitClientStats {
+	client_ip: string;
+	total_requests: number;
+	rejected_count: number;
+	last_request: string;
+}
+
+export interface EndpointRateLimitInfo {
+	pattern: string;
+	limit: number;
+	period: string;
+}
+
+export interface RateLimitDashboardStats {
+	default_limit: number;
+	default_period: string;
+	endpoint_configs: EndpointRateLimitInfo[];
+	client_stats: RateLimitClientStats[];
+	total_requests: number;
+	total_rejected: number;
+}
+
 // Announcement types
 export type AnnouncementType = 'info' | 'warning' | 'critical';
 
@@ -2770,6 +2902,107 @@ export interface AnnouncementsResponse {
 	announcements: Announcement[];
 }
 
+// Backup Queue and Concurrency types
+export type BackupQueueStatus = 'queued' | 'started' | 'canceled';
+
+export interface BackupQueueEntry {
+	id: string;
+	org_id: string;
+	agent_id: string;
+	schedule_id: string;
+	priority: number;
+	queued_at: string;
+	started_at?: string;
+	status: BackupQueueStatus;
+	queue_position: number;
+}
+
+export interface BackupQueueEntryWithDetails extends BackupQueueEntry {
+	schedule_name: string;
+	agent_hostname: string;
+}
+
+export interface ConcurrencyStatus {
+	org_id: string;
+	org_limit?: number;
+	org_running_count: number;
+	org_queued_count: number;
+	agent_id?: string;
+	agent_limit?: number;
+	agent_running_count: number;
+	agent_queued_count: number;
+	can_start_now: boolean;
+	queue_position?: number;
+	estimated_wait_minutes?: number;
+}
+
+export interface BackupQueueSummary {
+	total_queued: number;
+	total_running: number;
+	avg_wait_minutes: number;
+	oldest_queued_at?: string;
+	queued_by_agent?: Record<string, number>;
+}
+
+export interface ConcurrencyResponse {
+	max_concurrent_backups?: number;
+	running_count: number;
+	queued_count: number;
+}
+
+export interface UpdateConcurrencyRequest {
+	max_concurrent_backups?: number;
+}
+
+export interface BackupQueueResponse {
+	queue: BackupQueueEntryWithDetails[];
+}
+
+// Extended Organization with concurrency settings
+export interface OrganizationWithConcurrency extends Organization {
+	max_concurrent_backups?: number;
+}
+
+// Extended Agent with concurrency settings
+export interface AgentWithConcurrency extends Agent {
+	max_concurrent_backups?: number;
+}
+
+// Backup Queue types for priority management
+export interface BackupQueueItem {
+	id: string;
+	schedule_id: string;
+	agent_id: string;
+	priority: SchedulePriority;
+	status:
+		| 'pending'
+		| 'running'
+		| 'completed'
+		| 'failed'
+		| 'preempted'
+		| 'canceled';
+	queued_at: string;
+	started_at?: string;
+	completed_at?: string;
+	preempted_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface PriorityQueueSummary {
+	total_pending: number;
+	total_running: number;
+	high_priority: number;
+	medium_priority: number;
+	low_priority: number;
+}
+
+export interface PriorityQueueResponse {
+	queue: BackupQueueItem[];
+	summary: PriorityQueueSummary;
+}
+
+// IP Allowlist types
 export type IPAllowlistType = 'ui' | 'agent' | 'both';
 
 export interface IPAllowlist {
