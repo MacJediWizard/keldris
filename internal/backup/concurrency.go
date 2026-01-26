@@ -46,8 +46,8 @@ type ConcurrencyStore interface {
 	// GetQueuePosition returns the position in queue for a given entry.
 	GetQueuePosition(ctx context.Context, orgID, entryID uuid.UUID) (int, error)
 
-	// GetBackupQueueSummary returns queue statistics.
-	GetBackupQueueSummary(ctx context.Context, orgID uuid.UUID) (*models.BackupQueueSummary, error)
+	// GetConcurrencyQueueSummary returns queue statistics.
+	GetConcurrencyQueueSummary(ctx context.Context, orgID uuid.UUID) (*models.ConcurrencyQueueSummary, error)
 
 	// GetScheduleByID returns a schedule by ID.
 	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error)

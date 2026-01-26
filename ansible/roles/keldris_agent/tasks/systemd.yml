@@ -1,0 +1,29 @@
+# Keldris Agent Role - Systemd Service Setup (Linux)
+---
+- name: Deploy systemd service file
+  ansible.builtin.template:
+    src: keldris-agent.service.j2
+    dest: "{{ keldris_systemd_service_file }}"
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+  notify:
+    - Reload systemd
+    - Restart keldris-agent
+
+- name: Ensure systemd is reloaded
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable keldris-agent service
+  ansible.builtin.systemd:
+    name: "{{ keldris_service_name }}"
+    enabled: "{{ keldris_service_enabled }}"
+  become: true
+
+- name: Start keldris-agent service
+  ansible.builtin.systemd:
+    name: "{{ keldris_service_name }}"
+    state: started
+  become: true
+  when: keldris_service_started | bool

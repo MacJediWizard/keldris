@@ -44,7 +44,7 @@ func (db *DB) GetQueuedBackupsByOrg(ctx context.Context, orgID uuid.UUID) ([]*mo
 		if err != nil {
 			return nil, fmt.Errorf("scan backup queue entry: %w", err)
 		}
-		e.Status = models.BackupQueueStatus(statusStr)
+		e.Status = models.ConcurrencyQueueStatus(statusStr)
 		e.QueuePosition = position
 		position++
 		entries = append(entries, &e)
@@ -75,7 +75,7 @@ func (db *DB) GetQueuedBackupsByAgent(ctx context.Context, agentID uuid.UUID) ([
 		if err != nil {
 			return nil, fmt.Errorf("scan backup queue entry: %w", err)
 		}
-		e.Status = models.BackupQueueStatus(statusStr)
+		e.Status = models.ConcurrencyQueueStatus(statusStr)
 		e.QueuePosition = position
 		position++
 		entries = append(entries, &e)
@@ -101,7 +101,7 @@ func (db *DB) GetOldestQueuedBackup(ctx context.Context, orgID uuid.UUID) (*mode
 		}
 		return nil, fmt.Errorf("get oldest queued backup: %w", err)
 	}
-	e.Status = models.BackupQueueStatus(statusStr)
+	e.Status = models.ConcurrencyQueueStatus(statusStr)
 	return &e, nil
 }
 
@@ -175,9 +175,9 @@ func (db *DB) GetRunningBackupsCountByAgent(ctx context.Context, agentID uuid.UU
 	return count, nil
 }
 
-// GetBackupQueueSummary returns queue statistics for an organization.
-func (db *DB) GetBackupQueueSummary(ctx context.Context, orgID uuid.UUID) (*models.BackupQueueSummary, error) {
-	summary := &models.BackupQueueSummary{
+// GetConcurrencyQueueSummary returns queue statistics for an organization.
+func (db *DB) GetConcurrencyQueueSummary(ctx context.Context, orgID uuid.UUID) (*models.ConcurrencyQueueSummary, error) {
+	summary := &models.ConcurrencyQueueSummary{
 		ByOrg:   make(map[uuid.UUID]int),
 		ByAgent: make(map[uuid.UUID]int),
 	}
@@ -256,7 +256,7 @@ func (db *DB) GetQueuedBackupsWithDetails(ctx context.Context, orgID uuid.UUID) 
 		if err != nil {
 			return nil, fmt.Errorf("scan backup queue entry with details: %w", err)
 		}
-		e.Status = models.BackupQueueStatus(statusStr)
+		e.Status = models.ConcurrencyQueueStatus(statusStr)
 		e.QueuePosition = position
 		position++
 		entries = append(entries, &e)

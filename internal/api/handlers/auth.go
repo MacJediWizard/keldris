@@ -3,6 +3,8 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"time"
 
@@ -30,6 +32,12 @@ type UserStore interface {
 	GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error)
 	GetOrganizationSSOSettings(ctx context.Context, orgID uuid.UUID) (defaultRole *string, autoCreateOrgs bool, err error)
 	CreateAuditLog(ctx context.Context, log *models.AuditLog) error
+	// User session tracking methods
+	CreateUserSession(ctx context.Context, session *models.UserSession) error
+	RevokeUserSession(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
+	// Password authentication methods
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	GetUserPasswordInfo(ctx context.Context, userID uuid.UUID) (*models.UserPasswordInfo, error)
 }
 
 // AuthHandler handles authentication-related HTTP endpoints.
@@ -61,6 +69,8 @@ func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
 	r.GET("/callback", h.Callback)
 	r.POST("/logout", h.Logout)
 	r.GET("/me", h.Me)
+	// Password authentication routes
+	r.POST("/login/password", h.PasswordLogin)
 }
 
 // Login initiates the OIDC authentication flow.
@@ -216,6 +226,23 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		currentOrgRole = string(memberships[0].Role)
 	}
 
+	// Create a session record in the database
+	sessionRecordID := uuid.New()
+	sessionTokenHash := generateSessionTokenHash(sessionRecordID)
+	ipAddress := c.ClientIP()
+	userAgent := c.Request.UserAgent()
+
+	// Calculate session expiration (24 hours by default, matching cookie)
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	userSession := models.NewUserSession(user.ID, sessionTokenHash, ipAddress, userAgent, &expiresAt)
+	userSession.ID = sessionRecordID
+
+	if err := h.userStore.CreateUserSession(c.Request.Context(), userSession); err != nil {
+		h.logger.Error().Err(err).Msg("failed to create user session record")
+		// Continue anyway - session tracking is not critical for authentication
+	}
+
 	// Store user in session
 	sessionUser := &auth.SessionUser{
 		ID:              user.ID,
@@ -225,6 +252,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		AuthenticatedAt: time.Now(),
 		CurrentOrgID:    currentOrgID,
 		CurrentOrgRole:  currentOrgRole,
+		SessionRecordID: sessionRecordID,
 	}
 
 	if err := h.sessions.SetUser(c.Request, c.Writer, sessionUser); err != nil {
@@ -236,6 +264,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	h.logger.Info().
 		Str("user_id", user.ID.String()).
 		Str("email", user.Email).
+		Str("session_id", sessionRecordID.String()).
 		Msg("user authenticated successfully")
 
 	// Redirect to frontend dashboard
@@ -294,6 +323,15 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		h.logger.Info().
 			Str("user_id", sessionUser.ID.String()).
 			Msg("user logging out")
+
+		// Revoke the session record in the database
+		if sessionUser.SessionRecordID != uuid.Nil {
+			if err := h.userStore.RevokeUserSession(c.Request.Context(), sessionUser.SessionRecordID, sessionUser.ID); err != nil {
+				h.logger.Warn().Err(err).
+					Str("session_id", sessionUser.SessionRecordID.String()).
+					Msg("failed to revoke session record")
+			}
+		}
 	}
 
 	if err := h.sessions.ClearUser(c.Request, c.Writer); err != nil {
@@ -303,6 +341,12 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "logged out successfully"})
+}
+
+// generateSessionTokenHash creates a hash from a session ID for storage.
+func generateSessionTokenHash(sessionID uuid.UUID) string {
+	hash := sha256.Sum256([]byte(sessionID.String()))
+	return hex.EncodeToString(hash[:])
 }
 
 // MeResponse is the response for the /auth/me endpoint.
@@ -350,4 +394,129 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// PasswordLoginResponse is the response for password-based login.
+type PasswordLoginResponse struct {
+	ID                 uuid.UUID  `json:"id"`
+	Email              string     `json:"email"`
+	Name               string     `json:"name"`
+	CurrentOrgID       uuid.UUID  `json:"current_org_id,omitempty"`
+	CurrentOrgRole     string     `json:"current_org_role,omitempty"`
+	PasswordExpired    bool       `json:"password_expired,omitempty"`
+	MustChangePassword bool       `json:"must_change_password,omitempty"`
+	ExpiresAt          *time.Time `json:"expires_at,omitempty"`
+}
+
+// PasswordLogin handles password-based authentication.
+//
+//	@Summary		Password login
+//	@Description	Authenticates a user with email and password. Creates a session on successful authentication.
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		models.PasswordLoginRequest	true	"Login credentials"
+//	@Success		200		{object}	PasswordLoginResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Router			/auth/login/password [post]
+func (h *AuthHandler) PasswordLogin(c *gin.Context) {
+	var req models.PasswordLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Find user by email
+	user, err := h.userStore.GetUserByEmail(c.Request.Context(), req.Email)
+	if err != nil {
+		h.logger.Debug().Str("email", req.Email).Msg("user not found for password login")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
+		return
+	}
+
+	// Get password info
+	passwordInfo, err := h.userStore.GetUserPasswordInfo(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get password info")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
+		return
+	}
+
+	// Check if user has password authentication
+	if passwordInfo.PasswordHash == nil {
+		h.logger.Debug().Str("user_id", user.ID.String()).Msg("user does not have password auth configured")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
+		return
+	}
+
+	// Verify password
+	if err := auth.VerifyPassword(req.Password, *passwordInfo.PasswordHash); err != nil {
+		h.logger.Debug().Str("user_id", user.ID.String()).Msg("password verification failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
+		return
+	}
+
+	// Get user's memberships
+	memberships, err := h.userStore.GetMembershipsByUserID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to get user memberships")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
+		return
+	}
+
+	var currentOrgID uuid.UUID
+	var currentOrgRole string
+	if len(memberships) > 0 {
+		currentOrgID = memberships[0].OrgID
+		currentOrgRole = string(memberships[0].Role)
+	}
+
+	// Store user in session
+	sessionUser := &auth.SessionUser{
+		ID:              user.ID,
+		OIDCSubject:     user.OIDCSubject, // Will be empty for password-only users
+		Email:           user.Email,
+		Name:            user.Name,
+		AuthenticatedAt: time.Now(),
+		CurrentOrgID:    currentOrgID,
+		CurrentOrgRole:  currentOrgRole,
+	}
+
+	if err := h.sessions.SetUser(c.Request, c.Writer, sessionUser); err != nil {
+		h.logger.Error().Err(err).Msg("failed to save user to session")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
+		return
+	}
+
+	// Create audit log
+	auditLog := models.NewAuditLog(currentOrgID, models.AuditActionLogin, "user", models.AuditResultSuccess).
+		WithUser(user.ID).
+		WithDetails("Password-based login")
+	if err := h.userStore.CreateAuditLog(c.Request.Context(), auditLog); err != nil {
+		h.logger.Warn().Err(err).Msg("failed to create audit log for login")
+	}
+
+	h.logger.Info().
+		Str("user_id", user.ID.String()).
+		Str("email", user.Email).
+		Msg("user authenticated successfully via password")
+
+	// Check password expiration
+	var passwordExpired bool
+	if passwordInfo.PasswordExpiresAt != nil && time.Now().After(*passwordInfo.PasswordExpiresAt) {
+		passwordExpired = true
+	}
+
+	c.JSON(http.StatusOK, PasswordLoginResponse{
+		ID:                 user.ID,
+		Email:              user.Email,
+		Name:               user.Name,
+		CurrentOrgID:       currentOrgID,
+		CurrentOrgRole:     currentOrgRole,
+		PasswordExpired:    passwordExpired,
+		MustChangePassword: passwordInfo.MustChangePassword,
+		ExpiresAt:          passwordInfo.PasswordExpiresAt,
+	})
 }

@@ -15,7 +15,7 @@ import (
 // BackupQueueStore defines the interface for backup queue operations.
 type BackupQueueStore interface {
 	GetQueuedBackupsWithDetails(ctx context.Context, orgID uuid.UUID) ([]*models.BackupQueueEntryWithDetails, error)
-	GetBackupQueueSummary(ctx context.Context, orgID uuid.UUID) (*models.BackupQueueSummary, error)
+	GetConcurrencyQueueSummary(ctx context.Context, orgID uuid.UUID) (*models.ConcurrencyQueueSummary, error)
 	DeleteBackupQueueEntry(ctx context.Context, id uuid.UUID) error
 	GetRunningBackupsCountByOrg(ctx context.Context, orgID uuid.UUID) (int, error)
 	GetRunningBackupsCountByAgent(ctx context.Context, agentID uuid.UUID) (int, error)
@@ -153,7 +153,7 @@ func (h *BackupQueueHandler) GetSummary(c *gin.Context) {
 		return
 	}
 
-	summary, err := h.store.GetBackupQueueSummary(c.Request.Context(), user.CurrentOrgID)
+	summary, err := h.store.GetConcurrencyQueueSummary(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to get queue summary")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get queue summary"})
@@ -251,7 +251,7 @@ func (h *BackupQueueHandler) GetOrgConcurrency(c *gin.Context) {
 	}
 
 	runningCount, _ := h.store.GetRunningBackupsCountByOrg(c.Request.Context(), orgID)
-	summary, _ := h.store.GetBackupQueueSummary(c.Request.Context(), orgID)
+	summary, _ := h.store.GetConcurrencyQueueSummary(c.Request.Context(), orgID)
 
 	queuedCount := 0
 	if summary != nil {
