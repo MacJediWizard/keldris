@@ -3312,3 +3312,188 @@ export interface CreateIPBanRequest {
 export interface IPBansResponse {
 	bans: IPBan[];
 }
+
+// Storage Tier types
+export type StorageTierType = 'hot' | 'warm' | 'cold' | 'archive';
+
+export interface StorageTierConfig {
+	id: string;
+	org_id: string;
+	tier_type: StorageTierType;
+	name: string;
+	description?: string;
+	cost_per_gb_month: number;
+	retrieval_cost: number;
+	retrieval_time: string;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface TierRule {
+	id: string;
+	org_id: string;
+	repository_id?: string;
+	schedule_id?: string;
+	name: string;
+	description?: string;
+	from_tier: StorageTierType;
+	to_tier: StorageTierType;
+	age_threshold_days: number;
+	min_copies: number;
+	priority: number;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateTierRuleRequest {
+	name: string;
+	description?: string;
+	from_tier: StorageTierType;
+	to_tier: StorageTierType;
+	age_threshold_days: number;
+	min_copies?: number;
+	priority?: number;
+	repository_id?: string;
+	schedule_id?: string;
+}
+
+export interface UpdateTierRuleRequest {
+	name?: string;
+	description?: string;
+	age_threshold_days?: number;
+	min_copies?: number;
+	priority?: number;
+	enabled?: boolean;
+}
+
+export interface SnapshotTier {
+	id: string;
+	snapshot_id: string;
+	repository_id: string;
+	org_id: string;
+	current_tier: StorageTierType;
+	size_bytes: number;
+	snapshot_time: string;
+	tiered_at: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface TierTransition {
+	id: string;
+	snapshot_tier_id: string;
+	snapshot_id: string;
+	repository_id: string;
+	org_id: string;
+	from_tier: StorageTierType;
+	to_tier: StorageTierType;
+	trigger_rule_id?: string;
+	trigger_reason: string;
+	size_bytes: number;
+	estimated_saving: number;
+	status: string;
+	error_message?: string;
+	started_at?: string;
+	completed_at?: string;
+	created_at: string;
+}
+
+export interface ColdRestoreRequest {
+	id: string;
+	org_id: string;
+	snapshot_id: string;
+	repository_id: string;
+	requested_by: string;
+	from_tier: StorageTierType;
+	target_path?: string;
+	priority: 'standard' | 'expedited' | 'bulk';
+	status:
+		| 'pending'
+		| 'warming'
+		| 'ready'
+		| 'restoring'
+		| 'completed'
+		| 'failed'
+		| 'expired';
+	estimated_ready_at?: string;
+	ready_at?: string;
+	expires_at?: string;
+	error_message?: string;
+	retrieval_cost: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface TierBreakdownItem {
+	tier_type: StorageTierType;
+	snapshot_count: number;
+	total_size_bytes: number;
+	monthly_cost: number;
+	percentage: number;
+}
+
+export interface TierOptSuggestion {
+	snapshot_id: string;
+	repository_id: string;
+	current_tier: StorageTierType;
+	suggested_tier: StorageTierType;
+	age_days: number;
+	size_bytes: number;
+	monthly_savings: number;
+	reason: string;
+}
+
+export interface TierCostReport {
+	id: string;
+	org_id: string;
+	report_date: string;
+	total_size_bytes: number;
+	current_monthly_cost: number;
+	optimized_monthly_cost: number;
+	potential_monthly_savings: number;
+	tier_breakdown: TierBreakdownItem[];
+	suggestions: TierOptSuggestion[];
+	created_at: string;
+}
+
+export interface TierStats {
+	snapshot_count: number;
+	total_size_bytes: number;
+	monthly_cost: number;
+	oldest_snapshot_days: number;
+	newest_snapshot_days: number;
+}
+
+export interface TierStatsSummary {
+	total_snapshots: number;
+	total_size_bytes: number;
+	estimated_monthly_cost: number;
+	by_tier: Record<StorageTierType, TierStats>;
+	potential_savings: number;
+}
+
+export interface StorageTierConfigsResponse {
+	configs: StorageTierConfig[];
+}
+
+export interface TierRulesResponse {
+	rules: TierRule[];
+}
+
+export interface SnapshotTiersResponse {
+	tiers: SnapshotTier[];
+}
+
+export interface TierTransitionsResponse {
+	history: TierTransition[];
+}
+
+export interface ColdRestoreRequestsResponse {
+	requests: ColdRestoreRequest[];
+}
+
+export interface TierCostReportsResponse {
+	reports: TierCostReport[];
+}
