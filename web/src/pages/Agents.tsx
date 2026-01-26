@@ -13,7 +13,6 @@ import {
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
-import { statusHelp } from '../lib/help-content';
 import { useAddAgentToGroup, useAgentGroups } from '../hooks/useAgentGroups';
 import {
 	useCreateRegistrationCode,
@@ -29,6 +28,7 @@ import {
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useLocale } from '../hooks/useLocale';
 import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
+import { statusHelp } from '../lib/help-content';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
 import { getAgentStatusColor } from '../lib/utils';
 

@@ -12,13 +12,13 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
-import { statusHelp } from '../lib/help-content';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
 import { useBackupTags, useSetBackupTags, useTags } from '../hooks/useTags';
+import { statusHelp } from '../lib/help-content';
 import type {
 	Backup,
 	BackupStatus,
