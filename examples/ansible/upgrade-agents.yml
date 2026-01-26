@@ -1,0 +1,36 @@
+# Keldris Agent Upgrade Playbook
+# Upgrades the Keldris backup agent to a specific version on all hosts
+---
+- name: Upgrade Keldris Agents
+  hosts: backup_clients
+  gather_facts: true
+  serial: "25%"  # Rolling upgrade - 25% of hosts at a time
+
+  vars:
+    keldris_agent_version: "{{ target_version | default('latest') }}"
+
+  tasks:
+    - name: Get current agent version
+      ansible.builtin.command: "{{ keldris_install_dir | default('/usr/local/bin') }}/keldris-agent version"
+      register: current_version
+      changed_when: false
+      failed_when: false
+
+    - name: Display current version
+      ansible.builtin.debug:
+        msg: "Current version: {{ current_version.stdout | default('Not installed') }}"
+
+    - name: Include keldris_agent role for upgrade
+      ansible.builtin.include_role:
+        name: keldris_agent
+      vars:
+        keldris_register_agent: false  # Skip registration on upgrade
+
+    - name: Get new agent version
+      ansible.builtin.command: "{{ keldris_install_dir | default('/usr/local/bin') }}/keldris-agent version"
+      register: new_version
+      changed_when: false
+
+    - name: Display upgrade result
+      ansible.builtin.debug:
+        msg: "Upgraded from {{ current_version.stdout | default('unknown') }} to {{ new_version.stdout }}"

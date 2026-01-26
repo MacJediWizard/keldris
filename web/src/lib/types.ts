@@ -340,6 +340,17 @@ export interface UpdateRepositoryRequest {
 	config?: Record<string, unknown>;
 }
 
+export interface CloneRepositoryRequest {
+	name: string;
+	credentials: Record<string, unknown>;
+	target_org_id?: string;
+}
+
+export interface CloneRepositoryResponse {
+	repository: Repository;
+	password: string;
+}
+
 export interface TestRepositoryResponse {
 	success: boolean;
 	message: string;
@@ -403,6 +414,8 @@ export interface BackupWindow {
 
 export type CompressionLevel = 'off' | 'auto' | 'max';
 
+export type SchedulePriority = 1 | 2 | 3; // 1=high, 2=medium, 3=low
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
@@ -420,6 +433,8 @@ export interface Schedule {
 	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
 	classification_level?: string; // Data classification level
 	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
+	priority: SchedulePriority; // Backup priority: 1=high, 2=medium, 3=low
+	preemptible: boolean; // Can be preempted by higher priority backups
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -440,6 +455,8 @@ export interface CreateScheduleRequest {
 	compression_level?: CompressionLevel;
 	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
+	priority?: SchedulePriority;
+	preemptible?: boolean;
 	enabled?: boolean;
 }
 
@@ -456,12 +473,32 @@ export interface UpdateScheduleRequest {
 	compression_level?: CompressionLevel;
 	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
+	priority?: SchedulePriority;
+	preemptible?: boolean;
 	enabled?: boolean;
 }
 
 export interface RunScheduleResponse {
 	backup_id: string;
 	message: string;
+}
+
+// Clone schedule types
+export interface CloneScheduleRequest {
+	name?: string;
+	target_agent_id?: string;
+	target_repo_ids?: string[];
+}
+
+export interface BulkCloneScheduleRequest {
+	schedule_id: string;
+	target_agent_ids: string[];
+	name_prefix?: string;
+}
+
+export interface BulkCloneResponse {
+	schedules: Schedule[];
+	errors?: string[];
 }
 
 // Dry run types
@@ -970,39 +1007,109 @@ export type RestoreStatus =
 	| 'running'
 	| 'completed'
 	| 'failed'
-	| 'canceled';
+	| 'canceled'
+	| 'uploading'
+	| 'verifying';
+
+// Cloud restore target types
+export type CloudRestoreTargetType = 's3' | 'b2' | 'restic';
+
+export interface CloudRestoreTarget {
+	type: CloudRestoreTargetType;
+	// S3/B2 configuration
+	bucket?: string;
+	prefix?: string;
+	region?: string;
+	endpoint?: string;
+	access_key_id?: string;
+	secret_access_key?: string;
+	use_ssl?: boolean;
+	// B2 specific
+	account_id?: string;
+	application_key?: string;
+	// Restic repository configuration
+	repository?: string;
+	repository_password?: string;
+}
+
+export interface CloudRestoreProgress {
+	total_files: number;
+	total_bytes: number;
+	uploaded_files: number;
+	uploaded_bytes: number;
+	current_file?: string;
+	percent_complete: number;
+	verified_checksum: boolean;
+}
+
+export interface PathMapping {
+	source_path: string;
+	target_path: string;
+}
+
+export interface RestoreProgress {
+	files_restored: number;
+	bytes_restored: number;
+	total_files?: number;
+	total_bytes?: number;
+	current_file?: string;
+}
 
 export interface Restore {
 	id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	snapshot_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
 	status: RestoreStatus;
+	progress?: RestoreProgress; // Real-time progress tracking
+	is_cross_agent: boolean;
 	started_at?: string;
 	completed_at?: string;
 	error_message?: string;
 	created_at: string;
+	// Cloud restore fields
+	is_cloud_restore?: boolean;
+	cloud_target?: CloudRestoreTarget;
+	cloud_progress?: CloudRestoreProgress;
+	cloud_target_location?: string;
+	verify_upload?: boolean;
 }
 
 export interface CreateRestoreRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
+}
+
+export interface CreateCloudRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+	cloud_target: CloudRestoreTarget;
+	verify_upload?: boolean;
 }
 
 export interface RestorePreviewRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[];
 }
 
 export interface RestorePreviewFile {
@@ -1022,6 +1129,8 @@ export interface RestorePreview {
 	conflict_count: number;
 	files: RestorePreviewFile[];
 	disk_space_needed: number;
+	selected_paths?: string[];
+	selected_size?: number;
 }
 
 export interface RestoresResponse {
@@ -1194,6 +1303,121 @@ export interface NotificationPreferencesResponse {
 
 export interface NotificationLogsResponse {
 	logs: NotificationLog[];
+}
+
+// Notification Rule types
+export type RuleTriggerType =
+	| 'backup_failed'
+	| 'backup_success'
+	| 'agent_offline'
+	| 'agent_health_warning'
+	| 'agent_health_critical'
+	| 'storage_usage_high'
+	| 'replication_lag'
+	| 'ransomware_suspected'
+	| 'maintenance_scheduled';
+
+export type RuleActionType =
+	| 'notify_channel'
+	| 'escalate'
+	| 'suppress'
+	| 'webhook';
+
+export interface RuleConditions {
+	count?: number;
+	time_window_minutes?: number;
+	severity?: string;
+	agent_ids?: string[];
+	schedule_ids?: string[];
+	repository_ids?: string[];
+}
+
+export interface RuleAction {
+	type: RuleActionType;
+	channel_id?: string;
+	escalate_to_channel_id?: string;
+	webhook_url?: string;
+	suppress_duration_minutes?: number;
+	message?: string;
+}
+
+export interface NotificationRule {
+	id: string;
+	org_id: string;
+	name: string;
+	description?: string;
+	trigger_type: RuleTriggerType;
+	enabled: boolean;
+	priority: number;
+	conditions: RuleConditions;
+	actions: RuleAction[];
+	created_at: string;
+	updated_at: string;
+}
+
+export interface NotificationRuleEvent {
+	id: string;
+	org_id: string;
+	rule_id: string;
+	trigger_type: RuleTriggerType;
+	resource_type?: string;
+	resource_id?: string;
+	event_data?: Record<string, unknown>;
+	occurred_at: string;
+	created_at: string;
+}
+
+export interface NotificationRuleExecution {
+	id: string;
+	org_id: string;
+	rule_id: string;
+	triggered_by_event_id?: string;
+	actions_taken: RuleAction[];
+	success: boolean;
+	error_message?: string;
+	executed_at: string;
+	created_at: string;
+}
+
+export interface CreateNotificationRuleRequest {
+	name: string;
+	description?: string;
+	trigger_type: RuleTriggerType;
+	enabled: boolean;
+	priority: number;
+	conditions: RuleConditions;
+	actions: RuleAction[];
+}
+
+export interface UpdateNotificationRuleRequest {
+	name?: string;
+	description?: string;
+	enabled?: boolean;
+	priority?: number;
+	conditions?: RuleConditions;
+	actions?: RuleAction[];
+}
+
+export interface TestNotificationRuleRequest {
+	event_data?: Record<string, unknown>;
+}
+
+export interface NotificationRulesResponse {
+	rules: NotificationRule[];
+}
+
+export interface NotificationRuleEventsResponse {
+	events: NotificationRuleEvent[];
+}
+
+export interface NotificationRuleExecutionsResponse {
+	executions: NotificationRuleExecution[];
+}
+
+export interface TestNotificationRuleResponse {
+	success: boolean;
+	message?: string;
+	execution?: NotificationRuleExecution;
 }
 
 // Audit log types
@@ -2728,6 +2952,29 @@ export interface ConfigTemplatesResponse {
 	templates: ConfigTemplate[];
 }
 
+// Rate Limit types
+export interface RateLimitClientStats {
+	client_ip: string;
+	total_requests: number;
+	rejected_count: number;
+	last_request: string;
+}
+
+export interface EndpointRateLimitInfo {
+	pattern: string;
+	limit: number;
+	period: string;
+}
+
+export interface RateLimitDashboardStats {
+	default_limit: number;
+	default_period: string;
+	endpoint_configs: EndpointRateLimitInfo[];
+	client_stats: RateLimitClientStats[];
+	total_requests: number;
+	total_rejected: number;
+}
+
 // Announcement types
 export type AnnouncementType = 'info' | 'warning' | 'critical';
 
@@ -2768,4 +3015,1161 @@ export interface UpdateAnnouncementRequest {
 
 export interface AnnouncementsResponse {
 	announcements: Announcement[];
+}
+
+// Backup Queue and Concurrency types
+export type BackupQueueStatus = 'queued' | 'started' | 'canceled';
+
+export interface BackupQueueEntry {
+	id: string;
+	org_id: string;
+	agent_id: string;
+	schedule_id: string;
+	priority: number;
+	queued_at: string;
+	started_at?: string;
+	status: BackupQueueStatus;
+	queue_position: number;
+}
+
+export interface BackupQueueEntryWithDetails extends BackupQueueEntry {
+	schedule_name: string;
+	agent_hostname: string;
+}
+
+export interface ConcurrencyStatus {
+	org_id: string;
+	org_limit?: number;
+	org_running_count: number;
+	org_queued_count: number;
+	agent_id?: string;
+	agent_limit?: number;
+	agent_running_count: number;
+	agent_queued_count: number;
+	can_start_now: boolean;
+	queue_position?: number;
+	estimated_wait_minutes?: number;
+}
+
+export interface BackupQueueSummary {
+	total_queued: number;
+	total_running: number;
+	avg_wait_minutes: number;
+	oldest_queued_at?: string;
+	queued_by_agent?: Record<string, number>;
+}
+
+export interface ConcurrencyResponse {
+	max_concurrent_backups?: number;
+	running_count: number;
+	queued_count: number;
+}
+
+export interface UpdateConcurrencyRequest {
+	max_concurrent_backups?: number;
+}
+
+export interface BackupQueueResponse {
+	queue: BackupQueueEntryWithDetails[];
+}
+
+// Extended Organization with concurrency settings
+export interface OrganizationWithConcurrency extends Organization {
+	max_concurrent_backups?: number;
+}
+
+// Extended Agent with concurrency settings
+export interface AgentWithConcurrency extends Agent {
+	max_concurrent_backups?: number;
+}
+
+// Backup Queue types for priority management
+export interface BackupQueueItem {
+	id: string;
+	schedule_id: string;
+	agent_id: string;
+	priority: SchedulePriority;
+	status:
+		| 'pending'
+		| 'running'
+		| 'completed'
+		| 'failed'
+		| 'preempted'
+		| 'canceled';
+	queued_at: string;
+	started_at?: string;
+	completed_at?: string;
+	preempted_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface PriorityQueueSummary {
+	total_pending: number;
+	total_running: number;
+	high_priority: number;
+	medium_priority: number;
+	low_priority: number;
+}
+
+export interface PriorityQueueResponse {
+	queue: BackupQueueItem[];
+	summary: PriorityQueueSummary;
+}
+
+// IP Allowlist types
+export type IPAllowlistType = 'ui' | 'agent' | 'both';
+
+export interface IPAllowlist {
+	id: string;
+	org_id: string;
+	cidr: string;
+	description?: string;
+	type: IPAllowlistType;
+	enabled: boolean;
+	created_by?: string;
+	updated_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+// Rate Limit types
+export interface RateLimitConfig {
+	id: string;
+	org_id: string;
+	endpoint: string;
+	requests_per_period: number;
+	period_seconds: number;
+	enabled: boolean;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface IPAllowlistSettings {
+	id: string;
+	org_id: string;
+	enabled: boolean;
+	enforce_for_ui: boolean;
+	enforce_for_agent: boolean;
+	allow_admin_bypass: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface IPBlockedAttempt {
+	id: string;
+	org_id: string;
+	ip_address: string;
+	request_type: string;
+	path?: string;
+	user_id?: string;
+	agent_id?: string;
+	reason?: string;
+	created_at: string;
+}
+
+export interface CreateIPAllowlistRequest {
+	cidr: string;
+	description?: string;
+	type: IPAllowlistType;
+	enabled?: boolean;
+}
+
+export interface UpdateIPAllowlistRequest {
+	cidr?: string;
+	description?: string;
+	type?: IPAllowlistType;
+	enabled?: boolean;
+}
+
+export interface UpdateIPAllowlistSettingsRequest {
+	enabled?: boolean;
+	enforce_for_ui?: boolean;
+	enforce_for_agent?: boolean;
+	allow_admin_bypass?: boolean;
+}
+
+export interface IPAllowlistsResponse {
+	allowlists: IPAllowlist[];
+}
+
+export interface IPBlockedAttemptsResponse {
+	attempts: IPBlockedAttempt[];
+	total: number;
+}
+
+// Agent Import types
+export interface AgentImportPreviewEntry {
+	row_number: number;
+	hostname: string;
+	group_name?: string;
+	tags?: string[];
+	config?: Record<string, string>;
+	is_valid: boolean;
+	errors?: string[];
+}
+
+export interface AgentImportPreviewResponse {
+	total_rows: number;
+	valid_rows: number;
+	invalid_rows: number;
+	entries: AgentImportPreviewEntry[];
+	detected_groups: string[];
+	detected_tags: string[];
+}
+
+export interface AgentImportJobResult {
+	row_number: number;
+	hostname: string;
+	agent_id?: string;
+	group_id?: string;
+	group_name?: string;
+	registration_code?: string;
+	expires_at?: string;
+	success: boolean;
+	error_message?: string;
+}
+
+export interface AgentImportResponse {
+	job_id: string;
+	total_agents: number;
+	imported_count: number;
+	failed_count: number;
+	results: AgentImportJobResult[];
+	groups_created?: string[];
+}
+
+export interface AgentImportTemplateResponse {
+	headers: string[];
+	examples: string[][];
+}
+
+export interface AgentRegistrationScriptRequest {
+	hostname: string;
+	registration_code: string;
+}
+
+export interface AgentRegistrationScriptResponse {
+	script: string;
+	hostname: string;
+	registration_code: string;
+	expires_at: string;
+}
+
+// User Sessions
+export interface UserSession {
+	id: string;
+	user_id: string;
+	ip_address?: string;
+	user_agent?: string;
+	created_at: string;
+	last_active_at: string;
+	expires_at?: string;
+	revoked: boolean;
+	revoked_at?: string;
+	is_current?: boolean;
+}
+
+export interface UserSessionsResponse {
+	sessions: UserSession[];
+}
+
+export interface RevokeSessionsResponse {
+	message: string;
+	revoked_count?: number;
+}
+
+// Password Policy types
+export interface PasswordPolicy {
+	id: string;
+	org_id: string;
+	min_length: number;
+	require_uppercase: boolean;
+	require_lowercase: boolean;
+	require_number: boolean;
+	require_special: boolean;
+	max_age_days?: number;
+	history_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface PasswordRequirements {
+	min_length: number;
+	require_uppercase: boolean;
+	require_lowercase: boolean;
+	require_number: boolean;
+	require_special: boolean;
+	max_age_days?: number;
+	description: string;
+}
+
+export interface PasswordPolicyResponse {
+	policy: PasswordPolicy;
+	requirements: PasswordRequirements;
+}
+
+export interface UpdatePasswordPolicyRequest {
+	min_length?: number;
+	require_uppercase?: boolean;
+	require_lowercase?: boolean;
+	require_number?: boolean;
+	require_special?: boolean;
+	max_age_days?: number;
+	history_count?: number;
+}
+
+export interface PasswordValidationResult {
+	valid: boolean;
+	errors?: string[];
+	warnings?: string[];
+}
+
+export interface ChangePasswordRequest {
+	current_password: string;
+	new_password: string;
+}
+
+export interface PasswordExpirationInfo {
+	is_expired: boolean;
+	expires_at?: string;
+	days_until_expiry?: number;
+	must_change_now: boolean;
+	warn_days_remaining: number;
+}
+
+export interface PasswordLoginRequest {
+	email: string;
+	password: string;
+}
+
+export interface PasswordLoginResponse {
+	id: string;
+	email: string;
+	name: string;
+	current_org_id?: string;
+	current_org_role?: string;
+	password_expired?: boolean;
+	must_change_password?: boolean;
+	expires_at?: string;
+}
+
+export interface CreateRateLimitConfigRequest {
+	endpoint: string;
+	requests_per_period: number;
+	period_seconds: number;
+	enabled?: boolean;
+}
+
+export interface UpdateRateLimitConfigRequest {
+	requests_per_period?: number;
+	period_seconds?: number;
+	enabled?: boolean;
+}
+
+export interface RateLimitConfigsResponse {
+	configs: RateLimitConfig[];
+}
+
+export interface BlockedRequest {
+	id: string;
+	org_id?: string;
+	ip_address: string;
+	endpoint: string;
+	user_agent?: string;
+	blocked_at: string;
+	reason: string;
+}
+
+export interface IPBlockCount {
+	ip_address: string;
+	count: number;
+}
+
+export interface RouteBlockCount {
+	endpoint: string;
+	count: number;
+}
+
+export interface RateLimitStats {
+	blocked_today: number;
+	top_blocked_ips: IPBlockCount[];
+	top_blocked_endpoints: RouteBlockCount[];
+}
+
+export interface RateLimitStatsResponse {
+	stats: RateLimitStats;
+}
+
+export interface BlockedRequestsResponse {
+	blocked_requests: BlockedRequest[];
+}
+
+export interface IPBan {
+	id: string;
+	org_id?: string;
+	ip_address: string;
+	reason: string;
+	ban_count: number;
+	banned_by?: string;
+	banned_at: string;
+	expires_at?: string;
+	created_at: string;
+}
+
+export interface CreateIPBanRequest {
+	ip_address: string;
+	reason: string;
+	duration_minutes?: number;
+}
+
+export interface IPBansResponse {
+	bans: IPBan[];
+}
+
+// Storage Tier types
+export type StorageTierType = 'hot' | 'warm' | 'cold' | 'archive';
+
+export interface StorageTierConfig {
+	id: string;
+	org_id: string;
+	tier_type: StorageTierType;
+	name: string;
+	description?: string;
+	cost_per_gb_month: number;
+	retrieval_cost: number;
+	retrieval_time: string;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface TierRule {
+	id: string;
+	org_id: string;
+	repository_id?: string;
+	schedule_id?: string;
+	name: string;
+	description?: string;
+	from_tier: StorageTierType;
+	to_tier: StorageTierType;
+	age_threshold_days: number;
+	min_copies: number;
+	priority: number;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateTierRuleRequest {
+	name: string;
+	description?: string;
+	from_tier: StorageTierType;
+	to_tier: StorageTierType;
+	age_threshold_days: number;
+	min_copies?: number;
+	priority?: number;
+	repository_id?: string;
+	schedule_id?: string;
+}
+
+export interface UpdateTierRuleRequest {
+	name?: string;
+	description?: string;
+	age_threshold_days?: number;
+	min_copies?: number;
+	priority?: number;
+	enabled?: boolean;
+}
+
+export interface SnapshotTier {
+	id: string;
+	snapshot_id: string;
+	repository_id: string;
+	org_id: string;
+	current_tier: StorageTierType;
+	size_bytes: number;
+	snapshot_time: string;
+	tiered_at: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface TierTransition {
+	id: string;
+	snapshot_tier_id: string;
+	snapshot_id: string;
+	repository_id: string;
+	org_id: string;
+	from_tier: StorageTierType;
+	to_tier: StorageTierType;
+	trigger_rule_id?: string;
+	trigger_reason: string;
+	size_bytes: number;
+	estimated_saving: number;
+	status: string;
+	error_message?: string;
+	started_at?: string;
+	completed_at?: string;
+	created_at: string;
+}
+
+export interface ColdRestoreRequest {
+	id: string;
+	org_id: string;
+	snapshot_id: string;
+	repository_id: string;
+	requested_by: string;
+	from_tier: StorageTierType;
+	target_path?: string;
+	priority: 'standard' | 'expedited' | 'bulk';
+	status:
+		| 'pending'
+		| 'warming'
+		| 'ready'
+		| 'restoring'
+		| 'completed'
+		| 'failed'
+		| 'expired';
+	estimated_ready_at?: string;
+	ready_at?: string;
+	expires_at?: string;
+	error_message?: string;
+	retrieval_cost: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface TierBreakdownItem {
+	tier_type: StorageTierType;
+	snapshot_count: number;
+	total_size_bytes: number;
+	monthly_cost: number;
+	percentage: number;
+}
+
+export interface TierOptSuggestion {
+	snapshot_id: string;
+	repository_id: string;
+	current_tier: StorageTierType;
+	suggested_tier: StorageTierType;
+	age_days: number;
+	size_bytes: number;
+	monthly_savings: number;
+	reason: string;
+}
+
+export interface TierCostReport {
+	id: string;
+	org_id: string;
+	report_date: string;
+	total_size_bytes: number;
+	current_monthly_cost: number;
+	optimized_monthly_cost: number;
+	potential_monthly_savings: number;
+	tier_breakdown: TierBreakdownItem[];
+	suggestions: TierOptSuggestion[];
+	created_at: string;
+}
+
+export interface TierStats {
+	snapshot_count: number;
+	total_size_bytes: number;
+	monthly_cost: number;
+	oldest_snapshot_days: number;
+	newest_snapshot_days: number;
+}
+
+export interface TierStatsSummary {
+	total_snapshots: number;
+	total_size_bytes: number;
+	estimated_monthly_cost: number;
+	by_tier: Record<StorageTierType, TierStats>;
+	potential_savings: number;
+}
+
+export interface StorageTierConfigsResponse {
+	configs: StorageTierConfig[];
+}
+
+export interface TierRulesResponse {
+	rules: TierRule[];
+}
+
+export interface SnapshotTiersResponse {
+	tiers: SnapshotTier[];
+}
+
+export interface TierTransitionsResponse {
+	history: TierTransition[];
+}
+
+export interface ColdRestoreRequestsResponse {
+	requests: ColdRestoreRequest[];
+}
+
+export interface TierCostReportsResponse {
+	reports: TierCostReport[];
+}
+// Lifecycle Policy types
+export type LifecyclePolicyStatus = 'active' | 'draft' | 'disabled';
+
+export interface RetentionDuration {
+	min_days: number;
+	max_days: number;
+}
+
+export interface DataTypeOverride {
+	data_type: DataType;
+	retention: RetentionDuration;
+}
+
+export interface ClassificationRetention {
+	level: ClassificationLevel;
+	retention: RetentionDuration;
+	data_type_overrides?: DataTypeOverride[];
+}
+
+export interface LifecyclePolicy {
+	id: string;
+	name: string;
+	description?: string;
+	status: LifecyclePolicyStatus;
+	rules: ClassificationRetention[];
+	repository_ids?: string[];
+	schedule_ids?: string[];
+	last_evaluated_at?: string;
+	last_deletion_at?: string;
+	deletion_count: number;
+	bytes_reclaimed: number;
+	created_by: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateLifecyclePolicyRequest {
+	name: string;
+	description?: string;
+	status?: LifecyclePolicyStatus;
+	rules: ClassificationRetention[];
+	repository_ids?: string[];
+	schedule_ids?: string[];
+}
+
+export interface UpdateLifecyclePolicyRequest {
+	name?: string;
+	description?: string;
+	status?: LifecyclePolicyStatus;
+	rules?: ClassificationRetention[];
+	repository_ids?: string[];
+	schedule_ids?: string[];
+}
+
+export interface LifecycleDryRunRequest {
+	policy_id?: string;
+	rules?: ClassificationRetention[];
+	repository_ids?: string[];
+	schedule_ids?: string[];
+}
+
+export type LifecycleAction = 'keep' | 'can_delete' | 'must_delete' | 'hold';
+
+export interface LifecycleSnapshotEvaluation {
+	snapshot_id: string;
+	action: LifecycleAction;
+	reason: string;
+	snapshot_age_days: number;
+	min_retention_days: number;
+	max_retention_days: number;
+	days_until_deletable: number;
+	days_until_auto_delete: number;
+	classification_level: ClassificationLevel;
+	is_on_legal_hold: boolean;
+	size_bytes?: number;
+	snapshot_time: string;
+	repository_id: string;
+	schedule_name?: string;
+}
+
+export interface LifecycleDryRunResult {
+	evaluated_at: string;
+	policy_id?: string;
+	total_snapshots: number;
+	keep_count: number;
+	can_delete_count: number;
+	must_delete_count: number;
+	hold_count: number;
+	total_size_to_delete: number;
+	evaluations: LifecycleSnapshotEvaluation[];
+}
+
+export interface LifecycleDeletionEvent {
+	id: string;
+	org_id: string;
+	policy_id: string;
+	snapshot_id: string;
+	repository_id: string;
+	reason: string;
+	size_bytes: number;
+	deleted_by: string;
+	deleted_at: string;
+}
+
+export interface LifecyclePoliciesResponse {
+	policies: LifecyclePolicy[];
+}
+
+export interface LifecycleDeletionEventsResponse {
+	events: LifecycleDeletionEvent[];
+}
+
+// Metadata types
+export type MetadataEntityType = 'agent' | 'repository' | 'schedule';
+export type MetadataFieldType =
+	| 'text'
+	| 'number'
+	| 'date'
+	| 'select'
+	| 'boolean';
+
+export interface MetadataValidationRules {
+	min_length?: number;
+	max_length?: number;
+	pattern?: string;
+	min?: number;
+	max?: number;
+	min_date?: string;
+	max_date?: string;
+}
+
+export interface MetadataSelectOption {
+	value: string;
+	label: string;
+}
+
+export interface MetadataSchema {
+	id: string;
+	org_id: string;
+	entity_type: MetadataEntityType;
+	name: string;
+	field_key: string;
+	field_type: MetadataFieldType;
+	description?: string;
+	required: boolean;
+	default_value?: unknown;
+	options?: MetadataSelectOption[];
+	validation?: MetadataValidationRules;
+	display_order: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateMetadataSchemaRequest {
+	entity_type: MetadataEntityType;
+	name: string;
+	field_key: string;
+	field_type: MetadataFieldType;
+	description?: string;
+	required?: boolean;
+	default_value?: unknown;
+	options?: MetadataSelectOption[];
+	validation?: MetadataValidationRules;
+	display_order?: number;
+}
+
+export interface UpdateMetadataSchemaRequest {
+	name?: string;
+	description?: string;
+	required?: boolean;
+	default_value?: unknown;
+	options?: MetadataSelectOption[];
+	validation?: MetadataValidationRules;
+	display_order?: number;
+}
+
+export interface MetadataSchemasResponse {
+	schemas: MetadataSchema[];
+}
+
+export interface MetadataFieldTypesResponse {
+	types: {
+		type: MetadataFieldType;
+		label: string;
+		description: string;
+	}[];
+}
+
+export interface MetadataEntityTypesResponse {
+	types: {
+		type: MetadataEntityType;
+		label: string;
+	}[];
+}
+
+export interface UpdateEntityMetadataRequest {
+	metadata: Record<string, unknown>;
+}
+
+export interface MetadataSearchResult {
+	entity_type: MetadataEntityType;
+	entity_id: string;
+	entity_name: string;
+	metadata: Record<string, unknown>;
+}
+
+export interface MetadataSearchResponse {
+	results: MetadataSearchResult[];
+}
+
+// Saved Filter types
+export interface SavedFilter {
+	id: string;
+	user_id: string;
+	org_id: string;
+	name: string;
+	entity_type: string;
+	filters: Record<string, unknown>;
+	shared: boolean;
+	is_default: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateSavedFilterRequest {
+	name: string;
+	entity_type: string;
+	filters: Record<string, unknown>;
+	shared?: boolean;
+	is_default?: boolean;
+}
+
+export interface UpdateSavedFilterRequest {
+	name?: string;
+	filters?: Record<string, unknown>;
+	shared?: boolean;
+	is_default?: boolean;
+}
+
+export interface SavedFiltersResponse {
+	filters: SavedFilter[];
+}
+
+// Downtime types
+export type ComponentType = 'agent' | 'server' | 'repository' | 'service';
+export type DowntimeSeverity = 'info' | 'warning' | 'critical';
+export type BadgeType = '7d' | '30d' | '90d' | '365d';
+
+export interface DowntimeEvent {
+	id: string;
+	org_id: string;
+	component_type: ComponentType;
+	component_id?: string;
+	component_name: string;
+	started_at: string;
+	ended_at?: string;
+	duration_seconds?: number;
+	severity: DowntimeSeverity;
+	cause?: string;
+	notes?: string;
+	resolved_by?: string;
+	auto_detected: boolean;
+	alert_id?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface UptimeStats {
+	id: string;
+	org_id: string;
+	component_type: ComponentType;
+	component_id?: string;
+	component_name: string;
+	period_start: string;
+	period_end: string;
+	total_seconds: number;
+	downtime_seconds: number;
+	uptime_percent: number;
+	incident_count: number;
+	created_at: string;
+}
+
+export interface UptimeBadge {
+	id: string;
+	org_id: string;
+	component_type?: ComponentType;
+	component_id?: string;
+	component_name?: string;
+	badge_type: BadgeType;
+	uptime_percent: number;
+	last_updated: string;
+	created_at: string;
+}
+
+export interface DowntimeAlert {
+	id: string;
+	org_id: string;
+	name: string;
+	enabled: boolean;
+	uptime_threshold: number;
+	evaluation_period: string;
+	component_type?: ComponentType;
+	notify_on_breach: boolean;
+	notify_on_recovery: boolean;
+	last_triggered_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface ComponentUptime {
+	component_type: ComponentType;
+	component_id?: string;
+	component_name: string;
+	status: string;
+	uptime_percent_7d: number;
+	uptime_percent_30d: number;
+	incident_count_30d: number;
+	last_incident_at?: string;
+}
+
+export interface UptimeSummary {
+	total_components: number;
+	components_up: number;
+	components_down: number;
+	active_incidents: number;
+	overall_uptime_7d: number;
+	overall_uptime_30d: number;
+	overall_uptime_90d: number;
+	badges?: UptimeBadge[];
+	recent_incidents?: DowntimeEvent[];
+	component_breakdown?: ComponentUptime[];
+}
+
+export interface DailyUptime {
+	date: string;
+	uptime_percent: number;
+	downtime_seconds: number;
+	incident_count: number;
+}
+
+export interface MonthlyUptimeReport {
+	org_id: string;
+	month: string;
+	year: number;
+	month_num: number;
+	overall_uptime: number;
+	total_downtime_seconds: number;
+	incident_count: number;
+	most_affected?: ComponentUptime[];
+	daily_breakdown?: DailyUptime[];
+	generated_at: string;
+}
+
+export interface CreateDowntimeEventRequest {
+	component_type: ComponentType;
+	component_id?: string;
+	component_name: string;
+	severity: DowntimeSeverity;
+	cause?: string;
+}
+
+export interface UpdateDowntimeEventRequest {
+	severity?: DowntimeSeverity;
+	cause?: string;
+	notes?: string;
+}
+
+export interface ResolveDowntimeEventRequest {
+	notes?: string;
+}
+
+export interface CreateDowntimeAlertRequest {
+	name: string;
+	uptime_threshold: number;
+	evaluation_period: string;
+	component_type?: ComponentType;
+	notify_on_breach?: boolean;
+	notify_on_recovery?: boolean;
+}
+
+export interface UpdateDowntimeAlertRequest {
+	name?: string;
+	enabled?: boolean;
+	uptime_threshold?: number;
+	evaluation_period?: string;
+	notify_on_breach?: boolean;
+	notify_on_recovery?: boolean;
+}
+
+export interface DowntimeEventsResponse {
+	events: DowntimeEvent[];
+}
+
+export interface UptimeBadgesResponse {
+	badges: UptimeBadge[];
+}
+
+export interface DowntimeAlertsResponse {
+	alerts: DowntimeAlert[];
+}
+
+// SLA types
+export type SLAScope = 'agent' | 'repository' | 'organization';
+export type BreachType = 'rpo' | 'rto' | 'uptime';
+
+export interface SLADefinition {
+	id: string;
+	org_id: string;
+	name: string;
+	description?: string;
+	rpo_minutes?: number;
+	rto_minutes?: number;
+	uptime_percentage?: number;
+	scope: SLAScope;
+	active: boolean;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface SLAWithAssignments extends SLADefinition {
+	agent_count: number;
+	repository_count: number;
+}
+
+export interface SLAAssignment {
+	id: string;
+	org_id: string;
+	sla_id: string;
+	agent_id?: string;
+	repository_id?: string;
+	assigned_by?: string;
+	assigned_at: string;
+}
+
+export interface SLACompliance {
+	id: string;
+	org_id: string;
+	sla_id: string;
+	agent_id?: string;
+	repository_id?: string;
+	period_start: string;
+	period_end: string;
+	rpo_compliant?: boolean;
+	rpo_actual_minutes?: number;
+	rpo_breaches: number;
+	rto_compliant?: boolean;
+	rto_actual_minutes?: number;
+	rto_breaches: number;
+	uptime_compliant?: boolean;
+	uptime_actual_percentage?: number;
+	uptime_downtime_minutes: number;
+	is_compliant: boolean;
+	notes?: string;
+	calculated_at: string;
+}
+
+export interface SLABreach {
+	id: string;
+	org_id: string;
+	sla_id: string;
+	agent_id?: string;
+	repository_id?: string;
+	breach_type: BreachType;
+	expected_value?: number;
+	actual_value?: number;
+	breach_start: string;
+	breach_end?: string;
+	duration_minutes?: number;
+	acknowledged: boolean;
+	acknowledged_by?: string;
+	acknowledged_at?: string;
+	resolved: boolean;
+	resolved_at?: string;
+	description?: string;
+	created_at: string;
+}
+
+export interface SLAComplianceSummary {
+	sla_id: string;
+	sla_name: string;
+	total_targets: number;
+	compliant_targets: number;
+	compliance_rate: number;
+	active_breaches: number;
+	total_breaches: number;
+	period_start: string;
+	period_end: string;
+}
+
+export interface SLADashboardStats {
+	total_slas: number;
+	active_slas: number;
+	overall_compliance: number;
+	active_breaches: number;
+	unacknowledged_count: number;
+	compliance_trend?: SLAComplianceSummary[];
+}
+
+export interface SLAReport {
+	org_id: string;
+	report_month: string;
+	generated_at: string;
+	sla_summaries: SLAComplianceSummary[];
+	total_breaches: number;
+	resolved_breaches: number;
+	mean_time_to_resolve_minutes?: number;
+}
+
+export interface CreateSLADefinitionRequest {
+	name: string;
+	description?: string;
+	rpo_minutes?: number;
+	rto_minutes?: number;
+	uptime_percentage?: number;
+	scope: SLAScope;
+	active?: boolean;
+}
+
+export interface UpdateSLADefinitionRequest {
+	name?: string;
+	description?: string;
+	rpo_minutes?: number;
+	rto_minutes?: number;
+	uptime_percentage?: number;
+	scope?: SLAScope;
+	active?: boolean;
+}
+
+export interface AssignSLARequest {
+	agent_id?: string;
+	repository_id?: string;
+}
+
+export interface AcknowledgeBreachRequest {
+	notes?: string;
+}
+
+export interface SLADefinitionsResponse {
+	slas: SLAWithAssignments[];
+}
+
+export interface SLAAssignmentsResponse {
+	assignments: SLAAssignment[];
+}
+
+export interface SLAComplianceResponse {
+	compliance: SLACompliance[];
+}
+
+export interface SLABreachesResponse {
+	breaches: SLABreach[];
+}
+
+export interface SLADashboardResponse {
+	stats: SLADashboardStats;
+}
+
+export interface SLAReportResponse {
+	report: SLAReport;
 }

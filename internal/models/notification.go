@@ -12,6 +12,8 @@ type NotificationChannelType string
 const (
 	ChannelTypeEmail     NotificationChannelType = "email"
 	ChannelTypeSlack     NotificationChannelType = "slack"
+	ChannelTypeTeams     NotificationChannelType = "teams"
+	ChannelTypeDiscord   NotificationChannelType = "discord"
 	ChannelTypeWebhook   NotificationChannelType = "webhook"
 	ChannelTypePagerDuty NotificationChannelType = "pagerduty"
 )
@@ -136,6 +138,50 @@ type EmailChannelConfig struct {
 	Password string `json:"password"`
 	From     string `json:"from"`
 	TLS      bool   `json:"tls"`
+}
+
+// SlackChannelConfig represents Slack webhook configuration
+type SlackChannelConfig struct {
+	WebhookURL string `json:"webhook_url"`
+	Channel    string `json:"channel,omitempty"`
+	Username   string `json:"username,omitempty"`
+	IconEmoji  string `json:"icon_emoji,omitempty"`
+}
+
+// TeamsChannelConfig represents Microsoft Teams webhook configuration
+type TeamsChannelConfig struct {
+	WebhookURL string `json:"webhook_url"`
+}
+
+// DiscordChannelConfig represents Discord webhook configuration
+type DiscordChannelConfig struct {
+	WebhookURL string `json:"webhook_url"`
+	Username   string `json:"username,omitempty"`
+	AvatarURL  string `json:"avatar_url,omitempty"`
+}
+
+// PagerDutyChannelConfig represents PagerDuty integration configuration
+type PagerDutyChannelConfig struct {
+	RoutingKey   string `json:"routing_key"`
+	ServiceKey   string `json:"service_key,omitempty"`
+	Severity     string `json:"severity,omitempty"`
+	Component    string `json:"component,omitempty"`
+	Group        string `json:"group,omitempty"`
+	Class        string `json:"class,omitempty"`
+	CustomFields map[string]string `json:"custom_fields,omitempty"`
+}
+
+// WebhookChannelConfig represents generic webhook configuration
+type WebhookChannelConfig struct {
+	URL         string            `json:"url"`
+	Method      string            `json:"method,omitempty"`
+	Headers     map[string]string `json:"headers,omitempty"`
+	AuthType    string            `json:"auth_type,omitempty"`
+	AuthToken   string            `json:"auth_token,omitempty"`
+	BasicUser   string            `json:"basic_user,omitempty"`
+	BasicPass   string            `json:"basic_pass,omitempty"`
+	ContentType string            `json:"content_type,omitempty"`
+	Template    string            `json:"template,omitempty"`
 }
 
 // CreateNotificationChannelRequest represents a request to create a notification channel

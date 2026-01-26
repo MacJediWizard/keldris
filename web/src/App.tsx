@@ -14,27 +14,36 @@ import { Classifications } from './pages/Classifications';
 import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
+import { DowntimeHistory } from './pages/DowntimeHistory';
 import { FileDiff } from './pages/FileDiff';
 import { FileHistory } from './pages/FileHistory';
 import { FileSearch } from './pages/FileSearch';
+import { IPAllowlistSettings } from './pages/IPAllowlistSettings';
 import { LegalHolds } from './pages/LegalHolds';
+import { LifecyclePolicies } from './pages/LifecyclePolicies';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
+import { NotificationRules } from './pages/NotificationRules';
 import { Notifications } from './pages/Notifications';
 import { Onboarding } from './pages/Onboarding';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
+import { PasswordPolicies } from './pages/PasswordPolicies';
 import { Policies } from './pages/Policies';
+import { RateLimitDashboard } from './pages/RateLimitDashboard';
+import { RateLimits } from './pages/RateLimits';
 import Reports from './pages/Reports';
 import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
 import { Restore } from './pages/Restore';
+import { SLA } from './pages/SLA';
 import { Schedules } from './pages/Schedules';
 import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
 import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
+import { UserSessions } from './pages/UserSessions';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -74,15 +83,19 @@ function App() {
 						<Route path="snapshots/compare" element={<SnapshotCompare />} />
 						<Route path="snapshots/file-diff" element={<FileDiff />} />
 						<Route path="alerts" element={<Alerts />} />
+						<Route path="downtime" element={<DowntimeHistory />} />
 						<Route path="notifications" element={<Notifications />} />
+						<Route path="notification-rules" element={<NotificationRules />} />
 						<Route path="reports" element={<Reports />} />
 						<Route path="audit-logs" element={<AuditLogs />} />
 						<Route path="legal-holds" element={<LegalHolds />} />
+						<Route path="lifecycle-policies" element={<LifecyclePolicies />} />
 						<Route path="stats" element={<StorageStats />} />
 						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
 						<Route path="tags" element={<Tags />} />
 						<Route path="classifications" element={<Classifications />} />
 						<Route path="costs" element={<CostEstimation />} />
+						<Route path="sla" element={<SLA />} />
 						<Route
 							path="organization/members"
 							element={<OrganizationMembers />}
@@ -100,8 +113,19 @@ function App() {
 							path="organization/announcements"
 							element={<Announcements />}
 						/>
+						<Route
+							path="organization/ip-allowlist"
+							element={<IPAllowlistSettings />}
+						/>
+						<Route
+							path="organization/password-policies"
+							element={<PasswordPolicies />}
+						/>
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />
+						<Route path="admin/rate-limits" element={<RateLimitDashboard />} />
+						<Route path="admin/rate-limit-configs" element={<RateLimits />} />
+						<Route path="account/sessions" element={<UserSessions />} />
 						<Route path="onboarding" element={<Onboarding />} />
 						<Route path="changelog" element={<Changelog />} />
 					</Route>
