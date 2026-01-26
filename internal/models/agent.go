@@ -68,23 +68,25 @@ type HealthIssue struct {
 
 // Agent represents a backup agent installed on a host.
 type Agent struct {
-	ID                   uuid.UUID      `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
-	OrgID                uuid.UUID      `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440001"`
-	Hostname             string         `json:"hostname" example:"backup-server-01"`
-	APIKeyHash           string         `json:"-"` // Never expose in JSON
-	OSInfo               *OSInfo        `json:"os_info,omitempty"`
-	NetworkMounts        []NetworkMount `json:"network_mounts,omitempty"`
-	LastSeen             *time.Time     `json:"last_seen,omitempty"`
-	Status               AgentStatus    `json:"status" example:"active"`
-	HealthStatus         HealthStatus   `json:"health_status" example:"healthy"`
-	HealthMetrics        *HealthMetrics `json:"health_metrics,omitempty"`
-	HealthCheckedAt      *time.Time     `json:"health_checked_at,omitempty"`
-	DebugMode            bool           `json:"debug_mode" example:"false"`
-	DebugModeExpiresAt   *time.Time     `json:"debug_mode_expires_at,omitempty"`
-	DebugModeEnabledAt   *time.Time     `json:"debug_mode_enabled_at,omitempty"`
-	DebugModeEnabledBy   *uuid.UUID     `json:"debug_mode_enabled_by,omitempty"`
-	CreatedAt            time.Time      `json:"created_at"`
-	UpdatedAt            time.Time      `json:"updated_at"`
+	ID                   uuid.UUID              `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	OrgID                uuid.UUID              `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440001"`
+	Hostname             string                 `json:"hostname" example:"backup-server-01"`
+	APIKeyHash           string                 `json:"-"` // Never expose in JSON
+	OSInfo               *OSInfo                `json:"os_info,omitempty"`
+	NetworkMounts        []NetworkMount         `json:"network_mounts,omitempty"`
+	LastSeen             *time.Time             `json:"last_seen,omitempty"`
+	Status               AgentStatus            `json:"status" example:"active"`
+	HealthStatus         HealthStatus           `json:"health_status" example:"healthy"`
+	HealthMetrics        *HealthMetrics         `json:"health_metrics,omitempty"`
+	HealthCheckedAt      *time.Time             `json:"health_checked_at,omitempty"`
+	DebugMode            bool                   `json:"debug_mode" example:"false"`
+	DebugModeExpiresAt   *time.Time             `json:"debug_mode_expires_at,omitempty"`
+	DebugModeEnabledAt   *time.Time             `json:"debug_mode_enabled_at,omitempty"`
+	DebugModeEnabledBy   *uuid.UUID             `json:"debug_mode_enabled_by,omitempty"`
+	MaxConcurrentBackups *int                   `json:"max_concurrent_backups,omitempty"` // nil means use org default
+	Metadata             map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt            time.Time              `json:"created_at"`
+	UpdatedAt            time.Time              `json:"updated_at"`
 }
 
 // NewAgent creates a new Agent with the given details.
@@ -309,6 +311,23 @@ func (a *Agent) IsDebugModeExpired() bool {
 		return false
 	}
 	return time.Now().After(*a.DebugModeExpiresAt)
+}
+
+// SetMetadata sets the metadata from JSON bytes.
+func (a *Agent) SetMetadata(data []byte) error {
+	if len(data) == 0 {
+		a.Metadata = make(map[string]interface{})
+		return nil
+	}
+	return json.Unmarshal(data, &a.Metadata)
+}
+
+// MetadataJSON returns the metadata as JSON bytes for database storage.
+func (a *Agent) MetadataJSON() ([]byte, error) {
+	if a.Metadata == nil {
+		return []byte("{}"), nil
+	}
+	return json.Marshal(a.Metadata)
 }
 
 // SetDebugModeRequest is the request body for enabling/disabling debug mode.
