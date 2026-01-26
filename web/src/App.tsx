@@ -22,6 +22,7 @@ import { LegalHolds } from './pages/LegalHolds';
 import { LifecyclePolicies } from './pages/LifecyclePolicies';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
+import { NotificationRules } from './pages/NotificationRules';
 import { Notifications } from './pages/Notifications';
 import { Onboarding } from './pages/Onboarding';
 import { OrganizationMembers } from './pages/OrganizationMembers';
@@ -81,6 +82,7 @@ function App() {
 						<Route path="snapshots/file-diff" element={<FileDiff />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
+						<Route path="notification-rules" element={<NotificationRules />} />
 						<Route path="reports" element={<Reports />} />
 						<Route path="audit-logs" element={<AuditLogs />} />
 						<Route path="legal-holds" element={<LegalHolds />} />
