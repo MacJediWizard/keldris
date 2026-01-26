@@ -3611,7 +3611,12 @@ export interface LifecycleDeletionEventsResponse {
 
 // Metadata types
 export type MetadataEntityType = 'agent' | 'repository' | 'schedule';
-export type MetadataFieldType = 'text' | 'number' | 'date' | 'select' | 'boolean';
+export type MetadataFieldType =
+	| 'text'
+	| 'number'
+	| 'date'
+	| 'select'
+	| 'boolean';
 
 export interface MetadataValidationRules {
 	min_length?: number;
