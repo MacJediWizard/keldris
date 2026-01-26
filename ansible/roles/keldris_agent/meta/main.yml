@@ -1,0 +1,38 @@
+# Keldris Agent Role - Metadata
+---
+galaxy_info:
+  role_name: keldris_agent
+  author: MacJediWizard
+  description: Install and configure the Keldris backup agent
+  license: AGPL-3.0
+  min_ansible_version: "2.10"
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal    # 20.04
+        - jammy    # 22.04
+        - noble    # 24.04
+    - name: Debian
+      versions:
+        - bullseye # 11
+        - bookworm # 12
+    - name: EL      # RHEL/CentOS/Rocky/Alma
+      versions:
+        - "8"
+        - "9"
+    - name: MacOSX
+      versions:
+        - "12"     # Monterey
+        - "13"     # Ventura
+        - "14"     # Sonoma
+        - "15"     # Sequoia
+
+  galaxy_tags:
+    - backup
+    - keldris
+    - restic
+    - agent
+    - system
+
+dependencies: []

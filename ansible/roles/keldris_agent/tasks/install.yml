@@ -1,0 +1,53 @@
+# Keldris Agent Role - Binary Installation Tasks
+---
+- name: Determine system architecture
+  ansible.builtin.set_fact:
+    keldris_arch: >-
+      {{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}
+
+- name: Determine OS name for download
+  ansible.builtin.set_fact:
+    keldris_os: "{{ 'darwin' if ansible_system == 'Darwin' else 'linux' }}"
+
+- name: Set download URL
+  ansible.builtin.set_fact:
+    keldris_download_binary_url: "{{ keldris_download_url }}/{{ keldris_agent_version }}/keldris-agent-{{ keldris_os }}-{{ keldris_arch }}"
+
+- name: Ensure install directory exists
+  ansible.builtin.file:
+    path: "{{ keldris_install_dir }}"
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Check if agent binary exists
+  ansible.builtin.stat:
+    path: "{{ keldris_install_dir }}/{{ keldris_binary_name }}"
+  register: keldris_binary_stat
+
+- name: Get current agent version
+  ansible.builtin.command: "{{ keldris_install_dir }}/{{ keldris_binary_name }} version"
+  register: keldris_current_version
+  changed_when: false
+  failed_when: false
+  when: keldris_binary_stat.stat.exists
+
+- name: Download agent binary
+  ansible.builtin.get_url:
+    url: "{{ keldris_download_binary_url }}"
+    dest: "{{ keldris_install_dir }}/{{ keldris_binary_name }}"
+    mode: "0755"
+    owner: root
+    group: "{{ 'wheel' if ansible_system == 'Darwin' else 'root' }}"
+    force: "{{ keldris_agent_version != 'latest' or not keldris_binary_stat.stat.exists }}"
+  become: true
+  notify: Restart keldris-agent
+
+- name: Remove quarantine attribute (macOS)
+  ansible.builtin.command: xattr -d com.apple.quarantine "{{ keldris_install_dir }}/{{ keldris_binary_name }}"
+  become: true
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_system == "Darwin"
+    - keldris_remove_quarantine | bool

@@ -89,7 +89,9 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		restores.GET("", h.ListRestores)
 		restores.POST("", h.CreateRestore)
 		restores.POST("/preview", h.PreviewRestore)
+		restores.POST("/cloud", h.CreateCloudRestore)
 		restores.GET("/:id", h.GetRestore)
+		restores.GET("/:id/progress", h.GetCloudRestoreProgress)
 	}
 }
 
@@ -414,24 +416,75 @@ func (h *SnapshotsHandler) ListFiles(c *gin.Context) {
 	})
 }
 
+// PathMappingRequest represents a path mapping in API requests.
+type PathMappingRequest struct {
+	SourcePath string `json:"source_path" binding:"required"`
+	TargetPath string `json:"target_path" binding:"required"`
+}
+
 // CreateRestoreRequest is the request body for creating a restore job.
 type CreateRestoreRequest struct {
-	SnapshotID   string   `json:"snapshot_id" binding:"required"`
-	AgentID      string   `json:"agent_id" binding:"required"`
-	RepositoryID string   `json:"repository_id" binding:"required"`
-	TargetPath   string   `json:"target_path" binding:"required"`
-	IncludePaths []string `json:"include_paths,omitempty"`
-	ExcludePaths []string `json:"exclude_paths,omitempty"`
+	SnapshotID    string               `json:"snapshot_id" binding:"required"`
+	AgentID       string               `json:"agent_id" binding:"required"`               // Target agent (where restore executes)
+	SourceAgentID string               `json:"source_agent_id,omitempty"`                 // Source agent for cross-agent restores
+	RepositoryID  string               `json:"repository_id" binding:"required"`
+	TargetPath    string               `json:"target_path" binding:"required"`
+	IncludePaths  []string             `json:"include_paths,omitempty"`
+	ExcludePaths  []string             `json:"exclude_paths,omitempty"`
+	PathMappings  []PathMappingRequest `json:"path_mappings,omitempty"`                   // Path remapping for cross-agent restores
+}
+
+// CloudRestoreTargetRequest represents the cloud storage target for a restore operation.
+type CloudRestoreTargetRequest struct {
+	Type string `json:"type" binding:"required"` // "s3", "b2", or "restic"
+	// S3/B2 configuration
+	Bucket          string `json:"bucket,omitempty"`
+	Prefix          string `json:"prefix,omitempty"`
+	Region          string `json:"region,omitempty"`
+	Endpoint        string `json:"endpoint,omitempty"`
+	AccessKeyID     string `json:"access_key_id,omitempty"`
+	SecretAccessKey string `json:"secret_access_key,omitempty"`
+	UseSSL          bool   `json:"use_ssl,omitempty"`
+	// B2 specific
+	AccountID      string `json:"account_id,omitempty"`
+	ApplicationKey string `json:"application_key,omitempty"`
+	// Restic repository configuration
+	Repository         string `json:"repository,omitempty"`
+	RepositoryPassword string `json:"repository_password,omitempty"`
+}
+
+// CreateCloudRestoreRequest is the request body for creating a cloud restore job.
+type CreateCloudRestoreRequest struct {
+	SnapshotID   string                    `json:"snapshot_id" binding:"required"`
+	AgentID      string                    `json:"agent_id" binding:"required"`
+	RepositoryID string                    `json:"repository_id" binding:"required"`
+	IncludePaths []string                  `json:"include_paths,omitempty"`
+	ExcludePaths []string                  `json:"exclude_paths,omitempty"`
+	CloudTarget  CloudRestoreTargetRequest `json:"cloud_target" binding:"required"`
+	VerifyUpload bool                      `json:"verify_upload,omitempty"`
+}
+
+// CloudRestoreProgressResponse represents the progress of a cloud restore upload operation.
+type CloudRestoreProgressResponse struct {
+	TotalFiles       int64   `json:"total_files"`
+	TotalBytes       int64   `json:"total_bytes"`
+	UploadedFiles    int64   `json:"uploaded_files"`
+	UploadedBytes    int64   `json:"uploaded_bytes"`
+	CurrentFile      string  `json:"current_file,omitempty"`
+	PercentComplete  float64 `json:"percent_complete"`
+	VerifiedChecksum bool    `json:"verified_checksum"`
 }
 
 // RestorePreviewRequest is the request body for previewing a restore operation.
 type RestorePreviewRequest struct {
-	SnapshotID   string   `json:"snapshot_id" binding:"required"`
-	AgentID      string   `json:"agent_id" binding:"required"`
-	RepositoryID string   `json:"repository_id" binding:"required"`
-	TargetPath   string   `json:"target_path" binding:"required"`
-	IncludePaths []string `json:"include_paths,omitempty"`
-	ExcludePaths []string `json:"exclude_paths,omitempty"`
+	SnapshotID    string               `json:"snapshot_id" binding:"required"`
+	AgentID       string               `json:"agent_id" binding:"required"`               // Target agent
+	SourceAgentID string               `json:"source_agent_id,omitempty"`                 // Source agent for cross-agent restores
+	RepositoryID  string               `json:"repository_id" binding:"required"`
+	TargetPath    string               `json:"target_path" binding:"required"`
+	IncludePaths  []string             `json:"include_paths,omitempty"`
+	ExcludePaths  []string             `json:"exclude_paths,omitempty"`
+	PathMappings  []PathMappingRequest `json:"path_mappings,omitempty"`
 }
 
 // RestorePreviewFileResponse represents a file in the restore preview.
@@ -453,22 +506,49 @@ type RestorePreviewResponse struct {
 	ConflictCount   int                          `json:"conflict_count"`
 	Files           []RestorePreviewFileResponse `json:"files"`
 	DiskSpaceNeeded int64                        `json:"disk_space_needed"`
+	SelectedPaths   []string                     `json:"selected_paths,omitempty"`
+	SelectedSize    int64                        `json:"selected_size,omitempty"`
+}
+
+// PathMappingResponse represents a path mapping in API responses.
+type PathMappingResponse struct {
+	SourcePath string `json:"source_path"`
+	TargetPath string `json:"target_path"`
+}
+
+// RestoreProgressResponse represents restore progress in API responses.
+type RestoreProgressResponse struct {
+	FilesRestored int64  `json:"files_restored"`
+	BytesRestored int64  `json:"bytes_restored"`
+	TotalFiles    *int64 `json:"total_files,omitempty"`
+	TotalBytes    *int64 `json:"total_bytes,omitempty"`
+	CurrentFile   string `json:"current_file,omitempty"`
 }
 
 // RestoreResponse represents a restore job in API responses.
 type RestoreResponse struct {
-	ID           string   `json:"id"`
-	AgentID      string   `json:"agent_id"`
-	RepositoryID string   `json:"repository_id"`
-	SnapshotID   string   `json:"snapshot_id"`
-	TargetPath   string   `json:"target_path"`
-	IncludePaths []string `json:"include_paths,omitempty"`
-	ExcludePaths []string `json:"exclude_paths,omitempty"`
-	Status       string   `json:"status"`
-	StartedAt    string   `json:"started_at,omitempty"`
-	CompletedAt  string   `json:"completed_at,omitempty"`
-	ErrorMessage string   `json:"error_message,omitempty"`
-	CreatedAt    string   `json:"created_at"`
+	ID             string                   `json:"id"`
+	AgentID        string                   `json:"agent_id"`                      // Target agent
+	SourceAgentID  string                   `json:"source_agent_id,omitempty"`     // Source agent for cross-agent restores
+	RepositoryID   string                   `json:"repository_id"`
+	SnapshotID     string                   `json:"snapshot_id"`
+	TargetPath     string                   `json:"target_path"`
+	IncludePaths   []string                 `json:"include_paths,omitempty"`
+	ExcludePaths   []string                 `json:"exclude_paths,omitempty"`
+	PathMappings   []PathMappingResponse    `json:"path_mappings,omitempty"`
+	Status         string                   `json:"status"`
+	Progress       *RestoreProgressResponse `json:"progress,omitempty"`
+	IsCrossAgent   bool                     `json:"is_cross_agent"`
+	StartedAt      string                   `json:"started_at,omitempty"`
+	CompletedAt    string                   `json:"completed_at,omitempty"`
+	ErrorMessage   string                   `json:"error_message,omitempty"`
+	CreatedAt      string                   `json:"created_at"`
+	// Cloud restore fields
+	IsCloudRestore      bool                          `json:"is_cloud_restore,omitempty"`
+	CloudTarget         *CloudRestoreTargetRequest    `json:"cloud_target,omitempty"`
+	CloudProgress       *CloudRestoreProgressResponse `json:"cloud_progress,omitempty"`
+	CloudTargetLocation string                        `json:"cloud_target_location,omitempty"`
+	VerifyUpload        bool                          `json:"verify_upload,omitempty"`
 }
 
 func toRestoreResponse(r *models.Restore) RestoreResponse {
@@ -481,8 +561,12 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 		IncludePaths: r.IncludePaths,
 		ExcludePaths: r.ExcludePaths,
 		Status:       string(r.Status),
+		IsCrossAgent: r.IsCrossAgentRestore(),
 		ErrorMessage: r.ErrorMessage,
 		CreatedAt:    r.CreatedAt.Format(time.RFC3339),
+	}
+	if r.SourceAgentID != nil {
+		resp.SourceAgentID = r.SourceAgentID.String()
 	}
 	if r.StartedAt != nil {
 		resp.StartedAt = r.StartedAt.Format(time.RFC3339)
@@ -490,13 +574,61 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 	if r.CompletedAt != nil {
 		resp.CompletedAt = r.CompletedAt.Format(time.RFC3339)
 	}
+	if r.Progress != nil {
+		resp.Progress = &RestoreProgressResponse{
+			FilesRestored: r.Progress.FilesRestored,
+			BytesRestored: r.Progress.BytesRestored,
+			TotalFiles:    r.Progress.TotalFiles,
+			TotalBytes:    r.Progress.TotalBytes,
+			CurrentFile:   r.Progress.CurrentFile,
+		}
+	}
+	for _, pm := range r.PathMappings {
+		resp.PathMappings = append(resp.PathMappings, PathMappingResponse{
+			SourcePath: pm.SourcePath,
+			TargetPath: pm.TargetPath,
+		})
+	}
+
+	// Add cloud restore fields
+	if r.IsCloudRestore() {
+		resp.IsCloudRestore = true
+		resp.CloudTargetLocation = r.CloudTargetLocation
+		resp.VerifyUpload = r.VerifyUpload
+
+		if r.CloudTarget != nil {
+			resp.CloudTarget = &CloudRestoreTargetRequest{
+				Type:       string(r.CloudTarget.Type),
+				Bucket:     r.CloudTarget.Bucket,
+				Prefix:     r.CloudTarget.Prefix,
+				Region:     r.CloudTarget.Region,
+				Endpoint:   r.CloudTarget.Endpoint,
+				UseSSL:     r.CloudTarget.UseSSL,
+				Repository: r.CloudTarget.Repository,
+				// Note: Credentials are not included in responses for security
+			}
+		}
+
+		if r.CloudProgress != nil {
+			resp.CloudProgress = &CloudRestoreProgressResponse{
+				TotalFiles:       r.CloudProgress.TotalFiles,
+				TotalBytes:       r.CloudProgress.TotalBytes,
+				UploadedFiles:    r.CloudProgress.UploadedFiles,
+				UploadedBytes:    r.CloudProgress.UploadedBytes,
+				CurrentFile:      r.CloudProgress.CurrentFile,
+				PercentComplete:  r.CloudProgress.PercentComplete(),
+				VerifiedChecksum: r.CloudProgress.VerifiedChecksum,
+			}
+		}
+	}
+
 	return resp
 }
 
 // CreateRestore creates a new restore job.
 //
 //	@Summary		Create restore
-//	@Description	Creates a new restore job to restore files from a snapshot
+//	@Description	Creates a new restore job to restore files from a snapshot. Supports cross-agent restores by specifying source_agent_id.
 //	@Tags			Restores
 //	@Accept			json
 //	@Produce		json
@@ -520,8 +652,8 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		return
 	}
 
-	// Parse IDs
-	agentID, err := uuid.Parse(req.AgentID)
+	// Parse target agent ID (where restore will execute)
+	targetAgentID, err := uuid.Parse(req.AgentID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent_id"})
 		return
@@ -533,7 +665,18 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		return
 	}
 
-	// Verify user access to agent
+	// Parse source agent ID if provided (for cross-agent restores)
+	var sourceAgentID uuid.UUID
+	isCrossAgent := req.SourceAgentID != ""
+	if isCrossAgent {
+		sourceAgentID, err = uuid.Parse(req.SourceAgentID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid source_agent_id"})
+			return
+		}
+	}
+
+	// Verify user access
 	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
@@ -541,15 +684,28 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		return
 	}
 
-	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
+	// Verify access to target agent
+	targetAgent, err := h.store.GetAgentByID(c.Request.Context(), targetAgentID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "target agent not found"})
+		return
+	}
+	if targetAgent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "target agent not found"})
 		return
 	}
 
-	if agent.OrgID != dbUser.OrgID {
-		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
-		return
+	// For cross-agent restores, verify access to source agent
+	if isCrossAgent {
+		sourceAgent, err := h.store.GetAgentByID(c.Request.Context(), sourceAgentID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "source agent not found"})
+			return
+		}
+		if sourceAgent.OrgID != dbUser.OrgID {
+			c.JSON(http.StatusNotFound, gin.H{"error": "source agent not found"})
+			return
+		}
 	}
 
 	// Verify repository access
@@ -566,8 +722,22 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		return
 	}
 
+	// Convert path mappings
+	var pathMappings []models.PathMapping
+	for _, pm := range req.PathMappings {
+		pathMappings = append(pathMappings, models.PathMapping{
+			SourcePath: pm.SourcePath,
+			TargetPath: pm.TargetPath,
+		})
+	}
+
 	// Create restore job
-	restore := models.NewRestore(agentID, repositoryID, req.SnapshotID, req.TargetPath, req.IncludePaths, req.ExcludePaths)
+	var restore *models.Restore
+	if isCrossAgent {
+		restore = models.NewCrossRestore(sourceAgentID, targetAgentID, repositoryID, req.SnapshotID, req.TargetPath, req.IncludePaths, req.ExcludePaths, pathMappings)
+	} else {
+		restore = models.NewRestore(targetAgentID, repositoryID, req.SnapshotID, req.TargetPath, req.IncludePaths, req.ExcludePaths)
+	}
 
 	if err := h.store.CreateRestore(c.Request.Context(), restore); err != nil {
 		h.logger.Error().Err(err).Msg("failed to create restore job")
@@ -575,12 +745,16 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		return
 	}
 
-	h.logger.Info().
+	logEvent := h.logger.Info().
 		Str("restore_id", restore.ID.String()).
 		Str("snapshot_id", req.SnapshotID).
-		Str("agent_id", req.AgentID).
+		Str("target_agent_id", req.AgentID).
 		Str("target_path", req.TargetPath).
-		Msg("restore job created")
+		Bool("is_cross_agent", isCrossAgent)
+	if isCrossAgent {
+		logEvent = logEvent.Str("source_agent_id", req.SourceAgentID)
+	}
+	logEvent.Msg("restore job created")
 
 	c.JSON(http.StatusCreated, toRestoreResponse(restore))
 }
@@ -662,6 +836,7 @@ func (h *SnapshotsHandler) PreviewRestore(c *gin.Context) {
 		Str("snapshot_id", req.SnapshotID).
 		Str("agent_id", req.AgentID).
 		Str("target_path", req.TargetPath).
+		Strs("include_paths", req.IncludePaths).
 		Msg("restore preview requested")
 
 	// Note: In a full implementation, this would communicate with the agent
@@ -677,6 +852,228 @@ func (h *SnapshotsHandler) PreviewRestore(c *gin.Context) {
 		ConflictCount:   0,
 		Files:           []RestorePreviewFileResponse{},
 		DiskSpaceNeeded: 0,
+		SelectedPaths:   req.IncludePaths,
+		SelectedSize:    0,
+	})
+}
+
+// CreateCloudRestore creates a new restore job that uploads to cloud storage.
+//
+//	@Summary		Create cloud restore
+//	@Description	Creates a new restore job that restores files from a snapshot and uploads to cloud storage (S3, B2, or another Restic repository)
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		CreateCloudRestoreRequest	true	"Cloud restore details"
+//	@Success		201		{object}	RestoreResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores/cloud [post]
+func (h *SnapshotsHandler) CreateCloudRestore(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	var req CreateCloudRestoreRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	// Validate cloud target type
+	targetType := models.CloudRestoreTargetType(req.CloudTarget.Type)
+	switch targetType {
+	case models.CloudTargetS3:
+		if req.CloudTarget.Bucket == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "bucket is required for S3 target"})
+			return
+		}
+		if req.CloudTarget.AccessKeyID == "" || req.CloudTarget.SecretAccessKey == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "access_key_id and secret_access_key are required for S3 target"})
+			return
+		}
+	case models.CloudTargetB2:
+		if req.CloudTarget.Bucket == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "bucket is required for B2 target"})
+			return
+		}
+		if req.CloudTarget.AccountID == "" || req.CloudTarget.ApplicationKey == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "account_id and application_key are required for B2 target"})
+			return
+		}
+	case models.CloudTargetRestic:
+		if req.CloudTarget.Repository == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "repository is required for Restic target"})
+			return
+		}
+		if req.CloudTarget.RepositoryPassword == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "repository_password is required for Restic target"})
+			return
+		}
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cloud target type: must be 's3', 'b2', or 'restic'"})
+		return
+	}
+
+	// Parse IDs
+	agentID, err := uuid.Parse(req.AgentID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent_id"})
+		return
+	}
+
+	repositoryID, err := uuid.Parse(req.RepositoryID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid repository_id"})
+		return
+	}
+
+	// Verify user access to agent
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	if agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify repository access
+	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repositoryID)
+	if err != nil || repo.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
+		return
+	}
+
+	// Verify snapshot exists
+	_, err = h.store.GetBackupBySnapshotID(c.Request.Context(), req.SnapshotID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	// Create cloud restore target
+	cloudTarget := &models.CloudRestoreTarget{
+		Type:               targetType,
+		Bucket:             req.CloudTarget.Bucket,
+		Prefix:             req.CloudTarget.Prefix,
+		Region:             req.CloudTarget.Region,
+		Endpoint:           req.CloudTarget.Endpoint,
+		AccessKeyID:        req.CloudTarget.AccessKeyID,
+		SecretAccessKey:    req.CloudTarget.SecretAccessKey,
+		UseSSL:             req.CloudTarget.UseSSL,
+		AccountID:          req.CloudTarget.AccountID,
+		ApplicationKey:     req.CloudTarget.ApplicationKey,
+		Repository:         req.CloudTarget.Repository,
+		RepositoryPassword: req.CloudTarget.RepositoryPassword,
+	}
+
+	// Create cloud restore job
+	restore := models.NewCloudRestore(agentID, repositoryID, req.SnapshotID, req.IncludePaths, req.ExcludePaths, cloudTarget, req.VerifyUpload)
+
+	if err := h.store.CreateRestore(c.Request.Context(), restore); err != nil {
+		h.logger.Error().Err(err).Msg("failed to create cloud restore job")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create cloud restore job"})
+		return
+	}
+
+	h.logger.Info().
+		Str("restore_id", restore.ID.String()).
+		Str("snapshot_id", req.SnapshotID).
+		Str("agent_id", req.AgentID).
+		Str("cloud_target_type", string(targetType)).
+		Bool("verify_upload", req.VerifyUpload).
+		Msg("cloud restore job created")
+
+	c.JSON(http.StatusCreated, toRestoreResponse(restore))
+}
+
+// GetCloudRestoreProgress returns the progress of a cloud restore upload operation.
+//
+//	@Summary		Get cloud restore progress
+//	@Description	Returns the current progress of a cloud restore upload operation
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Restore ID"
+//	@Success		200	{object}	CloudRestoreProgressResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores/{id}/progress [get]
+func (h *SnapshotsHandler) GetCloudRestoreProgress(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid restore ID"})
+		return
+	}
+
+	restore, err := h.store.GetRestoreByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
+		return
+	}
+
+	// Verify access through agent
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), restore.AgentID)
+	if err != nil || agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
+		return
+	}
+
+	// Check if this is a cloud restore
+	if !restore.IsCloudRestore() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "this is not a cloud restore operation"})
+		return
+	}
+
+	// Return progress
+	if restore.CloudProgress == nil {
+		c.JSON(http.StatusOK, CloudRestoreProgressResponse{
+			TotalFiles:       0,
+			TotalBytes:       0,
+			UploadedFiles:    0,
+			UploadedBytes:    0,
+			PercentComplete:  0,
+			VerifiedChecksum: false,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, CloudRestoreProgressResponse{
+		TotalFiles:       restore.CloudProgress.TotalFiles,
+		TotalBytes:       restore.CloudProgress.TotalBytes,
+		UploadedFiles:    restore.CloudProgress.UploadedFiles,
+		UploadedBytes:    restore.CloudProgress.UploadedBytes,
+		CurrentFile:      restore.CloudProgress.CurrentFile,
+		PercentComplete:  restore.CloudProgress.PercentComplete(),
+		VerifiedChecksum: restore.CloudProgress.VerifiedChecksum,
 	})
 }
 

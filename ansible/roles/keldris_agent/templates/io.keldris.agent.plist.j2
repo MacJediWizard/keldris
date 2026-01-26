@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Keldris Agent Launchd Service -->
+<!-- Managed by Ansible - do not edit manually -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ keldris_launchd_label }}</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ keldris_install_dir }}/{{ keldris_binary_name }}</string>
+        <string>daemon</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <{{ 'true' if keldris_service_enabled else 'false' }}/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>NetworkState</key>
+        <true/>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{ keldris_config_dir }}/agent.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{ keldris_config_dir }}/agent.error.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>KELDRIS_CONFIG_DIR</key>
+        <string>{{ keldris_config_dir }}</string>
+    </dict>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
