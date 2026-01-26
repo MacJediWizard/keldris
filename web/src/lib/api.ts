@@ -23,6 +23,10 @@ import type {
 	Announcement,
 	AnnouncementsResponse,
 	ApplyPolicyRequest,
+	CreateSavedFilterRequest,
+	SavedFilter,
+	SavedFiltersResponse,
+	UpdateSavedFilterRequest,
 	ApplyPolicyResponse,
 	AssignTagsRequest,
 	AuditLog,
@@ -2435,5 +2439,39 @@ export const templatesApi = {
 		fetchApi<ImportResult>(`/templates/${id}/use`, {
 			method: 'POST',
 			body: JSON.stringify(data),
+		}),
+};
+
+// Saved Filters API
+export const savedFiltersApi = {
+	list: async (entityType?: string): Promise<SavedFilter[]> => {
+		const endpoint = entityType
+			? `/filters?entity_type=${entityType}`
+			: '/filters';
+		const response = await fetchApi<SavedFiltersResponse>(endpoint);
+		return response.filters ?? [];
+	},
+
+	get: async (id: string): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>(`/filters/${id}`),
+
+	create: async (data: CreateSavedFilterRequest): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>('/filters', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateSavedFilterRequest,
+	): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>(`/filters/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/filters/${id}`, {
+			method: 'DELETE',
 		}),
 };
