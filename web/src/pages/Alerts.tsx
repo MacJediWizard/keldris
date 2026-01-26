@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
+import { SaveFilterButton } from '../components/features/SaveFilterButton';
+import { SavedFiltersDropdown } from '../components/features/SavedFiltersDropdown';
 import {
 	useAcknowledgeAlert,
 	useAlerts,
 	useResolveAlert,
 } from '../hooks/useAlerts';
 import { useSavedFilters } from '../hooks/useSavedFilters';
-import { SaveFilterButton } from '../components/features/SaveFilterButton';
-import { SavedFiltersDropdown } from '../components/features/SavedFiltersDropdown';
 import type { Alert, AlertStatus } from '../lib/types';
 import {
 	formatDate,
@@ -405,10 +405,7 @@ export function Alerts() {
 								onApplyFilter={handleApplyFilter}
 								currentFilters={currentFilters}
 							/>
-							<SaveFilterButton
-								entityType="alerts"
-								filters={currentFilters}
-							/>
+							<SaveFilterButton entityType="alerts" filters={currentFilters} />
 						</div>
 					</div>
 				</div>
