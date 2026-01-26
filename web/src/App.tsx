@@ -29,6 +29,7 @@ import { OrganizationSettings } from './pages/OrganizationSettings';
 import { PasswordPolicies } from './pages/PasswordPolicies';
 import { Policies } from './pages/Policies';
 import { RateLimitDashboard } from './pages/RateLimitDashboard';
+import { RateLimits } from './pages/RateLimits';
 import Reports from './pages/Reports';
 import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
@@ -115,6 +116,7 @@ function App() {
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />
 						<Route path="admin/rate-limits" element={<RateLimitDashboard />} />
+						<Route path="admin/rate-limit-configs" element={<RateLimits />} />
 						<Route path="account/sessions" element={<UserSessions />} />
 						<Route path="onboarding" element={<Onboarding />} />
 						<Route path="changelog" element={<Changelog />} />
