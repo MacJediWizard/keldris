@@ -2902,6 +2902,72 @@ export interface AnnouncementsResponse {
 	announcements: Announcement[];
 }
 
+// Backup Queue and Concurrency types
+export type BackupQueueStatus = 'queued' | 'started' | 'canceled';
+
+export interface BackupQueueEntry {
+	id: string;
+	org_id: string;
+	agent_id: string;
+	schedule_id: string;
+	priority: number;
+	queued_at: string;
+	started_at?: string;
+	status: BackupQueueStatus;
+	queue_position: number;
+}
+
+export interface BackupQueueEntryWithDetails extends BackupQueueEntry {
+	schedule_name: string;
+	agent_hostname: string;
+}
+
+export interface ConcurrencyStatus {
+	org_id: string;
+	org_limit?: number;
+	org_running_count: number;
+	org_queued_count: number;
+	agent_id?: string;
+	agent_limit?: number;
+	agent_running_count: number;
+	agent_queued_count: number;
+	can_start_now: boolean;
+	queue_position?: number;
+	estimated_wait_minutes?: number;
+}
+
+export interface BackupQueueSummary {
+	total_queued: number;
+	total_running: number;
+	avg_wait_minutes: number;
+	oldest_queued_at?: string;
+	queued_by_agent?: Record<string, number>;
+}
+
+export interface ConcurrencyResponse {
+	max_concurrent_backups?: number;
+	running_count: number;
+	queued_count: number;
+}
+
+export interface UpdateConcurrencyRequest {
+	max_concurrent_backups?: number;
+}
+
+export interface BackupQueueResponse {
+	queue: BackupQueueEntryWithDetails[];
+}
+
+// Extended Organization with concurrency settings
+export interface OrganizationWithConcurrency extends Organization {
+	max_concurrent_backups?: number;
+}
+
+// Extended Agent with concurrency settings
+export interface AgentWithConcurrency extends Agent {
+	max_concurrent_backups?: number;
+}
+
 // Backup Queue types for priority management
 export interface BackupQueueItem {
 	id: string;
@@ -2923,7 +2989,7 @@ export interface BackupQueueItem {
 	updated_at: string;
 }
 
-export interface BackupQueueSummary {
+export interface PriorityQueueSummary {
 	total_pending: number;
 	total_running: number;
 	high_priority: number;
@@ -2931,9 +2997,9 @@ export interface BackupQueueSummary {
 	low_priority: number;
 }
 
-export interface BackupQueueResponse {
+export interface PriorityQueueResponse {
 	queue: BackupQueueItem[];
-	summary: BackupQueueSummary;
+	summary: PriorityQueueSummary;
 }
 
 // IP Allowlist types
