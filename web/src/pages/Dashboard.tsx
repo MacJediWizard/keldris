@@ -69,6 +69,15 @@ export function Dashboard() {
 	const activeAgents = agents?.filter((a) => a.status === 'active').length ?? 0;
 	const enabledSchedules = schedules?.filter((s) => s.enabled).length ?? 0;
 	const recentBackups = backups?.slice(0, 5) ?? [];
+	const runningBackups = backups?.filter((b) => b.status === 'running') ?? [];
+
+	// Calculate priority queue summary from schedules
+	const priorityQueueSummary = {
+		high: schedules?.filter((s) => s.enabled && s.priority === 1).length ?? 0,
+		medium: schedules?.filter((s) => s.enabled && s.priority === 2).length ?? 0,
+		low: schedules?.filter((s) => s.enabled && s.priority === 3).length ?? 0,
+		preemptible: schedules?.filter((s) => s.enabled && s.preemptible).length ?? 0,
+	};
 
 	const isLoading =
 		agentsLoading || reposLoading || schedulesLoading || backupsLoading;
@@ -171,6 +180,182 @@ export function Dashboard() {
 						</svg>
 					}
 				/>
+			</div>
+
+			{/* Backup Queue Status */}
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+				<div className="flex items-center justify-between mb-4">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+						Backup Queue Status
+					</h2>
+					<Link
+						to="/schedules"
+						className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+					>
+						Manage Schedules
+					</Link>
+				</div>
+				{schedulesLoading ? (
+					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+						{[1, 2, 3, 4].map((i) => (
+							<div key={i} className="animate-pulse">
+								<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+								<div className="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded" />
+							</div>
+						))}
+					</div>
+				) : (
+					<div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+						<div>
+							<div className="flex items-center gap-1.5 mb-1">
+								<span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+								<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+									Running
+								</span>
+							</div>
+							<p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+								{runningBackups.length}
+							</p>
+						</div>
+						<div>
+							<div className="flex items-center gap-1.5 mb-1">
+								<svg
+									className="w-3 h-3 text-red-500"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M5 15l7-7 7 7"
+									/>
+								</svg>
+								<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+									High Priority
+								</span>
+							</div>
+							<p className="text-2xl font-bold text-red-600 dark:text-red-400">
+								{priorityQueueSummary.high}
+							</p>
+						</div>
+						<div>
+							<div className="flex items-center gap-1.5 mb-1">
+								<span className="w-2 h-2 bg-yellow-500 rounded-full" />
+								<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+									Medium
+								</span>
+							</div>
+							<p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+								{priorityQueueSummary.medium}
+							</p>
+						</div>
+						<div>
+							<div className="flex items-center gap-1.5 mb-1">
+								<svg
+									className="w-3 h-3 text-gray-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M19 9l-7 7-7-7"
+									/>
+								</svg>
+								<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+									Low Priority
+								</span>
+							</div>
+							<p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+								{priorityQueueSummary.low}
+							</p>
+						</div>
+						<div>
+							<div className="flex items-center gap-1.5 mb-1">
+								<svg
+									className="w-3 h-3 text-amber-500"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
+								<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+									Preemptible
+								</span>
+							</div>
+							<p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+								{priorityQueueSummary.preemptible}
+							</p>
+						</div>
+					</div>
+				)}
+				{enabledSchedules > 0 && !schedulesLoading && (
+					<div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+						<div className="flex items-center justify-between text-sm">
+							<span className="text-gray-600 dark:text-gray-400">
+								Total enabled schedules
+							</span>
+							<span className="font-medium text-gray-900 dark:text-white">
+								{enabledSchedules}
+							</span>
+						</div>
+						<div className="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+							<div className="h-full flex">
+								{priorityQueueSummary.high > 0 && (
+									<div
+										className="bg-red-500 h-full"
+										style={{
+											width: `${(priorityQueueSummary.high / enabledSchedules) * 100}%`,
+										}}
+									/>
+								)}
+								{priorityQueueSummary.medium > 0 && (
+									<div
+										className="bg-yellow-500 h-full"
+										style={{
+											width: `${(priorityQueueSummary.medium / enabledSchedules) * 100}%`,
+										}}
+									/>
+								)}
+								{priorityQueueSummary.low > 0 && (
+									<div
+										className="bg-gray-400 h-full"
+										style={{
+											width: `${(priorityQueueSummary.low / enabledSchedules) * 100}%`,
+										}}
+									/>
+								)}
+							</div>
+						</div>
+						<div className="mt-2 flex gap-4 text-xs text-gray-500 dark:text-gray-400">
+							<span className="flex items-center gap-1">
+								<span className="w-2 h-2 bg-red-500 rounded" />
+								High
+							</span>
+							<span className="flex items-center gap-1">
+								<span className="w-2 h-2 bg-yellow-500 rounded" />
+								Medium
+							</span>
+							<span className="flex items-center gap-1">
+								<span className="w-2 h-2 bg-gray-400 rounded" />
+								Low
+							</span>
+						</div>
+					</div>
+				)}
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

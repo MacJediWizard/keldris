@@ -76,6 +76,8 @@ type CreateScheduleRequest struct {
 	CompressionLevel   *string                     `json:"compression_level,omitempty"`
 	MaxFileSizeMB      *int                        `json:"max_file_size_mb,omitempty"` // Max file size in MB (0 = disabled)
 	OnMountUnavailable string                      `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
+	Priority           *int                        `json:"priority,omitempty"`   // 1=high, 2=medium, 3=low
+	Preemptible        *bool                       `json:"preemptible,omitempty"` // Can be preempted by higher priority
 	Enabled            *bool                       `json:"enabled,omitempty"`
 }
 
@@ -93,6 +95,8 @@ type UpdateScheduleRequest struct {
 	CompressionLevel   *string                     `json:"compression_level,omitempty"`
 	MaxFileSizeMB      *int                        `json:"max_file_size_mb,omitempty"` // Max file size in MB (0 = disabled)
 	OnMountUnavailable *string                     `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
+	Priority           *int                        `json:"priority,omitempty"`   // 1=high, 2=medium, 3=low
+	Preemptible        *bool                       `json:"preemptible,omitempty"` // Can be preempted by higher priority
 	Enabled            *bool                       `json:"enabled,omitempty"`
 }
 
@@ -323,6 +327,16 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		schedule.OnMountUnavailable = models.MountBehavior(req.OnMountUnavailable)
 	}
 
+	if req.Priority != nil {
+		if *req.Priority >= 1 && *req.Priority <= 3 {
+			schedule.Priority = models.SchedulePriority(*req.Priority)
+		}
+	}
+
+	if req.Preemptible != nil {
+		schedule.Preemptible = *req.Preemptible
+	}
+
 	if req.Enabled != nil {
 		schedule.Enabled = *req.Enabled
 	}
@@ -426,6 +440,14 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 	}
 	if req.OnMountUnavailable != nil {
 		schedule.OnMountUnavailable = models.MountBehavior(*req.OnMountUnavailable)
+	}
+	if req.Priority != nil {
+		if *req.Priority >= 1 && *req.Priority <= 3 {
+			schedule.Priority = models.SchedulePriority(*req.Priority)
+		}
+	}
+	if req.Preemptible != nil {
+		schedule.Preemptible = *req.Preemptible
 	}
 	if req.Enabled != nil {
 		schedule.Enabled = *req.Enabled
