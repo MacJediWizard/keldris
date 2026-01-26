@@ -8,6 +8,10 @@ import type {
 	AgentGroup,
 	AgentGroupsResponse,
 	AgentHealthHistoryResponse,
+	AgentImportJobResult,
+	AgentImportPreviewResponse,
+	AgentImportResponse,
+	AgentImportTemplateResponse,
 	AgentLogFilter,
 	AgentLogsResponse,
 	AgentSchedulesResponse,
@@ -23,10 +27,6 @@ import type {
 	Announcement,
 	AnnouncementsResponse,
 	ApplyPolicyRequest,
-	CreateSavedFilterRequest,
-	SavedFilter,
-	SavedFiltersResponse,
-	UpdateSavedFilterRequest,
 	ApplyPolicyResponse,
 	AssignTagsRequest,
 	AuditLog,
@@ -36,21 +36,32 @@ import type {
 	BackupCalendarResponse,
 	BackupDurationTrend,
 	BackupDurationTrendResponse,
+	BackupQueueResponse,
+	BackupQueueSummary,
 	BackupScript,
 	BackupScriptsResponse,
 	BackupSuccessRate,
 	BackupSuccessRatesResponse,
 	BackupsResponse,
+	BlockedRequestsResponse,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
+	BulkCloneResponse,
+	BulkCloneScheduleRequest,
 	CategoriesResponse,
 	CategoryInfo,
+	ChangePasswordRequest,
 	ChangelogEntry,
 	ChangelogResponse,
 	ClassificationLevelsResponse,
 	ClassificationRulesResponse,
 	ClassificationSummary,
+	CloneRepositoryRequest,
+	CloneRepositoryResponse,
+	CloneScheduleRequest,
+	CloudRestoreProgress,
 	ComplianceReport,
+	ConcurrencyResponse,
 	ConfigTemplate,
 	ConfigTemplatesResponse,
 	CostAlert,
@@ -65,18 +76,24 @@ import type {
 	CreateAlertRuleRequest,
 	CreateAnnouncementRequest,
 	CreateBackupScriptRequest,
+	CreateCloudRestoreRequest,
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
 	CreateExcludePatternRequest,
+	CreateIPAllowlistRequest,
+	CreateIPBanRequest,
 	CreateImmutabilityLockRequest,
 	CreateLegalHoldRequest,
+	CreateLifecyclePolicyRequest,
 	CreateMaintenanceWindowRequest,
+	CreateMetadataSchemaRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
 	CreatePathClassificationRuleRequest,
 	CreatePolicyRequest,
+	CreateRateLimitConfigRequest,
 	CreateRegistrationCodeRequest,
 	CreateRegistrationCodeResponse,
 	CreateReportScheduleRequest,
@@ -126,6 +143,12 @@ import type {
 	GeoReplicationSummary,
 	GeoReplicationSummaryResponse,
 	GeoReplicationUpdateRequest,
+	IPAllowlist,
+	IPAllowlistSettings,
+	IPAllowlistsResponse,
+	IPBan,
+	IPBansResponse,
+	IPBlockedAttemptsResponse,
 	ImmutabilityLock,
 	ImmutabilityLocksResponse,
 	ImmutabilityStatus,
@@ -141,10 +164,22 @@ import type {
 	KeyRecoveryResponse,
 	LegalHold,
 	LegalHoldsResponse,
+	LifecycleDeletionEvent,
+	LifecycleDeletionEventsResponse,
+	LifecycleDryRunRequest,
+	LifecycleDryRunResult,
+	LifecyclePoliciesResponse,
+	LifecyclePolicy,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
 	MembersResponse,
 	MessageResponse,
+	MetadataEntityType,
+	MetadataEntityTypesResponse,
+	MetadataFieldTypesResponse,
+	MetadataSchema,
+	MetadataSchemasResponse,
+	MetadataSearchResponse,
 	MountSnapshotRequest,
 	NotificationChannel,
 	NotificationChannelWithPreferencesResponse,
@@ -160,11 +195,19 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	PasswordExpirationInfo,
+	PasswordPolicy,
+	PasswordPolicyResponse,
+	PasswordRequirements,
 	PathClassificationRule,
 	PendingRegistration,
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	RateLimitConfig,
+	RateLimitConfigsResponse,
+	RateLimitDashboardStats,
+	RateLimitStatsResponse,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -191,6 +234,10 @@ import type {
 	RotateAPIKeyResponse,
 	RunDRTestRequest,
 	RunScheduleResponse,
+	SavedFilter,
+	SavedFiltersResponse,
+	CreateSavedFilterRequest,
+	UpdateSavedFilterRequest,
 	SSOGroupMapping,
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
@@ -230,16 +277,24 @@ import type {
 	UpdateAlertRuleRequest,
 	UpdateAnnouncementRequest,
 	UpdateBackupScriptRequest,
+	UpdateConcurrencyRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
+	UpdateEntityMetadataRequest,
 	UpdateExcludePatternRequest,
+	UpdateIPAllowlistRequest,
+	UpdateIPAllowlistSettingsRequest,
+	UpdateLifecyclePolicyRequest,
 	UpdateMaintenanceWindowRequest,
 	UpdateMemberRequest,
+	UpdateMetadataSchemaRequest,
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
+	UpdatePasswordPolicyRequest,
 	UpdatePathClassificationRuleRequest,
 	UpdatePolicyRequest,
+	UpdateRateLimitConfigRequest,
 	UpdateReportScheduleRequest,
 	UpdateRepositoryImmutabilitySettingsRequest,
 	UpdateRepositoryRequest,
@@ -254,6 +309,8 @@ import type {
 	UseTemplateRequest,
 	User,
 	UserSSOGroups,
+	UserSession,
+	UserSessionsResponse,
 	ValidateImportRequest,
 	ValidationResult,
 	Verification,
@@ -583,6 +640,15 @@ export const repositoriesApi = {
 
 	recoverKey: async (id: string): Promise<KeyRecoveryResponse> =>
 		fetchApi<KeyRecoveryResponse>(`/repositories/${id}/key/recover`),
+
+	clone: async (
+		id: string,
+		data: CloneRepositoryRequest,
+	): Promise<CloneRepositoryResponse> =>
+		fetchApi<CloneRepositoryResponse>(`/repositories/${id}/clone`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Repository Import API
@@ -654,6 +720,20 @@ export const schedulesApi = {
 		);
 		return response.replication_status ?? [];
 	},
+
+	clone: async (id: string, data: CloneScheduleRequest): Promise<Schedule> =>
+		fetchApi<Schedule>(`/schedules/${id}/clone`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	bulkClone: async (
+		data: BulkCloneScheduleRequest,
+	): Promise<BulkCloneResponse> =>
+		fetchApi<BulkCloneResponse>('/schedules/bulk-clone', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Policies API
@@ -897,6 +977,15 @@ export const restoresApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+
+	createCloud: async (data: CreateCloudRestoreRequest): Promise<Restore> =>
+		fetchApi<Restore>('/restores/cloud', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getProgress: async (id: string): Promise<CloudRestoreProgress> =>
+		fetchApi<CloudRestoreProgress>(`/restores/${id}/progress`),
 };
 
 // File History API
@@ -2439,6 +2528,472 @@ export const templatesApi = {
 		fetchApi<ImportResult>(`/templates/${id}/use`, {
 			method: 'POST',
 			body: JSON.stringify(data),
+		}),
+};
+
+// Metadata Schemas API
+export const metadataApi = {
+	listSchemas: async (
+		entityType: MetadataEntityType,
+	): Promise<MetadataSchema[]> => {
+		const response = await fetchApi<MetadataSchemasResponse>(
+			`/metadata/schemas?entity_type=${entityType}`,
+		);
+		return response.schemas ?? [];
+	},
+
+	getSchema: async (id: string): Promise<MetadataSchema> =>
+		fetchApi<MetadataSchema>(`/metadata/schemas/${id}`),
+
+	createSchema: async (
+		data: CreateMetadataSchemaRequest,
+	): Promise<MetadataSchema> =>
+		fetchApi<MetadataSchema>('/metadata/schemas', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateSchema: async (
+		id: string,
+		data: UpdateMetadataSchemaRequest,
+	): Promise<MetadataSchema> =>
+		fetchApi<MetadataSchema>(`/metadata/schemas/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteSchema: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/metadata/schemas/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getFieldTypes: async (): Promise<MetadataFieldTypesResponse> =>
+		fetchApi<MetadataFieldTypesResponse>('/metadata/schemas/types'),
+
+	getEntityTypes: async (): Promise<MetadataEntityTypesResponse> =>
+		fetchApi<MetadataEntityTypesResponse>('/metadata/schemas/entities'),
+
+	updateAgentMetadata: async (
+		agentId: string,
+		data: UpdateEntityMetadataRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agents/${agentId}/metadata`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	updateRepositoryMetadata: async (
+		repositoryId: string,
+		data: UpdateEntityMetadataRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/repositories/${repositoryId}/metadata`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	updateScheduleMetadata: async (
+		scheduleId: string,
+		data: UpdateEntityMetadataRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/schedules/${scheduleId}/metadata`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	search: async (
+		entityType: MetadataEntityType,
+		key: string,
+		value: string,
+	): Promise<MetadataSearchResponse> =>
+		fetchApi<MetadataSearchResponse>(
+			`/metadata/search?entity_type=${entityType}&key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}`,
+		),
+};
+
+// Agent Import API
+export const agentImportApi = {
+	preview: async (
+		file: File,
+		options?: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+			createMissingGroups?: boolean;
+			tokenExpiryHours?: number;
+		},
+	): Promise<AgentImportPreviewResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options) {
+			formData.append('options', JSON.stringify(options));
+		}
+		const response = await fetch(`${API_BASE}/agents/import/preview`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportPreviewResponse>(response);
+	},
+
+	import: async (
+		file: File,
+		options?: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+			createMissingGroups?: boolean;
+			tokenExpiryHours?: number;
+		},
+	): Promise<AgentImportResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options) {
+			formData.append('options', JSON.stringify(options));
+		}
+		const response = await fetch(`${API_BASE}/agents/import`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportResponse>(response);
+	},
+
+	getTemplate: async (
+		format: 'json' | 'csv' = 'csv',
+	): Promise<AgentImportTemplateResponse> =>
+		fetchApi<AgentImportTemplateResponse>(
+			`/agents/import/template?format=${format}`,
+		),
+
+	downloadTemplate: async (): Promise<Blob> => {
+		const response = await fetch(
+			`${API_BASE}/agents/import/template/download`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to download template');
+		}
+		return response.blob();
+	},
+
+	generateScript: async (data: {
+		hostname: string;
+		registration_code: string;
+	}): Promise<{ script: string }> =>
+		fetchApi<{ script: string }>('/agents/import/script', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	exportTokens: async (results: AgentImportJobResult[]): Promise<Blob> => {
+		const response = await fetch(`${API_BASE}/agents/import/export-tokens`, {
+			method: 'POST',
+			credentials: 'include',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ results }),
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export tokens');
+		}
+		return response.blob();
+	},
+};
+
+// Backup Queue API
+export const backupQueueApi = {
+	list: async (): Promise<BackupQueueResponse['queue']> => {
+		const response = await fetchApi<BackupQueueResponse>('/backup-queue');
+		return response.queue ?? [];
+	},
+
+	getSummary: async (): Promise<BackupQueueSummary> =>
+		fetchApi<BackupQueueSummary>('/backup-queue/summary'),
+
+	cancel: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/backup-queue/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Concurrency API
+export const concurrencyApi = {
+	getOrgConcurrency: async (orgId: string): Promise<ConcurrencyResponse> =>
+		fetchApi<ConcurrencyResponse>(`/organizations/${orgId}/concurrency`),
+
+	updateOrgConcurrency: async (
+		orgId: string,
+		data: UpdateConcurrencyRequest,
+	): Promise<ConcurrencyResponse> =>
+		fetchApi<ConcurrencyResponse>(`/organizations/${orgId}/concurrency`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	getAgentConcurrency: async (agentId: string): Promise<ConcurrencyResponse> =>
+		fetchApi<ConcurrencyResponse>(`/agents/${agentId}/concurrency`),
+
+	updateAgentConcurrency: async (
+		agentId: string,
+		data: UpdateConcurrencyRequest,
+	): Promise<ConcurrencyResponse> =>
+		fetchApi<ConcurrencyResponse>(`/agents/${agentId}/concurrency`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+};
+
+// IP Allowlists API
+export const ipAllowlistsApi = {
+	list: async (): Promise<IPAllowlist[]> => {
+		const response = await fetchApi<IPAllowlistsResponse>('/ip-allowlists');
+		return response.allowlists ?? [];
+	},
+
+	get: async (id: string): Promise<IPAllowlist> =>
+		fetchApi<IPAllowlist>(`/ip-allowlists/${id}`),
+
+	create: async (data: CreateIPAllowlistRequest): Promise<IPAllowlist> =>
+		fetchApi<IPAllowlist>('/ip-allowlists', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateIPAllowlistRequest,
+	): Promise<IPAllowlist> =>
+		fetchApi<IPAllowlist>(`/ip-allowlists/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/ip-allowlists/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getSettings: async (): Promise<IPAllowlistSettings> =>
+		fetchApi<IPAllowlistSettings>('/ip-allowlists/settings'),
+
+	updateSettings: async (
+		data: UpdateIPAllowlistSettingsRequest,
+	): Promise<IPAllowlistSettings> =>
+		fetchApi<IPAllowlistSettings>('/ip-allowlists/settings', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	listBlockedAttempts: async (
+		limit = 50,
+		offset = 0,
+	): Promise<IPBlockedAttemptsResponse> =>
+		fetchApi<IPBlockedAttemptsResponse>(
+			`/ip-allowlists/blocked?limit=${limit}&offset=${offset}`,
+		),
+};
+
+// Lifecycle Policies API
+export const lifecyclePoliciesApi = {
+	list: async (): Promise<LifecyclePolicy[]> => {
+		const response = await fetchApi<LifecyclePoliciesResponse>(
+			'/lifecycle-policies',
+		);
+		return response.policies ?? [];
+	},
+
+	get: async (id: string): Promise<LifecyclePolicy> =>
+		fetchApi<LifecyclePolicy>(`/lifecycle-policies/${id}`),
+
+	create: async (
+		data: CreateLifecyclePolicyRequest,
+	): Promise<LifecyclePolicy> =>
+		fetchApi<LifecyclePolicy>('/lifecycle-policies', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateLifecyclePolicyRequest,
+	): Promise<LifecyclePolicy> =>
+		fetchApi<LifecyclePolicy>(`/lifecycle-policies/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/lifecycle-policies/${id}`, {
+			method: 'DELETE',
+		}),
+
+	dryRun: async (id: string): Promise<LifecycleDryRunResult> =>
+		fetchApi<LifecycleDryRunResult>(`/lifecycle-policies/${id}/dry-run`, {
+			method: 'POST',
+		}),
+
+	preview: async (
+		data: LifecycleDryRunRequest,
+	): Promise<LifecycleDryRunResult> =>
+		fetchApi<LifecycleDryRunResult>('/lifecycle-policies/preview', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	listDeletions: async (
+		policyId: string,
+		limit?: number,
+	): Promise<LifecycleDeletionEvent[]> => {
+		const params = new URLSearchParams();
+		if (limit) params.set('limit', limit.toString());
+		const query = params.toString();
+		const response = await fetchApi<LifecycleDeletionEventsResponse>(
+			`/lifecycle-policies/${policyId}/deletions${query ? `?${query}` : ''}`,
+		);
+		return response.events ?? [];
+	},
+
+	listOrgDeletions: async (
+		limit?: number,
+	): Promise<LifecycleDeletionEvent[]> => {
+		const params = new URLSearchParams();
+		if (limit) params.set('limit', limit.toString());
+		const query = params.toString();
+		const response = await fetchApi<LifecycleDeletionEventsResponse>(
+			`/lifecycle-policies/deletions${query ? `?${query}` : ''}`,
+		);
+		return response.events ?? [];
+	},
+};
+
+// Password API
+export const passwordApi = {
+	changePassword: async (
+		data: ChangePasswordRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/auth/password', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getExpiration: async (): Promise<PasswordExpirationInfo> =>
+		fetchApi<PasswordExpirationInfo>('/auth/password/expiration'),
+};
+
+// Password Policies API
+export const passwordPoliciesApi = {
+	get: async (): Promise<PasswordPolicyResponse> =>
+		fetchApi<PasswordPolicyResponse>('/password-policies'),
+
+	getRequirements: async (): Promise<PasswordRequirements> =>
+		fetchApi<PasswordRequirements>('/password-policies/requirements'),
+
+	update: async (data: UpdatePasswordPolicyRequest): Promise<PasswordPolicy> =>
+		fetchApi<PasswordPolicy>('/password-policies', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	validatePassword: async (
+		password: string,
+	): Promise<{ valid: boolean; errors?: string[]; warnings?: string[] }> =>
+		fetchApi<{ valid: boolean; errors?: string[]; warnings?: string[] }>(
+			'/password-policies/validate',
+			{
+				method: 'POST',
+				body: JSON.stringify({ password }),
+			},
+		),
+};
+
+// IP Bans API
+export const ipBansApi = {
+	list: async (): Promise<IPBan[]> => {
+		const response = await fetchApi<IPBansResponse>('/ip-bans');
+		return response.bans ?? [];
+	},
+
+	create: async (data: CreateIPBanRequest): Promise<IPBan> =>
+		fetchApi<IPBan>('/ip-bans', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/ip-bans/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Rate Limit Configs API
+export const rateLimitConfigsApi = {
+	list: async (): Promise<RateLimitConfig[]> => {
+		const response = await fetchApi<RateLimitConfigsResponse>(
+			'/rate-limit-configs',
+		);
+		return response.configs ?? [];
+	},
+
+	get: async (id: string): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>(`/rate-limit-configs/${id}`),
+
+	create: async (
+		data: CreateRateLimitConfigRequest,
+	): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>('/rate-limit-configs', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateRateLimitConfigRequest,
+	): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>(`/rate-limit-configs/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/rate-limit-configs/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getStats: async (): Promise<RateLimitStatsResponse> =>
+		fetchApi<RateLimitStatsResponse>('/rate-limit-configs/stats'),
+
+	listBlocked: async (): Promise<BlockedRequestsResponse> =>
+		fetchApi<BlockedRequestsResponse>('/rate-limit-configs/blocked'),
+};
+
+// Rate Limits API (Dashboard)
+export const rateLimitsApi = {
+	getDashboardStats: async (): Promise<RateLimitDashboardStats> =>
+		fetchApi<RateLimitDashboardStats>('/admin/rate-limits'),
+};
+
+// User Sessions API
+export const userSessionsApi = {
+	list: async (): Promise<UserSession[]> => {
+		const response = await fetchApi<UserSessionsResponse>('/user-sessions');
+		return response.sessions ?? [];
+	},
+
+	revoke: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/user-sessions/${id}`, {
+			method: 'DELETE',
+		}),
+
+	revokeAll: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/user-sessions', {
+			method: 'DELETE',
 		}),
 };
 

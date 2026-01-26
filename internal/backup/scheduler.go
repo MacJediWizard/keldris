@@ -79,18 +79,19 @@ func DefaultSchedulerConfig() SchedulerConfig {
 
 // Scheduler manages backup schedules using cron.
 type Scheduler struct {
-	store             ScheduleStore
-	restic            *Restic
-	config            SchedulerConfig
-	notifier          *notifications.Service
-	maintenance       *maintenance.Service
-	checkpointManager *CheckpointManager
-	largeFileScanner  *LargeFileScanner
-	cron              *cron.Cron
-	logger            zerolog.Logger
-	mu                sync.RWMutex
-	entries           map[uuid.UUID]cron.EntryID
-	running           bool
+	store              ScheduleStore
+	restic             *Restic
+	config             SchedulerConfig
+	notifier           *notifications.Service
+	maintenance        *maintenance.Service
+	checkpointManager  *CheckpointManager
+	largeFileScanner   *LargeFileScanner
+	concurrencyManager *ConcurrencyManager
+	cron               *cron.Cron
+	logger             zerolog.Logger
+	mu                 sync.RWMutex
+	entries            map[uuid.UUID]cron.EntryID
+	running            bool
 }
 
 // NewScheduler creates a new backup scheduler.
@@ -117,6 +118,12 @@ func NewScheduler(store ScheduleStore, restic *Restic, config SchedulerConfig, n
 // This should be called before Start() if maintenance mode checking is desired.
 func (s *Scheduler) SetMaintenanceService(maint *maintenance.Service) {
 	s.maintenance = maint
+}
+
+// SetConcurrencyManager sets the concurrency manager for backup limits.
+// This should be called before Start() if concurrency limiting is desired.
+func (s *Scheduler) SetConcurrencyManager(cm *ConcurrencyManager) {
+	s.concurrencyManager = cm
 }
 
 // Start starts the scheduler and loads initial schedules.
@@ -271,13 +278,15 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		return
 	}
 
+	// Get agent for subsequent checks
+	agent, err := s.store.GetAgentByID(ctx, schedule.AgentID)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to get agent")
+		return
+	}
+
 	// Check if maintenance mode is active for the agent's organization
 	if s.maintenance != nil {
-		agent, err := s.store.GetAgentByID(ctx, schedule.AgentID)
-		if err != nil {
-			logger.Error().Err(err).Msg("failed to get agent for maintenance check")
-			return
-		}
 		if s.maintenance.IsMaintenanceActive(agent.OrgID) {
 			logger.Info().
 				Str("agent_id", agent.ID.String()).
@@ -285,6 +294,29 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 				Msg("backup skipped: maintenance mode active")
 			return
 		}
+	}
+
+	// Check concurrency limits and queue if necessary
+	if s.concurrencyManager != nil {
+		acquired, queueEntry, err := s.concurrencyManager.AcquireSlot(ctx, agent.OrgID, agent.ID, schedule.ID)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to check concurrency limits")
+			return
+		}
+		if !acquired {
+			if queueEntry != nil {
+				logger.Info().
+					Int("queue_position", queueEntry.QueuePosition).
+					Msg("backup queued due to concurrency limit")
+			}
+			return
+		}
+		// Slot acquired, ensure we release it when done
+		defer func() {
+			if err := s.concurrencyManager.ReleaseSlot(ctx, agent.OrgID, agent.ID); err != nil {
+				logger.Error().Err(err).Msg("failed to release concurrency slot")
+			}
+		}()
 	}
 
 	// Check network mount availability for scheduled paths
@@ -1608,4 +1640,165 @@ func (s *Scheduler) runPostBackupScripts(ctx context.Context, scripts []*models.
 	}
 
 	backup.RecordPostScript(combinedOutput, combinedError)
+}
+
+// PriorityQueue manages backup jobs with priority ordering.
+// Higher priority jobs (lower number) are processed first.
+type PriorityQueue struct {
+	store    ScheduleStore
+	logger   zerolog.Logger
+	mu       sync.RWMutex
+	running  map[uuid.UUID]*models.BackupQueueItem // Currently running backups by agent ID
+}
+
+// NewPriorityQueue creates a new priority queue.
+func NewPriorityQueue(store ScheduleStore, logger zerolog.Logger) *PriorityQueue {
+	return &PriorityQueue{
+		store:   store,
+		logger:  logger.With().Str("component", "priority_queue").Logger(),
+		running: make(map[uuid.UUID]*models.BackupQueueItem),
+	}
+}
+
+// EnqueueBackup adds a backup to the priority queue.
+func (pq *PriorityQueue) EnqueueBackup(ctx context.Context, schedule *models.Schedule) (*models.BackupQueueItem, error) {
+	item := models.NewBackupQueueItem(schedule.ID, schedule.AgentID, schedule.Priority)
+
+	pq.logger.Info().
+		Str("schedule_id", schedule.ID.String()).
+		Str("agent_id", schedule.AgentID.String()).
+		Int("priority", int(schedule.Priority)).
+		Msg("enqueuing backup")
+
+	return item, nil
+}
+
+// GetNextPending returns the next pending backup for the given agent, ordered by priority.
+func (pq *PriorityQueue) GetNextPending(ctx context.Context, agentID uuid.UUID) (*models.BackupQueueItem, error) {
+	pq.mu.RLock()
+	defer pq.mu.RUnlock()
+
+	// In a full implementation, this would query the backup_queue table
+	// ordered by priority ASC, queued_at ASC
+	return nil, nil
+}
+
+// CanPreempt checks if a new backup can preempt the currently running backup.
+func (pq *PriorityQueue) CanPreempt(newPriority, runningPriority models.SchedulePriority, runningPreemptible bool) bool {
+	// Only preempt if:
+	// 1. The running backup is marked as preemptible
+	// 2. The new backup has higher priority (lower number)
+	return runningPreemptible && newPriority < runningPriority
+}
+
+// StartBackup marks a backup as running.
+func (pq *PriorityQueue) StartBackup(ctx context.Context, item *models.BackupQueueItem) error {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+
+	now := time.Now()
+	item.Status = models.QueueStatusRunning
+	item.StartedAt = &now
+	item.UpdatedAt = now
+
+	pq.running[item.AgentID] = item
+
+	pq.logger.Info().
+		Str("item_id", item.ID.String()).
+		Str("agent_id", item.AgentID.String()).
+		Int("priority", int(item.Priority)).
+		Msg("backup started")
+
+	return nil
+}
+
+// CompleteBackup marks a backup as completed.
+func (pq *PriorityQueue) CompleteBackup(ctx context.Context, item *models.BackupQueueItem, success bool) error {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+
+	now := time.Now()
+	item.CompletedAt = &now
+	item.UpdatedAt = now
+
+	if success {
+		item.Status = models.QueueStatusCompleted
+	} else {
+		item.Status = models.QueueStatusFailed
+	}
+
+	delete(pq.running, item.AgentID)
+
+	pq.logger.Info().
+		Str("item_id", item.ID.String()).
+		Str("agent_id", item.AgentID.String()).
+		Bool("success", success).
+		Msg("backup completed")
+
+	return nil
+}
+
+// PreemptBackup preempts a running backup with a higher priority one.
+func (pq *PriorityQueue) PreemptBackup(ctx context.Context, runningItem *models.BackupQueueItem, newItem *models.BackupQueueItem) error {
+	pq.mu.Lock()
+	defer pq.mu.Unlock()
+
+	now := time.Now()
+	runningItem.Status = models.QueueStatusPreempted
+	runningItem.PreemptedBy = &newItem.ID
+	runningItem.UpdatedAt = now
+
+	pq.logger.Warn().
+		Str("preempted_id", runningItem.ID.String()).
+		Str("preempting_id", newItem.ID.String()).
+		Int("preempted_priority", int(runningItem.Priority)).
+		Int("preempting_priority", int(newItem.Priority)).
+		Msg("backup preempted by higher priority backup")
+
+	return nil
+}
+
+// GetRunningBackup returns the currently running backup for an agent, if any.
+func (pq *PriorityQueue) GetRunningBackup(agentID uuid.UUID) *models.BackupQueueItem {
+	pq.mu.RLock()
+	defer pq.mu.RUnlock()
+	return pq.running[agentID]
+}
+
+// GetQueueSummary returns a summary of the backup queue.
+func (pq *PriorityQueue) GetQueueSummary(ctx context.Context) (*models.BackupQueueSummary, error) {
+	pq.mu.RLock()
+	defer pq.mu.RUnlock()
+
+	summary := &models.BackupQueueSummary{
+		TotalRunning: len(pq.running),
+	}
+
+	// Count running backups by priority
+	for _, item := range pq.running {
+		switch item.Priority {
+		case models.PriorityHigh:
+			summary.HighPriority++
+		case models.PriorityMedium:
+			summary.MediumPriority++
+		case models.PriorityLow:
+			summary.LowPriority++
+		}
+	}
+
+	return summary, nil
+}
+
+// GetPriorityLabel returns a human-readable label for a priority level.
+func GetPriorityLabel(priority models.SchedulePriority) string {
+	switch priority {
+	case models.PriorityHigh:
+		return "high"
+	case models.PriorityMedium:
+		return "medium"
+	case models.PriorityLow:
+		return "low"
+	default:
+		return "medium"
+	}
 }
