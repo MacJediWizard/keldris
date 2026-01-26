@@ -79,18 +79,19 @@ func DefaultSchedulerConfig() SchedulerConfig {
 
 // Scheduler manages backup schedules using cron.
 type Scheduler struct {
-	store             ScheduleStore
-	restic            *Restic
-	config            SchedulerConfig
-	notifier          *notifications.Service
-	maintenance       *maintenance.Service
-	checkpointManager *CheckpointManager
-	largeFileScanner  *LargeFileScanner
-	cron              *cron.Cron
-	logger            zerolog.Logger
-	mu                sync.RWMutex
-	entries           map[uuid.UUID]cron.EntryID
-	running           bool
+	store              ScheduleStore
+	restic             *Restic
+	config             SchedulerConfig
+	notifier           *notifications.Service
+	maintenance        *maintenance.Service
+	checkpointManager  *CheckpointManager
+	largeFileScanner   *LargeFileScanner
+	concurrencyManager *ConcurrencyManager
+	cron               *cron.Cron
+	logger             zerolog.Logger
+	mu                 sync.RWMutex
+	entries            map[uuid.UUID]cron.EntryID
+	running            bool
 }
 
 // NewScheduler creates a new backup scheduler.
@@ -117,6 +118,12 @@ func NewScheduler(store ScheduleStore, restic *Restic, config SchedulerConfig, n
 // This should be called before Start() if maintenance mode checking is desired.
 func (s *Scheduler) SetMaintenanceService(maint *maintenance.Service) {
 	s.maintenance = maint
+}
+
+// SetConcurrencyManager sets the concurrency manager for backup limits.
+// This should be called before Start() if concurrency limiting is desired.
+func (s *Scheduler) SetConcurrencyManager(cm *ConcurrencyManager) {
+	s.concurrencyManager = cm
 }
 
 // Start starts the scheduler and loads initial schedules.
@@ -271,13 +278,15 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		return
 	}
 
+	// Get agent for subsequent checks
+	agent, err := s.store.GetAgentByID(ctx, schedule.AgentID)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to get agent")
+		return
+	}
+
 	// Check if maintenance mode is active for the agent's organization
 	if s.maintenance != nil {
-		agent, err := s.store.GetAgentByID(ctx, schedule.AgentID)
-		if err != nil {
-			logger.Error().Err(err).Msg("failed to get agent for maintenance check")
-			return
-		}
 		if s.maintenance.IsMaintenanceActive(agent.OrgID) {
 			logger.Info().
 				Str("agent_id", agent.ID.String()).
@@ -285,6 +294,29 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 				Msg("backup skipped: maintenance mode active")
 			return
 		}
+	}
+
+	// Check concurrency limits and queue if necessary
+	if s.concurrencyManager != nil {
+		acquired, queueEntry, err := s.concurrencyManager.AcquireSlot(ctx, agent.OrgID, agent.ID, schedule.ID)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to check concurrency limits")
+			return
+		}
+		if !acquired {
+			if queueEntry != nil {
+				logger.Info().
+					Int("queue_position", queueEntry.QueuePosition).
+					Msg("backup queued due to concurrency limit")
+			}
+			return
+		}
+		// Slot acquired, ensure we release it when done
+		defer func() {
+			if err := s.concurrencyManager.ReleaseSlot(ctx, agent.OrgID, agent.ID); err != nil {
+				logger.Error().Err(err).Msg("failed to release concurrency slot")
+			}
+		}()
 	}
 
 	// Check network mount availability for scheduled paths
