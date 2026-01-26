@@ -16,15 +16,7 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
-import {
-	FormLabelWithHelp,
-	HelpTooltip,
-} from '../components/ui/HelpTooltip';
-import {
-	scheduleHelp,
-	retentionHelp,
-	advancedSettingsHelp,
-} from '../lib/help-content';
+import { FormLabelWithHelp, HelpTooltip } from '../components/ui/HelpTooltip';
 import { useAgents } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { usePolicies } from '../hooks/usePolicies';
@@ -37,6 +29,11 @@ import {
 	useSchedules,
 	useUpdateSchedule,
 } from '../hooks/useSchedules';
+import {
+	advancedSettingsHelp,
+	retentionHelp,
+	scheduleHelp,
+} from '../lib/help-content';
 import type {
 	CompressionLevel,
 	DryRunResponse,

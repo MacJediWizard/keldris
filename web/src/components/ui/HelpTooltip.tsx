@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface HelpTooltipProps {
 	content: string;
@@ -74,6 +74,7 @@ export function HelpTooltip({
 	// Simple markdown-like parsing for bold and code
 	const parseContent = (text: string) => {
 		const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+		// biome-ignore lint/suspicious/noArrayIndexKey: Static text parsing, order never changes
 		return parts.map((part, index) => {
 			if (part.startsWith('**') && part.endsWith('**')) {
 				return (
