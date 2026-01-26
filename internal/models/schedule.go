@@ -40,29 +40,30 @@ const (
 // or to an agent group (via AgentGroupID). When AgentGroupID is set,
 // the schedule applies to all agents in that group.
 type Schedule struct {
-	ID                      uuid.UUID            `json:"id"`
-	AgentID                 uuid.UUID            `json:"agent_id"`
-	AgentGroupID            *uuid.UUID           `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
-	PolicyID                *uuid.UUID           `json:"policy_id,omitempty"`      // Policy this schedule was created from
-	Name                    string               `json:"name"`
-	CronExpression          string               `json:"cron_expression"`
-	Paths                   []string             `json:"paths"`
-	Excludes                []string             `json:"excludes,omitempty"`
-	RetentionPolicy         *RetentionPolicy     `json:"retention_policy,omitempty"`
-	BandwidthLimitKB        *int                 `json:"bandwidth_limit_kb,omitempty"`   // Upload limit in KB/s
-	BackupWindow            *BackupWindow        `json:"backup_window,omitempty"`        // Allowed backup time window
-	ExcludedHours           []int                `json:"excluded_hours,omitempty"`       // Hours (0-23) when backups should not run
-	CompressionLevel        *string              `json:"compression_level,omitempty"`    // Compression level: off, auto, max
-	MaxFileSizeMB           *int                 `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
-	OnMountUnavailable      MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
-	ClassificationLevel     string               `json:"classification_level,omitempty"` // Data classification level: public, internal, confidential, restricted
-	ClassificationDataTypes []string             `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
-	Priority                SchedulePriority     `json:"priority"`                       // Backup priority: 1=high, 2=medium, 3=low
-	Preemptible             bool                 `json:"preemptible"`                    // Can be preempted by higher priority backups
-	Enabled                 bool                 `json:"enabled"`
-	Repositories            []ScheduleRepository `json:"repositories,omitempty"`
-	CreatedAt               time.Time            `json:"created_at"`
-	UpdatedAt               time.Time            `json:"updated_at"`
+	ID                      uuid.UUID              `json:"id"`
+	AgentID                 uuid.UUID              `json:"agent_id"`
+	AgentGroupID            *uuid.UUID             `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
+	PolicyID                *uuid.UUID             `json:"policy_id,omitempty"`      // Policy this schedule was created from
+	Name                    string                 `json:"name"`
+	CronExpression          string                 `json:"cron_expression"`
+	Paths                   []string               `json:"paths"`
+	Excludes                []string               `json:"excludes,omitempty"`
+	RetentionPolicy         *RetentionPolicy       `json:"retention_policy,omitempty"`
+	BandwidthLimitKB        *int                   `json:"bandwidth_limit_kb,omitempty"`   // Upload limit in KB/s
+	BackupWindow            *BackupWindow          `json:"backup_window,omitempty"`        // Allowed backup time window
+	ExcludedHours           []int                  `json:"excluded_hours,omitempty"`       // Hours (0-23) when backups should not run
+	CompressionLevel        *string                `json:"compression_level,omitempty"`    // Compression level: off, auto, max
+	MaxFileSizeMB           *int                   `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
+	OnMountUnavailable      MountBehavior          `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
+	ClassificationLevel     string                 `json:"classification_level,omitempty"` // Data classification level: public, internal, confidential, restricted
+	ClassificationDataTypes []string               `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	Priority                SchedulePriority       `json:"priority"`                       // Backup priority: 1=high, 2=medium, 3=low
+	Preemptible             bool                   `json:"preemptible"`                    // Can be preempted by higher priority backups
+	Metadata                map[string]interface{} `json:"metadata,omitempty"`
+	Enabled                 bool                   `json:"enabled"`
+	Repositories            []ScheduleRepository   `json:"repositories,omitempty"`
+	CreatedAt               time.Time              `json:"created_at"`
+	UpdatedAt               time.Time              `json:"updated_at"`
 }
 
 // NewSchedule creates a new Schedule with the given details.
@@ -297,6 +298,23 @@ func (s *Schedule) ClassificationDataTypesJSON() ([]byte, error) {
 	return json.Marshal(s.ClassificationDataTypes)
 }
 
+// SetMetadata sets the metadata from JSON bytes.
+func (s *Schedule) SetMetadata(data []byte) error {
+	if len(data) == 0 {
+		s.Metadata = make(map[string]interface{})
+		return nil
+	}
+	return json.Unmarshal(data, &s.Metadata)
+}
+
+// MetadataJSON returns the metadata as JSON bytes for database storage.
+func (s *Schedule) MetadataJSON() ([]byte, error) {
+	if s.Metadata == nil {
+		return []byte("{}"), nil
+	}
+	return json.Marshal(s.Metadata)
+}
+
 // BackupQueueStatus represents the status of a backup queue item.
 type BackupQueueStatus string
 
@@ -347,9 +365,9 @@ func NewBackupQueueItem(scheduleID, agentID uuid.UUID, priority SchedulePriority
 
 // BackupQueueSummary provides a summary of the backup queue for display.
 type BackupQueueSummary struct {
-	TotalPending  int `json:"total_pending"`
-	TotalRunning  int `json:"total_running"`
-	HighPriority  int `json:"high_priority"`
+	TotalPending   int `json:"total_pending"`
+	TotalRunning   int `json:"total_running"`
+	HighPriority   int `json:"high_priority"`
 	MediumPriority int `json:"medium_priority"`
-	LowPriority   int `json:"low_priority"`
+	LowPriority    int `json:"low_priority"`
 }
