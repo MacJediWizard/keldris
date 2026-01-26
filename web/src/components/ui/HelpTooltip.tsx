@@ -74,9 +74,9 @@ export function HelpTooltip({
 	// Simple markdown-like parsing for bold and code
 	const parseContent = (text: string) => {
 		const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-		// biome-ignore lint/suspicious/noArrayIndexKey: Static text parsing, order never changes
 		return parts.map((part, index) => {
 			if (part.startsWith('**') && part.endsWith('**')) {
+				// biome-ignore lint/suspicious/noArrayIndexKey: Static text parsing, order never changes
 				return (
 					<strong key={index} className="font-semibold text-white">
 						{part.slice(2, -2)}
@@ -84,6 +84,7 @@ export function HelpTooltip({
 				);
 			}
 			if (part.startsWith('`') && part.endsWith('`')) {
+				// biome-ignore lint/suspicious/noArrayIndexKey: Static text parsing, order never changes
 				return (
 					<code
 						key={index}
@@ -130,9 +131,7 @@ export function HelpTooltip({
 					role="tooltip"
 					className={`absolute z-50 w-64 px-3 py-2 text-sm text-gray-100 bg-gray-800 dark:bg-gray-700 rounded-lg shadow-lg ${positionClasses[tooltipPosition]}`}
 				>
-					{title && (
-						<div className="font-medium text-white mb-1">{title}</div>
-					)}
+					{title && <div className="font-medium text-white mb-1">{title}</div>}
 					<div className="text-gray-300 leading-relaxed">
 						{parseContent(content)}
 					</div>
