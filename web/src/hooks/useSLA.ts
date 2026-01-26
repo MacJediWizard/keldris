@@ -79,7 +79,9 @@ export function useCreateSLAAssignment() {
 			slaApi.createAssignment(slaId, data),
 		onSuccess: (_, { slaId }) => {
 			queryClient.invalidateQueries({ queryKey: ['slas'] });
-			queryClient.invalidateQueries({ queryKey: ['slas', slaId, 'assignments'] });
+			queryClient.invalidateQueries({
+				queryKey: ['slas', slaId, 'assignments'],
+			});
 		},
 	});
 }
@@ -95,7 +97,9 @@ export function useDeleteSLAAssignment() {
 			slaApi.deleteAssignment(slaId, assignmentId),
 		onSuccess: (_, { slaId }) => {
 			queryClient.invalidateQueries({ queryKey: ['slas'] });
-			queryClient.invalidateQueries({ queryKey: ['slas', slaId, 'assignments'] });
+			queryClient.invalidateQueries({
+				queryKey: ['slas', slaId, 'assignments'],
+			});
 		},
 	});
 }

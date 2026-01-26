@@ -1,21 +1,21 @@
 import { useState } from 'react';
-import {
-	useSLAs,
-	useCreateSLA,
-	useUpdateSLA,
-	useDeleteSLA,
-	useSLADashboard,
-	useActiveSLABreaches,
-	useAcknowledgeBreach,
-	useResolveBreach,
-} from '../hooks/useSLA';
 import { useMe } from '../hooks/useAuth';
+import {
+	useAcknowledgeBreach,
+	useActiveSLABreaches,
+	useCreateSLA,
+	useDeleteSLA,
+	useResolveBreach,
+	useSLADashboard,
+	useSLAs,
+	useUpdateSLA,
+} from '../hooks/useSLA';
 import type {
-	SLAWithAssignments,
-	SLAScope,
-	SLABreach,
 	CreateSLADefinitionRequest,
 	OrgRole,
+	SLABreach,
+	SLAScope,
+	SLAWithAssignments,
 } from '../lib/types';
 
 function formatDateTime(dateStr: string): string {
@@ -107,7 +107,9 @@ function DashboardCard({
 	return (
 		<div className="bg-white rounded-lg border border-gray-200 p-4">
 			<p className="text-sm font-medium text-gray-500">{title}</p>
-			<p className={`text-2xl font-bold ${color ? colors[color] : 'text-gray-900'}`}>
+			<p
+				className={`text-2xl font-bold ${color ? colors[color] : 'text-gray-900'}`}
+			>
 				{value}
 			</p>
 			{subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
@@ -238,9 +240,7 @@ export function SLA() {
 					</p>
 				</div>
 				<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-					<p className="text-amber-800">
-						Only administrators can manage SLAs.
-					</p>
+					<p className="text-amber-800">Only administrators can manage SLAs.</p>
 				</div>
 			</div>
 		);
@@ -325,7 +325,13 @@ export function SLA() {
 					<DashboardCard
 						title="Overall Compliance"
 						value={`${dashboard.overall_compliance.toFixed(1)}%`}
-						color={dashboard.overall_compliance >= 95 ? 'green' : dashboard.overall_compliance >= 90 ? 'yellow' : 'red'}
+						color={
+							dashboard.overall_compliance >= 95
+								? 'green'
+								: dashboard.overall_compliance >= 90
+									? 'yellow'
+									: 'red'
+						}
 					/>
 					<DashboardCard
 						title="Active Breaches"
@@ -356,7 +362,8 @@ export function SLA() {
 								<div className="flex items-center gap-3">
 									<BreachTypeBadge type={breach.breach_type} />
 									<span className="text-sm text-gray-700">
-										{breach.description ?? `${breach.breach_type.toUpperCase()} breach`}
+										{breach.description ??
+											`${breach.breach_type.toUpperCase()} breach`}
 									</span>
 									<span className="text-xs text-gray-500">
 										Started: {formatDateTime(breach.breach_start)}
@@ -475,7 +482,9 @@ export function SLA() {
 										onChange={(e) =>
 											setFormData({
 												...formData,
-												rpo_minutes: e.target.value ? Number(e.target.value) : undefined,
+												rpo_minutes: e.target.value
+													? Number(e.target.value)
+													: undefined,
 											})
 										}
 										min="1"
@@ -500,16 +509,16 @@ export function SLA() {
 										onChange={(e) =>
 											setFormData({
 												...formData,
-												rto_minutes: e.target.value ? Number(e.target.value) : undefined,
+												rto_minutes: e.target.value
+													? Number(e.target.value)
+													: undefined,
 											})
 										}
 										min="1"
 										className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 										placeholder="30"
 									/>
-									<p className="mt-1 text-xs text-gray-500">
-										Max restore time
-									</p>
+									<p className="mt-1 text-xs text-gray-500">Max restore time</p>
 								</div>
 								<div>
 									<label
@@ -525,7 +534,9 @@ export function SLA() {
 										onChange={(e) =>
 											setFormData({
 												...formData,
-												uptime_percentage: e.target.value ? Number(e.target.value) : undefined,
+												uptime_percentage: e.target.value
+													? Number(e.target.value)
+													: undefined,
 											})
 										}
 										min="0"
@@ -636,8 +647,8 @@ export function SLA() {
 												<span>Uptime: {sla.uptime_percentage}%</span>
 											)}
 											<span>
-												Assigned: {sla.agent_count} agents, {sla.repository_count}{' '}
-												repos
+												Assigned: {sla.agent_count} agents,{' '}
+												{sla.repository_count} repos
 											</span>
 										</div>
 									</div>
