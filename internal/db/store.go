@@ -125,7 +125,7 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at,
 		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
-		       created_at, updated_at
+		       metadata, created_at, updated_at
 		FROM agents
 		WHERE org_id = $1
 		ORDER BY hostname
@@ -141,6 +141,7 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		var osInfoBytes []byte
 		var networkMountsBytes []byte
 		var healthMetricsBytes []byte
+		var metadataBytes []byte
 		var statusStr string
 		var healthStatusStr *string
 		err := rows.Scan(
@@ -148,7 +149,7 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 			&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 			&a.HealthCheckedAt,
 			&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
-			&a.CreatedAt, &a.UpdatedAt,
+			&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
@@ -168,6 +169,9 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
 			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 		}
+		if err := a.SetMetadata(metadataBytes); err != nil {
+			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse metadata")
+		}
 		agents = append(agents, &a)
 	}
 
@@ -180,13 +184,14 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 	var osInfoBytes []byte
 	var networkMountsBytes []byte
 	var healthMetricsBytes []byte
+	var metadataBytes []byte
 	var statusStr string
 	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at,
 		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
-		       created_at, updated_at
+		       metadata, created_at, updated_at
 		FROM agents
 		WHERE id = $1
 	`, id).Scan(
@@ -194,7 +199,7 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 		&a.HealthCheckedAt,
 		&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
-		&a.CreatedAt, &a.UpdatedAt,
+		&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent: %w", err)
@@ -214,6 +219,9 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 	if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 	}
+	if err := a.SetMetadata(metadataBytes); err != nil {
+		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse metadata")
+	}
 	return &a, nil
 }
 
@@ -223,13 +231,14 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 	var osInfoBytes []byte
 	var networkMountsBytes []byte
 	var healthMetricsBytes []byte
+	var metadataBytes []byte
 	var statusStr string
 	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at,
 		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
-		       created_at, updated_at
+		       metadata, created_at, updated_at
 		FROM agents
 		WHERE api_key_hash = $1
 	`, hash).Scan(
@@ -237,7 +246,7 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 		&a.HealthCheckedAt,
 		&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
-		&a.CreatedAt, &a.UpdatedAt,
+		&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent by API key: %w", err)
@@ -256,6 +265,9 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 	}
 	if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
+	}
+	if err := a.SetMetadata(metadataBytes); err != nil {
+		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse metadata")
 	}
 	return &a, nil
 }
@@ -9098,4 +9110,1791 @@ func scanAnnouncements(rows interface{ Next() bool; Scan(dest ...interface{}) er
 	}
 
 	return announcements, nil
+}
+
+// Saved Filter methods
+
+// GetSavedFiltersByUserAndOrg returns all saved filters for a user in an organization,
+// including shared filters from other users.
+func (db *DB) GetSavedFiltersByUserAndOrg(ctx context.Context, userID, orgID uuid.UUID, entityType string) ([]*models.SavedFilter, error) {
+	query := `
+		SELECT id, user_id, org_id, name, entity_type, filters, shared, is_default, created_at, updated_at
+		FROM saved_filters
+		WHERE org_id = $1 AND (user_id = $2 OR shared = TRUE)
+	`
+	args := []interface{}{orgID, userID}
+
+	if entityType != "" {
+		query += ` AND entity_type = $3`
+		args = append(args, entityType)
+	}
+
+	query += ` ORDER BY name`
+
+	rows, err := db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list saved filters: %w", err)
+	}
+	defer rows.Close()
+
+	var filters []*models.SavedFilter
+	for rows.Next() {
+		var f models.SavedFilter
+		err := rows.Scan(
+			&f.ID, &f.UserID, &f.OrgID, &f.Name, &f.EntityType,
+			&f.Filters, &f.Shared, &f.IsDefault, &f.CreatedAt, &f.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan saved filter: %w", err)
+		}
+		filters = append(filters, &f)
+	}
+
+	return filters, nil
+}
+
+// GetSavedFilterByID returns a saved filter by ID.
+func (db *DB) GetSavedFilterByID(ctx context.Context, id uuid.UUID) (*models.SavedFilter, error) {
+	var f models.SavedFilter
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, user_id, org_id, name, entity_type, filters, shared, is_default, created_at, updated_at
+		FROM saved_filters
+		WHERE id = $1
+	`, id).Scan(
+		&f.ID, &f.UserID, &f.OrgID, &f.Name, &f.EntityType,
+		&f.Filters, &f.Shared, &f.IsDefault, &f.CreatedAt, &f.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get saved filter: %w", err)
+	}
+	return &f, nil
+}
+
+// GetDefaultSavedFilter returns the default filter for a user/entity type.
+func (db *DB) GetDefaultSavedFilter(ctx context.Context, userID, orgID uuid.UUID, entityType string) (*models.SavedFilter, error) {
+	var f models.SavedFilter
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, user_id, org_id, name, entity_type, filters, shared, is_default, created_at, updated_at
+		FROM saved_filters
+		WHERE user_id = $1 AND org_id = $2 AND entity_type = $3 AND is_default = TRUE
+	`, userID, orgID, entityType).Scan(
+		&f.ID, &f.UserID, &f.OrgID, &f.Name, &f.EntityType,
+		&f.Filters, &f.Shared, &f.IsDefault, &f.CreatedAt, &f.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get default saved filter: %w", err)
+	}
+	return &f, nil
+}
+
+// CreateSavedFilter creates a new saved filter.
+func (db *DB) CreateSavedFilter(ctx context.Context, f *models.SavedFilter) error {
+	return db.ExecTx(ctx, func(tx pgx.Tx) error {
+		// If setting as default, clear existing default for this user/entity type
+		if f.IsDefault {
+			_, err := tx.Exec(ctx, `
+				UPDATE saved_filters
+				SET is_default = FALSE, updated_at = NOW()
+				WHERE user_id = $1 AND org_id = $2 AND entity_type = $3 AND is_default = TRUE
+			`, f.UserID, f.OrgID, f.EntityType)
+			if err != nil {
+				return fmt.Errorf("clear existing default: %w", err)
+			}
+		}
+
+		_, err := tx.Exec(ctx, `
+			INSERT INTO saved_filters (id, user_id, org_id, name, entity_type, filters, shared, is_default, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		`, f.ID, f.UserID, f.OrgID, f.Name, f.EntityType, f.Filters, f.Shared, f.IsDefault, f.CreatedAt, f.UpdatedAt)
+		if err != nil {
+			return fmt.Errorf("create saved filter: %w", err)
+		}
+		return nil
+	})
+}
+
+// UpdateSavedFilter updates an existing saved filter.
+func (db *DB) UpdateSavedFilter(ctx context.Context, f *models.SavedFilter) error {
+	return db.ExecTx(ctx, func(tx pgx.Tx) error {
+		// If setting as default, clear existing default for this user/entity type
+		if f.IsDefault {
+			_, err := tx.Exec(ctx, `
+				UPDATE saved_filters
+				SET is_default = FALSE, updated_at = NOW()
+				WHERE user_id = $1 AND org_id = $2 AND entity_type = $3 AND is_default = TRUE AND id != $4
+			`, f.UserID, f.OrgID, f.EntityType, f.ID)
+			if err != nil {
+				return fmt.Errorf("clear existing default: %w", err)
+			}
+		}
+
+		_, err := tx.Exec(ctx, `
+			UPDATE saved_filters
+			SET name = $1, filters = $2, shared = $3, is_default = $4, updated_at = NOW()
+			WHERE id = $5
+		`, f.Name, f.Filters, f.Shared, f.IsDefault, f.ID)
+		if err != nil {
+			return fmt.Errorf("update saved filter: %w", err)
+		}
+		return nil
+	})
+}
+
+// DeleteSavedFilter deletes a saved filter.
+func (db *DB) DeleteSavedFilter(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM saved_filters WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete saved filter: %w", err)
+	}
+	return nil
+}
+
+// ========== IP Allowlist Methods ==========
+
+// GetIPAllowlistByID returns an IP allowlist entry by ID.
+func (db *DB) GetIPAllowlistByID(ctx context.Context, id uuid.UUID) (*models.IPAllowlist, error) {
+	var a models.IPAllowlist
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at
+		FROM ip_allowlists
+		WHERE id = $1
+	`, id).Scan(
+		&a.ID, &a.OrgID, &a.CIDR, &a.Description, &a.Type, &a.Enabled,
+		&a.CreatedBy, &a.UpdatedBy, &a.CreatedAt, &a.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get ip allowlist: %w", err)
+	}
+	return &a, nil
+}
+
+// ListIPAllowlistsByOrg returns all IP allowlist entries for an organization.
+func (db *DB) ListIPAllowlistsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.IPAllowlist, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at
+		FROM ip_allowlists
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list ip allowlists: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPAllowlists(rows)
+}
+
+// ListEnabledIPAllowlistsByOrg returns enabled IP allowlist entries for an organization by type.
+func (db *DB) ListEnabledIPAllowlistsByOrg(ctx context.Context, orgID uuid.UUID, allowlistType models.IPAllowlistType) ([]*models.IPAllowlist, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at
+		FROM ip_allowlists
+		WHERE org_id = $1 AND enabled = true AND (type = $2 OR type = 'both')
+		ORDER BY created_at DESC
+	`, orgID, allowlistType)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled ip allowlists: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPAllowlists(rows)
+}
+
+// CreateIPAllowlist creates a new IP allowlist entry.
+func (db *DB) CreateIPAllowlist(ctx context.Context, a *models.IPAllowlist) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO ip_allowlists (id, org_id, cidr, description, type, enabled, created_by, updated_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, a.ID, a.OrgID, a.CIDR, a.Description, a.Type, a.Enabled, a.CreatedBy, a.UpdatedBy, a.CreatedAt, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create ip allowlist: %w", err)
+	}
+	return nil
+}
+
+// UpdateIPAllowlist updates an existing IP allowlist entry.
+func (db *DB) UpdateIPAllowlist(ctx context.Context, a *models.IPAllowlist) error {
+	a.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE ip_allowlists SET
+			cidr = $2, description = $3, type = $4, enabled = $5, updated_by = $6, updated_at = $7
+		WHERE id = $1
+	`, a.ID, a.CIDR, a.Description, a.Type, a.Enabled, a.UpdatedBy, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update ip allowlist: %w", err)
+	}
+	return nil
+}
+
+// DeleteIPAllowlist deletes an IP allowlist entry.
+func (db *DB) DeleteIPAllowlist(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM ip_allowlists WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete ip allowlist: %w", err)
+	}
+	return nil
+}
+
+// GetIPAllowlistSettings returns the IP allowlist settings for an organization.
+func (db *DB) GetIPAllowlistSettings(ctx context.Context, orgID uuid.UUID) (*models.IPAllowlistSettings, error) {
+	var s models.IPAllowlistSettings
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, enabled, enforce_for_ui, enforce_for_agent, allow_admin_bypass, created_at, updated_at
+		FROM ip_allowlist_settings
+		WHERE org_id = $1
+	`, orgID).Scan(
+		&s.ID, &s.OrgID, &s.Enabled, &s.EnforceForUI, &s.EnforceForAgent, &s.AllowAdminBypass, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get ip allowlist settings: %w", err)
+	}
+	return &s, nil
+}
+
+// GetOrCreateIPAllowlistSettings returns existing settings or creates default settings.
+func (db *DB) GetOrCreateIPAllowlistSettings(ctx context.Context, orgID uuid.UUID) (*models.IPAllowlistSettings, error) {
+	settings, err := db.GetIPAllowlistSettings(ctx, orgID)
+	if err == nil {
+		return settings, nil
+	}
+
+	// Create default settings
+	settings = models.NewIPAllowlistSettings(orgID)
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO ip_allowlist_settings (id, org_id, enabled, enforce_for_ui, enforce_for_agent, allow_admin_bypass, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (org_id) DO NOTHING
+	`, settings.ID, settings.OrgID, settings.Enabled, settings.EnforceForUI, settings.EnforceForAgent, settings.AllowAdminBypass, settings.CreatedAt, settings.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create ip allowlist settings: %w", err)
+	}
+
+	// Re-fetch to get the actual values (in case of conflict)
+	return db.GetIPAllowlistSettings(ctx, orgID)
+}
+
+// UpdateIPAllowlistSettings updates the IP allowlist settings for an organization.
+func (db *DB) UpdateIPAllowlistSettings(ctx context.Context, s *models.IPAllowlistSettings) error {
+	s.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE ip_allowlist_settings
+		SET enabled = $2, enforce_for_ui = $3, enforce_for_agent = $4, allow_admin_bypass = $5, updated_at = $6
+		WHERE org_id = $1
+	`, s.OrgID, s.Enabled, s.EnforceForUI, s.EnforceForAgent, s.AllowAdminBypass, s.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update ip allowlist settings: %w", err)
+	}
+	return nil
+}
+
+// CreateIPBlockedAttempt records a blocked access attempt.
+func (db *DB) CreateIPBlockedAttempt(ctx context.Context, b *models.IPBlockedAttempt) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO ip_blocked_attempts (id, org_id, ip_address, request_type, path, user_id, agent_id, reason, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, b.ID, b.OrgID, b.IPAddress, b.RequestType, b.Path, b.UserID, b.AgentID, b.Reason, b.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create ip blocked attempt: %w", err)
+	}
+	return nil
+}
+
+// ListIPBlockedAttemptsByOrg returns blocked attempts for an organization.
+func (db *DB) ListIPBlockedAttemptsByOrg(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.IPBlockedAttempt, int, error) {
+	var total int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM ip_blocked_attempts WHERE org_id = $1
+	`, orgID).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count ip blocked attempts: %w", err)
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, request_type, path, user_id, agent_id, reason, created_at
+		FROM ip_blocked_attempts
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`, orgID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list ip blocked attempts: %w", err)
+	}
+	defer rows.Close()
+
+	attempts, err := scanIPBlockedAttempts(rows)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return attempts, total, nil
+}
+
+// scanIPAllowlists scans rows into IP allowlist entries.
+func scanIPAllowlists(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.IPAllowlist, error) {
+	var allowlists []*models.IPAllowlist
+	for rows.Next() {
+		var a models.IPAllowlist
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.CIDR, &a.Description, &a.Type, &a.Enabled,
+			&a.CreatedBy, &a.UpdatedBy, &a.CreatedAt, &a.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan ip allowlist: %w", err)
+		}
+		allowlists = append(allowlists, &a)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate IP allowlists: %w", err)
+	}
+
+	return allowlists, nil
+}
+
+// scanIPBlockedAttempts scans rows into blocked attempt records.
+func scanIPBlockedAttempts(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.IPBlockedAttempt, error) {
+	var attempts []*models.IPBlockedAttempt
+	for rows.Next() {
+		var b models.IPBlockedAttempt
+		err := rows.Scan(
+			&b.ID, &b.OrgID, &b.IPAddress, &b.RequestType, &b.Path, &b.UserID, &b.AgentID, &b.Reason, &b.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan ip blocked attempt: %w", err)
+		}
+		attempts = append(attempts, &b)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ip blocked attempts: %w", err)
+	}
+
+	return attempts, nil
+}
+
+// Rate Limit Config methods
+
+// GetRateLimitConfigByID returns a rate limit config by ID.
+func (db *DB) GetRateLimitConfigByID(ctx context.Context, id uuid.UUID) (*models.RateLimitConfig, error) {
+	var c models.RateLimitConfig
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled, created_by, created_at, updated_at
+		FROM rate_limit_configs
+		WHERE id = $1
+	`, id).Scan(
+		&c.ID, &c.OrgID, &c.Endpoint, &c.RequestsPerPeriod, &c.PeriodSeconds,
+		&c.Enabled, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get rate limit config: %w", err)
+	}
+	return &c, nil
+}
+
+// ListRateLimitConfigs returns all rate limit configs for an organization.
+func (db *DB) ListRateLimitConfigs(ctx context.Context, orgID uuid.UUID) ([]*models.RateLimitConfig, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled, created_by, created_at, updated_at
+		FROM rate_limit_configs
+		WHERE org_id = $1
+		ORDER BY endpoint
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list rate limit configs: %w", err)
+	}
+	defer rows.Close()
+
+	return scanRateLimitConfigs(rows)
+}
+
+// GetRateLimitConfigByEndpoint returns a rate limit config for a specific endpoint.
+func (db *DB) GetRateLimitConfigByEndpoint(ctx context.Context, orgID uuid.UUID, endpoint string) (*models.RateLimitConfig, error) {
+	var c models.RateLimitConfig
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled, created_by, created_at, updated_at
+		FROM rate_limit_configs
+		WHERE org_id = $1 AND endpoint = $2 AND enabled = true
+	`, orgID, endpoint).Scan(
+		&c.ID, &c.OrgID, &c.Endpoint, &c.RequestsPerPeriod, &c.PeriodSeconds,
+		&c.Enabled, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get rate limit config by endpoint: %w", err)
+	}
+	return &c, nil
+}
+
+// CreateRateLimitConfig creates a new rate limit config.
+func (db *DB) CreateRateLimitConfig(ctx context.Context, c *models.RateLimitConfig) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO rate_limit_configs (id, org_id, endpoint, requests_per_period, period_seconds, enabled, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, c.ID, c.OrgID, c.Endpoint, c.RequestsPerPeriod, c.PeriodSeconds, c.Enabled, c.CreatedBy, c.CreatedAt, c.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create rate limit config: %w", err)
+	}
+	return nil
+}
+
+// UpdateRateLimitConfig updates an existing rate limit config.
+func (db *DB) UpdateRateLimitConfig(ctx context.Context, c *models.RateLimitConfig) error {
+	c.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE rate_limit_configs SET
+			endpoint = $2, requests_per_period = $3, period_seconds = $4, enabled = $5, updated_at = $6
+		WHERE id = $1
+	`, c.ID, c.Endpoint, c.RequestsPerPeriod, c.PeriodSeconds, c.Enabled, c.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update rate limit config: %w", err)
+	}
+	return nil
+}
+
+// DeleteRateLimitConfig deletes a rate limit config.
+func (db *DB) DeleteRateLimitConfig(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM rate_limit_configs WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete rate limit config: %w", err)
+	}
+	return nil
+}
+
+// scanRateLimitConfigs scans rows into rate limit configs.
+func scanRateLimitConfigs(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.RateLimitConfig, error) {
+	var configs []*models.RateLimitConfig
+	for rows.Next() {
+		var c models.RateLimitConfig
+		err := rows.Scan(
+			&c.ID, &c.OrgID, &c.Endpoint, &c.RequestsPerPeriod, &c.PeriodSeconds,
+			&c.Enabled, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan rate limit config: %w", err)
+		}
+		configs = append(configs, &c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rate limit configs: %w", err)
+	}
+
+	return configs, nil
+}
+
+// Blocked Request methods
+
+// RecordBlockedRequest records a blocked request for statistics.
+func (db *DB) RecordBlockedRequest(ctx context.Context, orgID *uuid.UUID, ipAddress, endpoint, userAgent, reason string) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO blocked_requests (id, org_id, ip_address, endpoint, user_agent, blocked_at, reason)
+		VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+	`, uuid.New(), orgID, ipAddress, endpoint, userAgent, reason)
+	if err != nil {
+		return fmt.Errorf("record blocked request: %w", err)
+	}
+	return nil
+}
+
+// GetRateLimitStats returns rate limiting statistics for an organization.
+func (db *DB) GetRateLimitStats(ctx context.Context, orgID uuid.UUID) (*models.RateLimitStats, error) {
+	stats := &models.RateLimitStats{}
+
+	// Get blocked today count
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM blocked_requests
+		WHERE (org_id = $1 OR org_id IS NULL)
+		  AND blocked_at >= CURRENT_DATE
+	`, orgID).Scan(&stats.BlockedToday)
+	if err != nil {
+		return nil, fmt.Errorf("get blocked today count: %w", err)
+	}
+
+	// Get top blocked IPs
+	rows, err := db.Pool.Query(ctx, `
+		SELECT ip_address, COUNT(*) as count
+		FROM blocked_requests
+		WHERE (org_id = $1 OR org_id IS NULL)
+		  AND blocked_at >= CURRENT_DATE - INTERVAL '7 days'
+		GROUP BY ip_address
+		ORDER BY count DESC
+		LIMIT 10
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get top blocked IPs: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var ip models.IPBlockCount
+		if err := rows.Scan(&ip.IPAddress, &ip.Count); err != nil {
+			return nil, fmt.Errorf("scan blocked IP: %w", err)
+		}
+		stats.TopBlockedIPs = append(stats.TopBlockedIPs, ip)
+	}
+
+	// Get top blocked endpoints
+	rows2, err := db.Pool.Query(ctx, `
+		SELECT endpoint, COUNT(*) as count
+		FROM blocked_requests
+		WHERE (org_id = $1 OR org_id IS NULL)
+		  AND blocked_at >= CURRENT_DATE - INTERVAL '7 days'
+		GROUP BY endpoint
+		ORDER BY count DESC
+		LIMIT 10
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get top blocked endpoints: %w", err)
+	}
+	defer rows2.Close()
+
+	for rows2.Next() {
+		var route models.RouteBlockCount
+		if err := rows2.Scan(&route.Endpoint, &route.Count); err != nil {
+			return nil, fmt.Errorf("scan blocked endpoint: %w", err)
+		}
+		stats.TopBlockedRoutes = append(stats.TopBlockedRoutes, route)
+	}
+
+	return stats, nil
+}
+
+// ListRecentBlockedRequests returns recent blocked requests.
+func (db *DB) ListRecentBlockedRequests(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.BlockedRequest, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, endpoint, user_agent, blocked_at, reason
+		FROM blocked_requests
+		WHERE org_id = $1 OR org_id IS NULL
+		ORDER BY blocked_at DESC
+		LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list blocked requests: %w", err)
+	}
+	defer rows.Close()
+
+	var requests []*models.BlockedRequest
+	for rows.Next() {
+		var r models.BlockedRequest
+		if err := rows.Scan(&r.ID, &r.OrgID, &r.IPAddress, &r.Endpoint, &r.UserAgent, &r.BlockedAt, &r.Reason); err != nil {
+			return nil, fmt.Errorf("scan blocked request: %w", err)
+		}
+		requests = append(requests, &r)
+	}
+
+	return requests, nil
+}
+
+// ========== IP Ban Methods ==========
+
+// GetIPBanByID returns an IP ban by ID.
+func (db *DB) GetIPBanByID(ctx context.Context, id uuid.UUID) (*models.IPBan, error) {
+	var b models.IPBan
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, ip_address, reason, banned_by, expires_at, created_at
+		FROM ip_bans
+		WHERE id = $1
+	`, id).Scan(
+		&b.ID, &b.OrgID, &b.IPAddress, &b.Reason, &b.BannedBy, &b.ExpiresAt, &b.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get ip ban: %w", err)
+	}
+	return &b, nil
+}
+
+// ListIPBans returns all IP bans for an organization.
+func (db *DB) ListIPBans(ctx context.Context, orgID uuid.UUID) ([]*models.IPBan, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, reason, banned_by, expires_at, created_at
+		FROM ip_bans
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list ip bans: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPBans(rows)
+}
+
+// ListActiveIPBans returns active (non-expired) IP bans for an organization.
+func (db *DB) ListActiveIPBans(ctx context.Context, orgID uuid.UUID) ([]*models.IPBan, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, ip_address, reason, banned_by, expires_at, created_at
+		FROM ip_bans
+		WHERE org_id = $1 AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list active ip bans: %w", err)
+	}
+	defer rows.Close()
+
+	return scanIPBans(rows)
+}
+
+// IsIPBanned checks if an IP address is banned for an organization.
+func (db *DB) IsIPBanned(ctx context.Context, orgID uuid.UUID, ipAddress string) (bool, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM ip_bans
+		WHERE org_id = $1 AND ip_address = $2 AND (expires_at IS NULL OR expires_at > NOW())
+	`, orgID, ipAddress).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("check ip ban: %w", err)
+	}
+	return count > 0, nil
+}
+
+// CreateIPBan creates a new IP ban.
+func (db *DB) CreateIPBan(ctx context.Context, b *models.IPBan) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO ip_bans (id, org_id, ip_address, reason, banned_by, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, b.ID, b.OrgID, b.IPAddress, b.Reason, b.BannedBy, b.ExpiresAt, b.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create ip ban: %w", err)
+	}
+	return nil
+}
+
+// DeleteIPBan deletes an IP ban.
+func (db *DB) DeleteIPBan(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM ip_bans WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete ip ban: %w", err)
+	}
+	return nil
+}
+
+// DeleteExpiredIPBans removes expired IP bans.
+func (db *DB) DeleteExpiredIPBans(ctx context.Context) (int64, error) {
+	result, err := db.Pool.Exec(ctx, `DELETE FROM ip_bans WHERE expires_at IS NOT NULL AND expires_at < NOW()`)
+	if err != nil {
+		return 0, fmt.Errorf("delete expired ip bans: %w", err)
+	}
+	return result.RowsAffected(), nil
+}
+
+// scanIPBans scans rows into IP bans.
+func scanIPBans(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.IPBan, error) {
+	var bans []*models.IPBan
+	for rows.Next() {
+		var b models.IPBan
+		err := rows.Scan(
+			&b.ID, &b.OrgID, &b.IPAddress, &b.Reason, &b.BannedBy, &b.ExpiresAt, &b.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan ip ban: %w", err)
+		}
+		bans = append(bans, &b)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate IP bans: %w", err)
+	}
+
+	return bans, nil
+}
+
+// Storage Tiering methods
+
+// GetStorageTierConfigs returns all tier configurations for an organization.
+func (db *DB) GetStorageTierConfigs(ctx context.Context, orgID uuid.UUID) ([]*models.StorageTierConfig, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, tier_type, name, description, cost_per_gb_month, retrieval_cost,
+		       retrieval_time, enabled, created_at, updated_at
+		FROM storage_tier_configs
+		WHERE org_id = $1
+		ORDER BY
+			CASE tier_type
+				WHEN 'hot' THEN 1
+				WHEN 'warm' THEN 2
+				WHEN 'cold' THEN 3
+				WHEN 'archive' THEN 4
+			END
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get tier configs: %w", err)
+	}
+	defer rows.Close()
+
+	var configs []*models.StorageTierConfig
+	for rows.Next() {
+		var c models.StorageTierConfig
+		var tierType string
+		var desc *string
+		err := rows.Scan(
+			&c.ID, &c.OrgID, &tierType, &c.Name, &desc, &c.CostPerGBMonth,
+			&c.RetrievalCost, &c.RetrievalTime, &c.Enabled, &c.CreatedAt, &c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan tier config: %w", err)
+		}
+		c.TierType = models.StorageTierType(tierType)
+		if desc != nil {
+			c.Description = *desc
+		}
+		configs = append(configs, &c)
+	}
+
+	return configs, nil
+}
+
+// GetStorageTierConfig returns a single tier configuration by ID.
+func (db *DB) GetStorageTierConfig(ctx context.Context, id uuid.UUID) (*models.StorageTierConfig, error) {
+	var c models.StorageTierConfig
+	var tierType string
+	var desc *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, tier_type, name, description, cost_per_gb_month, retrieval_cost,
+		       retrieval_time, enabled, created_at, updated_at
+		FROM storage_tier_configs
+		WHERE id = $1
+	`, id).Scan(
+		&c.ID, &c.OrgID, &tierType, &c.Name, &desc, &c.CostPerGBMonth,
+		&c.RetrievalCost, &c.RetrievalTime, &c.Enabled, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get tier config: %w", err)
+	}
+	c.TierType = models.StorageTierType(tierType)
+	if desc != nil {
+		c.Description = *desc
+	}
+	return &c, nil
+}
+
+// CreateStorageTierConfig creates a new tier configuration.
+func (db *DB) CreateStorageTierConfig(ctx context.Context, config *models.StorageTierConfig) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO storage_tier_configs (id, org_id, tier_type, name, description, cost_per_gb_month,
+		            retrieval_cost, retrieval_time, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`, config.ID, config.OrgID, string(config.TierType), config.Name, config.Description,
+		config.CostPerGBMonth, config.RetrievalCost, config.RetrievalTime, config.Enabled,
+		config.CreatedAt, config.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create tier config: %w", err)
+	}
+	return nil
+}
+
+// UpdateStorageTierConfig updates an existing tier configuration.
+func (db *DB) UpdateStorageTierConfig(ctx context.Context, config *models.StorageTierConfig) error {
+	config.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE storage_tier_configs SET
+			name = $2, description = $3, cost_per_gb_month = $4, retrieval_cost = $5,
+			retrieval_time = $6, enabled = $7, updated_at = $8
+		WHERE id = $1
+	`, config.ID, config.Name, config.Description, config.CostPerGBMonth,
+		config.RetrievalCost, config.RetrievalTime, config.Enabled, config.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update tier config: %w", err)
+	}
+	return nil
+}
+
+// CreateDefaultTierConfigs creates default tier configurations for an organization.
+func (db *DB) CreateDefaultTierConfigs(ctx context.Context, orgID uuid.UUID) error {
+	configs := models.DefaultTierConfigs(orgID)
+	for _, config := range configs {
+		if err := db.CreateStorageTierConfig(ctx, config); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetTierRules returns all tier rules for an organization.
+func (db *DB) GetTierRules(ctx context.Context, orgID uuid.UUID) ([]*models.TierRule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, repository_id, schedule_id, name, description, from_tier, to_tier,
+		       age_threshold_days, min_copies, priority, enabled, created_at, updated_at
+		FROM tier_rules
+		WHERE org_id = $1
+		ORDER BY priority, name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get tier rules: %w", err)
+	}
+	defer rows.Close()
+
+	return scanTierRules(rows)
+}
+
+// GetTierRule returns a single tier rule by ID.
+func (db *DB) GetTierRule(ctx context.Context, id uuid.UUID) (*models.TierRule, error) {
+	var r models.TierRule
+	var fromTier, toTier string
+	var desc *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, repository_id, schedule_id, name, description, from_tier, to_tier,
+		       age_threshold_days, min_copies, priority, enabled, created_at, updated_at
+		FROM tier_rules
+		WHERE id = $1
+	`, id).Scan(
+		&r.ID, &r.OrgID, &r.RepositoryID, &r.ScheduleID, &r.Name, &desc, &fromTier, &toTier,
+		&r.AgeThresholdDay, &r.MinCopies, &r.Priority, &r.Enabled, &r.CreatedAt, &r.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get tier rule: %w", err)
+	}
+	r.FromTier = models.StorageTierType(fromTier)
+	r.ToTier = models.StorageTierType(toTier)
+	if desc != nil {
+		r.Description = *desc
+	}
+	return &r, nil
+}
+
+// CreateTierRule creates a new tier rule.
+func (db *DB) CreateTierRule(ctx context.Context, rule *models.TierRule) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO tier_rules (id, org_id, repository_id, schedule_id, name, description,
+		            from_tier, to_tier, age_threshold_days, min_copies, priority, enabled,
+		            created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+	`, rule.ID, rule.OrgID, rule.RepositoryID, rule.ScheduleID, rule.Name, rule.Description,
+		string(rule.FromTier), string(rule.ToTier), rule.AgeThresholdDay, rule.MinCopies,
+		rule.Priority, rule.Enabled, rule.CreatedAt, rule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create tier rule: %w", err)
+	}
+	return nil
+}
+
+// UpdateTierRule updates an existing tier rule.
+func (db *DB) UpdateTierRule(ctx context.Context, rule *models.TierRule) error {
+	rule.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE tier_rules SET
+			repository_id = $2, schedule_id = $3, name = $4, description = $5,
+			from_tier = $6, to_tier = $7, age_threshold_days = $8, min_copies = $9,
+			priority = $10, enabled = $11, updated_at = $12
+		WHERE id = $1
+	`, rule.ID, rule.RepositoryID, rule.ScheduleID, rule.Name, rule.Description,
+		string(rule.FromTier), string(rule.ToTier), rule.AgeThresholdDay, rule.MinCopies,
+		rule.Priority, rule.Enabled, rule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update tier rule: %w", err)
+	}
+	return nil
+}
+
+// DeleteTierRule deletes a tier rule.
+func (db *DB) DeleteTierRule(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM tier_rules WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete tier rule: %w", err)
+	}
+	return nil
+}
+
+// GetEnabledTierRules returns all enabled tier rules for an organization, sorted by priority.
+func (db *DB) GetEnabledTierRules(ctx context.Context, orgID uuid.UUID) ([]*models.TierRule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, repository_id, schedule_id, name, description, from_tier, to_tier,
+		       age_threshold_days, min_copies, priority, enabled, created_at, updated_at
+		FROM tier_rules
+		WHERE org_id = $1 AND enabled = true
+		ORDER BY priority, name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get enabled tier rules: %w", err)
+	}
+	defer rows.Close()
+
+	return scanTierRules(rows)
+}
+
+// scanTierRules scans rows into tier rules.
+func scanTierRules(rows pgx.Rows) ([]*models.TierRule, error) {
+	var rules []*models.TierRule
+	for rows.Next() {
+		var r models.TierRule
+		var fromTier, toTier string
+		var desc *string
+		err := rows.Scan(
+			&r.ID, &r.OrgID, &r.RepositoryID, &r.ScheduleID, &r.Name, &desc, &fromTier, &toTier,
+			&r.AgeThresholdDay, &r.MinCopies, &r.Priority, &r.Enabled, &r.CreatedAt, &r.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan tier rule: %w", err)
+		}
+		r.FromTier = models.StorageTierType(fromTier)
+		r.ToTier = models.StorageTierType(toTier)
+		if desc != nil {
+			r.Description = *desc
+		}
+		rules = append(rules, &r)
+	}
+	return rules, nil
+}
+
+// GetSnapshotTier returns the tier info for a specific snapshot.
+func (db *DB) GetSnapshotTier(ctx context.Context, snapshotID string, repositoryID uuid.UUID) (*models.SnapshotTier, error) {
+	var st models.SnapshotTier
+	var tierType string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, snapshot_id, repository_id, org_id, current_tier, size_bytes,
+		       snapshot_time, tiered_at, created_at, updated_at
+		FROM snapshot_tiers
+		WHERE snapshot_id = $1 AND repository_id = $2
+	`, snapshotID, repositoryID).Scan(
+		&st.ID, &st.SnapshotID, &st.RepositoryID, &st.OrgID, &tierType, &st.SizeBytes,
+		&st.SnapshotTime, &st.TieredAt, &st.CreatedAt, &st.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot tier: %w", err)
+	}
+	st.CurrentTier = models.StorageTierType(tierType)
+	return &st, nil
+}
+
+// GetSnapshotTierByID returns a snapshot tier by its ID.
+func (db *DB) GetSnapshotTierByID(ctx context.Context, id uuid.UUID) (*models.SnapshotTier, error) {
+	var st models.SnapshotTier
+	var tierType string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, snapshot_id, repository_id, org_id, current_tier, size_bytes,
+		       snapshot_time, tiered_at, created_at, updated_at
+		FROM snapshot_tiers
+		WHERE id = $1
+	`, id).Scan(
+		&st.ID, &st.SnapshotID, &st.RepositoryID, &st.OrgID, &tierType, &st.SizeBytes,
+		&st.SnapshotTime, &st.TieredAt, &st.CreatedAt, &st.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot tier by ID: %w", err)
+	}
+	st.CurrentTier = models.StorageTierType(tierType)
+	return &st, nil
+}
+
+// CreateSnapshotTier creates a new snapshot tier record.
+func (db *DB) CreateSnapshotTier(ctx context.Context, tier *models.SnapshotTier) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO snapshot_tiers (id, snapshot_id, repository_id, org_id, current_tier,
+		            size_bytes, snapshot_time, tiered_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		ON CONFLICT (snapshot_id, repository_id) DO UPDATE SET
+			current_tier = EXCLUDED.current_tier,
+			size_bytes = EXCLUDED.size_bytes,
+			updated_at = EXCLUDED.updated_at
+	`, tier.ID, tier.SnapshotID, tier.RepositoryID, tier.OrgID, string(tier.CurrentTier),
+		tier.SizeBytes, tier.SnapshotTime, tier.TieredAt, tier.CreatedAt, tier.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create snapshot tier: %w", err)
+	}
+	return nil
+}
+
+// UpdateSnapshotTier updates an existing snapshot tier record.
+func (db *DB) UpdateSnapshotTier(ctx context.Context, tier *models.SnapshotTier) error {
+	tier.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE snapshot_tiers SET
+			current_tier = $2, size_bytes = $3, tiered_at = $4, updated_at = $5
+		WHERE id = $1
+	`, tier.ID, string(tier.CurrentTier), tier.SizeBytes, tier.TieredAt, tier.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update snapshot tier: %w", err)
+	}
+	return nil
+}
+
+// GetSnapshotsForTiering returns snapshots that are candidates for tier transition.
+func (db *DB) GetSnapshotsForTiering(ctx context.Context, orgID uuid.UUID, currentTier models.StorageTierType, olderThanDays int) ([]*models.SnapshotTier, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, snapshot_id, repository_id, org_id, current_tier, size_bytes,
+		       snapshot_time, tiered_at, created_at, updated_at
+		FROM snapshot_tiers
+		WHERE org_id = $1
+		  AND current_tier = $2
+		  AND tiered_at < NOW() - INTERVAL '1 day' * $3
+		ORDER BY tiered_at
+		LIMIT 1000
+	`, orgID, string(currentTier), olderThanDays)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshots for tiering: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotTiers(rows)
+}
+
+// GetSnapshotTiersByRepository returns all snapshot tiers for a repository.
+func (db *DB) GetSnapshotTiersByRepository(ctx context.Context, repositoryID uuid.UUID) ([]*models.SnapshotTier, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, snapshot_id, repository_id, org_id, current_tier, size_bytes,
+		       snapshot_time, tiered_at, created_at, updated_at
+		FROM snapshot_tiers
+		WHERE repository_id = $1
+		ORDER BY snapshot_time DESC
+	`, repositoryID)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot tiers by repository: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotTiers(rows)
+}
+
+// GetSnapshotTiersByOrg returns all snapshot tiers for an organization.
+func (db *DB) GetSnapshotTiersByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.SnapshotTier, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, snapshot_id, repository_id, org_id, current_tier, size_bytes,
+		       snapshot_time, tiered_at, created_at, updated_at
+		FROM snapshot_tiers
+		WHERE org_id = $1
+		ORDER BY snapshot_time DESC
+		LIMIT 1000
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot tiers by org: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotTiers(rows)
+}
+
+// scanSnapshotTiers scans rows into snapshot tiers.
+func scanSnapshotTiers(rows pgx.Rows) ([]*models.SnapshotTier, error) {
+	var tiers []*models.SnapshotTier
+	for rows.Next() {
+		var st models.SnapshotTier
+		var tierType string
+		err := rows.Scan(
+			&st.ID, &st.SnapshotID, &st.RepositoryID, &st.OrgID, &tierType, &st.SizeBytes,
+			&st.SnapshotTime, &st.TieredAt, &st.CreatedAt, &st.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan snapshot tier: %w", err)
+		}
+		st.CurrentTier = models.StorageTierType(tierType)
+		tiers = append(tiers, &st)
+	}
+	return tiers, nil
+}
+
+// CreateTierTransition creates a new tier transition record.
+func (db *DB) CreateTierTransition(ctx context.Context, transition *models.TierTransition) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO tier_transitions (id, snapshot_tier_id, snapshot_id, repository_id, org_id,
+		            from_tier, to_tier, trigger_rule_id, trigger_reason, size_bytes,
+		            estimated_saving, status, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, transition.ID, transition.SnapshotTierID, transition.SnapshotID, transition.RepositoryID,
+		transition.OrgID, string(transition.FromTier), string(transition.ToTier),
+		transition.TriggerRuleID, transition.TriggerReason, transition.SizeBytes,
+		transition.EstimatedSaving, transition.Status, transition.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create tier transition: %w", err)
+	}
+	return nil
+}
+
+// UpdateTierTransition updates a tier transition record.
+func (db *DB) UpdateTierTransition(ctx context.Context, transition *models.TierTransition) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE tier_transitions SET
+			status = $2, error_message = $3, started_at = $4, completed_at = $5
+		WHERE id = $1
+	`, transition.ID, transition.Status, transition.ErrorMessage,
+		transition.StartedAt, transition.CompletedAt)
+	if err != nil {
+		return fmt.Errorf("update tier transition: %w", err)
+	}
+	return nil
+}
+
+// GetPendingTierTransitions returns all pending tier transitions for an organization.
+func (db *DB) GetPendingTierTransitions(ctx context.Context, orgID uuid.UUID) ([]*models.TierTransition, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, snapshot_tier_id, snapshot_id, repository_id, org_id, from_tier, to_tier,
+		       trigger_rule_id, trigger_reason, size_bytes, estimated_saving, status,
+		       error_message, started_at, completed_at, created_at
+		FROM tier_transitions
+		WHERE org_id = $1 AND status IN ('pending', 'in_progress')
+		ORDER BY created_at
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get pending tier transitions: %w", err)
+	}
+	defer rows.Close()
+
+	return scanTierTransitions(rows)
+}
+
+// GetTierTransitionHistory returns the tier transition history for a snapshot.
+func (db *DB) GetTierTransitionHistory(ctx context.Context, snapshotID string, repositoryID uuid.UUID, limit int) ([]*models.TierTransition, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, snapshot_tier_id, snapshot_id, repository_id, org_id, from_tier, to_tier,
+		       trigger_rule_id, trigger_reason, size_bytes, estimated_saving, status,
+		       error_message, started_at, completed_at, created_at
+		FROM tier_transitions
+		WHERE snapshot_id = $1 AND repository_id = $2
+		ORDER BY created_at DESC
+		LIMIT $3
+	`, snapshotID, repositoryID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get tier transition history: %w", err)
+	}
+	defer rows.Close()
+
+	return scanTierTransitions(rows)
+}
+
+// scanTierTransitions scans rows into tier transitions.
+func scanTierTransitions(rows pgx.Rows) ([]*models.TierTransition, error) {
+	var transitions []*models.TierTransition
+	for rows.Next() {
+		var t models.TierTransition
+		var fromTier, toTier string
+		var errMsg *string
+		err := rows.Scan(
+			&t.ID, &t.SnapshotTierID, &t.SnapshotID, &t.RepositoryID, &t.OrgID,
+			&fromTier, &toTier, &t.TriggerRuleID, &t.TriggerReason, &t.SizeBytes,
+			&t.EstimatedSaving, &t.Status, &errMsg, &t.StartedAt, &t.CompletedAt, &t.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan tier transition: %w", err)
+		}
+		t.FromTier = models.StorageTierType(fromTier)
+		t.ToTier = models.StorageTierType(toTier)
+		if errMsg != nil {
+			t.ErrorMessage = *errMsg
+		}
+		transitions = append(transitions, &t)
+	}
+	return transitions, nil
+}
+
+// CreateColdRestoreRequest creates a new cold restore request.
+func (db *DB) CreateColdRestoreRequest(ctx context.Context, req *models.ColdRestoreRequest) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO cold_restore_requests (id, org_id, snapshot_id, repository_id, requested_by,
+		            from_tier, target_path, priority, status, estimated_ready_at, retrieval_cost,
+		            created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, req.ID, req.OrgID, req.SnapshotID, req.RepositoryID, req.RequestedBy,
+		string(req.FromTier), req.TargetPath, req.Priority, req.Status,
+		req.EstimatedReady, req.RetrievalCost, req.CreatedAt, req.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create cold restore request: %w", err)
+	}
+	return nil
+}
+
+// UpdateColdRestoreRequest updates a cold restore request.
+func (db *DB) UpdateColdRestoreRequest(ctx context.Context, req *models.ColdRestoreRequest) error {
+	req.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE cold_restore_requests SET
+			status = $2, estimated_ready_at = $3, ready_at = $4, expires_at = $5,
+			error_message = $6, updated_at = $7
+		WHERE id = $1
+	`, req.ID, req.Status, req.EstimatedReady, req.ReadyAt, req.ExpiresAt,
+		req.ErrorMessage, req.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update cold restore request: %w", err)
+	}
+	return nil
+}
+
+// GetColdRestoreRequest returns a cold restore request by ID.
+func (db *DB) GetColdRestoreRequest(ctx context.Context, id uuid.UUID) (*models.ColdRestoreRequest, error) {
+	var req models.ColdRestoreRequest
+	var fromTier string
+	var targetPath, errMsg *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, snapshot_id, repository_id, requested_by, from_tier, target_path,
+		       priority, status, estimated_ready_at, ready_at, expires_at, error_message,
+		       retrieval_cost, created_at, updated_at
+		FROM cold_restore_requests
+		WHERE id = $1
+	`, id).Scan(
+		&req.ID, &req.OrgID, &req.SnapshotID, &req.RepositoryID, &req.RequestedBy,
+		&fromTier, &targetPath, &req.Priority, &req.Status, &req.EstimatedReady,
+		&req.ReadyAt, &req.ExpiresAt, &errMsg, &req.RetrievalCost, &req.CreatedAt, &req.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get cold restore request: %w", err)
+	}
+	req.FromTier = models.StorageTierType(fromTier)
+	if targetPath != nil {
+		req.TargetPath = *targetPath
+	}
+	if errMsg != nil {
+		req.ErrorMessage = *errMsg
+	}
+	return &req, nil
+}
+
+// GetColdRestoreRequestBySnapshot returns an active cold restore request for a snapshot.
+func (db *DB) GetColdRestoreRequestBySnapshot(ctx context.Context, snapshotID string, repositoryID uuid.UUID) (*models.ColdRestoreRequest, error) {
+	var req models.ColdRestoreRequest
+	var fromTier string
+	var targetPath, errMsg *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, snapshot_id, repository_id, requested_by, from_tier, target_path,
+		       priority, status, estimated_ready_at, ready_at, expires_at, error_message,
+		       retrieval_cost, created_at, updated_at
+		FROM cold_restore_requests
+		WHERE snapshot_id = $1 AND repository_id = $2 AND status NOT IN ('completed', 'failed', 'expired')
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, snapshotID, repositoryID).Scan(
+		&req.ID, &req.OrgID, &req.SnapshotID, &req.RepositoryID, &req.RequestedBy,
+		&fromTier, &targetPath, &req.Priority, &req.Status, &req.EstimatedReady,
+		&req.ReadyAt, &req.ExpiresAt, &errMsg, &req.RetrievalCost, &req.CreatedAt, &req.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get cold restore request by snapshot: %w", err)
+	}
+	req.FromTier = models.StorageTierType(fromTier)
+	if targetPath != nil {
+		req.TargetPath = *targetPath
+	}
+	if errMsg != nil {
+		req.ErrorMessage = *errMsg
+	}
+	return &req, nil
+}
+
+// GetPendingColdRestoreRequests returns all pending cold restore requests for an organization.
+func (db *DB) GetPendingColdRestoreRequests(ctx context.Context, orgID uuid.UUID) ([]*models.ColdRestoreRequest, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, snapshot_id, repository_id, requested_by, from_tier, target_path,
+		       priority, status, estimated_ready_at, ready_at, expires_at, error_message,
+		       retrieval_cost, created_at, updated_at
+		FROM cold_restore_requests
+		WHERE org_id = $1 AND status IN ('pending', 'warming')
+		ORDER BY created_at
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get pending cold restore requests: %w", err)
+	}
+	defer rows.Close()
+
+	return scanColdRestoreRequests(rows)
+}
+
+// GetActiveColdRestoreRequests returns all active cold restore requests for an organization.
+func (db *DB) GetActiveColdRestoreRequests(ctx context.Context, orgID uuid.UUID) ([]*models.ColdRestoreRequest, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, snapshot_id, repository_id, requested_by, from_tier, target_path,
+		       priority, status, estimated_ready_at, ready_at, expires_at, error_message,
+		       retrieval_cost, created_at, updated_at
+		FROM cold_restore_requests
+		WHERE org_id = $1 AND status NOT IN ('completed', 'failed', 'expired')
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get active cold restore requests: %w", err)
+	}
+	defer rows.Close()
+
+	return scanColdRestoreRequests(rows)
+}
+
+// ExpireColdRestoreRequests marks ready requests as expired if past their expiration time.
+func (db *DB) ExpireColdRestoreRequests(ctx context.Context) (int, error) {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE cold_restore_requests SET
+			status = 'expired', updated_at = NOW()
+		WHERE status = 'ready' AND expires_at < NOW()
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("expire cold restore requests: %w", err)
+	}
+	return int(result.RowsAffected()), nil
+}
+
+// scanColdRestoreRequests scans rows into cold restore requests.
+func scanColdRestoreRequests(rows pgx.Rows) ([]*models.ColdRestoreRequest, error) {
+	var requests []*models.ColdRestoreRequest
+	for rows.Next() {
+		var req models.ColdRestoreRequest
+		var fromTier string
+		var targetPath, errMsg *string
+		err := rows.Scan(
+			&req.ID, &req.OrgID, &req.SnapshotID, &req.RepositoryID, &req.RequestedBy,
+			&fromTier, &targetPath, &req.Priority, &req.Status, &req.EstimatedReady,
+			&req.ReadyAt, &req.ExpiresAt, &errMsg, &req.RetrievalCost, &req.CreatedAt, &req.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan cold restore request: %w", err)
+		}
+		req.FromTier = models.StorageTierType(fromTier)
+		if targetPath != nil {
+			req.TargetPath = *targetPath
+		}
+		if errMsg != nil {
+			req.ErrorMessage = *errMsg
+		}
+		requests = append(requests, &req)
+	}
+	return requests, nil
+}
+
+// CreateTierCostReport creates a new tier cost report.
+func (db *DB) CreateTierCostReport(ctx context.Context, report *models.TierCostReport) error {
+	breakdownJSON, err := json.Marshal(report.TierBreakdown)
+	if err != nil {
+		return fmt.Errorf("marshal tier breakdown: %w", err)
+	}
+	suggestionsJSON, err := json.Marshal(report.Suggestions)
+	if err != nil {
+		return fmt.Errorf("marshal suggestions: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO tier_cost_reports (id, org_id, report_date, total_size_bytes,
+		            current_monthly_cost, optimized_monthly_cost, potential_monthly_savings,
+		            tier_breakdown, suggestions, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		ON CONFLICT (org_id, report_date) DO UPDATE SET
+			total_size_bytes = EXCLUDED.total_size_bytes,
+			current_monthly_cost = EXCLUDED.current_monthly_cost,
+			optimized_monthly_cost = EXCLUDED.optimized_monthly_cost,
+			potential_monthly_savings = EXCLUDED.potential_monthly_savings,
+			tier_breakdown = EXCLUDED.tier_breakdown,
+			suggestions = EXCLUDED.suggestions
+	`, report.ID, report.OrgID, report.ReportDate.Format("2006-01-02"), report.TotalSize,
+		report.CurrentCost, report.OptimizedCost, report.PotentialSave,
+		breakdownJSON, suggestionsJSON, report.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create tier cost report: %w", err)
+	}
+	return nil
+}
+
+// GetLatestTierCostReport returns the most recent cost report for an organization.
+func (db *DB) GetLatestTierCostReport(ctx context.Context, orgID uuid.UUID) (*models.TierCostReport, error) {
+	var report models.TierCostReport
+	var breakdownJSON, suggestionsJSON []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, report_date, total_size_bytes, current_monthly_cost,
+		       optimized_monthly_cost, potential_monthly_savings, tier_breakdown,
+		       suggestions, created_at
+		FROM tier_cost_reports
+		WHERE org_id = $1
+		ORDER BY report_date DESC
+		LIMIT 1
+	`, orgID).Scan(
+		&report.ID, &report.OrgID, &report.ReportDate, &report.TotalSize,
+		&report.CurrentCost, &report.OptimizedCost, &report.PotentialSave,
+		&breakdownJSON, &suggestionsJSON, &report.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get latest tier cost report: %w", err)
+	}
+
+	if err := json.Unmarshal(breakdownJSON, &report.TierBreakdown); err != nil {
+		return nil, fmt.Errorf("unmarshal tier breakdown: %w", err)
+	}
+	if err := json.Unmarshal(suggestionsJSON, &report.Suggestions); err != nil {
+		return nil, fmt.Errorf("unmarshal suggestions: %w", err)
+	}
+
+	return &report, nil
+}
+
+// GetTierCostReports returns recent cost reports for an organization.
+func (db *DB) GetTierCostReports(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.TierCostReport, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, report_date, total_size_bytes, current_monthly_cost,
+		       optimized_monthly_cost, potential_monthly_savings, tier_breakdown,
+		       suggestions, created_at
+		FROM tier_cost_reports
+		WHERE org_id = $1
+		ORDER BY report_date DESC
+		LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get tier cost reports: %w", err)
+	}
+	defer rows.Close()
+
+	var reports []*models.TierCostReport
+	for rows.Next() {
+		var report models.TierCostReport
+		var breakdownJSON, suggestionsJSON []byte
+		err := rows.Scan(
+			&report.ID, &report.OrgID, &report.ReportDate, &report.TotalSize,
+			&report.CurrentCost, &report.OptimizedCost, &report.PotentialSave,
+			&breakdownJSON, &suggestionsJSON, &report.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan tier cost report: %w", err)
+		}
+
+		if err := json.Unmarshal(breakdownJSON, &report.TierBreakdown); err != nil {
+			return nil, fmt.Errorf("unmarshal tier breakdown: %w", err)
+		}
+		if err := json.Unmarshal(suggestionsJSON, &report.Suggestions); err != nil {
+			return nil, fmt.Errorf("unmarshal suggestions: %w", err)
+		}
+
+		reports = append(reports, &report)
+	}
+
+	return reports, nil
+}
+
+// GetTierStatsSummary returns aggregate tier statistics for an organization.
+func (db *DB) GetTierStatsSummary(ctx context.Context, orgID uuid.UUID) (*models.TierStatsSummary, error) {
+	// Get tier configurations for cost calculation
+	configs, err := db.GetStorageTierConfigs(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get tier configs: %w", err)
+	}
+
+	costMap := make(map[models.StorageTierType]float64)
+	for _, c := range configs {
+		costMap[c.TierType] = c.CostPerGBMonth
+	}
+
+	// Default costs if no configs
+	if len(costMap) == 0 {
+		costMap[models.StorageTierHot] = 0.023
+		costMap[models.StorageTierWarm] = 0.0125
+		costMap[models.StorageTierCold] = 0.004
+		costMap[models.StorageTierArchive] = 0.00099
+	}
+
+	// Get statistics by tier
+	rows, err := db.Pool.Query(ctx, `
+		SELECT current_tier,
+		       COUNT(*) as snapshot_count,
+		       COALESCE(SUM(size_bytes), 0) as total_size,
+		       COALESCE(EXTRACT(DAY FROM NOW() - MIN(snapshot_time)), 0) as oldest_days,
+		       COALESCE(EXTRACT(DAY FROM NOW() - MAX(snapshot_time)), 0) as newest_days
+		FROM snapshot_tiers
+		WHERE org_id = $1
+		GROUP BY current_tier
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get tier stats: %w", err)
+	}
+	defer rows.Close()
+
+	summary := &models.TierStatsSummary{
+		ByTier: make(map[models.StorageTierType]models.TierStats),
+	}
+
+	for rows.Next() {
+		var tierType string
+		var stats models.TierStats
+		err := rows.Scan(&tierType, &stats.SnapshotCount, &stats.TotalSizeBytes, &stats.OldestDays, &stats.NewestDays)
+		if err != nil {
+			return nil, fmt.Errorf("scan tier stats: %w", err)
+		}
+
+		tier := models.StorageTierType(tierType)
+		sizeGB := float64(stats.TotalSizeBytes) / (1024 * 1024 * 1024)
+		stats.MonthlyCost = sizeGB * costMap[tier]
+
+		summary.ByTier[tier] = stats
+		summary.TotalSnapshots += stats.SnapshotCount
+		summary.TotalSizeBytes += stats.TotalSizeBytes
+		summary.EstimatedMonthlyCost += stats.MonthlyCost
+	}
+
+	// Calculate potential savings (if all hot data older than 30 days moved to warm)
+	if hotStats, ok := summary.ByTier[models.StorageTierHot]; ok && hotStats.OldestDays > 30 {
+		// Rough estimate: assume 50% of hot data could be moved to warm
+		hotSizeGB := float64(hotStats.TotalSizeBytes) / (1024 * 1024 * 1024) * 0.5
+		summary.PotentialSavings = hotSizeGB * (costMap[models.StorageTierHot] - costMap[models.StorageTierWarm])
+	}
+
+	return summary, nil
+}
+// Lifecycle Policy methods
+
+// CreateLifecyclePolicy creates a new lifecycle policy.
+func (db *DB) CreateLifecyclePolicy(ctx context.Context, policy *models.LifecyclePolicy) error {
+	rulesJSON, err := policy.RulesJSON()
+	if err != nil {
+		return fmt.Errorf("marshal rules: %w", err)
+	}
+
+	repoIDsJSON, err := policy.RepositoryIDsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal repository_ids: %w", err)
+	}
+
+	scheduleIDsJSON, err := policy.ScheduleIDsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal schedule_ids: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO lifecycle_policies (
+			id, org_id, name, description, status, rules, repository_ids, schedule_ids,
+			deletion_count, bytes_reclaimed, created_by, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, policy.ID, policy.OrgID, policy.Name, policy.Description, policy.Status,
+		rulesJSON, repoIDsJSON, scheduleIDsJSON, policy.DeletionCount, policy.BytesReclaimed,
+		policy.CreatedBy, policy.CreatedAt, policy.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create lifecycle policy: %w", err)
+	}
+	return nil
+}
+
+// GetLifecyclePolicyByID returns a lifecycle policy by ID.
+func (db *DB) GetLifecyclePolicyByID(ctx context.Context, id uuid.UUID) (*models.LifecyclePolicy, error) {
+	var p models.LifecyclePolicy
+	var rulesJSON, repoIDsJSON, scheduleIDsJSON []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, description, status, rules, repository_ids, schedule_ids,
+			last_evaluated_at, last_deletion_at, deletion_count, bytes_reclaimed,
+			created_by, created_at, updated_at
+		FROM lifecycle_policies
+		WHERE id = $1
+	`, id).Scan(
+		&p.ID, &p.OrgID, &p.Name, &p.Description, &p.Status, &rulesJSON, &repoIDsJSON, &scheduleIDsJSON,
+		&p.LastEvaluatedAt, &p.LastDeletionAt, &p.DeletionCount, &p.BytesReclaimed,
+		&p.CreatedBy, &p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get lifecycle policy: %w", err)
+	}
+
+	if err := p.SetRules(rulesJSON); err != nil {
+		return nil, fmt.Errorf("parse rules: %w", err)
+	}
+	if err := p.SetRepositoryIDs(repoIDsJSON); err != nil {
+		return nil, fmt.Errorf("parse repository_ids: %w", err)
+	}
+	if err := p.SetScheduleIDs(scheduleIDsJSON); err != nil {
+		return nil, fmt.Errorf("parse schedule_ids: %w", err)
+	}
+
+	return &p, nil
+}
+
+// GetLifecyclePoliciesByOrgID returns all lifecycle policies for an organization.
+func (db *DB) GetLifecyclePoliciesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.LifecyclePolicy, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, description, status, rules, repository_ids, schedule_ids,
+			last_evaluated_at, last_deletion_at, deletion_count, bytes_reclaimed,
+			created_by, created_at, updated_at
+		FROM lifecycle_policies
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list lifecycle policies: %w", err)
+	}
+	defer rows.Close()
+
+	return scanLifecyclePolicies(rows)
+}
+
+// GetActiveLifecyclePoliciesByOrgID returns all active lifecycle policies for an organization.
+func (db *DB) GetActiveLifecyclePoliciesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.LifecyclePolicy, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, description, status, rules, repository_ids, schedule_ids,
+			last_evaluated_at, last_deletion_at, deletion_count, bytes_reclaimed,
+			created_by, created_at, updated_at
+		FROM lifecycle_policies
+		WHERE org_id = $1 AND status = 'active'
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list active lifecycle policies: %w", err)
+	}
+	defer rows.Close()
+
+	return scanLifecyclePolicies(rows)
+}
+
+// UpdateLifecyclePolicy updates a lifecycle policy.
+func (db *DB) UpdateLifecyclePolicy(ctx context.Context, policy *models.LifecyclePolicy) error {
+	rulesJSON, err := policy.RulesJSON()
+	if err != nil {
+		return fmt.Errorf("marshal rules: %w", err)
+	}
+
+	repoIDsJSON, err := policy.RepositoryIDsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal repository_ids: %w", err)
+	}
+
+	scheduleIDsJSON, err := policy.ScheduleIDsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal schedule_ids: %w", err)
+	}
+
+	policy.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE lifecycle_policies
+		SET name = $2, description = $3, status = $4, rules = $5, repository_ids = $6, schedule_ids = $7,
+			last_evaluated_at = $8, last_deletion_at = $9, deletion_count = $10, bytes_reclaimed = $11,
+			updated_at = $12
+		WHERE id = $1
+	`, policy.ID, policy.Name, policy.Description, policy.Status, rulesJSON, repoIDsJSON, scheduleIDsJSON,
+		policy.LastEvaluatedAt, policy.LastDeletionAt, policy.DeletionCount, policy.BytesReclaimed,
+		policy.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update lifecycle policy: %w", err)
+	}
+	return nil
+}
+
+// DeleteLifecyclePolicy deletes a lifecycle policy by ID.
+func (db *DB) DeleteLifecyclePolicy(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM lifecycle_policies WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete lifecycle policy: %w", err)
+	}
+	return nil
+}
+
+// CreateLifecycleDeletionEvent creates a deletion event for audit logging.
+func (db *DB) CreateLifecycleDeletionEvent(ctx context.Context, event *models.LifecycleDeletionEvent) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO lifecycle_deletion_events (
+			id, org_id, policy_id, snapshot_id, repository_id, reason, size_bytes, deleted_by, deleted_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, event.ID, event.OrgID, event.PolicyID, event.SnapshotID, event.RepositoryID,
+		event.Reason, event.SizeBytes, event.DeletedBy, event.DeletedAt)
+	if err != nil {
+		return fmt.Errorf("create lifecycle deletion event: %w", err)
+	}
+	return nil
+}
+
+// GetLifecycleDeletionEventsByPolicyID returns deletion events for a policy.
+func (db *DB) GetLifecycleDeletionEventsByPolicyID(ctx context.Context, policyID uuid.UUID, limit int) ([]*models.LifecycleDeletionEvent, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, policy_id, snapshot_id, repository_id, reason, size_bytes, deleted_by, deleted_at
+		FROM lifecycle_deletion_events
+		WHERE policy_id = $1
+		ORDER BY deleted_at DESC
+		LIMIT $2
+	`, policyID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list deletion events: %w", err)
+	}
+	defer rows.Close()
+
+	return scanLifecycleDeletionEvents(rows)
+}
+
+// GetLifecycleDeletionEventsByOrgID returns deletion events for an organization.
+func (db *DB) GetLifecycleDeletionEventsByOrgID(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.LifecycleDeletionEvent, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, policy_id, snapshot_id, repository_id, reason, size_bytes, deleted_by, deleted_at
+		FROM lifecycle_deletion_events
+		WHERE org_id = $1
+		ORDER BY deleted_at DESC
+		LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list deletion events: %w", err)
+	}
+	defer rows.Close()
+
+	return scanLifecycleDeletionEvents(rows)
+}
+
+// scanLifecyclePolicies scans rows into lifecycle policies.
+func scanLifecyclePolicies(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.LifecyclePolicy, error) {
+	var policies []*models.LifecyclePolicy
+	for rows.Next() {
+		var p models.LifecyclePolicy
+		var rulesJSON, repoIDsJSON, scheduleIDsJSON []byte
+		err := rows.Scan(
+			&p.ID, &p.OrgID, &p.Name, &p.Description, &p.Status, &rulesJSON, &repoIDsJSON, &scheduleIDsJSON,
+			&p.LastEvaluatedAt, &p.LastDeletionAt, &p.DeletionCount, &p.BytesReclaimed,
+			&p.CreatedBy, &p.CreatedAt, &p.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan lifecycle policy: %w", err)
+		}
+
+		if err := p.SetRules(rulesJSON); err != nil {
+			return nil, fmt.Errorf("parse rules: %w", err)
+		}
+		if err := p.SetRepositoryIDs(repoIDsJSON); err != nil {
+			return nil, fmt.Errorf("parse repository_ids: %w", err)
+		}
+		if err := p.SetScheduleIDs(scheduleIDsJSON); err != nil {
+			return nil, fmt.Errorf("parse schedule_ids: %w", err)
+		}
+
+		policies = append(policies, &p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate lifecycle policies: %w", err)
+	}
+
+	return policies, nil
+}
+
+// scanLifecycleDeletionEvents scans rows into deletion events.
+func scanLifecycleDeletionEvents(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.LifecycleDeletionEvent, error) {
+	var events []*models.LifecycleDeletionEvent
+	for rows.Next() {
+		var e models.LifecycleDeletionEvent
+		err := rows.Scan(
+			&e.ID, &e.OrgID, &e.PolicyID, &e.SnapshotID, &e.RepositoryID,
+			&e.Reason, &e.SizeBytes, &e.DeletedBy, &e.DeletedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan deletion event: %w", err)
+		}
+		events = append(events, &e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate deletion events: %w", err)
+	}
+
+	return events, nil
+}
+
+// GetBackupsByOrgID returns all backups for an organization.
+// This is used by lifecycle policy evaluation to assess which snapshots can be deleted.
+func (db *DB) GetBackupsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at, b.completed_at,
+		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
+		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
+		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1
+		ORDER BY b.started_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get backups by org: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackups(rows)
 }

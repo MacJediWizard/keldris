@@ -152,6 +152,12 @@ func parseResourceFromPath(path string) (string, uuid.UUID) {
 		return "user", resourceID
 	case "organizations":
 		return "organization", resourceID
+	case "ip-allowlists":
+		return "ip_allowlist", resourceID
+	case "ip-allowlist-settings":
+		return "ip_allowlist_settings", uuid.Nil
+	case "ip-blocked-attempts":
+		return "ip_blocked_attempt", uuid.Nil
 	case "auth":
 		// Handle auth endpoints
 		if len(parts) >= 2 {

@@ -30,6 +30,8 @@ type Config struct {
 	Version   string
 	Commit    string
 	BuildDate string
+	// ServerURL is the base URL of the server for generating registration links.
+	ServerURL string
 	// VerificationTrigger for manually triggering verifications (optional).
 	VerificationTrigger handlers.VerificationTrigger
 	// ReportScheduler for report generation and sending (optional).
@@ -120,6 +122,10 @@ func NewRouter(
 	apiV1.Use(middleware.AuthMiddleware(sessions, logger))
 	apiV1.Use(middleware.AuditMiddleware(database, logger))
 
+	// Create IP filter for IP-based access control
+	ipFilter := middleware.NewIPFilter(database, logger)
+	apiV1.Use(middleware.IPFilterMiddleware(ipFilter, logger))
+
 	// Create RBAC for permission checks
 	rbac := auth.NewRBAC(database)
 
@@ -143,6 +149,10 @@ func NewRouter(
 
 	agentGroupsHandler := handlers.NewAgentGroupsHandler(database, logger)
 	agentGroupsHandler.RegisterRoutes(apiV1)
+
+	// Agent CSV import for fleet deployment
+	agentImportHandler := handlers.NewAgentImportHandler(database, cfg.ServerURL, logger)
+	agentImportHandler.RegisterRoutes(apiV1)
 
 	reposHandler := handlers.NewRepositoriesHandler(database, keyManager, logger)
 	reposHandler.RegisterRoutes(apiV1)
@@ -183,6 +193,9 @@ func NewRouter(
 	notificationsHandler := handlers.NewNotificationsHandler(database, logger)
 	notificationsHandler.RegisterRoutes(apiV1)
 
+	notificationRulesHandler := handlers.NewNotificationRulesHandler(database, logger)
+	notificationRulesHandler.RegisterRoutes(apiV1)
+
 	// Register reports handler if scheduler is available
 	if cfg.ReportScheduler != nil {
 		reportsHandler := handlers.NewReportsHandler(database, cfg.ReportScheduler, logger)
@@ -197,6 +210,9 @@ func NewRouter(
 
 	tagsHandler := handlers.NewTagsHandler(database, logger)
 	tagsHandler.RegisterRoutes(apiV1)
+
+	filtersHandler := handlers.NewFiltersHandler(database, logger)
+	filtersHandler.RegisterRoutes(apiV1)
 
 	searchHandler := handlers.NewSearchHandler(database, logger)
 	searchHandler.RegisterRoutes(apiV1)
@@ -224,6 +240,10 @@ func NewRouter(
 
 	announcementsHandler := handlers.NewAnnouncementsHandler(database, logger)
 	announcementsHandler.RegisterRoutes(apiV1)
+
+	// Password policies handler for non-OIDC authentication
+	passwordPoliciesHandler := handlers.NewPasswordPoliciesHandler(database, logger)
+	passwordPoliciesHandler.RegisterRoutes(apiV1)
 
 	// Server logs handler for admin (requires LogBuffer)
 	if cfg.LogBuffer != nil {
@@ -253,6 +273,10 @@ func NewRouter(
 	classificationsHandler := handlers.NewClassificationsHandler(database, logger)
 	classificationsHandler.RegisterRoutes(apiV1)
 
+	// Storage Tiering routes (scheduler is nil for now, will be set up when tiering scheduler is integrated)
+	storageTiersHandler := handlers.NewStorageTiersHandler(database, nil, logger)
+	storageTiersHandler.RegisterRoutes(apiV1)
+
 	// Support bundle routes
 	supportHandler := handlers.NewSupportHandler(cfg.Version, cfg.Commit, cfg.BuildDate, "", logger)
 	supportHandler.RegisterRoutes(apiV1)
@@ -262,11 +286,32 @@ func NewRouter(
 	downtimeHandler := handlers.NewDowntimeHandler(downtimeService, database, logger)
 	downtimeHandler.RegisterRoutes(apiV1)
 
+	// IP allowlists routes
+	ipAllowlistsHandler := handlers.NewIPAllowlistsHandler(database, ipFilter, logger)
+	ipAllowlistsHandler.RegisterRoutes(apiV1)
+
+	// Rate limit dashboard routes (admin only)
+	rateLimitHandler := handlers.NewRateLimitHandler(database, logger)
+	rateLimitHandler.RegisterRoutes(apiV1)
+
+	// Rate limit config management routes
+	rateLimitsHandler := handlers.NewRateLimitsHandler(database, logger)
+	rateLimitsHandler.RegisterRoutes(apiV1)
+
+	// User sessions management routes
+	userSessionsHandler := handlers.NewUserSessionsHandler(database, logger)
+	userSessionsHandler.RegisterRoutes(apiV1)
+
+	// Lifecycle policy routes
+	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
+	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
 	agentAPI := r.Engine.Group("/api/v1/agent")
 	agentAPI.Use(middleware.APIKeyMiddleware(apiKeyValidator, logger))
+	agentAPI.Use(middleware.IPFilterAgentMiddleware(ipFilter, logger))
 
 	agentAPIHandler := handlers.NewAgentAPIHandler(database, logger)
 	agentAPIHandler.RegisterRoutes(agentAPI)
