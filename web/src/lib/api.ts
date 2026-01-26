@@ -2,6 +2,10 @@ import type {
 	ActiveMaintenanceResponse,
 	AddAgentToGroupRequest,
 	Agent,
+	BackupQueueEntryWithDetails,
+	BackupQueueSummary,
+	ConcurrencyResponse,
+	UpdateConcurrencyRequest,
 	AgentBackupsResponse,
 	AgentCommand,
 	AgentCommandsResponse,
@@ -2434,6 +2438,51 @@ export const templatesApi = {
 	): Promise<ImportResult> =>
 		fetchApi<ImportResult>(`/templates/${id}/use`, {
 			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+};
+
+// Backup Queue API
+export const backupQueueApi = {
+	list: async (): Promise<BackupQueueEntryWithDetails[]> => {
+		const response = await fetchApi<{ queue: BackupQueueEntryWithDetails[] }>(
+			'/backup-queue',
+		);
+		return response.queue ?? [];
+	},
+
+	getSummary: async (): Promise<BackupQueueSummary> =>
+		fetchApi<BackupQueueSummary>('/backup-queue/summary'),
+
+	cancel: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/backup-queue/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Concurrency API
+export const concurrencyApi = {
+	getOrgConcurrency: async (orgId: string): Promise<ConcurrencyResponse> =>
+		fetchApi<ConcurrencyResponse>(`/organizations/${orgId}/concurrency`),
+
+	updateOrgConcurrency: async (
+		orgId: string,
+		data: UpdateConcurrencyRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/organizations/${orgId}/concurrency`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	getAgentConcurrency: async (agentId: string): Promise<ConcurrencyResponse> =>
+		fetchApi<ConcurrencyResponse>(`/agents/${agentId}/concurrency`),
+
+	updateAgentConcurrency: async (
+		agentId: string,
+		data: UpdateConcurrencyRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agents/${agentId}/concurrency`, {
+			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
 };
