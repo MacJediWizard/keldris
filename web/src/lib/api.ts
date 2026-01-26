@@ -149,6 +149,16 @@ import type {
 	NotificationLogsResponse,
 	NotificationPreference,
 	NotificationPreferencesResponse,
+	NotificationRule,
+	NotificationRuleEvent,
+	NotificationRuleEventsResponse,
+	NotificationRuleExecution,
+	NotificationRuleExecutionsResponse,
+	NotificationRulesResponse,
+	CreateNotificationRuleRequest,
+	UpdateNotificationRuleRequest,
+	TestNotificationRuleRequest,
+	TestNotificationRuleResponse,
 	OnboardingStatus,
 	OnboardingStep,
 	OrgInvitation,
@@ -1179,6 +1189,64 @@ export const notificationsApi = {
 			'/notifications/logs',
 		);
 		return response.logs ?? [];
+	},
+};
+
+// Notification Rules API
+export const notificationRulesApi = {
+	list: async (): Promise<NotificationRule[]> => {
+		const response = await fetchApi<NotificationRulesResponse>(
+			'/notification-rules',
+		);
+		return response.rules ?? [];
+	},
+
+	get: async (id: string): Promise<NotificationRule> =>
+		fetchApi<NotificationRule>(`/notification-rules/${id}`),
+
+	create: async (
+		data: CreateNotificationRuleRequest,
+	): Promise<NotificationRule> =>
+		fetchApi<NotificationRule>('/notification-rules', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateNotificationRuleRequest,
+	): Promise<NotificationRule> =>
+		fetchApi<NotificationRule>(`/notification-rules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/notification-rules/${id}`, {
+			method: 'DELETE',
+		}),
+
+	test: async (
+		id: string,
+		data?: TestNotificationRuleRequest,
+	): Promise<TestNotificationRuleResponse> =>
+		fetchApi<TestNotificationRuleResponse>(`/notification-rules/${id}/test`, {
+			method: 'POST',
+			body: JSON.stringify(data ?? {}),
+		}),
+
+	listEvents: async (id: string): Promise<NotificationRuleEvent[]> => {
+		const response = await fetchApi<NotificationRuleEventsResponse>(
+			`/notification-rules/${id}/events`,
+		);
+		return response.events ?? [];
+	},
+
+	listExecutions: async (id: string): Promise<NotificationRuleExecution[]> => {
+		const response = await fetchApi<NotificationRuleExecutionsResponse>(
+			`/notification-rules/${id}/executions`,
+		);
+		return response.executions ?? [];
 	},
 };
 
