@@ -3176,7 +3176,14 @@ export interface ColdRestoreRequest {
 	from_tier: StorageTierType;
 	target_path?: string;
 	priority: 'standard' | 'expedited' | 'bulk';
-	status: 'pending' | 'warming' | 'ready' | 'restoring' | 'completed' | 'failed' | 'expired';
+	status:
+		| 'pending'
+		| 'warming'
+		| 'ready'
+		| 'restoring'
+		| 'completed'
+		| 'failed'
+		| 'expired';
 	estimated_ready_at?: string;
 	ready_at?: string;
 	expires_at?: string;
