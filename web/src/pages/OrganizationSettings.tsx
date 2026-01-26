@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMe } from '../hooks/useAuth';
 import {
+	useBackupQueueSummary,
+	useOrgConcurrency,
+	useUpdateOrgConcurrency,
+} from '../hooks/useBackupQueue';
+import {
 	useCurrentOrganization,
 	useDeleteOrganization,
 	useUpdateOrganization,
@@ -22,6 +27,13 @@ export function OrganizationSettings() {
 	const [isEditing, setIsEditing] = useState(false);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [deleteConfirmText, setDeleteConfirmText] = useState('');
+	const [isEditingConcurrency, setIsEditingConcurrency] = useState(false);
+	const [concurrencyLimit, setConcurrencyLimit] = useState<string>('');
+
+	const { data: concurrencyData, isLoading: concurrencyLoading } =
+		useOrgConcurrency(user?.current_org_id ?? '');
+	const { data: queueSummary } = useBackupQueueSummary();
+	const updateOrgConcurrency = useUpdateOrgConcurrency();
 
 	const currentUserRole = (user?.current_org_role ?? 'member') as OrgRole;
 	const isOwner = currentUserRole === 'owner';
@@ -62,6 +74,28 @@ export function OrganizationSettings() {
 		try {
 			await deleteOrganization.mutateAsync(orgId);
 			navigate('/');
+		} catch {
+			// Error handled by mutation
+		}
+	};
+
+	const handleEditConcurrency = () => {
+		setConcurrencyLimit(
+			concurrencyData?.max_concurrent_backups?.toString() ?? '',
+		);
+		setIsEditingConcurrency(true);
+	};
+
+	const handleSaveConcurrency = async (e: React.FormEvent) => {
+		e.preventDefault();
+		try {
+			const limit =
+				concurrencyLimit === '' ? null : Number.parseInt(concurrencyLimit, 10);
+			await updateOrgConcurrency.mutateAsync({
+				orgId,
+				data: { max_concurrent_backups: limit === null ? undefined : limit },
+			});
+			setIsEditingConcurrency(false);
 		} catch {
 			// Error handled by mutation
 		}
@@ -226,6 +260,132 @@ export function OrganizationSettings() {
 									).toLocaleDateString()}
 								</dd>
 							</div>
+						</dl>
+					)}
+				</div>
+			</div>
+
+			{/* Backup Concurrency Section */}
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+						Backup Concurrency Limits
+					</h2>
+					{canEdit && !isEditingConcurrency && (
+						<button
+							type="button"
+							onClick={handleEditConcurrency}
+							className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
+						>
+							Edit
+						</button>
+					)}
+				</div>
+
+				<div className="p-6">
+					{isEditingConcurrency ? (
+						<form onSubmit={handleSaveConcurrency} className="space-y-4">
+							<div>
+								<label
+									htmlFor="concurrencyLimit"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Maximum Concurrent Backups
+								</label>
+								<input
+									type="number"
+									id="concurrencyLimit"
+									value={concurrencyLimit}
+									onChange={(e) => setConcurrencyLimit(e.target.value)}
+									min="0"
+									placeholder="Unlimited"
+									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+								<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+									Leave empty for unlimited. When the limit is reached, new
+									backups will be queued.
+								</p>
+							</div>
+							{updateOrgConcurrency.isError && (
+								<p className="text-sm text-red-600 dark:text-red-400">
+									Failed to update concurrency limit. Please try again.
+								</p>
+							)}
+							<div className="flex justify-end gap-3">
+								<button
+									type="button"
+									onClick={() => setIsEditingConcurrency(false)}
+									className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+								>
+									Cancel
+								</button>
+								<button
+									type="submit"
+									disabled={updateOrgConcurrency.isPending}
+									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+								>
+									{updateOrgConcurrency.isPending
+										? 'Saving...'
+										: 'Save Changes'}
+								</button>
+							</div>
+						</form>
+					) : (
+						<dl className="space-y-4">
+							<div>
+								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Maximum Concurrent Backups
+								</dt>
+								<dd className="mt-1 text-sm text-gray-900 dark:text-white">
+									{concurrencyLoading ? (
+										<span className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse inline-block" />
+									) : concurrencyData?.max_concurrent_backups != null ? (
+										concurrencyData.max_concurrent_backups
+									) : (
+										<span className="text-gray-500 dark:text-gray-400">
+											Unlimited
+										</span>
+									)}
+								</dd>
+							</div>
+							<div className="flex gap-8">
+								<div>
+									<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+										Currently Running
+									</dt>
+									<dd className="mt-1 text-sm text-gray-900 dark:text-white">
+										{concurrencyData?.running_count ?? 0}
+									</dd>
+								</div>
+								<div>
+									<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+										Queued
+									</dt>
+									<dd className="mt-1 text-sm text-gray-900 dark:text-white">
+										{queueSummary?.total_queued ?? 0}
+										{(queueSummary?.total_queued ?? 0) > 0 && (
+											<span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+												Waiting
+											</span>
+										)}
+									</dd>
+								</div>
+							</div>
+							{queueSummary && queueSummary.total_queued > 0 && (
+								<div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+									<p className="text-sm text-yellow-800 dark:text-yellow-200">
+										{queueSummary.total_queued} backup(s) are queued waiting for
+										a slot.
+										{queueSummary.avg_wait_minutes > 0 && (
+											<>
+												{' '}
+												Average wait time:{' '}
+												{Math.round(queueSummary.avg_wait_minutes)} minutes.
+											</>
+										)}
+									</p>
+								</div>
+							)}
 						</dl>
 					)}
 				</div>
