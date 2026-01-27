@@ -5,6 +5,7 @@ import { AdminLogs } from './pages/AdminLogs';
 import { AgentDetails } from './pages/AgentDetails';
 import { AgentGroups } from './pages/AgentGroups';
 import { Agents } from './pages/Agents';
+import { Activity } from './pages/Activity';
 import { Alerts } from './pages/Alerts';
 import { Announcements } from './pages/Announcements';
 import { AuditLogs } from './pages/AuditLogs';
@@ -82,6 +83,7 @@ function App() {
 						<Route path="file-search" element={<FileSearch />} />
 						<Route path="snapshots/compare" element={<SnapshotCompare />} />
 						<Route path="snapshots/file-diff" element={<FileDiff />} />
+						<Route path="activity" element={<Activity />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="downtime" element={<DowntimeHistory />} />
 						<Route path="notifications" element={<Notifications />} />

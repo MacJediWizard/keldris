@@ -4173,3 +4173,86 @@ export interface SLADashboardResponse {
 export interface SLAReportResponse {
 	report: SLAReport;
 }
+
+// Activity Event types
+export type ActivityEventType =
+	| 'backup_started'
+	| 'backup_completed'
+	| 'backup_failed'
+	| 'restore_started'
+	| 'restore_completed'
+	| 'restore_failed'
+	| 'agent_connected'
+	| 'agent_disconnected'
+	| 'agent_created'
+	| 'agent_deleted'
+	| 'user_login'
+	| 'user_logout'
+	| 'schedule_created'
+	| 'schedule_updated'
+	| 'schedule_deleted'
+	| 'schedule_enabled'
+	| 'schedule_disabled'
+	| 'repository_created'
+	| 'repository_deleted'
+	| 'alert_triggered'
+	| 'alert_acknowledged'
+	| 'alert_resolved'
+	| 'policy_applied'
+	| 'maintenance_started'
+	| 'maintenance_ended'
+	| 'system_startup'
+	| 'system_shutdown';
+
+export type ActivityEventCategory =
+	| 'backup'
+	| 'restore'
+	| 'agent'
+	| 'user'
+	| 'schedule'
+	| 'repository'
+	| 'alert'
+	| 'policy'
+	| 'maintenance'
+	| 'system';
+
+export interface ActivityEvent {
+	id: string;
+	org_id: string;
+	type: ActivityEventType;
+	category: ActivityEventCategory;
+	title: string;
+	description: string;
+	user_id?: string;
+	user_name?: string;
+	agent_id?: string;
+	agent_name?: string;
+	resource_type?: string;
+	resource_id?: string;
+	resource_name?: string;
+	metadata?: Record<string, unknown>;
+	created_at: string;
+}
+
+export interface ActivityEventsResponse {
+	events: ActivityEvent[];
+}
+
+export interface ActivityEventCountResponse {
+	count: number;
+}
+
+export interface ActivityCategoriesResponse {
+	categories: Record<string, number>;
+}
+
+export interface ActivityEventFilter {
+	category?: ActivityEventCategory;
+	type?: ActivityEventType;
+	user_id?: string;
+	agent_id?: string;
+	start_time?: string;
+	end_time?: string;
+	limit?: number;
+	offset?: number;
+}

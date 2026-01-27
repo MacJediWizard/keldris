@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { ActivityFeedWidget } from '../components/features/ActivityFeed';
 import { MiniBackupCalendar } from '../components/features/BackupCalendar';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
 import { useAgents } from '../hooks/useAgents';
@@ -618,6 +619,9 @@ export function Dashboard() {
 					</div>
 				)}
 			</div>
+
+			{/* Activity Feed */}
+			<ActivityFeedWidget limit={5} enableRealtime={true} />
 		</div>
 	);
 }
