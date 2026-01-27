@@ -141,6 +141,10 @@ import type {
 	ExcludePattern,
 	ExcludePatternsResponse,
 	ExportBundleRequest,
+	Favorite,
+	FavoriteEntityType,
+	FavoritesResponse,
+	CreateFavoriteRequest,
 	ExportFormat,
 	ExtendImmutabilityLockRequest,
 	FileDiffResponse,
@@ -3487,4 +3491,29 @@ export const activityApi = {
 		);
 		return response.events ?? [];
 	},
+};
+
+// Favorites API
+export const favoritesApi = {
+	list: async (entityType?: FavoriteEntityType): Promise<Favorite[]> => {
+		const endpoint = entityType
+			? `/favorites?entity_type=${entityType}`
+			: '/favorites';
+		const response = await fetchApi<FavoritesResponse>(endpoint);
+		return response.favorites ?? [];
+	},
+
+	create: async (data: CreateFavoriteRequest): Promise<Favorite> =>
+		fetchApi<Favorite>('/favorites', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (
+		entityType: FavoriteEntityType,
+		entityId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/favorites/${entityType}/${entityId}`, {
+			method: 'DELETE',
+		}),
 };
