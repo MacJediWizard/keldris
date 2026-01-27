@@ -296,7 +296,12 @@ interface RecentItemRowProps {
 	onDelete: (e: React.MouseEvent) => void;
 }
 
-function RecentItemRow({ item, icon, onNavigate, onDelete }: RecentItemRowProps) {
+function RecentItemRow({
+	item,
+	icon,
+	onNavigate,
+	onDelete,
+}: RecentItemRowProps) {
 	return (
 		<button
 			type="button"
