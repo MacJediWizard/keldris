@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { AgentDownloads } from '../components/features/AgentDownloads';
-import { StarButton } from '../components/ui/StarButton';
-import { useFavoriteIds } from '../hooks/useFavorites';
 import { ExportImportModal } from '../components/features/ExportImportModal';
 import { ImportAgentsWizard } from '../components/features/ImportAgentsWizard';
 import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
@@ -16,6 +14,7 @@ import {
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
+import { StarButton } from '../components/ui/StarButton';
 import { useAddAgentToGroup, useAgentGroups } from '../hooks/useAgentGroups';
 import {
 	useCreateRegistrationCode,
@@ -29,6 +28,7 @@ import {
 	useRotateAgentApiKey,
 } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
+import { useFavoriteIds } from '../hooks/useFavorites';
 import { useLocale } from '../hooks/useLocale';
 import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
 import { statusHelp } from '../lib/help-content';

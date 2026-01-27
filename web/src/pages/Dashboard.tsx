@@ -11,6 +11,7 @@ import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
 import { useStorageStatsSummary } from '../hooks/useStorageStats';
 import { dashboardHelp } from '../lib/help-content';
+import type { Agent, Repository, Schedule } from '../lib/types';
 import {
 	formatDedupRatio,
 	getBackupStatusColor,
@@ -108,19 +109,25 @@ export function Dashboard() {
 	};
 
 	// Get favorite items with details
-	const favoriteAgents = favorites
-		?.filter((f) => f.entity_type === 'agent')
-		.map((f) => agents?.find((a) => a.id === f.entity_id))
-		.filter(Boolean) ?? [];
-	const favoriteSchedules = favorites
-		?.filter((f) => f.entity_type === 'schedule')
-		.map((f) => schedules?.find((s) => s.id === f.entity_id))
-		.filter(Boolean) ?? [];
-	const favoriteRepos = favorites
-		?.filter((f) => f.entity_type === 'repository')
-		.map((f) => repositories?.find((r) => r.id === f.entity_id))
-		.filter(Boolean) ?? [];
-	const hasFavorites = favoriteAgents.length > 0 || favoriteSchedules.length > 0 || favoriteRepos.length > 0;
+	const favoriteAgents =
+		favorites
+			?.filter((f) => f.entity_type === 'agent')
+			.map((f) => agents?.find((a) => a.id === f.entity_id))
+			.filter((a): a is Agent => a !== undefined) ?? [];
+	const favoriteSchedules =
+		favorites
+			?.filter((f) => f.entity_type === 'schedule')
+			.map((f) => schedules?.find((s) => s.id === f.entity_id))
+			.filter((s): s is Schedule => s !== undefined) ?? [];
+	const favoriteRepos =
+		favorites
+			?.filter((f) => f.entity_type === 'repository')
+			.map((f) => repositories?.find((r) => r.id === f.entity_id))
+			.filter((r): r is Repository => r !== undefined) ?? [];
+	const hasFavorites =
+		favoriteAgents.length > 0 ||
+		favoriteSchedules.length > 0 ||
+		favoriteRepos.length > 0;
 
 	const isLoading =
 		agentsLoading || reposLoading || schedulesLoading || backupsLoading;
@@ -441,21 +448,45 @@ export function Dashboard() {
 							{favoriteAgents.length > 0 && (
 								<div>
 									<h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 flex items-center gap-2">
-										<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+										<svg
+											aria-hidden="true"
+											className="w-4 h-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+											/>
 										</svg>
 										Agents ({favoriteAgents.length})
 									</h3>
 									<ul className="space-y-2">
 										{favoriteAgents.slice(0, 5).map((agent) => (
-											<li key={agent!.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
+											<li
+												key={agent.id}
+												className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded"
+											>
 												<div className="flex items-center gap-2">
-													<StarButton entityType="agent" entityId={agent!.id} isFavorite={true} size="sm" />
-													<Link to={`/agents/${agent!.id}`} className="text-sm font-medium text-gray-900 dark:text-white hover:text-indigo-600">
-														{agent!.hostname}
+													<StarButton
+														entityType="agent"
+														entityId={agent.id}
+														isFavorite={true}
+														size="sm"
+													/>
+													<Link
+														to={`/agents/${agent.id}`}
+														className="text-sm font-medium text-gray-900 dark:text-white hover:text-indigo-600"
+													>
+														{agent.hostname}
 													</Link>
 												</div>
-												<span className={`w-2 h-2 rounded-full ${agent!.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`} />
+												<span
+													className={`w-2 h-2 rounded-full ${agent.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`}
+												/>
 											</li>
 										))}
 									</ul>
@@ -465,21 +496,45 @@ export function Dashboard() {
 							{favoriteSchedules.length > 0 && (
 								<div>
 									<h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 flex items-center gap-2">
-										<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+										<svg
+											aria-hidden="true"
+											className="w-4 h-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+											/>
 										</svg>
 										Schedules ({favoriteSchedules.length})
 									</h3>
 									<ul className="space-y-2">
 										{favoriteSchedules.slice(0, 5).map((schedule) => (
-											<li key={schedule!.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
+											<li
+												key={schedule.id}
+												className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded"
+											>
 												<div className="flex items-center gap-2">
-													<StarButton entityType="schedule" entityId={schedule!.id} isFavorite={true} size="sm" />
-													<Link to="/schedules" className="text-sm font-medium text-gray-900 dark:text-white hover:text-indigo-600">
-														{schedule!.name}
+													<StarButton
+														entityType="schedule"
+														entityId={schedule.id}
+														isFavorite={true}
+														size="sm"
+													/>
+													<Link
+														to="/schedules"
+														className="text-sm font-medium text-gray-900 dark:text-white hover:text-indigo-600"
+													>
+														{schedule.name}
 													</Link>
 												</div>
-												<span className={`w-2 h-2 rounded-full ${schedule!.enabled ? 'bg-green-500' : 'bg-gray-400'}`} />
+												<span
+													className={`w-2 h-2 rounded-full ${schedule.enabled ? 'bg-green-500' : 'bg-gray-400'}`}
+												/>
 											</li>
 										))}
 									</ul>
@@ -489,21 +544,45 @@ export function Dashboard() {
 							{favoriteRepos.length > 0 && (
 								<div>
 									<h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 flex items-center gap-2">
-										<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+										<svg
+											aria-hidden="true"
+											className="w-4 h-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+											/>
 										</svg>
 										Repositories ({favoriteRepos.length})
 									</h3>
 									<ul className="space-y-2">
 										{favoriteRepos.slice(0, 5).map((repo) => (
-											<li key={repo!.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
+											<li
+												key={repo.id}
+												className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded"
+											>
 												<div className="flex items-center gap-2">
-													<StarButton entityType="repository" entityId={repo!.id} isFavorite={true} size="sm" />
-													<Link to="/repositories" className="text-sm font-medium text-gray-900 dark:text-white hover:text-indigo-600">
-														{repo!.name}
+													<StarButton
+														entityType="repository"
+														entityId={repo.id}
+														isFavorite={true}
+														size="sm"
+													/>
+													<Link
+														to="/repositories"
+														className="text-sm font-medium text-gray-900 dark:text-white hover:text-indigo-600"
+													>
+														{repo.name}
 													</Link>
 												</div>
-												<span className="text-xs text-gray-500 dark:text-gray-400">{repo!.type}</span>
+												<span className="text-xs text-gray-500 dark:text-gray-400">
+													{repo.type}
+												</span>
 											</li>
 										))}
 									</ul>

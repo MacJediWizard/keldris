@@ -33,8 +33,7 @@ export function StarButton({
 	};
 
 	const sizeClasses = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
-	const buttonClasses =
-		size === 'sm' ? 'p-0.5 -m-0.5' : 'p-1 -m-1';
+	const buttonClasses = size === 'sm' ? 'p-0.5 -m-0.5' : 'p-1 -m-1';
 
 	return (
 		<button

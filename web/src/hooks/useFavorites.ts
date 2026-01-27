@@ -28,7 +28,10 @@ export function useRemoveFavorite() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ entityType, entityId }: { entityType: FavoriteEntityType; entityId: string }) =>
+		mutationFn: ({
+			entityType,
+			entityId,
+		}: { entityType: FavoriteEntityType; entityId: string }) =>
 			favoritesApi.delete(entityType, entityId),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['favorites'] });
@@ -37,7 +40,10 @@ export function useRemoveFavorite() {
 }
 
 // Hook to check if a specific entity is favorited
-export function useIsFavorite(entityType: FavoriteEntityType, entityId: string) {
+export function useIsFavorite(
+	entityType: FavoriteEntityType,
+	entityId: string,
+) {
 	const { data: favorites } = useFavorites(entityType);
 	return favorites?.some((f) => f.entity_id === entityId) ?? false;
 }
