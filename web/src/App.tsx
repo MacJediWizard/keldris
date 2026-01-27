@@ -90,11 +90,17 @@ function App() {
 							<Route path="alerts" element={<Alerts />} />
 							<Route path="downtime" element={<DowntimeHistory />} />
 							<Route path="notifications" element={<Notifications />} />
-							<Route path="notification-rules" element={<NotificationRules />} />
+							<Route
+								path="notification-rules"
+								element={<NotificationRules />}
+							/>
 							<Route path="reports" element={<Reports />} />
 							<Route path="audit-logs" element={<AuditLogs />} />
 							<Route path="legal-holds" element={<LegalHolds />} />
-							<Route path="lifecycle-policies" element={<LifecyclePolicies />} />
+							<Route
+								path="lifecycle-policies"
+								element={<LifecyclePolicies />}
+							/>
 							<Route path="stats" element={<StorageStats />} />
 							<Route path="stats/:id" element={<RepositoryStatsDetail />} />
 							<Route path="tags" element={<Tags />} />
@@ -113,7 +119,10 @@ function App() {
 								path="organization/sso"
 								element={<OrganizationSSOSettings />}
 							/>
-							<Route path="organization/maintenance" element={<Maintenance />} />
+							<Route
+								path="organization/maintenance"
+								element={<Maintenance />}
+							/>
 							<Route
 								path="organization/announcements"
 								element={<Announcements />}
@@ -128,7 +137,10 @@ function App() {
 							/>
 							<Route path="organization/new" element={<NewOrganization />} />
 							<Route path="admin/logs" element={<AdminLogs />} />
-							<Route path="admin/rate-limits" element={<RateLimitDashboard />} />
+							<Route
+								path="admin/rate-limits"
+								element={<RateLimitDashboard />}
+							/>
 							<Route path="admin/rate-limit-configs" element={<RateLimits />} />
 							<Route path="account/sessions" element={<UserSessions />} />
 							<Route path="onboarding" element={<Onboarding />} />
