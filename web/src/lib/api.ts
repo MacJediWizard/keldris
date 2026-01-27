@@ -1,6 +1,11 @@
 import type {
 	AcknowledgeBreachRequest,
 	ActiveMaintenanceResponse,
+	ActivityCategoriesResponse,
+	ActivityEvent,
+	ActivityEventCountResponse,
+	ActivityEventFilter,
+	ActivityEventsResponse,
 	AddAgentToGroupRequest,
 	Agent,
 	AgentBackupsResponse,
@@ -25,11 +30,6 @@ import type {
 	AlertRule,
 	AlertRulesResponse,
 	AlertsResponse,
-	ActivityCategoriesResponse,
-	ActivityEvent,
-	ActivityEventCountResponse,
-	ActivityEventFilter,
-	ActivityEventsResponse,
 	Announcement,
 	AnnouncementsResponse,
 	ApplyPolicyRequest,
@@ -3380,16 +3380,15 @@ export const activityApi = {
 		return response.events ?? [];
 	},
 
-	count: async (
-		category?: string,
-		type?: string,
-	): Promise<number> => {
+	count: async (category?: string, type?: string): Promise<number> => {
 		const params = new URLSearchParams();
 		if (category) params.set('category', category);
 		if (type) params.set('type', type);
 
 		const queryString = params.toString();
-		const url = queryString ? `/activity/count?${queryString}` : '/activity/count';
+		const url = queryString
+			? `/activity/count?${queryString}`
+			: '/activity/count';
 		const response = await fetchApi<ActivityEventCountResponse>(url);
 		return response.count;
 	},

@@ -214,7 +214,10 @@ interface ActivityEventItemProps {
 	showCategory?: boolean;
 }
 
-function ActivityEventItem({ event, showCategory = true }: ActivityEventItemProps) {
+function ActivityEventItem({
+	event,
+	showCategory = true,
+}: ActivityEventItemProps) {
 	const { formatRelativeTime } = useLocale();
 	const style = getCategoryStyle(event.category);
 
@@ -293,7 +296,7 @@ export function ActivityFeedWidget({
 						self.findIndex((e) => e.id === event.id) === index,
 				)
 				.slice(0, limit)
-		: recentEvents ?? [];
+		: (recentEvents ?? []);
 
 	return (
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -305,9 +308,7 @@ export function ActivityFeedWidget({
 					{enableRealtime && (
 						<span
 							className={`w-2 h-2 rounded-full ${
-								isConnected
-									? 'bg-green-500 animate-pulse'
-									: 'bg-gray-400'
+								isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
 							}`}
 							title={isConnected ? 'Live updates enabled' : 'Connecting...'}
 						/>
@@ -378,13 +379,19 @@ interface ActivityFeedFullProps {
 }
 
 // Full activity feed component for dedicated page
-export function ActivityFeedFull({ enableRealtime = true }: ActivityFeedFullProps) {
+export function ActivityFeedFull({
+	enableRealtime = true,
+}: ActivityFeedFullProps) {
 	const [selectedCategory, setSelectedCategory] = useState<
 		ActivityEventCategory | 'all'
 	>('all');
 
 	const { data: recentEvents, isLoading, isFetching } = useRecentActivity(50);
-	const { events: liveEvents, isConnected, clearEvents } = useActivityFeed({
+	const {
+		events: liveEvents,
+		isConnected,
+		clearEvents,
+	} = useActivityFeed({
 		enabled: enableRealtime,
 		categories: selectedCategory === 'all' ? undefined : [selectedCategory],
 		maxEvents: 100,
@@ -397,12 +404,11 @@ export function ActivityFeedFull({ enableRealtime = true }: ActivityFeedFullProp
 			: recentEvents?.filter((e) => e.category === selectedCategory);
 
 	const allEvents = enableRealtime
-		? [...liveEvents, ...(filteredRecent ?? [])]
-				.filter(
-					(event, index, self) =>
-						self.findIndex((e) => e.id === event.id) === index,
-				)
-		: filteredRecent ?? [];
+		? [...liveEvents, ...(filteredRecent ?? [])].filter(
+				(event, index, self) =>
+					self.findIndex((e) => e.id === event.id) === index,
+			)
+		: (filteredRecent ?? []);
 
 	return (
 		<div className="space-y-4">
@@ -416,9 +422,7 @@ export function ActivityFeedFull({ enableRealtime = true }: ActivityFeedFullProp
 						<div className="flex items-center gap-2 text-sm">
 							<span
 								className={`w-2 h-2 rounded-full ${
-									isConnected
-										? 'bg-green-500 animate-pulse'
-										: 'bg-gray-400'
+									isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
 								}`}
 							/>
 							<span className="text-gray-500 dark:text-gray-400">
