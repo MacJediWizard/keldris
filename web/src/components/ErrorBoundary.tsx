@@ -39,7 +39,10 @@ export class ErrorBoundary extends Component<
 				return this.props.fallback;
 			}
 			return (
-				<ServerError error={this.state.error ?? undefined} resetError={this.resetError} />
+				<ServerError
+					error={this.state.error ?? undefined}
+					resetError={this.resetError}
+				/>
 			);
 		}
 
