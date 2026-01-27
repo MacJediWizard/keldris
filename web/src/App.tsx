@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { Activity } from './pages/Activity';
 import { AdminLogs } from './pages/AdminLogs';
 import { AgentDetails } from './pages/AgentDetails';
 import { AgentGroups } from './pages/AgentGroups';
@@ -82,6 +83,7 @@ function App() {
 						<Route path="file-search" element={<FileSearch />} />
 						<Route path="snapshots/compare" element={<SnapshotCompare />} />
 						<Route path="snapshots/file-diff" element={<FileDiff />} />
+						<Route path="activity" element={<Activity />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="downtime" element={<DowntimeHistory />} />
 						<Route path="notifications" element={<Notifications />} />
