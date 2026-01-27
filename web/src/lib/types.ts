@@ -4306,3 +4306,24 @@ export interface ActivityEventFilter {
 	limit?: number;
 	offset?: number;
 }
+
+// Favorite types
+export type FavoriteEntityType = 'agent' | 'schedule' | 'repository';
+
+export interface Favorite {
+	id: string;
+	user_id: string;
+	org_id: string;
+	entity_type: FavoriteEntityType;
+	entity_id: string;
+	created_at: string;
+}
+
+export interface CreateFavoriteRequest {
+	entity_type: FavoriteEntityType;
+	entity_id: string;
+}
+
+export interface FavoritesResponse {
+	favorites: Favorite[];
+}
