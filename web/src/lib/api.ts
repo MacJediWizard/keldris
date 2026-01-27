@@ -154,6 +154,7 @@ import type {
 	GeoReplicationSummary,
 	GeoReplicationSummaryResponse,
 	GeoReplicationUpdateRequest,
+	GroupedSearchResponse,
 	IPAllowlist,
 	IPAllowlistSettings,
 	IPAllowlistsResponse,
@@ -226,6 +227,7 @@ import type {
 	RateLimitConfigsResponse,
 	RateLimitDashboardStats,
 	RateLimitStatsResponse,
+	RecentSearchesResponse,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -269,16 +271,14 @@ import type {
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
 	SSOSettings,
+	SaveRecentSearchRequest,
 	SavedFilter,
 	SavedFiltersResponse,
 	Schedule,
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
-	GroupedSearchResponse,
 	SearchSuggestionsResponse,
-	RecentSearchesResponse,
-	SaveRecentSearchRequest,
 	ServerLogComponentsResponse,
 	ServerLogFilter,
 	ServerLogsResponse,
@@ -1937,7 +1937,9 @@ export const searchApi = {
 		return fetchApi<SearchResponse>(`/search?${searchParams.toString()}`);
 	},
 
-	searchGrouped: async (filter: SearchFilter): Promise<GroupedSearchResponse> => {
+	searchGrouped: async (
+		filter: SearchFilter,
+	): Promise<GroupedSearchResponse> => {
 		const searchParams = new URLSearchParams();
 		searchParams.set('q', filter.q);
 
@@ -1966,23 +1968,34 @@ export const searchApi = {
 			searchParams.set('limit', filter.limit.toString());
 		}
 
-		return fetchApi<GroupedSearchResponse>(`/search/grouped?${searchParams.toString()}`);
+		return fetchApi<GroupedSearchResponse>(
+			`/search/grouped?${searchParams.toString()}`,
+		);
 	},
 
-	getSuggestions: async (query: string, limit = 10): Promise<SearchSuggestionsResponse> => {
+	getSuggestions: async (
+		query: string,
+		limit = 10,
+	): Promise<SearchSuggestionsResponse> => {
 		const searchParams = new URLSearchParams();
 		searchParams.set('q', query);
 		searchParams.set('limit', limit.toString());
-		return fetchApi<SearchSuggestionsResponse>(`/search/suggestions?${searchParams.toString()}`);
+		return fetchApi<SearchSuggestionsResponse>(
+			`/search/suggestions?${searchParams.toString()}`,
+		);
 	},
 
 	getRecentSearches: async (limit = 10): Promise<RecentSearchesResponse> => {
 		const searchParams = new URLSearchParams();
 		searchParams.set('limit', limit.toString());
-		return fetchApi<RecentSearchesResponse>(`/search/recent?${searchParams.toString()}`);
+		return fetchApi<RecentSearchesResponse>(
+			`/search/recent?${searchParams.toString()}`,
+		);
 	},
 
-	saveRecentSearch: async (data: SaveRecentSearchRequest): Promise<MessageResponse> =>
+	saveRecentSearch: async (
+		data: SaveRecentSearchRequest,
+	): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>('/search/recent', {
 			method: 'POST',
 			body: JSON.stringify(data),

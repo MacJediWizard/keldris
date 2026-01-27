@@ -19,11 +19,11 @@ import {
 } from '../hooks/useReadOnlyMode';
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
+import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { WhatsNewModal } from './features/WhatsNewModal';
-import { GlobalSearchBar } from './features/GlobalSearchBar';
 
 interface NavItem {
 	path: string;
