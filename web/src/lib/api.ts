@@ -236,6 +236,8 @@ import type {
 	RateLimitConfigsResponse,
 	RateLimitDashboardStats,
 	RateLimitStatsResponse,
+	RecentItem,
+	RecentItemsResponse,
 	RecentSearchesResponse,
 	ReplicationStatus,
 	ReplicationStatusResponse,
@@ -316,6 +318,7 @@ import type {
 	TestNotificationRuleRequest,
 	TestNotificationRuleResponse,
 	TestRepositoryResponse,
+	TrackRecentItemRequest,
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
@@ -3435,6 +3438,31 @@ export const slaApi = {
 		const response = await fetchApi<SLAReportResponse>(url);
 		return response.report;
 	},
+};
+
+// Recent Items API
+export const recentItemsApi = {
+	list: async (type?: string): Promise<RecentItem[]> => {
+		const url = type ? `/recent-items?type=${type}` : '/recent-items';
+		const response = await fetchApi<RecentItemsResponse>(url);
+		return response.items ?? [];
+	},
+
+	track: async (data: TrackRecentItemRequest): Promise<RecentItem> =>
+		fetchApi<RecentItem>('/recent-items', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/recent-items/${id}`, {
+			method: 'DELETE',
+		}),
+
+	clearAll: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/recent-items', {
+			method: 'DELETE',
+		}),
 };
 
 // Activity API
