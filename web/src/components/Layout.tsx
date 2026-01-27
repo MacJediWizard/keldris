@@ -19,6 +19,7 @@ import {
 } from '../hooks/useReadOnlyMode';
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
+import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { RecentItemsDropdown } from './features/RecentItems';
@@ -814,6 +815,9 @@ function Header() {
 		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
 			<div className="flex items-center gap-4">
 				<OrgSwitcher />
+			</div>
+			<div className="flex-1 max-w-xl mx-4">
+				<GlobalSearchBar placeholder={t('common.search')} />
 			</div>
 			<div className="flex items-center gap-4">
 				<LanguageSelector />

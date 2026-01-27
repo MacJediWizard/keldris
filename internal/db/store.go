@@ -11416,3 +11416,116 @@ func (db *DB) GetSLADashboardStats(ctx context.Context, orgID uuid.UUID) (*model
 
 	return stats, nil
 }
+
+// User Favorites methods
+
+// GetFavoritesByUserAndOrg returns all favorites for a user in an organization,
+// optionally filtered by entity type.
+func (db *DB) GetFavoritesByUserAndOrg(ctx context.Context, userID, orgID uuid.UUID, entityType string) ([]*models.Favorite, error) {
+	query := `
+		SELECT id, user_id, org_id, entity_type, entity_id, created_at
+		FROM user_favorites
+		WHERE user_id = $1 AND org_id = $2
+	`
+	args := []interface{}{userID, orgID}
+
+	if entityType != "" {
+		query += " AND entity_type = $3"
+		args = append(args, entityType)
+	}
+
+	query += " ORDER BY created_at DESC"
+
+	rows, err := db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query favorites: %w", err)
+	}
+	defer rows.Close()
+
+	var favorites []*models.Favorite
+	for rows.Next() {
+		var f models.Favorite
+		err := rows.Scan(
+			&f.ID, &f.UserID, &f.OrgID, &f.EntityType, &f.EntityID, &f.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan favorite: %w", err)
+		}
+		favorites = append(favorites, &f)
+	}
+	return favorites, nil
+}
+
+// GetFavoriteByUserAndEntity returns a favorite by user and entity.
+func (db *DB) GetFavoriteByUserAndEntity(ctx context.Context, userID uuid.UUID, entityType string, entityID uuid.UUID) (*models.Favorite, error) {
+	var f models.Favorite
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, user_id, org_id, entity_type, entity_id, created_at
+		FROM user_favorites
+		WHERE user_id = $1 AND entity_type = $2 AND entity_id = $3
+	`, userID, entityType, entityID).Scan(
+		&f.ID, &f.UserID, &f.OrgID, &f.EntityType, &f.EntityID, &f.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
+// CreateFavorite creates a new favorite.
+func (db *DB) CreateFavorite(ctx context.Context, f *models.Favorite) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO user_favorites (id, user_id, org_id, entity_type, entity_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, f.ID, f.UserID, f.OrgID, f.EntityType, f.EntityID, f.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("insert favorite: %w", err)
+	}
+	return nil
+}
+
+// DeleteFavorite deletes a favorite by user, entity type and entity ID.
+func (db *DB) DeleteFavorite(ctx context.Context, userID uuid.UUID, entityType string, entityID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM user_favorites WHERE user_id = $1 AND entity_type = $2 AND entity_id = $3
+	`, userID, entityType, entityID)
+	if err != nil {
+		return fmt.Errorf("delete favorite: %w", err)
+	}
+	return nil
+}
+
+// IsFavorite checks if an entity is favorited by a user.
+func (db *DB) IsFavorite(ctx context.Context, userID uuid.UUID, entityType string, entityID uuid.UUID) (bool, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM user_favorites
+		WHERE user_id = $1 AND entity_type = $2 AND entity_id = $3
+	`, userID, entityType, entityID).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("check favorite: %w", err)
+	}
+	return count > 0, nil
+}
+
+// GetFavoriteEntityIDs returns all entity IDs of a given type that are favorited by a user.
+func (db *DB) GetFavoriteEntityIDs(ctx context.Context, userID, orgID uuid.UUID, entityType string) ([]uuid.UUID, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT entity_id FROM user_favorites
+		WHERE user_id = $1 AND org_id = $2 AND entity_type = $3
+	`, userID, orgID, entityType)
+	if err != nil {
+		return nil, fmt.Errorf("query favorite entity IDs: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan entity ID: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}

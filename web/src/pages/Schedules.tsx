@@ -17,8 +17,10 @@ import {
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { FormLabelWithHelp, HelpTooltip } from '../components/ui/HelpTooltip';
+import { StarButton } from '../components/ui/StarButton';
 import { useAgents } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
+import { useFavoriteIds } from '../hooks/useFavorites';
 import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
 import {
@@ -711,7 +713,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 										<FormLabelWithHelp
 											htmlFor="compression-level"
 											label="Compression Level"
-											helpContent={advancedSettingsHelp.compressionLevel.content}
+											helpContent={
+												advancedSettingsHelp.compressionLevel.content
+											}
 											helpTitle={advancedSettingsHelp.compressionLevel.title}
 										/>
 										<select
@@ -772,7 +776,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 										<FormLabelWithHelp
 											htmlFor="schedule-mount-behavior"
 											label="On Network Mount Unavailable"
-											helpContent={advancedSettingsHelp.onMountUnavailable.content}
+											helpContent={
+												advancedSettingsHelp.onMountUnavailable.content
+											}
 											helpTitle={advancedSettingsHelp.onMountUnavailable.title}
 										/>
 										<select
@@ -1321,6 +1327,7 @@ interface ScheduleRowProps {
 	isDryRunning: boolean;
 	isSelected: boolean;
 	onToggleSelect: () => void;
+	isFavorite: boolean;
 }
 
 function ScheduleRow({
@@ -1341,6 +1348,7 @@ function ScheduleRow({
 	isDryRunning,
 	isSelected,
 	onToggleSelect,
+	isFavorite,
 }: ScheduleRowProps) {
 	const hasResourceControls =
 		schedule.bandwidth_limit_kb ||
@@ -1365,8 +1373,16 @@ function ScheduleRow({
 				<BulkSelectCheckbox checked={isSelected} onChange={onToggleSelect} />
 			</td>
 			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900 dark:text-white">
-					{schedule.name}
+				<div className="flex items-center gap-2">
+					<StarButton
+						entityType="schedule"
+						entityId={schedule.id}
+						isFavorite={isFavorite}
+						size="sm"
+					/>
+					<div className="font-medium text-gray-900 dark:text-white">
+						{schedule.name}
+					</div>
 				</div>
 				<div className="text-sm text-gray-500 dark:text-gray-400">
 					{agentName ?? 'Unknown Agent'} →{' '}
@@ -1655,6 +1671,7 @@ export function Schedules() {
 	const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>(
 		'all',
 	);
+	const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [editingScriptsScheduleId, setEditingScriptsScheduleId] = useState<
 		string | null
@@ -1679,6 +1696,7 @@ export function Schedules() {
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
 	const { data: policies } = usePolicies();
+	const favoriteIds = useFavoriteIds('schedule');
 	const updateSchedule = useUpdateSchedule();
 	const deleteSchedule = useDeleteSchedule();
 	const runSchedule = useRunSchedule();
@@ -1700,7 +1718,8 @@ export function Schedules() {
 			statusFilter === 'all' ||
 			(statusFilter === 'active' && schedule.enabled) ||
 			(statusFilter === 'paused' && !schedule.enabled);
-		return matchesSearch && matchesStatus;
+		const matchesFavorites = !showFavoritesOnly || favoriteIds.has(schedule.id);
+		return matchesSearch && matchesStatus && matchesFavorites;
 	});
 
 	const scheduleIds = filteredSchedules?.map((s) => s.id) ?? [];
@@ -2051,6 +2070,31 @@ export function Schedules() {
 							<option value="active">Active</option>
 							<option value="paused">Paused</option>
 						</select>
+						<button
+							type="button"
+							onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+							className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
+								showFavoritesOnly
+									? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+									: 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+							}`}
+						>
+							<svg
+								aria-hidden="true"
+								className={`w-4 h-4 ${showFavoritesOnly ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
+								fill={showFavoritesOnly ? 'currentColor' : 'none'}
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+								/>
+							</svg>
+							Favorites
+						</button>
 					</div>
 				</div>
 
@@ -2149,6 +2193,7 @@ export function Schedules() {
 										isDryRunning={dryRunSchedule.isPending}
 										isSelected={bulkSelect.isSelected(schedule.id)}
 										onToggleSelect={() => bulkSelect.toggle(schedule.id)}
+										isFavorite={favoriteIds.has(schedule.id)}
 									/>
 								);
 							})}
