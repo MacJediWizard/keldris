@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { ClassificationBadge } from '../components/ClassificationBadge';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
-import { StarButton } from '../components/ui/StarButton';
-import { useFavoriteIds } from '../hooks/useFavorites';
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
 import { ExportImportModal } from '../components/features/ExportImportModal';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
@@ -19,8 +17,10 @@ import {
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { FormLabelWithHelp, HelpTooltip } from '../components/ui/HelpTooltip';
+import { StarButton } from '../components/ui/StarButton';
 import { useAgents } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
+import { useFavoriteIds } from '../hooks/useFavorites';
 import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
 import {
