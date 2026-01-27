@@ -4224,6 +4224,38 @@ export interface SLAReportResponse {
 	report: SLAReport;
 }
 
+// Recent Items types
+export type RecentItemType =
+	| 'agent'
+	| 'repository'
+	| 'schedule'
+	| 'backup'
+	| 'policy'
+	| 'snapshot';
+
+export interface RecentItem {
+	id: string;
+	org_id: string;
+	user_id: string;
+	item_type: RecentItemType;
+	item_id: string;
+	item_name: string;
+	page_path: string;
+	viewed_at: string;
+	created_at: string;
+}
+
+export interface TrackRecentItemRequest {
+	item_type: RecentItemType;
+	item_id: string;
+	item_name: string;
+	page_path: string;
+}
+
+export interface RecentItemsResponse {
+	items: RecentItem[];
+}
+
 // Activity Event types
 export type ActivityEventType =
 	| 'backup_started'

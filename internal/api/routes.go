@@ -312,6 +312,10 @@ func NewRouter(
 	userSessionsHandler := handlers.NewUserSessionsHandler(database, logger)
 	userSessionsHandler.RegisterRoutes(apiV1)
 
+	// Recent items tracking routes
+	recentItemsHandler := handlers.NewRecentItemsHandler(database, logger)
+	recentItemsHandler.RegisterRoutes(apiV1)
+
 	// Lifecycle policy routes
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
