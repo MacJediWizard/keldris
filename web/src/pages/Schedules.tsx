@@ -711,7 +711,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 										<FormLabelWithHelp
 											htmlFor="compression-level"
 											label="Compression Level"
-											helpContent={advancedSettingsHelp.compressionLevel.content}
+											helpContent={
+												advancedSettingsHelp.compressionLevel.content
+											}
 											helpTitle={advancedSettingsHelp.compressionLevel.title}
 										/>
 										<select
@@ -772,7 +774,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 										<FormLabelWithHelp
 											htmlFor="schedule-mount-behavior"
 											label="On Network Mount Unavailable"
-											helpContent={advancedSettingsHelp.onMountUnavailable.content}
+											helpContent={
+												advancedSettingsHelp.onMountUnavailable.content
+											}
 											helpTitle={advancedSettingsHelp.onMountUnavailable.title}
 										/>
 										<select
