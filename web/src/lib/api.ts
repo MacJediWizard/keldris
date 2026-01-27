@@ -154,6 +154,7 @@ import type {
 	GeoReplicationSummary,
 	GeoReplicationSummaryResponse,
 	GeoReplicationUpdateRequest,
+	GroupedSearchResponse,
 	IPAllowlist,
 	IPAllowlistSettings,
 	IPAllowlistsResponse,
@@ -226,6 +227,7 @@ import type {
 	RateLimitConfigsResponse,
 	RateLimitDashboardStats,
 	RateLimitStatsResponse,
+	RecentSearchesResponse,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -269,12 +271,14 @@ import type {
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
 	SSOSettings,
+	SaveRecentSearchRequest,
 	SavedFilter,
 	SavedFiltersResponse,
 	Schedule,
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
+	SearchSuggestionsResponse,
 	ServerLogComponentsResponse,
 	ServerLogFilter,
 	ServerLogsResponse,
@@ -1932,6 +1936,80 @@ export const searchApi = {
 
 		return fetchApi<SearchResponse>(`/search?${searchParams.toString()}`);
 	},
+
+	searchGrouped: async (
+		filter: SearchFilter,
+	): Promise<GroupedSearchResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', filter.q);
+
+		if (filter.types?.length) {
+			searchParams.set('types', filter.types.join(','));
+		}
+		if (filter.status) {
+			searchParams.set('status', filter.status);
+		}
+		if (filter.tag_ids?.length) {
+			searchParams.set('tag_ids', filter.tag_ids.join(','));
+		}
+		if (filter.date_from) {
+			searchParams.set('date_from', filter.date_from);
+		}
+		if (filter.date_to) {
+			searchParams.set('date_to', filter.date_to);
+		}
+		if (filter.size_min !== undefined) {
+			searchParams.set('size_min', filter.size_min.toString());
+		}
+		if (filter.size_max !== undefined) {
+			searchParams.set('size_max', filter.size_max.toString());
+		}
+		if (filter.limit) {
+			searchParams.set('limit', filter.limit.toString());
+		}
+
+		return fetchApi<GroupedSearchResponse>(
+			`/search/grouped?${searchParams.toString()}`,
+		);
+	},
+
+	getSuggestions: async (
+		query: string,
+		limit = 10,
+	): Promise<SearchSuggestionsResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', query);
+		searchParams.set('limit', limit.toString());
+		return fetchApi<SearchSuggestionsResponse>(
+			`/search/suggestions?${searchParams.toString()}`,
+		);
+	},
+
+	getRecentSearches: async (limit = 10): Promise<RecentSearchesResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('limit', limit.toString());
+		return fetchApi<RecentSearchesResponse>(
+			`/search/recent?${searchParams.toString()}`,
+		);
+	},
+
+	saveRecentSearch: async (
+		data: SaveRecentSearchRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/search/recent', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	deleteRecentSearch: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/search/recent/${id}`, {
+			method: 'DELETE',
+		}),
+
+	clearRecentSearches: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/search/recent', {
+			method: 'DELETE',
+		}),
 };
 
 // Dashboard Metrics API
