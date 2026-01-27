@@ -44,57 +44,127 @@ const RESULT_TYPE_ROUTES: Record<SearchResultType, string> = {
 
 const RESULT_TYPE_ICONS: Record<SearchResultType, React.ReactNode> = {
 	agent: (
-		<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+		<svg
+			className="w-4 h-4"
+			fill="none"
+			stroke="currentColor"
+			viewBox="0 0 24 24"
+			aria-hidden="true"
+		>
+			<path
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				strokeWidth={2}
+				d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+			/>
 		</svg>
 	),
 	backup: (
-		<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+		<svg
+			className="w-4 h-4"
+			fill="none"
+			stroke="currentColor"
+			viewBox="0 0 24 24"
+			aria-hidden="true"
+		>
+			<path
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				strokeWidth={2}
+				d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+			/>
 		</svg>
 	),
 	snapshot: (
-		<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+		<svg
+			className="w-4 h-4"
+			fill="none"
+			stroke="currentColor"
+			viewBox="0 0 24 24"
+			aria-hidden="true"
+		>
+			<path
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				strokeWidth={2}
+				d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+			/>
+			<path
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				strokeWidth={2}
+				d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+			/>
 		</svg>
 	),
 	schedule: (
-		<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+		<svg
+			className="w-4 h-4"
+			fill="none"
+			stroke="currentColor"
+			viewBox="0 0 24 24"
+			aria-hidden="true"
+		>
+			<path
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				strokeWidth={2}
+				d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+			/>
 		</svg>
 	),
 	repository: (
-		<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+		<svg
+			className="w-4 h-4"
+			fill="none"
+			stroke="currentColor"
+			viewBox="0 0 24 24"
+			aria-hidden="true"
+		>
+			<path
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				strokeWidth={2}
+				d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+			/>
 		</svg>
 	),
 };
 
-export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: GlobalSearchBarProps) {
+export function GlobalSearchBar({
+	placeholder = 'Search...',
+	className = '',
+}: GlobalSearchBarProps) {
 	const navigate = useNavigate();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const dropdownRef = useRef<HTMLDivElement>(null);
 	const [isOpen, setIsOpen] = useState(false);
 	const [query, setQuery] = useState('');
 	const [selectedIndex, setSelectedIndex] = useState(-1);
-	const [activeFilter, setActiveFilter] = useState<SearchResultType | null>(null);
+	const [activeFilter, setActiveFilter] = useState<SearchResultType | null>(
+		null,
+	);
 	const [dateFrom, setDateFrom] = useState<string>('');
 	const [dateTo, setDateTo] = useState<string>('');
 	const [showFilters, setShowFilters] = useState(false);
 
-	const searchFilter: SearchFilter | null = query.length >= 2
-		? {
-				q: query,
-				types: activeFilter ? [activeFilter] : undefined,
-				date_from: dateFrom || undefined,
-				date_to: dateTo || undefined,
-				limit: 5,
-		  }
-		: null;
+	const searchFilter: SearchFilter | null =
+		query.length >= 2
+			? {
+					q: query,
+					types: activeFilter ? [activeFilter] : undefined,
+					date_from: dateFrom || undefined,
+					date_to: dateTo || undefined,
+					limit: 5,
+				}
+			: null;
 
-	const { data: suggestionsData } = useSearchSuggestions(query, query.length >= 2 && !searchFilter);
-	const { data: searchResults, isLoading: isSearching } = useGroupedSearch(searchFilter);
+	const { data: suggestionsData } = useSearchSuggestions(
+		query,
+		query.length >= 2 && !searchFilter,
+	);
+	const { data: searchResults, isLoading: isSearching } =
+		useGroupedSearch(searchFilter);
 	const { data: recentData } = useRecentSearches(5);
 	const saveSearch = useSaveRecentSearch();
 	const deleteSearch = useDeleteRecentSearch();
@@ -122,13 +192,24 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 
 		// Then show grouped search results
 		if (searchResults) {
-			const categories: SearchResultType[] = ['agent', 'backup', 'snapshot', 'schedule', 'repository'];
+			const categories: SearchResultType[] = [
+				'agent',
+				'backup',
+				'snapshot',
+				'schedule',
+				'repository',
+			];
 			for (const category of categories) {
 				if (activeFilter && activeFilter !== category) continue;
-				const results = searchResults[`${category}s` as keyof typeof searchResults];
+				const results =
+					searchResults[`${category}s` as keyof typeof searchResults];
 				if (Array.isArray(results)) {
 					for (const result of results.slice(0, 3)) {
-						items.push({ type: 'result', data: result as GroupedSearchResult, category });
+						items.push({
+							type: 'result',
+							data: result as GroupedSearchResult,
+							category,
+						});
 					}
 				}
 			}
@@ -142,7 +223,10 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 	// Handle click outside to close dropdown
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+			if (
+				dropdownRef.current &&
+				!dropdownRef.current.contains(event.target as Node)
+			) {
 				setIsOpen(false);
 			}
 		};
@@ -191,14 +275,28 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 			case 'Tab':
 				if (event.shiftKey) {
 					// Cycle through filters backwards
-					const types: (SearchResultType | null)[] = [null, 'agent', 'backup', 'snapshot', 'schedule', 'repository'];
+					const types: (SearchResultType | null)[] = [
+						null,
+						'agent',
+						'backup',
+						'snapshot',
+						'schedule',
+						'repository',
+					];
 					const currentIdx = types.indexOf(activeFilter);
 					const prevIdx = currentIdx <= 0 ? types.length - 1 : currentIdx - 1;
 					setActiveFilter(types[prevIdx]);
 					event.preventDefault();
 				} else {
 					// Cycle through filters
-					const types: (SearchResultType | null)[] = [null, 'agent', 'backup', 'snapshot', 'schedule', 'repository'];
+					const types: (SearchResultType | null)[] = [
+						null,
+						'agent',
+						'backup',
+						'snapshot',
+						'schedule',
+						'repository',
+					];
 					const currentIdx = types.indexOf(activeFilter);
 					const nextIdx = (currentIdx + 1) % types.length;
 					setActiveFilter(types[nextIdx]);
@@ -226,7 +324,10 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 		if (q.length < 2) return;
 
 		// Save to recent searches
-		saveSearch.mutate({ query: q, types: activeFilter ? [activeFilter] : undefined });
+		saveSearch.mutate({
+			query: q,
+			types: activeFilter ? [activeFilter] : undefined,
+		});
 
 		// Navigate to search results page (or you could show results inline)
 		const params = new URLSearchParams({ q });
@@ -250,15 +351,29 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 
 	const formatDate = (dateStr: string) => {
 		const date = new Date(dateStr);
-		return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+		return date.toLocaleDateString(undefined, {
+			month: 'short',
+			day: 'numeric',
+		});
 	};
 
 	return (
 		<div ref={dropdownRef} className={`relative ${className}`}>
 			<div className="relative">
 				<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-					<svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+					<svg
+						className="h-5 w-5 text-gray-400"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+						aria-hidden="true"
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+						/>
 					</svg>
 				</div>
 				<input
@@ -276,6 +391,7 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 					aria-label="Search"
 					aria-expanded={isOpen}
 					aria-haspopup="listbox"
+					aria-controls="search-listbox"
 					role="combobox"
 				/>
 				<div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
@@ -290,8 +406,19 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 							className="p-1 text-gray-400 hover:text-gray-600"
 							aria-label="Clear search"
 						>
-							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+							<svg
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+								aria-hidden="true"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M6 18L18 6M6 6l12 12"
+								/>
 							</svg>
 						</button>
 					)}
@@ -301,8 +428,19 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 						className={`p-1 rounded ${showFilters ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-gray-600'}`}
 						aria-label="Toggle filters"
 					>
-						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+						<svg
+							className="w-4 h-4"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+							aria-hidden="true"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+							/>
 						</svg>
 					</button>
 					<kbd className="hidden sm:inline-flex items-center px-1.5 text-xs font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded">
@@ -316,7 +454,9 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 				<div className="absolute top-full left-0 right-0 mt-1 p-3 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
 					<div className="space-y-3">
 						<div>
-							<label className="block text-xs font-medium text-gray-500 mb-1.5">Filter by type</label>
+							<span className="block text-xs font-medium text-gray-500 mb-1.5">
+								Filter by type
+							</span>
 							<div className="flex flex-wrap gap-1.5">
 								<button
 									type="button"
@@ -329,25 +469,34 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 								>
 									All
 								</button>
-								{(Object.keys(RESULT_TYPE_LABELS) as SearchResultType[]).map((type) => (
-									<button
-										key={type}
-										type="button"
-										onClick={() => setActiveFilter(activeFilter === type ? null : type)}
-										className={`px-2 py-1 text-xs rounded-full transition-colors ${
-											activeFilter === type
-												? 'bg-indigo-100 text-indigo-700'
-												: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-										}`}
-									>
-										{RESULT_TYPE_LABELS[type]}
-									</button>
-								))}
+								{(Object.keys(RESULT_TYPE_LABELS) as SearchResultType[]).map(
+									(type) => (
+										<button
+											key={type}
+											type="button"
+											onClick={() =>
+												setActiveFilter(activeFilter === type ? null : type)
+											}
+											className={`px-2 py-1 text-xs rounded-full transition-colors ${
+												activeFilter === type
+													? 'bg-indigo-100 text-indigo-700'
+													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+											}`}
+										>
+											{RESULT_TYPE_LABELS[type]}
+										</button>
+									),
+								)}
 							</div>
 						</div>
 						<div className="flex gap-3">
 							<div className="flex-1">
-								<label htmlFor="search-date-from" className="block text-xs font-medium text-gray-500 mb-1">From</label>
+								<label
+									htmlFor="search-date-from"
+									className="block text-xs font-medium text-gray-500 mb-1"
+								>
+									From
+								</label>
 								<input
 									id="search-date-from"
 									type="date"
@@ -357,7 +506,12 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 								/>
 							</div>
 							<div className="flex-1">
-								<label htmlFor="search-date-to" className="block text-xs font-medium text-gray-500 mb-1">To</label>
+								<label
+									htmlFor="search-date-to"
+									className="block text-xs font-medium text-gray-500 mb-1"
+								>
+									To
+								</label>
 								<input
 									id="search-date-to"
 									type="date"
@@ -374,13 +528,16 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 			{/* Dropdown Results */}
 			{isOpen && (
 				<div
+					id="search-listbox"
 					className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto z-40"
-					role="listbox"
+					tabIndex={-1}
 				>
 					{query.length < 2 && recentSearches.length > 0 && (
 						<div className="p-2">
 							<div className="flex items-center justify-between px-2 py-1">
-								<span className="text-xs font-medium text-gray-500">Recent Searches</span>
+								<span className="text-xs font-medium text-gray-500">
+									Recent Searches
+								</span>
 								<button
 									type="button"
 									onClick={handleClearRecent}
@@ -390,35 +547,68 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 								</button>
 							</div>
 							{recentSearches.map((recent, idx) => (
-								<button
+								<div
 									key={recent.id}
-									type="button"
-									onClick={() => handleSelectItem({ type: 'recent', data: recent })}
-									className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left ${
+									onClick={() =>
+										handleSelectItem({ type: 'recent', data: recent })
+									}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') {
+											handleSelectItem({ type: 'recent', data: recent });
+										}
+									}}
+									className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left cursor-pointer ${
 										selectedIndex === idx ? 'bg-indigo-50' : 'hover:bg-gray-50'
 									}`}
-									role="option"
 									aria-selected={selectedIndex === idx}
 								>
-									<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+									<svg
+										className="w-4 h-4 text-gray-400"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										aria-hidden="true"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+										/>
 									</svg>
-									<span className="flex-1 text-sm text-gray-700 truncate">{recent.query}</span>
+									<span className="flex-1 text-sm text-gray-700 truncate">
+										{recent.query}
+									</span>
 									{recent.types && recent.types.length > 0 && (
-										<span className="text-xs text-gray-400">{recent.types.join(', ')}</span>
+										<span className="text-xs text-gray-400">
+											{recent.types.join(', ')}
+										</span>
 									)}
-									<span className="text-xs text-gray-400">{formatDate(recent.created_at)}</span>
+									<span className="text-xs text-gray-400">
+										{formatDate(recent.created_at)}
+									</span>
 									<button
 										type="button"
 										onClick={(e) => handleDeleteRecent(e, recent.id)}
 										className="p-1 text-gray-400 hover:text-gray-600"
 										aria-label="Remove from recent"
 									>
-										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+										<svg
+											className="w-3 h-3"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+											aria-hidden="true"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M6 18L18 6M6 6l12 12"
+											/>
 										</svg>
 									</button>
-								</button>
+								</div>
 							))}
 						</div>
 					)}
@@ -429,29 +619,52 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 							{isSearching && (
 								<div className="p-4 text-center">
 									<div className="w-5 h-5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto" />
-									<span className="text-sm text-gray-500 mt-2 block">Searching...</span>
+									<span className="text-sm text-gray-500 mt-2 block">
+										Searching...
+									</span>
 								</div>
 							)}
 
 							{/* Suggestions */}
 							{suggestions.length > 0 && (
 								<div className="p-2 border-b border-gray-100">
-									<span className="px-2 text-xs font-medium text-gray-500">Suggestions</span>
+									<span className="px-2 text-xs font-medium text-gray-500">
+										Suggestions
+									</span>
 									{suggestions.slice(0, 5).map((suggestion, idx) => (
-										<button
+										<div
 											key={`${suggestion.type}-${suggestion.id}`}
-											type="button"
-											onClick={() => handleSelectItem({ type: 'suggestion', data: suggestion })}
-											className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left ${
-												selectedIndex === idx ? 'bg-indigo-50' : 'hover:bg-gray-50'
+											onClick={() =>
+												handleSelectItem({
+													type: 'suggestion',
+													data: suggestion,
+												})
+											}
+											onKeyDown={(e) => {
+												if (e.key === 'Enter' || e.key === ' ') {
+													handleSelectItem({
+														type: 'suggestion',
+														data: suggestion,
+													});
+												}
+											}}
+											className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left cursor-pointer ${
+												selectedIndex === idx
+													? 'bg-indigo-50'
+													: 'hover:bg-gray-50'
 											}`}
-											role="option"
 											aria-selected={selectedIndex === idx}
 										>
-											<span className="text-gray-400">{RESULT_TYPE_ICONS[suggestion.type]}</span>
-											<span className="flex-1 text-sm text-gray-700">{suggestion.text}</span>
-											<span className="text-xs text-gray-400">{suggestion.detail}</span>
-										</button>
+											<span className="text-gray-400">
+												{RESULT_TYPE_ICONS[suggestion.type]}
+											</span>
+											<span className="flex-1 text-sm text-gray-700">
+												{suggestion.text}
+											</span>
+											<span className="text-xs text-gray-400">
+												{suggestion.detail}
+											</span>
+										</div>
 									))}
 								</div>
 							)}
@@ -459,59 +672,105 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 							{/* Grouped Results */}
 							{searchResults && !isSearching && (
 								<div className="p-2">
-									{(Object.keys(RESULT_TYPE_LABELS) as SearchResultType[]).map((type) => {
-										if (activeFilter && activeFilter !== type) return null;
-										const results = searchResults[`${type}s` as keyof typeof searchResults];
-										if (!Array.isArray(results) || results.length === 0) return null;
+									{(Object.keys(RESULT_TYPE_LABELS) as SearchResultType[]).map(
+										(type) => {
+											if (activeFilter && activeFilter !== type) return null;
+											const results =
+												searchResults[`${type}s` as keyof typeof searchResults];
+											if (!Array.isArray(results) || results.length === 0)
+												return null;
 
-										const categoryStartIdx = suggestions.length +
-											(Object.keys(RESULT_TYPE_LABELS) as SearchResultType[])
-												.filter(t => t !== type && (!activeFilter || activeFilter === t))
-												.reduce((acc, t) => {
-													const r = searchResults[`${t}s` as keyof typeof searchResults];
-													return acc + (Array.isArray(r) ? Math.min(r.length, 3) : 0);
-												}, 0);
+											const categoryStartIdx =
+												suggestions.length +
+												(Object.keys(RESULT_TYPE_LABELS) as SearchResultType[])
+													.filter(
+														(t) =>
+															t !== type &&
+															(!activeFilter || activeFilter === t),
+													)
+													.reduce((acc, t) => {
+														const r =
+															searchResults[
+																`${t}s` as keyof typeof searchResults
+															];
+														return (
+															acc +
+															(Array.isArray(r) ? Math.min(r.length, 3) : 0)
+														);
+													}, 0);
 
-										return (
-											<div key={type} className="mb-2">
-												<span className="px-2 text-xs font-medium text-gray-500">{RESULT_TYPE_LABELS[type]}</span>
-												{(results as GroupedSearchResult[]).slice(0, 3).map((result, idx) => {
-													const globalIdx = categoryStartIdx + idx;
-													return (
-														<button
-															key={result.id}
-															type="button"
-															onClick={() => handleSelectItem({ type: 'result', data: result, category: type })}
-															className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left ${
-																selectedIndex === globalIdx ? 'bg-indigo-50' : 'hover:bg-gray-50'
-															}`}
-															role="option"
-															aria-selected={selectedIndex === globalIdx}
-														>
-															<span className="text-gray-400">{RESULT_TYPE_ICONS[type]}</span>
-															<div className="flex-1 min-w-0">
-																<div className="text-sm text-gray-700 truncate">{result.name}</div>
-																{result.description && (
-																	<div className="text-xs text-gray-500 truncate">{result.description}</div>
-																)}
-															</div>
-															{result.status && (
-																<span className={`px-1.5 py-0.5 text-xs rounded-full ${
-																	result.status === 'active' || result.status === 'completed' || result.status === 'enabled'
-																		? 'bg-green-100 text-green-700'
-																		: result.status === 'failed' || result.status === 'offline' || result.status === 'disabled'
-																		? 'bg-red-100 text-red-700'
-																		: 'bg-gray-100 text-gray-600'
-																}`}>
-																	{result.status}
-																</span>
-															)}
-														</button>
-													);
-												})}
-											</div>
-										);
-									})}
+											return (
+												<div key={type} className="mb-2">
+													<span className="px-2 text-xs font-medium text-gray-500">
+														{RESULT_TYPE_LABELS[type]}
+													</span>
+													{(results as GroupedSearchResult[])
+														.slice(0, 3)
+														.map((result, idx) => {
+															const globalIdx = categoryStartIdx + idx;
+															return (
+																<div
+																	key={result.id}
+																	onClick={() =>
+																		handleSelectItem({
+																			type: 'result',
+																			data: result,
+																			category: type,
+																		})
+																	}
+																	onKeyDown={(e) => {
+																		if (e.key === 'Enter' || e.key === ' ') {
+																			handleSelectItem({
+																				type: 'result',
+																				data: result,
+																				category: type,
+																			});
+																		}
+																	}}
+																	className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left cursor-pointer ${
+																		selectedIndex === globalIdx
+																			? 'bg-indigo-50'
+																			: 'hover:bg-gray-50'
+																	}`}
+																	aria-selected={selectedIndex === globalIdx}
+																>
+																	<span className="text-gray-400">
+																		{RESULT_TYPE_ICONS[type]}
+																	</span>
+																	<div className="flex-1 min-w-0">
+																		<div className="text-sm text-gray-700 truncate">
+																			{result.name}
+																		</div>
+																		{result.description && (
+																			<div className="text-xs text-gray-500 truncate">
+																				{result.description}
+																			</div>
+																		)}
+																	</div>
+																	{result.status && (
+																		<span
+																			className={`px-1.5 py-0.5 text-xs rounded-full ${
+																				result.status === 'active' ||
+																				result.status === 'completed' ||
+																				result.status === 'enabled'
+																					? 'bg-green-100 text-green-700'
+																					: result.status === 'failed' ||
+																							result.status === 'offline' ||
+																							result.status === 'disabled'
+																						? 'bg-red-100 text-red-700'
+																						: 'bg-gray-100 text-gray-600'
+																			}`}
+																		>
+																			{result.status}
+																		</span>
+																	)}
+																</div>
+															);
+														})}
+												</div>
+											);
+										},
+									)}
 								</div>
 							)}
 
@@ -526,12 +785,16 @@ export function GlobalSearchBar({ placeholder = 'Search...', className = '' }: G
 							<div className="p-2 border-t border-gray-100 bg-gray-50">
 								<div className="flex items-center justify-between px-2 text-xs text-gray-500">
 									<span>
-										<kbd className="px-1 py-0.5 bg-white border border-gray-200 rounded text-[10px]">Tab</kbd>
-										{' '}to filter by type
+										<kbd className="px-1 py-0.5 bg-white border border-gray-200 rounded text-[10px]">
+											Tab
+										</kbd>{' '}
+										to filter by type
 									</span>
 									<span>
-										<kbd className="px-1 py-0.5 bg-white border border-gray-200 rounded text-[10px]">Enter</kbd>
-										{' '}to search
+										<kbd className="px-1 py-0.5 bg-white border border-gray-200 rounded text-[10px]">
+											Enter
+										</kbd>{' '}
+										to search
 									</span>
 								</div>
 							</div>

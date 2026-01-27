@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { searchApi } from '../lib/api';
-import type { SearchFilter, SaveRecentSearchRequest } from '../lib/types';
+import type { SaveRecentSearchRequest, SearchFilter } from '../lib/types';
 
 export function useSearch(filter: SearchFilter | null) {
 	return useQuery({
@@ -64,7 +64,8 @@ export function useSaveRecentSearch() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (data: SaveRecentSearchRequest) => searchApi.saveRecentSearch(data),
+		mutationFn: (data: SaveRecentSearchRequest) =>
+			searchApi.saveRecentSearch(data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['search', 'recent'] });
 		},
