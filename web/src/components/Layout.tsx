@@ -25,6 +25,7 @@ import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { RecentItemsDropdown } from './features/RecentItems';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { WhatsNewModal } from './features/WhatsNewModal';
+import { Breadcrumbs } from './ui/Breadcrumbs';
 
 interface NavItem {
 	path: string;
@@ -970,6 +971,7 @@ export function Layout() {
 					<div className="flex-1 flex flex-col">
 						<Header />
 						<main className="flex-1 p-6">
+							<Breadcrumbs />
 							<Outlet />
 						</main>
 					</div>
