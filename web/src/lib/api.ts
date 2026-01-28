@@ -140,6 +140,13 @@ import type {
 	DiscoveredDockerStack,
 	DockerContainer,
 	DockerContainersResponse,
+	DockerLogBackup,
+	DockerLogBackupsResponse,
+	DockerLogRetentionResult,
+	DockerLogSettings,
+	DockerLogSettingsUpdate,
+	DockerLogStorageStats,
+	DockerLogViewResponse,
 	DockerRestore,
 	DockerRestorePlan,
 	DockerRestorePreviewRequest,
@@ -397,13 +404,6 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
-	DockerLogBackup,
-	DockerLogBackupsResponse,
-	DockerLogSettings,
-	DockerLogSettingsUpdate,
-	DockerLogStorageStats,
-	DockerLogViewResponse,
-	DockerLogRetentionResult,
 } from './types';
 
 const API_BASE = '/api/v1';

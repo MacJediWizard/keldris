@@ -305,8 +305,10 @@ function SettingsModal({ agentId, agentName, onClose }: SettingsModalProps) {
 					cron_expression: cronExpression,
 					retention_policy: {
 						max_age_days: maxAgeDays,
-						max_size_bytes: settings?.retention_policy.max_size_bytes ?? 1073741824,
-						max_files_per_day: settings?.retention_policy.max_files_per_day ?? 24,
+						max_size_bytes:
+							settings?.retention_policy.max_size_bytes ?? 1073741824,
+						max_files_per_day:
+							settings?.retention_policy.max_files_per_day ?? 24,
 						compress_enabled: compressEnabled,
 						compress_level: settings?.retention_policy.compress_level ?? 6,
 					},
@@ -466,9 +468,7 @@ function SettingsModal({ agentId, agentName, onClose }: SettingsModalProps) {
 						disabled={applyRetention.isPending}
 						className="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
 					>
-						{applyRetention.isPending
-							? 'Cleaning...'
-							: 'Apply Retention Now'}
+						{applyRetention.isPending ? 'Cleaning...' : 'Apply Retention Now'}
 					</button>
 					<div className="flex items-center gap-2">
 						<button
@@ -495,7 +495,9 @@ function SettingsModal({ agentId, agentName, onClose }: SettingsModalProps) {
 
 export function DockerLogs() {
 	const [selectedAgent, setSelectedAgent] = useState<string>('');
-	const [statusFilter, setStatusFilter] = useState<DockerLogBackupStatus | ''>('');
+	const [statusFilter, setStatusFilter] = useState<DockerLogBackupStatus | ''>(
+		'',
+	);
 	const [viewingBackup, setViewingBackup] = useState<DockerLogBackup | null>(
 		null,
 	);
@@ -584,9 +586,7 @@ export function DockerLogs() {
 						<select
 							value={statusFilter}
 							onChange={(e) =>
-								setStatusFilter(
-									e.target.value as DockerLogBackupStatus | '',
-								)
+								setStatusFilter(e.target.value as DockerLogBackupStatus | '')
 							}
 							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
 						>
@@ -600,9 +600,7 @@ export function DockerLogs() {
 							<button
 								type="button"
 								onClick={() => {
-									const agent = agentsData?.find(
-										(a) => a.id === selectedAgent,
-									);
+									const agent = agentsData?.find((a) => a.id === selectedAgent);
 									if (agent) {
 										setSettingsAgent({ id: agent.id, name: agent.hostname });
 									}
@@ -713,7 +711,9 @@ export function DockerLogs() {
 												</td>
 												<td className="px-6 py-4 text-gray-600 dark:text-gray-400">
 													{backup.compressed ? (
-														<span title={`Original: ${formatBytes(backup.original_size)}`}>
+														<span
+															title={`Original: ${formatBytes(backup.original_size)}`}
+														>
 															{formatBytes(backup.compressed_size)}
 														</span>
 													) : (
