@@ -11529,3 +11529,236 @@ func (db *DB) GetFavoriteEntityIDs(ctx context.Context, userID, orgID uuid.UUID,
 	}
 	return ids, nil
 }
+
+// Docker Registry methods
+
+// GetDockerRegistriesByOrgID returns all Docker registries for an organization.
+func (db *DB) GetDockerRegistriesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.DockerRegistry, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, type, url, credentials_encrypted, is_default, enabled,
+		       health_status, last_health_check, last_health_error,
+		       credentials_rotated_at, credentials_expires_at, metadata, created_by, created_at, updated_at
+		FROM docker_registries
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list docker registries: %w", err)
+	}
+	defer rows.Close()
+
+	return scanDockerRegistries(rows)
+}
+
+// GetDockerRegistryByID returns a Docker registry by ID.
+func (db *DB) GetDockerRegistryByID(ctx context.Context, id uuid.UUID) (*models.DockerRegistry, error) {
+	var r models.DockerRegistry
+	var typeStr, healthStatusStr string
+	var metadataBytes []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, type, url, credentials_encrypted, is_default, enabled,
+		       health_status, last_health_check, last_health_error,
+		       credentials_rotated_at, credentials_expires_at, metadata, created_by, created_at, updated_at
+		FROM docker_registries
+		WHERE id = $1
+	`, id).Scan(
+		&r.ID, &r.OrgID, &r.Name, &typeStr, &r.URL, &r.CredentialsEncrypted, &r.IsDefault, &r.Enabled,
+		&healthStatusStr, &r.LastHealthCheck, &r.LastHealthError,
+		&r.CredentialsRotatedAt, &r.CredentialsExpiresAt, &metadataBytes, &r.CreatedBy, &r.CreatedAt, &r.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get docker registry: %w", err)
+	}
+	r.Type = models.DockerRegistryType(typeStr)
+	r.HealthStatus = models.DockerRegistryHealthStatus(healthStatusStr)
+	if err := r.SetMetadata(metadataBytes); err != nil {
+		db.logger.Warn().Err(err).Str("registry_id", r.ID.String()).Msg("failed to parse registry metadata")
+	}
+	return &r, nil
+}
+
+// GetDefaultDockerRegistry returns the default Docker registry for an organization.
+func (db *DB) GetDefaultDockerRegistry(ctx context.Context, orgID uuid.UUID) (*models.DockerRegistry, error) {
+	var r models.DockerRegistry
+	var typeStr, healthStatusStr string
+	var metadataBytes []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, type, url, credentials_encrypted, is_default, enabled,
+		       health_status, last_health_check, last_health_error,
+		       credentials_rotated_at, credentials_expires_at, metadata, created_by, created_at, updated_at
+		FROM docker_registries
+		WHERE org_id = $1 AND is_default = true
+	`, orgID).Scan(
+		&r.ID, &r.OrgID, &r.Name, &typeStr, &r.URL, &r.CredentialsEncrypted, &r.IsDefault, &r.Enabled,
+		&healthStatusStr, &r.LastHealthCheck, &r.LastHealthError,
+		&r.CredentialsRotatedAt, &r.CredentialsExpiresAt, &metadataBytes, &r.CreatedBy, &r.CreatedAt, &r.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get default docker registry: %w", err)
+	}
+	r.Type = models.DockerRegistryType(typeStr)
+	r.HealthStatus = models.DockerRegistryHealthStatus(healthStatusStr)
+	if err := r.SetMetadata(metadataBytes); err != nil {
+		db.logger.Warn().Err(err).Str("registry_id", r.ID.String()).Msg("failed to parse registry metadata")
+	}
+	return &r, nil
+}
+
+// CreateDockerRegistry creates a new Docker registry.
+func (db *DB) CreateDockerRegistry(ctx context.Context, registry *models.DockerRegistry) error {
+	metadataBytes, err := registry.MetadataJSON()
+	if err != nil {
+		return fmt.Errorf("marshal metadata: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO docker_registries (id, org_id, name, type, url, credentials_encrypted, is_default, enabled,
+		                               health_status, credentials_rotated_at, credentials_expires_at, metadata, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+	`, registry.ID, registry.OrgID, registry.Name, string(registry.Type), registry.URL, registry.CredentialsEncrypted,
+		registry.IsDefault, registry.Enabled, string(registry.HealthStatus), registry.CredentialsRotatedAt,
+		registry.CredentialsExpiresAt, metadataBytes, registry.CreatedBy, registry.CreatedAt, registry.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create docker registry: %w", err)
+	}
+	return nil
+}
+
+// UpdateDockerRegistry updates an existing Docker registry.
+func (db *DB) UpdateDockerRegistry(ctx context.Context, registry *models.DockerRegistry) error {
+	metadataBytes, err := registry.MetadataJSON()
+	if err != nil {
+		return fmt.Errorf("marshal metadata: %w", err)
+	}
+
+	registry.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE docker_registries
+		SET name = $2, type = $3, url = $4, is_default = $5, enabled = $6, metadata = $7, updated_at = $8
+		WHERE id = $1
+	`, registry.ID, registry.Name, string(registry.Type), registry.URL, registry.IsDefault,
+		registry.Enabled, metadataBytes, registry.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update docker registry: %w", err)
+	}
+	return nil
+}
+
+// DeleteDockerRegistry deletes a Docker registry.
+func (db *DB) DeleteDockerRegistry(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM docker_registries WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete docker registry: %w", err)
+	}
+	return nil
+}
+
+// UpdateDockerRegistryHealth updates the health status of a Docker registry.
+func (db *DB) UpdateDockerRegistryHealth(ctx context.Context, id uuid.UUID, status models.DockerRegistryHealthStatus, errorMsg *string) error {
+	now := time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE docker_registries
+		SET health_status = $2, last_health_check = $3, last_health_error = $4, updated_at = $5
+		WHERE id = $1
+	`, id, string(status), now, errorMsg, now)
+	if err != nil {
+		return fmt.Errorf("update docker registry health: %w", err)
+	}
+	return nil
+}
+
+// UpdateDockerRegistryCredentials updates the credentials of a Docker registry (for rotation).
+func (db *DB) UpdateDockerRegistryCredentials(ctx context.Context, id uuid.UUID, credentialsEncrypted []byte, expiresAt *time.Time) error {
+	now := time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE docker_registries
+		SET credentials_encrypted = $2, credentials_rotated_at = $3, credentials_expires_at = $4, updated_at = $5
+		WHERE id = $1
+	`, id, credentialsEncrypted, now, expiresAt, now)
+	if err != nil {
+		return fmt.Errorf("update docker registry credentials: %w", err)
+	}
+	return nil
+}
+
+// SetDefaultDockerRegistry sets a registry as the default for an organization.
+func (db *DB) SetDefaultDockerRegistry(ctx context.Context, orgID uuid.UUID, registryID uuid.UUID) error {
+	now := time.Now()
+	// First, unset any existing default
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE docker_registries SET is_default = false, updated_at = $2 WHERE org_id = $1 AND is_default = true
+	`, orgID, now)
+	if err != nil {
+		return fmt.Errorf("unset default docker registry: %w", err)
+	}
+
+	// Set the new default
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE docker_registries SET is_default = true, updated_at = $2 WHERE id = $1
+	`, registryID, now)
+	if err != nil {
+		return fmt.Errorf("set default docker registry: %w", err)
+	}
+	return nil
+}
+
+// GetDockerRegistriesWithExpiringCredentials returns registries with credentials expiring before the given date.
+func (db *DB) GetDockerRegistriesWithExpiringCredentials(ctx context.Context, orgID uuid.UUID, before time.Time) ([]*models.DockerRegistry, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, type, url, credentials_encrypted, is_default, enabled,
+		       health_status, last_health_check, last_health_error,
+		       credentials_rotated_at, credentials_expires_at, metadata, created_by, created_at, updated_at
+		FROM docker_registries
+		WHERE org_id = $1 AND credentials_expires_at IS NOT NULL AND credentials_expires_at < $2
+		ORDER BY credentials_expires_at
+	`, orgID, before)
+	if err != nil {
+		return nil, fmt.Errorf("get expiring docker registries: %w", err)
+	}
+	defer rows.Close()
+
+	return scanDockerRegistries(rows)
+}
+
+// CreateDockerRegistryAuditLog creates an audit log entry for a Docker registry operation.
+func (db *DB) CreateDockerRegistryAuditLog(ctx context.Context, orgID, registryID uuid.UUID, userID *uuid.UUID, action string, details map[string]interface{}, ipAddress, userAgent string) error {
+	detailsJSON, err := json.Marshal(details)
+	if err != nil {
+		return fmt.Errorf("marshal audit details: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO docker_registry_audit_log (org_id, registry_id, user_id, action, details, ip_address, user_agent)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, orgID, registryID, userID, action, detailsJSON, ipAddress, userAgent)
+	if err != nil {
+		return fmt.Errorf("create docker registry audit log: %w", err)
+	}
+	return nil
+}
+
+// scanDockerRegistries scans rows into Docker registries.
+func scanDockerRegistries(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.DockerRegistry, error) {
+	var registries []*models.DockerRegistry
+	for rows.Next() {
+		var r models.DockerRegistry
+		var typeStr, healthStatusStr string
+		var metadataBytes []byte
+		err := rows.Scan(
+			&r.ID, &r.OrgID, &r.Name, &typeStr, &r.URL, &r.CredentialsEncrypted, &r.IsDefault, &r.Enabled,
+			&healthStatusStr, &r.LastHealthCheck, &r.LastHealthError,
+			&r.CredentialsRotatedAt, &r.CredentialsExpiresAt, &metadataBytes, &r.CreatedBy, &r.CreatedAt, &r.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan docker registry: %w", err)
+		}
+		r.Type = models.DockerRegistryType(typeStr)
+		r.HealthStatus = models.DockerRegistryHealthStatus(healthStatusStr)
+		_ = r.SetMetadata(metadataBytes)
+		registries = append(registries, &r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate docker registries: %w", err)
+	}
+	return registries, nil
+}
