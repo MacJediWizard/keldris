@@ -290,6 +290,10 @@ func NewRouter(
 	downtimeHandler := handlers.NewDowntimeHandler(downtimeService, database, logger)
 	downtimeHandler.RegisterRoutes(apiV1)
 
+	// Docker health monitoring routes
+	dockerHandler := handlers.NewDockerHandler(database, logger)
+	dockerHandler.RegisterRoutes(apiV1)
+
 	// IP allowlists routes
 	ipAllowlistsHandler := handlers.NewIPAllowlistsHandler(database, ipFilter, logger)
 	ipAllowlistsHandler.RegisterRoutes(apiV1)
