@@ -334,11 +334,8 @@ func (cb *ComposeBackup) extractDependencies(dependsOn interface{}) []string {
 }
 
 // GetContainerStates retrieves the current state of all containers in the stack.
-func (cb *ComposeBackup) GetContainerStates(ctx context.Context, composePath, stackName string) ([]ContainerState, error) {
+func (cb *ComposeBackup) GetContainerStates(ctx context.Context, composePath, _ string) ([]ContainerState, error) {
 	composeDir := filepath.Dir(composePath)
-	if stackName == "" {
-		stackName = filepath.Base(composeDir)
-	}
 
 	// Use docker compose ps to get container info
 	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", composePath, "ps", "--format", "json")
