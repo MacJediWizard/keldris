@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ImportRepositoryWizard } from '../components/features/ImportRepositoryWizard';
+import { StarButton } from '../components/ui/StarButton';
 import { useMe } from '../hooks/useAuth';
+import { useFavoriteIds } from '../hooks/useFavorites';
 import { useOrganizations } from '../hooks/useOrganizations';
 import {
 	useCloneRepository,
@@ -847,6 +849,7 @@ interface RepositoryCardProps {
 	isVerifying: boolean;
 	isRecovering: boolean;
 	testResult?: { success: boolean; message: string };
+	isFavorite: boolean;
 }
 
 function RepositoryCard({
@@ -861,6 +864,7 @@ function RepositoryCard({
 	isVerifying,
 	isRecovering,
 	testResult,
+	isFavorite,
 }: RepositoryCardProps) {
 	const typeBadge = getRepositoryTypeBadge(repository.type);
 	const { data: verificationStatus } = useVerificationStatus(repository.id);
@@ -874,11 +878,19 @@ function RepositoryCard({
 	return (
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-start justify-between mb-4">
-				<div>
-					<h3 className="font-semibold text-gray-900">{repository.name}</h3>
-					<p className="text-sm text-gray-500 dark:text-gray-400">
-						Created {formatDate(repository.created_at)}
-					</p>
+				<div className="flex items-start gap-2">
+					<StarButton
+						entityType="repository"
+						entityId={repository.id}
+						isFavorite={isFavorite}
+						size="sm"
+					/>
+					<div>
+						<h3 className="font-semibold text-gray-900">{repository.name}</h3>
+						<p className="text-sm text-gray-500 dark:text-gray-400">
+							Created {formatDate(repository.created_at)}
+						</p>
+					</div>
 				</div>
 				<div className="flex items-center gap-2">
 					{repository.escrow_enabled && (
@@ -1421,6 +1433,7 @@ function CloneRepositoryModal({
 export function Repositories() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [typeFilter, setTypeFilter] = useState<RepositoryType | 'all'>('all');
+	const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 	const [showAddModal, setShowAddModal] = useState(false);
 	const [selectedType, setSelectedType] = useState<RepositoryType | undefined>(
 		undefined,
@@ -1451,6 +1464,7 @@ export function Repositories() {
 
 	const { data: user } = useMe();
 	const { data: repositories, isLoading, isError } = useRepositories();
+	const favoriteIds = useFavoriteIds('repository');
 	const deleteRepository = useDeleteRepository();
 	const testRepository = useTestRepository();
 	const triggerVerification = useTriggerVerification();
@@ -1464,7 +1478,8 @@ export function Repositories() {
 			.toLowerCase()
 			.includes(searchQuery.toLowerCase());
 		const matchesType = typeFilter === 'all' || repo.type === typeFilter;
-		return matchesSearch && matchesType;
+		const matchesFavorites = !showFavoritesOnly || favoriteIds.has(repo.id);
+		return matchesSearch && matchesType && matchesFavorites;
 	});
 
 	const handleDelete = (id: string) => {
@@ -1629,6 +1644,31 @@ export function Repositories() {
 							<option value="rest">REST Server</option>
 							<option value="dropbox">Dropbox</option>
 						</select>
+						<button
+							type="button"
+							onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+							className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
+								showFavoritesOnly
+									? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+									: 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+							}`}
+						>
+							<svg
+								aria-hidden="true"
+								className={`w-4 h-4 ${showFavoritesOnly ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
+								fill={showFavoritesOnly ? 'currentColor' : 'none'}
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+								/>
+							</svg>
+							Favorites
+						</button>
 					</div>
 				</div>
 
@@ -1659,6 +1699,7 @@ export function Repositories() {
 								isVerifying={triggerVerification.isPending}
 								isRecovering={recoverKey.isPending}
 								testResult={testResults[repo.id]}
+								isFavorite={favoriteIds.has(repo.id)}
 							/>
 						))}
 					</div>
