@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { ClassificationBadge } from '../components/ClassificationBadge';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
+import {
+	DockerStackSelector,
+	type DockerStackBackupConfig,
+} from '../components/features/DockerStackSelector';
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
 import { ExportImportModal } from '../components/features/ExportImportModal';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
@@ -19,6 +23,7 @@ import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { FormLabelWithHelp, HelpTooltip } from '../components/ui/HelpTooltip';
 import { useAgents } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
+import { useDockerStacks } from '../hooks/useDockerStacks';
 import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
 import {
@@ -112,10 +117,15 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	// Priority and preemption state
 	const [priority, setPriority] = useState<SchedulePriority>(2);
 	const [preemptible, setPreemptible] = useState(false);
+	// Docker stack state
+	const [dockerStackId, setDockerStackId] = useState<string | null>(null);
+	const [dockerStackConfig, setDockerStackConfig] =
+		useState<DockerStackBackupConfig | null>(null);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
 	const { data: policies } = usePolicies();
+	const { data: dockerStacks, isLoading: isLoadingStacks } = useDockerStacks();
 	const createSchedule = useCreateSchedule();
 
 	const handlePolicySelect = (policyId: string) => {
@@ -221,6 +231,16 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				data.preemptible = preemptible;
 			}
 
+			// Docker stack config
+			if (dockerStackConfig) {
+				data.docker_stack_config = {
+					stack_id: dockerStackConfig.stack_id,
+					export_images: dockerStackConfig.export_images,
+					include_env_files: dockerStackConfig.include_env_files,
+					stop_for_backup: dockerStackConfig.stop_for_backup,
+				};
+			}
+
 			await createSchedule.mutateAsync(data);
 			onClose();
 			setName('');
@@ -251,6 +271,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			// Reset priority state
 			setPriority(2);
 			setPreemptible(false);
+			// Reset docker stack state
+			setDockerStackId(null);
+			setDockerStackConfig(null);
 		} catch {
 			// Error handled by mutation
 		}
@@ -845,6 +868,18 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								</div>
 							)}
 						</div>
+
+						{/* Docker Stack Backup Section */}
+						<DockerStackSelector
+							stacks={dockerStacks ?? []}
+							selectedStackId={dockerStackId}
+							onChange={(stackId, config) => {
+								setDockerStackId(stackId);
+								setDockerStackConfig(config);
+							}}
+							agentId={agentId}
+							isLoading={isLoadingStacks}
+						/>
 					</div>
 					{createSchedule.isError && (
 						<p className="text-sm text-red-600 mt-4">
