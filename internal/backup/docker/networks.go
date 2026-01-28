@@ -39,26 +39,23 @@ var ErrNetworkNotFound = errors.New("network not found")
 // ErrNetworkConflict is returned when a network conflicts with an existing one.
 var ErrNetworkConflict = errors.New("network conflict detected")
 
-// ErrDockerNotAvailable is returned when Docker CLI is not available.
-var ErrDockerNotAvailable = errors.New("docker not available")
-
-// IPAMConfig represents IP Address Management configuration.
-type IPAMConfig struct {
+// NetworkIPAMSubnet represents a single IPAM subnet configuration for a network.
+type NetworkIPAMSubnet struct {
 	Subnet     string            `json:"subnet,omitempty"`
 	IPRange    string            `json:"ip_range,omitempty"`
 	Gateway    string            `json:"gateway,omitempty"`
 	AuxAddress map[string]string `json:"aux_addresses,omitempty"`
 }
 
-// IPAM represents the IP Address Management settings for a network.
-type IPAM struct {
-	Driver  string       `json:"driver,omitempty"`
-	Config  []IPAMConfig `json:"config,omitempty"`
-	Options map[string]string `json:"options,omitempty"`
+// NetworkIPAM represents the IP Address Management settings for a network.
+type NetworkIPAM struct {
+	Driver  string              `json:"driver,omitempty"`
+	Config  []NetworkIPAMSubnet `json:"config,omitempty"`
+	Options map[string]string   `json:"options,omitempty"`
 }
 
-// NetworkConfig represents a Docker network configuration.
-type NetworkConfig struct {
+// NetworkDefinition represents a Docker network definition captured during backup.
+type NetworkDefinition struct {
 	ID         string            `json:"id"`
 	Name       string            `json:"name"`
 	Driver     NetworkDriver     `json:"driver"`
@@ -69,7 +66,7 @@ type NetworkConfig struct {
 	Ingress    bool              `json:"ingress"`
 	Labels     map[string]string `json:"labels,omitempty"`
 	Options    map[string]string `json:"options,omitempty"`
-	IPAM       *IPAM             `json:"ipam,omitempty"`
+	IPAM       *NetworkIPAM      `json:"ipam,omitempty"`
 	CreatedAt  time.Time         `json:"created_at"`
 }
 
@@ -93,7 +90,7 @@ type NetworkAssignment struct {
 
 // NetworkBackup represents a complete backup of Docker network configuration.
 type NetworkBackup struct {
-	Networks     []NetworkConfig     `json:"networks"`
+	Networks     []NetworkDefinition `json:"networks"`
 	Assignments  []NetworkAssignment `json:"assignments"`
 	BackupTime   time.Time           `json:"backup_time"`
 	DockerHost   string              `json:"docker_host,omitempty"`
@@ -102,15 +99,15 @@ type NetworkBackup struct {
 
 // NetworkConflict represents a detected conflict during restore.
 type NetworkConflict struct {
-	NetworkName     string `json:"network_name"`
-	ConflictType    string `json:"conflict_type"` // "name", "subnet", "gateway"
-	ExistingValue   string `json:"existing_value"`
-	BackupValue     string `json:"backup_value"`
-	Resolution      string `json:"resolution,omitempty"`
+	NetworkName   string `json:"network_name"`
+	ConflictType  string `json:"conflict_type"` // "name", "subnet", "gateway"
+	ExistingValue string `json:"existing_value"`
+	BackupValue   string `json:"backup_value"`
+	Resolution    string `json:"resolution,omitempty"`
 }
 
-// RestoreOptions configures the network restore operation.
-type RestoreOptions struct {
+// NetworkRestoreOptions configures the network restore operation.
+type NetworkRestoreOptions struct {
 	// DryRun only previews what would be restored without making changes.
 	DryRun bool
 	// SkipExisting skips networks that already exist.
@@ -125,15 +122,15 @@ type RestoreOptions struct {
 	NetworkFilter []string
 }
 
-// RestoreResult contains the results of a network restore operation.
-type RestoreResult struct {
-	NetworksRestored   []string          `json:"networks_restored"`
-	NetworksSkipped    []string          `json:"networks_skipped"`
-	NetworksFailed     []string          `json:"networks_failed"`
-	AssignmentsRestored int              `json:"assignments_restored"`
-	AssignmentsFailed   int              `json:"assignments_failed"`
-	Conflicts          []NetworkConflict `json:"conflicts,omitempty"`
-	Errors             []string          `json:"errors,omitempty"`
+// NetworkRestoreResult contains the results of a network restore operation.
+type NetworkRestoreResult struct {
+	NetworksRestored    []string          `json:"networks_restored"`
+	NetworksSkipped     []string          `json:"networks_skipped"`
+	NetworksFailed      []string          `json:"networks_failed"`
+	AssignmentsRestored int               `json:"assignments_restored"`
+	AssignmentsFailed   int               `json:"assignments_failed"`
+	Conflicts           []NetworkConflict `json:"conflicts,omitempty"`
+	Errors              []string          `json:"errors,omitempty"`
 }
 
 // Networks provides Docker network backup and restore functionality.
@@ -182,7 +179,7 @@ func (n *Networks) Backup(ctx context.Context) (*NetworkBackup, error) {
 	}
 
 	// Get detailed configuration for each network
-	var configs []NetworkConfig
+	var configs []NetworkDefinition
 	var assignments []NetworkAssignment
 
 	for _, netName := range networks {
@@ -250,7 +247,7 @@ func (n *Networks) listNetworks(ctx context.Context) ([]string, error) {
 }
 
 // inspectNetwork returns detailed configuration for a network.
-func (n *Networks) inspectNetwork(ctx context.Context, name string) (*NetworkConfig, error) {
+func (n *Networks) inspectNetwork(ctx context.Context, name string) (*NetworkDefinition, error) {
 	cmd := exec.CommandContext(ctx, n.dockerPath, "network", "inspect", name, "--format", "{{json .}}")
 	output, err := cmd.Output()
 	if err != nil {
@@ -263,7 +260,7 @@ func (n *Networks) inspectNetwork(ctx context.Context, name string) (*NetworkCon
 		return nil, fmt.Errorf("parse network inspect: %w", err)
 	}
 
-	config := &NetworkConfig{
+	config := &NetworkDefinition{
 		ID:         raw.ID,
 		Name:       raw.Name,
 		Driver:     NetworkDriver(raw.Driver),
@@ -278,12 +275,12 @@ func (n *Networks) inspectNetwork(ctx context.Context, name string) (*NetworkCon
 
 	// Parse IPAM configuration
 	if raw.IPAM.Driver != "" || len(raw.IPAM.Config) > 0 {
-		config.IPAM = &IPAM{
+		config.IPAM = &NetworkIPAM{
 			Driver:  raw.IPAM.Driver,
 			Options: raw.IPAM.Options,
 		}
 		for _, ipamCfg := range raw.IPAM.Config {
-			config.IPAM.Config = append(config.IPAM.Config, IPAMConfig{
+			config.IPAM.Config = append(config.IPAM.Config, NetworkIPAMSubnet{
 				Subnet:     ipamCfg.Subnet,
 				IPRange:    ipamCfg.IPRange,
 				Gateway:    ipamCfg.Gateway,
@@ -304,24 +301,24 @@ func (n *Networks) inspectNetwork(ctx context.Context, name string) (*NetworkCon
 
 // dockerNetworkInspect represents the raw Docker network inspect output.
 type dockerNetworkInspect struct {
-	ID         string            `json:"Id"`
-	Name       string            `json:"Name"`
-	Created    string            `json:"Created"`
-	Scope      string            `json:"Scope"`
-	Driver     string            `json:"Driver"`
-	EnableIPv6 bool              `json:"EnableIPv6"`
-	IPAM       dockerIPAM        `json:"IPAM"`
-	Internal   bool              `json:"Internal"`
-	Attachable bool              `json:"Attachable"`
-	Ingress    bool              `json:"Ingress"`
-	Options    map[string]string `json:"Options"`
-	Labels     map[string]string `json:"Labels"`
-	Containers map[string]dockerContainer `json:"Containers"`
+	ID         string                         `json:"Id"`
+	Name       string                         `json:"Name"`
+	Created    string                         `json:"Created"`
+	Scope      string                         `json:"Scope"`
+	Driver     string                         `json:"Driver"`
+	EnableIPv6 bool                           `json:"EnableIPv6"`
+	IPAM       dockerIPAM                     `json:"IPAM"`
+	Internal   bool                           `json:"Internal"`
+	Attachable bool                           `json:"Attachable"`
+	Ingress    bool                           `json:"Ingress"`
+	Options    map[string]string              `json:"Options"`
+	Labels     map[string]string              `json:"Labels"`
+	Containers map[string]dockerContainer     `json:"Containers"`
 }
 
 type dockerIPAM struct {
-	Driver  string            `json:"Driver"`
-	Options map[string]string `json:"Options"`
+	Driver  string             `json:"Driver"`
+	Options map[string]string  `json:"Options"`
 	Config  []dockerIPAMConfig `json:"Config"`
 }
 
@@ -341,7 +338,7 @@ type dockerContainer struct {
 }
 
 // getNetworkAssignments returns container assignments for a network.
-func (n *Networks) getNetworkAssignments(ctx context.Context, config *NetworkConfig) (*NetworkAssignment, error) {
+func (n *Networks) getNetworkAssignments(ctx context.Context, config *NetworkDefinition) (*NetworkAssignment, error) {
 	cmd := exec.CommandContext(ctx, n.dockerPath, "network", "inspect", config.Name, "--format", "{{json .Containers}}")
 	output, err := cmd.Output()
 	if err != nil {
@@ -431,7 +428,7 @@ func isDefaultNetwork(name string) bool {
 }
 
 // Restore restores Docker networks from a backup.
-func (n *Networks) Restore(ctx context.Context, backup *NetworkBackup, opts RestoreOptions) (*RestoreResult, error) {
+func (n *Networks) Restore(ctx context.Context, backup *NetworkBackup, opts NetworkRestoreOptions) (*NetworkRestoreResult, error) {
 	n.logger.Info().
 		Bool("dry_run", opts.DryRun).
 		Bool("force", opts.Force).
@@ -442,10 +439,10 @@ func (n *Networks) Restore(ctx context.Context, backup *NetworkBackup, opts Rest
 		return nil, err
 	}
 
-	result := &RestoreResult{
-		NetworksRestored:   []string{},
-		NetworksSkipped:    []string{},
-		NetworksFailed:     []string{},
+	result := &NetworkRestoreResult{
+		NetworksRestored: []string{},
+		NetworksSkipped:  []string{},
+		NetworksFailed:   []string{},
 	}
 
 	// Detect conflicts before restore
@@ -456,57 +453,57 @@ func (n *Networks) Restore(ctx context.Context, backup *NetworkBackup, opts Rest
 	result.Conflicts = conflicts
 
 	// Restore networks
-	for _, netConfig := range backup.Networks {
+	for _, netDef := range backup.Networks {
 		// Apply network filter if specified
-		if len(opts.NetworkFilter) > 0 && !contains(opts.NetworkFilter, netConfig.Name) {
-			n.logger.Debug().Str("network", netConfig.Name).Msg("skipping filtered network")
-			result.NetworksSkipped = append(result.NetworksSkipped, netConfig.Name)
+		if len(opts.NetworkFilter) > 0 && !contains(opts.NetworkFilter, netDef.Name) {
+			n.logger.Debug().Str("network", netDef.Name).Msg("skipping filtered network")
+			result.NetworksSkipped = append(result.NetworksSkipped, netDef.Name)
 			continue
 		}
 
 		// Check if network exists
-		exists, err := n.networkExists(ctx, netConfig.Name)
+		exists, err := n.networkExists(ctx, netDef.Name)
 		if err != nil {
-			n.logger.Warn().Err(err).Str("network", netConfig.Name).Msg("failed to check network existence")
+			n.logger.Warn().Err(err).Str("network", netDef.Name).Msg("failed to check network existence")
 		}
 
 		if exists {
 			if opts.SkipExisting {
-				n.logger.Info().Str("network", netConfig.Name).Msg("skipping existing network")
-				result.NetworksSkipped = append(result.NetworksSkipped, netConfig.Name)
+				n.logger.Info().Str("network", netDef.Name).Msg("skipping existing network")
+				result.NetworksSkipped = append(result.NetworksSkipped, netDef.Name)
 				continue
 			}
 
 			if opts.Force {
 				if !opts.DryRun {
-					if err := n.removeNetwork(ctx, netConfig.Name); err != nil {
-						n.logger.Error().Err(err).Str("network", netConfig.Name).Msg("failed to remove existing network")
-						result.NetworksFailed = append(result.NetworksFailed, netConfig.Name)
-						result.Errors = append(result.Errors, fmt.Sprintf("remove %s: %v", netConfig.Name, err))
+					if err := n.removeNetwork(ctx, netDef.Name); err != nil {
+						n.logger.Error().Err(err).Str("network", netDef.Name).Msg("failed to remove existing network")
+						result.NetworksFailed = append(result.NetworksFailed, netDef.Name)
+						result.Errors = append(result.Errors, fmt.Sprintf("remove %s: %v", netDef.Name, err))
 						continue
 					}
 				}
-				n.logger.Info().Str("network", netConfig.Name).Msg("removed existing network for recreation")
+				n.logger.Info().Str("network", netDef.Name).Msg("removed existing network for recreation")
 			} else {
-				n.logger.Info().Str("network", netConfig.Name).Msg("network exists, skipping")
-				result.NetworksSkipped = append(result.NetworksSkipped, netConfig.Name)
+				n.logger.Info().Str("network", netDef.Name).Msg("network exists, skipping")
+				result.NetworksSkipped = append(result.NetworksSkipped, netDef.Name)
 				continue
 			}
 		}
 
 		// Create the network
 		if opts.DryRun {
-			n.logger.Info().Str("network", netConfig.Name).Msg("[dry-run] would create network")
-			result.NetworksRestored = append(result.NetworksRestored, netConfig.Name)
+			n.logger.Info().Str("network", netDef.Name).Msg("[dry-run] would create network")
+			result.NetworksRestored = append(result.NetworksRestored, netDef.Name)
 		} else {
-			if err := n.createNetwork(ctx, &netConfig); err != nil {
-				n.logger.Error().Err(err).Str("network", netConfig.Name).Msg("failed to create network")
-				result.NetworksFailed = append(result.NetworksFailed, netConfig.Name)
-				result.Errors = append(result.Errors, fmt.Sprintf("create %s: %v", netConfig.Name, err))
+			if err := n.createNetwork(ctx, &netDef); err != nil {
+				n.logger.Error().Err(err).Str("network", netDef.Name).Msg("failed to create network")
+				result.NetworksFailed = append(result.NetworksFailed, netDef.Name)
+				result.Errors = append(result.Errors, fmt.Sprintf("create %s: %v", netDef.Name, err))
 				continue
 			}
-			n.logger.Info().Str("network", netConfig.Name).Msg("created network")
-			result.NetworksRestored = append(result.NetworksRestored, netConfig.Name)
+			n.logger.Info().Str("network", netDef.Name).Msg("created network")
+			result.NetworksRestored = append(result.NetworksRestored, netDef.Name)
 		}
 	}
 
@@ -576,7 +573,7 @@ func (n *Networks) removeNetwork(ctx context.Context, name string) error {
 }
 
 // createNetwork creates a Docker network from configuration.
-func (n *Networks) createNetwork(ctx context.Context, config *NetworkConfig) error {
+func (n *Networks) createNetwork(ctx context.Context, config *NetworkDefinition) error {
 	args := []string{"network", "create"}
 
 	// Driver
@@ -692,7 +689,7 @@ func (n *Networks) DetectConflicts(ctx context.Context, backup *NetworkBackup) (
 	}
 
 	// Build a map of existing network configurations
-	existingConfigs := make(map[string]*NetworkConfig)
+	existingConfigs := make(map[string]*NetworkDefinition)
 	for _, name := range existingNetworks {
 		if isDefaultNetwork(name) {
 			continue
@@ -807,24 +804,24 @@ func (n *Networks) ImportJSON(data []byte) (*NetworkBackup, error) {
 }
 
 // ListNetworksByDriver returns networks filtered by driver type.
-func (n *Networks) ListNetworksByDriver(ctx context.Context, driver NetworkDriver) ([]NetworkConfig, error) {
+func (n *Networks) ListNetworksByDriver(ctx context.Context, driver NetworkDriver) ([]NetworkDefinition, error) {
 	backup, err := n.Backup(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var filtered []NetworkConfig
-	for _, net := range backup.Networks {
-		if net.Driver == driver {
-			filtered = append(filtered, net)
+	var filtered []NetworkDefinition
+	for _, netDef := range backup.Networks {
+		if netDef.Driver == driver {
+			filtered = append(filtered, netDef)
 		}
 	}
 
 	return filtered, nil
 }
 
-// GetNetworkConfig returns the configuration for a specific network.
-func (n *Networks) GetNetworkConfig(ctx context.Context, name string) (*NetworkConfig, error) {
+// GetNetworkDefinition returns the definition for a specific network.
+func (n *Networks) GetNetworkDefinition(ctx context.Context, name string) (*NetworkDefinition, error) {
 	exists, err := n.networkExists(ctx, name)
 	if err != nil {
 		return nil, err
@@ -840,34 +837,34 @@ func (n *Networks) GetNetworkConfig(ctx context.Context, name string) (*NetworkC
 func (n *Networks) ValidateBackup(backup *NetworkBackup) []string {
 	var issues []string
 
-	for _, netCfg := range backup.Networks {
+	for _, netDef := range backup.Networks {
 		// Validate driver
-		switch netCfg.Driver {
+		switch netDef.Driver {
 		case NetworkDriverBridge, NetworkDriverHost, NetworkDriverOverlay,
 			NetworkDriverMacvlan, NetworkDriverIPvlan, NetworkDriverNone:
 			// Valid driver
 		default:
-			issues = append(issues, fmt.Sprintf("network %s has unknown driver: %s", netCfg.Name, netCfg.Driver))
+			issues = append(issues, fmt.Sprintf("network %s has unknown driver: %s", netDef.Name, netDef.Driver))
 		}
 
 		// Validate IPAM configuration
-		if netCfg.IPAM != nil {
-			for _, cfg := range netCfg.IPAM.Config {
+		if netDef.IPAM != nil {
+			for _, cfg := range netDef.IPAM.Config {
 				if cfg.Subnet != "" {
 					if _, _, err := net.ParseCIDR(cfg.Subnet); err != nil {
-						issues = append(issues, fmt.Sprintf("network %s has invalid subnet: %s", netCfg.Name, cfg.Subnet))
+						issues = append(issues, fmt.Sprintf("network %s has invalid subnet: %s", netDef.Name, cfg.Subnet))
 					}
 				}
 				if cfg.Gateway != "" {
 					if ip := net.ParseIP(cfg.Gateway); ip == nil {
-						issues = append(issues, fmt.Sprintf("network %s has invalid gateway: %s", netCfg.Name, cfg.Gateway))
+						issues = append(issues, fmt.Sprintf("network %s has invalid gateway: %s", netDef.Name, cfg.Gateway))
 					}
 				}
 			}
 		}
 
 		// Validate network names
-		if netCfg.Name == "" {
+		if netDef.Name == "" {
 			issues = append(issues, "network has empty name")
 		}
 	}
