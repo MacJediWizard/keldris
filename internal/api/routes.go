@@ -263,6 +263,10 @@ func NewRouter(
 	configExportHandler := handlers.NewConfigExportHandler(database, logger)
 	configExportHandler.RegisterRoutes(apiV1)
 
+	// Docker restore routes
+	dockerRestoreHandler := handlers.NewDockerRestoreHandler(database, logger)
+	dockerRestoreHandler.RegisterRoutes(apiV1)
+
 	// DR Runbook routes
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
 	drRunbooksHandler.RegisterRoutes(apiV1)
