@@ -448,7 +448,8 @@ function BackupDetailsModal({
 						</div>
 					)}
 
-					{(backup.container_pre_hook_output || backup.container_pre_hook_error) && (
+					{(backup.container_pre_hook_output ||
+						backup.container_pre_hook_error) && (
 						<div>
 							<p className="text-sm font-medium text-gray-500 mb-2">
 								Container Pre-Backup Hook
@@ -474,7 +475,8 @@ function BackupDetailsModal({
 						</div>
 					)}
 
-					{(backup.container_post_hook_output || backup.container_post_hook_error) && (
+					{(backup.container_post_hook_output ||
+						backup.container_post_hook_error) && (
 						<div>
 							<p className="text-sm font-medium text-gray-500 mb-2">
 								Container Post-Backup Hook

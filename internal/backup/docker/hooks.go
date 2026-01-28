@@ -1,4 +1,3 @@
-// Package docker provides Docker container backup hook functionality.
 package docker
 
 import (
@@ -16,8 +15,6 @@ import (
 )
 
 var (
-	// ErrContainerNotFound is returned when the container is not found.
-	ErrContainerNotFound = errors.New("container not found")
 	// ErrHookTimeout is returned when the hook execution times out.
 	ErrHookTimeout = errors.New("hook execution timed out")
 	// ErrHookFailed is returned when the hook command fails.
@@ -251,42 +248,3 @@ func (e *HookExecutor) executeHooks(ctx context.Context, hooks []*models.Contain
 	return executions, nil
 }
 
-// ContainerExists checks if a container exists and is running.
-func (e *HookExecutor) ContainerExists(ctx context.Context, containerName string) (bool, error) {
-	cmd := exec.CommandContext(ctx, e.dockerBinary, "inspect", "--format", "{{.State.Running}}", containerName)
-
-	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
-
-	err := cmd.Run()
-	if err != nil {
-		if strings.Contains(err.Error(), "No such") || strings.Contains(stdout.String(), "Error") {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return strings.TrimSpace(stdout.String()) == "true", nil
-}
-
-// ListContainers returns a list of running container names.
-func (e *HookExecutor) ListContainers(ctx context.Context) ([]string, error) {
-	cmd := exec.CommandContext(ctx, e.dockerBinary, "ps", "--format", "{{.Names}}")
-
-	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to list containers: %w", err)
-	}
-
-	lines := strings.Split(strings.TrimSpace(stdout.String()), "\n")
-	var containers []string
-	for _, line := range lines {
-		if line != "" {
-			containers = append(containers, line)
-		}
-	}
-
-	return containers, nil
-}
