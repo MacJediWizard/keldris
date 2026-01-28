@@ -188,7 +188,7 @@ func TestCheckDeduplication(t *testing.T) {
 	}
 
 	// Should not deduplicate within same backup directory
-	checksum, path = service.checkDeduplication(ctx, "image1", filepath.Dir(testPath))
+	_, path = service.checkDeduplication(ctx, "image1", filepath.Dir(testPath))
 	if path != "" {
 		t.Error("should not deduplicate within same backup directory")
 	}
