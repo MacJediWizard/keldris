@@ -164,14 +164,3 @@ type DockerLogViewResponse struct {
 	StartTime     time.Time        `json:"start_time"`
 	EndTime       time.Time        `json:"end_time"`
 }
-
-// DockerContainerInfo represents information about a container.
-type DockerContainerInfo struct {
-	ID        string            `json:"id"`
-	Name      string            `json:"name"`
-	Image     string            `json:"image"`
-	Status    string            `json:"status"`
-	State     string            `json:"state"` // running, exited, etc.
-	CreatedAt time.Time         `json:"created_at"`
-	Labels    map[string]string `json:"labels,omitempty"`
-}

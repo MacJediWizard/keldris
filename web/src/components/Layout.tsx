@@ -19,10 +19,13 @@ import {
 } from '../hooks/useReadOnlyMode';
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
+import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
+import { RecentItemsDropdown } from './features/RecentItems';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { WhatsNewModal } from './features/WhatsNewModal';
+import { Breadcrumbs } from './ui/Breadcrumbs';
 
 interface NavItem {
 	path: string;
@@ -840,8 +843,12 @@ function Header() {
 			<div className="flex items-center gap-4">
 				<OrgSwitcher />
 			</div>
+			<div className="flex-1 max-w-xl mx-4">
+				<GlobalSearchBar placeholder={t('common.search')} />
+			</div>
 			<div className="flex items-center gap-4">
 				<LanguageSelector />
+				<RecentItemsDropdown />
 				<Link
 					to="/alerts"
 					aria-label={t('nav.alerts')}
@@ -990,6 +997,7 @@ export function Layout() {
 					<div className="flex-1 flex flex-col">
 						<Header />
 						<main className="flex-1 p-6">
+							<Breadcrumbs />
 							<Outlet />
 						</main>
 					</div>
