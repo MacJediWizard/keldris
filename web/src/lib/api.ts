@@ -359,6 +359,18 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
+	DockerStack,
+	DockerStackBackup,
+	DockerStackRestore,
+	DiscoveredDockerStack,
+	CreateDockerStackRequest,
+	UpdateDockerStackRequest,
+	TriggerDockerStackBackupRequest,
+	RestoreDockerStackRequest,
+	DiscoverDockerStacksRequest,
+	DockerStackListResponse,
+	DockerStackBackupListResponse,
+	DiscoverDockerStacksResponse,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -3347,5 +3359,92 @@ export const slaApi = {
 		const url = month ? `/sla-report?month=${month}` : '/sla-report';
 		const response = await fetchApi<SLAReportResponse>(url);
 		return response.report;
+	},
+};
+
+// Docker Stacks API
+export const dockerStacksApi = {
+	// Stack Management
+	list: async (agentId?: string): Promise<DockerStack[]> => {
+		const endpoint = agentId
+			? `/docker-stacks?agent_id=${agentId}`
+			: '/docker-stacks';
+		const response = await fetchApi<DockerStackListResponse>(endpoint);
+		return response.stacks ?? [];
+	},
+
+	get: async (id: string): Promise<DockerStack> =>
+		fetchApi<DockerStack>(`/docker-stacks/${id}`),
+
+	create: async (data: CreateDockerStackRequest): Promise<DockerStack> =>
+		fetchApi<DockerStack>('/docker-stacks', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateDockerStackRequest,
+	): Promise<DockerStack> =>
+		fetchApi<DockerStack>(`/docker-stacks/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-stacks/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Backup Operations
+	triggerBackup: async (
+		id: string,
+		data?: TriggerDockerStackBackupRequest,
+	): Promise<DockerStackBackup> =>
+		fetchApi<DockerStackBackup>(`/docker-stacks/${id}/backup`, {
+			method: 'POST',
+			body: JSON.stringify(data ?? {}),
+		}),
+
+	listBackups: async (stackId: string): Promise<DockerStackBackup[]> => {
+		const response = await fetchApi<DockerStackBackupListResponse>(
+			`/docker-stacks/${stackId}/backups`,
+		);
+		return response.backups ?? [];
+	},
+
+	getBackup: async (id: string): Promise<DockerStackBackup> =>
+		fetchApi<DockerStackBackup>(`/docker-stack-backups/${id}`),
+
+	deleteBackup: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-stack-backups/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Restore Operations
+	restoreBackup: async (
+		backupId: string,
+		data: RestoreDockerStackRequest,
+	): Promise<DockerStackRestore> =>
+		fetchApi<DockerStackRestore>(`/docker-stack-backups/${backupId}/restore`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getRestore: async (id: string): Promise<DockerStackRestore> =>
+		fetchApi<DockerStackRestore>(`/docker-stack-restores/${id}`),
+
+	// Discovery
+	discoverStacks: async (
+		data: DiscoverDockerStacksRequest,
+	): Promise<DiscoveredDockerStack[]> => {
+		const response = await fetchApi<DiscoverDockerStacksResponse>(
+			'/docker-stacks/discover',
+			{
+				method: 'POST',
+				body: JSON.stringify(data),
+			},
+		);
+		return response.stacks ?? [];
 	},
 };

@@ -416,6 +416,13 @@ export type CompressionLevel = 'off' | 'auto' | 'max';
 
 export type SchedulePriority = 1 | 2 | 3; // 1=high, 2=medium, 3=low
 
+export interface DockerStackScheduleConfig {
+	stack_id: string;
+	export_images: boolean;
+	include_env_files: boolean;
+	stop_for_backup: boolean;
+}
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
@@ -435,6 +442,7 @@ export interface Schedule {
 	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
 	priority: SchedulePriority; // Backup priority: 1=high, 2=medium, 3=low
 	preemptible: boolean; // Can be preempted by higher priority backups
+	docker_stack_config?: DockerStackScheduleConfig; // Docker stack backup configuration
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -457,6 +465,7 @@ export interface CreateScheduleRequest {
 	on_mount_unavailable?: MountBehavior;
 	priority?: SchedulePriority;
 	preemptible?: boolean;
+	docker_stack_config?: DockerStackScheduleConfig;
 	enabled?: boolean;
 }
 
@@ -4172,4 +4181,153 @@ export interface SLADashboardResponse {
 
 export interface SLAReportResponse {
 	report: SLAReport;
+}
+
+// Docker Stack Backup types
+export type DockerStackBackupStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed'
+	| 'canceled';
+
+export type DockerStackRestoreStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed';
+
+export interface DockerContainerState {
+	service_name: string;
+	container_id: string;
+	status: string;
+	health?: string;
+	image: string;
+	image_id: string;
+	created: string;
+	started?: string;
+}
+
+export interface DockerStack {
+	id: string;
+	org_id: string;
+	agent_id: string;
+	name: string;
+	compose_path: string;
+	description?: string;
+	service_count: number;
+	is_running: boolean;
+	last_backup_at?: string;
+	last_backup_id?: string;
+	backup_schedule_id?: string;
+	export_images: boolean;
+	include_env_files: boolean;
+	stop_for_backup: boolean;
+	exclude_paths?: string[];
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerStackBackup {
+	id: string;
+	org_id: string;
+	stack_id: string;
+	agent_id: string;
+	schedule_id?: string;
+	backup_id?: string;
+	status: DockerStackBackupStatus;
+	backup_path: string;
+	manifest_path?: string;
+	volume_count: number;
+	bind_mount_count: number;
+	image_count?: number;
+	total_size_bytes: number;
+	container_states?: DockerContainerState[];
+	dependency_order?: string[];
+	includes_images: boolean;
+	error_message?: string;
+	started_at?: string;
+	completed_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerStackRestore {
+	id: string;
+	org_id: string;
+	stack_backup_id: string;
+	agent_id: string;
+	status: DockerStackRestoreStatus;
+	target_path: string;
+	restore_volumes: boolean;
+	restore_images: boolean;
+	start_containers: boolean;
+	path_mappings?: Record<string, string>;
+	volumes_restored: number;
+	images_restored: number;
+	error_message?: string;
+	started_at?: string;
+	completed_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DiscoveredDockerStack {
+	name: string;
+	compose_path: string;
+	service_count: number;
+	is_running: boolean;
+	is_registered: boolean;
+}
+
+export interface CreateDockerStackRequest {
+	name: string;
+	agent_id: string;
+	compose_path: string;
+	description?: string;
+	export_images?: boolean;
+	include_env_files?: boolean;
+	stop_for_backup?: boolean;
+	exclude_paths?: string[];
+}
+
+export interface UpdateDockerStackRequest {
+	name?: string;
+	description?: string;
+	export_images?: boolean;
+	include_env_files?: boolean;
+	stop_for_backup?: boolean;
+	exclude_paths?: string[];
+}
+
+export interface TriggerDockerStackBackupRequest {
+	export_images?: boolean;
+	stop_for_backup?: boolean;
+}
+
+export interface RestoreDockerStackRequest {
+	backup_id: string;
+	target_agent_id: string;
+	target_path: string;
+	restore_volumes: boolean;
+	restore_images: boolean;
+	start_containers: boolean;
+	path_mappings?: Record<string, string>;
+}
+
+export interface DiscoverDockerStacksRequest {
+	agent_id: string;
+	search_paths: string[];
+}
+
+export interface DockerStackListResponse {
+	stacks: DockerStack[];
+}
+
+export interface DockerStackBackupListResponse {
+	backups: DockerStackBackup[];
+}
+
+export interface DiscoverDockerStacksResponse {
+	stacks: DiscoveredDockerStack[];
 }
