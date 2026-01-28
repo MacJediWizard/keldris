@@ -4173,3 +4173,105 @@ export interface SLADashboardResponse {
 export interface SLAReportResponse {
 	report: SLAReport;
 }
+
+// Docker Container Logs types
+export type DockerLogBackupStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed';
+
+export interface DockerLogRetentionPolicy {
+	max_age_days: number;
+	max_size_bytes: number;
+	max_files_per_day: number;
+	compress_enabled: boolean;
+	compress_level: number;
+}
+
+export interface DockerLogBackup {
+	id: string;
+	agent_id: string;
+	container_id: string;
+	container_name: string;
+	image_name?: string;
+	log_path: string;
+	original_size: number;
+	compressed_size: number;
+	compressed: boolean;
+	start_time: string;
+	end_time: string;
+	line_count: number;
+	status: DockerLogBackupStatus;
+	error_message?: string;
+	backup_schedule_id?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerLogSettings {
+	id: string;
+	agent_id: string;
+	enabled: boolean;
+	cron_expression: string;
+	retention_policy: DockerLogRetentionPolicy;
+	include_containers?: string[];
+	exclude_containers?: string[];
+	include_labels?: Record<string, string>;
+	exclude_labels?: Record<string, string>;
+	timestamps: boolean;
+	tail: number;
+	since?: string;
+	until?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerLogEntry {
+	timestamp: string;
+	stream: string;
+	message: string;
+	line_num: number;
+}
+
+export interface DockerLogViewResponse {
+	backup_id: string;
+	container_id: string;
+	container_name: string;
+	entries: DockerLogEntry[];
+	total_lines: number;
+	offset: number;
+	limit: number;
+	start_time: string;
+	end_time: string;
+}
+
+export interface DockerLogBackupsResponse {
+	backups: DockerLogBackup[];
+	total_count: number;
+}
+
+export interface DockerLogStorageStats {
+	total_size: number;
+	total_files: number;
+	container_stats: Record<string, { size: number; files: number }>;
+}
+
+export interface DockerLogRetentionResult {
+	removed_count: number;
+	removed_bytes: number;
+}
+
+export interface DockerLogSettingsUpdate {
+	enabled?: boolean;
+	cron_expression?: string;
+	retention_policy?: DockerLogRetentionPolicy;
+	include_containers?: string[];
+	exclude_containers?: string[];
+	include_labels?: Record<string, string>;
+	exclude_labels?: Record<string, string>;
+	timestamps?: boolean;
+	tail?: number;
+	since?: string;
+	until?: string;
+}
