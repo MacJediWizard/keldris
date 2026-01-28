@@ -43,11 +43,42 @@ export interface NetworkMount {
 	last_checked: string;
 }
 
+// Docker container info for agent display
+export interface DockerContainerInfo {
+	id: string;
+	name: string;
+	image: string;
+	status: string;
+	state: string; // running, paused, exited, etc.
+}
+
+// Docker volume info for agent display
+export interface DockerVolumeInfo {
+	name: string;
+	driver: string;
+	mountpoint?: string;
+}
+
+// Docker info for an agent
+export interface DockerInfo {
+	available: boolean;
+	version?: string;
+	api_version?: string;
+	container_count: number;
+	running_count: number;
+	volume_count: number;
+	containers?: DockerContainerInfo[];
+	volumes?: DockerVolumeInfo[];
+	error?: string;
+	detected_at?: string;
+}
+
 export interface Agent {
 	id: string;
 	org_id: string;
 	hostname: string;
 	os_info?: OSInfo;
+	docker_info?: DockerInfo;
 	network_mounts?: NetworkMount[];
 	last_seen?: string;
 	status: AgentStatus;
@@ -416,11 +447,31 @@ export type CompressionLevel = 'off' | 'auto' | 'max';
 
 export type SchedulePriority = 1 | 2 | 3; // 1=high, 2=medium, 3=low
 
+// Backup type determines what kind of backup to perform
+export type BackupType = 'file' | 'docker';
+
+// Docker backup options
+export interface DockerBackupOptions {
+	volume_ids?: string[]; // Specific volumes to backup (empty = all)
+	container_ids?: string[]; // Specific container configs to backup (empty = all)
+	pause_containers: boolean; // Pause containers during volume backup
+	include_container_configs: boolean; // Backup container configurations
+}
+
+// Docker Compose stack backup configuration
+export interface DockerStackScheduleConfig {
+	stack_id: string;
+	export_images: boolean;
+	include_env_files: boolean;
+	stop_for_backup: boolean;
+}
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
 	policy_id?: string; // Policy this schedule was created from
 	name: string;
+	backup_type: BackupType; // Type of backup: file or docker
 	cron_expression: string;
 	paths: string[];
 	excludes?: string[];
@@ -435,6 +486,8 @@ export interface Schedule {
 	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
 	priority: SchedulePriority; // Backup priority: 1=high, 2=medium, 3=low
 	preemptible: boolean; // Can be preempted by higher priority backups
+	docker_options?: DockerBackupOptions; // Docker-specific backup options
+	docker_stack_config?: DockerStackScheduleConfig; // Docker stack backup configuration
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -445,8 +498,9 @@ export interface CreateScheduleRequest {
 	agent_id: string;
 	repositories: ScheduleRepositoryRequest[];
 	name: string;
+	backup_type?: BackupType; // Type of backup: file (default) or docker
 	cron_expression: string;
-	paths: string[];
+	paths?: string[]; // Required for file backups, optional for docker
 	excludes?: string[];
 	retention_policy?: RetentionPolicy;
 	bandwidth_limit_kb?: number;
@@ -457,11 +511,14 @@ export interface CreateScheduleRequest {
 	on_mount_unavailable?: MountBehavior;
 	priority?: SchedulePriority;
 	preemptible?: boolean;
+	docker_options?: DockerBackupOptions; // Docker-specific backup options
+	docker_stack_config?: DockerStackScheduleConfig;
 	enabled?: boolean;
 }
 
 export interface UpdateScheduleRequest {
 	name?: string;
+	backup_type?: BackupType;
 	cron_expression?: string;
 	paths?: string[];
 	excludes?: string[];
@@ -475,6 +532,7 @@ export interface UpdateScheduleRequest {
 	on_mount_unavailable?: MountBehavior;
 	priority?: SchedulePriority;
 	preemptible?: boolean;
+	docker_options?: DockerBackupOptions;
 	enabled?: boolean;
 }
 
@@ -1135,6 +1193,133 @@ export interface RestorePreview {
 
 export interface RestoresResponse {
 	restores: Restore[];
+}
+
+// Docker Restore types
+export type DockerRestoreStatus =
+	| 'pending'
+	| 'preparing'
+	| 'restoring_volumes'
+	| 'creating_container'
+	| 'starting'
+	| 'verifying'
+	| 'completed'
+	| 'failed'
+	| 'canceled';
+
+export type DockerRestoreTargetType = 'local' | 'remote';
+
+export interface DockerRestoreTarget {
+	type: DockerRestoreTargetType;
+	host?: string;
+	cert_path?: string;
+	tls_verify?: boolean;
+}
+
+export interface DockerRestoreProgress {
+	status: string;
+	current_step: string;
+	total_steps: number;
+	completed_steps: number;
+	percent_complete: number;
+	total_bytes: number;
+	restored_bytes: number;
+	current_volume?: string;
+	error_message?: string;
+}
+
+export interface DockerContainer {
+	id: string;
+	name: string;
+	image: string;
+	volumes?: string[];
+	ports?: string[];
+	networks?: string[];
+	created_at: string;
+}
+
+export interface DockerVolume {
+	name: string;
+	driver: string;
+	size_bytes: number;
+	created_at: string;
+}
+
+export interface DockerRestoreConflict {
+	type: 'container' | 'volume' | 'network';
+	name: string;
+	existing_id?: string;
+	description: string;
+}
+
+export interface DockerRestorePlan {
+	container?: DockerContainer;
+	volumes: DockerVolume[];
+	total_size_bytes: number;
+	conflicts: DockerRestoreConflict[];
+	dependencies: string[];
+}
+
+export interface DockerRestore {
+	id: string;
+	agent_id: string;
+	repository_id: string;
+	snapshot_id: string;
+	container_name?: string;
+	volume_name?: string;
+	new_container_name?: string;
+	new_volume_name?: string;
+	target?: DockerRestoreTarget;
+	overwrite_existing: boolean;
+	start_after_restore: boolean;
+	verify_start: boolean;
+	status: DockerRestoreStatus;
+	progress?: DockerRestoreProgress;
+	restored_container_id?: string;
+	restored_volumes?: string[];
+	start_verified: boolean;
+	warnings?: string[];
+	started_at?: string;
+	completed_at?: string;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface CreateDockerRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	container_name?: string;
+	volume_name?: string;
+	new_container_name?: string;
+	new_volume_name?: string;
+	target?: DockerRestoreTarget;
+	overwrite_existing?: boolean;
+	start_after_restore?: boolean;
+	verify_start?: boolean;
+}
+
+export interface DockerRestorePreviewRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	container_name?: string;
+	volume_name?: string;
+	target?: DockerRestoreTarget;
+}
+
+export interface DockerRestoresResponse {
+	docker_restores: DockerRestore[];
+}
+
+export interface DockerContainersResponse {
+	containers: DockerContainer[];
+	message?: string;
+}
+
+export interface DockerVolumesResponse {
+	volumes: DockerVolume[];
+	message?: string;
 }
 
 // Alert types
@@ -1970,6 +2155,56 @@ export interface SearchResponse {
 	results: SearchResult[];
 	query: string;
 	total: number;
+}
+
+export interface GroupedSearchResult {
+	type: SearchResultType;
+	id: string;
+	name: string;
+	description?: string;
+	status?: string;
+	tags?: string[];
+	created_at: string;
+	metadata?: Record<string, unknown>;
+}
+
+export interface GroupedSearchResponse {
+	agents: GroupedSearchResult[];
+	backups: GroupedSearchResult[];
+	snapshots: GroupedSearchResult[];
+	schedules: GroupedSearchResult[];
+	repositories: GroupedSearchResult[];
+	query: string;
+	total: number;
+}
+
+export interface SearchSuggestion {
+	text: string;
+	type: SearchResultType;
+	id: string;
+	detail?: string;
+}
+
+export interface SearchSuggestionsResponse {
+	suggestions: SearchSuggestion[];
+}
+
+export interface RecentSearch {
+	id: string;
+	user_id: string;
+	org_id: string;
+	query: string;
+	types?: string[];
+	created_at: string;
+}
+
+export interface RecentSearchesResponse {
+	recent_searches: RecentSearch[];
+}
+
+export interface SaveRecentSearchRequest {
+	query: string;
+	types?: string[];
 }
 
 // Dashboard Metrics types
@@ -4172,4 +4407,289 @@ export interface SLADashboardResponse {
 
 export interface SLAReportResponse {
 	report: SLAReport;
+}
+
+// Recent Items types
+export type RecentItemType =
+	| 'agent'
+	| 'repository'
+	| 'schedule'
+	| 'backup'
+	| 'policy'
+	| 'snapshot';
+
+export interface RecentItem {
+	id: string;
+	org_id: string;
+	user_id: string;
+	item_type: RecentItemType;
+	item_id: string;
+	item_name: string;
+	page_path: string;
+	viewed_at: string;
+	created_at: string;
+}
+
+export interface TrackRecentItemRequest {
+	item_type: RecentItemType;
+	item_id: string;
+	item_name: string;
+	page_path: string;
+}
+
+export interface RecentItemsResponse {
+	items: RecentItem[];
+}
+
+// Activity Event types
+export type ActivityEventType =
+	| 'backup_started'
+	| 'backup_completed'
+	| 'backup_failed'
+	| 'restore_started'
+	| 'restore_completed'
+	| 'restore_failed'
+	| 'agent_connected'
+	| 'agent_disconnected'
+	| 'agent_created'
+	| 'agent_deleted'
+	| 'user_login'
+	| 'user_logout'
+	| 'schedule_created'
+	| 'schedule_updated'
+	| 'schedule_deleted'
+	| 'schedule_enabled'
+	| 'schedule_disabled'
+	| 'repository_created'
+	| 'repository_deleted'
+	| 'alert_triggered'
+	| 'alert_acknowledged'
+	| 'alert_resolved'
+	| 'policy_applied'
+	| 'maintenance_started'
+	| 'maintenance_ended'
+	| 'system_startup'
+	| 'system_shutdown';
+
+export type ActivityEventCategory =
+	| 'backup'
+	| 'restore'
+	| 'agent'
+	| 'user'
+	| 'schedule'
+	| 'repository'
+	| 'alert'
+	| 'policy'
+	| 'maintenance'
+	| 'system';
+
+export interface ActivityEvent {
+	id: string;
+	org_id: string;
+	type: ActivityEventType;
+	category: ActivityEventCategory;
+	title: string;
+	description: string;
+	user_id?: string;
+	user_name?: string;
+	agent_id?: string;
+	agent_name?: string;
+	resource_type?: string;
+	resource_id?: string;
+	resource_name?: string;
+	metadata?: Record<string, unknown>;
+	created_at: string;
+}
+
+export interface ActivityEventsResponse {
+	events: ActivityEvent[];
+}
+
+export interface ActivityEventCountResponse {
+	count: number;
+}
+
+export interface ActivityCategoriesResponse {
+	categories: Record<string, number>;
+}
+
+export interface ActivityEventFilter {
+	category?: ActivityEventCategory;
+	type?: ActivityEventType;
+	user_id?: string;
+	agent_id?: string;
+	start_time?: string;
+	end_time?: string;
+	limit?: number;
+	offset?: number;
+}
+
+// Favorite types
+export type FavoriteEntityType = 'agent' | 'schedule' | 'repository';
+
+export interface Favorite {
+	id: string;
+	user_id: string;
+	org_id: string;
+	entity_type: FavoriteEntityType;
+	entity_id: string;
+	created_at: string;
+}
+
+export interface CreateFavoriteRequest {
+	entity_type: FavoriteEntityType;
+	entity_id: string;
+}
+
+export interface FavoritesResponse {
+	favorites: Favorite[];
+}
+
+// Docker Stack Backup types
+export type DockerStackBackupStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed'
+	| 'canceled';
+
+export type DockerStackRestoreStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed';
+
+export interface DockerContainerState {
+	service_name: string;
+	container_id: string;
+	status: string;
+	health?: string;
+	image: string;
+	image_id: string;
+	created: string;
+	started?: string;
+}
+
+export interface DockerStack {
+	id: string;
+	org_id: string;
+	agent_id: string;
+	name: string;
+	compose_path: string;
+	description?: string;
+	service_count: number;
+	is_running: boolean;
+	last_backup_at?: string;
+	last_backup_id?: string;
+	backup_schedule_id?: string;
+	export_images: boolean;
+	include_env_files: boolean;
+	stop_for_backup: boolean;
+	exclude_paths?: string[];
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerStackBackup {
+	id: string;
+	org_id: string;
+	stack_id: string;
+	agent_id: string;
+	schedule_id?: string;
+	backup_id?: string;
+	status: DockerStackBackupStatus;
+	backup_path: string;
+	manifest_path?: string;
+	volume_count: number;
+	bind_mount_count: number;
+	image_count?: number;
+	total_size_bytes: number;
+	container_states?: DockerContainerState[];
+	dependency_order?: string[];
+	includes_images: boolean;
+	error_message?: string;
+	started_at?: string;
+	completed_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerStackRestore {
+	id: string;
+	org_id: string;
+	stack_backup_id: string;
+	agent_id: string;
+	status: DockerStackRestoreStatus;
+	target_path: string;
+	restore_volumes: boolean;
+	restore_images: boolean;
+	start_containers: boolean;
+	path_mappings?: Record<string, string>;
+	volumes_restored: number;
+	images_restored: number;
+	error_message?: string;
+	started_at?: string;
+	completed_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DiscoveredDockerStack {
+	name: string;
+	compose_path: string;
+	service_count: number;
+	is_running: boolean;
+	is_registered: boolean;
+}
+
+export interface CreateDockerStackRequest {
+	name: string;
+	agent_id: string;
+	compose_path: string;
+	description?: string;
+	export_images?: boolean;
+	include_env_files?: boolean;
+	stop_for_backup?: boolean;
+	exclude_paths?: string[];
+}
+
+export interface UpdateDockerStackRequest {
+	name?: string;
+	description?: string;
+	export_images?: boolean;
+	include_env_files?: boolean;
+	stop_for_backup?: boolean;
+	exclude_paths?: string[];
+}
+
+export interface TriggerDockerStackBackupRequest {
+	export_images?: boolean;
+	stop_for_backup?: boolean;
+}
+
+export interface RestoreDockerStackRequest {
+	backup_id: string;
+	target_agent_id: string;
+	target_path: string;
+	restore_volumes: boolean;
+	restore_images: boolean;
+	start_containers: boolean;
+	path_mappings?: Record<string, string>;
+}
+
+export interface DiscoverDockerStacksRequest {
+	agent_id: string;
+	search_paths: string[];
+}
+
+export interface DockerStackListResponse {
+	stacks: DockerStack[];
+}
+
+export interface DockerStackBackupListResponse {
+	backups: DockerStackBackup[];
+}
+
+export interface DiscoverDockerStacksResponse {
+	stacks: DiscoveredDockerStack[];
 }
