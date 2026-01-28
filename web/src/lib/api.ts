@@ -1,6 +1,11 @@
 import type {
 	AcknowledgeBreachRequest,
 	ActiveMaintenanceResponse,
+	ActivityCategoriesResponse,
+	ActivityEvent,
+	ActivityEventCountResponse,
+	ActivityEventFilter,
+	ActivityEventsResponse,
 	AddAgentToGroupRequest,
 	Agent,
 	AgentBackupsResponse,
@@ -82,9 +87,11 @@ import type {
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
+	CreateDockerRestoreRequest,
 	CreateDowntimeAlertRequest,
 	CreateDowntimeEventRequest,
 	CreateExcludePatternRequest,
+	CreateFavoriteRequest,
 	CreateIPAllowlistRequest,
 	CreateIPBanRequest,
 	CreateImmutabilityLockRequest,
@@ -127,6 +134,15 @@ import type {
 	DashboardStats,
 	DataTypesResponse,
 	DefaultPricingResponse,
+	DockerContainer,
+	DockerContainersResponse,
+	DockerRestore,
+	DockerRestorePlan,
+	DockerRestorePreviewRequest,
+	DockerRestoreProgress,
+	DockerRestoresResponse,
+	DockerVolume,
+	DockerVolumesResponse,
 	DowntimeAlert,
 	DowntimeAlertsResponse,
 	DowntimeEvent,
@@ -138,6 +154,9 @@ import type {
 	ExportBundleRequest,
 	ExportFormat,
 	ExtendImmutabilityLockRequest,
+	Favorite,
+	FavoriteEntityType,
+	FavoritesResponse,
 	FileDiffResponse,
 	FileHistoryParams,
 	FileHistoryResponse,
@@ -154,6 +173,7 @@ import type {
 	GeoReplicationSummary,
 	GeoReplicationSummaryResponse,
 	GeoReplicationUpdateRequest,
+	GroupedSearchResponse,
 	IPAllowlist,
 	IPAllowlistSettings,
 	IPAllowlistsResponse,
@@ -226,6 +246,9 @@ import type {
 	RateLimitConfigsResponse,
 	RateLimitDashboardStats,
 	RateLimitStatsResponse,
+	RecentItem,
+	RecentItemsResponse,
+	RecentSearchesResponse,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -269,12 +292,14 @@ import type {
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
 	SSOSettings,
+	SaveRecentSearchRequest,
 	SavedFilter,
 	SavedFiltersResponse,
 	Schedule,
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
+	SearchSuggestionsResponse,
 	ServerLogComponentsResponse,
 	ServerLogFilter,
 	ServerLogsResponse,
@@ -303,6 +328,7 @@ import type {
 	TestNotificationRuleRequest,
 	TestNotificationRuleResponse,
 	TestRepositoryResponse,
+	TrackRecentItemRequest,
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
@@ -1037,6 +1063,72 @@ export const restoresApi = {
 
 	getProgress: async (id: string): Promise<CloudRestoreProgress> =>
 		fetchApi<CloudRestoreProgress>(`/restores/${id}/progress`),
+};
+
+// Docker Restores API
+export const dockerRestoresApi = {
+	list: async (params?: {
+		agent_id?: string;
+		status?: string;
+	}): Promise<DockerRestore[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.agent_id) searchParams.set('agent_id', params.agent_id);
+		if (params?.status) searchParams.set('status', params.status);
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/docker-restores?${query}` : '/docker-restores';
+		const response = await fetchApi<DockerRestoresResponse>(endpoint);
+		return response.docker_restores ?? [];
+	},
+
+	get: async (id: string): Promise<DockerRestore> =>
+		fetchApi<DockerRestore>(`/docker-restores/${id}`),
+
+	create: async (data: CreateDockerRestoreRequest): Promise<DockerRestore> =>
+		fetchApi<DockerRestore>('/docker-restores', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	preview: async (
+		data: DockerRestorePreviewRequest,
+	): Promise<DockerRestorePlan> =>
+		fetchApi<DockerRestorePlan>('/docker-restores/preview', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getProgress: async (id: string): Promise<DockerRestoreProgress> =>
+		fetchApi<DockerRestoreProgress>(`/docker-restores/${id}/progress`),
+
+	listContainers: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<DockerContainer[]> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('agent_id', agentId);
+		const response = await fetchApi<DockerContainersResponse>(
+			`/docker-restores/snapshot/${snapshotId}/containers?${searchParams.toString()}`,
+		);
+		return response.containers ?? [];
+	},
+
+	listVolumes: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<DockerVolume[]> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('agent_id', agentId);
+		const response = await fetchApi<DockerVolumesResponse>(
+			`/docker-restores/snapshot/${snapshotId}/volumes?${searchParams.toString()}`,
+		);
+		return response.volumes ?? [];
+	},
+
+	cancel: async (id: string): Promise<DockerRestore> =>
+		fetchApi<DockerRestore>(`/docker-restores/${id}/cancel`, {
+			method: 'POST',
+		}),
 };
 
 // File History API
@@ -1944,6 +2036,80 @@ export const searchApi = {
 
 		return fetchApi<SearchResponse>(`/search?${searchParams.toString()}`);
 	},
+
+	searchGrouped: async (
+		filter: SearchFilter,
+	): Promise<GroupedSearchResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', filter.q);
+
+		if (filter.types?.length) {
+			searchParams.set('types', filter.types.join(','));
+		}
+		if (filter.status) {
+			searchParams.set('status', filter.status);
+		}
+		if (filter.tag_ids?.length) {
+			searchParams.set('tag_ids', filter.tag_ids.join(','));
+		}
+		if (filter.date_from) {
+			searchParams.set('date_from', filter.date_from);
+		}
+		if (filter.date_to) {
+			searchParams.set('date_to', filter.date_to);
+		}
+		if (filter.size_min !== undefined) {
+			searchParams.set('size_min', filter.size_min.toString());
+		}
+		if (filter.size_max !== undefined) {
+			searchParams.set('size_max', filter.size_max.toString());
+		}
+		if (filter.limit) {
+			searchParams.set('limit', filter.limit.toString());
+		}
+
+		return fetchApi<GroupedSearchResponse>(
+			`/search/grouped?${searchParams.toString()}`,
+		);
+	},
+
+	getSuggestions: async (
+		query: string,
+		limit = 10,
+	): Promise<SearchSuggestionsResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', query);
+		searchParams.set('limit', limit.toString());
+		return fetchApi<SearchSuggestionsResponse>(
+			`/search/suggestions?${searchParams.toString()}`,
+		);
+	},
+
+	getRecentSearches: async (limit = 10): Promise<RecentSearchesResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('limit', limit.toString());
+		return fetchApi<RecentSearchesResponse>(
+			`/search/recent?${searchParams.toString()}`,
+		);
+	},
+
+	saveRecentSearch: async (
+		data: SaveRecentSearchRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/search/recent', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	deleteRecentSearch: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/search/recent/${id}`, {
+			method: 'DELETE',
+		}),
+
+	clearRecentSearches: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/search/recent', {
+			method: 'DELETE',
+		}),
 };
 
 // Dashboard Metrics API
@@ -3360,6 +3526,112 @@ export const slaApi = {
 		const response = await fetchApi<SLAReportResponse>(url);
 		return response.report;
 	},
+};
+
+// Recent Items API
+export const recentItemsApi = {
+	list: async (type?: string): Promise<RecentItem[]> => {
+		const url = type ? `/recent-items?type=${type}` : '/recent-items';
+		const response = await fetchApi<RecentItemsResponse>(url);
+		return response.items ?? [];
+	},
+
+	track: async (data: TrackRecentItemRequest): Promise<RecentItem> =>
+		fetchApi<RecentItem>('/recent-items', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/recent-items/${id}`, {
+			method: 'DELETE',
+		}),
+
+	clearAll: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/recent-items', {
+			method: 'DELETE',
+		}),
+};
+
+// Activity API
+export const activityApi = {
+	list: async (filter?: ActivityEventFilter): Promise<ActivityEvent[]> => {
+		const params = new URLSearchParams();
+		if (filter?.category) params.set('category', filter.category);
+		if (filter?.type) params.set('type', filter.type);
+		if (filter?.user_id) params.set('user_id', filter.user_id);
+		if (filter?.agent_id) params.set('agent_id', filter.agent_id);
+		if (filter?.start_time) params.set('start_time', filter.start_time);
+		if (filter?.end_time) params.set('end_time', filter.end_time);
+		if (filter?.limit) params.set('limit', String(filter.limit));
+		if (filter?.offset) params.set('offset', String(filter.offset));
+
+		const queryString = params.toString();
+		const url = queryString ? `/activity?${queryString}` : '/activity';
+		const response = await fetchApi<ActivityEventsResponse>(url);
+		return response.events ?? [];
+	},
+
+	recent: async (limit?: number): Promise<ActivityEvent[]> => {
+		const url = limit ? `/activity/recent?limit=${limit}` : '/activity/recent';
+		const response = await fetchApi<ActivityEventsResponse>(url);
+		return response.events ?? [];
+	},
+
+	count: async (category?: string, type?: string): Promise<number> => {
+		const params = new URLSearchParams();
+		if (category) params.set('category', category);
+		if (type) params.set('type', type);
+
+		const queryString = params.toString();
+		const url = queryString
+			? `/activity/count?${queryString}`
+			: '/activity/count';
+		const response = await fetchApi<ActivityEventCountResponse>(url);
+		return response.count;
+	},
+
+	categories: async (): Promise<Record<string, number>> => {
+		const response = await fetchApi<ActivityCategoriesResponse>(
+			'/activity/categories',
+		);
+		return response.categories ?? {};
+	},
+
+	search: async (query: string, limit?: number): Promise<ActivityEvent[]> => {
+		const params = new URLSearchParams({ q: query });
+		if (limit) params.set('limit', String(limit));
+
+		const response = await fetchApi<ActivityEventsResponse>(
+			`/activity/search?${params.toString()}`,
+		);
+		return response.events ?? [];
+	},
+};
+
+// Favorites API
+export const favoritesApi = {
+	list: async (entityType?: FavoriteEntityType): Promise<Favorite[]> => {
+		const endpoint = entityType
+			? `/favorites?entity_type=${entityType}`
+			: '/favorites';
+		const response = await fetchApi<FavoritesResponse>(endpoint);
+		return response.favorites ?? [];
+	},
+
+	create: async (data: CreateFavoriteRequest): Promise<Favorite> =>
+		fetchApi<Favorite>('/favorites', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (
+		entityType: FavoriteEntityType,
+		entityId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/favorites/${entityType}/${entityId}`, {
+			method: 'DELETE',
+		}),
 };
 
 // Docker Stacks API
