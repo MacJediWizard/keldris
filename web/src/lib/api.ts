@@ -140,6 +140,13 @@ import type {
 	DiscoveredDockerStack,
 	DockerContainer,
 	DockerContainersResponse,
+	DockerLogBackup,
+	DockerLogBackupsResponse,
+	DockerLogRetentionResult,
+	DockerLogSettings,
+	DockerLogSettingsUpdate,
+	DockerLogStorageStats,
+	DockerLogViewResponse,
 	DockerRestore,
 	DockerRestorePlan,
 	DockerRestorePreviewRequest,
@@ -3525,6 +3532,96 @@ export const slaApi = {
 		const url = month ? `/sla-report?month=${month}` : '/sla-report';
 		const response = await fetchApi<SLAReportResponse>(url);
 		return response.report;
+	},
+};
+
+// Docker Container Logs API
+export const dockerLogsApi = {
+	// List all backups
+	list: async (status?: string): Promise<DockerLogBackupsResponse> => {
+		const url = status ? `/docker-logs?status=${status}` : '/docker-logs';
+		return fetchApi<DockerLogBackupsResponse>(url);
+	},
+
+	// Get a specific backup
+	get: async (id: string): Promise<DockerLogBackup> =>
+		fetchApi<DockerLogBackup>(`/docker-logs/${id}`),
+
+	// View backup contents
+	view: async (
+		id: string,
+		offset = 0,
+		limit = 1000,
+	): Promise<DockerLogViewResponse> =>
+		fetchApi<DockerLogViewResponse>(
+			`/docker-logs/${id}/view?offset=${offset}&limit=${limit}`,
+		),
+
+	// Download backup
+	download: async (
+		id: string,
+		format: 'json' | 'csv' | 'raw' = 'json',
+	): Promise<Blob> => {
+		const response = await fetch(
+			`${API_BASE}/docker-logs/${id}/download?format=${format}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to download docker logs');
+		}
+		return response.blob();
+	},
+
+	// Delete a backup
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-logs/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Get settings for an agent
+	getSettings: async (agentId: string): Promise<DockerLogSettings> =>
+		fetchApi<DockerLogSettings>(`/docker-logs/settings/${agentId}`),
+
+	// Update settings for an agent
+	updateSettings: async (
+		agentId: string,
+		settings: DockerLogSettingsUpdate,
+	): Promise<DockerLogSettings> =>
+		fetchApi<DockerLogSettings>(`/docker-logs/settings/${agentId}`, {
+			method: 'PUT',
+			body: JSON.stringify(settings),
+		}),
+
+	// List backups by agent
+	listByAgent: async (agentId: string): Promise<DockerLogBackupsResponse> =>
+		fetchApi<DockerLogBackupsResponse>(`/docker-logs/agent/${agentId}`),
+
+	// List backups by container
+	listByContainer: async (
+		agentId: string,
+		containerId: string,
+	): Promise<DockerLogBackupsResponse> =>
+		fetchApi<DockerLogBackupsResponse>(
+			`/docker-logs/agent/${agentId}/container/${containerId}`,
+		),
+
+	// Get storage stats for an agent
+	getStorageStats: async (agentId: string): Promise<DockerLogStorageStats> =>
+		fetchApi<DockerLogStorageStats>(`/docker-logs/stats/${agentId}`),
+
+	// Apply retention policy
+	applyRetention: async (
+		agentId: string,
+		containerId?: string,
+	): Promise<DockerLogRetentionResult> => {
+		const url = containerId
+			? `/docker-logs/retention/${agentId}?container_id=${containerId}`
+			: `/docker-logs/retention/${agentId}`;
+		return fetchApi<DockerLogRetentionResult>(url, {
+			method: 'POST',
+		});
 	},
 };
 

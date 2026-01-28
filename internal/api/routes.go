@@ -6,6 +6,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/api/handlers"
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/backup/docker"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/MacJediWizard/keldris/internal/logs"
@@ -327,6 +328,11 @@ func NewRouter(
 	// Lifecycle policy routes
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
+
+	// Docker container logs backup routes
+	dockerLogBackupService := docker.NewLogBackupService(docker.DefaultLogBackupConfig(), logger)
+	dockerLogsHandler := handlers.NewDockerLogsHandler(database, dockerLogBackupService, logger)
+	dockerLogsHandler.RegisterRoutes(apiV1)
 
 	// Activity feed routes
 	if cfg.ActivityFeed != nil {
