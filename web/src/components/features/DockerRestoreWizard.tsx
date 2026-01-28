@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useAgents } from '../../hooks/useAgents';
-import { useSnapshots } from '../../hooks/useSnapshots';
 import {
+	useContainersInSnapshot,
 	useCreateDockerRestore,
 	useDockerRestorePreview,
-	useContainersInSnapshot,
 	useVolumesInSnapshot,
 } from '../../hooks/useDockerRestore';
+import { useSnapshots } from '../../hooks/useSnapshots';
 import type {
 	Agent,
 	DockerContainer,
@@ -83,14 +83,23 @@ export function DockerRestoreWizard({
 	const [error, setError] = useState<string | null>(null);
 
 	// Source selection state
-	const [selectedAgentId, setSelectedAgentId] = useState(preSelectedAgentId || '');
-	const [selectedSnapshotId, setSelectedSnapshotId] = useState(preSelectedSnapshotId || '');
+	const [selectedAgentId, setSelectedAgentId] = useState(
+		preSelectedAgentId || '',
+	);
+	const [selectedSnapshotId, setSelectedSnapshotId] = useState(
+		preSelectedSnapshotId || '',
+	);
 	const [selectedRepositoryId, setSelectedRepositoryId] = useState('');
 
 	// Container/Volume selection state
-	const [restoreType, setRestoreType] = useState<'container' | 'volume'>('container');
-	const [selectedContainer, setSelectedContainer] = useState<DockerContainer | null>(null);
-	const [selectedVolume, setSelectedVolume] = useState<DockerVolume | null>(null);
+	const [restoreType, setRestoreType] = useState<'container' | 'volume'>(
+		'container',
+	);
+	const [selectedContainer, setSelectedContainer] =
+		useState<DockerContainer | null>(null);
+	const [selectedVolume, setSelectedVolume] = useState<DockerVolume | null>(
+		null,
+	);
 
 	// Preview state
 	const [preview, setPreview] = useState<DockerRestorePlan | null>(null);
@@ -112,12 +121,12 @@ export function DockerRestoreWizard({
 	const { data: containers } = useContainersInSnapshot(
 		selectedSnapshotId,
 		selectedAgentId,
-		!!selectedSnapshotId && !!selectedAgentId
+		!!selectedSnapshotId && !!selectedAgentId,
 	);
 	const { data: volumes } = useVolumesInSnapshot(
 		selectedSnapshotId,
 		selectedAgentId,
-		!!selectedSnapshotId && !!selectedAgentId
+		!!selectedSnapshotId && !!selectedAgentId,
 	);
 	const previewMutation = useDockerRestorePreview();
 	const createRestore = useCreateDockerRestore();
@@ -125,28 +134,33 @@ export function DockerRestoreWizard({
 	const handlePreview = async () => {
 		setError(null);
 		try {
-			const target: DockerRestoreTarget | undefined = targetType === 'remote'
-				? {
-						type: 'remote',
-						host: remoteHost,
-						cert_path: remoteCertPath || undefined,
-						tls_verify: remoteTlsVerify,
-				  }
-				: { type: 'local' };
+			const target: DockerRestoreTarget | undefined =
+				targetType === 'remote'
+					? {
+							type: 'remote',
+							host: remoteHost,
+							cert_path: remoteCertPath || undefined,
+							tls_verify: remoteTlsVerify,
+						}
+					: { type: 'local' };
 
 			const result = await previewMutation.mutateAsync({
 				snapshot_id: selectedSnapshotId,
 				agent_id: selectedAgentId,
 				repository_id: selectedRepositoryId,
-				container_name: restoreType === 'container' ? selectedContainer?.name : undefined,
-				volume_name: restoreType === 'volume' ? selectedVolume?.name : undefined,
+				container_name:
+					restoreType === 'container' ? selectedContainer?.name : undefined,
+				volume_name:
+					restoreType === 'volume' ? selectedVolume?.name : undefined,
 				target,
 			});
 
 			setPreview(result);
 			setStep('preview');
 		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to generate preview');
+			setError(
+				err instanceof Error ? err.message : 'Failed to generate preview',
+			);
 		}
 	};
 
@@ -154,21 +168,24 @@ export function DockerRestoreWizard({
 		setError(null);
 		setStep('restoring');
 		try {
-			const target: DockerRestoreTarget | undefined = targetType === 'remote'
-				? {
-						type: 'remote',
-						host: remoteHost,
-						cert_path: remoteCertPath || undefined,
-						tls_verify: remoteTlsVerify,
-				  }
-				: { type: 'local' };
+			const target: DockerRestoreTarget | undefined =
+				targetType === 'remote'
+					? {
+							type: 'remote',
+							host: remoteHost,
+							cert_path: remoteCertPath || undefined,
+							tls_verify: remoteTlsVerify,
+						}
+					: { type: 'local' };
 
 			const result = await createRestore.mutateAsync({
 				snapshot_id: selectedSnapshotId,
 				agent_id: selectedAgentId,
 				repository_id: selectedRepositoryId,
-				container_name: restoreType === 'container' ? selectedContainer?.name : undefined,
-				volume_name: restoreType === 'volume' ? selectedVolume?.name : undefined,
+				container_name:
+					restoreType === 'container' ? selectedContainer?.name : undefined,
+				volume_name:
+					restoreType === 'volume' ? selectedVolume?.name : undefined,
 				new_container_name: newContainerName || undefined,
 				new_volume_name: newVolumeName || undefined,
 				target,
@@ -180,7 +197,9 @@ export function DockerRestoreWizard({
 			onSuccess(result.id);
 			resetForm();
 		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to start Docker restore');
+			setError(
+				err instanceof Error ? err.message : 'Failed to start Docker restore',
+			);
 			setStep('options');
 		}
 	};
@@ -212,9 +231,6 @@ export function DockerRestoreWizard({
 	};
 
 	if (!isOpen) return null;
-
-	const selectedSnapshot = snapshots?.find((s: Snapshot) => s.id === selectedSnapshotId);
-	const selectedAgent = agents?.find((a: Agent) => a.id === selectedAgentId);
 
 	const renderSourceStep = () => (
 		<div className="space-y-4">
@@ -283,7 +299,9 @@ export function DockerRestoreWizard({
 						id="restore-snapshot"
 						value={selectedSnapshotId}
 						onChange={(e) => {
-							const snapshot = snapshots?.find((s: Snapshot) => s.id === e.target.value);
+							const snapshot = snapshots?.find(
+								(s: Snapshot) => s.id === e.target.value,
+							);
 							setSelectedSnapshotId(e.target.value);
 							setSelectedRepositoryId(snapshot?.repository_id || '');
 						}}
@@ -294,7 +312,8 @@ export function DockerRestoreWizard({
 							?.filter((s: Snapshot) => s.agent_id === selectedAgentId)
 							.map((snapshot: Snapshot) => (
 								<option key={snapshot.id} value={snapshot.id}>
-									{snapshot.short_id} - {new Date(snapshot.time).toLocaleString()}
+									{snapshot.short_id} -{' '}
+									{new Date(snapshot.time).toLocaleString()}
 								</option>
 							))}
 					</select>
@@ -306,9 +325,9 @@ export function DockerRestoreWizard({
 	const renderSelectionStep = () => (
 		<div className="space-y-4">
 			<div>
-				<label className="block text-sm font-medium text-gray-700 mb-2">
+				<span className="block text-sm font-medium text-gray-700 mb-2">
 					What do you want to restore?
-				</label>
+				</span>
 				<div className="flex gap-4">
 					<label className="flex items-center gap-2">
 						<input
@@ -322,7 +341,9 @@ export function DockerRestoreWizard({
 							}}
 							className="text-indigo-600 focus:ring-indigo-500"
 						/>
-						<span className="text-sm text-gray-700">Container (with volumes)</span>
+						<span className="text-sm text-gray-700">
+							Container (with volumes)
+						</span>
 					</label>
 					<label className="flex items-center gap-2">
 						<input
@@ -466,7 +487,9 @@ export function DockerRestoreWizard({
 
 				{preview.container && (
 					<div className="bg-gray-50 rounded-lg p-4">
-						<h4 className="text-sm font-medium text-gray-700 mb-2">Container</h4>
+						<h4 className="text-sm font-medium text-gray-700 mb-2">
+							Container
+						</h4>
 						<p className="text-sm text-gray-900">{preview.container.name}</p>
 						<p className="text-xs text-gray-500">{preview.container.image}</p>
 					</div>
@@ -480,7 +503,9 @@ export function DockerRestoreWizard({
 						<div className="border border-gray-200 rounded-lg divide-y divide-gray-200">
 							{preview.volumes.map((vol) => (
 								<div key={vol.name} className="p-3">
-									<p className="text-sm font-medium text-gray-900">{vol.name}</p>
+									<p className="text-sm font-medium text-gray-900">
+										{vol.name}
+									</p>
 									<p className="text-xs text-gray-500">
 										{vol.driver} - {formatBytes(vol.size_bytes)}
 									</p>
@@ -511,8 +536,8 @@ export function DockerRestoreWizard({
 							Conflicts Detected
 						</h4>
 						<ul className="text-sm text-amber-700 space-y-1">
-							{preview.conflicts.map((conflict: DockerRestoreConflict, idx: number) => (
-								<li key={idx}>
+							{preview.conflicts.map((conflict: DockerRestoreConflict) => (
+								<li key={`${conflict.type}-${conflict.name}`}>
 									{conflict.type}: {conflict.description}
 								</li>
 							))}
@@ -548,9 +573,9 @@ export function DockerRestoreWizard({
 			)}
 
 			<div>
-				<label className="block text-sm font-medium text-gray-700 mb-2">
+				<span className="block text-sm font-medium text-gray-700 mb-2">
 					Restore Target
-				</label>
+				</span>
 				<div className="flex gap-4">
 					<label className="flex items-center gap-2">
 						<input
@@ -624,10 +649,7 @@ export function DockerRestoreWizard({
 						onChange={(e) => setOverwriteExisting(e.target.checked)}
 						className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 					/>
-					<label
-						htmlFor="overwrite-existing"
-						className="text-sm text-gray-700"
-					>
+					<label htmlFor="overwrite-existing" className="text-sm text-gray-700">
 						Overwrite existing containers/volumes
 					</label>
 				</div>
@@ -659,10 +681,7 @@ export function DockerRestoreWizard({
 									onChange={(e) => setVerifyStart(e.target.checked)}
 									className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
 								/>
-								<label
-									htmlFor="verify-start"
-									className="text-sm text-gray-700"
-								>
+								<label htmlFor="verify-start" className="text-sm text-gray-700">
 									Verify container starts successfully
 								</label>
 							</div>
@@ -720,8 +739,10 @@ export function DockerRestoreWizard({
 			return !selectedAgentId || !selectedSnapshotId;
 		}
 		if (step === 'selection') {
-			return (restoreType === 'container' && !selectedContainer) ||
-				(restoreType === 'volume' && !selectedVolume);
+			return (
+				(restoreType === 'container' && !selectedContainer) ||
+				(restoreType === 'volume' && !selectedVolume)
+			);
 		}
 		if (step === 'options' && targetType === 'remote') {
 			return !remoteHost;
@@ -835,7 +856,11 @@ export function DockerRestoreWizard({
 						<button
 							type="button"
 							onClick={handleNext}
-							disabled={isNextDisabled() || previewMutation.isPending || createRestore.isPending}
+							disabled={
+								isNextDisabled() ||
+								previewMutation.isPending ||
+								createRestore.isPending
+							}
 							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							{previewMutation.isPending

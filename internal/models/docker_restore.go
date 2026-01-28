@@ -69,8 +69,8 @@ func (p *DockerRestoreProgress) PercentComplete() float64 {
 	return float64(p.CompletedSteps) / float64(p.TotalSteps) * 100
 }
 
-// DockerContainerInfo represents a backed up container's information.
-type DockerContainerInfo struct {
+// DockerRestoreContainerInfo represents a backed up container's information for restore.
+type DockerRestoreContainerInfo struct {
 	ID        string   `json:"id"`
 	Name      string   `json:"name"`
 	Image     string   `json:"image"`
@@ -80,8 +80,8 @@ type DockerContainerInfo struct {
 	CreatedAt string   `json:"created_at"`
 }
 
-// DockerVolumeInfo represents a backed up volume's information.
-type DockerVolumeInfo struct {
+// DockerRestoreVolumeInfo represents a backed up volume's information for restore.
+type DockerRestoreVolumeInfo struct {
 	Name      string `json:"name"`
 	Driver    string `json:"driver"`
 	SizeBytes int64  `json:"size_bytes"`
@@ -293,9 +293,9 @@ func (r *DockerRestore) IsVolumeOnlyRestore() bool {
 
 // DockerRestorePlan represents a preview of what will be restored.
 type DockerRestorePlan struct {
-	Container      *DockerContainerInfo    `json:"container,omitempty"`
-	Volumes        []DockerVolumeInfo      `json:"volumes,omitempty"`
-	TotalSizeBytes int64                   `json:"total_size_bytes"`
-	Conflicts      []DockerRestoreConflict `json:"conflicts,omitempty"`
-	Dependencies   []string                `json:"dependencies,omitempty"`
+	Container      *DockerRestoreContainerInfo `json:"container,omitempty"`
+	Volumes        []DockerRestoreVolumeInfo   `json:"volumes,omitempty"`
+	TotalSizeBytes int64                       `json:"total_size_bytes"`
+	Conflicts      []DockerRestoreConflict     `json:"conflicts,omitempty"`
+	Dependencies   []string                    `json:"dependencies,omitempty"`
 }

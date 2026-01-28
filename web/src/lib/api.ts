@@ -87,6 +87,7 @@ import type {
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
+	CreateDockerRestoreRequest,
 	CreateDowntimeAlertRequest,
 	CreateDowntimeEventRequest,
 	CreateExcludePatternRequest,
@@ -128,21 +129,20 @@ import type {
 	DRTestSchedule,
 	DRTestSchedulesResponse,
 	DRTestsResponse,
-	DockerContainer,
-	DockerContainersResponse,
-	DockerRestore,
-	DockerRestorePreviewRequest,
-	DockerRestoreProgress,
-	DockerRestorePlan,
-	DockerRestoresResponse,
-	DockerVolume,
-	DockerVolumesResponse,
-	CreateDockerRestoreRequest,
 	DailyBackupStats,
 	DailyBackupStatsResponse,
 	DashboardStats,
 	DataTypesResponse,
 	DefaultPricingResponse,
+	DockerContainer,
+	DockerContainersResponse,
+	DockerRestore,
+	DockerRestorePlan,
+	DockerRestorePreviewRequest,
+	DockerRestoreProgress,
+	DockerRestoresResponse,
+	DockerVolume,
+	DockerVolumesResponse,
 	DowntimeAlert,
 	DowntimeAlertsResponse,
 	DowntimeEvent,
@@ -1078,7 +1078,9 @@ export const dockerRestoresApi = {
 			body: JSON.stringify(data),
 		}),
 
-	preview: async (data: DockerRestorePreviewRequest): Promise<DockerRestorePlan> =>
+	preview: async (
+		data: DockerRestorePreviewRequest,
+	): Promise<DockerRestorePlan> =>
 		fetchApi<DockerRestorePlan>('/docker-restores/preview', {
 			method: 'POST',
 			body: JSON.stringify(data),
@@ -1087,20 +1089,26 @@ export const dockerRestoresApi = {
 	getProgress: async (id: string): Promise<DockerRestoreProgress> =>
 		fetchApi<DockerRestoreProgress>(`/docker-restores/${id}/progress`),
 
-	listContainers: async (snapshotId: string, agentId: string): Promise<DockerContainer[]> => {
+	listContainers: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<DockerContainer[]> => {
 		const searchParams = new URLSearchParams();
 		searchParams.set('agent_id', agentId);
 		const response = await fetchApi<DockerContainersResponse>(
-			`/docker-restores/snapshot/${snapshotId}/containers?${searchParams.toString()}`
+			`/docker-restores/snapshot/${snapshotId}/containers?${searchParams.toString()}`,
 		);
 		return response.containers ?? [];
 	},
 
-	listVolumes: async (snapshotId: string, agentId: string): Promise<DockerVolume[]> => {
+	listVolumes: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<DockerVolume[]> => {
 		const searchParams = new URLSearchParams();
 		searchParams.set('agent_id', agentId);
 		const response = await fetchApi<DockerVolumesResponse>(
-			`/docker-restores/snapshot/${snapshotId}/volumes?${searchParams.toString()}`
+			`/docker-restores/snapshot/${snapshotId}/volumes?${searchParams.toString()}`,
 		);
 		return response.volumes ?? [];
 	},
