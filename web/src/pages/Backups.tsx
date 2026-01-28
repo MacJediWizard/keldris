@@ -447,6 +447,58 @@ function BackupDetailsModal({
 							)}
 						</div>
 					)}
+
+					{(backup.container_pre_hook_output || backup.container_pre_hook_error) && (
+						<div>
+							<p className="text-sm font-medium text-gray-500 mb-2">
+								Container Pre-Backup Hook
+							</p>
+							{backup.container_pre_hook_output && (
+								<div className="mb-2">
+									<p className="text-xs font-medium text-gray-400 mb-1">
+										Output
+									</p>
+									<pre className="bg-gray-100 p-3 rounded-lg text-xs text-gray-800 overflow-x-auto max-h-32 whitespace-pre-wrap">
+										{backup.container_pre_hook_output}
+									</pre>
+								</div>
+							)}
+							{backup.container_pre_hook_error && (
+								<div>
+									<p className="text-xs font-medium text-red-400 mb-1">Error</p>
+									<pre className="bg-red-50 p-3 rounded-lg text-xs text-red-700 overflow-x-auto max-h-32 whitespace-pre-wrap">
+										{backup.container_pre_hook_error}
+									</pre>
+								</div>
+							)}
+						</div>
+					)}
+
+					{(backup.container_post_hook_output || backup.container_post_hook_error) && (
+						<div>
+							<p className="text-sm font-medium text-gray-500 mb-2">
+								Container Post-Backup Hook
+							</p>
+							{backup.container_post_hook_output && (
+								<div className="mb-2">
+									<p className="text-xs font-medium text-gray-400 mb-1">
+										Output
+									</p>
+									<pre className="bg-gray-100 p-3 rounded-lg text-xs text-gray-800 overflow-x-auto max-h-32 whitespace-pre-wrap">
+										{backup.container_post_hook_output}
+									</pre>
+								</div>
+							)}
+							{backup.container_post_hook_error && (
+								<div>
+									<p className="text-xs font-medium text-red-400 mb-1">Error</p>
+									<pre className="bg-red-50 p-3 rounded-lg text-xs text-red-700 overflow-x-auto max-h-32 whitespace-pre-wrap">
+										{backup.container_post_hook_error}
+									</pre>
+								</div>
+							)}
+						</div>
+					)}
 				</div>
 
 				<div className="flex justify-end mt-6">
