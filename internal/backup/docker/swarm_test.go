@@ -35,8 +35,8 @@ func TestDefaultSwarmBackupConfig(t *testing.T) {
 	}
 }
 
-func TestDefaultRestoreOptions(t *testing.T) {
-	opts := DefaultRestoreOptions()
+func TestDefaultSwarmRestoreOptions(t *testing.T) {
+	opts := DefaultSwarmRestoreOptions()
 
 	if opts.DryRun {
 		t.Error("expected DryRun to be false by default")
@@ -265,7 +265,7 @@ func TestFilterServicesForRestore(t *testing.T) {
 		{Name: "db", StackName: "data"},
 	}
 
-	opts := &RestoreOptions{
+	opts := &SwarmRestoreOptions{
 		StackFilter: []string{"app"},
 	}
 
@@ -499,8 +499,8 @@ func TestServicePortJSON(t *testing.T) {
 	}
 }
 
-func TestRestoreResultSuccess(t *testing.T) {
-	result := &RestoreResult{
+func TestSwarmRestoreResultSuccess(t *testing.T) {
+	result := &SwarmRestoreResult{
 		Success:          true,
 		ServicesRestored: []string{"web", "api", "db"},
 		Duration:         5 * time.Second,

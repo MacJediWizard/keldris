@@ -19,14 +19,13 @@ import (
 
 // Error definitions for Swarm backup operations.
 var (
-	ErrNotSwarmManager    = errors.New("node is not a swarm manager")
-	ErrSwarmNotActive     = errors.New("swarm is not active")
-	ErrServiceNotFound    = errors.New("service not found")
-	ErrStackNotFound      = errors.New("stack not found")
-	ErrBackupFailed       = errors.New("backup failed")
-	ErrRestoreFailed      = errors.New("restore failed")
-	ErrDependencyCycle    = errors.New("circular dependency detected")
-	ErrInvalidBackupData  = errors.New("invalid backup data")
+	ErrNotSwarmManager   = errors.New("node is not a swarm manager")
+	ErrServiceNotFound   = errors.New("service not found")
+	ErrStackNotFound     = errors.New("stack not found")
+	ErrBackupFailed      = errors.New("backup failed")
+	ErrRestoreFailed     = errors.New("restore failed")
+	ErrDependencyCycle   = errors.New("circular dependency detected")
+	ErrInvalidBackupData = errors.New("invalid backup data")
 )
 
 // SwarmBackupConfig holds configuration for Swarm backup operations.
@@ -105,7 +104,7 @@ type SwarmService struct {
 	Labels        map[string]string      `json:"labels,omitempty"`
 	Env           []string               `json:"env,omitempty"`
 	Secrets       []ServiceSecret        `json:"secrets,omitempty"`
-	Configs       []ServiceConfig        `json:"configs,omitempty"`
+	Configs       []SwarmServiceConfig        `json:"configs,omitempty"`
 	DependsOn     []string               `json:"depends_on,omitempty"`
 	StackName     string                 `json:"stack_name,omitempty"`
 	UpdatedAt     time.Time              `json:"updated_at"`
@@ -138,8 +137,8 @@ type ServiceSecret struct {
 	Mode       uint32 `json:"mode,omitempty"`
 }
 
-// ServiceConfig represents a config used by a service.
-type ServiceConfig struct {
+// SwarmServiceConfig represents a config used by a service.
+type SwarmServiceConfig struct {
 	ConfigID   string `json:"config_id"`
 	ConfigName string `json:"config_name"`
 	FileName   string `json:"file_name,omitempty"`
@@ -191,11 +190,11 @@ type SwarmNetwork struct {
 	Ingress    bool              `json:"ingress"`
 	Labels     map[string]string `json:"labels,omitempty"`
 	Options    map[string]string `json:"options,omitempty"`
-	IPAMConfig []IPAMConfig      `json:"ipam_config,omitempty"`
+	SwarmIPAMConfig []SwarmIPAMConfig      `json:"ipam_config,omitempty"`
 }
 
-// IPAMConfig represents IP address management configuration.
-type IPAMConfig struct {
+// SwarmIPAMConfig represents IP address management configuration.
+type SwarmIPAMConfig struct {
 	Subnet  string `json:"subnet,omitempty"`
 	Gateway string `json:"gateway,omitempty"`
 	IPRange string `json:"ip_range,omitempty"`
@@ -245,8 +244,8 @@ type BackupMetadata struct {
 	NodeCount    int       `json:"node_count"`
 }
 
-// RestoreOptions configures how services are restored.
-type RestoreOptions struct {
+// SwarmRestoreOptions configures how services are restored.
+type SwarmRestoreOptions struct {
 	// DryRun performs a dry run without making changes
 	DryRun bool `json:"dry_run"`
 	// Force removes existing services before restore
@@ -265,9 +264,9 @@ type RestoreOptions struct {
 	RespectDependencies bool `json:"respect_dependencies"`
 }
 
-// DefaultRestoreOptions returns restore options with sensible defaults.
-func DefaultRestoreOptions() *RestoreOptions {
-	return &RestoreOptions{
+// DefaultSwarmRestoreOptions returns restore options with sensible defaults.
+func DefaultSwarmRestoreOptions() *SwarmRestoreOptions {
+	return &SwarmRestoreOptions{
 		DryRun:              false,
 		Force:               false,
 		IncludeNetworks:     true,
@@ -277,8 +276,8 @@ func DefaultRestoreOptions() *RestoreOptions {
 	}
 }
 
-// RestoreResult contains the results of a restore operation.
-type RestoreResult struct {
+// SwarmRestoreResult contains the results of a restore operation.
+type SwarmRestoreResult struct {
 	Success          bool                    `json:"success"`
 	ServicesRestored []string                `json:"services_restored"`
 	ServicesFailed   []ServiceRestoreFailure `json:"services_failed,omitempty"`
@@ -726,7 +725,7 @@ func (m *SwarmBackupManager) inspectService(ctx context.Context, serviceID strin
 
 	// Extract configs
 	for _, c := range spec.Spec.TaskTemplate.ContainerSpec.Configs {
-		service.Configs = append(service.Configs, ServiceConfig{
+		service.Configs = append(service.Configs, SwarmServiceConfig{
 			ConfigID:   c.ConfigID,
 			ConfigName: c.ConfigName,
 			FileName:   c.File.Name,
@@ -969,7 +968,7 @@ func (m *SwarmBackupManager) backupNetworks(ctx context.Context) ([]SwarmNetwork
 				network.Ingress = detail.Ingress
 
 				for _, cfg := range detail.IPAM.Config {
-					network.IPAMConfig = append(network.IPAMConfig, IPAMConfig{
+					network.SwarmIPAMConfig = append(network.SwarmIPAMConfig, SwarmIPAMConfig{
 						Subnet:  cfg.Subnet,
 						Gateway: cfg.Gateway,
 						IPRange: cfg.IPRange,
@@ -1035,9 +1034,9 @@ func (m *SwarmBackupManager) backupVolumes(ctx context.Context) ([]SwarmVolume, 
 }
 
 // Restore restores services from a backup in dependency order.
-func (m *SwarmBackupManager) Restore(ctx context.Context, backup *SwarmBackup, opts *RestoreOptions) (*RestoreResult, error) {
+func (m *SwarmBackupManager) Restore(ctx context.Context, backup *SwarmBackup, opts *SwarmRestoreOptions) (*SwarmRestoreResult, error) {
 	if opts == nil {
-		opts = DefaultRestoreOptions()
+		opts = DefaultSwarmRestoreOptions()
 	}
 
 	m.logger.Info().
@@ -1047,7 +1046,7 @@ func (m *SwarmBackupManager) Restore(ctx context.Context, backup *SwarmBackup, o
 		Msg("starting swarm restore")
 
 	start := time.Now()
-	result := &RestoreResult{
+	result := &SwarmRestoreResult{
 		Success:          true,
 		ServicesRestored: []string{},
 		ServicesFailed:   []ServiceRestoreFailure{},
@@ -1327,7 +1326,7 @@ func (m *SwarmBackupManager) restoreNetwork(ctx context.Context, network *SwarmN
 		args = append(args, "--opt", fmt.Sprintf("%s=%s", k, v))
 	}
 
-	for _, ipam := range network.IPAMConfig {
+	for _, ipam := range network.SwarmIPAMConfig {
 		if ipam.Subnet != "" {
 			args = append(args, "--subnet", ipam.Subnet)
 		}
@@ -1475,7 +1474,7 @@ func (m *SwarmBackupManager) filterStacks(stacks []SwarmStack) []SwarmStack {
 }
 
 // filterServicesForRestore filters services for restore based on options.
-func (m *SwarmBackupManager) filterServicesForRestore(services []SwarmService, opts *RestoreOptions) []SwarmService {
+func (m *SwarmBackupManager) filterServicesForRestore(services []SwarmService, opts *SwarmRestoreOptions) []SwarmService {
 	if len(opts.StackFilter) == 0 && len(opts.ServiceFilter) == 0 {
 		return services
 	}
@@ -1626,7 +1625,7 @@ func (m *SwarmAgentMode) PerformBackup(ctx context.Context) (*SwarmBackup, error
 }
 
 // PerformRestore performs a Swarm cluster restore.
-func (m *SwarmAgentMode) PerformRestore(ctx context.Context, backup *SwarmBackup, opts *RestoreOptions) (*RestoreResult, error) {
+func (m *SwarmAgentMode) PerformRestore(ctx context.Context, backup *SwarmBackup, opts *SwarmRestoreOptions) (*SwarmRestoreResult, error) {
 	if !m.IsAvailable(ctx) {
 		return nil, ErrNotSwarmManager
 	}
