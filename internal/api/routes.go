@@ -332,6 +332,12 @@ func NewRouter(
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
 
+	// Docker backup routes
+	dockerDiscoveryConfig := docker.DefaultDiscoveryConfig()
+	dockerDiscoveryService := docker.NewDiscoveryService(database, dockerDiscoveryConfig, logger)
+	dockerBackupHandler := handlers.NewDockerBackupHandler(database, dockerDiscoveryService, logger)
+	dockerBackupHandler.RegisterRoutes(apiV1)
+
 	// Docker container logs backup routes
 	dockerLogBackupService := docker.NewLogBackupService(docker.DefaultLogBackupConfig(), logger)
 	dockerLogsHandler := handlers.NewDockerLogsHandler(database, dockerLogBackupService, logger)
