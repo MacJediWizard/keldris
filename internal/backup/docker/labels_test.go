@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -327,7 +328,7 @@ func TestLabelParser_ValidateLabels(t *testing.T) {
 
 			found := false
 			for _, err := range errors {
-				if contains(err, tt.expectError) {
+				if strings.Contains(err, tt.expectError) {
 					found = true
 					break
 				}
@@ -499,11 +500,11 @@ func TestLabelParser_GenerateDockerComposeExample(t *testing.T) {
 		t.Error("expected non-empty Docker Compose example")
 	}
 
-	if !contains(example, "keldris.backup=true") {
+	if !strings.Contains(example, "keldris.backup=true") {
 		t.Error("expected Docker Compose example to contain keldris.backup=true")
 	}
 
-	if !contains(example, "postgres") {
+	if !strings.Contains(example, "postgres") {
 		t.Error("expected Docker Compose example to contain postgres service")
 	}
 }
@@ -516,24 +517,12 @@ func TestLabelParser_GenerateDockerRunExample(t *testing.T) {
 		t.Error("expected non-empty docker run example")
 	}
 
-	if !contains(example, "--label") {
+	if !strings.Contains(example, "--label") {
 		t.Error("expected docker run example to contain --label")
 	}
 
-	if !contains(example, "keldris.backup=true") {
+	if !strings.Contains(example, "keldris.backup=true") {
 		t.Error("expected docker run example to contain keldris.backup=true")
 	}
 }
 
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}

@@ -25,6 +25,16 @@ const (
 	AlertTypeReplicationLag AlertType = "replication_lag"
 	// AlertTypeRansomwareSuspected indicates potential ransomware activity was detected.
 	AlertTypeRansomwareSuspected AlertType = "ransomware_suspected"
+	// AlertTypeContainerUnhealthy indicates a Docker container health check is failing.
+	AlertTypeContainerUnhealthy AlertType = "container_unhealthy"
+	// AlertTypeContainerRestartLoop indicates a container is in a restart loop.
+	AlertTypeContainerRestartLoop AlertType = "container_restart_loop"
+	// AlertTypeContainerHighResource indicates a container is using excessive resources.
+	AlertTypeContainerHighResource AlertType = "container_high_resource"
+	// AlertTypeVolumeSpaceLow indicates a Docker volume is running low on space.
+	AlertTypeVolumeSpaceLow AlertType = "volume_space_low"
+	// AlertTypeDockerDaemonUnavailable indicates Docker daemon is not responding.
+	AlertTypeDockerDaemonUnavailable AlertType = "docker_daemon_unavailable"
 )
 
 // AlertSeverity represents the severity level of an alert.
@@ -61,6 +71,10 @@ const (
 	ResourceTypeSchedule ResourceType = "schedule"
 	// ResourceTypeRepository represents a repository resource.
 	ResourceTypeRepository ResourceType = "repository"
+	// ResourceTypeContainer represents a Docker container resource.
+	ResourceTypeContainer ResourceType = "container"
+	// ResourceTypeVolume represents a Docker volume resource.
+	ResourceTypeVolume ResourceType = "volume"
 )
 
 // Alert represents a triggered alert instance.
@@ -160,11 +174,23 @@ type AlertRuleConfig struct {
 	MaxReplicationLagSnapshots int `json:"max_replication_lag_snapshots,omitempty"`
 	// For replication_lag: maximum hours behind before alert
 	MaxReplicationLagHours int `json:"max_replication_lag_hours,omitempty"`
+	// For container_restart_loop: number of restarts in window before alerting
+	ContainerRestartThreshold int `json:"container_restart_threshold,omitempty"`
+	// For container_restart_loop: time window in minutes
+	ContainerRestartWindowMinutes int `json:"container_restart_window_minutes,omitempty"`
+	// For volume_space_low: percentage threshold
+	VolumeUsageThresholdPercent float64 `json:"volume_usage_threshold_percent,omitempty"`
+	// For container_high_resource: memory percentage threshold
+	ContainerMemoryThresholdPercent float64 `json:"container_memory_threshold_percent,omitempty"`
+	// For container_high_resource: CPU percentage threshold
+	ContainerCPUThresholdPercent float64 `json:"container_cpu_threshold_percent,omitempty"`
 	// Target-specific filters
 	AgentIDs              []uuid.UUID `json:"agent_ids,omitempty"`
 	ScheduleIDs           []uuid.UUID `json:"schedule_ids,omitempty"`
 	RepositoryID          *uuid.UUID  `json:"repository_id,omitempty"`
 	GeoReplicationConfigs []uuid.UUID `json:"geo_replication_configs,omitempty"`
+	ContainerNames        []string    `json:"container_names,omitempty"`
+	VolumeNames           []string    `json:"volume_names,omitempty"`
 }
 
 // AlertRule defines conditions that trigger alerts.
