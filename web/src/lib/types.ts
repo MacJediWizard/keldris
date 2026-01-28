@@ -616,6 +616,10 @@ export interface Backup {
 	pre_script_error?: string;
 	post_script_output?: string;
 	post_script_error?: string;
+	container_pre_hook_output?: string;
+	container_pre_hook_error?: string;
+	container_post_hook_output?: string;
+	container_post_hook_error?: string;
 	excluded_large_files?: ExcludedLargeFile[]; // Files excluded due to size limit
 	resumed: boolean;
 	checkpoint_id?: string;
@@ -732,6 +736,98 @@ export interface UpdateBackupScriptRequest {
 
 export interface BackupScriptsResponse {
 	scripts: BackupScript[];
+}
+
+// Container Backup Hook types
+export type ContainerHookType = 'pre_backup' | 'post_backup';
+
+export type ContainerHookTemplate =
+	| 'none'
+	| 'postgres'
+	| 'mysql'
+	| 'mongodb'
+	| 'redis'
+	| 'elasticsearch';
+
+export interface ContainerBackupHook {
+	id: string;
+	schedule_id: string;
+	container_name: string;
+	type: ContainerHookType;
+	template: ContainerHookTemplate;
+	command: string;
+	working_dir?: string;
+	user?: string;
+	timeout_seconds: number;
+	fail_on_error: boolean;
+	enabled: boolean;
+	description?: string;
+	template_vars?: Record<string, string>;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateContainerBackupHookRequest {
+	container_name: string;
+	type: ContainerHookType;
+	template?: ContainerHookTemplate;
+	command?: string;
+	working_dir?: string;
+	user?: string;
+	timeout_seconds?: number;
+	fail_on_error?: boolean;
+	enabled?: boolean;
+	description?: string;
+	template_vars?: Record<string, string>;
+}
+
+export interface UpdateContainerBackupHookRequest {
+	container_name?: string;
+	command?: string;
+	working_dir?: string;
+	user?: string;
+	timeout_seconds?: number;
+	fail_on_error?: boolean;
+	enabled?: boolean;
+	description?: string;
+	template_vars?: Record<string, string>;
+}
+
+export interface ContainerBackupHooksResponse {
+	hooks: ContainerBackupHook[];
+}
+
+export interface ContainerHookTemplateInfo {
+	name: string;
+	template: ContainerHookTemplate;
+	description: string;
+	pre_backup_cmd: string;
+	post_backup_cmd: string;
+	required_vars: string[];
+	optional_vars: string[];
+	default_vars: Record<string, string>;
+}
+
+export interface ContainerHookTemplatesResponse {
+	templates: ContainerHookTemplateInfo[];
+}
+
+export interface ContainerHookExecution {
+	hook_id: string;
+	backup_id: string;
+	container: string;
+	type: ContainerHookType;
+	command: string;
+	output: string;
+	exit_code: number;
+	error?: string;
+	duration: number;
+	started_at: string;
+	completed_at: string;
+}
+
+export interface ContainerHookExecutionsResponse {
+	executions: ContainerHookExecution[];
 }
 
 // Auth types

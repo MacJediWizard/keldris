@@ -43,6 +43,14 @@ import type {
 	BackupScript,
 	BackupScriptsResponse,
 	BackupSuccessRate,
+	ContainerBackupHook,
+	ContainerBackupHooksResponse,
+	ContainerHookExecution,
+	ContainerHookExecutionsResponse,
+	ContainerHookTemplateInfo,
+	ContainerHookTemplatesResponse,
+	CreateContainerBackupHookRequest,
+	UpdateContainerBackupHookRequest,
 	BackupSuccessRatesResponse,
 	BackupsResponse,
 	BlockedRequestsResponse,
@@ -880,6 +888,57 @@ export const backupScriptsApi = {
 		fetchApi<MessageResponse>(`/schedules/${scheduleId}/scripts/${id}`, {
 			method: 'DELETE',
 		}),
+};
+
+// Container Backup Hooks API
+export const containerHooksApi = {
+	list: async (scheduleId: string): Promise<ContainerBackupHook[]> => {
+		const response = await fetchApi<ContainerBackupHooksResponse>(
+			`/schedules/${scheduleId}/container-hooks`,
+		);
+		return response.hooks ?? [];
+	},
+
+	get: async (scheduleId: string, id: string): Promise<ContainerBackupHook> =>
+		fetchApi<ContainerBackupHook>(`/schedules/${scheduleId}/container-hooks/${id}`),
+
+	create: async (
+		scheduleId: string,
+		data: CreateContainerBackupHookRequest,
+	): Promise<ContainerBackupHook> =>
+		fetchApi<ContainerBackupHook>(`/schedules/${scheduleId}/container-hooks`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		scheduleId: string,
+		id: string,
+		data: UpdateContainerBackupHookRequest,
+	): Promise<ContainerBackupHook> =>
+		fetchApi<ContainerBackupHook>(`/schedules/${scheduleId}/container-hooks/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (scheduleId: string, id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/schedules/${scheduleId}/container-hooks/${id}`, {
+			method: 'DELETE',
+		}),
+
+	listTemplates: async (): Promise<ContainerHookTemplateInfo[]> => {
+		const response = await fetchApi<ContainerHookTemplatesResponse>(
+			'/container-hook-templates',
+		);
+		return response.templates ?? [];
+	},
+
+	listExecutions: async (backupId: string): Promise<ContainerHookExecution[]> => {
+		const response = await fetchApi<ContainerHookExecutionsResponse>(
+			`/backups/${backupId}/container-hook-executions`,
+		);
+		return response.executions ?? [];
+	},
 };
 
 // Snapshots API
