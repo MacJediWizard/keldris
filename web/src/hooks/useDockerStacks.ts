@@ -40,7 +40,10 @@ export function useUpdateDockerStack() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ id, data }: { id: string; data: UpdateDockerStackRequest }) =>
+		mutationFn: ({
+			id,
+			data,
+		}: { id: string; data: UpdateDockerStackRequest }) =>
 			dockerStacksApi.update(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['docker-stacks'] });

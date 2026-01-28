@@ -19,17 +19,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Common errors for docker compose backup operations.
+// Errors specific to docker compose backup operations.
+// Note: ErrDockerNotAvailable, ErrContainerNotFound, and ErrVolumeNotFound are defined in docker.go
 var (
-	ErrComposeFileNotFound   = errors.New("docker-compose file not found")
-	ErrDockerNotAvailable    = errors.New("docker is not available")
-	ErrInvalidComposeFile    = errors.New("invalid docker-compose file")
-	ErrStackNotRunning       = errors.New("docker stack is not running")
-	ErrVolumeNotFound        = errors.New("docker volume not found")
-	ErrContainerNotFound     = errors.New("container not found")
-	ErrBackupInProgress      = errors.New("backup already in progress for this stack")
-	ErrRestoreInProgress     = errors.New("restore already in progress for this stack")
-	ErrCircularDependency    = errors.New("circular dependency detected in services")
+	ErrComposeFileNotFound = errors.New("docker-compose file not found")
+	ErrInvalidComposeFile  = errors.New("invalid docker-compose file")
+	ErrStackNotRunning     = errors.New("docker stack is not running")
+	ErrBackupInProgress    = errors.New("backup already in progress for this stack")
+	ErrRestoreInProgress   = errors.New("restore already in progress for this stack")
+	ErrCircularDependency  = errors.New("circular dependency detected in services")
 )
 
 // ComposeFile represents a parsed docker-compose.yml file.

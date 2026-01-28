@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { ClassificationBadge } from '../components/ClassificationBadge';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
 import {
-	DockerStackSelector,
 	type DockerStackBackupConfig,
+	DockerStackSelector,
 } from '../components/features/DockerStackSelector';
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
 import { ExportImportModal } from '../components/features/ExportImportModal';
