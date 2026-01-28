@@ -17,13 +17,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Common errors for Docker restore operations.
+// Restore-specific errors.
 var (
-	ErrContainerNotFound      = errors.New("container not found in snapshot")
-	ErrVolumeNotFound         = errors.New("volume not found in snapshot")
 	ErrContainerAlreadyExists = errors.New("container with same name already exists")
 	ErrVolumeAlreadyExists    = errors.New("volume with same name already exists")
-	ErrDockerNotAvailable     = errors.New("docker daemon not available")
 	ErrInvalidRestoreTarget   = errors.New("invalid restore target")
 	ErrContainerStartFailed   = errors.New("container failed to start after restore")
 	ErrVolumeDependency       = errors.New("volume dependency not satisfied")
@@ -39,43 +36,27 @@ const (
 	RestoreTargetRemote RestoreTargetType = "remote"
 )
 
-// ContainerConfig represents the backed up configuration of a Docker container.
-type ContainerConfig struct {
-	ID           string            `json:"id"`
-	Name         string            `json:"name"`
-	Image        string            `json:"image"`
-	Command      []string          `json:"command,omitempty"`
-	Entrypoint   []string          `json:"entrypoint,omitempty"`
-	Env          []string          `json:"env,omitempty"`
-	Labels       map[string]string `json:"labels,omitempty"`
-	Volumes      []VolumeMount     `json:"volumes,omitempty"`
-	Ports        []PortBinding     `json:"ports,omitempty"`
-	Networks     []string          `json:"networks,omitempty"`
-	RestartPolicy string           `json:"restart_policy,omitempty"`
-	WorkingDir   string            `json:"working_dir,omitempty"`
-	User         string            `json:"user,omitempty"`
-	Hostname     string            `json:"hostname,omitempty"`
-	CreatedAt    time.Time         `json:"created_at"`
+// RestoreContainerConfig represents the backed up configuration of a Docker container for restore.
+type RestoreContainerConfig struct {
+	ID            string            `json:"id"`
+	Name          string            `json:"name"`
+	Image         string            `json:"image"`
+	Command       []string          `json:"command,omitempty"`
+	Entrypoint    []string          `json:"entrypoint,omitempty"`
+	Env           []string          `json:"env,omitempty"`
+	Labels        map[string]string `json:"labels,omitempty"`
+	Mounts        []ContainerMount  `json:"mounts,omitempty"`
+	Ports         []PortBinding     `json:"ports,omitempty"`
+	Networks      []NetworkInfo     `json:"networks,omitempty"`
+	RestartPolicy string            `json:"restart_policy,omitempty"`
+	WorkingDir    string            `json:"working_dir,omitempty"`
+	User          string            `json:"user,omitempty"`
+	Hostname      string            `json:"hostname,omitempty"`
+	CreatedAt     time.Time         `json:"created_at"`
 }
 
-// VolumeMount represents a volume mount configuration.
-type VolumeMount struct {
-	Source      string `json:"source"`
-	Destination string `json:"destination"`
-	Mode        string `json:"mode,omitempty"`
-	Type        string `json:"type"` // "volume", "bind", "tmpfs"
-}
-
-// PortBinding represents a port binding configuration.
-type PortBinding struct {
-	ContainerPort string `json:"container_port"`
-	HostPort      string `json:"host_port,omitempty"`
-	HostIP        string `json:"host_ip,omitempty"`
-	Protocol      string `json:"protocol,omitempty"` // "tcp" or "udp"
-}
-
-// VolumeConfig represents the backed up configuration of a Docker volume.
-type VolumeConfig struct {
+// RestoreVolumeConfig represents the backed up configuration of a Docker volume for restore.
+type RestoreVolumeConfig struct {
 	Name       string            `json:"name"`
 	Driver     string            `json:"driver"`
 	Labels     map[string]string `json:"labels,omitempty"`
@@ -87,10 +68,10 @@ type VolumeConfig struct {
 
 // RestoreTarget represents the target Docker host for restore.
 type RestoreTarget struct {
-	Type     RestoreTargetType `json:"type"`
-	Host     string            `json:"host,omitempty"`      // For remote: docker host URL
-	CertPath string            `json:"cert_path,omitempty"` // For remote: TLS cert path
-	TLSVerify bool             `json:"tls_verify,omitempty"`
+	Type      RestoreTargetType `json:"type"`
+	Host      string            `json:"host,omitempty"`      // For remote: docker host URL
+	CertPath  string            `json:"cert_path,omitempty"` // For remote: TLS cert path
+	TLSVerify bool              `json:"tls_verify,omitempty"`
 }
 
 // RestoreOptions configures a Docker restore operation.
@@ -167,22 +148,22 @@ func (p *RestoreProgress) PercentComplete() float64 {
 
 // RestoreResult contains the result of a Docker restore operation.
 type RestoreResult struct {
-	ContainerID   string        `json:"container_id,omitempty"`
-	ContainerName string        `json:"container_name,omitempty"`
-	RestoredVolumes []string    `json:"restored_volumes,omitempty"`
-	Duration      time.Duration `json:"duration"`
-	StartVerified bool          `json:"start_verified"`
-	Warnings      []string      `json:"warnings,omitempty"`
+	ContainerID     string        `json:"container_id,omitempty"`
+	ContainerName   string        `json:"container_name,omitempty"`
+	RestoredVolumes []string      `json:"restored_volumes,omitempty"`
+	Duration        time.Duration `json:"duration"`
+	StartVerified   bool          `json:"start_verified"`
+	Warnings        []string      `json:"warnings,omitempty"`
 }
 
 // RestorePlan represents a preview of what will be restored.
 type RestorePlan struct {
-	Container       *ContainerConfig `json:"container,omitempty"`
-	Volumes         []VolumeConfig   `json:"volumes,omitempty"`
-	TotalSizeBytes  int64            `json:"total_size_bytes"`
-	Conflicts       []RestoreConflict `json:"conflicts,omitempty"`
-	Dependencies    []string          `json:"dependencies,omitempty"`
-	EstimatedTime   time.Duration     `json:"estimated_time,omitempty"`
+	Container      *RestoreContainerConfig `json:"container,omitempty"`
+	Volumes        []RestoreVolumeConfig   `json:"volumes,omitempty"`
+	TotalSizeBytes int64                   `json:"total_size_bytes"`
+	Conflicts      []RestoreConflict       `json:"conflicts,omitempty"`
+	Dependencies   []string                `json:"dependencies,omitempty"`
+	EstimatedTime  time.Duration           `json:"estimated_time,omitempty"`
 }
 
 // RestoreConflict represents a conflict detected during restore planning.
@@ -260,9 +241,9 @@ func (r *Restorer) PreviewRestore(ctx context.Context, opts RestoreOptions) (*Re
 		}
 
 		// Add volume configs from container
-		for _, mount := range containerConfig.Volumes {
+		for _, mount := range containerConfig.Mounts {
 			if mount.Type == "volume" {
-				volConfig, err := r.loadVolumeConfig(opts.SnapshotPath, mount.Source)
+				volConfig, err := r.loadVolumeConfig(opts.SnapshotPath, mount.VolumeName)
 				if err == nil {
 					plan.Volumes = append(plan.Volumes, *volConfig)
 					plan.TotalSizeBytes += volConfig.SizeBytes
@@ -477,7 +458,7 @@ func (r *Restorer) Restore(ctx context.Context, opts RestoreOptions) (*RestoreRe
 }
 
 // loadContainerConfig loads container configuration from snapshot.
-func (r *Restorer) loadContainerConfig(snapshotPath, containerName string) (*ContainerConfig, error) {
+func (r *Restorer) loadContainerConfig(snapshotPath, containerName string) (*RestoreContainerConfig, error) {
 	configPath := filepath.Join(snapshotPath, "docker", "containers", containerName, "config.json")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -487,7 +468,7 @@ func (r *Restorer) loadContainerConfig(snapshotPath, containerName string) (*Con
 		return nil, fmt.Errorf("read config: %w", err)
 	}
 
-	var config ContainerConfig
+	var config RestoreContainerConfig
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
@@ -496,7 +477,7 @@ func (r *Restorer) loadContainerConfig(snapshotPath, containerName string) (*Con
 }
 
 // loadVolumeConfig loads volume configuration from snapshot.
-func (r *Restorer) loadVolumeConfig(snapshotPath, volumeName string) (*VolumeConfig, error) {
+func (r *Restorer) loadVolumeConfig(snapshotPath, volumeName string) (*RestoreVolumeConfig, error) {
 	configPath := filepath.Join(snapshotPath, "docker", "volumes", volumeName, "config.json")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -506,7 +487,7 @@ func (r *Restorer) loadVolumeConfig(snapshotPath, volumeName string) (*VolumeCon
 		return nil, fmt.Errorf("read config: %w", err)
 	}
 
-	var config VolumeConfig
+	var config RestoreVolumeConfig
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
@@ -552,7 +533,7 @@ func (r *Restorer) removeVolume(ctx context.Context, target RestoreTarget, name 
 }
 
 // restoreVolume restores a volume from the snapshot.
-func (r *Restorer) restoreVolume(ctx context.Context, opts RestoreOptions, vol VolumeConfig, targetName string) error {
+func (r *Restorer) restoreVolume(ctx context.Context, opts RestoreOptions, vol RestoreVolumeConfig, targetName string) error {
 	r.logger.Info().
 		Str("source_volume", vol.Name).
 		Str("target_volume", targetName).
@@ -604,7 +585,7 @@ func (r *Restorer) restoreVolume(ctx context.Context, opts RestoreOptions, vol V
 }
 
 // createContainer creates a container from the backup configuration.
-func (r *Restorer) createContainer(ctx context.Context, opts RestoreOptions, config *ContainerConfig, targetName string, volumeMappings map[string]string) (string, error) {
+func (r *Restorer) createContainer(ctx context.Context, opts RestoreOptions, config *RestoreContainerConfig, targetName string, volumeMappings map[string]string) (string, error) {
 	r.logger.Info().
 		Str("original_name", config.Name).
 		Str("target_name", targetName).
@@ -623,8 +604,11 @@ func (r *Restorer) createContainer(ctx context.Context, opts RestoreOptions, con
 	}
 
 	// Add volume mounts
-	for _, mount := range config.Volumes {
+	for _, mount := range config.Mounts {
 		source := mount.Source
+		if mount.VolumeName != "" {
+			source = mount.VolumeName
+		}
 		// Apply volume mapping if exists
 		if newName, ok := volumeMappings[source]; ok {
 			source = newName
@@ -663,7 +647,7 @@ func (r *Restorer) createContainer(ctx context.Context, opts RestoreOptions, con
 
 	// Add networks
 	for _, network := range config.Networks {
-		args = append(args, "--network", network)
+		args = append(args, "--network", network.Name)
 	}
 
 	// Add restart policy
@@ -782,7 +766,7 @@ func (r *Restorer) sendProgress(progress *RestoreProgress) {
 }
 
 // ListContainersInSnapshot lists all containers available in a snapshot.
-func (r *Restorer) ListContainersInSnapshot(snapshotPath string) ([]ContainerConfig, error) {
+func (r *Restorer) ListContainersInSnapshot(snapshotPath string) ([]RestoreContainerConfig, error) {
 	containersDir := filepath.Join(snapshotPath, "docker", "containers")
 	entries, err := os.ReadDir(containersDir)
 	if err != nil {
@@ -792,7 +776,7 @@ func (r *Restorer) ListContainersInSnapshot(snapshotPath string) ([]ContainerCon
 		return nil, fmt.Errorf("read containers directory: %w", err)
 	}
 
-	var containers []ContainerConfig
+	var containers []RestoreContainerConfig
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -809,7 +793,7 @@ func (r *Restorer) ListContainersInSnapshot(snapshotPath string) ([]ContainerCon
 }
 
 // ListVolumesInSnapshot lists all volumes available in a snapshot.
-func (r *Restorer) ListVolumesInSnapshot(snapshotPath string) ([]VolumeConfig, error) {
+func (r *Restorer) ListVolumesInSnapshot(snapshotPath string) ([]RestoreVolumeConfig, error) {
 	volumesDir := filepath.Join(snapshotPath, "docker", "volumes")
 	entries, err := os.ReadDir(volumesDir)
 	if err != nil {
@@ -819,7 +803,7 @@ func (r *Restorer) ListVolumesInSnapshot(snapshotPath string) ([]VolumeConfig, e
 		return nil, fmt.Errorf("read volumes directory: %w", err)
 	}
 
-	var volumes []VolumeConfig
+	var volumes []RestoreVolumeConfig
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
