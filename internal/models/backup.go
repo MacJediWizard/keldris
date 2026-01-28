@@ -54,9 +54,13 @@ type Backup struct {
 	Resumed                 bool                `json:"resumed"`                        // True if this backup was resumed from a checkpoint
 	CheckpointID            *uuid.UUID          `json:"checkpoint_id,omitempty"`        // Associated checkpoint if resumed
 	OriginalBackupID        *uuid.UUID          `json:"original_backup_id,omitempty"`   // Original backup that was interrupted
-	ClassificationLevel     string              `json:"classification_level,omitempty"` // Data classification level
-	ClassificationDataTypes []string            `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
-	CreatedAt               time.Time           `json:"created_at"`
+	ClassificationLevel       string              `json:"classification_level,omitempty"` // Data classification level
+	ClassificationDataTypes   []string            `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	ContainerPreHookOutput    string              `json:"container_pre_hook_output,omitempty"`
+	ContainerPreHookError     string              `json:"container_pre_hook_error,omitempty"`
+	ContainerPostHookOutput   string              `json:"container_post_hook_output,omitempty"`
+	ContainerPostHookError    string              `json:"container_post_hook_error,omitempty"`
+	CreatedAt                 time.Time           `json:"created_at"`
 }
 
 // NewBackup creates a new Backup record for the given schedule, agent, and repository.
@@ -178,4 +182,20 @@ func (b *Backup) ClassificationDataTypesJSON() ([]byte, error) {
 		return []byte(`["general"]`), nil
 	}
 	return json.Marshal(b.ClassificationDataTypes)
+}
+
+// RecordContainerPreHook records the results of running a container pre-backup hook.
+func (b *Backup) RecordContainerPreHook(output string, err error) {
+	b.ContainerPreHookOutput = output
+	if err != nil {
+		b.ContainerPreHookError = err.Error()
+	}
+}
+
+// RecordContainerPostHook records the results of running a container post-backup hook.
+func (b *Backup) RecordContainerPostHook(output string, err error) {
+	b.ContainerPostHookOutput = output
+	if err != nil {
+		b.ContainerPostHookError = err.Error()
+	}
 }
