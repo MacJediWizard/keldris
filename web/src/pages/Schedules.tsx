@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { ClassificationBadge } from '../components/ClassificationBadge';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
+import {
+	type DockerStackBackupConfig,
+	DockerStackSelector,
+} from '../components/features/DockerStackSelector';
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
 import { ExportImportModal } from '../components/features/ExportImportModal';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
@@ -17,8 +21,11 @@ import {
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { FormLabelWithHelp, HelpTooltip } from '../components/ui/HelpTooltip';
+import { StarButton } from '../components/ui/StarButton';
 import { useAgents } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
+import { useDockerStacks } from '../hooks/useDockerStacks';
+import { useFavoriteIds } from '../hooks/useFavorites';
 import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
 import {
@@ -38,6 +45,7 @@ import {
 } from '../lib/help-content';
 import type {
 	Agent,
+	BackupType,
 	CompressionLevel,
 	DryRunResponse,
 	MountBehavior,
@@ -85,6 +93,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	>([]);
 	const [cronExpression, setCronExpression] = useState('0 2 * * *');
 	const [paths, setPaths] = useState('/home');
+	// Backup type state
+	const [backupType, setBackupType] = useState<BackupType>('file');
+	// Docker backup options state
+	const [dockerVolumeIds, setDockerVolumeIds] = useState<string[]>([]);
+	const [dockerPauseContainers, setDockerPauseContainers] = useState(false);
+	const [dockerIncludeConfigs, setDockerIncludeConfigs] = useState(true);
 	// Policy template state
 	const [selectedPolicyId, setSelectedPolicyId] = useState('');
 	// Retention policy state
@@ -112,10 +126,15 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	// Priority and preemption state
 	const [priority, setPriority] = useState<SchedulePriority>(2);
 	const [preemptible, setPreemptible] = useState(false);
+	// Docker stack state
+	const [dockerStackId, setDockerStackId] = useState<string | null>(null);
+	const [dockerStackConfig, setDockerStackConfig] =
+		useState<DockerStackBackupConfig | null>(null);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
 	const { data: policies } = usePolicies();
+	const { data: dockerStacks, isLoading: isLoadingStacks } = useDockerStacks();
 	const createSchedule = useCreateSchedule();
 
 	const handlePolicySelect = (policyId: string) => {
@@ -181,12 +200,25 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				name,
 				agent_id: agentId,
 				repositories: selectedRepos,
+				backup_type: backupType,
 				cron_expression: cronExpression,
-				paths: paths.split('\n').filter((p) => p.trim()),
+				paths:
+					backupType === 'file'
+						? paths.split('\n').filter((p) => p.trim())
+						: undefined,
 				excludes: excludes.length > 0 ? excludes : undefined,
 				retention_policy: retentionPolicy,
 				enabled: true,
 			};
+
+			// Add Docker-specific options
+			if (backupType === 'docker') {
+				data.docker_options = {
+					volume_ids: dockerVolumeIds.length > 0 ? dockerVolumeIds : undefined,
+					pause_containers: dockerPauseContainers,
+					include_container_configs: dockerIncludeConfigs,
+				};
+			}
 
 			if (bandwidthLimitKb && Number.parseInt(bandwidthLimitKb, 10) > 0) {
 				data.bandwidth_limit_kb = Number.parseInt(bandwidthLimitKb, 10);
@@ -221,6 +253,16 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				data.preemptible = preemptible;
 			}
 
+			// Docker stack config
+			if (dockerStackConfig) {
+				data.docker_stack_config = {
+					stack_id: dockerStackConfig.stack_id,
+					export_images: dockerStackConfig.export_images,
+					include_env_files: dockerStackConfig.include_env_files,
+					stop_for_backup: dockerStackConfig.stop_for_backup,
+				};
+			}
+
 			await createSchedule.mutateAsync(data);
 			onClose();
 			setName('');
@@ -229,6 +271,11 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			setSelectedPolicyId('');
 			setCronExpression('0 2 * * *');
 			setPaths('/home');
+			// Reset backup type state
+			setBackupType('file');
+			setDockerVolumeIds([]);
+			setDockerPauseContainers(false);
+			setDockerIncludeConfigs(true);
 			// Reset retention policy state
 			setShowRetention(false);
 			setKeepLast(5);
@@ -251,6 +298,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			// Reset priority state
 			setPriority(2);
 			setPreemptible(false);
+			// Reset docker stack state
+			setDockerStackId(null);
+			setDockerStackConfig(null);
 		} catch {
 			// Error handled by mutation
 		}
@@ -326,7 +376,49 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								onChange={setSelectedRepos}
 							/>
 						</div>
-						{policies && policies.length > 0 && (
+						{/* Backup Type Selector */}
+						<div>
+							<label
+								htmlFor="schedule-backup-type"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Backup Type
+							</label>
+							<div className="flex gap-4">
+								<label className="flex items-center gap-2 cursor-pointer">
+									<input
+										type="radio"
+										name="backup-type"
+										value="file"
+										checked={backupType === 'file'}
+										onChange={() => setBackupType('file')}
+										className="text-indigo-600 focus:ring-indigo-500"
+									/>
+									<span className="text-sm text-gray-700 dark:text-gray-300">
+										File/Directory Backup
+									</span>
+								</label>
+								<label className="flex items-center gap-2 cursor-pointer">
+									<input
+										type="radio"
+										name="backup-type"
+										value="docker"
+										checked={backupType === 'docker'}
+										onChange={() => setBackupType('docker')}
+										className="text-indigo-600 focus:ring-indigo-500"
+									/>
+									<span className="text-sm text-gray-700 dark:text-gray-300">
+										Docker Volumes
+									</span>
+								</label>
+							</div>
+							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+								{backupType === 'file'
+									? 'Back up files and directories from the agent'
+									: 'Back up Docker volumes and container configurations'}
+							</p>
+						</div>
+						{policies && policies.length > 0 && backupType === 'file' && (
 							<div>
 								<FormLabelWithHelp
 									htmlFor="schedule-policy"
@@ -375,43 +467,34 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								Examples: 0 2 * * * (daily at 2 AM), 0 */6 * * * (every 6 hours)
 							</p>
 						</div>
-						<div>
-							<FormLabelWithHelp
-								htmlFor="schedule-paths"
-								label="Paths to Backup (one per line)"
-								helpContent={scheduleHelp.paths.content}
-								helpTitle={scheduleHelp.paths.title}
-								required
-							/>
-							<textarea
-								id="schedule-paths"
-								value={paths}
-								onChange={(e) => setPaths(e.target.value)}
-								placeholder="/home&#10;/etc&#10;/var/www"
-								rows={3}
-								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
-								required
-							/>
-						</div>
+						{/* File Backup: Paths Section */}
+						{backupType === 'file' && (
+							<div>
+								<FormLabelWithHelp
+									htmlFor="schedule-paths"
+									label="Paths to Backup (one per line)"
+									helpContent={scheduleHelp.paths.content}
+									helpTitle={scheduleHelp.paths.title}
+									required
+								/>
+								<textarea
+									id="schedule-paths"
+									value={paths}
+									onChange={(e) => setPaths(e.target.value)}
+									placeholder="/home&#10;/etc&#10;/var/www"
+									rows={3}
+									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+									required
+								/>
+							</div>
+						)}
 
-						{/* Exclude Patterns Section */}
-						<div className="border-t border-gray-200 pt-4">
-							<div className="flex items-center justify-between mb-2">
-								<span className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-									Exclude Patterns
-									<HelpTooltip
-										content={scheduleHelp.excludePatterns.content}
-										title={scheduleHelp.excludePatterns.title}
-										docsUrl={scheduleHelp.excludePatterns.docsUrl}
-									/>
-								</span>
-								<button
-									type="button"
-									onClick={() => setShowPatternLibrary(true)}
-									className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-								>
+						{/* Docker Backup: Options Section */}
+						{backupType === 'docker' && (
+							<div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+								<div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
 									<svg
-										className="w-4 h-4"
+										className="w-5 h-5 text-blue-500"
 										fill="none"
 										stroke="currentColor"
 										viewBox="0 0 24 24"
@@ -421,56 +504,150 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											strokeLinecap="round"
 											strokeLinejoin="round"
 											strokeWidth={2}
-											d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+											d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
 										/>
 									</svg>
-									Browse Library
-								</button>
-							</div>
-							{excludes.length > 0 ? (
-								<div className="space-y-2">
-									<div className="flex flex-wrap gap-1.5 p-3 bg-gray-50 rounded-lg max-h-32 overflow-y-auto">
-										{excludes.map((pattern) => (
-											<span
-												key={pattern}
-												className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-200 rounded group"
-											>
-												<code className="text-gray-700">{pattern}</code>
-												<button
-													type="button"
-													onClick={() => handleRemovePattern(pattern)}
-													className="text-gray-400 hover:text-red-500 transition-colors"
-												>
-													<svg
-														className="w-3 h-3"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-														aria-hidden="true"
-													>
-														<path
-															strokeLinecap="round"
-															strokeLinejoin="round"
-															strokeWidth={2}
-															d="M6 18L18 6M6 6l12 12"
-														/>
-													</svg>
-												</button>
-											</span>
-										))}
-									</div>
-									<p className="text-xs text-gray-500">
-										{excludes.length} pattern{excludes.length !== 1 ? 's' : ''}{' '}
-										will be excluded from backup
+									Docker Backup Options
+								</div>
+
+								{/* Volume Selection Info */}
+								<div>
+									<p className="text-sm text-gray-600 dark:text-gray-400">
+										All Docker volumes on the selected agent will be backed up.
+										Volume selection will be available once the agent reports
+										Docker information.
 									</p>
 								</div>
-							) : (
-								<p className="text-sm text-gray-500">
-									No patterns selected. Click "Browse Library" to add common
-									patterns.
-								</p>
-							)}
-						</div>
+
+								{/* Pause Containers Option */}
+								<div className="flex items-start gap-3">
+									<input
+										type="checkbox"
+										id="docker-pause-containers"
+										checked={dockerPauseContainers}
+										onChange={(e) => setDockerPauseContainers(e.target.checked)}
+										className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+									/>
+									<div>
+										<label
+											htmlFor="docker-pause-containers"
+											className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+										>
+											Pause containers during backup
+										</label>
+										<p className="text-xs text-gray-500 dark:text-gray-400">
+											Pauses running containers while backing up volumes for
+											data consistency. Containers will be automatically
+											unpaused after backup completes.
+										</p>
+									</div>
+								</div>
+
+								{/* Include Container Configs Option */}
+								<div className="flex items-start gap-3">
+									<input
+										type="checkbox"
+										id="docker-include-configs"
+										checked={dockerIncludeConfigs}
+										onChange={(e) => setDockerIncludeConfigs(e.target.checked)}
+										className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+									/>
+									<div>
+										<label
+											htmlFor="docker-include-configs"
+											className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+										>
+											Include container configurations
+										</label>
+										<p className="text-xs text-gray-500 dark:text-gray-400">
+											Backs up container configurations (docker inspect) as JSON
+											files for easier restoration.
+										</p>
+									</div>
+								</div>
+							</div>
+						)}
+
+						{/* Exclude Patterns Section (File backups only) */}
+						{backupType === 'file' && (
+							<div className="border-t border-gray-200 pt-4">
+								<div className="flex items-center justify-between mb-2">
+									<span className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+										Exclude Patterns
+										<HelpTooltip
+											content={scheduleHelp.excludePatterns.content}
+											title={scheduleHelp.excludePatterns.title}
+											docsUrl={scheduleHelp.excludePatterns.docsUrl}
+										/>
+									</span>
+									<button
+										type="button"
+										onClick={() => setShowPatternLibrary(true)}
+										className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+									>
+										<svg
+											className="w-4 h-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+											aria-hidden="true"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+											/>
+										</svg>
+										Browse Library
+									</button>
+								</div>
+								{excludes.length > 0 ? (
+									<div className="space-y-2">
+										<div className="flex flex-wrap gap-1.5 p-3 bg-gray-50 rounded-lg max-h-32 overflow-y-auto">
+											{excludes.map((pattern) => (
+												<span
+													key={pattern}
+													className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-200 rounded group"
+												>
+													<code className="text-gray-700">{pattern}</code>
+													<button
+														type="button"
+														onClick={() => handleRemovePattern(pattern)}
+														className="text-gray-400 hover:text-red-500 transition-colors"
+													>
+														<svg
+															className="w-3 h-3"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+															aria-hidden="true"
+														>
+															<path
+																strokeLinecap="round"
+																strokeLinejoin="round"
+																strokeWidth={2}
+																d="M6 18L18 6M6 6l12 12"
+															/>
+														</svg>
+													</button>
+												</span>
+											))}
+										</div>
+										<p className="text-xs text-gray-500">
+											{excludes.length} pattern
+											{excludes.length !== 1 ? 's' : ''} will be excluded from
+											backup
+										</p>
+									</div>
+								) : (
+									<p className="text-sm text-gray-500">
+										No patterns selected. Click "Browse Library" to add common
+										patterns.
+									</p>
+								)}
+							</div>
+						)}
 
 						{/* Retention Policy Section */}
 						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -711,7 +888,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 										<FormLabelWithHelp
 											htmlFor="compression-level"
 											label="Compression Level"
-											helpContent={advancedSettingsHelp.compressionLevel.content}
+											helpContent={
+												advancedSettingsHelp.compressionLevel.content
+											}
 											helpTitle={advancedSettingsHelp.compressionLevel.title}
 										/>
 										<select
@@ -772,7 +951,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 										<FormLabelWithHelp
 											htmlFor="schedule-mount-behavior"
 											label="On Network Mount Unavailable"
-											helpContent={advancedSettingsHelp.onMountUnavailable.content}
+											helpContent={
+												advancedSettingsHelp.onMountUnavailable.content
+											}
 											helpTitle={advancedSettingsHelp.onMountUnavailable.title}
 										/>
 										<select
@@ -845,6 +1026,18 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								</div>
 							)}
 						</div>
+
+						{/* Docker Stack Backup Section */}
+						<DockerStackSelector
+							stacks={dockerStacks ?? []}
+							selectedStackId={dockerStackId}
+							onChange={(stackId, config) => {
+								setDockerStackId(stackId);
+								setDockerStackConfig(config);
+							}}
+							agentId={agentId}
+							isLoading={isLoadingStacks}
+						/>
 					</div>
 					{createSchedule.isError && (
 						<p className="text-sm text-red-600 mt-4">
@@ -1321,6 +1514,7 @@ interface ScheduleRowProps {
 	isDryRunning: boolean;
 	isSelected: boolean;
 	onToggleSelect: () => void;
+	isFavorite: boolean;
 }
 
 function ScheduleRow({
@@ -1341,6 +1535,7 @@ function ScheduleRow({
 	isDryRunning,
 	isSelected,
 	onToggleSelect,
+	isFavorite,
 }: ScheduleRowProps) {
 	const hasResourceControls =
 		schedule.bandwidth_limit_kb ||
@@ -1365,8 +1560,16 @@ function ScheduleRow({
 				<BulkSelectCheckbox checked={isSelected} onChange={onToggleSelect} />
 			</td>
 			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900 dark:text-white">
-					{schedule.name}
+				<div className="flex items-center gap-2">
+					<StarButton
+						entityType="schedule"
+						entityId={schedule.id}
+						isFavorite={isFavorite}
+						size="sm"
+					/>
+					<div className="font-medium text-gray-900 dark:text-white">
+						{schedule.name}
+					</div>
 				</div>
 				<div className="text-sm text-gray-500 dark:text-gray-400">
 					{agentName ?? 'Unknown Agent'} →{' '}
@@ -1655,6 +1858,7 @@ export function Schedules() {
 	const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>(
 		'all',
 	);
+	const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [editingScriptsScheduleId, setEditingScriptsScheduleId] = useState<
 		string | null
@@ -1679,6 +1883,7 @@ export function Schedules() {
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
 	const { data: policies } = usePolicies();
+	const favoriteIds = useFavoriteIds('schedule');
 	const updateSchedule = useUpdateSchedule();
 	const deleteSchedule = useDeleteSchedule();
 	const runSchedule = useRunSchedule();
@@ -1700,7 +1905,8 @@ export function Schedules() {
 			statusFilter === 'all' ||
 			(statusFilter === 'active' && schedule.enabled) ||
 			(statusFilter === 'paused' && !schedule.enabled);
-		return matchesSearch && matchesStatus;
+		const matchesFavorites = !showFavoritesOnly || favoriteIds.has(schedule.id);
+		return matchesSearch && matchesStatus && matchesFavorites;
 	});
 
 	const scheduleIds = filteredSchedules?.map((s) => s.id) ?? [];
@@ -2051,6 +2257,31 @@ export function Schedules() {
 							<option value="active">Active</option>
 							<option value="paused">Paused</option>
 						</select>
+						<button
+							type="button"
+							onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+							className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
+								showFavoritesOnly
+									? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+									: 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+							}`}
+						>
+							<svg
+								aria-hidden="true"
+								className={`w-4 h-4 ${showFavoritesOnly ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
+								fill={showFavoritesOnly ? 'currentColor' : 'none'}
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+								/>
+							</svg>
+							Favorites
+						</button>
 					</div>
 				</div>
 
@@ -2149,6 +2380,7 @@ export function Schedules() {
 										isDryRunning={dryRunSchedule.isPending}
 										isSelected={bulkSelect.isSelected(schedule.id)}
 										onToggleSelect={() => bulkSelect.toggle(schedule.id)}
+										isFavorite={favoriteIds.has(schedule.id)}
 									/>
 								);
 							})}
