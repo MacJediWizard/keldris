@@ -16,6 +16,7 @@ import { Classifications } from './pages/Classifications';
 import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
+import { DockerLogs } from './pages/DockerLogs';
 import { DowntimeHistory } from './pages/DowntimeHistory';
 import { FileDiff } from './pages/FileDiff';
 import { FileHistory } from './pages/FileHistory';
@@ -137,6 +138,7 @@ function App() {
 							/>
 							<Route path="organization/new" element={<NewOrganization />} />
 							<Route path="admin/logs" element={<AdminLogs />} />
+							<Route path="admin/docker-logs" element={<DockerLogs />} />
 							<Route
 								path="admin/rate-limits"
 								element={<RateLimitDashboard />}
