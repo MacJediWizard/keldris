@@ -43,14 +43,6 @@ import type {
 	BackupScript,
 	BackupScriptsResponse,
 	BackupSuccessRate,
-	ContainerBackupHook,
-	ContainerBackupHooksResponse,
-	ContainerHookExecution,
-	ContainerHookExecutionsResponse,
-	ContainerHookTemplateInfo,
-	ContainerHookTemplatesResponse,
-	CreateContainerBackupHookRequest,
-	UpdateContainerBackupHookRequest,
 	BackupSuccessRatesResponse,
 	BackupsResponse,
 	BlockedRequestsResponse,
@@ -74,6 +66,12 @@ import type {
 	ConcurrencyResponse,
 	ConfigTemplate,
 	ConfigTemplatesResponse,
+	ContainerBackupHook,
+	ContainerBackupHooksResponse,
+	ContainerHookExecution,
+	ContainerHookExecutionsResponse,
+	ContainerHookTemplateInfo,
+	ContainerHookTemplatesResponse,
 	CostAlert,
 	CostAlertsResponse,
 	CostForecastResponse,
@@ -87,6 +85,7 @@ import type {
 	CreateAnnouncementRequest,
 	CreateBackupScriptRequest,
 	CreateCloudRestoreRequest,
+	CreateContainerBackupHookRequest,
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
@@ -317,6 +316,7 @@ import type {
 	UpdateAnnouncementRequest,
 	UpdateBackupScriptRequest,
 	UpdateConcurrencyRequest,
+	UpdateContainerBackupHookRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
 	UpdateDowntimeAlertRequest,
@@ -900,7 +900,9 @@ export const containerHooksApi = {
 	},
 
 	get: async (scheduleId: string, id: string): Promise<ContainerBackupHook> =>
-		fetchApi<ContainerBackupHook>(`/schedules/${scheduleId}/container-hooks/${id}`),
+		fetchApi<ContainerBackupHook>(
+			`/schedules/${scheduleId}/container-hooks/${id}`,
+		),
 
 	create: async (
 		scheduleId: string,
@@ -916,15 +918,21 @@ export const containerHooksApi = {
 		id: string,
 		data: UpdateContainerBackupHookRequest,
 	): Promise<ContainerBackupHook> =>
-		fetchApi<ContainerBackupHook>(`/schedules/${scheduleId}/container-hooks/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
+		fetchApi<ContainerBackupHook>(
+			`/schedules/${scheduleId}/container-hooks/${id}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		),
 
 	delete: async (scheduleId: string, id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/schedules/${scheduleId}/container-hooks/${id}`, {
-			method: 'DELETE',
-		}),
+		fetchApi<MessageResponse>(
+			`/schedules/${scheduleId}/container-hooks/${id}`,
+			{
+				method: 'DELETE',
+			},
+		),
 
 	listTemplates: async (): Promise<ContainerHookTemplateInfo[]> => {
 		const response = await fetchApi<ContainerHookTemplatesResponse>(
@@ -933,7 +941,9 @@ export const containerHooksApi = {
 		return response.templates ?? [];
 	},
 
-	listExecutions: async (backupId: string): Promise<ContainerHookExecution[]> => {
+	listExecutions: async (
+		backupId: string,
+	): Promise<ContainerHookExecution[]> => {
 		const response = await fetchApi<ContainerHookExecutionsResponse>(
 			`/backups/${backupId}/container-hook-executions`,
 		);

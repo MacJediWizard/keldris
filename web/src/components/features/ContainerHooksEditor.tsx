@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import {
+	useContainerHookTemplates,
 	useContainerHooks,
 	useCreateContainerHook,
 	useDeleteContainerHook,
 	useUpdateContainerHook,
-	useContainerHookTemplates,
 } from '../../hooks/useContainerHooks';
 import type {
 	ContainerBackupHook,
-	ContainerHookType,
 	ContainerHookTemplate,
 	ContainerHookTemplateInfo,
+	ContainerHookType,
 } from '../../lib/types';
 
 interface ContainerHooksEditorProps {
@@ -52,10 +52,11 @@ function HookForm({
 	onSave,
 	onCancel,
 }: HookFormProps) {
-	const [containerName, setContainerName] = useState(hook?.container_name ?? '');
-	const [selectedTemplate, setSelectedTemplate] = useState<ContainerHookTemplate>(
-		hook?.template ?? 'none',
+	const [containerName, setContainerName] = useState(
+		hook?.container_name ?? '',
 	);
+	const [selectedTemplate, setSelectedTemplate] =
+		useState<ContainerHookTemplate>(hook?.template ?? 'none');
 	const [command, setCommand] = useState(hook?.command ?? '');
 	const [workingDir, setWorkingDir] = useState(hook?.working_dir ?? '');
 	const [user, setUser] = useState(hook?.user ?? '');
@@ -81,7 +82,8 @@ function HookForm({
 			// Initialize template vars with defaults
 			setTemplateVars({ ...info.default_vars });
 			// Set command from template
-			const cmd = hookType === 'pre_backup' ? info.pre_backup_cmd : info.post_backup_cmd;
+			const cmd =
+				hookType === 'pre_backup' ? info.pre_backup_cmd : info.post_backup_cmd;
 			setCommand(cmd);
 		} else {
 			setCommand('');
@@ -106,7 +108,8 @@ function HookForm({
 						fail_on_error: failOnError,
 						enabled,
 						description: description || undefined,
-						template_vars: selectedTemplate !== 'none' ? templateVars : undefined,
+						template_vars:
+							selectedTemplate !== 'none' ? templateVars : undefined,
 					},
 				});
 			} else {
@@ -115,7 +118,8 @@ function HookForm({
 					data: {
 						container_name: containerName,
 						type: hookType,
-						template: selectedTemplate !== 'none' ? selectedTemplate : undefined,
+						template:
+							selectedTemplate !== 'none' ? selectedTemplate : undefined,
 						command: selectedTemplate === 'none' ? command : undefined,
 						working_dir: workingDir || undefined,
 						user: user || undefined,
@@ -123,7 +127,8 @@ function HookForm({
 						fail_on_error: failOnError,
 						enabled,
 						description: description || undefined,
-						template_vars: selectedTemplate !== 'none' ? templateVars : undefined,
+						template_vars:
+							selectedTemplate !== 'none' ? templateVars : undefined,
 					},
 				});
 			}
@@ -174,7 +179,9 @@ function HookForm({
 				<select
 					id="template"
 					value={selectedTemplate}
-					onChange={(e) => handleTemplateChange(e.target.value as ContainerHookTemplate)}
+					onChange={(e) =>
+						handleTemplateChange(e.target.value as ContainerHookTemplate)
+					}
 					className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					disabled={!!hook}
 				>
@@ -212,7 +219,9 @@ function HookForm({
 				<>
 					{templateInfo && (
 						<div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-							<p className="text-sm text-gray-700 mb-2">{templateInfo.description}</p>
+							<p className="text-sm text-gray-700 mb-2">
+								{templateInfo.description}
+							</p>
 							<div className="bg-gray-100 p-2 rounded text-xs font-mono text-gray-600 whitespace-pre-wrap">
 								{hookType === 'pre_backup'
 									? templateInfo.pre_backup_cmd
@@ -221,58 +230,66 @@ function HookForm({
 						</div>
 					)}
 
-					{templateInfo && (templateInfo.required_vars.length > 0 || templateInfo.optional_vars.length > 0) && (
-						<div className="space-y-3">
-							<label className="block text-sm font-medium text-gray-700">
-								Template Variables
-							</label>
-							{templateInfo.required_vars.map((varName) => (
-								<div key={varName}>
-									<label
-										htmlFor={`var-${varName}`}
-										className="block text-xs font-medium text-gray-600 mb-1"
-									>
-										{varName} <span className="text-red-500">*</span>
-									</label>
-									<input
-										type="text"
-										id={`var-${varName}`}
-										value={templateVars[varName] ?? ''}
-										onChange={(e) =>
-											setTemplateVars({ ...templateVars, [varName]: e.target.value })
-										}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-										required
-									/>
-								</div>
-							))}
-							{templateInfo.optional_vars.map((varName) => (
-								<div key={varName}>
-									<label
-										htmlFor={`var-${varName}`}
-										className="block text-xs font-medium text-gray-600 mb-1"
-									>
-										{varName}
-										{templateInfo.default_vars[varName] && (
-											<span className="text-gray-400 ml-1">
-												(default: {templateInfo.default_vars[varName]})
-											</span>
-										)}
-									</label>
-									<input
-										type="text"
-										id={`var-${varName}`}
-										value={templateVars[varName] ?? ''}
-										onChange={(e) =>
-											setTemplateVars({ ...templateVars, [varName]: e.target.value })
-										}
-										placeholder={templateInfo.default_vars[varName]}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-									/>
-								</div>
-							))}
-						</div>
-					)}
+					{templateInfo &&
+						(templateInfo.required_vars.length > 0 ||
+							templateInfo.optional_vars.length > 0) && (
+							<div className="space-y-3">
+								<p className="text-sm font-medium text-gray-700">
+									Template Variables
+								</p>
+								{templateInfo.required_vars.map((varName) => (
+									<div key={varName}>
+										<label
+											htmlFor={`var-${varName}`}
+											className="block text-xs font-medium text-gray-600 mb-1"
+										>
+											{varName} <span className="text-red-500">*</span>
+										</label>
+										<input
+											type="text"
+											id={`var-${varName}`}
+											value={templateVars[varName] ?? ''}
+											onChange={(e) =>
+												setTemplateVars({
+													...templateVars,
+													[varName]: e.target.value,
+												})
+											}
+											className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+											required
+										/>
+									</div>
+								))}
+								{templateInfo.optional_vars.map((varName) => (
+									<div key={varName}>
+										<label
+											htmlFor={`var-${varName}`}
+											className="block text-xs font-medium text-gray-600 mb-1"
+										>
+											{varName}
+											{templateInfo.default_vars[varName] && (
+												<span className="text-gray-400 ml-1">
+													(default: {templateInfo.default_vars[varName]})
+												</span>
+											)}
+										</label>
+										<input
+											type="text"
+											id={`var-${varName}`}
+											value={templateVars[varName] ?? ''}
+											onChange={(e) =>
+												setTemplateVars({
+													...templateVars,
+													[varName]: e.target.value,
+												})
+											}
+											placeholder={templateInfo.default_vars[varName]}
+											className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										/>
+									</div>
+								))}
+							</div>
+						)}
 				</>
 			)}
 
@@ -392,7 +409,11 @@ function HookForm({
 				</button>
 				<button
 					type="submit"
-					disabled={isPending || !containerName.trim() || (selectedTemplate === 'none' && !command.trim())}
+					disabled={
+						isPending ||
+						!containerName.trim() ||
+						(selectedTemplate === 'none' && !command.trim())
+					}
 					className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 				>
 					{isPending ? 'Saving...' : hook ? 'Update Hook' : 'Create Hook'}
@@ -486,8 +507,12 @@ export function ContainerHooksEditor({
 }: ContainerHooksEditorProps) {
 	const { data: hooks, isLoading, isError } = useContainerHooks(scheduleId);
 	const { data: templates = [] } = useContainerHookTemplates();
-	const [editingHook, setEditingHook] = useState<ContainerBackupHook | null>(null);
-	const [creatingType, setCreatingType] = useState<ContainerHookType | null>(null);
+	const [editingHook, setEditingHook] = useState<ContainerBackupHook | null>(
+		null,
+	);
+	const [creatingType, setCreatingType] = useState<ContainerHookType | null>(
+		null,
+	);
 
 	if (isLoading) {
 		return (
@@ -567,9 +592,9 @@ export function ContainerHooksEditor({
 				) : (
 					<>
 						<p className="text-sm text-gray-600 mb-4">
-							Configure hooks to run inside Docker containers before and after backups.
-							Use pre-backup hooks to dump databases or stop writes, and post-backup
-							hooks to clean up or resume operations.
+							Configure hooks to run inside Docker containers before and after
+							backups. Use pre-backup hooks to dump databases or stop writes,
+							and post-backup hooks to clean up or resume operations.
 						</p>
 
 						{hooks && hooks.length > 0 && (
