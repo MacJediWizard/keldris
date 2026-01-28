@@ -257,7 +257,8 @@ export const statusHelp: Record<string, HelpContent> = {
 		title: 'Failed',
 	},
 	backupCanceled: {
-		content: 'Backup was manually stopped before completion. No snapshot was created.',
+		content:
+			'Backup was manually stopped before completion. No snapshot was created.',
 		title: 'Canceled',
 	},
 
@@ -314,8 +315,7 @@ export const statusHelp: Record<string, HelpContent> = {
 
 	// Alert statuses
 	alertActive: {
-		content:
-			'Alert condition is currently present and requires attention.',
+		content: 'Alert condition is currently present and requires attention.',
 		title: 'Active Alert',
 	},
 	alertAcknowledged: {
