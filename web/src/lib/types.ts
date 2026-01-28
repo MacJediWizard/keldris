@@ -1185,6 +1185,133 @@ export interface RestoresResponse {
 	restores: Restore[];
 }
 
+// Docker Restore types
+export type DockerRestoreStatus =
+	| 'pending'
+	| 'preparing'
+	| 'restoring_volumes'
+	| 'creating_container'
+	| 'starting'
+	| 'verifying'
+	| 'completed'
+	| 'failed'
+	| 'canceled';
+
+export type DockerRestoreTargetType = 'local' | 'remote';
+
+export interface DockerRestoreTarget {
+	type: DockerRestoreTargetType;
+	host?: string;
+	cert_path?: string;
+	tls_verify?: boolean;
+}
+
+export interface DockerRestoreProgress {
+	status: string;
+	current_step: string;
+	total_steps: number;
+	completed_steps: number;
+	percent_complete: number;
+	total_bytes: number;
+	restored_bytes: number;
+	current_volume?: string;
+	error_message?: string;
+}
+
+export interface DockerContainer {
+	id: string;
+	name: string;
+	image: string;
+	volumes?: string[];
+	ports?: string[];
+	networks?: string[];
+	created_at: string;
+}
+
+export interface DockerVolume {
+	name: string;
+	driver: string;
+	size_bytes: number;
+	created_at: string;
+}
+
+export interface DockerRestoreConflict {
+	type: 'container' | 'volume' | 'network';
+	name: string;
+	existing_id?: string;
+	description: string;
+}
+
+export interface DockerRestorePlan {
+	container?: DockerContainer;
+	volumes: DockerVolume[];
+	total_size_bytes: number;
+	conflicts: DockerRestoreConflict[];
+	dependencies: string[];
+}
+
+export interface DockerRestore {
+	id: string;
+	agent_id: string;
+	repository_id: string;
+	snapshot_id: string;
+	container_name?: string;
+	volume_name?: string;
+	new_container_name?: string;
+	new_volume_name?: string;
+	target?: DockerRestoreTarget;
+	overwrite_existing: boolean;
+	start_after_restore: boolean;
+	verify_start: boolean;
+	status: DockerRestoreStatus;
+	progress?: DockerRestoreProgress;
+	restored_container_id?: string;
+	restored_volumes?: string[];
+	start_verified: boolean;
+	warnings?: string[];
+	started_at?: string;
+	completed_at?: string;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface CreateDockerRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	container_name?: string;
+	volume_name?: string;
+	new_container_name?: string;
+	new_volume_name?: string;
+	target?: DockerRestoreTarget;
+	overwrite_existing?: boolean;
+	start_after_restore?: boolean;
+	verify_start?: boolean;
+}
+
+export interface DockerRestorePreviewRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	container_name?: string;
+	volume_name?: string;
+	target?: DockerRestoreTarget;
+}
+
+export interface DockerRestoresResponse {
+	docker_restores: DockerRestore[];
+}
+
+export interface DockerContainersResponse {
+	containers: DockerContainer[];
+	message?: string;
+}
+
+export interface DockerVolumesResponse {
+	volumes: DockerVolume[];
+	message?: string;
+}
+
 // Alert types
 export type AlertType =
 	| 'agent_offline'
