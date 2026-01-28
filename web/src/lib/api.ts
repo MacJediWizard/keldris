@@ -128,6 +128,16 @@ import type {
 	DRTestSchedule,
 	DRTestSchedulesResponse,
 	DRTestsResponse,
+	DockerContainer,
+	DockerContainersResponse,
+	DockerRestore,
+	DockerRestorePreviewRequest,
+	DockerRestoreProgress,
+	DockerRestorePlan,
+	DockerRestoresResponse,
+	DockerVolume,
+	DockerVolumesResponse,
+	CreateDockerRestoreRequest,
 	DailyBackupStats,
 	DailyBackupStatsResponse,
 	DashboardStats,
@@ -1041,6 +1051,64 @@ export const restoresApi = {
 
 	getProgress: async (id: string): Promise<CloudRestoreProgress> =>
 		fetchApi<CloudRestoreProgress>(`/restores/${id}/progress`),
+};
+
+// Docker Restores API
+export const dockerRestoresApi = {
+	list: async (params?: {
+		agent_id?: string;
+		status?: string;
+	}): Promise<DockerRestore[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.agent_id) searchParams.set('agent_id', params.agent_id);
+		if (params?.status) searchParams.set('status', params.status);
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/docker-restores?${query}` : '/docker-restores';
+		const response = await fetchApi<DockerRestoresResponse>(endpoint);
+		return response.docker_restores ?? [];
+	},
+
+	get: async (id: string): Promise<DockerRestore> =>
+		fetchApi<DockerRestore>(`/docker-restores/${id}`),
+
+	create: async (data: CreateDockerRestoreRequest): Promise<DockerRestore> =>
+		fetchApi<DockerRestore>('/docker-restores', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	preview: async (data: DockerRestorePreviewRequest): Promise<DockerRestorePlan> =>
+		fetchApi<DockerRestorePlan>('/docker-restores/preview', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getProgress: async (id: string): Promise<DockerRestoreProgress> =>
+		fetchApi<DockerRestoreProgress>(`/docker-restores/${id}/progress`),
+
+	listContainers: async (snapshotId: string, agentId: string): Promise<DockerContainer[]> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('agent_id', agentId);
+		const response = await fetchApi<DockerContainersResponse>(
+			`/docker-restores/snapshot/${snapshotId}/containers?${searchParams.toString()}`
+		);
+		return response.containers ?? [];
+	},
+
+	listVolumes: async (snapshotId: string, agentId: string): Promise<DockerVolume[]> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('agent_id', agentId);
+		const response = await fetchApi<DockerVolumesResponse>(
+			`/docker-restores/snapshot/${snapshotId}/volumes?${searchParams.toString()}`
+		);
+		return response.volumes ?? [];
+	},
+
+	cancel: async (id: string): Promise<DockerRestore> =>
+		fetchApi<DockerRestore>(`/docker-restores/${id}/cancel`, {
+			method: 'POST',
+		}),
 };
 
 // File History API
