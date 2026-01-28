@@ -2,6 +2,7 @@
 package api
 
 import (
+	"github.com/MacJediWizard/keldris/internal/activity"
 	"github.com/MacJediWizard/keldris/internal/api/handlers"
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
@@ -39,6 +40,8 @@ type Config struct {
 	ReportScheduler *reports.Scheduler
 	// LogBuffer for server log capture and viewing (optional).
 	LogBuffer *logs.LogBuffer
+	// ActivityFeed for real-time activity events (optional).
+	ActivityFeed *activity.Feed
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -167,6 +170,9 @@ func NewRouter(
 	backupScriptsHandler := handlers.NewBackupScriptsHandler(database, logger)
 	backupScriptsHandler.RegisterRoutes(apiV1)
 
+	containerHooksHandler := handlers.NewContainerHooksHandler(database, logger)
+	containerHooksHandler.RegisterRoutes(apiV1)
+
 	policiesHandler := handlers.NewPoliciesHandler(database, logger)
 	policiesHandler.RegisterRoutes(apiV1)
 
@@ -215,6 +221,9 @@ func NewRouter(
 	filtersHandler := handlers.NewFiltersHandler(database, logger)
 	filtersHandler.RegisterRoutes(apiV1)
 
+	favoritesHandler := handlers.NewFavoritesHandler(database, logger)
+	favoritesHandler.RegisterRoutes(apiV1)
+
 	searchHandler := handlers.NewSearchHandler(database, logger)
 	searchHandler.RegisterRoutes(apiV1)
 
@@ -258,6 +267,10 @@ func NewRouter(
 	configExportHandler := handlers.NewConfigExportHandler(database, logger)
 	configExportHandler.RegisterRoutes(apiV1)
 
+	// Docker restore routes
+	dockerRestoreHandler := handlers.NewDockerRestoreHandler(database, logger)
+	dockerRestoreHandler.RegisterRoutes(apiV1)
+
 	// DR Runbook routes
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
 	drRunbooksHandler.RegisterRoutes(apiV1)
@@ -291,6 +304,10 @@ func NewRouter(
 	downtimeHandler := handlers.NewDowntimeHandler(downtimeService, database, logger)
 	downtimeHandler.RegisterRoutes(apiV1)
 
+	// Docker health monitoring routes
+	dockerHandler := handlers.NewDockerHandler(database, logger)
+	dockerHandler.RegisterRoutes(apiV1)
+
 	// IP allowlists routes
 	ipAllowlistsHandler := handlers.NewIPAllowlistsHandler(database, ipFilter, logger)
 	ipAllowlistsHandler.RegisterRoutes(apiV1)
@@ -307,6 +324,10 @@ func NewRouter(
 	userSessionsHandler := handlers.NewUserSessionsHandler(database, logger)
 	userSessionsHandler.RegisterRoutes(apiV1)
 
+	// Recent items tracking routes
+	recentItemsHandler := handlers.NewRecentItemsHandler(database, logger)
+	recentItemsHandler.RegisterRoutes(apiV1)
+
 	// Lifecycle policy routes
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
@@ -316,6 +337,18 @@ func NewRouter(
 	dockerDiscoveryService := docker.NewDiscoveryService(database, dockerDiscoveryConfig, logger)
 	dockerBackupHandler := handlers.NewDockerBackupHandler(database, dockerDiscoveryService, logger)
 	dockerBackupHandler.RegisterRoutes(apiV1)
+
+	// Docker container logs backup routes
+	dockerLogBackupService := docker.NewLogBackupService(docker.DefaultLogBackupConfig(), logger)
+	dockerLogsHandler := handlers.NewDockerLogsHandler(database, dockerLogBackupService, logger)
+	dockerLogsHandler.RegisterRoutes(apiV1)
+
+	// Activity feed routes
+	if cfg.ActivityFeed != nil {
+		activityHandler := handlers.NewActivityHandler(database, cfg.ActivityFeed, logger)
+		activityHandler.RegisterRoutes(apiV1)
+		activityHandler.RegisterWebSocketRoute(r.Engine, middleware.AuthMiddleware(sessions, logger))
+	}
 
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
