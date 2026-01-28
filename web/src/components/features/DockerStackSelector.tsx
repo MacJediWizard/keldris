@@ -5,7 +5,10 @@ import { HelpTooltip } from '../ui/HelpTooltip';
 interface DockerStackSelectorProps {
 	stacks: DockerStack[];
 	selectedStackId: string | null;
-	onChange: (stackId: string | null, config: DockerStackBackupConfig | null) => void;
+	onChange: (
+		stackId: string | null,
+		config: DockerStackBackupConfig | null,
+	) => void;
 	agentId: string;
 	isLoading?: boolean;
 	onDiscover?: () => void;
@@ -58,7 +61,10 @@ export function DockerStackSelector({
 		}
 	};
 
-	const handleConfigChange = (field: keyof Omit<DockerStackBackupConfig, 'stack_id'>, value: boolean) => {
+	const handleConfigChange = (
+		field: keyof Omit<DockerStackBackupConfig, 'stack_id'>,
+		value: boolean,
+	) => {
 		if (!selectedStackId) return;
 
 		let newConfig: DockerStackBackupConfig;
@@ -212,11 +218,13 @@ export function DockerStackSelector({
 								<span className="font-medium text-gray-900 dark:text-white">
 									{selectedStack.name}
 								</span>
-								<span className={`px-2 py-0.5 rounded-full text-xs ${
-									selectedStack.is_running
-										? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-										: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-								}`}>
+								<span
+									className={`px-2 py-0.5 rounded-full text-xs ${
+										selectedStack.is_running
+											? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+											: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+									}`}
+								>
 									{selectedStack.is_running ? 'Running' : 'Stopped'}
 								</span>
 							</div>
@@ -230,7 +238,9 @@ export function DockerStackSelector({
 									<input
 										type="checkbox"
 										checked={includeEnvFiles}
-										onChange={(e) => handleConfigChange('include_env_files', e.target.checked)}
+										onChange={(e) =>
+											handleConfigChange('include_env_files', e.target.checked)
+										}
 										className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 									/>
 									<span className="text-gray-700 dark:text-gray-300">
@@ -246,7 +256,9 @@ export function DockerStackSelector({
 									<input
 										type="checkbox"
 										checked={stopForBackup}
-										onChange={(e) => handleConfigChange('stop_for_backup', e.target.checked)}
+										onChange={(e) =>
+											handleConfigChange('stop_for_backup', e.target.checked)
+										}
 										className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 									/>
 									<span className="text-gray-700 dark:text-gray-300">
@@ -262,7 +274,9 @@ export function DockerStackSelector({
 									<input
 										type="checkbox"
 										checked={exportImages}
-										onChange={(e) => handleConfigChange('export_images', e.target.checked)}
+										onChange={(e) =>
+											handleConfigChange('export_images', e.target.checked)
+										}
 										className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 									/>
 									<span className="text-gray-700 dark:text-gray-300">
@@ -295,8 +309,9 @@ export function DockerStackSelector({
 										/>
 									</svg>
 									<span>
-										Exporting Docker images can significantly increase backup size.
-										Images will be saved as tar archives alongside volume data.
+										Exporting Docker images can significantly increase backup
+										size. Images will be saved as tar archives alongside volume
+										data.
 									</span>
 								</div>
 							)}
