@@ -241,6 +241,39 @@ func (s *DiscordService) SendMaintenanceScheduled(data MaintenanceScheduledData)
 	return s.Send(msg)
 }
 
+// SendValidationFailed sends a backup validation failed notification to Discord.
+func (s *DiscordService) SendValidationFailed(data ValidationFailedData) error {
+	msg := &DiscordMessage{
+		Embeds: []DiscordEmbed{
+			{
+				Title:       fmt.Sprintf("Backup Validation Failed: %s", data.Hostname),
+				Description: fmt.Sprintf("Backup validation failed for schedule **%s**", data.ScheduleName),
+				Color:       DiscordColorRed,
+				Fields: []DiscordEmbedField{
+					{Name: "Host", Value: data.Hostname, Inline: true},
+					{Name: "Schedule", Value: data.ScheduleName, Inline: true},
+					{Name: "Snapshot ID", Value: data.SnapshotID, Inline: true},
+					{Name: "Backup Completed", Value: data.BackupCompletedAt.Format(time.RFC822), Inline: true},
+					{Name: "Validation Summary", Value: data.ValidationSummary, Inline: false},
+					{Name: "Error", Value: data.ErrorMessage, Inline: false},
+				},
+				Footer: &DiscordEmbedFooter{
+					Text: "Keldris Backup",
+				},
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending validation failed notification to Discord")
+
+	return s.Send(msg)
+}
+
 // TestConnection sends a test message to verify the Discord webhook is working.
 func (s *DiscordService) TestConnection() error {
 	msg := &DiscordMessage{

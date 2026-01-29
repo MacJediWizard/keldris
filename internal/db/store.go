@@ -11416,3 +11416,104 @@ func (db *DB) GetSLADashboardStats(ctx context.Context, orgID uuid.UUID) (*model
 
 	return stats, nil
 }
+
+// Backup Validation methods
+
+// CreateBackupValidation creates a new backup validation record.
+func (db *DB) CreateBackupValidation(ctx context.Context, v *models.BackupValidation) error {
+	var detailsJSON []byte
+	if v.Details != nil {
+		var err error
+		detailsJSON, err = json.Marshal(v.Details)
+		if err != nil {
+			return fmt.Errorf("marshal validation details: %w", err)
+		}
+	}
+
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO backup_validations (id, backup_id, repository_id, snapshot_id, started_at, completed_at,
+		                                status, duration_ms, error_message, details, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`, v.ID, v.BackupID, v.RepositoryID, v.SnapshotID, v.StartedAt, v.CompletedAt,
+		string(v.Status), v.DurationMs, v.ErrorMessage, detailsJSON, v.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create backup validation: %w", err)
+	}
+	return nil
+}
+
+// UpdateBackupValidation updates an existing backup validation record.
+func (db *DB) UpdateBackupValidation(ctx context.Context, v *models.BackupValidation) error {
+	var detailsJSON []byte
+	if v.Details != nil {
+		var err error
+		detailsJSON, err = json.Marshal(v.Details)
+		if err != nil {
+			return fmt.Errorf("marshal validation details: %w", err)
+		}
+	}
+
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE backup_validations
+		SET completed_at = $2, status = $3, duration_ms = $4, error_message = $5, details = $6
+		WHERE id = $1
+	`, v.ID, v.CompletedAt, string(v.Status), v.DurationMs, v.ErrorMessage, detailsJSON)
+	if err != nil {
+		return fmt.Errorf("update backup validation: %w", err)
+	}
+	return nil
+}
+
+// GetBackupValidationByBackupID returns the validation record for a backup.
+func (db *DB) GetBackupValidationByBackupID(ctx context.Context, backupID uuid.UUID) (*models.BackupValidation, error) {
+	var v models.BackupValidation
+	var statusStr string
+	var detailsJSON []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, backup_id, repository_id, snapshot_id, started_at, completed_at,
+		       status, duration_ms, error_message, details, created_at
+		FROM backup_validations
+		WHERE backup_id = $1
+	`, backupID).Scan(
+		&v.ID, &v.BackupID, &v.RepositoryID, &v.SnapshotID, &v.StartedAt, &v.CompletedAt,
+		&statusStr, &v.DurationMs, &v.ErrorMessage, &detailsJSON, &v.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get backup validation: %w", err)
+	}
+	v.Status = models.BackupValidationStatus(statusStr)
+	if detailsJSON != nil {
+		if err := json.Unmarshal(detailsJSON, &v.Details); err != nil {
+			return nil, fmt.Errorf("unmarshal validation details: %w", err)
+		}
+	}
+	return &v, nil
+}
+
+// GetLatestBackupValidationByRepoID returns the most recent validation for a repository.
+func (db *DB) GetLatestBackupValidationByRepoID(ctx context.Context, repoID uuid.UUID) (*models.BackupValidation, error) {
+	var v models.BackupValidation
+	var statusStr string
+	var detailsJSON []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, backup_id, repository_id, snapshot_id, started_at, completed_at,
+		       status, duration_ms, error_message, details, created_at
+		FROM backup_validations
+		WHERE repository_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, repoID).Scan(
+		&v.ID, &v.BackupID, &v.RepositoryID, &v.SnapshotID, &v.StartedAt, &v.CompletedAt,
+		&statusStr, &v.DurationMs, &v.ErrorMessage, &detailsJSON, &v.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get latest backup validation: %w", err)
+	}
+	v.Status = models.BackupValidationStatus(statusStr)
+	if detailsJSON != nil {
+		if err := json.Unmarshal(detailsJSON, &v.Details); err != nil {
+			return nil, fmt.Errorf("unmarshal validation details: %w", err)
+		}
+	}
+	return &v, nil
+}

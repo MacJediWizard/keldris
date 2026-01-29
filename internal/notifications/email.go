@@ -103,6 +103,18 @@ type MaintenanceScheduledData struct {
 	Duration string
 }
 
+// ValidationFailedData holds data for validation failed email template
+type ValidationFailedData struct {
+	Hostname           string
+	ScheduleName       string
+	SnapshotID         string
+	BackupCompletedAt  time.Time
+	ValidationFailedAt time.Time
+	ErrorMessage       string
+	ValidationSummary  string
+	ValidationDetails  string
+}
+
 // ReportEmailData holds data for report summary email template
 type ReportEmailData struct {
 	OrgName              string
@@ -194,6 +206,12 @@ func (s *EmailService) SendAgentOffline(to []string, data AgentOfflineData) erro
 func (s *EmailService) SendMaintenanceScheduled(to []string, data MaintenanceScheduledData) error {
 	subject := fmt.Sprintf("Scheduled Maintenance: %s", data.Title)
 	return s.sendTemplate(to, subject, "maintenance_scheduled.html", data)
+}
+
+// SendValidationFailed sends a validation failed notification email
+func (s *EmailService) SendValidationFailed(to []string, data ValidationFailedData) error {
+	subject := fmt.Sprintf("Backup Validation Failed: %s - %s", data.Hostname, data.ScheduleName)
+	return s.sendTemplate(to, subject, "validation_failed.html", data)
 }
 
 // SendReport sends a report summary email
