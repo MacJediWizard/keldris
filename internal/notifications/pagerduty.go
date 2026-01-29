@@ -297,6 +297,45 @@ func (s *PagerDutyService) SendMaintenanceScheduled(data MaintenanceScheduledDat
 	return s.Send(event)
 }
 
+// SendTestRestoreFailed sends a test restore failed notification to PagerDuty.
+func (s *PagerDutyService) SendTestRestoreFailed(data TestRestoreFailedData) error {
+	severity := s.getSeverity(PagerDutySeverityError)
+	if data.ConsecutiveFails > 2 {
+		severity = PagerDutySeverityCritical
+	}
+
+	event := &PagerDutyEvent{
+		EventAction: PagerDutyEventTrigger,
+		DedupKey:    fmt.Sprintf("test-restore-%s", data.RepositoryID),
+		Payload: PagerDutyPayload{
+			Summary:   fmt.Sprintf("Test Restore Failed: %s - %s", data.RepositoryName, data.ErrorMessage),
+			Source:    "keldris-backup",
+			Severity:  severity,
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			CustomDetails: map[string]interface{}{
+				"repository_name":    data.RepositoryName,
+				"repository_id":      data.RepositoryID,
+				"snapshot_id":        data.SnapshotID,
+				"sample_percentage":  data.SamplePercentage,
+				"files_restored":     data.FilesRestored,
+				"files_verified":     data.FilesVerified,
+				"started_at":         data.StartedAt.Format(time.RFC3339),
+				"failed_at":          data.FailedAt.Format(time.RFC3339),
+				"error_message":      data.ErrorMessage,
+				"consecutive_fails":  data.ConsecutiveFails,
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("repository", data.RepositoryName).
+		Str("error", data.ErrorMessage).
+		Int("consecutive_fails", data.ConsecutiveFails).
+		Msg("sending test restore failed notification to PagerDuty")
+
+	return s.Send(event)
+}
+
 // TestConnection sends a test event to verify the PagerDuty integration is working.
 func (s *PagerDutyService) TestConnection() error {
 	event := &PagerDutyEvent{
