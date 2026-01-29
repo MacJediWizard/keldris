@@ -54,7 +54,18 @@ type HealthMetrics struct {
 	UptimeSeconds   int64         `json:"uptime_seconds"`
 	ResticVersion   string        `json:"restic_version,omitempty"`
 	ResticAvailable bool          `json:"restic_available"`
+	PiholeInfo      *PiholeInfo   `json:"pihole_info,omitempty"`
 	Issues          []HealthIssue `json:"issues,omitempty"`
+}
+
+// PiholeInfo contains Pi-hole detection and version information.
+type PiholeInfo struct {
+	Installed       bool   `json:"installed"`
+	Version         string `json:"version,omitempty"`
+	FTLVersion      string `json:"ftl_version,omitempty"`
+	WebVersion      string `json:"web_version,omitempty"`
+	ConfigDir       string `json:"config_dir,omitempty"`
+	BlockingEnabled bool   `json:"blocking_enabled"`
 }
 
 // HealthIssue represents a specific health issue detected on an agent.
