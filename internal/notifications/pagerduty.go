@@ -297,6 +297,36 @@ func (s *PagerDutyService) SendMaintenanceScheduled(data MaintenanceScheduledDat
 	return s.Send(event)
 }
 
+// SendValidationFailed sends a backup validation failed notification to PagerDuty.
+func (s *PagerDutyService) SendValidationFailed(data ValidationFailedData) error {
+	event := &PagerDutyEvent{
+		EventAction: PagerDutyEventTrigger,
+		DedupKey:    fmt.Sprintf("validation-failed-%s-%s", data.Hostname, data.SnapshotID),
+		Payload: PagerDutyPayload{
+			Summary:   fmt.Sprintf("Backup Validation Failed: %s - %s", data.Hostname, data.ScheduleName),
+			Source:    "keldris-backup",
+			Severity:  PagerDutySeverityError,
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			CustomDetails: map[string]interface{}{
+				"hostname":            data.Hostname,
+				"schedule_name":       data.ScheduleName,
+				"snapshot_id":         data.SnapshotID,
+				"backup_completed_at": data.BackupCompletedAt.Format(time.RFC3339),
+				"validation_summary":  data.ValidationSummary,
+				"error_message":       data.ErrorMessage,
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending validation failed notification to PagerDuty")
+
+	return s.Send(event)
+}
+
 // TestConnection sends a test event to verify the PagerDuty integration is working.
 func (s *PagerDutyService) TestConnection() error {
 	event := &PagerDutyEvent{

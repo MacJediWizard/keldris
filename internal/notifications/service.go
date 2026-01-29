@@ -834,6 +834,215 @@ func (s *Service) TestChannel(channel *models.NotificationChannel) error {
 	}
 }
 
+// ValidationFailedResult contains information about a failed validation.
+type ValidationFailedResult struct {
+	OrgID             uuid.UUID
+	BackupID          uuid.UUID
+	ScheduleID        uuid.UUID
+	ScheduleName      string
+	AgentID           uuid.UUID
+	Hostname          string
+	SnapshotID        string
+	BackupCompletedAt time.Time
+	ValidationID      uuid.UUID
+	ErrorMessage      string
+	ValidationSummary string
+	ValidationDetails string
+}
+
+// NotifyValidationFailed sends notifications for a failed backup validation.
+func (s *Service) NotifyValidationFailed(ctx context.Context, result ValidationFailedResult) {
+	prefs, err := s.store.GetEnabledPreferencesForEvent(ctx, result.OrgID, models.EventValidationFailed)
+	if err != nil {
+		s.logger.Error().Err(err).
+			Str("org_id", result.OrgID.String()).
+			Str("event_type", string(models.EventValidationFailed)).
+			Msg("failed to get notification preferences")
+		return
+	}
+
+	if len(prefs) == 0 {
+		s.logger.Debug().
+			Str("org_id", result.OrgID.String()).
+			Str("event_type", string(models.EventValidationFailed)).
+			Msg("no notification preferences enabled for event")
+		return
+	}
+
+	for _, pref := range prefs {
+		go s.sendValidationFailedNotification(ctx, pref, result)
+	}
+}
+
+// sendValidationFailedNotification sends a validation failed notification.
+func (s *Service) sendValidationFailedNotification(ctx context.Context, pref *models.NotificationPreference, result ValidationFailedResult) {
+	channel, err := s.store.GetNotificationChannelByID(ctx, pref.ChannelID)
+	if err != nil {
+		s.logger.Error().Err(err).
+			Str("channel_id", pref.ChannelID.String()).
+			Msg("failed to get notification channel")
+		return
+	}
+
+	data := ValidationFailedData{
+		Hostname:           result.Hostname,
+		ScheduleName:       result.ScheduleName,
+		SnapshotID:         result.SnapshotID,
+		BackupCompletedAt:  result.BackupCompletedAt,
+		ValidationFailedAt: time.Now(),
+		ErrorMessage:       result.ErrorMessage,
+		ValidationSummary:  result.ValidationSummary,
+		ValidationDetails:  result.ValidationDetails,
+	}
+
+	subject := fmt.Sprintf("Backup Validation Failed: %s - %s", result.Hostname, result.ScheduleName)
+	recipient := s.getChannelRecipient(channel)
+
+	log := models.NewNotificationLog(result.OrgID, &channel.ID, string(pref.EventType), recipient, subject)
+	if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+		s.logger.Error().Err(err).Msg("failed to create notification log")
+	}
+
+	var sendErr error
+	switch channel.Type {
+	case models.ChannelTypeEmail:
+		sendErr = s.sendEmailValidationFailed(channel, data)
+	case models.ChannelTypeSlack:
+		sendErr = s.sendSlackValidationFailed(channel, data)
+	case models.ChannelTypeTeams:
+		sendErr = s.sendTeamsValidationFailed(channel, data)
+	case models.ChannelTypeDiscord:
+		sendErr = s.sendDiscordValidationFailed(channel, data)
+	case models.ChannelTypePagerDuty:
+		sendErr = s.sendPagerDutyValidationFailed(channel, data)
+	case models.ChannelTypeWebhook:
+		sendErr = s.sendWebhookValidationFailed(channel, data)
+	default:
+		s.logger.Warn().
+			Str("channel_type", string(channel.Type)).
+			Msg("unsupported notification channel type")
+		return
+	}
+
+	if sendErr != nil {
+		log.MarkFailed(sendErr.Error())
+		s.logger.Error().Err(sendErr).
+			Str("channel_id", channel.ID.String()).
+			Str("channel_type", string(channel.Type)).
+			Msg("failed to send validation failed notification")
+	} else {
+		log.MarkSent()
+		s.logger.Info().
+			Str("channel_id", channel.ID.String()).
+			Str("channel_type", string(channel.Type)).
+			Str("validation_id", result.ValidationID.String()).
+			Msg("validation failed notification sent")
+	}
+
+	if err := s.store.UpdateNotificationLog(ctx, log); err != nil {
+		s.logger.Error().Err(err).Msg("failed to update notification log")
+	}
+}
+
+// sendEmailValidationFailed sends a validation failed notification via email.
+func (s *Service) sendEmailValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
+	var emailConfig models.EmailChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
+		return fmt.Errorf("parse email config: %w", err)
+	}
+
+	smtpConfig := SMTPConfig{
+		Host:     emailConfig.Host,
+		Port:     emailConfig.Port,
+		Username: emailConfig.Username,
+		Password: emailConfig.Password,
+		From:     emailConfig.From,
+		TLS:      emailConfig.TLS,
+	}
+
+	emailService, err := NewEmailService(smtpConfig, s.logger)
+	if err != nil {
+		return fmt.Errorf("create email service: %w", err)
+	}
+
+	return emailService.SendValidationFailed([]string{emailConfig.From}, data)
+}
+
+// sendSlackValidationFailed sends a validation failed notification via Slack.
+func (s *Service) sendSlackValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
+	var config models.SlackChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse slack config: %w", err)
+	}
+
+	slackService, err := NewSlackService(config, s.logger)
+	if err != nil {
+		return fmt.Errorf("create slack service: %w", err)
+	}
+
+	return slackService.SendValidationFailed(data)
+}
+
+// sendTeamsValidationFailed sends a validation failed notification via Microsoft Teams.
+func (s *Service) sendTeamsValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
+	var config models.TeamsChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse teams config: %w", err)
+	}
+
+	teamsService, err := NewTeamsService(config, s.logger)
+	if err != nil {
+		return fmt.Errorf("create teams service: %w", err)
+	}
+
+	return teamsService.SendValidationFailed(data)
+}
+
+// sendDiscordValidationFailed sends a validation failed notification via Discord.
+func (s *Service) sendDiscordValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
+	var config models.DiscordChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse discord config: %w", err)
+	}
+
+	discordService, err := NewDiscordService(config, s.logger)
+	if err != nil {
+		return fmt.Errorf("create discord service: %w", err)
+	}
+
+	return discordService.SendValidationFailed(data)
+}
+
+// sendPagerDutyValidationFailed sends a validation failed notification via PagerDuty.
+func (s *Service) sendPagerDutyValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
+	var config models.PagerDutyChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse pagerduty config: %w", err)
+	}
+
+	pdService, err := NewPagerDutyService(config, s.logger)
+	if err != nil {
+		return fmt.Errorf("create pagerduty service: %w", err)
+	}
+
+	return pdService.SendValidationFailed(data)
+}
+
+// sendWebhookValidationFailed sends a validation failed notification via generic webhook.
+func (s *Service) sendWebhookValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
+	var config models.WebhookChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse webhook config: %w", err)
+	}
+
+	webhookService, err := NewWebhookService(config, s.logger)
+	if err != nil {
+		return fmt.Errorf("create webhook service: %w", err)
+	}
+
+	return webhookService.SendValidationFailed(data)
+}
+
 // formatDuration formats a duration into a human-readable string.
 func formatDuration(d time.Duration) string {
 	if d < time.Minute {

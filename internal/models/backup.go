@@ -56,6 +56,10 @@ type Backup struct {
 	OriginalBackupID        *uuid.UUID          `json:"original_backup_id,omitempty"`   // Original backup that was interrupted
 	ClassificationLevel     string              `json:"classification_level,omitempty"` // Data classification level
 	ClassificationDataTypes []string            `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	// Validation fields
+	ValidationID            *uuid.UUID          `json:"validation_id,omitempty"`     // ID of the associated validation record
+	ValidationStatus        string              `json:"validation_status,omitempty"` // Status: passed, failed, skipped, pending
+	ValidationError         string              `json:"validation_error,omitempty"`  // Error message if validation failed
 	CreatedAt               time.Time           `json:"created_at"`
 }
 
@@ -178,4 +182,21 @@ func (b *Backup) ClassificationDataTypesJSON() ([]byte, error) {
 		return []byte(`["general"]`), nil
 	}
 	return json.Marshal(b.ClassificationDataTypes)
+}
+
+// RecordValidation records the results of backup validation.
+func (b *Backup) RecordValidation(validationID uuid.UUID, status string, errMsg string) {
+	b.ValidationID = &validationID
+	b.ValidationStatus = status
+	b.ValidationError = errMsg
+}
+
+// IsValidated returns true if the backup has been validated.
+func (b *Backup) IsValidated() bool {
+	return b.ValidationID != nil
+}
+
+// ValidationPassed returns true if the backup validation passed.
+func (b *Backup) ValidationPassed() bool {
+	return b.ValidationStatus == "passed"
 }

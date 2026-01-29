@@ -240,6 +240,37 @@ func (s *SlackService) SendMaintenanceScheduled(data MaintenanceScheduledData) e
 	return s.Send(msg)
 }
 
+// SendValidationFailed sends a backup validation failed notification to Slack.
+func (s *SlackService) SendValidationFailed(data ValidationFailedData) error {
+	msg := &SlackMessage{
+		Attachments: []SlackAttachment{
+			{
+				Color:    "#dc3545", // Red
+				Title:    fmt.Sprintf("Backup Validation Failed: %s", data.Hostname),
+				Fallback: fmt.Sprintf("Backup validation failed for %s - %s: %s", data.Hostname, data.ScheduleName, data.ErrorMessage),
+				Fields: []SlackField{
+					{Title: "Host", Value: data.Hostname, Short: true},
+					{Title: "Schedule", Value: data.ScheduleName, Short: true},
+					{Title: "Snapshot ID", Value: data.SnapshotID, Short: true},
+					{Title: "Backup Completed", Value: data.BackupCompletedAt.Format(time.RFC822), Short: true},
+					{Title: "Validation Summary", Value: data.ValidationSummary, Short: false},
+					{Title: "Error", Value: data.ErrorMessage, Short: false},
+				},
+				Footer:    "Keldris Backup",
+				Timestamp: time.Now().Unix(),
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending validation failed notification to Slack")
+
+	return s.Send(msg)
+}
+
 // TestConnection sends a test message to verify the Slack webhook is working.
 func (s *SlackService) TestConnection() error {
 	msg := &SlackMessage{
