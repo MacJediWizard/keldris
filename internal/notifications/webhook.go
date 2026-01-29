@@ -258,6 +258,42 @@ func (s *WebhookService) SendMaintenanceScheduled(data MaintenanceScheduledData)
 	return s.Send(payload)
 }
 
+// SendTestRestoreFailed sends a test restore failed notification via webhook.
+func (s *WebhookService) SendTestRestoreFailed(data TestRestoreFailedData) error {
+	severity := "error"
+	if data.ConsecutiveFails > 2 {
+		severity = "critical"
+	}
+
+	payload := &WebhookPayload{
+		EventType: "test_restore_failed",
+		EventTime: time.Now().UTC(),
+		Source:    "keldris-backup",
+		Summary:   fmt.Sprintf("Test Restore Failed: %s", data.RepositoryName),
+		Severity:  severity,
+		Details: map[string]interface{}{
+			"repository_name":   data.RepositoryName,
+			"repository_id":     data.RepositoryID,
+			"snapshot_id":       data.SnapshotID,
+			"sample_percentage": data.SamplePercentage,
+			"files_restored":    data.FilesRestored,
+			"files_verified":    data.FilesVerified,
+			"started_at":        data.StartedAt.Format(time.RFC3339),
+			"failed_at":         data.FailedAt.Format(time.RFC3339),
+			"error_message":     data.ErrorMessage,
+			"consecutive_fails": data.ConsecutiveFails,
+		},
+	}
+
+	s.logger.Debug().
+		Str("repository", data.RepositoryName).
+		Str("error", data.ErrorMessage).
+		Int("consecutive_fails", data.ConsecutiveFails).
+		Msg("sending test restore failed notification via webhook")
+
+	return s.Send(payload)
+}
+
 // SendValidationFailed sends a backup validation failed notification via webhook.
 func (s *WebhookService) SendValidationFailed(data ValidationFailedData) error {
 	payload := &WebhookPayload{
@@ -267,12 +303,14 @@ func (s *WebhookService) SendValidationFailed(data ValidationFailedData) error {
 		Summary:   fmt.Sprintf("Backup Validation Failed: %s - %s", data.Hostname, data.ScheduleName),
 		Severity:  "error",
 		Details: map[string]interface{}{
-			"hostname":            data.Hostname,
-			"schedule_name":       data.ScheduleName,
-			"snapshot_id":         data.SnapshotID,
-			"backup_completed_at": data.BackupCompletedAt.Format(time.RFC3339),
-			"validation_summary":  data.ValidationSummary,
-			"error_message":       data.ErrorMessage,
+			"hostname":             data.Hostname,
+			"schedule":             data.ScheduleName,
+			"snapshot_id":          data.SnapshotID,
+			"backup_completed_at":  data.BackupCompletedAt.Format(time.RFC3339),
+			"validation_failed_at": data.ValidationFailedAt.Format(time.RFC3339),
+			"error_message":        data.ErrorMessage,
+			"validation_summary":   data.ValidationSummary,
+			"validation_details":   data.ValidationDetails,
 		},
 	}
 

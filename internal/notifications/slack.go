@@ -240,6 +240,46 @@ func (s *SlackService) SendMaintenanceScheduled(data MaintenanceScheduledData) e
 	return s.Send(msg)
 }
 
+// SendTestRestoreFailed sends a test restore failed notification to Slack.
+func (s *SlackService) SendTestRestoreFailed(data TestRestoreFailedData) error {
+	fields := []SlackField{
+		{Title: "Repository", Value: data.RepositoryName, Short: true},
+		{Title: "Snapshot ID", Value: data.SnapshotID, Short: true},
+		{Title: "Sample Size", Value: fmt.Sprintf("%d%%", data.SamplePercentage), Short: true},
+		{Title: "Files Restored", Value: fmt.Sprintf("%d", data.FilesRestored), Short: true},
+		{Title: "Files Verified", Value: fmt.Sprintf("%d", data.FilesVerified), Short: true},
+		{Title: "Failed At", Value: data.FailedAt.Format(time.RFC822), Short: true},
+		{Title: "Error", Value: data.ErrorMessage, Short: false},
+	}
+
+	if data.ConsecutiveFails > 1 {
+		fields = append([]SlackField{
+			{Title: "Consecutive Failures", Value: fmt.Sprintf("%d", data.ConsecutiveFails), Short: true},
+		}, fields...)
+	}
+
+	msg := &SlackMessage{
+		Attachments: []SlackAttachment{
+			{
+				Color:    "#dc2626", // Red
+				Title:    fmt.Sprintf("Test Restore Failed: %s", data.RepositoryName),
+				Fallback: fmt.Sprintf("Test restore failed for repository %s: %s", data.RepositoryName, data.ErrorMessage),
+				Fields:   fields,
+				Footer:   "Keldris Backup",
+				Timestamp: time.Now().Unix(),
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("repository", data.RepositoryName).
+		Str("error", data.ErrorMessage).
+		Int("consecutive_fails", data.ConsecutiveFails).
+		Msg("sending test restore failed notification to Slack")
+
+	return s.Send(msg)
+}
+
 // SendValidationFailed sends a backup validation failed notification to Slack.
 func (s *SlackService) SendValidationFailed(data ValidationFailedData) error {
 	msg := &SlackMessage{
@@ -253,13 +293,21 @@ func (s *SlackService) SendValidationFailed(data ValidationFailedData) error {
 					{Title: "Schedule", Value: data.ScheduleName, Short: true},
 					{Title: "Snapshot ID", Value: data.SnapshotID, Short: true},
 					{Title: "Backup Completed", Value: data.BackupCompletedAt.Format(time.RFC822), Short: true},
-					{Title: "Validation Summary", Value: data.ValidationSummary, Short: false},
+					{Title: "Validation Failed", Value: data.ValidationFailedAt.Format(time.RFC822), Short: true},
 					{Title: "Error", Value: data.ErrorMessage, Short: false},
 				},
 				Footer:    "Keldris Backup",
 				Timestamp: time.Now().Unix(),
 			},
 		},
+	}
+
+	if data.ValidationSummary != "" {
+		msg.Attachments[0].Fields = append(msg.Attachments[0].Fields, SlackField{
+			Title: "Validation Summary",
+			Value: data.ValidationSummary,
+			Short: false,
+		})
 	}
 
 	s.logger.Debug().
