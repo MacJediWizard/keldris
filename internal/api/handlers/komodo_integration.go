@@ -641,8 +641,8 @@ func (h *KomodoHandler) GetContainer(c *gin.Context) {
 	c.JSON(http.StatusOK, container)
 }
 
-// UpdateContainerRequest is the request body for updating a Komodo container.
-type UpdateContainerRequest struct {
+// UpdateKomodoContainerRequest is the request body for updating a Komodo container.
+type UpdateKomodoContainerRequest struct {
 	AgentID       *uuid.UUID `json:"agent_id,omitempty"`
 	BackupEnabled *bool      `json:"backup_enabled,omitempty"`
 }
@@ -662,7 +662,7 @@ func (h *KomodoHandler) UpdateContainer(c *gin.Context) {
 		return
 	}
 
-	var req UpdateContainerRequest
+	var req UpdateKomodoContainerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
 		return
