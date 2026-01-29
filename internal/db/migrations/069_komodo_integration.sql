@@ -1,4 +1,4 @@
--- 059_komodo_integration.sql
+-- 069_komodo_integration.sql
 -- Migration: Add Komodo integration tables
 
 -- Komodo integrations (connection to Komodo instances)
