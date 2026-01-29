@@ -343,6 +343,10 @@ func NewRouter(
 	dockerLogsHandler := handlers.NewDockerLogsHandler(database, dockerLogBackupService, logger)
 	dockerLogsHandler.RegisterRoutes(apiV1)
 
+	// Docker registry routes
+	dockerRegistriesHandler := handlers.NewDockerRegistriesHandler(database, keyManager, logger)
+	dockerRegistriesHandler.RegisterRoutes(apiV1)
+
 	// Activity feed routes
 	if cfg.ActivityFeed != nil {
 		activityHandler := handlers.NewActivityHandler(database, cfg.ActivityFeed, logger)
