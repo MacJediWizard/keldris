@@ -1,18 +1,15 @@
 import { useState } from 'react';
 import {
-	useKomodoIntegrations,
 	useCreateKomodoIntegration,
 	useDeleteKomodoIntegration,
-	useTestKomodoConnection,
-	useSyncKomodoIntegration,
 	useKomodoContainers,
+	useKomodoIntegrations,
 	useKomodoStacks,
 	useKomodoWebhookEvents,
+	useSyncKomodoIntegration,
+	useTestKomodoConnection,
 } from '../hooks/useKomodoIntegration';
-import type {
-	KomodoIntegration,
-	KomodoIntegrationConfig,
-} from '../lib/types';
+import type { KomodoIntegration, KomodoIntegrationConfig } from '../lib/types';
 import { formatDate } from '../lib/utils';
 
 function LoadingRow() {
@@ -36,16 +33,23 @@ function LoadingRow() {
 
 function StatusBadge({ status }: { status: string }) {
 	const colors = {
-		active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-		disconnected: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400',
+		active:
+			'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+		disconnected:
+			'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400',
 		error: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-		running: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+		running:
+			'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
 		stopped: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400',
-		restarting: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+		restarting:
+			'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
 		unknown: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400',
-		received: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-		processing: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-		processed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+		received:
+			'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+		processing:
+			'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+		processed:
+			'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
 		failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
 	};
 
@@ -224,7 +228,8 @@ function AddIntegrationModal({ isOpen, onClose }: AddIntegrationModalProps) {
 
 					{createIntegration.isError && (
 						<p className="mt-3 text-sm text-red-600 dark:text-red-400">
-							{createIntegration.error?.message || 'Failed to create integration'}
+							{createIntegration.error?.message ||
+								'Failed to create integration'}
 						</p>
 					)}
 				</form>
@@ -256,7 +261,11 @@ function IntegrationRow({ integration }: { integration: KomodoIntegration }) {
 	};
 
 	const handleDelete = async () => {
-		if (confirm('Are you sure you want to delete this integration? This will also remove all discovered containers and stacks.')) {
+		if (
+			confirm(
+				'Are you sure you want to delete this integration? This will also remove all discovered containers and stacks.',
+			)
+		) {
 			try {
 				await deleteIntegration.mutateAsync(integration.id);
 			} catch {
@@ -293,16 +302,24 @@ function IntegrationRow({ integration }: { integration: KomodoIntegration }) {
 			<td className="px-6 py-4 text-right">
 				<div className="relative">
 					<button
+						type="button"
 						onClick={() => setShowActions(!showActions)}
 						className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+						aria-label="Actions menu"
 					>
-						<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+						<svg
+							className="w-5 h-5"
+							fill="currentColor"
+							viewBox="0 0 20 20"
+							aria-hidden="true"
+						>
 							<path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
 						</svg>
 					</button>
 					{showActions && (
 						<div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
 							<button
+								type="button"
 								onClick={() => {
 									setShowActions(false);
 									handleTest();
@@ -313,6 +330,7 @@ function IntegrationRow({ integration }: { integration: KomodoIntegration }) {
 								{testConnection.isPending ? 'Testing...' : 'Test Connection'}
 							</button>
 							<button
+								type="button"
 								onClick={() => {
 									setShowActions(false);
 									handleSync();
@@ -324,6 +342,7 @@ function IntegrationRow({ integration }: { integration: KomodoIntegration }) {
 							</button>
 							<hr className="my-1 border-gray-200 dark:border-gray-700" />
 							<button
+								type="button"
 								onClick={() => {
 									setShowActions(false);
 									handleDelete();
@@ -383,13 +402,20 @@ function ContainersTable() {
 						</>
 					) : containers?.length === 0 ? (
 						<tr>
-							<td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-								No containers discovered yet. Add an integration and sync to discover containers.
+							<td
+								colSpan={5}
+								className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+							>
+								No containers discovered yet. Add an integration and sync to
+								discover containers.
 							</td>
 						</tr>
 					) : (
 						containers?.map((container) => (
-							<tr key={container.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+							<tr
+								key={container.id}
+								className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+							>
 								<td className="px-6 py-4">
 									<div className="font-medium text-gray-900 dark:text-white">
 										{container.name}
@@ -408,7 +434,9 @@ function ContainersTable() {
 								</td>
 								<td className="px-6 py-4">
 									{container.backup_enabled ? (
-										<span className="text-green-600 dark:text-green-400">Enabled</span>
+										<span className="text-green-600 dark:text-green-400">
+											Enabled
+										</span>
 									) : (
 										<span className="text-gray-400">Disabled</span>
 									)}
@@ -463,13 +491,19 @@ function StacksTable() {
 						</>
 					) : stacks?.length === 0 ? (
 						<tr>
-							<td colSpan={4} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+							<td
+								colSpan={4}
+								className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+							>
 								No stacks discovered yet.
 							</td>
 						</tr>
 					) : (
 						stacks?.map((stack) => (
-							<tr key={stack.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+							<tr
+								key={stack.id}
+								className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+							>
 								<td className="px-6 py-4">
 									<div className="font-medium text-gray-900 dark:text-white">
 										{stack.name}
@@ -531,13 +565,19 @@ function WebhookEventsTable() {
 						</>
 					) : events?.length === 0 ? (
 						<tr>
-							<td colSpan={4} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+							<td
+								colSpan={4}
+								className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+							>
 								No webhook events received yet.
 							</td>
 						</tr>
 					) : (
 						events?.map((event) => (
-							<tr key={event.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+							<tr
+								key={event.id}
+								className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+							>
 								<td className="px-6 py-4">
 									<span className="font-mono text-sm text-gray-900 dark:text-white">
 										{event.event_type}
@@ -563,7 +603,9 @@ function WebhookEventsTable() {
 
 export default function KomodoSettings() {
 	const [showAddModal, setShowAddModal] = useState(false);
-	const [activeTab, setActiveTab] = useState<'integrations' | 'containers' | 'stacks' | 'events'>('integrations');
+	const [activeTab, setActiveTab] = useState<
+		'integrations' | 'containers' | 'stacks' | 'events'
+	>('integrations');
 	const { data: integrations, isLoading, error } = useKomodoIntegrations();
 
 	const tabs = [
@@ -581,10 +623,12 @@ export default function KomodoSettings() {
 						Komodo Integration
 					</h1>
 					<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-						Connect to Komodo to import stacks and containers, trigger backups, and sync status.
+						Connect to Komodo to import stacks and containers, trigger backups,
+						and sync status.
 					</p>
 				</div>
 				<button
+					type="button"
 					onClick={() => setShowAddModal(true)}
 					className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700"
 				>
@@ -597,6 +641,7 @@ export default function KomodoSettings() {
 				<nav className="flex gap-8">
 					{tabs.map((tab) => (
 						<button
+							type="button"
 							key={tab.id}
 							onClick={() => setActiveTab(tab.id)}
 							className={`pb-4 text-sm font-medium border-b-2 ${
@@ -613,55 +658,58 @@ export default function KomodoSettings() {
 
 			{/* Content */}
 			<div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-				{activeTab === 'integrations' && (
-					<>
-						{error ? (
-							<div className="p-6 text-center text-red-600 dark:text-red-400">
-								Failed to load integrations: {error.message}
-							</div>
-						) : (
-							<table className="min-w-full">
-								<thead>
-									<tr className="border-b border-gray-200 dark:border-gray-700">
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Integration
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Status
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Last Sync
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Enabled
-										</th>
-										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Actions
-										</th>
+				{activeTab === 'integrations' &&
+					(error ? (
+						<div className="p-6 text-center text-red-600 dark:text-red-400">
+							Failed to load integrations: {error.message}
+						</div>
+					) : (
+						<table className="min-w-full">
+							<thead>
+								<tr className="border-b border-gray-200 dark:border-gray-700">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Integration
+									</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Status
+									</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Last Sync
+									</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Enabled
+									</th>
+									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Actions
+									</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+								{isLoading ? (
+									<>
+										<LoadingRow />
+										<LoadingRow />
+									</>
+								) : integrations?.length === 0 ? (
+									<tr>
+										<td
+											colSpan={5}
+											className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+										>
+											No integrations configured. Add one to get started.
+										</td>
 									</tr>
-								</thead>
-								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-									{isLoading ? (
-										<>
-											<LoadingRow />
-											<LoadingRow />
-										</>
-									) : integrations?.length === 0 ? (
-										<tr>
-											<td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-												No integrations configured. Add one to get started.
-											</td>
-										</tr>
-									) : (
-										integrations?.map((integration) => (
-											<IntegrationRow key={integration.id} integration={integration} />
-										))
-									)}
-								</tbody>
-							</table>
-						)}
-					</>
-				)}
+								) : (
+									integrations?.map((integration) => (
+										<IntegrationRow
+											key={integration.id}
+											integration={integration}
+										/>
+									))
+								)}
+							</tbody>
+						</table>
+					))}
 
 				{activeTab === 'containers' && <ContainersTable />}
 				{activeTab === 'stacks' && <StacksTable />}
@@ -669,31 +717,40 @@ export default function KomodoSettings() {
 			</div>
 
 			{/* Webhook URL Info */}
-			{activeTab === 'integrations' && integrations && integrations.length > 0 && (
-				<div className="mt-6 bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-					<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-						Webhook Configuration
-					</h3>
-					<p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-						Configure Komodo to send webhooks to the following URL to trigger backups:
-					</p>
-					<div className="flex items-center gap-2">
-						<code className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-sm font-mono text-gray-900 dark:text-white">
-							{window.location.origin}/webhooks/komodo/{'{integration_id}'}
-						</code>
-						<button
-							onClick={() => {
-								navigator.clipboard.writeText(`${window.location.origin}/webhooks/komodo/`);
-							}}
-							className="px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded"
-						>
-							Copy
-						</button>
+			{activeTab === 'integrations' &&
+				integrations &&
+				integrations.length > 0 && (
+					<div className="mt-6 bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+						<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+							Webhook Configuration
+						</h3>
+						<p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+							Configure Komodo to send webhooks to the following URL to trigger
+							backups:
+						</p>
+						<div className="flex items-center gap-2">
+							<code className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-sm font-mono text-gray-900 dark:text-white">
+								{window.location.origin}/webhooks/komodo/{'{integration_id}'}
+							</code>
+							<button
+								type="button"
+								onClick={() => {
+									navigator.clipboard.writeText(
+										`${window.location.origin}/webhooks/komodo/`,
+									);
+								}}
+								className="px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded"
+							>
+								Copy
+							</button>
+						</div>
 					</div>
-				</div>
-			)}
+				)}
 
-			<AddIntegrationModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} />
+			<AddIntegrationModal
+				isOpen={showAddModal}
+				onClose={() => setShowAddModal(false)}
+			/>
 		</div>
 	);
 }

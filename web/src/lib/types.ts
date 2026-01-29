@@ -5017,7 +5017,11 @@ export interface ExpiringCredentialsResponse {
 // =============================================================================
 
 export type KomodoIntegrationStatus = 'active' | 'disconnected' | 'error';
-export type KomodoContainerStatus = 'running' | 'stopped' | 'restarting' | 'unknown';
+export type KomodoContainerStatus =
+	| 'running'
+	| 'stopped'
+	| 'restarting'
+	| 'unknown';
 export type KomodoWebhookEventType =
 	| 'container.start'
 	| 'container.stop'
@@ -5026,7 +5030,11 @@ export type KomodoWebhookEventType =
 	| 'stack.update'
 	| 'backup.trigger'
 	| 'unknown';
-export type KomodoWebhookEventStatus = 'received' | 'processing' | 'processed' | 'failed';
+export type KomodoWebhookEventStatus =
+	| 'received'
+	| 'processing'
+	| 'processed'
+	| 'failed';
 
 export interface KomodoIntegration {
 	id: string;
