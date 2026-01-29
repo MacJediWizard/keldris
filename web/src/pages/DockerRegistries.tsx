@@ -271,9 +271,8 @@ function RegistryForm({
 							{label}
 							<textarea
 								value={
-									(credentials as Record<string, string | undefined>)[
-										field
-									] ?? ''
+									(credentials as Record<string, string | undefined>)[field] ??
+									''
 								}
 								onChange={(e) =>
 									setCredentials({
@@ -469,9 +468,8 @@ function RotateCredentialsModal({
 							{label}
 							<textarea
 								value={
-									(credentials as Record<string, string | undefined>)[
-										field
-									] ?? ''
+									(credentials as Record<string, string | undefined>)[field] ??
+									''
 								}
 								onChange={(e) =>
 									setCredentials({
