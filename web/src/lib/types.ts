@@ -4173,3 +4173,145 @@ export interface SLADashboardResponse {
 export interface SLAReportResponse {
 	report: SLAReport;
 }
+
+// =============================================================================
+// Komodo Integration Types
+// =============================================================================
+
+export type KomodoIntegrationStatus = 'active' | 'disconnected' | 'error';
+export type KomodoContainerStatus = 'running' | 'stopped' | 'restarting' | 'unknown';
+export type KomodoWebhookEventType =
+	| 'container.start'
+	| 'container.stop'
+	| 'container.restart'
+	| 'stack.deploy'
+	| 'stack.update'
+	| 'backup.trigger'
+	| 'unknown';
+export type KomodoWebhookEventStatus = 'received' | 'processing' | 'processed' | 'failed';
+
+export interface KomodoIntegration {
+	id: string;
+	org_id: string;
+	name: string;
+	url: string;
+	status: KomodoIntegrationStatus;
+	last_sync_at?: string;
+	last_error?: string;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface KomodoIntegrationConfig {
+	api_key: string;
+	username?: string;
+	password?: string;
+}
+
+export interface KomodoContainer {
+	id: string;
+	org_id: string;
+	integration_id: string;
+	komodo_id: string;
+	name: string;
+	image?: string;
+	stack_name?: string;
+	stack_id?: string;
+	status: KomodoContainerStatus;
+	agent_id?: string;
+	volumes?: string[];
+	labels?: Record<string, string>;
+	backup_enabled: boolean;
+	last_discovered_at: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface KomodoStack {
+	id: string;
+	org_id: string;
+	integration_id: string;
+	komodo_id: string;
+	name: string;
+	server_id?: string;
+	server_name?: string;
+	container_count: number;
+	running_count: number;
+	last_discovered_at: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface KomodoWebhookEvent {
+	id: string;
+	org_id: string;
+	integration_id: string;
+	event_type: KomodoWebhookEventType;
+	status: KomodoWebhookEventStatus;
+	error_message?: string;
+	processed_at?: string;
+	created_at: string;
+}
+
+export interface KomodoDiscoveryResult {
+	stacks: KomodoStack[];
+	containers: KomodoContainer[];
+	new_stacks: number;
+	updated_stacks: number;
+	new_containers: number;
+	updated_containers: number;
+	discovered_at: string;
+}
+
+export interface CreateKomodoIntegrationRequest {
+	name: string;
+	url: string;
+	config: KomodoIntegrationConfig;
+}
+
+export interface UpdateKomodoIntegrationRequest {
+	name?: string;
+	url?: string;
+	config?: KomodoIntegrationConfig;
+	enabled?: boolean;
+}
+
+export interface UpdateKomodoContainerRequest {
+	agent_id?: string;
+	backup_enabled?: boolean;
+}
+
+export interface KomodoIntegrationsResponse {
+	integrations: KomodoIntegration[];
+}
+
+export interface KomodoIntegrationResponse {
+	integration: KomodoIntegration;
+	containers?: KomodoContainer[];
+	stacks?: KomodoStack[];
+}
+
+export interface KomodoContainersResponse {
+	containers: KomodoContainer[];
+}
+
+export interface KomodoStacksResponse {
+	stacks: KomodoStack[];
+}
+
+export interface KomodoWebhookEventsResponse {
+	events: KomodoWebhookEvent[];
+}
+
+export interface KomodoSyncResponse {
+	message: string;
+	stacks: number;
+	containers: number;
+	result: KomodoDiscoveryResult;
+}
+
+export interface KomodoConnectionTestResponse {
+	message: string;
+	status: KomodoIntegrationStatus;
+}

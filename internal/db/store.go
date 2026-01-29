@@ -11416,3 +11416,420 @@ func (db *DB) GetSLADashboardStats(ctx context.Context, orgID uuid.UUID) (*model
 
 	return stats, nil
 }
+
+// =============================================================================
+// Komodo Integration Methods
+// =============================================================================
+
+// GetKomodoIntegrationsByOrgID returns all Komodo integrations for an organization.
+func (db *DB) GetKomodoIntegrationsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.KomodoIntegration, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, url, config_encrypted, status, last_sync_at,
+		       last_error, enabled, created_at, updated_at
+		FROM komodo_integrations
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get komodo integrations: %w", err)
+	}
+	defer rows.Close()
+
+	var integrations []*models.KomodoIntegration
+	for rows.Next() {
+		var i models.KomodoIntegration
+		err := rows.Scan(
+			&i.ID, &i.OrgID, &i.Name, &i.URL, &i.ConfigEncrypted, &i.Status,
+			&i.LastSyncAt, &i.LastError, &i.Enabled, &i.CreatedAt, &i.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan komodo integration: %w", err)
+		}
+		integrations = append(integrations, &i)
+	}
+
+	return integrations, nil
+}
+
+// GetKomodoIntegrationByID returns a Komodo integration by ID.
+func (db *DB) GetKomodoIntegrationByID(ctx context.Context, id uuid.UUID) (*models.KomodoIntegration, error) {
+	var i models.KomodoIntegration
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, url, config_encrypted, status, last_sync_at,
+		       last_error, enabled, created_at, updated_at
+		FROM komodo_integrations
+		WHERE id = $1
+	`, id).Scan(
+		&i.ID, &i.OrgID, &i.Name, &i.URL, &i.ConfigEncrypted, &i.Status,
+		&i.LastSyncAt, &i.LastError, &i.Enabled, &i.CreatedAt, &i.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get komodo integration: %w", err)
+	}
+	return &i, nil
+}
+
+// CreateKomodoIntegration creates a new Komodo integration.
+func (db *DB) CreateKomodoIntegration(ctx context.Context, integration *models.KomodoIntegration) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO komodo_integrations (id, org_id, name, url, config_encrypted, status,
+		                                 last_sync_at, last_error, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`, integration.ID, integration.OrgID, integration.Name, integration.URL, integration.ConfigEncrypted,
+		integration.Status, integration.LastSyncAt, integration.LastError, integration.Enabled,
+		integration.CreatedAt, integration.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create komodo integration: %w", err)
+	}
+	return nil
+}
+
+// UpdateKomodoIntegration updates a Komodo integration.
+func (db *DB) UpdateKomodoIntegration(ctx context.Context, integration *models.KomodoIntegration) error {
+	integration.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE komodo_integrations
+		SET name = $2, url = $3, config_encrypted = $4, status = $5, last_sync_at = $6,
+		    last_error = $7, enabled = $8, updated_at = $9
+		WHERE id = $1
+	`, integration.ID, integration.Name, integration.URL, integration.ConfigEncrypted,
+		integration.Status, integration.LastSyncAt, integration.LastError, integration.Enabled,
+		integration.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update komodo integration: %w", err)
+	}
+	return nil
+}
+
+// DeleteKomodoIntegration deletes a Komodo integration by ID.
+func (db *DB) DeleteKomodoIntegration(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM komodo_integrations WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete komodo integration: %w", err)
+	}
+	return nil
+}
+
+// GetKomodoContainersByOrgID returns all Komodo containers for an organization.
+func (db *DB) GetKomodoContainersByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.KomodoContainer, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, integration_id, komodo_id, name, image, stack_name, stack_id,
+		       status, agent_id, volumes, labels, backup_enabled, last_discovered_at,
+		       created_at, updated_at
+		FROM komodo_containers
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get komodo containers: %w", err)
+	}
+	defer rows.Close()
+
+	return db.scanKomodoContainers(rows)
+}
+
+// GetKomodoContainersByIntegrationID returns all containers for a specific integration.
+func (db *DB) GetKomodoContainersByIntegrationID(ctx context.Context, integrationID uuid.UUID) ([]*models.KomodoContainer, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, integration_id, komodo_id, name, image, stack_name, stack_id,
+		       status, agent_id, volumes, labels, backup_enabled, last_discovered_at,
+		       created_at, updated_at
+		FROM komodo_containers
+		WHERE integration_id = $1
+		ORDER BY name
+	`, integrationID)
+	if err != nil {
+		return nil, fmt.Errorf("get komodo containers by integration: %w", err)
+	}
+	defer rows.Close()
+
+	return db.scanKomodoContainers(rows)
+}
+
+// GetKomodoContainerByID returns a Komodo container by ID.
+func (db *DB) GetKomodoContainerByID(ctx context.Context, id uuid.UUID) (*models.KomodoContainer, error) {
+	var c models.KomodoContainer
+	var labelsJSON []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, integration_id, komodo_id, name, image, stack_name, stack_id,
+		       status, agent_id, volumes, labels, backup_enabled, last_discovered_at,
+		       created_at, updated_at
+		FROM komodo_containers
+		WHERE id = $1
+	`, id).Scan(
+		&c.ID, &c.OrgID, &c.IntegrationID, &c.KomodoID, &c.Name, &c.Image, &c.StackName,
+		&c.StackID, &c.Status, &c.AgentID, &c.Volumes, &labelsJSON, &c.BackupEnabled,
+		&c.LastDiscoveredAt, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get komodo container: %w", err)
+	}
+	if labelsJSON != nil {
+		json.Unmarshal(labelsJSON, &c.Labels)
+	}
+	return &c, nil
+}
+
+// GetKomodoContainerByKomodoID returns a container by its Komodo ID within an integration.
+func (db *DB) GetKomodoContainerByKomodoID(ctx context.Context, integrationID uuid.UUID, komodoID string) (*models.KomodoContainer, error) {
+	var c models.KomodoContainer
+	var labelsJSON []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, integration_id, komodo_id, name, image, stack_name, stack_id,
+		       status, agent_id, volumes, labels, backup_enabled, last_discovered_at,
+		       created_at, updated_at
+		FROM komodo_containers
+		WHERE integration_id = $1 AND komodo_id = $2
+	`, integrationID, komodoID).Scan(
+		&c.ID, &c.OrgID, &c.IntegrationID, &c.KomodoID, &c.Name, &c.Image, &c.StackName,
+		&c.StackID, &c.Status, &c.AgentID, &c.Volumes, &labelsJSON, &c.BackupEnabled,
+		&c.LastDiscoveredAt, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get komodo container by komodo_id: %w", err)
+	}
+	if labelsJSON != nil {
+		json.Unmarshal(labelsJSON, &c.Labels)
+	}
+	return &c, nil
+}
+
+// CreateKomodoContainer creates a new Komodo container.
+func (db *DB) CreateKomodoContainer(ctx context.Context, container *models.KomodoContainer) error {
+	labelsJSON, _ := json.Marshal(container.Labels)
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO komodo_containers (id, org_id, integration_id, komodo_id, name, image,
+		                               stack_name, stack_id, status, agent_id, volumes, labels,
+		                               backup_enabled, last_discovered_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+	`, container.ID, container.OrgID, container.IntegrationID, container.KomodoID, container.Name,
+		container.Image, container.StackName, container.StackID, container.Status, container.AgentID,
+		container.Volumes, labelsJSON, container.BackupEnabled, container.LastDiscoveredAt,
+		container.CreatedAt, container.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create komodo container: %w", err)
+	}
+	return nil
+}
+
+// UpdateKomodoContainer updates a Komodo container.
+func (db *DB) UpdateKomodoContainer(ctx context.Context, container *models.KomodoContainer) error {
+	container.UpdatedAt = time.Now()
+	labelsJSON, _ := json.Marshal(container.Labels)
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE komodo_containers
+		SET name = $2, image = $3, stack_name = $4, stack_id = $5, status = $6, agent_id = $7,
+		    volumes = $8, labels = $9, backup_enabled = $10, last_discovered_at = $11, updated_at = $12
+		WHERE id = $1
+	`, container.ID, container.Name, container.Image, container.StackName, container.StackID,
+		container.Status, container.AgentID, container.Volumes, labelsJSON, container.BackupEnabled,
+		container.LastDiscoveredAt, container.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update komodo container: %w", err)
+	}
+	return nil
+}
+
+// UpsertKomodoContainer inserts or updates a Komodo container based on komodo_id.
+func (db *DB) UpsertKomodoContainer(ctx context.Context, container *models.KomodoContainer) error {
+	container.UpdatedAt = time.Now()
+	labelsJSON, _ := json.Marshal(container.Labels)
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO komodo_containers (id, org_id, integration_id, komodo_id, name, image,
+		                               stack_name, stack_id, status, agent_id, volumes, labels,
+		                               backup_enabled, last_discovered_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		ON CONFLICT (integration_id, komodo_id)
+		DO UPDATE SET name = EXCLUDED.name, image = EXCLUDED.image, stack_name = EXCLUDED.stack_name,
+		              stack_id = EXCLUDED.stack_id, status = EXCLUDED.status, volumes = EXCLUDED.volumes,
+		              labels = EXCLUDED.labels, last_discovered_at = EXCLUDED.last_discovered_at,
+		              updated_at = EXCLUDED.updated_at
+	`, container.ID, container.OrgID, container.IntegrationID, container.KomodoID, container.Name,
+		container.Image, container.StackName, container.StackID, container.Status, container.AgentID,
+		container.Volumes, labelsJSON, container.BackupEnabled, container.LastDiscoveredAt,
+		container.CreatedAt, container.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("upsert komodo container: %w", err)
+	}
+	return nil
+}
+
+// DeleteKomodoContainer deletes a Komodo container by ID.
+func (db *DB) DeleteKomodoContainer(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM komodo_containers WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete komodo container: %w", err)
+	}
+	return nil
+}
+
+// scanKomodoContainers scans rows into KomodoContainer slice.
+func (db *DB) scanKomodoContainers(rows pgx.Rows) ([]*models.KomodoContainer, error) {
+	var containers []*models.KomodoContainer
+	for rows.Next() {
+		var c models.KomodoContainer
+		var labelsJSON []byte
+		err := rows.Scan(
+			&c.ID, &c.OrgID, &c.IntegrationID, &c.KomodoID, &c.Name, &c.Image, &c.StackName,
+			&c.StackID, &c.Status, &c.AgentID, &c.Volumes, &labelsJSON, &c.BackupEnabled,
+			&c.LastDiscoveredAt, &c.CreatedAt, &c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan komodo container: %w", err)
+		}
+		if labelsJSON != nil {
+			json.Unmarshal(labelsJSON, &c.Labels)
+		}
+		containers = append(containers, &c)
+	}
+	return containers, nil
+}
+
+// GetKomodoStacksByOrgID returns all Komodo stacks for an organization.
+func (db *DB) GetKomodoStacksByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.KomodoStack, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, integration_id, komodo_id, name, server_id, server_name,
+		       container_count, running_count, last_discovered_at, created_at, updated_at
+		FROM komodo_stacks
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get komodo stacks: %w", err)
+	}
+	defer rows.Close()
+
+	return db.scanKomodoStacks(rows)
+}
+
+// GetKomodoStacksByIntegrationID returns all stacks for a specific integration.
+func (db *DB) GetKomodoStacksByIntegrationID(ctx context.Context, integrationID uuid.UUID) ([]*models.KomodoStack, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, integration_id, komodo_id, name, server_id, server_name,
+		       container_count, running_count, last_discovered_at, created_at, updated_at
+		FROM komodo_stacks
+		WHERE integration_id = $1
+		ORDER BY name
+	`, integrationID)
+	if err != nil {
+		return nil, fmt.Errorf("get komodo stacks by integration: %w", err)
+	}
+	defer rows.Close()
+
+	return db.scanKomodoStacks(rows)
+}
+
+// GetKomodoStackByID returns a Komodo stack by ID.
+func (db *DB) GetKomodoStackByID(ctx context.Context, id uuid.UUID) (*models.KomodoStack, error) {
+	var s models.KomodoStack
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, integration_id, komodo_id, name, server_id, server_name,
+		       container_count, running_count, last_discovered_at, created_at, updated_at
+		FROM komodo_stacks
+		WHERE id = $1
+	`, id).Scan(
+		&s.ID, &s.OrgID, &s.IntegrationID, &s.KomodoID, &s.Name, &s.ServerID, &s.ServerName,
+		&s.ContainerCount, &s.RunningCount, &s.LastDiscoveredAt, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get komodo stack: %w", err)
+	}
+	return &s, nil
+}
+
+// UpsertKomodoStack inserts or updates a Komodo stack based on komodo_id.
+func (db *DB) UpsertKomodoStack(ctx context.Context, stack *models.KomodoStack) error {
+	stack.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO komodo_stacks (id, org_id, integration_id, komodo_id, name, server_id,
+		                           server_name, container_count, running_count,
+		                           last_discovered_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		ON CONFLICT (integration_id, komodo_id)
+		DO UPDATE SET name = EXCLUDED.name, server_id = EXCLUDED.server_id,
+		              server_name = EXCLUDED.server_name, container_count = EXCLUDED.container_count,
+		              running_count = EXCLUDED.running_count, last_discovered_at = EXCLUDED.last_discovered_at,
+		              updated_at = EXCLUDED.updated_at
+	`, stack.ID, stack.OrgID, stack.IntegrationID, stack.KomodoID, stack.Name, stack.ServerID,
+		stack.ServerName, stack.ContainerCount, stack.RunningCount, stack.LastDiscoveredAt,
+		stack.CreatedAt, stack.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("upsert komodo stack: %w", err)
+	}
+	return nil
+}
+
+// scanKomodoStacks scans rows into KomodoStack slice.
+func (db *DB) scanKomodoStacks(rows pgx.Rows) ([]*models.KomodoStack, error) {
+	var stacks []*models.KomodoStack
+	for rows.Next() {
+		var s models.KomodoStack
+		err := rows.Scan(
+			&s.ID, &s.OrgID, &s.IntegrationID, &s.KomodoID, &s.Name, &s.ServerID, &s.ServerName,
+			&s.ContainerCount, &s.RunningCount, &s.LastDiscoveredAt, &s.CreatedAt, &s.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan komodo stack: %w", err)
+		}
+		stacks = append(stacks, &s)
+	}
+	return stacks, nil
+}
+
+// CreateKomodoWebhookEvent creates a new Komodo webhook event.
+func (db *DB) CreateKomodoWebhookEvent(ctx context.Context, event *models.KomodoWebhookEvent) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO komodo_webhook_events (id, org_id, integration_id, event_type, payload,
+		                                   status, error_message, processed_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, event.ID, event.OrgID, event.IntegrationID, event.EventType, event.Payload,
+		event.Status, event.ErrorMessage, event.ProcessedAt, event.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create komodo webhook event: %w", err)
+	}
+	return nil
+}
+
+// GetKomodoWebhookEventsByOrgID returns recent webhook events for an organization.
+func (db *DB) GetKomodoWebhookEventsByOrgID(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.KomodoWebhookEvent, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, integration_id, event_type, payload, status,
+		       error_message, processed_at, created_at
+		FROM komodo_webhook_events
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get komodo webhook events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []*models.KomodoWebhookEvent
+	for rows.Next() {
+		var e models.KomodoWebhookEvent
+		err := rows.Scan(
+			&e.ID, &e.OrgID, &e.IntegrationID, &e.EventType, &e.Payload, &e.Status,
+			&e.ErrorMessage, &e.ProcessedAt, &e.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan komodo webhook event: %w", err)
+		}
+		events = append(events, &e)
+	}
+
+	return events, nil
+}
+
+// UpdateKomodoWebhookEvent updates a Komodo webhook event.
+func (db *DB) UpdateKomodoWebhookEvent(ctx context.Context, event *models.KomodoWebhookEvent) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE komodo_webhook_events
+		SET status = $2, error_message = $3, processed_at = $4
+		WHERE id = $1
+	`, event.ID, event.Status, event.ErrorMessage, event.ProcessedAt)
+	if err != nil {
+		return fmt.Errorf("update komodo webhook event: %w", err)
+	}
+	return nil
+}
