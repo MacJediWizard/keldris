@@ -595,7 +595,7 @@ func (p *PiholeBackup) Validate(ctx context.Context) error {
 		return fmt.Errorf("detect Pi-hole: %w", err)
 	}
 	if !info.Installed {
-		return errors.New("Pi-hole is not installed")
+		return errors.New("pi-hole is not installed")
 	}
 
 	// Check config directory
@@ -604,7 +604,7 @@ func (p *PiholeBackup) Validate(ctx context.Context) error {
 		configDir = defaultPiholeConfigDir
 	}
 	if _, err := os.Stat(configDir); err != nil {
-		return fmt.Errorf("Pi-hole config directory not accessible: %w", err)
+		return fmt.Errorf("pi-hole config directory not accessible: %w", err)
 	}
 
 	return nil
