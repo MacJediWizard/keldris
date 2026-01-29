@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { komodoApi } from '../lib/api';
 import type {
 	CreateKomodoIntegrationRequest,
-	UpdateKomodoIntegrationRequest,
 	UpdateKomodoContainerRequest,
+	UpdateKomodoIntegrationRequest,
 } from '../lib/types';
 
 // Query Keys
@@ -16,7 +16,8 @@ export const komodoKeys = {
 	stacks: () => [...komodoKeys.all, 'stacks'] as const,
 	stack: (id: string) => [...komodoKeys.stacks(), id] as const,
 	events: () => [...komodoKeys.all, 'events'] as const,
-	discovery: (id: string) => [...komodoKeys.integrations(), id, 'discovery'] as const,
+	discovery: (id: string) =>
+		[...komodoKeys.integrations(), id, 'discovery'] as const,
 };
 
 // Integration Hooks
@@ -51,11 +52,16 @@ export function useCreateKomodoIntegration() {
 export function useUpdateKomodoIntegration() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ id, data }: { id: string; data: UpdateKomodoIntegrationRequest }) =>
+		mutationFn: ({
+			id,
+			data,
+		}: { id: string; data: UpdateKomodoIntegrationRequest }) =>
 			komodoApi.updateIntegration(id, data),
 		onSuccess: (_, variables) => {
 			queryClient.invalidateQueries({ queryKey: komodoKeys.integrations() });
-			queryClient.invalidateQueries({ queryKey: komodoKeys.integration(variables.id) });
+			queryClient.invalidateQueries({
+				queryKey: komodoKeys.integration(variables.id),
+			});
 		},
 	});
 }
@@ -126,11 +132,16 @@ export function useKomodoContainer(id: string) {
 export function useUpdateKomodoContainer() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ id, data }: { id: string; data: UpdateKomodoContainerRequest }) =>
+		mutationFn: ({
+			id,
+			data,
+		}: { id: string; data: UpdateKomodoContainerRequest }) =>
 			komodoApi.updateContainer(id, data),
 		onSuccess: (_, variables) => {
 			queryClient.invalidateQueries({ queryKey: komodoKeys.containers() });
-			queryClient.invalidateQueries({ queryKey: komodoKeys.container(variables.id) });
+			queryClient.invalidateQueries({
+				queryKey: komodoKeys.container(variables.id),
+			});
 		},
 	});
 }
