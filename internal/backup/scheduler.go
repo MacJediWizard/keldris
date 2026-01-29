@@ -45,6 +45,9 @@ type ScheduleStore interface {
 
 	// Checkpoint methods for resumable backups
 	CheckpointStore
+
+	// Validation methods for backup validation
+	ValidationStore
 }
 
 const (
@@ -87,6 +90,8 @@ type Scheduler struct {
 	checkpointManager  *CheckpointManager
 	largeFileScanner   *LargeFileScanner
 	concurrencyManager *ConcurrencyManager
+	validator          *BackupValidator
+	validationConfig   ValidationConfig
 	cron               *cron.Cron
 	logger             zerolog.Logger
 	mu                 sync.RWMutex
@@ -124,6 +129,25 @@ func (s *Scheduler) SetMaintenanceService(maint *maintenance.Service) {
 // This should be called before Start() if concurrency limiting is desired.
 func (s *Scheduler) SetConcurrencyManager(cm *ConcurrencyManager) {
 	s.concurrencyManager = cm
+}
+
+// SetBackupValidator sets the backup validator for automated validation after backups.
+// This should be called before Start() if backup validation is desired.
+func (s *Scheduler) SetBackupValidator(validator *BackupValidator) {
+	s.validator = validator
+}
+
+// SetValidationConfig sets the validation configuration.
+// This should be called before Start() if custom validation settings are desired.
+func (s *Scheduler) SetValidationConfig(config ValidationConfig) {
+	s.validationConfig = config
+}
+
+// EnableValidation enables backup validation with the given configuration.
+// This creates a BackupValidator and configures it for the scheduler.
+func (s *Scheduler) EnableValidation(config ValidationConfig) {
+	s.validationConfig = config
+	s.validator = NewBackupValidator(s.restic, config, s.store, s.logger)
 }
 
 // Start starts the scheduler and loads initial schedules.
@@ -456,6 +480,11 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		Dur("duration", successStats.Duration).
 		Msg("backup completed successfully")
 
+	// Run automated backup validation if enabled
+	if s.validator != nil {
+		s.runBackupValidation(ctx, successBackup, successResticCfg, schedule.Paths, logger)
+	}
+
 	// Send success notification
 	s.sendBackupNotification(ctx, schedule, successBackup, true, "")
 
@@ -751,6 +780,36 @@ func (s *Scheduler) failBackup(ctx context.Context, backup *models.Backup, errMs
 		return
 	}
 	logger.Error().Str("error", errMsg).Msg("backup failed")
+}
+
+// runBackupValidation runs automated validation after a successful backup.
+func (s *Scheduler) runBackupValidation(ctx context.Context, backup *models.Backup, cfg ResticConfig, sourcePaths []string, logger zerolog.Logger) {
+	logger.Info().Msg("running automated backup validation")
+
+	result, err := s.validator.ValidateAndNotify(ctx, backup, cfg, sourcePaths)
+	if err != nil {
+		logger.Error().Err(err).Msg("backup validation encountered an error")
+		backup.RecordValidation(uuid.Nil, "error", err.Error())
+	} else if result.Validation != nil {
+		backup.RecordValidation(result.Validation.ID, string(result.Validation.Status), result.Validation.ErrorMessage)
+		if result.Passed {
+			logger.Info().
+				Str("validation_id", result.Validation.ID.String()).
+				Int64("duration_ms", *result.Validation.DurationMs).
+				Msg("backup validation passed")
+		} else {
+			logger.Warn().
+				Str("validation_id", result.Validation.ID.String()).
+				Str("error", result.Validation.ErrorMessage).
+				Bool("alert_sent", result.AlertSent).
+				Msg("backup validation failed")
+		}
+	}
+
+	// Update the backup record with validation results
+	if err := s.store.UpdateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Msg("failed to update backup with validation results")
+	}
 }
 
 // sendBackupNotification sends a notification for a backup result.
@@ -1071,6 +1130,11 @@ func (s *Scheduler) executeResumedBackup(schedule models.Schedule, checkpoint *m
 		Int64("size_bytes", stats.SizeBytes).
 		Dur("duration", stats.Duration).
 		Msg("resumed backup completed successfully")
+
+	// Run automated backup validation if enabled
+	if s.validator != nil {
+		s.runBackupValidation(ctx, backup, resticCfg, schedule.Paths, logger)
+	}
 
 	// Send success notification
 	s.sendBackupNotification(ctx, schedule, backup, true, "")
