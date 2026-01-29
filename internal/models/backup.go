@@ -60,6 +60,10 @@ type Backup struct {
 	ContainerPreHookError     string              `json:"container_pre_hook_error,omitempty"`
 	ContainerPostHookOutput   string              `json:"container_post_hook_output,omitempty"`
 	ContainerPostHookError    string              `json:"container_post_hook_error,omitempty"`
+	// Validation fields
+	ValidationID              *uuid.UUID          `json:"validation_id,omitempty"`     // ID of the associated validation record
+	ValidationStatus          string              `json:"validation_status,omitempty"` // Status: passed, failed, skipped, pending
+	ValidationError           string              `json:"validation_error,omitempty"`  // Error message if validation failed
 	CreatedAt                 time.Time           `json:"created_at"`
 }
 
@@ -198,4 +202,21 @@ func (b *Backup) RecordContainerPostHook(output string, err error) {
 	if err != nil {
 		b.ContainerPostHookError = err.Error()
 	}
+}
+
+// RecordValidation records the results of backup validation.
+func (b *Backup) RecordValidation(validationID uuid.UUID, status string, errMsg string) {
+	b.ValidationID = &validationID
+	b.ValidationStatus = status
+	b.ValidationError = errMsg
+}
+
+// IsValidated returns true if the backup has been validated.
+func (b *Backup) IsValidated() bool {
+	return b.ValidationID != nil
+}
+
+// ValidationPassed returns true if the backup validation passed.
+func (b *Backup) ValidationPassed() bool {
+	return b.ValidationStatus == "passed"
 }

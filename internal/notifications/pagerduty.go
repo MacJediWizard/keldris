@@ -375,3 +375,34 @@ func (s *PagerDutyService) ResolveAgent(agentID, hostname string) error {
 
 	return s.Send(event)
 }
+
+// SendValidationFailed sends a backup validation failed notification to PagerDuty.
+func (s *PagerDutyService) SendValidationFailed(data ValidationFailedData) error {
+	event := &PagerDutyEvent{
+		EventAction: PagerDutyEventTrigger,
+		DedupKey:    fmt.Sprintf("validation-%s-%s-%s", data.Hostname, data.ScheduleName, data.SnapshotID),
+		Payload: PagerDutyPayload{
+			Summary:   fmt.Sprintf("Backup Validation Failed: %s - %s: %s", data.Hostname, data.ScheduleName, data.ErrorMessage),
+			Source:    data.Hostname,
+			Severity:  s.getSeverity(PagerDutySeverityError),
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			CustomDetails: map[string]interface{}{
+				"hostname":             data.Hostname,
+				"schedule":             data.ScheduleName,
+				"snapshot_id":          data.SnapshotID,
+				"backup_completed_at":  data.BackupCompletedAt.Format(time.RFC3339),
+				"validation_failed_at": data.ValidationFailedAt.Format(time.RFC3339),
+				"error_message":        data.ErrorMessage,
+				"validation_summary":   data.ValidationSummary,
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending validation failed notification to PagerDuty")
+
+	return s.Send(event)
+}

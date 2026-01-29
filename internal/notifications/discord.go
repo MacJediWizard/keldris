@@ -282,6 +282,49 @@ func (s *DiscordService) SendTestRestoreFailed(data TestRestoreFailedData) error
 	return s.Send(msg)
 }
 
+// SendValidationFailed sends a backup validation failed notification to Discord.
+func (s *DiscordService) SendValidationFailed(data ValidationFailedData) error {
+	fields := []DiscordEmbedField{
+		{Name: "Host", Value: data.Hostname, Inline: true},
+		{Name: "Schedule", Value: data.ScheduleName, Inline: true},
+		{Name: "Snapshot ID", Value: fmt.Sprintf("`%s`", data.SnapshotID), Inline: false},
+		{Name: "Backup Completed", Value: data.BackupCompletedAt.Format(time.RFC822), Inline: true},
+		{Name: "Validation Failed", Value: data.ValidationFailedAt.Format(time.RFC822), Inline: true},
+		{Name: "Error", Value: fmt.Sprintf("```\n%s\n```", data.ErrorMessage), Inline: false},
+	}
+
+	if data.ValidationSummary != "" {
+		fields = append(fields, DiscordEmbedField{
+			Name:   "Validation Summary",
+			Value:  data.ValidationSummary,
+			Inline: false,
+		})
+	}
+
+	msg := &DiscordMessage{
+		Embeds: []DiscordEmbed{
+			{
+				Title:       fmt.Sprintf("Backup Validation Failed: %s", data.Hostname),
+				Description: fmt.Sprintf("Backup validation failed for schedule **%s**", data.ScheduleName),
+				Color:       DiscordColorRed,
+				Fields:      fields,
+				Footer: &DiscordEmbedFooter{
+					Text: "Keldris Backup",
+				},
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending validation failed notification to Discord")
+
+	return s.Send(msg)
+}
+
 // TestConnection sends a test message to verify the Discord webhook is working.
 func (s *DiscordService) TestConnection() error {
 	msg := &DiscordMessage{

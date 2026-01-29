@@ -291,6 +291,35 @@ func (s *TeamsService) SendTestRestoreFailed(data TestRestoreFailedData) error {
 	return s.Send(msg)
 }
 
+// SendValidationFailed sends a backup validation failed notification to Teams.
+func (s *TeamsService) SendValidationFailed(data ValidationFailedData) error {
+	msg := NewTeamsMessage()
+	msg.AddHeader(fmt.Sprintf("Backup Validation Failed: %s", data.Hostname), "Attention")
+
+	facts := []TeamsCardFact{
+		{Title: "Host", Value: data.Hostname},
+		{Title: "Schedule", Value: data.ScheduleName},
+		{Title: "Snapshot ID", Value: data.SnapshotID},
+		{Title: "Backup Completed", Value: data.BackupCompletedAt.Format(time.RFC822)},
+		{Title: "Validation Failed", Value: data.ValidationFailedAt.Format(time.RFC822)},
+	}
+
+	msg.AddFactSet(facts)
+	msg.AddText(fmt.Sprintf("**Error:** %s", data.ErrorMessage), true)
+
+	if data.ValidationSummary != "" {
+		msg.AddText(fmt.Sprintf("**Summary:** %s", data.ValidationSummary), true)
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending validation failed notification to Teams")
+
+	return s.Send(msg)
+}
+
 // TestConnection sends a test message to verify the Teams webhook is working.
 func (s *TeamsService) TestConnection() error {
 	msg := NewTeamsMessage()

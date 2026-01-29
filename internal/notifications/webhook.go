@@ -294,6 +294,35 @@ func (s *WebhookService) SendTestRestoreFailed(data TestRestoreFailedData) error
 	return s.Send(payload)
 }
 
+// SendValidationFailed sends a backup validation failed notification via webhook.
+func (s *WebhookService) SendValidationFailed(data ValidationFailedData) error {
+	payload := &WebhookPayload{
+		EventType: "validation_failed",
+		EventTime: time.Now().UTC(),
+		Source:    "keldris-backup",
+		Summary:   fmt.Sprintf("Backup Validation Failed: %s - %s", data.Hostname, data.ScheduleName),
+		Severity:  "error",
+		Details: map[string]interface{}{
+			"hostname":             data.Hostname,
+			"schedule":             data.ScheduleName,
+			"snapshot_id":          data.SnapshotID,
+			"backup_completed_at":  data.BackupCompletedAt.Format(time.RFC3339),
+			"validation_failed_at": data.ValidationFailedAt.Format(time.RFC3339),
+			"error_message":        data.ErrorMessage,
+			"validation_summary":   data.ValidationSummary,
+			"validation_details":   data.ValidationDetails,
+		},
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending validation failed notification via webhook")
+
+	return s.Send(payload)
+}
+
 // TestConnection sends a test event to verify the webhook is working.
 func (s *WebhookService) TestConnection() error {
 	payload := &WebhookPayload{
