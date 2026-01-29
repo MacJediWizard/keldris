@@ -1,4 +1,4 @@
--- 060_test_restore.sql
+-- 061_test_restore.sql
 -- Migration: Add test restore tables for automated backup verification testing
 
 -- Test restore settings define per-repository test restore configuration
