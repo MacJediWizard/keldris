@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/backup/apps"
 	"github.com/MacJediWizard/keldris/internal/maintenance"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/notifications"
@@ -366,6 +368,12 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 	}
 
 	logger.Info().Msg("starting scheduled backup")
+
+	// Handle Pi-hole specific backup
+	if schedule.IsPiholeBackup() {
+		s.executePiholeBackup(ctx, schedule, agent, logger)
+		return
+	}
 
 	// Get enabled repositories sorted by priority
 	enabledRepos := schedule.GetEnabledRepositories()
@@ -810,6 +818,190 @@ func (s *Scheduler) runBackupValidation(ctx context.Context, backup *models.Back
 	if err := s.store.UpdateBackup(ctx, backup); err != nil {
 		logger.Error().Err(err).Msg("failed to update backup with validation results")
 	}
+}
+
+// executePiholeBackup runs a Pi-hole specific backup for the given schedule.
+func (s *Scheduler) executePiholeBackup(ctx context.Context, schedule models.Schedule, agent *models.Agent, logger zerolog.Logger) {
+	logger.Info().Msg("starting Pi-hole backup")
+
+	// Verify Pi-hole is installed on this agent
+	if agent.HealthMetrics == nil || agent.HealthMetrics.PiholeInfo == nil || !agent.HealthMetrics.PiholeInfo.Installed {
+		logger.Error().Msg("Pi-hole is not installed on this agent")
+		return
+	}
+
+	// Get enabled repositories sorted by priority
+	enabledRepos := schedule.GetEnabledRepositories()
+	if len(enabledRepos) == 0 {
+		logger.Error().Msg("no enabled repositories for schedule")
+		return
+	}
+
+	// Use primary repository for backup record
+	primaryRepo := schedule.GetPrimaryRepository()
+	if primaryRepo == nil {
+		logger.Error().Msg("no primary repository configured")
+		return
+	}
+
+	// Create backup record
+	backup := models.NewBackup(schedule.ID, schedule.AgentID, &primaryRepo.RepositoryID)
+	backup.SetPiholeBackup(true)
+	if err := s.store.CreateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Msg("failed to create backup record")
+		return
+	}
+
+	// Create Pi-hole backup instance
+	pihole := apps.NewPiholeBackup(logger)
+
+	// Apply configuration from schedule
+	if schedule.PiholeConfig != nil {
+		pihole.UseTeleporter = schedule.PiholeConfig.UseTeleporter
+		pihole.IncludeQueryLogs = schedule.PiholeConfig.IncludeQueryLogs
+		if schedule.PiholeConfig.ConfigDir != "" {
+			pihole.ConfigDir = schedule.PiholeConfig.ConfigDir
+		}
+		if schedule.PiholeConfig.DNSMasqDir != "" {
+			pihole.DNSMasqDir = schedule.PiholeConfig.DNSMasqDir
+		}
+	} else {
+		// Use defaults
+		pihole.UseTeleporter = true
+		pihole.IncludeQueryLogs = true
+	}
+
+	// Override with detected config dir if available
+	if agent.HealthMetrics.PiholeInfo.ConfigDir != "" {
+		pihole.ConfigDir = agent.HealthMetrics.PiholeInfo.ConfigDir
+	}
+
+	// Create output directory for Pi-hole backup
+	// The backup files will be placed here and then backed up via Restic
+	outputDir := filepath.Join("/tmp", "pihole-backup", schedule.ID.String())
+
+	// Execute Pi-hole backup (creates teleporter archive or manual backup)
+	result, err := pihole.Backup(ctx, outputDir)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("Pi-hole backup failed: %v", err), logger)
+		s.sendBackupNotification(ctx, schedule, backup, false, err.Error())
+		return
+	}
+
+	if !result.Success {
+		s.failBackup(ctx, backup, fmt.Sprintf("Pi-hole backup failed: %s", result.ErrorMessage), logger)
+		s.sendBackupNotification(ctx, schedule, backup, false, result.ErrorMessage)
+		return
+	}
+
+	logger.Info().
+		Str("backup_path", result.BackupPath).
+		Int("files", len(result.BackupFiles)).
+		Int64("size_bytes", result.SizeBytes).
+		Msg("Pi-hole backup created, now backing up to repository")
+
+	// Now backup the Pi-hole backup files to the repository using Restic
+	// Get repository configuration
+	repo, err := s.store.GetRepository(ctx, primaryRepo.RepositoryID)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("get repository: %v", err), logger)
+		s.sendBackupNotification(ctx, schedule, backup, false, err.Error())
+		return
+	}
+
+	// Decrypt repository configuration
+	if s.config.DecryptFunc == nil {
+		s.failBackup(ctx, backup, "decrypt function not configured", logger)
+		return
+	}
+
+	configJSON, err := s.config.DecryptFunc(repo.ConfigEncrypted)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("decrypt config: %v", err), logger)
+		s.sendBackupNotification(ctx, schedule, backup, false, err.Error())
+		return
+	}
+
+	// Parse backend configuration
+	backend, err := ParseBackend(repo.Type, configJSON)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("parse backend: %v", err), logger)
+		s.sendBackupNotification(ctx, schedule, backup, false, err.Error())
+		return
+	}
+
+	// Get repository password
+	if s.config.PasswordFunc == nil {
+		s.failBackup(ctx, backup, "password function not configured", logger)
+		return
+	}
+
+	password, err := s.config.PasswordFunc(repo.ID)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("get password: %v", err), logger)
+		s.sendBackupNotification(ctx, schedule, backup, false, err.Error())
+		return
+	}
+
+	// Build restic config
+	resticCfg := backend.ToResticConfig(password)
+
+	// Build tags for the backup
+	tags := []string{
+		fmt.Sprintf("schedule:%s", schedule.ID.String()),
+		fmt.Sprintf("agent:%s", schedule.AgentID.String()),
+		"pihole",
+		fmt.Sprintf("pihole-version:%s", agent.HealthMetrics.PiholeInfo.Version),
+	}
+
+	// Backup the Pi-hole backup files to the repository
+	backupPaths := []string{outputDir}
+	stats, err := s.restic.Backup(ctx, resticCfg, backupPaths, nil, tags)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("restic backup failed: %v", err), logger)
+		s.sendBackupNotification(ctx, schedule, backup, false, err.Error())
+		return
+	}
+
+	// Mark backup as completed
+	backup.Complete(stats.SnapshotID, stats.SizeBytes, stats.FilesNew, stats.FilesChanged)
+	if err := s.store.UpdateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Msg("failed to update backup record")
+	}
+
+	logger.Info().
+		Str("snapshot_id", stats.SnapshotID).
+		Int("files_new", stats.FilesNew).
+		Int("files_changed", stats.FilesChanged).
+		Int64("size_bytes", stats.SizeBytes).
+		Dur("duration", stats.Duration).
+		Msg("Pi-hole backup completed successfully")
+
+	// Send success notification
+	s.sendBackupNotification(ctx, schedule, backup, true, "")
+
+	// Run prune if retention policy is set
+	if schedule.RetentionPolicy != nil {
+		logger.Info().Msg("running prune with retention policy")
+		forgetResult, err := s.restic.Prune(ctx, resticCfg, schedule.RetentionPolicy)
+		if err != nil {
+			logger.Error().Err(err).Msg("prune failed")
+			backup.RecordRetention(0, 0, err)
+		} else {
+			logger.Info().
+				Int("snapshots_removed", forgetResult.SnapshotsRemoved).
+				Int("snapshots_kept", forgetResult.SnapshotsKept).
+				Msg("prune completed")
+			backup.RecordRetention(forgetResult.SnapshotsRemoved, forgetResult.SnapshotsKept, nil)
+		}
+		// Update backup record with retention results
+		if err := s.store.UpdateBackup(ctx, backup); err != nil {
+			logger.Error().Err(err).Msg("failed to update backup with retention results")
+		}
+	}
+
+	// Replicate to other repositories if configured
+	s.replicateToOtherRepos(ctx, schedule, primaryRepo, stats.SnapshotID, resticCfg, enabledRepos, logger)
 }
 
 // sendBackupNotification sends a notification for a backup result.

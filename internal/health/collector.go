@@ -18,15 +18,26 @@ import (
 
 // Metrics contains system metrics collected from an agent.
 type Metrics struct {
-	CPUUsage        float64 `json:"cpu_usage"`
-	MemoryUsage     float64 `json:"memory_usage"`
-	DiskUsage       float64 `json:"disk_usage"`
-	DiskFreeBytes   int64   `json:"disk_free_bytes"`
-	DiskTotalBytes  int64   `json:"disk_total_bytes"`
-	NetworkUp       bool    `json:"network_up"`
-	UptimeSeconds   int64   `json:"uptime_seconds"`
-	ResticVersion   string  `json:"restic_version,omitempty"`
-	ResticAvailable bool    `json:"restic_available"`
+	CPUUsage          float64     `json:"cpu_usage"`
+	MemoryUsage       float64     `json:"memory_usage"`
+	DiskUsage         float64     `json:"disk_usage"`
+	DiskFreeBytes     int64       `json:"disk_free_bytes"`
+	DiskTotalBytes    int64       `json:"disk_total_bytes"`
+	NetworkUp         bool        `json:"network_up"`
+	UptimeSeconds     int64       `json:"uptime_seconds"`
+	ResticVersion     string      `json:"restic_version,omitempty"`
+	ResticAvailable   bool        `json:"restic_available"`
+	PiholeInfo        *PiholeInfo `json:"pihole_info,omitempty"`
+}
+
+// PiholeInfo contains Pi-hole detection and version information.
+type PiholeInfo struct {
+	Installed       bool   `json:"installed"`
+	Version         string `json:"version,omitempty"`
+	FTLVersion      string `json:"ftl_version,omitempty"`
+	WebVersion      string `json:"web_version,omitempty"`
+	ConfigDir       string `json:"config_dir,omitempty"`
+	BlockingEnabled bool   `json:"blocking_enabled"`
 }
 
 // Collector collects system metrics.
@@ -80,6 +91,9 @@ func (c *Collector) Collect(ctx context.Context) (*Metrics, error) {
 
 	// Restic version
 	m.ResticVersion, m.ResticAvailable = c.getResticVersion(ctx)
+
+	// Pi-hole detection
+	m.PiholeInfo = c.detectPihole(ctx)
 
 	return m, nil
 }
@@ -184,4 +198,86 @@ func getOSVersion() string {
 		}
 	}
 	return runtime.GOOS
+}
+
+// detectPihole checks if Pi-hole is installed and returns version info.
+func (c *Collector) detectPihole(ctx context.Context) *PiholeInfo {
+	info := &PiholeInfo{
+		Installed: false,
+	}
+
+	// Check for pihole binary
+	piholeBinary := "/usr/local/bin/pihole"
+	if _, err := os.Stat(piholeBinary); err != nil {
+		// Try to find in PATH
+		path, err := exec.LookPath("pihole")
+		if err != nil {
+			return info
+		}
+		piholeBinary = path
+	}
+
+	info.Installed = true
+
+	// Get Pi-hole version
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	// Get core version
+	cmd := exec.CommandContext(ctx, piholeBinary, "-v", "-p")
+	if output, err := cmd.Output(); err == nil {
+		info.Version = parsePiholeVersion(string(output))
+	}
+
+	// Get FTL version
+	cmd = exec.CommandContext(ctx, piholeBinary, "-v", "-f")
+	if output, err := cmd.Output(); err == nil {
+		info.FTLVersion = parsePiholeVersion(string(output))
+	}
+
+	// Get web version
+	cmd = exec.CommandContext(ctx, piholeBinary, "-v", "-a")
+	if output, err := cmd.Output(); err == nil {
+		info.WebVersion = parsePiholeVersion(string(output))
+	}
+
+	// Check config directory
+	configDir := "/etc/pihole"
+	if _, err := os.Stat(configDir); err == nil {
+		info.ConfigDir = configDir
+	}
+
+	// Check if blocking is enabled from setupVars.conf
+	setupVars := "/etc/pihole/setupVars.conf"
+	if data, err := os.ReadFile(setupVars); err == nil {
+		lines := strings.Split(string(data), "\n")
+		for _, line := range lines {
+			if strings.HasPrefix(line, "BLOCKING_ENABLED=") {
+				info.BlockingEnabled = strings.TrimPrefix(line, "BLOCKING_ENABLED=") == "true"
+				break
+			}
+		}
+	}
+
+	return info
+}
+
+// parsePiholeVersion extracts version string from pihole -v output.
+func parsePiholeVersion(output string) string {
+	output = strings.TrimSpace(output)
+	// Output format: "Pi-hole version is v5.14.2 (Latest: v5.14.2)"
+	// or "FTL version is v5.20 (Latest: v5.20)"
+	// or just "v5.14.2"
+	if strings.Contains(output, "version is") {
+		parts := strings.Split(output, "version is")
+		if len(parts) >= 2 {
+			version := strings.TrimSpace(parts[1])
+			// Remove "(Latest: ...)" if present
+			if idx := strings.Index(version, "("); idx != -1 {
+				version = strings.TrimSpace(version[:idx])
+			}
+			return version
+		}
+	}
+	return output
 }

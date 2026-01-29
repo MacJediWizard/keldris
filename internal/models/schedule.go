@@ -41,9 +41,33 @@ type BackupType string
 const (
 	// BackupTypeFile is a standard file/directory backup.
 	BackupTypeFile BackupType = "file"
+	// BackupTypeFiles is an alias for file-based backup using Restic.
+	BackupTypeFiles BackupType = "files"
 	// BackupTypeDocker backs up Docker volumes and container configs.
 	BackupTypeDocker BackupType = "docker"
+	// BackupTypePihole is a Pi-hole specific backup using teleporter.
+	BackupTypePihole BackupType = "pihole"
 )
+
+// ValidBackupTypes returns all valid backup types.
+func ValidBackupTypes() []BackupType {
+	return []BackupType{
+		BackupTypeFile,
+		BackupTypeFiles,
+		BackupTypeDocker,
+		BackupTypePihole,
+	}
+}
+
+// IsValidBackupType checks if the backup type is valid.
+func IsValidBackupType(t BackupType) bool {
+	for _, valid := range ValidBackupTypes() {
+		if t == valid {
+			return true
+		}
+	}
+	return false
+}
 
 // DockerBackupOptions contains Docker-specific backup configuration.
 type DockerBackupOptions struct {
@@ -57,6 +81,18 @@ type DockerBackupOptions struct {
 	IncludeContainerConfigs bool `json:"include_container_configs"`
 }
 
+// PiholeBackupConfig contains Pi-hole specific backup configuration.
+type PiholeBackupConfig struct {
+	// UseTeleporter uses pihole -a -t for backup (recommended).
+	UseTeleporter bool `json:"use_teleporter"`
+	// IncludeQueryLogs includes pihole-FTL.db (query logs) in backup.
+	IncludeQueryLogs bool `json:"include_query_logs"`
+	// ConfigDir overrides the default /etc/pihole directory.
+	ConfigDir string `json:"config_dir,omitempty"`
+	// DNSMasqDir overrides the default /etc/dnsmasq.d directory.
+	DNSMasqDir string `json:"dnsmasq_dir,omitempty"`
+}
+
 // Schedule represents a backup schedule configuration.
 // A schedule can be assigned to either an individual agent (via AgentID)
 // or to an agent group (via AgentGroupID). When AgentGroupID is set,
@@ -67,7 +103,7 @@ type Schedule struct {
 	AgentGroupID            *uuid.UUID             `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
 	PolicyID                *uuid.UUID             `json:"policy_id,omitempty"`      // Policy this schedule was created from
 	Name                    string                 `json:"name"`
-	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker
+	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker, pihole
 	CronExpression          string                 `json:"cron_expression"`
 	Paths                   []string               `json:"paths"`
 	Excludes                []string               `json:"excludes,omitempty"`
@@ -83,6 +119,7 @@ type Schedule struct {
 	Priority                SchedulePriority       `json:"priority"`                       // Backup priority: 1=high, 2=medium, 3=low
 	Preemptible             bool                   `json:"preemptible"`                    // Can be preempted by higher priority backups
 	DockerOptions           *DockerBackupOptions   `json:"docker_options,omitempty"`       // Docker-specific backup options
+	PiholeConfig            *PiholeBackupConfig    `json:"pihole_config,omitempty"`        // Pi-hole specific backup configuration
 	Metadata                map[string]interface{} `json:"metadata,omitempty"`
 	Enabled                 bool                   `json:"enabled"`
 	Repositories            []ScheduleRepository   `json:"repositories,omitempty"`
@@ -129,9 +166,37 @@ func NewDockerSchedule(agentID uuid.UUID, name, cronExpr string, opts *DockerBac
 	}
 }
 
+// NewPiholeSchedule creates a new Schedule for Pi-hole backups.
+func NewPiholeSchedule(agentID uuid.UUID, name, cronExpr string) *Schedule {
+	now := time.Now()
+	return &Schedule{
+		ID:                 uuid.New(),
+		AgentID:            agentID,
+		Name:               name,
+		CronExpression:     cronExpr,
+		BackupType:         BackupTypePihole,
+		Paths:              []string{"/etc/pihole", "/etc/dnsmasq.d"},
+		OnMountUnavailable: MountBehaviorFail,
+		Priority:           PriorityMedium,
+		Preemptible:        false,
+		PiholeConfig: &PiholeBackupConfig{
+			UseTeleporter:    true,
+			IncludeQueryLogs: true,
+		},
+		Enabled:   true,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+}
+
 // IsDockerBackup returns true if this is a Docker backup schedule.
 func (s *Schedule) IsDockerBackup() bool {
 	return s.BackupType == BackupTypeDocker
+}
+
+// IsPiholeBackup returns true if this is a Pi-hole backup schedule.
+func (s *Schedule) IsPiholeBackup() bool {
+	return s.BackupType == BackupTypePihole
 }
 
 // SetDockerOptions sets the Docker backup options from JSON bytes.
@@ -384,6 +449,38 @@ func (s *Schedule) MetadataJSON() ([]byte, error) {
 		return []byte("{}"), nil
 	}
 	return json.Marshal(s.Metadata)
+}
+
+// SetPiholeConfig sets the Pi-hole config from JSON bytes.
+func (s *Schedule) SetPiholeConfig(data []byte) error {
+	if len(data) == 0 {
+		s.PiholeConfig = nil
+		return nil
+	}
+	var config PiholeBackupConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return err
+	}
+	s.PiholeConfig = &config
+	return nil
+}
+
+// PiholeConfigJSON returns the Pi-hole config as JSON bytes for database storage.
+func (s *Schedule) PiholeConfigJSON() ([]byte, error) {
+	if s.PiholeConfig == nil {
+		return nil, nil
+	}
+	return json.Marshal(s.PiholeConfig)
+}
+
+// DefaultPiholeConfig returns a sensible default Pi-hole backup configuration.
+func DefaultPiholeConfig() *PiholeBackupConfig {
+	return &PiholeBackupConfig{
+		UseTeleporter:    true,
+		IncludeQueryLogs: true,
+		ConfigDir:        "/etc/pihole",
+		DNSMasqDir:       "/etc/dnsmasq.d",
+	}
 }
 
 // BackupQueueStatus represents the status of a backup queue item.
