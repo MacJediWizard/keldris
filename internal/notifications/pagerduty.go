@@ -297,32 +297,41 @@ func (s *PagerDutyService) SendMaintenanceScheduled(data MaintenanceScheduledDat
 	return s.Send(event)
 }
 
-// SendValidationFailed sends a backup validation failed notification to PagerDuty.
-func (s *PagerDutyService) SendValidationFailed(data ValidationFailedData) error {
+// SendTestRestoreFailed sends a test restore failed notification to PagerDuty.
+func (s *PagerDutyService) SendTestRestoreFailed(data TestRestoreFailedData) error {
+	severity := s.getSeverity(PagerDutySeverityError)
+	if data.ConsecutiveFails > 2 {
+		severity = PagerDutySeverityCritical
+	}
+
 	event := &PagerDutyEvent{
 		EventAction: PagerDutyEventTrigger,
-		DedupKey:    fmt.Sprintf("validation-failed-%s-%s", data.Hostname, data.SnapshotID),
+		DedupKey:    fmt.Sprintf("test-restore-%s", data.RepositoryID),
 		Payload: PagerDutyPayload{
-			Summary:   fmt.Sprintf("Backup Validation Failed: %s - %s", data.Hostname, data.ScheduleName),
+			Summary:   fmt.Sprintf("Test Restore Failed: %s - %s", data.RepositoryName, data.ErrorMessage),
 			Source:    "keldris-backup",
-			Severity:  PagerDutySeverityError,
+			Severity:  severity,
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			CustomDetails: map[string]interface{}{
-				"hostname":            data.Hostname,
-				"schedule_name":       data.ScheduleName,
-				"snapshot_id":         data.SnapshotID,
-				"backup_completed_at": data.BackupCompletedAt.Format(time.RFC3339),
-				"validation_summary":  data.ValidationSummary,
-				"error_message":       data.ErrorMessage,
+				"repository_name":    data.RepositoryName,
+				"repository_id":      data.RepositoryID,
+				"snapshot_id":        data.SnapshotID,
+				"sample_percentage":  data.SamplePercentage,
+				"files_restored":     data.FilesRestored,
+				"files_verified":     data.FilesVerified,
+				"started_at":         data.StartedAt.Format(time.RFC3339),
+				"failed_at":          data.FailedAt.Format(time.RFC3339),
+				"error_message":      data.ErrorMessage,
+				"consecutive_fails":  data.ConsecutiveFails,
 			},
 		},
 	}
 
 	s.logger.Debug().
-		Str("hostname", data.Hostname).
-		Str("schedule", data.ScheduleName).
+		Str("repository", data.RepositoryName).
 		Str("error", data.ErrorMessage).
-		Msg("sending validation failed notification to PagerDuty")
+		Int("consecutive_fails", data.ConsecutiveFails).
+		Msg("sending test restore failed notification to PagerDuty")
 
 	return s.Send(event)
 }
@@ -363,6 +372,37 @@ func (s *PagerDutyService) ResolveAgent(agentID, hostname string) error {
 		Str("hostname", hostname).
 		Str("agent_id", agentID).
 		Msg("resolving agent offline alert in PagerDuty")
+
+	return s.Send(event)
+}
+
+// SendValidationFailed sends a backup validation failed notification to PagerDuty.
+func (s *PagerDutyService) SendValidationFailed(data ValidationFailedData) error {
+	event := &PagerDutyEvent{
+		EventAction: PagerDutyEventTrigger,
+		DedupKey:    fmt.Sprintf("validation-%s-%s-%s", data.Hostname, data.ScheduleName, data.SnapshotID),
+		Payload: PagerDutyPayload{
+			Summary:   fmt.Sprintf("Backup Validation Failed: %s - %s: %s", data.Hostname, data.ScheduleName, data.ErrorMessage),
+			Source:    data.Hostname,
+			Severity:  s.getSeverity(PagerDutySeverityError),
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			CustomDetails: map[string]interface{}{
+				"hostname":             data.Hostname,
+				"schedule":             data.ScheduleName,
+				"snapshot_id":          data.SnapshotID,
+				"backup_completed_at":  data.BackupCompletedAt.Format(time.RFC3339),
+				"validation_failed_at": data.ValidationFailedAt.Format(time.RFC3339),
+				"error_message":        data.ErrorMessage,
+				"validation_summary":   data.ValidationSummary,
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending validation failed notification to PagerDuty")
 
 	return s.Send(event)
 }
