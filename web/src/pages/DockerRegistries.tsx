@@ -269,18 +269,23 @@ function RegistryForm({
 					<div key={field}>
 						<label className="block text-sm font-medium text-gray-700 mb-1">
 							{label}
+							<textarea
+								value={
+									(credentials as Record<string, string | undefined>)[
+										field
+									] ?? ''
+								}
+								onChange={(e) =>
+									setCredentials({
+										...credentials,
+										[field]: e.target.value,
+									})
+								}
+								rows={6}
+								className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+								placeholder="Paste your GCP service account JSON key here..."
+							/>
 						</label>
-						<textarea
-							value={
-								(credentials as Record<string, string | undefined>)[field] ?? ''
-							}
-							onChange={(e) =>
-								setCredentials({ ...credentials, [field]: e.target.value })
-							}
-							rows={6}
-							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
-							placeholder="Paste your GCP service account JSON key here..."
-						/>
 					</div>
 				);
 			}
@@ -289,17 +294,20 @@ function RegistryForm({
 				<div key={field}>
 					<label className="block text-sm font-medium text-gray-700 mb-1">
 						{label}
+						<input
+							type={isPassword ? 'password' : 'text'}
+							value={
+								(credentials as Record<string, string | undefined>)[field] ?? ''
+							}
+							onChange={(e) =>
+								setCredentials({
+									...credentials,
+									[field]: e.target.value,
+								})
+							}
+							className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						/>
 					</label>
-					<input
-						type={isPassword ? 'password' : 'text'}
-						value={
-							(credentials as Record<string, string | undefined>)[field] ?? ''
-						}
-						onChange={(e) =>
-							setCredentials({ ...credentials, [field]: e.target.value })
-						}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-					/>
 				</div>
 			);
 		});
@@ -310,39 +318,38 @@ function RegistryForm({
 			<div>
 				<label className="block text-sm font-medium text-gray-700 mb-1">
 					Name
+					<input
+						type="text"
+						value={name}
+						onChange={(e) => setName(e.target.value)}
+						required
+						className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						placeholder="My Registry"
+					/>
 				</label>
-				<input
-					type="text"
-					value={name}
-					onChange={(e) => setName(e.target.value)}
-					required
-					className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-					placeholder="My Registry"
-				/>
 			</div>
 
 			<div>
 				<label className="block text-sm font-medium text-gray-700 mb-1">
 					Registry Type
-				</label>
-				<select
-					value={type}
-					onChange={(e) => {
-						setType(e.target.value as DockerRegistryType);
-						setCredentials({});
-						const newType = types.find((t) => t.type === e.target.value);
-						if (newType?.default_url) {
-							setUrl(newType.default_url);
-						}
-					}}
-					className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-				>
-					{types.map((t) => (
-						<option key={t.type} value={t.type}>
-							{t.name}
-						</option>
-					))}
-				</select>
+					<select
+						value={type}
+						onChange={(e) => {
+							setType(e.target.value as DockerRegistryType);
+							setCredentials({});
+							const newType = types.find((t) => t.type === e.target.value);
+							if (newType?.default_url) {
+								setUrl(newType.default_url);
+							}
+						}}
+						className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+					>
+						{types.map((t) => (
+							<option key={t.type} value={t.type}>
+								{t.name}
+							</option>
+						))}
+					</select>
 				{selectedType && (
 					<p className="mt-1 text-sm text-gray-500">
 						{selectedType.description}
@@ -353,14 +360,16 @@ function RegistryForm({
 			<div>
 				<label className="block text-sm font-medium text-gray-700 mb-1">
 					URL
+					<input
+						type="url"
+						value={url}
+						onChange={(e) => setUrl(e.target.value)}
+						className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						placeholder={
+							selectedType?.default_url || 'https://registry.example.com'
+						}
+					/>
 				</label>
-				<input
-					type="url"
-					value={url}
-					onChange={(e) => setUrl(e.target.value)}
-					className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-					placeholder={selectedType?.default_url || 'https://registry.example.com'}
-				/>
 				{selectedType?.default_url && (
 					<p className="mt-1 text-sm text-gray-500">
 						Leave empty to use: {selectedType.default_url}
@@ -413,7 +422,10 @@ function RegistryForm({
 interface RotateCredentialsModalProps {
 	registry: DockerRegistry;
 	types: DockerRegistryTypeInfo[];
-	onSubmit: (credentials: DockerRegistryCredentials, expiresAt?: string) => void;
+	onSubmit: (
+		credentials: DockerRegistryCredentials,
+		expiresAt?: string,
+	) => void;
 	onCancel: () => void;
 	isSubmitting: boolean;
 }
@@ -454,18 +466,23 @@ function RotateCredentialsModal({
 					<div key={field}>
 						<label className="block text-sm font-medium text-gray-700 mb-1">
 							{label}
+							<textarea
+								value={
+									(credentials as Record<string, string | undefined>)[
+										field
+									] ?? ''
+								}
+								onChange={(e) =>
+									setCredentials({
+										...credentials,
+										[field]: e.target.value,
+									})
+								}
+								rows={6}
+								className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+								placeholder="Paste your GCP service account JSON key here..."
+							/>
 						</label>
-						<textarea
-							value={
-								(credentials as Record<string, string | undefined>)[field] ?? ''
-							}
-							onChange={(e) =>
-								setCredentials({ ...credentials, [field]: e.target.value })
-							}
-							rows={6}
-							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
-							placeholder="Paste your GCP service account JSON key here..."
-						/>
 					</div>
 				);
 			}
@@ -474,17 +491,20 @@ function RotateCredentialsModal({
 				<div key={field}>
 					<label className="block text-sm font-medium text-gray-700 mb-1">
 						{label}
+						<input
+							type={isPassword ? 'password' : 'text'}
+							value={
+								(credentials as Record<string, string | undefined>)[field] ?? ''
+							}
+							onChange={(e) =>
+								setCredentials({
+									...credentials,
+									[field]: e.target.value,
+								})
+							}
+							className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						/>
 					</label>
-					<input
-						type={isPassword ? 'password' : 'text'}
-						value={
-							(credentials as Record<string, string | undefined>)[field] ?? ''
-						}
-						onChange={(e) =>
-							setCredentials({ ...credentials, [field]: e.target.value })
-						}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-					/>
 				</div>
 			);
 		});
@@ -503,13 +523,13 @@ function RotateCredentialsModal({
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">
 								Expires At (Optional)
+								<input
+									type="datetime-local"
+									value={expiresAt}
+									onChange={(e) => setExpiresAt(e.target.value)}
+									className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
 							</label>
-							<input
-								type="datetime-local"
-								value={expiresAt}
-								onChange={(e) => setExpiresAt(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							/>
 							<p className="mt-1 text-sm text-gray-500">
 								Set a reminder for when these credentials expire
 							</p>
@@ -600,9 +620,7 @@ export function DockerRegistries() {
 	};
 
 	const handleDelete = (id: string) => {
-		if (
-			window.confirm('Are you sure you want to delete this registry?')
-		) {
+		if (window.confirm('Are you sure you want to delete this registry?')) {
 			deleteRegistry.mutate(id);
 		}
 	};

@@ -134,7 +134,9 @@ export function useRotateDockerRegistryCredentials() {
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['docker-registries'] });
 			queryClient.invalidateQueries({ queryKey: ['docker-registries', id] });
-			queryClient.invalidateQueries({ queryKey: ['docker-registries-expiring'] });
+			queryClient.invalidateQueries({
+				queryKey: ['docker-registries-expiring'],
+			});
 		},
 	});
 }

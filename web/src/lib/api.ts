@@ -94,6 +94,7 @@ import type {
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
+	CreateDockerRegistryRequest,
 	CreateDockerRestoreRequest,
 	CreateDockerStackRequest,
 	CreateDowntimeAlertRequest,
@@ -147,6 +148,8 @@ import type {
 	DiscoveredDockerStack,
 	DockerContainer,
 	DockerContainersResponse,
+	DockerHealthCheckAllResponse,
+	DockerHealthCheckResponse,
 	DockerLogBackup,
 	DockerLogBackupsResponse,
 	DockerLogRetentionResult,
@@ -154,6 +157,15 @@ import type {
 	DockerLogSettingsUpdate,
 	DockerLogStorageStats,
 	DockerLogViewResponse,
+	DockerLoginAllResponse,
+	DockerLoginResult,
+	DockerLoginResultResponse,
+	DockerRegistriesResponse,
+	DockerRegistry,
+	DockerRegistryHealthCheck,
+	DockerRegistryResponse,
+	DockerRegistryTypeInfo,
+	DockerRegistryTypesResponse,
 	DockerRestore,
 	DockerRestorePlan,
 	DockerRestorePreviewRequest,
@@ -174,6 +186,7 @@ import type {
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
+	ExpiringCredentialsResponse,
 	ExportBundleRequest,
 	ExportFormat,
 	ExtendImmutabilityLockRequest,
@@ -298,6 +311,7 @@ import type {
 	RestorePreviewRequest,
 	RestoresResponse,
 	RotateAPIKeyResponse,
+	RotateCredentialsRequest,
 	RunDRTestRequest,
 	RunScheduleResponse,
 	SLAAssignment,
@@ -312,21 +326,6 @@ import type {
 	SLAReport,
 	SLAReportResponse,
 	SLAWithAssignments,
-	CreateDockerRegistryRequest,
-	DockerHealthCheckAllResponse,
-	DockerHealthCheckResponse,
-	DockerLoginAllResponse,
-	DockerLoginResult,
-	DockerLoginResultResponse,
-	DockerRegistriesResponse,
-	DockerRegistry,
-	DockerRegistryHealthCheck,
-	DockerRegistryResponse,
-	DockerRegistryTypeInfo,
-	DockerRegistryTypesResponse,
-	ExpiringCredentialsResponse,
-	RotateCredentialsRequest,
-	UpdateDockerRegistryRequest,
 	SSOGroupMapping,
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
@@ -378,6 +377,7 @@ import type {
 	UpdateContainerBackupHookRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
+	UpdateDockerRegistryRequest,
 	UpdateDockerStackRequest,
 	UpdateDowntimeAlertRequest,
 	UpdateDowntimeEventRequest,
@@ -3905,9 +3905,8 @@ export const dockerStacksApi = {
 // Docker Registry API
 export const dockerRegistriesApi = {
 	list: async (): Promise<DockerRegistry[]> => {
-		const response = await fetchApi<DockerRegistriesResponse>(
-			'/docker-registries',
-		);
+		const response =
+			await fetchApi<DockerRegistriesResponse>('/docker-registries');
 		return response.registries ?? [];
 	},
 
@@ -3918,9 +3917,7 @@ export const dockerRegistriesApi = {
 		return response.registry;
 	},
 
-	create: async (
-		data: CreateDockerRegistryRequest,
-	): Promise<DockerRegistry> =>
+	create: async (data: CreateDockerRegistryRequest): Promise<DockerRegistry> =>
 		fetchApi<DockerRegistry>('/docker-registries', {
 			method: 'POST',
 			body: JSON.stringify(data),
@@ -3950,8 +3947,7 @@ export const dockerRegistriesApi = {
 	getExpiringCredentials: async (): Promise<{
 		registries: DockerRegistry[];
 		warning_days: number;
-	}> =>
-		fetchApi<ExpiringCredentialsResponse>('/docker-registries/expiring'),
+	}> => fetchApi<ExpiringCredentialsResponse>('/docker-registries/expiring'),
 
 	login: async (id: string): Promise<DockerLoginResult> => {
 		const response = await fetchApi<DockerLoginResultResponse>(
