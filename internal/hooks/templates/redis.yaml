@@ -1,0 +1,130 @@
+# Redis Backup Hook Template
+# Uses BGSAVE to create a Redis dump before backup
+name: Redis
+description: Creates a Redis database dump using BGSAVE before backing up
+service_type: redis
+icon: database
+tags:
+  - database
+  - redis
+  - cache
+  - nosql
+
+# Variables that users can customize
+variables:
+  - name: REDIS_HOST
+    description: Redis host
+    default: localhost
+    required: true
+  - name: REDIS_PORT
+    description: Redis port
+    default: "6379"
+    required: true
+  - name: REDIS_PASSWORD
+    description: Redis password (leave empty if no auth)
+    default: ""
+    required: false
+    sensitive: true
+  - name: REDIS_DATA_DIR
+    description: Redis data directory (where dump.rdb is stored)
+    default: /var/lib/redis
+    required: true
+  - name: DUMP_DIR
+    description: Directory to copy the dump file
+    default: /var/backups/redis
+    required: true
+  - name: REDIS_CLI
+    description: Path to redis-cli
+    default: redis-cli
+    required: false
+  - name: BGSAVE_TIMEOUT
+    description: Timeout in seconds to wait for BGSAVE to complete
+    default: "300"
+    required: false
+
+scripts:
+  pre_backup:
+    script: |
+      #!/bin/bash
+      set -e
+
+      # Redis backup script
+      TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/redis}"
+      REDIS_DATA_DIR="${REDIS_DATA_DIR:-/var/lib/redis}"
+      REDIS_CLI="${REDIS_CLI:-redis-cli}"
+      BGSAVE_TIMEOUT="${BGSAVE_TIMEOUT:-300}"
+
+      # Create dump directory if it doesn't exist
+      mkdir -p "$DUMP_DIR"
+
+      # Build redis-cli command
+      CLI_OPTS="-h ${REDIS_HOST:-localhost} -p ${REDIS_PORT:-6379}"
+      if [ -n "${REDIS_PASSWORD}" ]; then
+        CLI_OPTS="$CLI_OPTS -a ${REDIS_PASSWORD}"
+        export REDISCLI_AUTH="${REDIS_PASSWORD}"
+      fi
+
+      # Get last save timestamp before BGSAVE
+      LAST_SAVE=$($REDIS_CLI $CLI_OPTS LASTSAVE 2>/dev/null | grep -o '[0-9]*')
+      echo "Last save timestamp: $LAST_SAVE"
+
+      # Trigger BGSAVE
+      echo "Triggering Redis BGSAVE..."
+      $REDIS_CLI $CLI_OPTS BGSAVE 2>/dev/null
+
+      # Wait for BGSAVE to complete
+      echo "Waiting for BGSAVE to complete (timeout: ${BGSAVE_TIMEOUT}s)..."
+      ELAPSED=0
+      while [ $ELAPSED -lt $BGSAVE_TIMEOUT ]; do
+        CURRENT_SAVE=$($REDIS_CLI $CLI_OPTS LASTSAVE 2>/dev/null | grep -o '[0-9]*')
+        if [ "$CURRENT_SAVE" != "$LAST_SAVE" ]; then
+          echo "BGSAVE completed"
+          break
+        fi
+        sleep 1
+        ELAPSED=$((ELAPSED + 1))
+      done
+
+      if [ $ELAPSED -ge $BGSAVE_TIMEOUT ]; then
+        echo "WARNING: BGSAVE timeout reached, proceeding with existing dump"
+      fi
+
+      # Copy the dump file
+      DUMP_FILE="$DUMP_DIR/redis_${TIMESTAMP}.rdb"
+      if [ -f "$REDIS_DATA_DIR/dump.rdb" ]; then
+        cp "$REDIS_DATA_DIR/dump.rdb" "$DUMP_FILE"
+        echo "Redis dump created: $DUMP_FILE"
+
+        # Compress the dump
+        gzip "$DUMP_FILE"
+        echo "Compressed dump: ${DUMP_FILE}.gz"
+      else
+        echo "ERROR: dump.rdb not found at $REDIS_DATA_DIR/dump.rdb"
+        exit 1
+      fi
+
+      echo "Redis backup completed successfully"
+    timeout_seconds: 600
+    fail_on_error: true
+
+  post_success:
+    script: |
+      #!/bin/bash
+      # Cleanup old dumps (keep last 7 days)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/redis}"
+      RETENTION_DAYS=7
+
+      echo "Cleaning up dumps older than $RETENTION_DAYS days"
+      find "$DUMP_DIR" -type f -name "redis_*.rdb.gz" -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
+      echo "Cleanup completed"
+    timeout_seconds: 300
+    fail_on_error: false
+
+  post_failure:
+    script: |
+      #!/bin/bash
+      echo "Redis backup failed - manual intervention may be required"
+      echo "Check Redis connectivity and ensure BGSAVE is allowed"
+    timeout_seconds: 60
+    fail_on_error: false
