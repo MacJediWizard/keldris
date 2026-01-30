@@ -306,6 +306,10 @@ func NewRouter(
 	userSessionsHandler := handlers.NewUserSessionsHandler(database, logger)
 	userSessionsHandler.RegisterRoutes(apiV1)
 
+	// User management routes (admin)
+	usersHandler := handlers.NewUsersHandler(database, sessions, rbac, logger)
+	usersHandler.RegisterRoutes(apiV1)
+
 	// Lifecycle policy routes
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)

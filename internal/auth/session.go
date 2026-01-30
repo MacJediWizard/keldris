@@ -38,6 +38,14 @@ const (
 	CurrentOrgRoleKey = "current_org_role"
 	// SessionRecordIDKey is the session key for the database session record ID.
 	SessionRecordIDKey = "session_record_id"
+	// ImpersonatingKey is the session key for impersonation state.
+	ImpersonatingKey = "impersonating"
+	// OriginalUserIDKey is the session key for the original user ID during impersonation.
+	OriginalUserIDKey = "original_user_id"
+	// OriginalUserEmailKey is the session key for the original user email during impersonation.
+	OriginalUserEmailKey = "original_user_email"
+	// ImpersonationLogIDKey is the session key for the impersonation log ID.
+	ImpersonationLogIDKey = "impersonation_log_id"
 )
 
 // SessionConfig holds session store configuration.
@@ -151,6 +159,16 @@ type SessionUser struct {
 	CurrentOrgID    uuid.UUID
 	CurrentOrgRole  string
 	SessionRecordID uuid.UUID
+	// Impersonation fields
+	Impersonating      bool
+	OriginalUserID     uuid.UUID
+	OriginalUserEmail  string
+	ImpersonationLogID uuid.UUID
+}
+
+// IsImpersonating returns true if the user is being impersonated.
+func (u *SessionUser) IsImpersonating() bool {
+	return u.Impersonating && u.OriginalUserID != uuid.Nil
 }
 
 // SetUser stores user data in the session after successful authentication.
@@ -190,15 +208,25 @@ func (s *SessionStore) GetUser(r *http.Request) (*SessionUser, error) {
 	currentOrgRole, _ := session.Values[CurrentOrgRoleKey].(string)
 	sessionRecordID, _ := session.Values[SessionRecordIDKey].(uuid.UUID)
 
+	// Impersonation fields
+	impersonating, _ := session.Values[ImpersonatingKey].(bool)
+	originalUserID, _ := session.Values[OriginalUserIDKey].(uuid.UUID)
+	originalUserEmail, _ := session.Values[OriginalUserEmailKey].(string)
+	impersonationLogID, _ := session.Values[ImpersonationLogIDKey].(uuid.UUID)
+
 	return &SessionUser{
-		ID:              userID,
-		OIDCSubject:     oidcSubject,
-		Email:           email,
-		Name:            name,
-		AuthenticatedAt: authenticatedAt,
-		CurrentOrgID:    currentOrgID,
-		CurrentOrgRole:  currentOrgRole,
-		SessionRecordID: sessionRecordID,
+		ID:                 userID,
+		OIDCSubject:        oidcSubject,
+		Email:              email,
+		Name:               name,
+		AuthenticatedAt:    authenticatedAt,
+		CurrentOrgID:       currentOrgID,
+		CurrentOrgRole:     currentOrgRole,
+		SessionRecordID:    sessionRecordID,
+		Impersonating:      impersonating,
+		OriginalUserID:     originalUserID,
+		OriginalUserEmail:  originalUserEmail,
+		ImpersonationLogID: impersonationLogID,
 	}, nil
 }
 
@@ -240,4 +268,70 @@ func (s *SessionStore) IsAuthenticated(r *http.Request) bool {
 	}
 	_, ok := session.Values[UserIDKey].(uuid.UUID)
 	return ok
+}
+
+// StartImpersonation begins impersonation of a target user.
+func (s *SessionStore) StartImpersonation(r *http.Request, w http.ResponseWriter, targetUser *SessionUser, logID uuid.UUID) error {
+	session, err := s.Get(r)
+	if err != nil {
+		return err
+	}
+
+	// Store original user info
+	originalUserID, _ := session.Values[UserIDKey].(uuid.UUID)
+	originalUserEmail, _ := session.Values[EmailKey].(string)
+
+	// Set impersonation state
+	session.Values[ImpersonatingKey] = true
+	session.Values[OriginalUserIDKey] = originalUserID
+	session.Values[OriginalUserEmailKey] = originalUserEmail
+	session.Values[ImpersonationLogIDKey] = logID
+
+	// Switch to target user
+	session.Values[UserIDKey] = targetUser.ID
+	session.Values[OIDCSubjectKey] = targetUser.OIDCSubject
+	session.Values[EmailKey] = targetUser.Email
+	session.Values[NameKey] = targetUser.Name
+	session.Values[CurrentOrgIDKey] = targetUser.CurrentOrgID
+	session.Values[CurrentOrgRoleKey] = targetUser.CurrentOrgRole
+
+	return s.Save(r, w, session)
+}
+
+// EndImpersonation ends impersonation and restores the original user.
+func (s *SessionStore) EndImpersonation(r *http.Request, w http.ResponseWriter, originalUser *SessionUser) error {
+	session, err := s.Get(r)
+	if err != nil {
+		return err
+	}
+
+	// Restore original user
+	session.Values[UserIDKey] = originalUser.ID
+	session.Values[OIDCSubjectKey] = originalUser.OIDCSubject
+	session.Values[EmailKey] = originalUser.Email
+	session.Values[NameKey] = originalUser.Name
+	session.Values[CurrentOrgIDKey] = originalUser.CurrentOrgID
+	session.Values[CurrentOrgRoleKey] = originalUser.CurrentOrgRole
+
+	// Clear impersonation state
+	delete(session.Values, ImpersonatingKey)
+	delete(session.Values, OriginalUserIDKey)
+	delete(session.Values, OriginalUserEmailKey)
+	delete(session.Values, ImpersonationLogIDKey)
+
+	return s.Save(r, w, session)
+}
+
+// GetImpersonationLogID returns the current impersonation log ID if impersonating.
+func (s *SessionStore) GetImpersonationLogID(r *http.Request) (uuid.UUID, error) {
+	session, err := s.Get(r)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	logID, ok := session.Values[ImpersonationLogIDKey].(uuid.UUID)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("not impersonating")
+	}
+	return logID, nil
 }
