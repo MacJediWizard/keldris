@@ -734,6 +734,83 @@ export interface BackupScriptsResponse {
 	scripts: BackupScript[];
 }
 
+// Backup Hook Template types
+export type BackupHookTemplateVisibility = 'built_in' | 'private' | 'organization';
+
+export interface BackupHookTemplateVariable {
+	name: string;
+	description: string;
+	default: string;
+	required: boolean;
+	sensitive?: boolean;
+}
+
+export interface BackupHookTemplateScript {
+	script: string;
+	timeout_seconds: number;
+	fail_on_error: boolean;
+}
+
+export interface BackupHookTemplateScripts {
+	pre_backup?: BackupHookTemplateScript;
+	post_success?: BackupHookTemplateScript;
+	post_failure?: BackupHookTemplateScript;
+	post_always?: BackupHookTemplateScript;
+}
+
+export interface BackupHookTemplate {
+	id: string;
+	org_id?: string;
+	created_by_id?: string;
+	name: string;
+	description?: string;
+	service_type: string;
+	icon?: string;
+	tags?: string[];
+	variables?: BackupHookTemplateVariable[];
+	scripts: BackupHookTemplateScripts;
+	visibility: BackupHookTemplateVisibility;
+	usage_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateBackupHookTemplateRequest {
+	name: string;
+	description?: string;
+	service_type: string;
+	icon?: string;
+	tags?: string[];
+	variables?: BackupHookTemplateVariable[];
+	scripts: BackupHookTemplateScripts;
+	visibility?: BackupHookTemplateVisibility;
+}
+
+export interface UpdateBackupHookTemplateRequest {
+	name?: string;
+	description?: string;
+	service_type?: string;
+	icon?: string;
+	tags?: string[];
+	variables?: BackupHookTemplateVariable[];
+	scripts?: BackupHookTemplateScripts;
+	visibility?: BackupHookTemplateVisibility;
+}
+
+export interface ApplyBackupHookTemplateRequest {
+	schedule_id: string;
+	variable_values?: Record<string, string>;
+}
+
+export interface ApplyBackupHookTemplateResponse {
+	scripts: BackupScript[];
+	message: string;
+}
+
+export interface BackupHookTemplatesResponse {
+	templates: BackupHookTemplate[];
+}
+
 // Auth types
 export type SupportedLanguage = 'en' | 'es' | 'pt';
 

@@ -8,6 +8,7 @@ import { Agents } from './pages/Agents';
 import { Alerts } from './pages/Alerts';
 import { Announcements } from './pages/Announcements';
 import { AuditLogs } from './pages/AuditLogs';
+import { BackupHookTemplates } from './pages/BackupHookTemplates';
 import { Backups } from './pages/Backups';
 import { Changelog } from './pages/Changelog';
 import { Classifications } from './pages/Classifications';
@@ -75,6 +76,7 @@ function App() {
 						<Route path="schedules" element={<Schedules />} />
 						<Route path="policies" element={<Policies />} />
 						<Route path="templates" element={<Templates />} />
+						<Route path="backup-hook-templates" element={<BackupHookTemplates />} />
 						<Route path="backups" element={<Backups />} />
 						<Route path="dr-runbooks" element={<DRRunbooks />} />
 						<Route path="restore" element={<Restore />} />
