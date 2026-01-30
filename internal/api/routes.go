@@ -359,6 +359,10 @@ func NewRouter(
 	komodoHandler.RegisterRoutes(apiV1)
 	komodoHandler.RegisterWebhookRoutes(r.Engine)
 
+	// Pi-hole backup routes
+	piholeHandler := handlers.NewPiholeHandler(database, logger)
+	piholeHandler.RegisterRoutes(apiV1)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
