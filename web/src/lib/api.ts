@@ -280,11 +280,13 @@ import type {
 	NotificationRuleExecution,
 	NotificationRuleExecutionsResponse,
 	NotificationRulesResponse,
+	OIDCSettings,
 	OnboardingStatus,
 	OnboardingStep,
 	OrgInvitation,
 	OrgMember,
 	OrgResponse,
+	OrgSettingsResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
 	PasswordExpirationInfo,
@@ -344,6 +346,7 @@ import type {
 	SLAReport,
 	SLAReportResponse,
 	SLAWithAssignments,
+	SMTPSettings,
 	SSOGroupMapping,
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
@@ -356,12 +359,14 @@ import type {
 	SearchFilter,
 	SearchResponse,
 	SearchSuggestionsResponse,
+	SecuritySettings,
 	ServerLogComponentsResponse,
 	ServerLogFilter,
 	ServerLogsResponse,
 	SetDebugModeRequest,
 	SetDebugModeResponse,
 	SetScheduleClassificationRequest,
+	SettingsAuditLogsResponse,
 	Snapshot,
 	SnapshotComment,
 	SnapshotCommentsResponse,
@@ -370,6 +375,7 @@ import type {
 	SnapshotMount,
 	SnapshotMountsResponse,
 	SnapshotsResponse,
+	StorageDefaultSettings,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
 	StorageGrowthTrend,
@@ -383,7 +389,10 @@ import type {
 	TestConnectionRequest,
 	TestNotificationRuleRequest,
 	TestNotificationRuleResponse,
+	TestOIDCResponse,
 	TestRepositoryResponse,
+	TestSMTPRequest,
+	TestSMTPResponse,
 	TrackRecentItemRequest,
 	TriggerDockerStackBackupRequest,
 	TriggerVerificationRequest,
@@ -413,6 +422,7 @@ import type {
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateNotificationRuleRequest,
+	UpdateOIDCSettingsRequest,
 	UpdateOrgRequest,
 	UpdatePasswordPolicyRequest,
 	UpdatePathClassificationRuleRequest,
@@ -422,10 +432,13 @@ import type {
 	UpdateRepositoryImmutabilitySettingsRequest,
 	UpdateRepositoryRequest,
 	UpdateSLADefinitionRequest,
+	UpdateSMTPSettingsRequest,
 	UpdateSSOGroupMappingRequest,
 	UpdateSSOSettingsRequest,
 	UpdateSavedFilterRequest,
 	UpdateScheduleRequest,
+	UpdateSecuritySettingsRequest,
+	UpdateStorageDefaultsRequest,
 	UpdateStoragePricingRequest,
 	UpdateTagRequest,
 	UpdateTemplateRequest,
@@ -3704,6 +3717,77 @@ export const slaApi = {
 		const response = await fetchApi<SLAReportResponse>(url);
 		return response.report;
 	},
+};
+
+// Organization System Settings API (SMTP, OIDC, Storage, Security)
+export const orgSettingsApi = {
+	// Get all settings
+	getAll: async (): Promise<OrgSettingsResponse> =>
+		fetchApi<OrgSettingsResponse>('/system-settings'),
+
+	// SMTP settings
+	getSMTP: async (): Promise<SMTPSettings> =>
+		fetchApi<SMTPSettings>('/system-settings/smtp'),
+
+	updateSMTP: async (data: UpdateSMTPSettingsRequest): Promise<SMTPSettings> =>
+		fetchApi<SMTPSettings>('/system-settings/smtp', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	testSMTP: async (data: TestSMTPRequest): Promise<TestSMTPResponse> =>
+		fetchApi<TestSMTPResponse>('/system-settings/smtp/test', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// OIDC settings
+	getOIDC: async (): Promise<OIDCSettings> =>
+		fetchApi<OIDCSettings>('/system-settings/oidc'),
+
+	updateOIDC: async (data: UpdateOIDCSettingsRequest): Promise<OIDCSettings> =>
+		fetchApi<OIDCSettings>('/system-settings/oidc', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	testOIDC: async (): Promise<TestOIDCResponse> =>
+		fetchApi<TestOIDCResponse>('/system-settings/oidc/test', {
+			method: 'POST',
+		}),
+
+	// Storage settings
+	getStorageDefaults: async (): Promise<StorageDefaultSettings> =>
+		fetchApi<StorageDefaultSettings>('/system-settings/storage'),
+
+	updateStorageDefaults: async (
+		data: UpdateStorageDefaultsRequest,
+	): Promise<StorageDefaultSettings> =>
+		fetchApi<StorageDefaultSettings>('/system-settings/storage', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// Security settings
+	getSecurity: async (): Promise<SecuritySettings> =>
+		fetchApi<SecuritySettings>('/system-settings/security'),
+
+	updateSecurity: async (
+		data: UpdateSecuritySettingsRequest,
+	): Promise<SecuritySettings> =>
+		fetchApi<SecuritySettings>('/system-settings/security', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// Audit log
+	getAuditLog: async (
+		limit = 50,
+		offset = 0,
+	): Promise<SettingsAuditLogsResponse> =>
+		fetchApi<SettingsAuditLogsResponse>(
+			`/system-settings/audit-log?limit=${limit}&offset=${offset}`,
+		),
 };
 
 // Docker Container Logs API

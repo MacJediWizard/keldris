@@ -4588,6 +4588,160 @@ export interface SLAReportResponse {
 	report: SLAReport;
 }
 
+// Organization System Settings types (SMTP, OIDC, Storage, Security)
+export interface SMTPSettings {
+	host: string;
+	port: number;
+	username?: string;
+	password?: string;
+	from_email: string;
+	from_name?: string;
+	encryption: 'none' | 'tls' | 'starttls';
+	enabled: boolean;
+	skip_tls_verify: boolean;
+	connection_timeout_seconds: number;
+}
+
+export interface OIDCSettings {
+	enabled: boolean;
+	issuer: string;
+	client_id: string;
+	client_secret?: string;
+	redirect_url: string;
+	scopes: string[];
+	auto_create_users: boolean;
+	default_role: 'member' | 'readonly';
+	allowed_domains?: string[];
+	require_email_verification: boolean;
+}
+
+export interface StorageDefaultSettings {
+	default_retention_days: number;
+	max_retention_days: number;
+	default_storage_backend: 'local' | 's3' | 'b2' | 'sftp' | 'rest' | 'dropbox';
+	max_backup_size_gb: number;
+	enable_compression: boolean;
+	compression_level: number;
+	default_encryption_method: 'aes256' | 'none';
+	prune_schedule: string;
+	auto_prune_enabled: boolean;
+}
+
+export interface SecuritySettings {
+	session_timeout_minutes: number;
+	max_concurrent_sessions: number;
+	require_mfa: boolean;
+	mfa_grace_period_days: number;
+	allowed_ip_ranges?: string[];
+	blocked_ip_ranges?: string[];
+	failed_login_lockout_attempts: number;
+	failed_login_lockout_minutes: number;
+	api_key_expiration_days: number;
+	enable_audit_logging: boolean;
+	audit_log_retention_days: number;
+	force_https: boolean;
+	allow_password_login: boolean;
+}
+
+export interface OrgSettingsResponse {
+	smtp: SMTPSettings;
+	oidc: OIDCSettings;
+	storage_defaults: StorageDefaultSettings;
+	security: SecuritySettings;
+	updated_at: string;
+}
+
+export interface UpdateSMTPSettingsRequest {
+	host?: string;
+	port?: number;
+	username?: string;
+	password?: string;
+	from_email?: string;
+	from_name?: string;
+	encryption?: 'none' | 'tls' | 'starttls';
+	enabled?: boolean;
+	skip_tls_verify?: boolean;
+	connection_timeout_seconds?: number;
+}
+
+export interface UpdateOIDCSettingsRequest {
+	enabled?: boolean;
+	issuer?: string;
+	client_id?: string;
+	client_secret?: string;
+	redirect_url?: string;
+	scopes?: string[];
+	auto_create_users?: boolean;
+	default_role?: 'member' | 'readonly';
+	allowed_domains?: string[];
+	require_email_verification?: boolean;
+}
+
+export interface UpdateStorageDefaultsRequest {
+	default_retention_days?: number;
+	max_retention_days?: number;
+	default_storage_backend?: 'local' | 's3' | 'b2' | 'sftp' | 'rest' | 'dropbox';
+	max_backup_size_gb?: number;
+	enable_compression?: boolean;
+	compression_level?: number;
+	default_encryption_method?: 'aes256' | 'none';
+	prune_schedule?: string;
+	auto_prune_enabled?: boolean;
+}
+
+export interface UpdateSecuritySettingsRequest {
+	session_timeout_minutes?: number;
+	max_concurrent_sessions?: number;
+	require_mfa?: boolean;
+	mfa_grace_period_days?: number;
+	allowed_ip_ranges?: string[];
+	blocked_ip_ranges?: string[];
+	failed_login_lockout_attempts?: number;
+	failed_login_lockout_minutes?: number;
+	api_key_expiration_days?: number;
+	enable_audit_logging?: boolean;
+	audit_log_retention_days?: number;
+	force_https?: boolean;
+	allow_password_login?: boolean;
+}
+
+export interface TestSMTPRequest {
+	recipient_email: string;
+}
+
+export interface TestSMTPResponse {
+	success: boolean;
+	message: string;
+}
+
+export interface TestOIDCResponse {
+	success: boolean;
+	message: string;
+	provider_name?: string;
+	auth_url?: string;
+	supported_flow?: string;
+}
+
+export type SettingKey = 'smtp' | 'oidc' | 'storage_defaults' | 'security';
+
+export interface SettingsAuditLog {
+	id: string;
+	org_id: string;
+	setting_key: SettingKey;
+	old_value?: object;
+	new_value: object;
+	changed_by: string;
+	changed_by_email?: string;
+	changed_at: string;
+	ip_address?: string;
+}
+
+export interface SettingsAuditLogsResponse {
+	logs: SettingsAuditLog[];
+	limit: number;
+	offset: number;
+}
+
 // Superuser types
 export type SuperuserAction =
 	| 'view_organizations'
