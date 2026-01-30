@@ -1,0 +1,105 @@
+# MySQL Backup Hook Template
+# Uses mysqldump to create a database dump before backup
+name: MySQL
+description: Creates a MySQL database dump using mysqldump before backing up
+service_type: mysql
+icon: database
+tags:
+  - database
+  - mysql
+  - sql
+
+# Variables that users can customize
+variables:
+  - name: MYSQL_HOST
+    description: MySQL host
+    default: localhost
+    required: true
+  - name: MYSQL_PORT
+    description: MySQL port
+    default: "3306"
+    required: true
+  - name: MYSQL_USER
+    description: MySQL username
+    default: root
+    required: true
+  - name: MYSQL_PASSWORD
+    description: MySQL password
+    default: ""
+    required: false
+    sensitive: true
+  - name: MYSQL_DATABASE
+    description: Database name to backup (leave empty for all databases)
+    default: ""
+    required: false
+  - name: DUMP_DIR
+    description: Directory to store the dump file
+    default: /var/backups/mysql
+    required: true
+  - name: EXTRA_OPTS
+    description: Additional mysqldump options
+    default: "--single-transaction --quick --lock-tables=false"
+    required: false
+
+scripts:
+  pre_backup:
+    script: |
+      #!/bin/bash
+      set -e
+
+      # MySQL backup script
+      TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/mysql}"
+      EXTRA_OPTS="${EXTRA_OPTS:---single-transaction --quick --lock-tables=false}"
+
+      # Create dump directory if it doesn't exist
+      mkdir -p "$DUMP_DIR"
+
+      # Build connection options
+      CONN_OPTS="-h${MYSQL_HOST:-localhost} -P${MYSQL_PORT:-3306} -u${MYSQL_USER:-root}"
+      if [ -n "${MYSQL_PASSWORD}" ]; then
+        export MYSQL_PWD="${MYSQL_PASSWORD}"
+      fi
+
+      if [ -n "${MYSQL_DATABASE}" ]; then
+        # Backup single database
+        DUMP_FILE="$DUMP_DIR/${MYSQL_DATABASE}_${TIMESTAMP}.sql"
+        echo "Backing up database: ${MYSQL_DATABASE}"
+        mysqldump $CONN_OPTS $EXTRA_OPTS "${MYSQL_DATABASE}" > "$DUMP_FILE"
+        echo "Database dump created: $DUMP_FILE"
+      else
+        # Backup all databases
+        DUMP_FILE="$DUMP_DIR/all_databases_${TIMESTAMP}.sql"
+        echo "Backing up all databases"
+        mysqldump $CONN_OPTS $EXTRA_OPTS --all-databases > "$DUMP_FILE"
+        echo "Full dump created: $DUMP_FILE"
+      fi
+
+      # Compress the dump
+      gzip "$DUMP_FILE"
+      echo "Compressed dump: ${DUMP_FILE}.gz"
+
+      echo "MySQL backup completed successfully"
+    timeout_seconds: 3600
+    fail_on_error: true
+
+  post_success:
+    script: |
+      #!/bin/bash
+      # Cleanup old dumps (keep last 7 days)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/mysql}"
+      RETENTION_DAYS=7
+
+      echo "Cleaning up dumps older than $RETENTION_DAYS days"
+      find "$DUMP_DIR" -type f -name "*.sql.gz" -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
+      echo "Cleanup completed"
+    timeout_seconds: 300
+    fail_on_error: false
+
+  post_failure:
+    script: |
+      #!/bin/bash
+      echo "MySQL backup failed - manual intervention may be required"
+      echo "Check MySQL connectivity and credentials"
+    timeout_seconds: 60
+    fail_on_error: false
