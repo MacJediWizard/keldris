@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useMe } from '../hooks/useAuth';
 import {
+	useSettingsAuditLog,
 	useSystemSettings,
-	useUpdateSMTPSettings,
+	useTestOIDC,
 	useTestSMTP,
 	useUpdateOIDCSettings,
-	useTestOIDC,
-	useUpdateStorageDefaultSettings,
+	useUpdateSMTPSettings,
 	useUpdateSecuritySettings,
-	useSettingsAuditLog,
+	useUpdateStorageDefaultSettings,
 } from '../hooks/useSystemSettings';
 import type {
+	OIDCSettings,
 	OrgRole,
 	SMTPSettings,
-	OIDCSettings,
-	StorageDefaultSettings,
 	SecuritySettings,
 	SettingsAuditLog,
+	StorageDefaultSettings,
 } from '../lib/types';
 
 type SettingsTab = 'smtp' | 'oidc' | 'storage' | 'security' | 'audit';
@@ -134,7 +134,7 @@ export function SystemSettings() {
 		try {
 			const data = { ...smtpForm };
 			if (!data.password) {
-				delete (data as Record<string, unknown>).password;
+				(data as Record<string, unknown>).password = undefined;
 			}
 			await updateSMTP.mutateAsync(data);
 			setEditingSection(null);
@@ -157,7 +157,7 @@ export function SystemSettings() {
 		try {
 			const data = { ...oidcForm };
 			if (!data.client_secret) {
-				delete (data as Record<string, unknown>).client_secret;
+				(data as Record<string, unknown>).client_secret = undefined;
 			}
 			await updateOIDC.mutateAsync(data);
 			setEditingSection(null);
@@ -319,11 +319,15 @@ export function SystemSettings() {
 
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="smtp-host"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									SMTP Host
 								</label>
 								<input
 									type="text"
+									id="smtp-host"
 									value={smtpForm.host}
 									disabled={editingSection !== 'smtp'}
 									onChange={(e) =>
@@ -334,11 +338,15 @@ export function SystemSettings() {
 								/>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="smtp-port"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Port
 								</label>
 								<input
 									type="number"
+									id="smtp-port"
 									value={smtpForm.port}
 									disabled={editingSection !== 'smtp'}
 									onChange={(e) =>
@@ -351,11 +359,15 @@ export function SystemSettings() {
 
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="smtp-username"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Username
 								</label>
 								<input
 									type="text"
+									id="smtp-username"
 									value={smtpForm.username ?? ''}
 									disabled={editingSection !== 'smtp'}
 									onChange={(e) =>
@@ -365,17 +377,25 @@ export function SystemSettings() {
 								/>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="smtp-password"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Password
 								</label>
 								<input
 									type="password"
+									id="smtp-password"
 									value={smtpForm.password ?? ''}
 									disabled={editingSection !== 'smtp'}
 									onChange={(e) =>
 										setSmtpForm({ ...smtpForm, password: e.target.value })
 									}
-									placeholder={editingSection === 'smtp' ? 'Enter new password' : '********'}
+									placeholder={
+										editingSection === 'smtp'
+											? 'Enter new password'
+											: '********'
+									}
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 								/>
 							</div>
@@ -383,11 +403,15 @@ export function SystemSettings() {
 
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="smtp-from-email"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									From Email
 								</label>
 								<input
 									type="email"
+									id="smtp-from-email"
 									value={smtpForm.from_email}
 									disabled={editingSection !== 'smtp'}
 									onChange={(e) =>
@@ -398,11 +422,15 @@ export function SystemSettings() {
 								/>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="smtp-from-name"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									From Name
 								</label>
 								<input
 									type="text"
+									id="smtp-from-name"
 									value={smtpForm.from_name ?? ''}
 									disabled={editingSection !== 'smtp'}
 									onChange={(e) =>
@@ -416,10 +444,14 @@ export function SystemSettings() {
 
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="smtp-encryption"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Encryption
 								</label>
 								<select
+									id="smtp-encryption"
 									value={smtpForm.encryption}
 									disabled={editingSection !== 'smtp'}
 									onChange={(e) =>
@@ -436,11 +468,15 @@ export function SystemSettings() {
 								</select>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="smtp-timeout"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Connection Timeout (seconds)
 								</label>
 								<input
 									type="number"
+									id="smtp-timeout"
 									value={smtpForm.connection_timeout_seconds}
 									disabled={editingSection !== 'smtp'}
 									onChange={(e) =>
@@ -463,7 +499,10 @@ export function SystemSettings() {
 								checked={smtpForm.skip_tls_verify}
 								disabled={editingSection !== 'smtp'}
 								onChange={(e) =>
-									setSmtpForm({ ...smtpForm, skip_tls_verify: e.target.checked })
+									setSmtpForm({
+										...smtpForm,
+										skip_tls_verify: e.target.checked,
+									})
 								}
 								className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
 							/>
@@ -580,11 +619,15 @@ export function SystemSettings() {
 						</div>
 
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label
+								htmlFor="oidc-issuer"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
 								Issuer URL
 							</label>
 							<input
 								type="url"
+								id="oidc-issuer"
 								value={oidcForm.issuer}
 								disabled={editingSection !== 'oidc'}
 								onChange={(e) =>
@@ -597,11 +640,15 @@ export function SystemSettings() {
 
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="oidc-client-id"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Client ID
 								</label>
 								<input
 									type="text"
+									id="oidc-client-id"
 									value={oidcForm.client_id}
 									disabled={editingSection !== 'oidc'}
 									onChange={(e) =>
@@ -611,28 +658,38 @@ export function SystemSettings() {
 								/>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="oidc-client-secret"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Client Secret
 								</label>
 								<input
 									type="password"
+									id="oidc-client-secret"
 									value={oidcForm.client_secret ?? ''}
 									disabled={editingSection !== 'oidc'}
 									onChange={(e) =>
 										setOidcForm({ ...oidcForm, client_secret: e.target.value })
 									}
-									placeholder={editingSection === 'oidc' ? 'Enter new secret' : '********'}
+									placeholder={
+										editingSection === 'oidc' ? 'Enter new secret' : '********'
+									}
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 								/>
 							</div>
 						</div>
 
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label
+								htmlFor="oidc-redirect-url"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
 								Redirect URL
 							</label>
 							<input
 								type="url"
+								id="oidc-redirect-url"
 								value={oidcForm.redirect_url}
 								disabled={editingSection !== 'oidc'}
 								onChange={(e) =>
@@ -645,10 +702,14 @@ export function SystemSettings() {
 
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="oidc-default-role"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Default Role for New Users
 								</label>
 								<select
+									id="oidc-default-role"
 									value={oidcForm.default_role}
 									disabled={editingSection !== 'oidc'}
 									onChange={(e) =>
@@ -664,11 +725,15 @@ export function SystemSettings() {
 								</select>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="oidc-allowed-domains"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Allowed Email Domains (comma-separated)
 								</label>
 								<input
 									type="text"
+									id="oidc-allowed-domains"
 									value={oidcForm.allowed_domains?.join(', ') ?? ''}
 									disabled={editingSection !== 'oidc'}
 									onChange={(e) =>
@@ -808,11 +873,15 @@ export function SystemSettings() {
 					<div className="p-6 space-y-4">
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="storage-retention"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Default Retention (days)
 								</label>
 								<input
 									type="number"
+									id="storage-retention"
 									value={storageForm.default_retention_days}
 									disabled={editingSection !== 'storage'}
 									onChange={(e) =>
@@ -827,11 +896,15 @@ export function SystemSettings() {
 								/>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="storage-max-retention"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Maximum Retention (days)
 								</label>
 								<input
 									type="number"
+									id="storage-max-retention"
 									value={storageForm.max_retention_days}
 									disabled={editingSection !== 'storage'}
 									onChange={(e) =>
@@ -849,16 +922,26 @@ export function SystemSettings() {
 
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="storage-backend"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Default Storage Backend
 								</label>
 								<select
+									id="storage-backend"
 									value={storageForm.default_storage_backend}
 									disabled={editingSection !== 'storage'}
 									onChange={(e) =>
 										setStorageForm({
 											...storageForm,
-											default_storage_backend: e.target.value as 'local' | 's3' | 'b2' | 'sftp' | 'rest' | 'dropbox',
+											default_storage_backend: e.target.value as
+												| 'local'
+												| 's3'
+												| 'b2'
+												| 'sftp'
+												| 'rest'
+												| 'dropbox',
 										})
 									}
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
@@ -872,11 +955,15 @@ export function SystemSettings() {
 								</select>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="storage-max-size"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Maximum Backup Size (GB)
 								</label>
 								<input
 									type="number"
+									id="storage-max-size"
 									value={storageForm.max_backup_size_gb}
 									disabled={editingSection !== 'storage'}
 									onChange={(e) =>
@@ -894,16 +981,22 @@ export function SystemSettings() {
 
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="storage-encryption"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Default Encryption
 								</label>
 								<select
+									id="storage-encryption"
 									value={storageForm.default_encryption_method}
 									disabled={editingSection !== 'storage'}
 									onChange={(e) =>
 										setStorageForm({
 											...storageForm,
-											default_encryption_method: e.target.value as 'aes256' | 'none',
+											default_encryption_method: e.target.value as
+												| 'aes256'
+												| 'none',
 										})
 									}
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
@@ -913,11 +1006,15 @@ export function SystemSettings() {
 								</select>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+								<label
+									htmlFor="storage-compression-level"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
 									Compression Level (1-9)
 								</label>
 								<input
 									type="number"
+									id="storage-compression-level"
 									value={storageForm.compression_level}
 									disabled={editingSection !== 'storage'}
 									onChange={(e) =>
@@ -934,11 +1031,15 @@ export function SystemSettings() {
 						</div>
 
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label
+								htmlFor="storage-prune-schedule"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
 								Auto-Prune Schedule (cron expression)
 							</label>
 							<input
 								type="text"
+								id="storage-prune-schedule"
 								value={storageForm.prune_schedule}
 								disabled={editingSection !== 'storage'}
 								onChange={(e) =>
@@ -1057,11 +1158,15 @@ export function SystemSettings() {
 							</h3>
 							<div className="grid grid-cols-2 gap-4">
 								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+									<label
+										htmlFor="security-session-timeout"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+									>
 										Session Timeout (minutes)
 									</label>
 									<input
 										type="number"
+										id="security-session-timeout"
 										value={securityForm.session_timeout_minutes}
 										disabled={editingSection !== 'security'}
 										onChange={(e) =>
@@ -1079,11 +1184,15 @@ export function SystemSettings() {
 									</p>
 								</div>
 								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+									<label
+										htmlFor="security-max-sessions"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+									>
 										Max Concurrent Sessions
 									</label>
 									<input
 										type="number"
+										id="security-max-sessions"
 										value={securityForm.max_concurrent_sessions}
 										disabled={editingSection !== 'security'}
 										onChange={(e) =>
@@ -1128,11 +1237,15 @@ export function SystemSettings() {
 								</div>
 								{securityForm.require_mfa && (
 									<div className="ml-6">
-										<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+										<label
+											htmlFor="security-mfa-grace"
+											className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+										>
 											MFA Grace Period (days)
 										</label>
 										<input
 											type="number"
+											id="security-mfa-grace"
 											value={securityForm.mfa_grace_period_days}
 											disabled={editingSection !== 'security'}
 											onChange={(e) =>
@@ -1156,11 +1269,15 @@ export function SystemSettings() {
 							</h3>
 							<div className="grid grid-cols-2 gap-4">
 								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+									<label
+										htmlFor="security-lockout-attempts"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+									>
 										Failed Login Lockout Attempts
 									</label>
 									<input
 										type="number"
+										id="security-lockout-attempts"
 										value={securityForm.failed_login_lockout_attempts}
 										disabled={editingSection !== 'security'}
 										onChange={(e) =>
@@ -1175,11 +1292,15 @@ export function SystemSettings() {
 									/>
 								</div>
 								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+									<label
+										htmlFor="security-lockout-duration"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+									>
 										Lockout Duration (minutes)
 									</label>
 									<input
 										type="number"
+										id="security-lockout-duration"
 										value={securityForm.failed_login_lockout_minutes}
 										disabled={editingSection !== 'security'}
 										onChange={(e) =>
@@ -1202,11 +1323,15 @@ export function SystemSettings() {
 							</h3>
 							<div className="grid grid-cols-2 gap-4">
 								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+									<label
+										htmlFor="security-api-expiration"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+									>
 										API Key Expiration (days, 0 = no expiration)
 									</label>
 									<input
 										type="number"
+										id="security-api-expiration"
 										value={securityForm.api_key_expiration_days}
 										disabled={editingSection !== 'security'}
 										onChange={(e) =>
@@ -1221,11 +1346,15 @@ export function SystemSettings() {
 									/>
 								</div>
 								<div>
-									<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+									<label
+										htmlFor="security-audit-retention"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+									>
 										Audit Log Retention (days)
 									</label>
 									<input
 										type="number"
+										id="security-audit-retention"
 										value={securityForm.audit_log_retention_days}
 										disabled={editingSection !== 'security'}
 										onChange={(e) =>
