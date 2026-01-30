@@ -50,7 +50,10 @@ export function useUpdateBackupHookTemplate() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ id, data }: { id: string; data: UpdateBackupHookTemplateRequest }) =>
+		mutationFn: ({
+			id,
+			data,
+		}: { id: string; data: UpdateBackupHookTemplateRequest }) =>
 			backupHookTemplatesApi.update(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['backupHookTemplates'] });

@@ -47,9 +47,15 @@ interface ApplyTemplateModalProps {
 	template: BackupHookTemplate;
 }
 
-function ApplyTemplateModal({ isOpen, onClose, template }: ApplyTemplateModalProps) {
+function ApplyTemplateModal({
+	isOpen,
+	onClose,
+	template,
+}: ApplyTemplateModalProps) {
 	const [selectedScheduleId, setSelectedScheduleId] = useState('');
-	const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+	const [variableValues, setVariableValues] = useState<Record<string, string>>(
+		{},
+	);
 
 	const { data: schedules, isLoading: schedulesLoading } = useSchedules();
 	const applyTemplate = useApplyBackupHookTemplate();
@@ -89,10 +95,14 @@ function ApplyTemplateModal({ isOpen, onClose, template }: ApplyTemplateModalPro
 
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label
+							htmlFor="select-schedule"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
 							Select Schedule
 						</label>
 						<select
+							id="select-schedule"
 							value={selectedScheduleId}
 							onChange={(e) => setSelectedScheduleId(e.target.value)}
 							className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -118,15 +128,23 @@ function ApplyTemplateModal({ isOpen, onClose, template }: ApplyTemplateModalPro
 							</h4>
 							{template.variables.map((variable) => (
 								<div key={variable.name}>
-									<label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+									<label
+										htmlFor={`var-${variable.name}`}
+										className="block text-sm text-gray-600 dark:text-gray-400 mb-1"
+									>
 										{variable.name}
-										{variable.required && <span className="text-red-500 ml-1">*</span>}
+										{variable.required && (
+											<span className="text-red-500 ml-1">*</span>
+										)}
 									</label>
 									<input
+										id={`var-${variable.name}`}
 										type={variable.sensitive ? 'password' : 'text'}
 										placeholder={variable.default || variable.description}
 										value={variableValues[variable.name] || ''}
-										onChange={(e) => handleVariableChange(variable.name, e.target.value)}
+										onChange={(e) =>
+											handleVariableChange(variable.name, e.target.value)
+										}
 										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
 										required={variable.required}
 									/>
@@ -166,21 +184,31 @@ interface CreateTemplateModalProps {
 	editTemplate?: BackupHookTemplate;
 }
 
-function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateModalProps) {
+function CreateTemplateModal({
+	isOpen,
+	onClose,
+	editTemplate,
+}: CreateTemplateModalProps) {
 	const [name, setName] = useState(editTemplate?.name || '');
-	const [description, setDescription] = useState(editTemplate?.description || '');
-	const [serviceType, setServiceType] = useState(editTemplate?.service_type || '');
+	const [description, setDescription] = useState(
+		editTemplate?.description || '',
+	);
+	const [serviceType, setServiceType] = useState(
+		editTemplate?.service_type || '',
+	);
 	const [icon, setIcon] = useState(editTemplate?.icon || 'database');
 	const [visibility, setVisibility] = useState<BackupHookTemplateVisibility>(
-		editTemplate?.visibility === 'built_in' ? 'private' : (editTemplate?.visibility || 'private')
+		editTemplate?.visibility === 'built_in'
+			? 'private'
+			: editTemplate?.visibility || 'private',
 	);
 	const [tags, setTags] = useState<string[]>(editTemplate?.tags || []);
 	const [tagInput, setTagInput] = useState('');
 	const [variables, setVariables] = useState<BackupHookTemplateVariable[]>(
-		editTemplate?.variables || []
+		editTemplate?.variables || [],
 	);
 	const [scripts, setScripts] = useState<BackupHookTemplateScripts>(
-		editTemplate?.scripts || {}
+		editTemplate?.scripts || {},
 	);
 
 	const createTemplate = useCreateBackupHookTemplate();
@@ -253,7 +281,11 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 		]);
 	};
 
-	const updateVariable = (index: number, field: keyof BackupHookTemplateVariable, value: string | boolean) => {
+	const updateVariable = (
+		index: number,
+		field: keyof BackupHookTemplateVariable,
+		value: string | boolean,
+	) => {
 		const updated = [...variables];
 		updated[index] = { ...updated[index], [field]: value };
 		setVariables(updated);
@@ -266,7 +298,7 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 	const updateScript = (
 		type: 'pre_backup' | 'post_success' | 'post_failure' | 'post_always',
 		field: 'script' | 'timeout_seconds' | 'fail_on_error',
-		value: string | number | boolean
+		value: string | number | boolean,
 	) => {
 		setScripts((prev) => ({
 			...prev,
@@ -293,10 +325,14 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 					{/* Basic Info */}
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label
+								htmlFor="template-name"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
 								Name
 							</label>
 							<input
+								id="template-name"
 								type="text"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
@@ -305,10 +341,14 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 							/>
 						</div>
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label
+								htmlFor="template-service-type"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
 								Service Type
 							</label>
 							<input
+								id="template-service-type"
 								type="text"
 								value={serviceType}
 								onChange={(e) => setServiceType(e.target.value)}
@@ -320,10 +360,14 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label
+							htmlFor="template-description"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
 							Description
 						</label>
 						<textarea
+							id="template-description"
 							value={description}
 							onChange={(e) => setDescription(e.target.value)}
 							rows={2}
@@ -333,10 +377,14 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label
+								htmlFor="template-icon"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
 								Icon
 							</label>
 							<select
+								id="template-icon"
 								value={icon}
 								onChange={(e) => setIcon(e.target.value)}
 								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -348,12 +396,18 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							<label
+								htmlFor="template-visibility"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
 								Visibility
 							</label>
 							<select
+								id="template-visibility"
 								value={visibility}
-								onChange={(e) => setVisibility(e.target.value as BackupHookTemplateVisibility)}
+								onChange={(e) =>
+									setVisibility(e.target.value as BackupHookTemplateVisibility)
+								}
 								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 							>
 								<option value="private">Private (Only me)</option>
@@ -364,15 +418,24 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 
 					{/* Tags */}
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label
+							htmlFor="template-tags"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
 							Tags
 						</label>
 						<div className="flex gap-2 mb-2">
 							<input
+								id="template-tags"
 								type="text"
 								value={tagInput}
 								onChange={(e) => setTagInput(e.target.value)}
-								onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter') {
+										e.preventDefault();
+										addTag();
+									}
+								}}
 								placeholder="Add a tag..."
 								className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 							/>
@@ -406,9 +469,9 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 					{/* Variables */}
 					<div>
 						<div className="flex justify-between items-center mb-2">
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
 								Variables
-							</label>
+							</span>
 							<button
 								type="button"
 								onClick={addVariable}
@@ -419,25 +482,34 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 						</div>
 						<div className="space-y-3">
 							{variables.map((variable, index) => (
-								<div key={index} className="flex gap-2 items-start bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
+								<div
+									key={variable.name || `var-${index}`}
+									className="flex gap-2 items-start bg-gray-50 dark:bg-gray-700 p-3 rounded-md"
+								>
 									<input
 										type="text"
 										value={variable.name}
-										onChange={(e) => updateVariable(index, 'name', e.target.value)}
+										onChange={(e) =>
+											updateVariable(index, 'name', e.target.value)
+										}
 										placeholder="Name"
 										className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
 									/>
 									<input
 										type="text"
 										value={variable.description}
-										onChange={(e) => updateVariable(index, 'description', e.target.value)}
+										onChange={(e) =>
+											updateVariable(index, 'description', e.target.value)
+										}
 										placeholder="Description"
 										className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
 									/>
 									<input
 										type="text"
 										value={variable.default}
-										onChange={(e) => updateVariable(index, 'default', e.target.value)}
+										onChange={(e) =>
+											updateVariable(index, 'default', e.target.value)
+										}
 										placeholder="Default"
 										className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
 									/>
@@ -445,7 +517,9 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 										<input
 											type="checkbox"
 											checked={variable.required}
-											onChange={(e) => updateVariable(index, 'required', e.target.checked)}
+											onChange={(e) =>
+												updateVariable(index, 'required', e.target.checked)
+											}
 											className="rounded"
 										/>
 										Required
@@ -464,18 +538,30 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 
 					{/* Scripts */}
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Scripts
-						</label>
+						</span>
 						<div className="space-y-4">
-							{(['pre_backup', 'post_success', 'post_failure', 'post_always'] as const).map((type) => (
-								<div key={type} className="border border-gray-200 dark:border-gray-700 rounded-md p-4">
+							{(
+								[
+									'pre_backup',
+									'post_success',
+									'post_failure',
+									'post_always',
+								] as const
+							).map((type) => (
+								<div
+									key={type}
+									className="border border-gray-200 dark:border-gray-700 rounded-md p-4"
+								>
 									<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 capitalize">
 										{type.replace('_', ' ')}
 									</h4>
 									<textarea
 										value={scripts[type]?.script || ''}
-										onChange={(e) => updateScript(type, 'script', e.target.value)}
+										onChange={(e) =>
+											updateScript(type, 'script', e.target.value)
+										}
 										rows={4}
 										placeholder="#!/bin/bash&#10;# Your script here..."
 										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
@@ -486,7 +572,13 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 											<input
 												type="number"
 												value={scripts[type]?.timeout_seconds || 300}
-												onChange={(e) => updateScript(type, 'timeout_seconds', parseInt(e.target.value))}
+												onChange={(e) =>
+													updateScript(
+														type,
+														'timeout_seconds',
+														Number.parseInt(e.target.value),
+													)
+												}
 												min={1}
 												max={3600}
 												className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
@@ -496,7 +588,9 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 											<input
 												type="checkbox"
 												checked={scripts[type]?.fail_on_error || false}
-												onChange={(e) => updateScript(type, 'fail_on_error', e.target.checked)}
+												onChange={(e) =>
+													updateScript(type, 'fail_on_error', e.target.checked)
+												}
 												className="rounded"
 											/>
 											Fail on error
@@ -510,7 +604,10 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 					<div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
 						<button
 							type="button"
-							onClick={() => { resetForm(); onClose(); }}
+							onClick={() => {
+								resetForm();
+								onClose();
+							}}
 							className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
 						>
 							Cancel
@@ -523,8 +620,8 @@ function CreateTemplateModal({ isOpen, onClose, editTemplate }: CreateTemplateMo
 							{createTemplate.isPending || updateTemplate.isPending
 								? 'Saving...'
 								: editTemplate
-								? 'Update Template'
-								: 'Create Template'}
+									? 'Update Template'
+									: 'Create Template'}
 						</button>
 					</div>
 				</form>
@@ -540,7 +637,12 @@ interface TemplateCardProps {
 	onDelete?: () => void;
 }
 
-function TemplateCard({ template, onApply, onEdit, onDelete }: TemplateCardProps) {
+function TemplateCard({
+	template,
+	onApply,
+	onEdit,
+	onDelete,
+}: TemplateCardProps) {
 	const isBuiltIn = template.visibility === 'built_in';
 
 	return (
@@ -553,8 +655,14 @@ function TemplateCard({ template, onApply, onEdit, onDelete }: TemplateCardProps
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
+							aria-hidden="true"
 						>
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getIconPath(template.icon)} />
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d={getIconPath(template.icon)}
+							/>
 						</svg>
 					</div>
 					<div>
@@ -609,6 +717,7 @@ function TemplateCard({ template, onApply, onEdit, onDelete }: TemplateCardProps
 				<div className="flex gap-2">
 					{!isBuiltIn && onEdit && (
 						<button
+							type="button"
 							onClick={onEdit}
 							className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
 						>
@@ -617,6 +726,7 @@ function TemplateCard({ template, onApply, onEdit, onDelete }: TemplateCardProps
 					)}
 					{!isBuiltIn && onDelete && (
 						<button
+							type="button"
 							onClick={onDelete}
 							className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
 						>
@@ -624,6 +734,7 @@ function TemplateCard({ template, onApply, onEdit, onDelete }: TemplateCardProps
 						</button>
 					)}
 					<button
+						type="button"
 						onClick={onApply}
 						className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
 					>
@@ -641,15 +752,23 @@ export function BackupHookTemplates() {
 	const [tagFilter, setTagFilter] = useState('');
 	const [searchQuery, setSearchQuery] = useState('');
 	const [showCreateModal, setShowCreateModal] = useState(false);
-	const [editTemplate, setEditTemplate] = useState<BackupHookTemplate | undefined>();
-	const [applyTemplate, setApplyTemplate] = useState<BackupHookTemplate | null>(null);
+	const [editTemplate, setEditTemplate] = useState<
+		BackupHookTemplate | undefined
+	>();
+	const [applyTemplate, setApplyTemplate] = useState<BackupHookTemplate | null>(
+		null,
+	);
 
 	const { data: templates, isLoading } = useBackupHookTemplates();
 	const deleteTemplate = useDeleteBackupHookTemplate();
 
 	// Get unique service types and tags for filters
-	const serviceTypes = Array.from(new Set(templates?.map((t) => t.service_type) || []));
-	const allTags = Array.from(new Set(templates?.flatMap((t) => t.tags || []) || []));
+	const serviceTypes = Array.from(
+		new Set(templates?.map((t) => t.service_type) || []),
+	);
+	const allTags = Array.from(
+		new Set(templates?.flatMap((t) => t.tags || []) || []),
+	);
 
 	// Filter templates
 	const filteredTemplates = templates?.filter((t) => {
@@ -689,6 +808,7 @@ export function BackupHookTemplates() {
 					</p>
 				</div>
 				<button
+					type="button"
 					onClick={() => setShowCreateModal(true)}
 					className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
 				>
@@ -700,10 +820,14 @@ export function BackupHookTemplates() {
 			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
 				<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label
+							htmlFor="filter-search"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
 							Search
 						</label>
 						<input
+							id="filter-search"
 							type="text"
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
@@ -712,12 +836,18 @@ export function BackupHookTemplates() {
 						/>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label
+							htmlFor="filter-type"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
 							Type
 						</label>
 						<select
+							id="filter-type"
 							value={filter}
-							onChange={(e) => setFilter(e.target.value as 'all' | 'built_in' | 'custom')}
+							onChange={(e) =>
+								setFilter(e.target.value as 'all' | 'built_in' | 'custom')
+							}
 							className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
 						>
 							<option value="all">All Templates</option>
@@ -726,10 +856,14 @@ export function BackupHookTemplates() {
 						</select>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label
+							htmlFor="filter-service-type"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
 							Service Type
 						</label>
 						<select
+							id="filter-service-type"
 							value={serviceTypeFilter}
 							onChange={(e) => setServiceTypeFilter(e.target.value)}
 							className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -743,10 +877,14 @@ export function BackupHookTemplates() {
 						</select>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<label
+							htmlFor="filter-tag"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
 							Tag
 						</label>
 						<select
+							id="filter-tag"
 							value={tagFilter}
 							onChange={(e) => setTagFilter(e.target.value)}
 							className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -766,7 +904,8 @@ export function BackupHookTemplates() {
 			{isLoading ? (
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 					{[...Array(6)].map((_, i) => (
-						<LoadingCard key={i} />
+						// biome-ignore lint/suspicious/noArrayIndexKey: Static loading skeleton has no state
+						<LoadingCard key={`loading-card-${i}`} />
 					))}
 				</div>
 			) : filteredTemplates && filteredTemplates.length > 0 ? (
@@ -796,6 +935,7 @@ export function BackupHookTemplates() {
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
+						aria-hidden="true"
 					>
 						<path
 							strokeLinecap="round"
@@ -814,6 +954,7 @@ export function BackupHookTemplates() {
 					</p>
 					<div className="mt-6">
 						<button
+							type="button"
 							onClick={() => setShowCreateModal(true)}
 							className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
 						>
