@@ -310,6 +310,10 @@ func NewRouter(
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
 
+	// Superuser routes (requires superuser privileges)
+	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
+	superuserHandler.RegisterRoutes(apiV1)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)

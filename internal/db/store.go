@@ -72,12 +72,12 @@ func (db *DB) GetUserByOIDCSubject(ctx context.Context, subject string) (*models
 	var user models.User
 	var roleStr string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, oidc_subject, email, name, role, created_at, updated_at
+		SELECT id, org_id, oidc_subject, email, name, role, is_superuser, created_at, updated_at
 		FROM users
 		WHERE oidc_subject = $1
 	`, subject).Scan(
 		&user.ID, &user.OrgID, &user.OIDCSubject, &user.Email,
-		&user.Name, &roleStr, &user.CreatedAt, &user.UpdatedAt,
+		&user.Name, &roleStr, &user.IsSuperuser, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get user by OIDC subject: %w", err)
@@ -91,12 +91,12 @@ func (db *DB) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, erro
 	var user models.User
 	var roleStr string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, oidc_subject, email, name, role, created_at, updated_at
+		SELECT id, org_id, oidc_subject, email, name, role, is_superuser, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`, id).Scan(
 		&user.ID, &user.OrgID, &user.OIDCSubject, &user.Email,
-		&user.Name, &roleStr, &user.CreatedAt, &user.UpdatedAt,
+		&user.Name, &roleStr, &user.IsSuperuser, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get user by ID: %w", err)
@@ -108,9 +108,9 @@ func (db *DB) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, erro
 // CreateUser creates a new user.
 func (db *DB) CreateUser(ctx context.Context, user *models.User) error {
 	_, err := db.Pool.Exec(ctx, `
-		INSERT INTO users (id, org_id, oidc_subject, email, name, role, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, user.ID, user.OrgID, user.OIDCSubject, user.Email, user.Name, string(user.Role), user.CreatedAt, user.UpdatedAt)
+		INSERT INTO users (id, org_id, oidc_subject, email, name, role, is_superuser, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, user.ID, user.OrgID, user.OIDCSubject, user.Email, user.Name, string(user.Role), user.IsSuperuser, user.CreatedAt, user.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create user: %w", err)
 	}
