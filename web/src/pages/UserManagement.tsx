@@ -196,9 +196,9 @@ function EditUserModal({ isOpen, onClose, user }: EditUserModalProps) {
 				</h3>
 				<form onSubmit={handleSubmit}>
 					<div className="mb-4">
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 							Email
-						</label>
+						</span>
 						<p className="text-gray-900 dark:text-white">{user.email}</p>
 					</div>
 					<div className="mb-4">
@@ -271,7 +271,11 @@ interface ResetPasswordModalProps {
 	user: UserWithMembership | null;
 }
 
-function ResetPasswordModal({ isOpen, onClose, user }: ResetPasswordModalProps) {
+function ResetPasswordModal({
+	isOpen,
+	onClose,
+	user,
+}: ResetPasswordModalProps) {
 	const [password, setPassword] = useState('');
 	const [confirmPassword, setConfirmPassword] = useState('');
 	const [requireChange, setRequireChange] = useState(true);
@@ -348,7 +352,9 @@ function ResetPasswordModal({ isOpen, onClose, user }: ResetPasswordModalProps) 
 							required
 						/>
 						{confirmPassword && !passwordsMatch && (
-							<p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+							<p className="mt-1 text-xs text-red-500">
+								Passwords do not match
+							</p>
 						)}
 					</div>
 					<div className="mb-4">
@@ -425,8 +431,9 @@ function ImpersonateModal({ isOpen, onClose, user }: ImpersonateModalProps) {
 				</h3>
 				<div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
 					<p className="text-sm text-yellow-800 dark:text-yellow-200">
-						You are about to impersonate <strong>{user.name || user.email}</strong>.
-						All actions will be logged for audit purposes.
+						You are about to impersonate{' '}
+						<strong>{user.name || user.email}</strong>. All actions will be
+						logged for audit purposes.
 					</p>
 				</div>
 				<form onSubmit={handleSubmit}>
@@ -465,7 +472,9 @@ function ImpersonateModal({ isOpen, onClose, user }: ImpersonateModalProps) {
 							disabled={startImpersonation.isPending}
 							className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50"
 						>
-							{startImpersonation.isPending ? 'Starting...' : 'Start Impersonation'}
+							{startImpersonation.isPending
+								? 'Starting...'
+								: 'Start Impersonation'}
 						</button>
 					</div>
 				</form>
@@ -497,8 +506,19 @@ function ActivityModal({ isOpen, onClose, user }: ActivityModalProps) {
 						onClick={onClose}
 						className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
 					>
-						<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+						<svg
+							aria-hidden="true"
+							className="w-6 h-6"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M6 18L18 6M6 6l12 12"
+							/>
 						</svg>
 					</button>
 				</div>
@@ -608,7 +628,9 @@ function UserRow({
 		user.org_role !== 'owner';
 
 	const handleDisable = () => {
-		if (confirm(`Are you sure you want to disable ${user.name || user.email}?`)) {
+		if (
+			confirm(`Are you sure you want to disable ${user.name || user.email}?`)
+		) {
 			disableUser.mutate(user.id);
 		}
 	};
@@ -665,8 +687,19 @@ function UserRow({
 							className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm"
 							title="View Activity"
 						>
-							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+								/>
 							</svg>
 						</button>
 						{canManage && (
@@ -677,8 +710,19 @@ function UserRow({
 									className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm"
 									title="Edit"
 								>
-									<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+									<svg
+										aria-hidden="true"
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+										/>
 									</svg>
 								</button>
 								{!user.oidc_subject && (
@@ -688,8 +732,19 @@ function UserRow({
 										className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300 text-sm"
 										title="Reset Password"
 									>
-										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+										<svg
+											aria-hidden="true"
+											className="w-4 h-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+											/>
 										</svg>
 									</button>
 								)}
@@ -701,8 +756,19 @@ function UserRow({
 										className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 text-sm disabled:opacity-50"
 										title="Disable"
 									>
-										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+										<svg
+											aria-hidden="true"
+											className="w-4 h-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+											/>
 										</svg>
 									</button>
 								) : (
@@ -713,8 +779,19 @@ function UserRow({
 										className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 text-sm disabled:opacity-50"
 										title="Enable"
 									>
-										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+										<svg
+											aria-hidden="true"
+											className="w-4 h-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+											/>
 										</svg>
 									</button>
 								)}
@@ -725,8 +802,19 @@ function UserRow({
 									className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
 									title="Delete"
 								>
-									<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+									<svg
+										aria-hidden="true"
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+										/>
 									</svg>
 								</button>
 							</>
@@ -738,8 +826,19 @@ function UserRow({
 								className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 text-sm"
 								title="Impersonate"
 							>
-								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+								<svg
+									aria-hidden="true"
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+									/>
 								</svg>
 							</button>
 						)}
@@ -752,14 +851,24 @@ function UserRow({
 
 export function UserManagement() {
 	const [showInviteModal, setShowInviteModal] = useState(false);
-	const [editingUser, setEditingUser] = useState<UserWithMembership | null>(null);
-	const [resetPasswordUser, setResetPasswordUser] = useState<UserWithMembership | null>(null);
-	const [activityUser, setActivityUser] = useState<UserWithMembership | null>(null);
-	const [impersonateUser, setImpersonateUser] = useState<UserWithMembership | null>(null);
+	const [editingUser, setEditingUser] = useState<UserWithMembership | null>(
+		null,
+	);
+	const [resetPasswordUser, setResetPasswordUser] =
+		useState<UserWithMembership | null>(null);
+	const [activityUser, setActivityUser] = useState<UserWithMembership | null>(
+		null,
+	);
+	const [impersonateUser, setImpersonateUser] =
+		useState<UserWithMembership | null>(null);
 
 	const { data: me } = useMe();
 	const { data: currentOrg, isLoading: orgLoading } = useCurrentOrganization();
-	const { data: users, isLoading: usersLoading, isError: usersError } = useUsers();
+	const {
+		data: users,
+		isLoading: usersLoading,
+		isError: usersError,
+	} = useUsers();
 	const endImpersonation = useEndImpersonation();
 
 	const currentUserRole = (me?.current_org_role ?? 'member') as OrgRole;
@@ -780,11 +889,23 @@ export function UserManagement() {
 			{isImpersonating && (
 				<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 flex items-center justify-between">
 					<div className="flex items-center gap-3">
-						<svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+						<svg
+							aria-hidden="true"
+							className="w-6 h-6 text-yellow-600 dark:text-yellow-400"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+							/>
 						</svg>
 						<span className="text-yellow-800 dark:text-yellow-200 font-medium">
-							You are currently impersonating a user. All actions are being logged.
+							You are currently impersonating a user. All actions are being
+							logged.
 						</span>
 					</div>
 					<button
@@ -804,7 +925,8 @@ export function UserManagement() {
 						User Management
 					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
-						Manage users in {currentOrg?.organization.name ?? 'your organization'}
+						Manage users in{' '}
+						{currentOrg?.organization.name ?? 'your organization'}
 					</p>
 				</div>
 				{canInvite && (
