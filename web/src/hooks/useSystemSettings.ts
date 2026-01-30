@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { orgSettingsApi } from '../lib/api';
 import type {
-	UpdateOIDCSettingsRequest,
-	UpdateSecuritySettingsRequest,
-	UpdateSMTPSettingsRequest,
-	UpdateStorageDefaultsRequest,
 	TestSMTPRequest,
+	UpdateOIDCSettingsRequest,
+	UpdateSMTPSettingsRequest,
+	UpdateSecuritySettingsRequest,
+	UpdateStorageDefaultsRequest,
 } from '../lib/types';
 
 // Get all system settings
