@@ -760,6 +760,15 @@ func (h *UsersHandler) StartImpersonation(c *gin.Context) {
 	}
 
 	// Start impersonation in session
+	originalUser := &auth.SessionUser{
+		ID:             user.ID,
+		OIDCSubject:    user.OIDCSubject,
+		Email:          user.Email,
+		Name:           user.Name,
+		CurrentOrgID:   user.CurrentOrgID,
+		CurrentOrgRole: user.CurrentOrgRole,
+		IsSuperuser:    true,
+	}
 	targetSessionUser := &auth.SessionUser{
 		ID:             targetUser.ID,
 		OIDCSubject:    targetUser.OIDCSubject,
@@ -769,7 +778,7 @@ func (h *UsersHandler) StartImpersonation(c *gin.Context) {
 		CurrentOrgRole: string(targetUser.OrgRole),
 	}
 
-	if err := h.sessions.StartImpersonation(c.Request, c.Writer, targetSessionUser, impersonationLog.ID); err != nil {
+	if err := h.sessions.StartImpersonation(c.Request, c.Writer, originalUser, targetSessionUser, impersonationLog.ID); err != nil {
 		h.logger.Error().Err(err).Msg("failed to start impersonation session")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start impersonation"})
 		return

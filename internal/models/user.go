@@ -48,7 +48,7 @@ type User struct {
 	LockedUntil         *time.Time `json:"locked_until,omitempty"`
 	InvitedBy           *uuid.UUID `json:"invited_by,omitempty"`
 	InvitedAt           *time.Time `json:"invited_at,omitempty"`
-	IsSuperuser         bool       `json:"is_superuser,omitempty"`
+	IsSuperuser         bool       `json:"is_superuser"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
 }
@@ -210,4 +210,10 @@ type ResetPasswordRequest struct {
 // ImpersonateUserRequest is the request body for impersonating a user.
 type ImpersonateUserRequest struct {
 	Reason string `json:"reason" binding:"required,min=5"`
+}
+
+// IsSuperAdmin returns true if the user is a global superuser.
+// Superusers have system-wide access across all organizations.
+func (u *User) IsSuperAdmin() bool {
+	return u.IsSuperuser
 }

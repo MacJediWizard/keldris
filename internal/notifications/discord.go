@@ -241,6 +241,90 @@ func (s *DiscordService) SendMaintenanceScheduled(data MaintenanceScheduledData)
 	return s.Send(msg)
 }
 
+// SendTestRestoreFailed sends a test restore failed notification to Discord.
+func (s *DiscordService) SendTestRestoreFailed(data TestRestoreFailedData) error {
+	fields := []DiscordEmbedField{
+		{Name: "Repository", Value: data.RepositoryName, Inline: true},
+		{Name: "Snapshot ID", Value: fmt.Sprintf("`%s`", data.SnapshotID), Inline: true},
+		{Name: "Sample Size", Value: fmt.Sprintf("%d%%", data.SamplePercentage), Inline: true},
+		{Name: "Files Restored", Value: fmt.Sprintf("%d", data.FilesRestored), Inline: true},
+		{Name: "Files Verified", Value: fmt.Sprintf("%d", data.FilesVerified), Inline: true},
+		{Name: "Failed At", Value: data.FailedAt.Format(time.RFC822), Inline: true},
+		{Name: "Error", Value: fmt.Sprintf("```\n%s\n```", data.ErrorMessage), Inline: false},
+	}
+
+	description := "A scheduled test restore has failed"
+	if data.ConsecutiveFails > 1 {
+		description = fmt.Sprintf("**Warning:** %d consecutive test restore failures", data.ConsecutiveFails)
+	}
+
+	msg := &DiscordMessage{
+		Embeds: []DiscordEmbed{
+			{
+				Title:       fmt.Sprintf("Test Restore Failed: %s", data.RepositoryName),
+				Description: description,
+				Color:       DiscordColorRed,
+				Fields:      fields,
+				Footer: &DiscordEmbedFooter{
+					Text: "Keldris Backup",
+				},
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("repository", data.RepositoryName).
+		Str("error", data.ErrorMessage).
+		Int("consecutive_fails", data.ConsecutiveFails).
+		Msg("sending test restore failed notification to Discord")
+
+	return s.Send(msg)
+}
+
+// SendValidationFailed sends a backup validation failed notification to Discord.
+func (s *DiscordService) SendValidationFailed(data ValidationFailedData) error {
+	fields := []DiscordEmbedField{
+		{Name: "Host", Value: data.Hostname, Inline: true},
+		{Name: "Schedule", Value: data.ScheduleName, Inline: true},
+		{Name: "Snapshot ID", Value: fmt.Sprintf("`%s`", data.SnapshotID), Inline: false},
+		{Name: "Backup Completed", Value: data.BackupCompletedAt.Format(time.RFC822), Inline: true},
+		{Name: "Validation Failed", Value: data.ValidationFailedAt.Format(time.RFC822), Inline: true},
+		{Name: "Error", Value: fmt.Sprintf("```\n%s\n```", data.ErrorMessage), Inline: false},
+	}
+
+	if data.ValidationSummary != "" {
+		fields = append(fields, DiscordEmbedField{
+			Name:   "Validation Summary",
+			Value:  data.ValidationSummary,
+			Inline: false,
+		})
+	}
+
+	msg := &DiscordMessage{
+		Embeds: []DiscordEmbed{
+			{
+				Title:       fmt.Sprintf("Backup Validation Failed: %s", data.Hostname),
+				Description: fmt.Sprintf("Backup validation failed for schedule **%s**", data.ScheduleName),
+				Color:       DiscordColorRed,
+				Fields:      fields,
+				Footer: &DiscordEmbedFooter{
+					Text: "Keldris Backup",
+				},
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending validation failed notification to Discord")
+
+	return s.Send(msg)
+}
+
 // TestConnection sends a test message to verify the Discord webhook is working.
 func (s *DiscordService) TestConnection() error {
 	msg := &DiscordMessage{

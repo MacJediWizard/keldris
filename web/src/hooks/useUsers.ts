@@ -117,7 +117,7 @@ export function useEnableUser() {
 export function useUserActivity(id: string, limit = 50, offset = 0) {
 	return useQuery({
 		queryKey: [...USER_ACTIVITY_KEY(id), limit, offset],
-		queryFn: () => usersApi.getUserActivity(id, limit, offset),
+		queryFn: () => usersApi.getActivity(id, limit, offset),
 		enabled: !!id,
 	});
 }
