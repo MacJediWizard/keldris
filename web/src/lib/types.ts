@@ -43,11 +43,42 @@ export interface NetworkMount {
 	last_checked: string;
 }
 
+// Docker container info for agent display
+export interface DockerContainerInfo {
+	id: string;
+	name: string;
+	image: string;
+	status: string;
+	state: string; // running, paused, exited, etc.
+}
+
+// Docker volume info for agent display
+export interface DockerVolumeInfo {
+	name: string;
+	driver: string;
+	mountpoint?: string;
+}
+
+// Docker info for an agent
+export interface DockerInfo {
+	available: boolean;
+	version?: string;
+	api_version?: string;
+	container_count: number;
+	running_count: number;
+	volume_count: number;
+	containers?: DockerContainerInfo[];
+	volumes?: DockerVolumeInfo[];
+	error?: string;
+	detected_at?: string;
+}
+
 export interface Agent {
 	id: string;
 	org_id: string;
 	hostname: string;
 	os_info?: OSInfo;
+	docker_info?: DockerInfo;
 	network_mounts?: NetworkMount[];
 	last_seen?: string;
 	status: AgentStatus;
@@ -416,11 +447,31 @@ export type CompressionLevel = 'off' | 'auto' | 'max';
 
 export type SchedulePriority = 1 | 2 | 3; // 1=high, 2=medium, 3=low
 
+// Backup type determines what kind of backup to perform
+export type BackupType = 'file' | 'docker';
+
+// Docker backup options
+export interface DockerBackupOptions {
+	volume_ids?: string[]; // Specific volumes to backup (empty = all)
+	container_ids?: string[]; // Specific container configs to backup (empty = all)
+	pause_containers: boolean; // Pause containers during volume backup
+	include_container_configs: boolean; // Backup container configurations
+}
+
+// Docker Compose stack backup configuration
+export interface DockerStackScheduleConfig {
+	stack_id: string;
+	export_images: boolean;
+	include_env_files: boolean;
+	stop_for_backup: boolean;
+}
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
 	policy_id?: string; // Policy this schedule was created from
 	name: string;
+	backup_type: BackupType; // Type of backup: file or docker
 	cron_expression: string;
 	paths: string[];
 	excludes?: string[];
@@ -435,6 +486,8 @@ export interface Schedule {
 	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
 	priority: SchedulePriority; // Backup priority: 1=high, 2=medium, 3=low
 	preemptible: boolean; // Can be preempted by higher priority backups
+	docker_options?: DockerBackupOptions; // Docker-specific backup options
+	docker_stack_config?: DockerStackScheduleConfig; // Docker stack backup configuration
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -445,8 +498,9 @@ export interface CreateScheduleRequest {
 	agent_id: string;
 	repositories: ScheduleRepositoryRequest[];
 	name: string;
+	backup_type?: BackupType; // Type of backup: file (default) or docker
 	cron_expression: string;
-	paths: string[];
+	paths?: string[]; // Required for file backups, optional for docker
 	excludes?: string[];
 	retention_policy?: RetentionPolicy;
 	bandwidth_limit_kb?: number;
@@ -457,11 +511,14 @@ export interface CreateScheduleRequest {
 	on_mount_unavailable?: MountBehavior;
 	priority?: SchedulePriority;
 	preemptible?: boolean;
+	docker_options?: DockerBackupOptions; // Docker-specific backup options
+	docker_stack_config?: DockerStackScheduleConfig;
 	enabled?: boolean;
 }
 
 export interface UpdateScheduleRequest {
 	name?: string;
+	backup_type?: BackupType;
 	cron_expression?: string;
 	paths?: string[];
 	excludes?: string[];
@@ -475,6 +532,7 @@ export interface UpdateScheduleRequest {
 	on_mount_unavailable?: MountBehavior;
 	priority?: SchedulePriority;
 	preemptible?: boolean;
+	docker_options?: DockerBackupOptions;
 	enabled?: boolean;
 }
 
@@ -616,6 +674,10 @@ export interface Backup {
 	pre_script_error?: string;
 	post_script_output?: string;
 	post_script_error?: string;
+	container_pre_hook_output?: string;
+	container_pre_hook_error?: string;
+	container_post_hook_output?: string;
+	container_post_hook_error?: string;
 	excluded_large_files?: ExcludedLargeFile[]; // Files excluded due to size limit
 	resumed: boolean;
 	checkpoint_id?: string;
@@ -734,6 +796,178 @@ export interface BackupScriptsResponse {
 	scripts: BackupScript[];
 }
 
+// Backup Hook Template types
+export type BackupHookTemplateVisibility =
+	| 'built_in'
+	| 'private'
+	| 'organization';
+
+export interface BackupHookTemplateVariable {
+	name: string;
+	description: string;
+	default: string;
+	required: boolean;
+	sensitive?: boolean;
+}
+
+export interface BackupHookTemplateScript {
+	script: string;
+	timeout_seconds: number;
+	fail_on_error: boolean;
+}
+
+export interface BackupHookTemplateScripts {
+	pre_backup?: BackupHookTemplateScript;
+	post_success?: BackupHookTemplateScript;
+	post_failure?: BackupHookTemplateScript;
+	post_always?: BackupHookTemplateScript;
+}
+
+export interface BackupHookTemplate {
+	id: string;
+	org_id?: string;
+	created_by_id?: string;
+	name: string;
+	description?: string;
+	service_type: string;
+	icon?: string;
+	tags?: string[];
+	variables?: BackupHookTemplateVariable[];
+	scripts: BackupHookTemplateScripts;
+	visibility: BackupHookTemplateVisibility;
+	usage_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateBackupHookTemplateRequest {
+	name: string;
+	description?: string;
+	service_type: string;
+	icon?: string;
+	tags?: string[];
+	variables?: BackupHookTemplateVariable[];
+	scripts: BackupHookTemplateScripts;
+	visibility?: BackupHookTemplateVisibility;
+}
+
+export interface UpdateBackupHookTemplateRequest {
+	name?: string;
+	description?: string;
+	service_type?: string;
+	icon?: string;
+	tags?: string[];
+	variables?: BackupHookTemplateVariable[];
+	scripts?: BackupHookTemplateScripts;
+	visibility?: BackupHookTemplateVisibility;
+}
+
+export interface ApplyBackupHookTemplateRequest {
+	schedule_id: string;
+	variable_values?: Record<string, string>;
+}
+
+export interface ApplyBackupHookTemplateResponse {
+	scripts: BackupScript[];
+	message: string;
+}
+
+export interface BackupHookTemplatesResponse {
+	templates: BackupHookTemplate[];
+}
+
+// Container Backup Hook types
+export type ContainerHookType = 'pre_backup' | 'post_backup';
+
+export type ContainerHookTemplate =
+	| 'none'
+	| 'postgres'
+	| 'mysql'
+	| 'mongodb'
+	| 'redis'
+	| 'elasticsearch';
+
+export interface ContainerBackupHook {
+	id: string;
+	schedule_id: string;
+	container_name: string;
+	type: ContainerHookType;
+	template: ContainerHookTemplate;
+	command: string;
+	working_dir?: string;
+	user?: string;
+	timeout_seconds: number;
+	fail_on_error: boolean;
+	enabled: boolean;
+	description?: string;
+	template_vars?: Record<string, string>;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateContainerBackupHookRequest {
+	container_name: string;
+	type: ContainerHookType;
+	template?: ContainerHookTemplate;
+	command?: string;
+	working_dir?: string;
+	user?: string;
+	timeout_seconds?: number;
+	fail_on_error?: boolean;
+	enabled?: boolean;
+	description?: string;
+	template_vars?: Record<string, string>;
+}
+
+export interface UpdateContainerBackupHookRequest {
+	container_name?: string;
+	command?: string;
+	working_dir?: string;
+	user?: string;
+	timeout_seconds?: number;
+	fail_on_error?: boolean;
+	enabled?: boolean;
+	description?: string;
+	template_vars?: Record<string, string>;
+}
+
+export interface ContainerBackupHooksResponse {
+	hooks: ContainerBackupHook[];
+}
+
+export interface ContainerHookTemplateInfo {
+	name: string;
+	template: ContainerHookTemplate;
+	description: string;
+	pre_backup_cmd: string;
+	post_backup_cmd: string;
+	required_vars: string[];
+	optional_vars: string[];
+	default_vars: Record<string, string>;
+}
+
+export interface ContainerHookTemplatesResponse {
+	templates: ContainerHookTemplateInfo[];
+}
+
+export interface ContainerHookExecution {
+	hook_id: string;
+	backup_id: string;
+	container: string;
+	type: ContainerHookType;
+	command: string;
+	output: string;
+	exit_code: number;
+	error?: string;
+	duration: number;
+	started_at: string;
+	completed_at: string;
+}
+
+export interface ContainerHookExecutionsResponse {
+	executions: ContainerHookExecution[];
+}
+
 // Auth types
 export type SupportedLanguage = 'en' | 'es' | 'pt';
 
@@ -746,6 +980,9 @@ export interface User {
 	sso_groups?: string[];
 	sso_groups_synced_at?: string;
 	language?: SupportedLanguage;
+	is_superuser?: boolean;
+	is_impersonating?: boolean;
+	impersonating_id?: string;
 }
 
 export interface UpdateUserPreferencesRequest {
@@ -1135,6 +1372,133 @@ export interface RestorePreview {
 
 export interface RestoresResponse {
 	restores: Restore[];
+}
+
+// Docker Restore types
+export type DockerRestoreStatus =
+	| 'pending'
+	| 'preparing'
+	| 'restoring_volumes'
+	| 'creating_container'
+	| 'starting'
+	| 'verifying'
+	| 'completed'
+	| 'failed'
+	| 'canceled';
+
+export type DockerRestoreTargetType = 'local' | 'remote';
+
+export interface DockerRestoreTarget {
+	type: DockerRestoreTargetType;
+	host?: string;
+	cert_path?: string;
+	tls_verify?: boolean;
+}
+
+export interface DockerRestoreProgress {
+	status: string;
+	current_step: string;
+	total_steps: number;
+	completed_steps: number;
+	percent_complete: number;
+	total_bytes: number;
+	restored_bytes: number;
+	current_volume?: string;
+	error_message?: string;
+}
+
+export interface DockerContainer {
+	id: string;
+	name: string;
+	image: string;
+	volumes?: string[];
+	ports?: string[];
+	networks?: string[];
+	created_at: string;
+}
+
+export interface DockerVolume {
+	name: string;
+	driver: string;
+	size_bytes: number;
+	created_at: string;
+}
+
+export interface DockerRestoreConflict {
+	type: 'container' | 'volume' | 'network';
+	name: string;
+	existing_id?: string;
+	description: string;
+}
+
+export interface DockerRestorePlan {
+	container?: DockerContainer;
+	volumes: DockerVolume[];
+	total_size_bytes: number;
+	conflicts: DockerRestoreConflict[];
+	dependencies: string[];
+}
+
+export interface DockerRestore {
+	id: string;
+	agent_id: string;
+	repository_id: string;
+	snapshot_id: string;
+	container_name?: string;
+	volume_name?: string;
+	new_container_name?: string;
+	new_volume_name?: string;
+	target?: DockerRestoreTarget;
+	overwrite_existing: boolean;
+	start_after_restore: boolean;
+	verify_start: boolean;
+	status: DockerRestoreStatus;
+	progress?: DockerRestoreProgress;
+	restored_container_id?: string;
+	restored_volumes?: string[];
+	start_verified: boolean;
+	warnings?: string[];
+	started_at?: string;
+	completed_at?: string;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface CreateDockerRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	container_name?: string;
+	volume_name?: string;
+	new_container_name?: string;
+	new_volume_name?: string;
+	target?: DockerRestoreTarget;
+	overwrite_existing?: boolean;
+	start_after_restore?: boolean;
+	verify_start?: boolean;
+}
+
+export interface DockerRestorePreviewRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	container_name?: string;
+	volume_name?: string;
+	target?: DockerRestoreTarget;
+}
+
+export interface DockerRestoresResponse {
+	docker_restores: DockerRestore[];
+}
+
+export interface DockerContainersResponse {
+	containers: DockerContainer[];
+	message?: string;
+}
+
+export interface DockerVolumesResponse {
+	volumes: DockerVolume[];
+	message?: string;
 }
 
 // Alert types
@@ -1970,6 +2334,56 @@ export interface SearchResponse {
 	results: SearchResult[];
 	query: string;
 	total: number;
+}
+
+export interface GroupedSearchResult {
+	type: SearchResultType;
+	id: string;
+	name: string;
+	description?: string;
+	status?: string;
+	tags?: string[];
+	created_at: string;
+	metadata?: Record<string, unknown>;
+}
+
+export interface GroupedSearchResponse {
+	agents: GroupedSearchResult[];
+	backups: GroupedSearchResult[];
+	snapshots: GroupedSearchResult[];
+	schedules: GroupedSearchResult[];
+	repositories: GroupedSearchResult[];
+	query: string;
+	total: number;
+}
+
+export interface SearchSuggestion {
+	text: string;
+	type: SearchResultType;
+	id: string;
+	detail?: string;
+}
+
+export interface SearchSuggestionsResponse {
+	suggestions: SearchSuggestion[];
+}
+
+export interface RecentSearch {
+	id: string;
+	user_id: string;
+	org_id: string;
+	query: string;
+	types?: string[];
+	created_at: string;
+}
+
+export interface RecentSearchesResponse {
+	recent_searches: RecentSearch[];
+}
+
+export interface SaveRecentSearchRequest {
+	query: string;
+	types?: string[];
 }
 
 // Dashboard Metrics types
@@ -4174,7 +4588,7 @@ export interface SLAReportResponse {
 	report: SLAReport;
 }
 
-// System Settings types
+// Organization System Settings types (SMTP, OIDC, Storage, Security)
 export interface SMTPSettings {
 	host: string;
 	port: number;
@@ -4229,7 +4643,7 @@ export interface SecuritySettings {
 	allow_password_login: boolean;
 }
 
-export interface SystemSettingsResponse {
+export interface OrgSettingsResponse {
 	smtp: SMTPSettings;
 	oidc: OIDCSettings;
 	storage_defaults: StorageDefaultSettings;
@@ -4326,4 +4740,742 @@ export interface SettingsAuditLogsResponse {
 	logs: SettingsAuditLog[];
 	limit: number;
 	offset: number;
+}
+
+// Superuser types
+export type SuperuserAction =
+	| 'view_organizations'
+	| 'view_organization'
+	| 'impersonate_user'
+	| 'end_impersonation'
+	| 'update_system_settings'
+	| 'view_system_settings'
+	| 'grant_superuser'
+	| 'revoke_superuser'
+	| 'view_users'
+	| 'view_superuser_audit_logs';
+
+export interface SuperuserAuditLog {
+	id: string;
+	superuser_id: string;
+	action: SuperuserAction;
+	target_type: string;
+	target_id?: string;
+	target_org_id?: string;
+	impersonated_user_id?: string;
+	ip_address?: string;
+	user_agent?: string;
+	details?: Record<string, unknown>;
+	created_at: string;
+	superuser_email?: string;
+	superuser_name?: string;
+}
+
+export interface SystemSetting {
+	key: string;
+	value: unknown;
+	description?: string;
+	updated_by?: string;
+	updated_at: string;
+}
+
+export interface SuperuserOrganizationsResponse {
+	organizations: Organization[];
+}
+
+export interface SuperuserUsersResponse {
+	users: User[];
+}
+
+export interface SuperusersResponse {
+	superusers: User[];
+}
+
+export interface SuperuserAuditLogsResponse {
+	audit_logs: SuperuserAuditLog[];
+	total: number;
+	limit: number;
+	offset: number;
+}
+
+export interface SystemSettingsResponse {
+	settings: SystemSetting[];
+}
+
+export interface SystemSettingResponse {
+	setting: SystemSetting;
+}
+
+export interface UpdateSystemSettingRequest {
+	value: unknown;
+}
+
+export interface GrantSuperuserRequest {
+	reason?: string;
+}
+
+export interface ImpersonationResponse {
+	message: string;
+	impersonating?: {
+		id: string;
+		email: string;
+		name: string;
+	};
+}
+
+// Recent Items types
+export type RecentItemType =
+	| 'agent'
+	| 'repository'
+	| 'schedule'
+	| 'backup'
+	| 'policy'
+	| 'snapshot';
+
+export interface RecentItem {
+	id: string;
+	org_id: string;
+	user_id: string;
+	item_type: RecentItemType;
+	item_id: string;
+	item_name: string;
+	page_path: string;
+	viewed_at: string;
+	created_at: string;
+}
+
+export interface TrackRecentItemRequest {
+	item_type: RecentItemType;
+	item_id: string;
+	item_name: string;
+	page_path: string;
+}
+
+export interface RecentItemsResponse {
+	items: RecentItem[];
+}
+
+// Activity Event types
+export type ActivityEventType =
+	| 'backup_started'
+	| 'backup_completed'
+	| 'backup_failed'
+	| 'restore_started'
+	| 'restore_completed'
+	| 'restore_failed'
+	| 'agent_connected'
+	| 'agent_disconnected'
+	| 'agent_created'
+	| 'agent_deleted'
+	| 'user_login'
+	| 'user_logout'
+	| 'schedule_created'
+	| 'schedule_updated'
+	| 'schedule_deleted'
+	| 'schedule_enabled'
+	| 'schedule_disabled'
+	| 'repository_created'
+	| 'repository_deleted'
+	| 'alert_triggered'
+	| 'alert_acknowledged'
+	| 'alert_resolved'
+	| 'policy_applied'
+	| 'maintenance_started'
+	| 'maintenance_ended'
+	| 'system_startup'
+	| 'system_shutdown';
+
+export type ActivityEventCategory =
+	| 'backup'
+	| 'restore'
+	| 'agent'
+	| 'user'
+	| 'schedule'
+	| 'repository'
+	| 'alert'
+	| 'policy'
+	| 'maintenance'
+	| 'system';
+
+export interface ActivityEvent {
+	id: string;
+	org_id: string;
+	type: ActivityEventType;
+	category: ActivityEventCategory;
+	title: string;
+	description: string;
+	user_id?: string;
+	user_name?: string;
+	agent_id?: string;
+	agent_name?: string;
+	resource_type?: string;
+	resource_id?: string;
+	resource_name?: string;
+	metadata?: Record<string, unknown>;
+	created_at: string;
+}
+
+export interface ActivityEventsResponse {
+	events: ActivityEvent[];
+}
+
+export interface ActivityEventCountResponse {
+	count: number;
+}
+
+export interface ActivityCategoriesResponse {
+	categories: Record<string, number>;
+}
+
+export interface ActivityEventFilter {
+	category?: ActivityEventCategory;
+	type?: ActivityEventType;
+	user_id?: string;
+	agent_id?: string;
+	start_time?: string;
+	end_time?: string;
+	limit?: number;
+	offset?: number;
+}
+
+// Favorite types
+export type FavoriteEntityType = 'agent' | 'schedule' | 'repository';
+
+export interface Favorite {
+	id: string;
+	user_id: string;
+	org_id: string;
+	entity_type: FavoriteEntityType;
+	entity_id: string;
+	created_at: string;
+}
+
+export interface CreateFavoriteRequest {
+	entity_type: FavoriteEntityType;
+	entity_id: string;
+}
+
+export interface FavoritesResponse {
+	favorites: Favorite[];
+}
+
+// Docker Stack Backup types
+export type DockerStackBackupStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed'
+	| 'canceled';
+
+export type DockerStackRestoreStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed';
+
+export interface DockerContainerState {
+	service_name: string;
+	container_id: string;
+	status: string;
+	health?: string;
+	image: string;
+	image_id: string;
+	created: string;
+	started?: string;
+}
+
+export interface DockerStack {
+	id: string;
+	org_id: string;
+	agent_id: string;
+	name: string;
+	compose_path: string;
+	description?: string;
+	service_count: number;
+	is_running: boolean;
+	last_backup_at?: string;
+	last_backup_id?: string;
+	backup_schedule_id?: string;
+	export_images: boolean;
+	include_env_files: boolean;
+	stop_for_backup: boolean;
+	exclude_paths?: string[];
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerStackBackup {
+	id: string;
+	org_id: string;
+	stack_id: string;
+	agent_id: string;
+	schedule_id?: string;
+	backup_id?: string;
+	status: DockerStackBackupStatus;
+	backup_path: string;
+	manifest_path?: string;
+	volume_count: number;
+	bind_mount_count: number;
+	image_count?: number;
+	total_size_bytes: number;
+	container_states?: DockerContainerState[];
+	dependency_order?: string[];
+	includes_images: boolean;
+	error_message?: string;
+	started_at?: string;
+	completed_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerStackRestore {
+	id: string;
+	org_id: string;
+	stack_backup_id: string;
+	agent_id: string;
+	status: DockerStackRestoreStatus;
+	target_path: string;
+	restore_volumes: boolean;
+	restore_images: boolean;
+	start_containers: boolean;
+	path_mappings?: Record<string, string>;
+	volumes_restored: number;
+	images_restored: number;
+	error_message?: string;
+	started_at?: string;
+	completed_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DiscoveredDockerStack {
+	name: string;
+	compose_path: string;
+	service_count: number;
+	is_running: boolean;
+	is_registered: boolean;
+}
+
+export interface CreateDockerStackRequest {
+	name: string;
+	agent_id: string;
+	compose_path: string;
+	description?: string;
+	export_images?: boolean;
+	include_env_files?: boolean;
+	stop_for_backup?: boolean;
+	exclude_paths?: string[];
+}
+
+export interface UpdateDockerStackRequest {
+	name?: string;
+	description?: string;
+	export_images?: boolean;
+	include_env_files?: boolean;
+	stop_for_backup?: boolean;
+	exclude_paths?: string[];
+}
+
+export interface TriggerDockerStackBackupRequest {
+	export_images?: boolean;
+	stop_for_backup?: boolean;
+}
+
+export interface RestoreDockerStackRequest {
+	backup_id: string;
+	target_agent_id: string;
+	target_path: string;
+	restore_volumes: boolean;
+	restore_images: boolean;
+	start_containers: boolean;
+	path_mappings?: Record<string, string>;
+}
+
+export interface DiscoverDockerStacksRequest {
+	agent_id: string;
+	search_paths: string[];
+}
+
+export interface DockerStackListResponse {
+	stacks: DockerStack[];
+}
+
+export interface DockerStackBackupListResponse {
+	backups: DockerStackBackup[];
+}
+
+export interface DiscoverDockerStacksResponse {
+	stacks: DiscoveredDockerStack[];
+}
+
+// Docker Container Logs types
+export type DockerLogBackupStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed';
+
+export interface DockerLogRetentionPolicy {
+	max_age_days: number;
+	max_size_bytes: number;
+	max_files_per_day: number;
+	compress_enabled: boolean;
+	compress_level: number;
+}
+
+export interface DockerLogBackup {
+	id: string;
+	agent_id: string;
+	container_id: string;
+	container_name: string;
+	image_name?: string;
+	log_path: string;
+	original_size: number;
+	compressed_size: number;
+	compressed: boolean;
+	start_time: string;
+	end_time: string;
+	line_count: number;
+	status: DockerLogBackupStatus;
+	error_message?: string;
+	backup_schedule_id?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerLogSettings {
+	id: string;
+	agent_id: string;
+	enabled: boolean;
+	cron_expression: string;
+	retention_policy: DockerLogRetentionPolicy;
+	include_containers?: string[];
+	exclude_containers?: string[];
+	include_labels?: Record<string, string>;
+	exclude_labels?: Record<string, string>;
+	timestamps: boolean;
+	tail: number;
+	since?: string;
+	until?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerLogEntry {
+	timestamp: string;
+	stream: string;
+	message: string;
+	line_num: number;
+}
+
+export interface DockerLogViewResponse {
+	backup_id: string;
+	container_id: string;
+	container_name: string;
+	entries: DockerLogEntry[];
+	total_lines: number;
+	offset: number;
+	limit: number;
+	start_time: string;
+	end_time: string;
+}
+
+export interface DockerLogBackupsResponse {
+	backups: DockerLogBackup[];
+	total_count: number;
+}
+
+export interface DockerLogStorageStats {
+	total_size: number;
+	total_files: number;
+	container_stats: Record<string, { size: number; files: number }>;
+}
+
+export interface DockerLogRetentionResult {
+	removed_count: number;
+	removed_bytes: number;
+}
+
+export interface DockerLogSettingsUpdate {
+	enabled?: boolean;
+	cron_expression?: string;
+	retention_policy?: DockerLogRetentionPolicy;
+	include_containers?: string[];
+	exclude_containers?: string[];
+	include_labels?: Record<string, string>;
+	exclude_labels?: Record<string, string>;
+	timestamps?: boolean;
+	tail?: number;
+	since?: string;
+	until?: string;
+}
+
+// Docker Registry types
+export type DockerRegistryType =
+	| 'dockerhub'
+	| 'gcr'
+	| 'ecr'
+	| 'acr'
+	| 'ghcr'
+	| 'private';
+
+export type DockerRegistryHealthStatus = 'healthy' | 'unhealthy' | 'unknown';
+
+export interface DockerRegistry {
+	id: string;
+	org_id: string;
+	name: string;
+	type: DockerRegistryType;
+	url: string;
+	is_default: boolean;
+	enabled: boolean;
+	health_status: DockerRegistryHealthStatus;
+	last_health_check?: string;
+	last_health_error?: string;
+	credentials_rotated_at?: string;
+	credentials_expires_at?: string;
+	metadata?: Record<string, unknown>;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerRegistryCredentials {
+	username?: string;
+	password?: string;
+	access_token?: string;
+	aws_access_key_id?: string;
+	aws_secret_access_key?: string;
+	aws_region?: string;
+	azure_tenant_id?: string;
+	azure_client_id?: string;
+	azure_client_secret?: string;
+	gcr_key_json?: string;
+}
+
+export interface DockerLoginResult {
+	success: boolean;
+	registry_id: string;
+	registry_url: string;
+	error_message?: string;
+	logged_in_at: string;
+}
+
+export interface DockerRegistryHealthCheck {
+	registry_id: string;
+	status: DockerRegistryHealthStatus;
+	response_time_ms: number;
+	error_message?: string;
+	checked_at: string;
+}
+
+export interface DockerRegistryTypeInfo {
+	type: DockerRegistryType;
+	name: string;
+	description: string;
+	default_url: string;
+	fields: string[];
+}
+
+export interface CreateDockerRegistryRequest {
+	name: string;
+	type: DockerRegistryType;
+	url?: string;
+	credentials: DockerRegistryCredentials;
+	is_default?: boolean;
+}
+
+export interface UpdateDockerRegistryRequest {
+	name?: string;
+	url?: string;
+	enabled?: boolean;
+	is_default?: boolean;
+}
+
+export interface RotateCredentialsRequest {
+	credentials: DockerRegistryCredentials;
+	expires_at?: string;
+}
+
+export interface DockerRegistriesResponse {
+	registries: DockerRegistry[];
+}
+
+export interface DockerRegistryResponse {
+	registry: DockerRegistry;
+}
+
+export interface DockerRegistryTypesResponse {
+	types: DockerRegistryTypeInfo[];
+}
+
+export interface DockerLoginResultResponse {
+	result: DockerLoginResult;
+}
+
+export interface DockerLoginAllResponse {
+	results: DockerLoginResult[];
+}
+
+export interface DockerHealthCheckResponse {
+	result: DockerRegistryHealthCheck;
+}
+
+export interface DockerHealthCheckAllResponse {
+	results: DockerRegistryHealthCheck[];
+}
+
+export interface ExpiringCredentialsResponse {
+	registries: DockerRegistry[];
+	warning_days: number;
+}
+
+// =============================================================================
+// Komodo Integration Types
+// =============================================================================
+
+export type KomodoIntegrationStatus = 'active' | 'disconnected' | 'error';
+export type KomodoContainerStatus =
+	| 'running'
+	| 'stopped'
+	| 'restarting'
+	| 'unknown';
+export type KomodoWebhookEventType =
+	| 'container.start'
+	| 'container.stop'
+	| 'container.restart'
+	| 'stack.deploy'
+	| 'stack.update'
+	| 'backup.trigger'
+	| 'unknown';
+export type KomodoWebhookEventStatus =
+	| 'received'
+	| 'processing'
+	| 'processed'
+	| 'failed';
+
+export interface KomodoIntegration {
+	id: string;
+	org_id: string;
+	name: string;
+	url: string;
+	status: KomodoIntegrationStatus;
+	last_sync_at?: string;
+	last_error?: string;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface KomodoIntegrationConfig {
+	api_key: string;
+	username?: string;
+	password?: string;
+}
+
+export interface KomodoContainer {
+	id: string;
+	org_id: string;
+	integration_id: string;
+	komodo_id: string;
+	name: string;
+	image?: string;
+	stack_name?: string;
+	stack_id?: string;
+	status: KomodoContainerStatus;
+	agent_id?: string;
+	volumes?: string[];
+	labels?: Record<string, string>;
+	backup_enabled: boolean;
+	last_discovered_at: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface KomodoStack {
+	id: string;
+	org_id: string;
+	integration_id: string;
+	komodo_id: string;
+	name: string;
+	server_id?: string;
+	server_name?: string;
+	container_count: number;
+	running_count: number;
+	last_discovered_at: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface KomodoWebhookEvent {
+	id: string;
+	org_id: string;
+	integration_id: string;
+	event_type: KomodoWebhookEventType;
+	status: KomodoWebhookEventStatus;
+	error_message?: string;
+	processed_at?: string;
+	created_at: string;
+}
+
+export interface KomodoDiscoveryResult {
+	stacks: KomodoStack[];
+	containers: KomodoContainer[];
+	new_stacks: number;
+	updated_stacks: number;
+	new_containers: number;
+	updated_containers: number;
+	discovered_at: string;
+}
+
+export interface CreateKomodoIntegrationRequest {
+	name: string;
+	url: string;
+	config: KomodoIntegrationConfig;
+}
+
+export interface UpdateKomodoIntegrationRequest {
+	name?: string;
+	url?: string;
+	config?: KomodoIntegrationConfig;
+	enabled?: boolean;
+}
+
+export interface UpdateKomodoContainerRequest {
+	agent_id?: string;
+	backup_enabled?: boolean;
+}
+
+export interface KomodoIntegrationsResponse {
+	integrations: KomodoIntegration[];
+}
+
+export interface KomodoIntegrationResponse {
+	integration: KomodoIntegration;
+	containers?: KomodoContainer[];
+	stacks?: KomodoStack[];
+}
+
+export interface KomodoContainersResponse {
+	containers: KomodoContainer[];
+}
+
+export interface KomodoStacksResponse {
+	stacks: KomodoStack[];
+}
+
+export interface KomodoWebhookEventsResponse {
+	events: KomodoWebhookEvent[];
+}
+
+export interface KomodoSyncResponse {
+	message: string;
+	stacks: number;
+	containers: number;
+	result: KomodoDiscoveryResult;
+}
+
+export interface KomodoConnectionTestResponse {
+	message: string;
+	status: KomodoIntegrationStatus;
 }

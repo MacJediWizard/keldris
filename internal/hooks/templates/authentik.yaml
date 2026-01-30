@@ -1,0 +1,125 @@
+# Authentik Backup Hook Template
+# Uses ak dump_config to export Authentik configuration before backup
+name: Authentik
+description: Exports Authentik configuration using ak dump_config before backing up
+service_type: authentik
+icon: shield
+tags:
+  - identity
+  - authentication
+  - sso
+  - authentik
+
+# Variables that users can customize
+variables:
+  - name: AUTHENTIK_CONTAINER
+    description: Authentik server container name (for Docker)
+    default: authentik-server
+    required: false
+  - name: DUMP_DIR
+    description: Directory to store the config export
+    default: /var/backups/authentik
+    required: true
+  - name: USE_DOCKER
+    description: Use Docker exec to run commands (true/false)
+    default: "true"
+    required: false
+  - name: DOCKER_CMD
+    description: Docker command (docker or podman)
+    default: docker
+    required: false
+  - name: INCLUDE_MEDIA
+    description: Include media files in backup (true/false)
+    default: "true"
+    required: false
+  - name: AUTHENTIK_MEDIA_DIR
+    description: Authentik media directory path
+    default: /media
+    required: false
+
+scripts:
+  pre_backup:
+    script: |
+      #!/bin/bash
+      set -e
+
+      # Authentik backup script
+      TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/authentik}"
+      AUTHENTIK_CONTAINER="${AUTHENTIK_CONTAINER:-authentik-server}"
+      USE_DOCKER="${USE_DOCKER:-true}"
+      DOCKER_CMD="${DOCKER_CMD:-docker}"
+      INCLUDE_MEDIA="${INCLUDE_MEDIA:-true}"
+      AUTHENTIK_MEDIA_DIR="${AUTHENTIK_MEDIA_DIR:-/media}"
+
+      # Create dump directory if it doesn't exist
+      mkdir -p "$DUMP_DIR"
+
+      CONFIG_FILE="$DUMP_DIR/authentik_config_${TIMESTAMP}.yaml"
+
+      if [ "$USE_DOCKER" = "true" ]; then
+        echo "Exporting Authentik configuration via Docker..."
+        $DOCKER_CMD exec "$AUTHENTIK_CONTAINER" ak dump_config > "$CONFIG_FILE"
+      else
+        echo "Exporting Authentik configuration..."
+        ak dump_config > "$CONFIG_FILE"
+      fi
+
+      echo "Configuration exported: $CONFIG_FILE"
+
+      # Export media files if requested
+      if [ "$INCLUDE_MEDIA" = "true" ]; then
+        MEDIA_ARCHIVE="$DUMP_DIR/authentik_media_${TIMESTAMP}.tar.gz"
+        echo "Backing up media files..."
+
+        if [ "$USE_DOCKER" = "true" ]; then
+          # Copy media from container
+          TEMP_MEDIA="$DUMP_DIR/temp_media_${TIMESTAMP}"
+          mkdir -p "$TEMP_MEDIA"
+          $DOCKER_CMD cp "$AUTHENTIK_CONTAINER:$AUTHENTIK_MEDIA_DIR" "$TEMP_MEDIA/" 2>/dev/null || true
+          if [ -d "$TEMP_MEDIA" ] && [ "$(ls -A $TEMP_MEDIA 2>/dev/null)" ]; then
+            tar -czf "$MEDIA_ARCHIVE" -C "$TEMP_MEDIA" .
+            echo "Media backup created: $MEDIA_ARCHIVE"
+          else
+            echo "No media files found, skipping media backup"
+          fi
+          rm -rf "$TEMP_MEDIA"
+        else
+          if [ -d "$AUTHENTIK_MEDIA_DIR" ]; then
+            tar -czf "$MEDIA_ARCHIVE" -C "$AUTHENTIK_MEDIA_DIR" .
+            echo "Media backup created: $MEDIA_ARCHIVE"
+          else
+            echo "Media directory not found, skipping media backup"
+          fi
+        fi
+      fi
+
+      # Compress config file
+      gzip "$CONFIG_FILE"
+      echo "Compressed config: ${CONFIG_FILE}.gz"
+
+      echo "Authentik backup completed successfully"
+    timeout_seconds: 600
+    fail_on_error: true
+
+  post_success:
+    script: |
+      #!/bin/bash
+      # Cleanup old exports (keep last 7 days)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/authentik}"
+      RETENTION_DAYS=7
+
+      echo "Cleaning up exports older than $RETENTION_DAYS days"
+      find "$DUMP_DIR" -type f -name "authentik_*.yaml.gz" -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
+      find "$DUMP_DIR" -type f -name "authentik_media_*.tar.gz" -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
+      echo "Cleanup completed"
+    timeout_seconds: 300
+    fail_on_error: false
+
+  post_failure:
+    script: |
+      #!/bin/bash
+      echo "Authentik backup failed - manual intervention may be required"
+      echo "Check container status and Authentik configuration"
+    timeout_seconds: 60
+    fail_on_error: false

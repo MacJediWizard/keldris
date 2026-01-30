@@ -1,0 +1,157 @@
+# n8n Backup Hook Template
+# Uses n8n export:workflow to export all workflows before backup
+name: n8n
+description: Exports all n8n workflows using n8n export:workflow --all before backing up
+service_type: n8n
+icon: workflow
+tags:
+  - automation
+  - workflow
+  - n8n
+  - integration
+
+# Variables that users can customize
+variables:
+  - name: N8N_CONTAINER
+    description: n8n container name (for Docker)
+    default: n8n
+    required: false
+  - name: DUMP_DIR
+    description: Directory to store the workflow exports
+    default: /var/backups/n8n
+    required: true
+  - name: USE_DOCKER
+    description: Use Docker exec to run commands (true/false)
+    default: "true"
+    required: false
+  - name: DOCKER_CMD
+    description: Docker command (docker or podman)
+    default: docker
+    required: false
+  - name: EXPORT_CREDENTIALS
+    description: Export credentials as well (true/false)
+    default: "true"
+    required: false
+  - name: N8N_USER_FOLDER
+    description: n8n user folder path (for non-Docker installs)
+    default: /home/node/.n8n
+    required: false
+  - name: INCLUDE_STATIC
+    description: Include static data folder in backup (true/false)
+    default: "true"
+    required: false
+
+scripts:
+  pre_backup:
+    script: |
+      #!/bin/bash
+      set -e
+
+      # n8n backup script
+      TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/n8n}"
+      N8N_CONTAINER="${N8N_CONTAINER:-n8n}"
+      USE_DOCKER="${USE_DOCKER:-true}"
+      DOCKER_CMD="${DOCKER_CMD:-docker}"
+      EXPORT_CREDENTIALS="${EXPORT_CREDENTIALS:-true}"
+      N8N_USER_FOLDER="${N8N_USER_FOLDER:-/home/node/.n8n}"
+      INCLUDE_STATIC="${INCLUDE_STATIC:-true}"
+
+      # Create dump directory if it doesn't exist
+      BACKUP_SUBDIR="$DUMP_DIR/n8n_${TIMESTAMP}"
+      mkdir -p "$BACKUP_SUBDIR"
+
+      echo "Starting n8n backup..."
+
+      if [ "$USE_DOCKER" = "true" ]; then
+        # Export workflows via Docker
+        echo "Exporting workflows via Docker..."
+        WORKFLOW_FILE="$BACKUP_SUBDIR/workflows.json"
+        $DOCKER_CMD exec "$N8N_CONTAINER" n8n export:workflow --all --output=/tmp/workflows.json 2>/dev/null || \
+          $DOCKER_CMD exec "$N8N_CONTAINER" n8n export:workflow --all > "$WORKFLOW_FILE"
+
+        # Try to copy from container if output was written there
+        $DOCKER_CMD cp "$N8N_CONTAINER:/tmp/workflows.json" "$WORKFLOW_FILE" 2>/dev/null || true
+
+        if [ -f "$WORKFLOW_FILE" ] && [ -s "$WORKFLOW_FILE" ]; then
+          echo "Workflows exported: $WORKFLOW_FILE"
+        else
+          echo "WARNING: No workflows exported or empty file"
+        fi
+
+        # Export credentials if requested
+        if [ "$EXPORT_CREDENTIALS" = "true" ]; then
+          echo "Exporting credentials..."
+          CREDS_FILE="$BACKUP_SUBDIR/credentials.json"
+          $DOCKER_CMD exec "$N8N_CONTAINER" n8n export:credentials --all --output=/tmp/credentials.json 2>/dev/null || \
+            $DOCKER_CMD exec "$N8N_CONTAINER" n8n export:credentials --all > "$CREDS_FILE" 2>/dev/null || true
+          $DOCKER_CMD cp "$N8N_CONTAINER:/tmp/credentials.json" "$CREDS_FILE" 2>/dev/null || true
+
+          if [ -f "$CREDS_FILE" ] && [ -s "$CREDS_FILE" ]; then
+            echo "Credentials exported: $CREDS_FILE"
+          else
+            echo "WARNING: No credentials exported or empty file"
+            rm -f "$CREDS_FILE" 2>/dev/null || true
+          fi
+        fi
+
+        # Backup database if SQLite is used
+        echo "Backing up n8n database..."
+        $DOCKER_CMD cp "$N8N_CONTAINER:/home/node/.n8n/database.sqlite" "$BACKUP_SUBDIR/" 2>/dev/null || true
+
+        # Include static data if requested
+        if [ "$INCLUDE_STATIC" = "true" ]; then
+          STATIC_DIR="$BACKUP_SUBDIR/static"
+          mkdir -p "$STATIC_DIR"
+          $DOCKER_CMD cp "$N8N_CONTAINER:/home/node/.n8n/." "$STATIC_DIR/" 2>/dev/null || true
+        fi
+      else
+        # Export workflows directly
+        echo "Exporting workflows..."
+        WORKFLOW_FILE="$BACKUP_SUBDIR/workflows.json"
+        n8n export:workflow --all --output="$WORKFLOW_FILE"
+        echo "Workflows exported: $WORKFLOW_FILE"
+
+        # Export credentials if requested
+        if [ "$EXPORT_CREDENTIALS" = "true" ]; then
+          echo "Exporting credentials..."
+          CREDS_FILE="$BACKUP_SUBDIR/credentials.json"
+          n8n export:credentials --all --output="$CREDS_FILE" 2>/dev/null || true
+        fi
+
+        # Backup database and static data
+        if [ -d "$N8N_USER_FOLDER" ]; then
+          cp -r "$N8N_USER_FOLDER" "$BACKUP_SUBDIR/n8n_data" 2>/dev/null || true
+        fi
+      fi
+
+      # Create compressed archive
+      ARCHIVE_FILE="$DUMP_DIR/n8n_backup_${TIMESTAMP}.tar.gz"
+      tar -czf "$ARCHIVE_FILE" -C "$DUMP_DIR" "n8n_${TIMESTAMP}"
+      rm -rf "$BACKUP_SUBDIR"
+
+      echo "n8n backup created: $ARCHIVE_FILE"
+      echo "n8n backup completed successfully"
+    timeout_seconds: 600
+    fail_on_error: true
+
+  post_success:
+    script: |
+      #!/bin/bash
+      # Cleanup old backups (keep last 7 days)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/n8n}"
+      RETENTION_DAYS=7
+
+      echo "Cleaning up backups older than $RETENTION_DAYS days"
+      find "$DUMP_DIR" -type f -name "n8n_backup_*.tar.gz" -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
+      echo "Cleanup completed"
+    timeout_seconds: 300
+    fail_on_error: false
+
+  post_failure:
+    script: |
+      #!/bin/bash
+      echo "n8n backup failed - manual intervention may be required"
+      echo "Check n8n container status and CLI availability"
+    timeout_seconds: 60
+    fail_on_error: false

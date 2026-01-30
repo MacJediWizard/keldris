@@ -253,6 +253,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		CurrentOrgID:    currentOrgID,
 		CurrentOrgRole:  currentOrgRole,
 		SessionRecordID: sessionRecordID,
+		IsSuperuser:     user.IsSuperuser,
 	}
 
 	if err := h.sessions.SetUser(c.Request, c.Writer, sessionUser); err != nil {
@@ -358,6 +359,9 @@ type MeResponse struct {
 	CurrentOrgRole    string     `json:"current_org_role,omitempty" example:"admin"`
 	SSOGroups         []string   `json:"sso_groups,omitempty"`
 	SSOGroupsSyncedAt *time.Time `json:"sso_groups_synced_at,omitempty"`
+	IsSuperuser       bool       `json:"is_superuser"`
+	IsImpersonating   bool       `json:"is_impersonating,omitempty"`
+	ImpersonatingID   *uuid.UUID `json:"impersonating_id,omitempty"`
 }
 
 // Me returns the current authenticated user.
@@ -384,6 +388,13 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		Name:           sessionUser.Name,
 		CurrentOrgID:   sessionUser.CurrentOrgID,
 		CurrentOrgRole: sessionUser.CurrentOrgRole,
+		IsSuperuser:    sessionUser.IsSuperuser,
+	}
+
+	// Check if impersonating
+	if sessionUser.ImpersonatingID != uuid.Nil {
+		response.IsImpersonating = true
+		response.ImpersonatingID = &sessionUser.ImpersonatingID
 	}
 
 	// Fetch user's SSO groups if available

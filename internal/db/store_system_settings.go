@@ -13,8 +13,8 @@ import (
 
 // System Settings methods
 
-// GetSystemSetting returns a system setting by organization and key.
-func (db *DB) GetSystemSetting(ctx context.Context, orgID uuid.UUID, key settings.SettingKey) (*settings.SystemSetting, error) {
+// GetOrgSetting returns a system setting by organization and key.
+func (db *DB) GetOrgSetting(ctx context.Context, orgID uuid.UUID, key settings.SettingKey) (*settings.SystemSetting, error) {
 	var s settings.SystemSetting
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, org_id, setting_key, setting_value, description, created_at, updated_at
@@ -32,8 +32,8 @@ func (db *DB) GetSystemSetting(ctx context.Context, orgID uuid.UUID, key setting
 	return &s, nil
 }
 
-// GetAllSystemSettings returns all system settings for an organization.
-func (db *DB) GetAllSystemSettings(ctx context.Context, orgID uuid.UUID) ([]*settings.SystemSetting, error) {
+// GetAllOrgSettings returns all system settings for an organization.
+func (db *DB) GetAllOrgSettings(ctx context.Context, orgID uuid.UUID) ([]*settings.SystemSetting, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, setting_key, setting_value, description, created_at, updated_at
 		FROM system_settings
@@ -79,7 +79,7 @@ func (db *DB) UpsertSystemSetting(ctx context.Context, s *settings.SystemSetting
 
 // GetSMTPSettings returns SMTP settings for an organization.
 func (db *DB) GetSMTPSettings(ctx context.Context, orgID uuid.UUID) (*settings.SMTPSettings, error) {
-	setting, err := db.GetSystemSetting(ctx, orgID, settings.SettingKeySMTP)
+	setting, err := db.GetOrgSetting(ctx, orgID, settings.SettingKeySMTP)
 	if err != nil {
 		// Return defaults if not found
 		defaults := settings.DefaultSMTPSettings()
@@ -109,7 +109,7 @@ func (db *DB) UpdateSMTPSettings(ctx context.Context, orgID uuid.UUID, smtp *set
 
 // GetOIDCSettings returns OIDC settings for an organization.
 func (db *DB) GetOIDCSettings(ctx context.Context, orgID uuid.UUID) (*settings.OIDCSettings, error) {
-	setting, err := db.GetSystemSetting(ctx, orgID, settings.SettingKeyOIDC)
+	setting, err := db.GetOrgSetting(ctx, orgID, settings.SettingKeyOIDC)
 	if err != nil {
 		// Return defaults if not found
 		defaults := settings.DefaultOIDCSettings()
@@ -139,7 +139,7 @@ func (db *DB) UpdateOIDCSettings(ctx context.Context, orgID uuid.UUID, oidc *set
 
 // GetStorageDefaultSettings returns storage default settings for an organization.
 func (db *DB) GetStorageDefaultSettings(ctx context.Context, orgID uuid.UUID) (*settings.StorageDefaultSettings, error) {
-	setting, err := db.GetSystemSetting(ctx, orgID, settings.SettingKeyStorageDefaults)
+	setting, err := db.GetOrgSetting(ctx, orgID, settings.SettingKeyStorageDefaults)
 	if err != nil {
 		// Return defaults if not found
 		defaults := settings.DefaultStorageSettings()
@@ -169,7 +169,7 @@ func (db *DB) UpdateStorageDefaultSettings(ctx context.Context, orgID uuid.UUID,
 
 // GetSecuritySettings returns security settings for an organization.
 func (db *DB) GetSecuritySettings(ctx context.Context, orgID uuid.UUID) (*settings.SecuritySettings, error) {
-	setting, err := db.GetSystemSetting(ctx, orgID, settings.SettingKeySecurity)
+	setting, err := db.GetOrgSetting(ctx, orgID, settings.SettingKeySecurity)
 	if err != nil {
 		// Return defaults if not found
 		defaults := settings.DefaultSecuritySettings()
