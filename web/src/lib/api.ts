@@ -359,6 +359,19 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
+	SystemSettingsResponse,
+	SMTPSettings,
+	OIDCSettings,
+	StorageDefaultSettings,
+	SecuritySettings,
+	UpdateSMTPSettingsRequest,
+	UpdateOIDCSettingsRequest,
+	UpdateStorageDefaultsRequest,
+	UpdateSecuritySettingsRequest,
+	TestSMTPRequest,
+	TestSMTPResponse,
+	TestOIDCResponse,
+	SettingsAuditLogsResponse,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -3348,4 +3361,75 @@ export const slaApi = {
 		const response = await fetchApi<SLAReportResponse>(url);
 		return response.report;
 	},
+};
+
+// System Settings API
+export const systemSettingsApi = {
+	// Get all settings
+	getAll: async (): Promise<SystemSettingsResponse> =>
+		fetchApi<SystemSettingsResponse>('/system-settings'),
+
+	// SMTP settings
+	getSMTP: async (): Promise<SMTPSettings> =>
+		fetchApi<SMTPSettings>('/system-settings/smtp'),
+
+	updateSMTP: async (data: UpdateSMTPSettingsRequest): Promise<SMTPSettings> =>
+		fetchApi<SMTPSettings>('/system-settings/smtp', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	testSMTP: async (data: TestSMTPRequest): Promise<TestSMTPResponse> =>
+		fetchApi<TestSMTPResponse>('/system-settings/smtp/test', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// OIDC settings
+	getOIDC: async (): Promise<OIDCSettings> =>
+		fetchApi<OIDCSettings>('/system-settings/oidc'),
+
+	updateOIDC: async (data: UpdateOIDCSettingsRequest): Promise<OIDCSettings> =>
+		fetchApi<OIDCSettings>('/system-settings/oidc', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	testOIDC: async (): Promise<TestOIDCResponse> =>
+		fetchApi<TestOIDCResponse>('/system-settings/oidc/test', {
+			method: 'POST',
+		}),
+
+	// Storage settings
+	getStorageDefaults: async (): Promise<StorageDefaultSettings> =>
+		fetchApi<StorageDefaultSettings>('/system-settings/storage'),
+
+	updateStorageDefaults: async (
+		data: UpdateStorageDefaultsRequest,
+	): Promise<StorageDefaultSettings> =>
+		fetchApi<StorageDefaultSettings>('/system-settings/storage', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// Security settings
+	getSecurity: async (): Promise<SecuritySettings> =>
+		fetchApi<SecuritySettings>('/system-settings/security'),
+
+	updateSecurity: async (
+		data: UpdateSecuritySettingsRequest,
+	): Promise<SecuritySettings> =>
+		fetchApi<SecuritySettings>('/system-settings/security', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// Audit log
+	getAuditLog: async (
+		limit = 50,
+		offset = 0,
+	): Promise<SettingsAuditLogsResponse> =>
+		fetchApi<SettingsAuditLogsResponse>(
+			`/system-settings/audit-log?limit=${limit}&offset=${offset}`,
+		),
 };

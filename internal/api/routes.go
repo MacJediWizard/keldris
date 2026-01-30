@@ -310,6 +310,10 @@ func NewRouter(
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
 
+	// System settings routes (admin only)
+	systemSettingsHandler := handlers.NewSystemSettingsHandler(database, logger)
+	systemSettingsHandler.RegisterRoutes(apiV1)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
