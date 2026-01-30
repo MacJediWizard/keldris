@@ -26,6 +26,7 @@ type User struct {
 	Email       string    `json:"email"`
 	Name        string    `json:"name,omitempty"`
 	Role        UserRole  `json:"role"`
+	IsSuperuser bool      `json:"is_superuser"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -48,4 +49,10 @@ func NewUser(orgID uuid.UUID, oidcSubject, email, name string, role UserRole) *U
 // IsAdmin returns true if the user has admin role.
 func (u *User) IsAdmin() bool {
 	return u.Role == UserRoleAdmin
+}
+
+// IsSuperAdmin returns true if the user is a global superuser.
+// Superusers have system-wide access across all organizations.
+func (u *User) IsSuperAdmin() bool {
+	return u.IsSuperuser
 }
