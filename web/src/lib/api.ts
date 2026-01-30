@@ -225,6 +225,9 @@ import type {
 	ImmutabilityLock,
 	ImmutabilityLocksResponse,
 	ImmutabilityStatus,
+	ImpersonateUserRequest,
+	ImpersonateUserResponse,
+	ImpersonationLogsResponse,
 	ImportConfigRequest,
 	ImportPreviewRequest,
 	ImportPreviewResponse,
@@ -234,6 +237,8 @@ import type {
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
+	InviteUserRequest,
+	InviteUserResponse,
 	KeyRecoveryResponse,
 	KomodoConnectionTestResponse,
 	KomodoContainer,
@@ -324,6 +329,7 @@ import type {
 	RepositoryStatsListItem,
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
+	ResetPasswordRequest,
 	ResolveDowntimeEventRequest,
 	Restore,
 	RestoreDockerStackRequest,
@@ -443,15 +449,21 @@ import type {
 	UpdateTagRequest,
 	UpdateTemplateRequest,
 	UpdateUserPreferencesRequest,
+	UpdateUserRequest,
 	UpdateVerificationScheduleRequest,
 	UptimeBadge,
 	UptimeBadgesResponse,
 	UptimeSummary,
 	UseTemplateRequest,
 	User,
+	UserActivityLog,
+	UserActivityLogsResponse,
+	UserImpersonationLog,
 	UserSSOGroups,
 	UserSession,
 	UserSessionsResponse,
+	UserWithMembership,
+	UsersResponse,
 	ValidateImportRequest,
 	ValidationResult,
 	Verification,
@@ -4255,5 +4267,100 @@ export const komodoApi = {
 			'/integrations/komodo/events',
 		);
 		return response.events ?? [];
+	},
+};
+
+// Users API (Admin user management)
+export const usersApi = {
+	list: async (): Promise<UserWithMembership[]> => {
+		const response = await fetchApi<UsersResponse>('/users');
+		return response.users ?? [];
+	},
+
+	get: async (id: string): Promise<UserWithMembership> =>
+		fetchApi<UserWithMembership>(`/users/${id}`),
+
+	invite: async (data: InviteUserRequest): Promise<InviteUserResponse> =>
+		fetchApi<InviteUserResponse>('/users/invite', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateUserRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/users/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/users/${id}`, {
+			method: 'DELETE',
+		}),
+
+	resetPassword: async (
+		id: string,
+		data: ResetPasswordRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/users/${id}/reset-password`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	disable: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/users/${id}/disable`, {
+			method: 'POST',
+		}),
+
+	enable: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/users/${id}/enable`, {
+			method: 'POST',
+		}),
+
+	getActivity: async (
+		id: string,
+		limit = 50,
+		offset = 0,
+	): Promise<UserActivityLog[]> => {
+		const response = await fetchApi<UserActivityLogsResponse>(
+			`/users/${id}/activity?limit=${limit}&offset=${offset}`,
+		);
+		return response.activity_logs ?? [];
+	},
+
+	getOrgActivityLogs: async (
+		limit = 50,
+		offset = 0,
+	): Promise<UserActivityLog[]> => {
+		const response = await fetchApi<UserActivityLogsResponse>(
+			`/users/activity?limit=${limit}&offset=${offset}`,
+		);
+		return response.activity_logs ?? [];
+	},
+
+	startImpersonation: async (
+		id: string,
+		data: ImpersonateUserRequest,
+	): Promise<ImpersonateUserResponse> =>
+		fetchApi<ImpersonateUserResponse>(`/users/${id}/impersonate`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	endImpersonation: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/users/end-impersonation', {
+			method: 'POST',
+		}),
+
+	getImpersonationLogs: async (
+		limit = 50,
+		offset = 0,
+	): Promise<UserImpersonationLog[]> => {
+		const response = await fetchApi<ImpersonationLogsResponse>(
+			`/users/impersonation-logs?limit=${limit}&offset=${offset}`,
+		);
+		return response.impersonation_logs ?? [];
 	},
 };

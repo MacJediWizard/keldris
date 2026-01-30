@@ -135,3 +135,8 @@ func (i *OrgInvitation) IsExpired() bool {
 func (i *OrgInvitation) IsAccepted() bool {
 	return i.AcceptedAt != nil
 }
+
+// DefaultInvitationExpiry returns the default expiry time for invitations (7 days).
+func DefaultInvitationExpiry() time.Time {
+	return time.Now().Add(7 * 24 * time.Hour)
+}

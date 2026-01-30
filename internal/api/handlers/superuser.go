@@ -326,8 +326,8 @@ func (h *SuperuserHandler) StartImpersonation(c *gin.Context) {
 		CurrentOrgRole: string(memberships[0].Role),
 	}
 
-	// Start impersonation
-	if err := h.sessions.StartImpersonation(c.Request, c.Writer, user, targetSession); err != nil {
+	// Start impersonation (impersonation logging is handled separately via logActionWithImpersonation)
+	if err := h.sessions.StartImpersonation(c.Request, c.Writer, user, targetSession, uuid.Nil); err != nil {
 		h.logger.Error().Err(err).Msg("failed to start impersonation")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start impersonation"})
 		return
