@@ -797,7 +797,10 @@ export interface BackupScriptsResponse {
 }
 
 // Backup Hook Template types
-export type BackupHookTemplateVisibility = 'built_in' | 'private' | 'organization';
+export type BackupHookTemplateVisibility =
+	| 'built_in'
+	| 'private'
+	| 'organization';
 
 export interface BackupHookTemplateVariable {
 	name: string;
