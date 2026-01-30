@@ -23,6 +23,7 @@ import { LegalHolds } from './pages/LegalHolds';
 import { LifecyclePolicies } from './pages/LifecyclePolicies';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
+import { OrgManagement } from './pages/OrgManagement';
 import { NotificationRules } from './pages/NotificationRules';
 import { Notifications } from './pages/Notifications';
 import { Onboarding } from './pages/Onboarding';
@@ -123,6 +124,7 @@ function App() {
 						/>
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />
+						<Route path="admin/organizations" element={<OrgManagement />} />
 						<Route path="admin/rate-limits" element={<RateLimitDashboard />} />
 						<Route path="admin/rate-limit-configs" element={<RateLimits />} />
 						<Route path="account/sessions" element={<UserSessions />} />

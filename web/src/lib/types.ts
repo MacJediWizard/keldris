@@ -746,6 +746,7 @@ export interface User {
 	sso_groups?: string[];
 	sso_groups_synced_at?: string;
 	language?: SupportedLanguage;
+	is_superuser?: boolean;
 }
 
 export interface UpdateUserPreferencesRequest {
@@ -839,6 +840,81 @@ export interface InvitationsResponse {
 export interface InviteResponse {
 	message: string;
 	token: string;
+}
+
+// Admin Organization types (superuser only)
+export interface AdminOrganization {
+	id: string;
+	name: string;
+	slug: string;
+	logo_url?: string;
+	storage_quota_bytes?: number;
+	storage_used_bytes?: number;
+	agent_limit?: number;
+	agent_count?: number;
+	feature_flags: OrgFeatureFlags;
+	member_count: number;
+	owner_email?: string;
+	owner_id?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface OrgFeatureFlags {
+	sso_enabled?: boolean;
+	api_access?: boolean;
+	advanced_reporting?: boolean;
+	custom_branding?: boolean;
+	priority_support?: boolean;
+}
+
+export interface AdminOrgSettings {
+	name?: string;
+	slug?: string;
+	logo_url?: string;
+	storage_quota_bytes?: number;
+	agent_limit?: number;
+	feature_flags?: Partial<OrgFeatureFlags>;
+}
+
+export interface AdminCreateOrgRequest {
+	name: string;
+	slug: string;
+	owner_email: string;
+	logo_url?: string;
+	storage_quota_bytes?: number;
+	agent_limit?: number;
+	feature_flags?: Partial<OrgFeatureFlags>;
+}
+
+export interface AdminOrganizationsResponse {
+	organizations: AdminOrganization[];
+	total_count: number;
+}
+
+export interface AdminOrgUsageStats {
+	org_id: string;
+	storage_used_bytes: number;
+	storage_quota_bytes?: number;
+	agent_count: number;
+	agent_limit?: number;
+	backup_count: number;
+	total_backup_size_bytes: number;
+	member_count: number;
+	last_backup_at?: string;
+	created_at: string;
+}
+
+export interface TransferOwnershipRequest {
+	new_owner_user_id: string;
+}
+
+export interface BillingSettings {
+	plan_type: 'free' | 'starter' | 'professional' | 'enterprise';
+	billing_email?: string;
+	billing_cycle?: 'monthly' | 'annual';
+	next_billing_date?: string;
+	payment_method_last4?: string;
 }
 
 // API response wrappers
