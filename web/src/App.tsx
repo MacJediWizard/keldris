@@ -43,6 +43,7 @@ import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
 import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
+import { UserManagement } from './pages/UserManagement';
 import { UserSessions } from './pages/UserSessions';
 
 const queryClient = new QueryClient({
@@ -99,6 +100,10 @@ function App() {
 						<Route
 							path="organization/members"
 							element={<OrganizationMembers />}
+						/>
+						<Route
+							path="organization/users"
+							element={<UserManagement />}
 						/>
 						<Route
 							path="organization/settings"
