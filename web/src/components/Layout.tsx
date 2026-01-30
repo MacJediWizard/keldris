@@ -19,10 +19,13 @@ import {
 } from '../hooks/useReadOnlyMode';
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
+import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
+import { RecentItemsDropdown } from './features/RecentItems';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { WhatsNewModal } from './features/WhatsNewModal';
+import { Breadcrumbs } from './ui/Breadcrumbs';
 
 interface NavItem {
 	path: string;
@@ -614,6 +617,32 @@ function Sidebar() {
 							</li>
 							<li>
 								<Link
+									to="/organization/docker-registries"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/docker-registries'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
+										/>
+									</svg>
+									<span>Docker Registries</span>
+								</Link>
+							</li>
+							<li>
+								<Link
 									to="/admin/logs"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/admin/logs'
@@ -636,6 +665,32 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Server Logs</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/admin/docker-logs"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/admin/docker-logs'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+										/>
+									</svg>
+									<span>Docker Logs</span>
 								</Link>
 							</li>
 							<li>
@@ -809,13 +864,71 @@ function Header() {
 		user?.email?.charAt(0).toUpperCase() ??
 		'U';
 
+	const isSuperuser = user?.is_superuser;
+	const isImpersonating = user?.is_impersonating;
+
 	return (
 		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
 			<div className="flex items-center gap-4">
 				<OrgSwitcher />
+				{isImpersonating && (
+					<div className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 border border-amber-300 rounded-lg">
+						<svg
+							aria-hidden="true"
+							className="w-4 h-4 text-amber-600"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+							/>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+							/>
+						</svg>
+						<span className="text-sm font-medium text-amber-800">
+							Impersonating
+						</span>
+					</div>
+				)}
+			</div>
+			<div className="flex-1 max-w-xl mx-4">
+				<GlobalSearchBar placeholder={t('common.search')} />
 			</div>
 			<div className="flex items-center gap-4">
+				{isSuperuser && (
+					<div
+						className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-100 border border-purple-200 rounded-full"
+						title="Superuser"
+					>
+						<svg
+							aria-hidden="true"
+							className="w-4 h-4 text-purple-600"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+							/>
+						</svg>
+						<span className="text-xs font-semibold text-purple-700">
+							Superuser
+						</span>
+					</div>
+				)}
 				<LanguageSelector />
+				<RecentItemsDropdown />
 				<Link
 					to="/alerts"
 					aria-label={t('nav.alerts')}
@@ -847,19 +960,56 @@ function Header() {
 						onClick={() => setShowDropdown(!showDropdown)}
 						className="flex items-center gap-2"
 					>
-						<div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+						<div
+							className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
+								isSuperuser ? 'bg-purple-600' : 'bg-indigo-600'
+							}`}
+						>
 							{userInitial}
 						</div>
 					</button>
 					{showDropdown && (
-						<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+						<div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
 							{user && (
 								<div className="px-4 py-2 border-b border-gray-100">
-									<p className="text-sm font-medium text-gray-900 truncate">
-										{user.name}
-									</p>
+									<div className="flex items-center gap-2">
+										<p className="text-sm font-medium text-gray-900 truncate">
+											{user.name}
+										</p>
+										{isSuperuser && (
+											<span className="px-1.5 py-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 rounded">
+												Superuser
+											</span>
+										)}
+									</div>
 									<p className="text-xs text-gray-500 truncate">{user.email}</p>
 								</div>
+							)}
+							{isSuperuser && (
+								<>
+									<Link
+										to="/superuser"
+										onClick={() => setShowDropdown(false)}
+										className="w-full text-left px-4 py-2 text-sm text-purple-700 hover:bg-purple-50 flex items-center gap-2"
+									>
+										<svg
+											aria-hidden="true"
+											className="w-4 h-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+											/>
+										</svg>
+										Superuser Console
+									</Link>
+									<div className="border-t border-gray-100 my-1" />
+								</>
 							)}
 							<Link
 								to="/account/sessions"
@@ -964,6 +1114,7 @@ export function Layout() {
 					<div className="flex-1 flex flex-col">
 						<Header />
 						<main className="flex-1 p-6">
+							<Breadcrumbs />
 							<Outlet />
 						</main>
 					</div>

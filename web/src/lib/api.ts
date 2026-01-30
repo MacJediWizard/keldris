@@ -1,6 +1,11 @@
 import type {
 	AcknowledgeBreachRequest,
 	ActiveMaintenanceResponse,
+	ActivityCategoriesResponse,
+	ActivityEvent,
+	ActivityEventCountResponse,
+	ActivityEventFilter,
+	ActivityEventsResponse,
 	AddAgentToGroupRequest,
 	Agent,
 	AgentBackupsResponse,
@@ -27,6 +32,8 @@ import type {
 	AlertsResponse,
 	Announcement,
 	AnnouncementsResponse,
+	ApplyBackupHookTemplateRequest,
+	ApplyBackupHookTemplateResponse,
 	ApplyPolicyRequest,
 	ApplyPolicyResponse,
 	AssignSLARequest,
@@ -38,6 +45,8 @@ import type {
 	BackupCalendarResponse,
 	BackupDurationTrend,
 	BackupDurationTrendResponse,
+	BackupHookTemplate,
+	BackupHookTemplatesResponse,
 	BackupQueueResponse,
 	BackupQueueSummary,
 	BackupScript,
@@ -66,6 +75,12 @@ import type {
 	ConcurrencyResponse,
 	ConfigTemplate,
 	ConfigTemplatesResponse,
+	ContainerBackupHook,
+	ContainerBackupHooksResponse,
+	ContainerHookExecution,
+	ContainerHookExecutionsResponse,
+	ContainerHookTemplateInfo,
+	ContainerHookTemplatesResponse,
 	CostAlert,
 	CostAlertsResponse,
 	CostForecastResponse,
@@ -77,17 +92,24 @@ import type {
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
 	CreateAnnouncementRequest,
+	CreateBackupHookTemplateRequest,
 	CreateBackupScriptRequest,
 	CreateCloudRestoreRequest,
+	CreateContainerBackupHookRequest,
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
+	CreateDockerRegistryRequest,
+	CreateDockerRestoreRequest,
+	CreateDockerStackRequest,
 	CreateDowntimeAlertRequest,
 	CreateDowntimeEventRequest,
 	CreateExcludePatternRequest,
+	CreateFavoriteRequest,
 	CreateIPAllowlistRequest,
 	CreateIPBanRequest,
 	CreateImmutabilityLockRequest,
+	CreateKomodoIntegrationRequest,
 	CreateLegalHoldRequest,
 	CreateLifecyclePolicyRequest,
 	CreateMaintenanceWindowRequest,
@@ -127,6 +149,41 @@ import type {
 	DashboardStats,
 	DataTypesResponse,
 	DefaultPricingResponse,
+	DiscoverDockerStacksRequest,
+	DiscoverDockerStacksResponse,
+	DiscoveredDockerStack,
+	DockerContainer,
+	DockerContainersResponse,
+	DockerHealthCheckAllResponse,
+	DockerHealthCheckResponse,
+	DockerLogBackup,
+	DockerLogBackupsResponse,
+	DockerLogRetentionResult,
+	DockerLogSettings,
+	DockerLogSettingsUpdate,
+	DockerLogStorageStats,
+	DockerLogViewResponse,
+	DockerLoginAllResponse,
+	DockerLoginResult,
+	DockerLoginResultResponse,
+	DockerRegistriesResponse,
+	DockerRegistry,
+	DockerRegistryHealthCheck,
+	DockerRegistryResponse,
+	DockerRegistryTypeInfo,
+	DockerRegistryTypesResponse,
+	DockerRestore,
+	DockerRestorePlan,
+	DockerRestorePreviewRequest,
+	DockerRestoreProgress,
+	DockerRestoresResponse,
+	DockerStack,
+	DockerStackBackup,
+	DockerStackBackupListResponse,
+	DockerStackListResponse,
+	DockerStackRestore,
+	DockerVolume,
+	DockerVolumesResponse,
 	DowntimeAlert,
 	DowntimeAlertsResponse,
 	DowntimeEvent,
@@ -135,9 +192,13 @@ import type {
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
+	ExpiringCredentialsResponse,
 	ExportBundleRequest,
 	ExportFormat,
 	ExtendImmutabilityLockRequest,
+	Favorite,
+	FavoriteEntityType,
+	FavoritesResponse,
 	FileDiffResponse,
 	FileHistoryParams,
 	FileHistoryResponse,
@@ -154,6 +215,7 @@ import type {
 	GeoReplicationSummary,
 	GeoReplicationSummaryResponse,
 	GeoReplicationUpdateRequest,
+	GroupedSearchResponse,
 	IPAllowlist,
 	IPAllowlistSettings,
 	IPAllowlistsResponse,
@@ -173,6 +235,18 @@ import type {
 	InviteMemberRequest,
 	InviteResponse,
 	KeyRecoveryResponse,
+	KomodoConnectionTestResponse,
+	KomodoContainer,
+	KomodoContainersResponse,
+	KomodoDiscoveryResult,
+	KomodoIntegration,
+	KomodoIntegrationResponse,
+	KomodoIntegrationsResponse,
+	KomodoStack,
+	KomodoStacksResponse,
+	KomodoSyncResponse,
+	KomodoWebhookEvent,
+	KomodoWebhookEventsResponse,
 	LegalHold,
 	LegalHoldsResponse,
 	LifecycleDeletionEvent,
@@ -226,6 +300,9 @@ import type {
 	RateLimitConfigsResponse,
 	RateLimitDashboardStats,
 	RateLimitStatsResponse,
+	RecentItem,
+	RecentItemsResponse,
+	RecentSearchesResponse,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -247,10 +324,12 @@ import type {
 	RepositoryStatsResponse,
 	ResolveDowntimeEventRequest,
 	Restore,
+	RestoreDockerStackRequest,
 	RestorePreview,
 	RestorePreviewRequest,
 	RestoresResponse,
 	RotateAPIKeyResponse,
+	RotateCredentialsRequest,
 	RunDRTestRequest,
 	RunScheduleResponse,
 	SLAAssignment,
@@ -269,12 +348,14 @@ import type {
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
 	SSOSettings,
+	SaveRecentSearchRequest,
 	SavedFilter,
 	SavedFiltersResponse,
 	Schedule,
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
+	SearchSuggestionsResponse,
 	ServerLogComponentsResponse,
 	ServerLogFilter,
 	ServerLogsResponse,
@@ -303,20 +384,28 @@ import type {
 	TestNotificationRuleRequest,
 	TestNotificationRuleResponse,
 	TestRepositoryResponse,
+	TrackRecentItemRequest,
+	TriggerDockerStackBackupRequest,
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
 	UpdateAnnouncementRequest,
+	UpdateBackupHookTemplateRequest,
 	UpdateBackupScriptRequest,
 	UpdateConcurrencyRequest,
+	UpdateContainerBackupHookRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
+	UpdateDockerRegistryRequest,
+	UpdateDockerStackRequest,
 	UpdateDowntimeAlertRequest,
 	UpdateDowntimeEventRequest,
 	UpdateEntityMetadataRequest,
 	UpdateExcludePatternRequest,
 	UpdateIPAllowlistRequest,
 	UpdateIPAllowlistSettingsRequest,
+	UpdateKomodoContainerRequest,
+	UpdateKomodoIntegrationRequest,
 	UpdateLifecyclePolicyRequest,
 	UpdateMaintenanceWindowRequest,
 	UpdateMemberRequest,
@@ -359,7 +448,7 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
-	SystemSettingsResponse,
+	OrgSettingsResponse,
 	SMTPSettings,
 	OIDCSettings,
 	StorageDefaultSettings,
@@ -895,6 +984,133 @@ export const backupScriptsApi = {
 		}),
 };
 
+// Backup Hook Templates API
+export const backupHookTemplatesApi = {
+	list: async (params?: {
+		service_type?: string;
+		visibility?: string;
+		tag?: string;
+	}): Promise<BackupHookTemplate[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.service_type)
+			searchParams.set('service_type', params.service_type);
+		if (params?.visibility) searchParams.set('visibility', params.visibility);
+		if (params?.tag) searchParams.set('tag', params.tag);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/backup-hook-templates?${query}`
+			: '/backup-hook-templates';
+		const response = await fetchApi<BackupHookTemplatesResponse>(endpoint);
+		return response.templates ?? [];
+	},
+
+	listBuiltIn: async (): Promise<BackupHookTemplate[]> => {
+		const response = await fetchApi<BackupHookTemplatesResponse>(
+			'/backup-hook-templates/built-in',
+		);
+		return response.templates ?? [];
+	},
+
+	get: async (id: string): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>(`/backup-hook-templates/${id}`),
+
+	create: async (
+		data: CreateBackupHookTemplateRequest,
+	): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>('/backup-hook-templates', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateBackupHookTemplateRequest,
+	): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>(`/backup-hook-templates/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/backup-hook-templates/${id}`, {
+			method: 'DELETE',
+		}),
+
+	apply: async (
+		id: string,
+		data: ApplyBackupHookTemplateRequest,
+	): Promise<ApplyBackupHookTemplateResponse> =>
+		fetchApi<ApplyBackupHookTemplateResponse>(
+			`/backup-hook-templates/${id}/apply`,
+			{
+				method: 'POST',
+				body: JSON.stringify(data),
+			},
+		),
+};
+
+// Container Backup Hooks API
+export const containerHooksApi = {
+	list: async (scheduleId: string): Promise<ContainerBackupHook[]> => {
+		const response = await fetchApi<ContainerBackupHooksResponse>(
+			`/schedules/${scheduleId}/container-hooks`,
+		);
+		return response.hooks ?? [];
+	},
+
+	get: async (scheduleId: string, id: string): Promise<ContainerBackupHook> =>
+		fetchApi<ContainerBackupHook>(
+			`/schedules/${scheduleId}/container-hooks/${id}`,
+		),
+
+	create: async (
+		scheduleId: string,
+		data: CreateContainerBackupHookRequest,
+	): Promise<ContainerBackupHook> =>
+		fetchApi<ContainerBackupHook>(`/schedules/${scheduleId}/container-hooks`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		scheduleId: string,
+		id: string,
+		data: UpdateContainerBackupHookRequest,
+	): Promise<ContainerBackupHook> =>
+		fetchApi<ContainerBackupHook>(
+			`/schedules/${scheduleId}/container-hooks/${id}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		),
+
+	delete: async (scheduleId: string, id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/schedules/${scheduleId}/container-hooks/${id}`,
+			{
+				method: 'DELETE',
+			},
+		),
+
+	listTemplates: async (): Promise<ContainerHookTemplateInfo[]> => {
+		const response = await fetchApi<ContainerHookTemplatesResponse>(
+			'/container-hook-templates',
+		);
+		return response.templates ?? [];
+	},
+
+	listExecutions: async (
+		backupId: string,
+	): Promise<ContainerHookExecution[]> => {
+		const response = await fetchApi<ContainerHookExecutionsResponse>(
+			`/backups/${backupId}/container-hook-executions`,
+		);
+		return response.executions ?? [];
+	},
+};
+
 // Snapshots API
 export const snapshotsApi = {
 	list: async (params?: {
@@ -1038,6 +1254,72 @@ export const restoresApi = {
 
 	getProgress: async (id: string): Promise<CloudRestoreProgress> =>
 		fetchApi<CloudRestoreProgress>(`/restores/${id}/progress`),
+};
+
+// Docker Restores API
+export const dockerRestoresApi = {
+	list: async (params?: {
+		agent_id?: string;
+		status?: string;
+	}): Promise<DockerRestore[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.agent_id) searchParams.set('agent_id', params.agent_id);
+		if (params?.status) searchParams.set('status', params.status);
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/docker-restores?${query}` : '/docker-restores';
+		const response = await fetchApi<DockerRestoresResponse>(endpoint);
+		return response.docker_restores ?? [];
+	},
+
+	get: async (id: string): Promise<DockerRestore> =>
+		fetchApi<DockerRestore>(`/docker-restores/${id}`),
+
+	create: async (data: CreateDockerRestoreRequest): Promise<DockerRestore> =>
+		fetchApi<DockerRestore>('/docker-restores', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	preview: async (
+		data: DockerRestorePreviewRequest,
+	): Promise<DockerRestorePlan> =>
+		fetchApi<DockerRestorePlan>('/docker-restores/preview', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getProgress: async (id: string): Promise<DockerRestoreProgress> =>
+		fetchApi<DockerRestoreProgress>(`/docker-restores/${id}/progress`),
+
+	listContainers: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<DockerContainer[]> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('agent_id', agentId);
+		const response = await fetchApi<DockerContainersResponse>(
+			`/docker-restores/snapshot/${snapshotId}/containers?${searchParams.toString()}`,
+		);
+		return response.containers ?? [];
+	},
+
+	listVolumes: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<DockerVolume[]> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('agent_id', agentId);
+		const response = await fetchApi<DockerVolumesResponse>(
+			`/docker-restores/snapshot/${snapshotId}/volumes?${searchParams.toString()}`,
+		);
+		return response.volumes ?? [];
+	},
+
+	cancel: async (id: string): Promise<DockerRestore> =>
+		fetchApi<DockerRestore>(`/docker-restores/${id}/cancel`, {
+			method: 'POST',
+		}),
 };
 
 // File History API
@@ -1945,6 +2227,80 @@ export const searchApi = {
 
 		return fetchApi<SearchResponse>(`/search?${searchParams.toString()}`);
 	},
+
+	searchGrouped: async (
+		filter: SearchFilter,
+	): Promise<GroupedSearchResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', filter.q);
+
+		if (filter.types?.length) {
+			searchParams.set('types', filter.types.join(','));
+		}
+		if (filter.status) {
+			searchParams.set('status', filter.status);
+		}
+		if (filter.tag_ids?.length) {
+			searchParams.set('tag_ids', filter.tag_ids.join(','));
+		}
+		if (filter.date_from) {
+			searchParams.set('date_from', filter.date_from);
+		}
+		if (filter.date_to) {
+			searchParams.set('date_to', filter.date_to);
+		}
+		if (filter.size_min !== undefined) {
+			searchParams.set('size_min', filter.size_min.toString());
+		}
+		if (filter.size_max !== undefined) {
+			searchParams.set('size_max', filter.size_max.toString());
+		}
+		if (filter.limit) {
+			searchParams.set('limit', filter.limit.toString());
+		}
+
+		return fetchApi<GroupedSearchResponse>(
+			`/search/grouped?${searchParams.toString()}`,
+		);
+	},
+
+	getSuggestions: async (
+		query: string,
+		limit = 10,
+	): Promise<SearchSuggestionsResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', query);
+		searchParams.set('limit', limit.toString());
+		return fetchApi<SearchSuggestionsResponse>(
+			`/search/suggestions?${searchParams.toString()}`,
+		);
+	},
+
+	getRecentSearches: async (limit = 10): Promise<RecentSearchesResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('limit', limit.toString());
+		return fetchApi<RecentSearchesResponse>(
+			`/search/recent?${searchParams.toString()}`,
+		);
+	},
+
+	saveRecentSearch: async (
+		data: SaveRecentSearchRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/search/recent', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	deleteRecentSearch: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/search/recent/${id}`, {
+			method: 'DELETE',
+		}),
+
+	clearRecentSearches: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/search/recent', {
+			method: 'DELETE',
+		}),
 };
 
 // Dashboard Metrics API
@@ -3363,11 +3719,11 @@ export const slaApi = {
 	},
 };
 
-// System Settings API
-export const systemSettingsApi = {
+// Organization System Settings API (SMTP, OIDC, Storage, Security)
+export const orgSettingsApi = {
 	// Get all settings
-	getAll: async (): Promise<SystemSettingsResponse> =>
-		fetchApi<SystemSettingsResponse>('/system-settings'),
+	getAll: async (): Promise<OrgSettingsResponse> =>
+		fetchApi<OrgSettingsResponse>('/system-settings'),
 
 	// SMTP settings
 	getSMTP: async (): Promise<SMTPSettings> =>
@@ -3432,4 +3788,472 @@ export const systemSettingsApi = {
 		fetchApi<SettingsAuditLogsResponse>(
 			`/system-settings/audit-log?limit=${limit}&offset=${offset}`,
 		),
+};
+
+// Docker Container Logs API
+export const dockerLogsApi = {
+	// List all backups
+	list: async (status?: string): Promise<DockerLogBackupsResponse> => {
+		const url = status ? `/docker-logs?status=${status}` : '/docker-logs';
+		return fetchApi<DockerLogBackupsResponse>(url);
+	},
+
+	// Get a specific backup
+	get: async (id: string): Promise<DockerLogBackup> =>
+		fetchApi<DockerLogBackup>(`/docker-logs/${id}`),
+
+	// View backup contents
+	view: async (
+		id: string,
+		offset = 0,
+		limit = 1000,
+	): Promise<DockerLogViewResponse> =>
+		fetchApi<DockerLogViewResponse>(
+			`/docker-logs/${id}/view?offset=${offset}&limit=${limit}`,
+		),
+
+	// Download backup
+	download: async (
+		id: string,
+		format: 'json' | 'csv' | 'raw' = 'json',
+	): Promise<Blob> => {
+		const response = await fetch(
+			`${API_BASE}/docker-logs/${id}/download?format=${format}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to download docker logs');
+		}
+		return response.blob();
+	},
+
+	// Delete a backup
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-logs/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Get settings for an agent
+	getSettings: async (agentId: string): Promise<DockerLogSettings> =>
+		fetchApi<DockerLogSettings>(`/docker-logs/settings/${agentId}`),
+
+	// Update settings for an agent
+	updateSettings: async (
+		agentId: string,
+		settings: DockerLogSettingsUpdate,
+	): Promise<DockerLogSettings> =>
+		fetchApi<DockerLogSettings>(`/docker-logs/settings/${agentId}`, {
+			method: 'PUT',
+			body: JSON.stringify(settings),
+		}),
+
+	// List backups by agent
+	listByAgent: async (agentId: string): Promise<DockerLogBackupsResponse> =>
+		fetchApi<DockerLogBackupsResponse>(`/docker-logs/agent/${agentId}`),
+
+	// List backups by container
+	listByContainer: async (
+		agentId: string,
+		containerId: string,
+	): Promise<DockerLogBackupsResponse> =>
+		fetchApi<DockerLogBackupsResponse>(
+			`/docker-logs/agent/${agentId}/container/${containerId}`,
+		),
+
+	// Get storage stats for an agent
+	getStorageStats: async (agentId: string): Promise<DockerLogStorageStats> =>
+		fetchApi<DockerLogStorageStats>(`/docker-logs/stats/${agentId}`),
+
+	// Apply retention policy
+	applyRetention: async (
+		agentId: string,
+		containerId?: string,
+	): Promise<DockerLogRetentionResult> => {
+		const url = containerId
+			? `/docker-logs/retention/${agentId}?container_id=${containerId}`
+			: `/docker-logs/retention/${agentId}`;
+		return fetchApi<DockerLogRetentionResult>(url, {
+			method: 'POST',
+		});
+	},
+};
+
+// Recent Items API
+export const recentItemsApi = {
+	list: async (type?: string): Promise<RecentItem[]> => {
+		const url = type ? `/recent-items?type=${type}` : '/recent-items';
+		const response = await fetchApi<RecentItemsResponse>(url);
+		return response.items ?? [];
+	},
+
+	track: async (data: TrackRecentItemRequest): Promise<RecentItem> =>
+		fetchApi<RecentItem>('/recent-items', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/recent-items/${id}`, {
+			method: 'DELETE',
+		}),
+
+	clearAll: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/recent-items', {
+			method: 'DELETE',
+		}),
+};
+
+// Activity API
+export const activityApi = {
+	list: async (filter?: ActivityEventFilter): Promise<ActivityEvent[]> => {
+		const params = new URLSearchParams();
+		if (filter?.category) params.set('category', filter.category);
+		if (filter?.type) params.set('type', filter.type);
+		if (filter?.user_id) params.set('user_id', filter.user_id);
+		if (filter?.agent_id) params.set('agent_id', filter.agent_id);
+		if (filter?.start_time) params.set('start_time', filter.start_time);
+		if (filter?.end_time) params.set('end_time', filter.end_time);
+		if (filter?.limit) params.set('limit', String(filter.limit));
+		if (filter?.offset) params.set('offset', String(filter.offset));
+
+		const queryString = params.toString();
+		const url = queryString ? `/activity?${queryString}` : '/activity';
+		const response = await fetchApi<ActivityEventsResponse>(url);
+		return response.events ?? [];
+	},
+
+	recent: async (limit?: number): Promise<ActivityEvent[]> => {
+		const url = limit ? `/activity/recent?limit=${limit}` : '/activity/recent';
+		const response = await fetchApi<ActivityEventsResponse>(url);
+		return response.events ?? [];
+	},
+
+	count: async (category?: string, type?: string): Promise<number> => {
+		const params = new URLSearchParams();
+		if (category) params.set('category', category);
+		if (type) params.set('type', type);
+
+		const queryString = params.toString();
+		const url = queryString
+			? `/activity/count?${queryString}`
+			: '/activity/count';
+		const response = await fetchApi<ActivityEventCountResponse>(url);
+		return response.count;
+	},
+
+	categories: async (): Promise<Record<string, number>> => {
+		const response = await fetchApi<ActivityCategoriesResponse>(
+			'/activity/categories',
+		);
+		return response.categories ?? {};
+	},
+
+	search: async (query: string, limit?: number): Promise<ActivityEvent[]> => {
+		const params = new URLSearchParams({ q: query });
+		if (limit) params.set('limit', String(limit));
+
+		const response = await fetchApi<ActivityEventsResponse>(
+			`/activity/search?${params.toString()}`,
+		);
+		return response.events ?? [];
+	},
+};
+
+// Favorites API
+export const favoritesApi = {
+	list: async (entityType?: FavoriteEntityType): Promise<Favorite[]> => {
+		const endpoint = entityType
+			? `/favorites?entity_type=${entityType}`
+			: '/favorites';
+		const response = await fetchApi<FavoritesResponse>(endpoint);
+		return response.favorites ?? [];
+	},
+
+	create: async (data: CreateFavoriteRequest): Promise<Favorite> =>
+		fetchApi<Favorite>('/favorites', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (
+		entityType: FavoriteEntityType,
+		entityId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/favorites/${entityType}/${entityId}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Docker Stacks API
+export const dockerStacksApi = {
+	// Stack Management
+	list: async (agentId?: string): Promise<DockerStack[]> => {
+		const endpoint = agentId
+			? `/docker-stacks?agent_id=${agentId}`
+			: '/docker-stacks';
+		const response = await fetchApi<DockerStackListResponse>(endpoint);
+		return response.stacks ?? [];
+	},
+
+	get: async (id: string): Promise<DockerStack> =>
+		fetchApi<DockerStack>(`/docker-stacks/${id}`),
+
+	create: async (data: CreateDockerStackRequest): Promise<DockerStack> =>
+		fetchApi<DockerStack>('/docker-stacks', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateDockerStackRequest,
+	): Promise<DockerStack> =>
+		fetchApi<DockerStack>(`/docker-stacks/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-stacks/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Backup Operations
+	triggerBackup: async (
+		id: string,
+		data?: TriggerDockerStackBackupRequest,
+	): Promise<DockerStackBackup> =>
+		fetchApi<DockerStackBackup>(`/docker-stacks/${id}/backup`, {
+			method: 'POST',
+			body: JSON.stringify(data ?? {}),
+		}),
+
+	listBackups: async (stackId: string): Promise<DockerStackBackup[]> => {
+		const response = await fetchApi<DockerStackBackupListResponse>(
+			`/docker-stacks/${stackId}/backups`,
+		);
+		return response.backups ?? [];
+	},
+
+	getBackup: async (id: string): Promise<DockerStackBackup> =>
+		fetchApi<DockerStackBackup>(`/docker-stack-backups/${id}`),
+
+	deleteBackup: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-stack-backups/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Restore Operations
+	restoreBackup: async (
+		backupId: string,
+		data: RestoreDockerStackRequest,
+	): Promise<DockerStackRestore> =>
+		fetchApi<DockerStackRestore>(`/docker-stack-backups/${backupId}/restore`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getRestore: async (id: string): Promise<DockerStackRestore> =>
+		fetchApi<DockerStackRestore>(`/docker-stack-restores/${id}`),
+
+	// Discovery
+	discoverStacks: async (
+		data: DiscoverDockerStacksRequest,
+	): Promise<DiscoveredDockerStack[]> => {
+		const response = await fetchApi<DiscoverDockerStacksResponse>(
+			'/docker-stacks/discover',
+			{
+				method: 'POST',
+				body: JSON.stringify(data),
+			},
+		);
+		return response.stacks ?? [];
+	},
+};
+
+// Docker Registry API
+export const dockerRegistriesApi = {
+	list: async (): Promise<DockerRegistry[]> => {
+		const response =
+			await fetchApi<DockerRegistriesResponse>('/docker-registries');
+		return response.registries ?? [];
+	},
+
+	get: async (id: string): Promise<DockerRegistry> => {
+		const response = await fetchApi<DockerRegistryResponse>(
+			`/docker-registries/${id}`,
+		);
+		return response.registry;
+	},
+
+	create: async (data: CreateDockerRegistryRequest): Promise<DockerRegistry> =>
+		fetchApi<DockerRegistry>('/docker-registries', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateDockerRegistryRequest,
+	): Promise<DockerRegistry> =>
+		fetchApi<DockerRegistry>(`/docker-registries/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-registries/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getTypes: async (): Promise<DockerRegistryTypeInfo[]> => {
+		const response = await fetchApi<DockerRegistryTypesResponse>(
+			'/docker-registries/types',
+		);
+		return response.types ?? [];
+	},
+
+	getExpiringCredentials: async (): Promise<{
+		registries: DockerRegistry[];
+		warning_days: number;
+	}> => fetchApi<ExpiringCredentialsResponse>('/docker-registries/expiring'),
+
+	login: async (id: string): Promise<DockerLoginResult> => {
+		const response = await fetchApi<DockerLoginResultResponse>(
+			`/docker-registries/${id}/login`,
+			{ method: 'POST' },
+		);
+		return response.result;
+	},
+
+	loginAll: async (): Promise<DockerLoginResult[]> => {
+		const response = await fetchApi<DockerLoginAllResponse>(
+			'/docker-registries/login-all',
+			{ method: 'POST' },
+		);
+		return response.results ?? [];
+	},
+
+	healthCheck: async (id: string): Promise<DockerRegistryHealthCheck> => {
+		const response = await fetchApi<DockerHealthCheckResponse>(
+			`/docker-registries/${id}/health-check`,
+			{ method: 'POST' },
+		);
+		return response.result;
+	},
+
+	healthCheckAll: async (): Promise<DockerRegistryHealthCheck[]> => {
+		const response = await fetchApi<DockerHealthCheckAllResponse>(
+			'/docker-registries/health-check-all',
+			{ method: 'POST' },
+		);
+		return response.results ?? [];
+	},
+
+	rotateCredentials: async (
+		id: string,
+		data: RotateCredentialsRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-registries/${id}/rotate-credentials`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	setDefault: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-registries/${id}/set-default`, {
+			method: 'POST',
+		}),
+};
+
+// =============================================================================
+// Komodo Integration API
+// =============================================================================
+
+export const komodoApi = {
+	// Integrations
+	listIntegrations: async (): Promise<KomodoIntegration[]> => {
+		const response = await fetchApi<KomodoIntegrationsResponse>(
+			'/integrations/komodo',
+		);
+		return response.integrations ?? [];
+	},
+
+	getIntegration: async (id: string): Promise<KomodoIntegrationResponse> =>
+		fetchApi<KomodoIntegrationResponse>(`/integrations/komodo/${id}`),
+
+	createIntegration: async (
+		data: CreateKomodoIntegrationRequest,
+	): Promise<KomodoIntegration> =>
+		fetchApi<KomodoIntegration>('/integrations/komodo', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateIntegration: async (
+		id: string,
+		data: UpdateKomodoIntegrationRequest,
+	): Promise<KomodoIntegration> =>
+		fetchApi<KomodoIntegration>(`/integrations/komodo/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteIntegration: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/integrations/komodo/${id}`, {
+			method: 'DELETE',
+		}),
+
+	testConnection: async (id: string): Promise<KomodoConnectionTestResponse> =>
+		fetchApi<KomodoConnectionTestResponse>(`/integrations/komodo/${id}/test`, {
+			method: 'POST',
+		}),
+
+	syncIntegration: async (id: string): Promise<KomodoSyncResponse> =>
+		fetchApi<KomodoSyncResponse>(`/integrations/komodo/${id}/sync`, {
+			method: 'POST',
+		}),
+
+	discoverContainers: async (id: string): Promise<KomodoDiscoveryResult> =>
+		fetchApi<KomodoDiscoveryResult>(`/integrations/komodo/${id}/discover`),
+
+	// Containers
+	listContainers: async (): Promise<KomodoContainer[]> => {
+		const response = await fetchApi<KomodoContainersResponse>(
+			'/integrations/komodo/containers',
+		);
+		return response.containers ?? [];
+	},
+
+	getContainer: async (id: string): Promise<KomodoContainer> =>
+		fetchApi<KomodoContainer>(`/integrations/komodo/containers/${id}`),
+
+	updateContainer: async (
+		id: string,
+		data: UpdateKomodoContainerRequest,
+	): Promise<KomodoContainer> =>
+		fetchApi<KomodoContainer>(`/integrations/komodo/containers/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// Stacks
+	listStacks: async (): Promise<KomodoStack[]> => {
+		const response = await fetchApi<KomodoStacksResponse>(
+			'/integrations/komodo/stacks',
+		);
+		return response.stacks ?? [];
+	},
+
+	getStack: async (id: string): Promise<KomodoStack> =>
+		fetchApi<KomodoStack>(`/integrations/komodo/stacks/${id}`),
+
+	// Webhook Events
+	listWebhookEvents: async (): Promise<KomodoWebhookEvent[]> => {
+		const response = await fetchApi<KomodoWebhookEventsResponse>(
+			'/integrations/komodo/events',
+		);
+		return response.events ?? [];
+	},
 };
