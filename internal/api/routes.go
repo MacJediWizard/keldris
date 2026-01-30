@@ -335,6 +335,10 @@ func NewRouter(
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
 
+	// Superuser routes (requires superuser privileges)
+	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
+	superuserHandler.RegisterRoutes(apiV1)
+
 	// Docker backup routes
 	dockerDiscoveryConfig := docker.DefaultDiscoveryConfig()
 	dockerDiscoveryService := docker.NewDiscoveryService(database, dockerDiscoveryConfig, logger)
