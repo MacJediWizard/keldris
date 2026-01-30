@@ -24,6 +24,7 @@ type BackupStore interface {
 	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error)
 	GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error)
 	GetBackupsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]*models.Backup, error)
+	GetBackupValidationByBackupID(ctx context.Context, backupID uuid.UUID) (*models.BackupValidation, error)
 }
 
 // BackupsHandler handles backup-related HTTP endpoints.
@@ -47,6 +48,7 @@ func (h *BackupsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		backups.GET("", h.List)
 		backups.GET("/calendar", h.Calendar)
 		backups.GET("/:id", h.Get)
+		backups.GET("/:id/validation", h.GetValidation)
 	}
 }
 
@@ -211,6 +213,69 @@ func (h *BackupsHandler) Get(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, backup)
+}
+
+// GetValidation returns the validation details for a specific backup.
+//
+//	@Summary		Get backup validation
+//	@Description	Returns validation details for a specific backup job
+//	@Tags			Backups
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Backup ID"
+//	@Success		200	{object}	models.BackupValidation
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/backups/{id}/validation [get]
+func (h *BackupsHandler) GetValidation(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid backup ID"})
+		return
+	}
+
+	// Get the backup first
+	backup, err := h.store.GetBackupByID(c.Request.Context(), id)
+	if err != nil {
+		h.logger.Error().Err(err).Str("backup_id", id.String()).Msg("failed to get backup")
+		c.JSON(http.StatusNotFound, gin.H{"error": "backup not found"})
+		return
+	}
+
+	// Verify backup's agent belongs to user's org
+	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "backup not found"})
+		return
+	}
+
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "backup not found"})
+		return
+	}
+
+	// Get validation for this backup
+	validation, err := h.store.GetBackupValidationByBackupID(c.Request.Context(), id)
+	if err != nil {
+		h.logger.Error().Err(err).Str("backup_id", id.String()).Msg("failed to get backup validation")
+		c.JSON(http.StatusNotFound, gin.H{"error": "validation not found for this backup"})
+		return
+	}
+
+	c.JSON(http.StatusOK, validation)
 }
 
 // filterByStatus filters backups by status if status param is provided.

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backup Validation Failed</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5;">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f4f4f5;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: #ef4444; padding: 24px 32px;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Backup Validation Failed</h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 32px;">
+                            <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.5;">
+                                A backup completed successfully but failed validation checks. This may indicate data integrity issues.
+                            </p>
+
+                            <!-- Summary Box -->
+                            <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f9fafb; border-radius: 6px; margin-bottom: 24px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Host</span>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                                    <span style="color: #111827; font-size: 14px; font-weight: 500;">{{.Hostname}}</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Schedule</span>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                                    <span style="color: #111827; font-size: 14px; font-weight: 500;">{{.ScheduleName}}</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Snapshot ID</span>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                                    <span style="color: #111827; font-size: 14px; font-family: monospace;">{{.SnapshotID}}</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Backup Completed</span>
+                                                </td>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                                    <span style="color: #111827; font-size: 14px;">{{.BackupCompletedAt.Format "Jan 02, 2006 15:04 MST"}}</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <span style="color: #6b7280; font-size: 14px;">Validation Failed</span>
+                                                </td>
+                                                <td style="padding: 8px 0; text-align: right;">
+                                                    <span style="color: #111827; font-size: 14px;">{{.ValidationFailedAt.Format "Jan 02, 2006 15:04 MST"}}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Validation Summary -->
+                            {{if .ValidationSummary}}
+                            <div style="background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+                                <div style="color: #92400e; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Validation Summary</div>
+                                <p style="margin: 0; color: #78350f; font-size: 14px;">{{.ValidationSummary}}</p>
+                            </div>
+                            {{end}}
+
+                            <!-- Error Message -->
+                            <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 16px;">
+                                <div style="color: #991b1b; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Error Details</div>
+                                <pre style="margin: 0; color: #7f1d1d; font-size: 13px; font-family: monospace; white-space: pre-wrap; word-break: break-word;">{{.ErrorMessage}}</pre>
+                            </div>
+
+                            <!-- Validation Details -->
+                            {{if .ValidationDetails}}
+                            <div style="margin-top: 16px; background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px;">
+                                <div style="color: #374151; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Detailed Results</div>
+                                <pre style="margin: 0; color: #4b5563; font-size: 12px; font-family: monospace; white-space: pre-wrap; word-break: break-word;">{{.ValidationDetails}}</pre>
+                            </div>
+                            {{end}}
+
+                            <!-- Action -->
+                            <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                                Recommended actions:
+                            </p>
+                            <ul style="margin: 12px 0 0; padding-left: 20px; color: #6b7280; font-size: 14px; line-height: 1.8;">
+                                <li>Review the backup validation details in the UI</li>
+                                <li>Check the snapshot contents manually with a test restore</li>
+                                <li>Verify repository integrity with a full repository check</li>
+                                <li>Consider running a new backup if data integrity is compromised</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 20px 32px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; color: #6b7280; font-size: 13px; text-align: center;">
+                                This notification was sent by Keldris Backup System
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

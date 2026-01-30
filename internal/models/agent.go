@@ -54,7 +54,18 @@ type HealthMetrics struct {
 	UptimeSeconds   int64         `json:"uptime_seconds"`
 	ResticVersion   string        `json:"restic_version,omitempty"`
 	ResticAvailable bool          `json:"restic_available"`
+	PiholeInfo      *PiholeInfo   `json:"pihole_info,omitempty"`
 	Issues          []HealthIssue `json:"issues,omitempty"`
+}
+
+// PiholeInfo contains Pi-hole detection and version information.
+type PiholeInfo struct {
+	Installed       bool   `json:"installed"`
+	Version         string `json:"version,omitempty"`
+	FTLVersion      string `json:"ftl_version,omitempty"`
+	WebVersion      string `json:"web_version,omitempty"`
+	ConfigDir       string `json:"config_dir,omitempty"`
+	BlockingEnabled bool   `json:"blocking_enabled"`
 }
 
 // HealthIssue represents a specific health issue detected on an agent.
@@ -66,6 +77,36 @@ type HealthIssue struct {
 	Threshold float64      `json:"threshold,omitempty"`
 }
 
+// DockerContainerInfo represents basic Docker container information.
+type DockerContainerInfo struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Image  string `json:"image"`
+	Status string `json:"status"`
+	State  string `json:"state"` // running, paused, exited, etc.
+}
+
+// DockerVolumeInfo represents basic Docker volume information.
+type DockerVolumeInfo struct {
+	Name       string `json:"name"`
+	Driver     string `json:"driver"`
+	Mountpoint string `json:"mountpoint,omitempty"`
+}
+
+// DockerInfo contains information about Docker on an agent.
+type DockerInfo struct {
+	Available       bool                  `json:"available"`
+	Version         string                `json:"version,omitempty"`
+	APIVersion      string                `json:"api_version,omitempty"`
+	ContainerCount  int                   `json:"container_count"`
+	RunningCount    int                   `json:"running_count"`
+	VolumeCount     int                   `json:"volume_count"`
+	Containers      []DockerContainerInfo `json:"containers,omitempty"`
+	Volumes         []DockerVolumeInfo    `json:"volumes,omitempty"`
+	Error           string                `json:"error,omitempty"`
+	DetectedAt      *time.Time            `json:"detected_at,omitempty"`
+}
+
 // Agent represents a backup agent installed on a host.
 type Agent struct {
 	ID                   uuid.UUID              `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
@@ -73,6 +114,7 @@ type Agent struct {
 	Hostname             string                 `json:"hostname" example:"backup-server-01"`
 	APIKeyHash           string                 `json:"-"` // Never expose in JSON
 	OSInfo               *OSInfo                `json:"os_info,omitempty"`
+	DockerInfo           *DockerInfo            `json:"docker_info,omitempty"`
 	NetworkMounts        []NetworkMount         `json:"network_mounts,omitempty"`
 	LastSeen             *time.Time             `json:"last_seen,omitempty"`
 	Status               AgentStatus            `json:"status" example:"active"`
@@ -122,6 +164,32 @@ func (a *Agent) OSInfoJSON() ([]byte, error) {
 		return nil, nil
 	}
 	return json.Marshal(a.OSInfo)
+}
+
+// SetDockerInfo sets the Docker information from JSON bytes.
+func (a *Agent) SetDockerInfo(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	var info DockerInfo
+	if err := json.Unmarshal(data, &info); err != nil {
+		return err
+	}
+	a.DockerInfo = &info
+	return nil
+}
+
+// DockerInfoJSON returns the Docker info as JSON bytes for database storage.
+func (a *Agent) DockerInfoJSON() ([]byte, error) {
+	if a.DockerInfo == nil {
+		return nil, nil
+	}
+	return json.Marshal(a.DockerInfo)
+}
+
+// HasDocker returns true if Docker is available on this agent.
+func (a *Agent) HasDocker() bool {
+	return a.DockerInfo != nil && a.DockerInfo.Available
 }
 
 // IsOnline returns true if the agent has been seen within the threshold.
