@@ -1,0 +1,111 @@
+# Mailcow Backup Hook Template
+# Uses mailcow-backup.sh to create a full backup before backup
+name: Mailcow
+description: Creates a Mailcow backup using mailcow-backup.sh before backing up
+service_type: mailcow
+icon: mail
+tags:
+  - email
+  - mailcow
+  - mail-server
+
+# Variables that users can customize
+variables:
+  - name: MAILCOW_DIR
+    description: Mailcow installation directory
+    default: /opt/mailcow-dockerized
+    required: true
+  - name: BACKUP_DIR
+    description: Directory to store the backup
+    default: /var/backups/mailcow
+    required: true
+  - name: BACKUP_TYPE
+    description: Backup type (full or partial)
+    default: full
+    required: false
+  - name: BACKUP_THREADS
+    description: Number of threads to use for backup
+    default: "2"
+    required: false
+  - name: DELETE_DAYS
+    description: Delete backups older than this many days (0 to disable)
+    default: "0"
+    required: false
+
+scripts:
+  pre_backup:
+    script: |
+      #!/bin/bash
+      set -e
+
+      # Mailcow backup script
+      TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+      MAILCOW_DIR="${MAILCOW_DIR:-/opt/mailcow-dockerized}"
+      BACKUP_DIR="${BACKUP_DIR:-/var/backups/mailcow}"
+      BACKUP_TYPE="${BACKUP_TYPE:-full}"
+      BACKUP_THREADS="${BACKUP_THREADS:-2}"
+      DELETE_DAYS="${DELETE_DAYS:-0}"
+
+      # Create backup directory if it doesn't exist
+      mkdir -p "$BACKUP_DIR"
+
+      # Verify mailcow directory exists
+      if [ ! -d "$MAILCOW_DIR" ]; then
+        echo "ERROR: Mailcow directory not found: $MAILCOW_DIR"
+        exit 1
+      fi
+
+      # Check for backup script
+      BACKUP_SCRIPT="$MAILCOW_DIR/helper-scripts/backup_and_restore.sh"
+      if [ ! -f "$BACKUP_SCRIPT" ]; then
+        echo "ERROR: Mailcow backup script not found: $BACKUP_SCRIPT"
+        exit 1
+      fi
+
+      cd "$MAILCOW_DIR"
+
+      echo "Starting Mailcow backup..."
+      echo "Backup type: $BACKUP_TYPE"
+      echo "Backup directory: $BACKUP_DIR"
+      echo "Threads: $BACKUP_THREADS"
+
+      # Set environment variables for the backup script
+      export BACKUP_LOCATION="$BACKUP_DIR"
+      export THREADS="$BACKUP_THREADS"
+
+      # Run backup
+      if [ "$BACKUP_TYPE" = "full" ]; then
+        "$BACKUP_SCRIPT" backup all --delete-days "$DELETE_DAYS"
+      else
+        "$BACKUP_SCRIPT" backup crypt vmail redis rspamd postfix mysql --delete-days "$DELETE_DAYS"
+      fi
+
+      echo "Mailcow backup completed successfully"
+      echo "Backup stored in: $BACKUP_DIR"
+    timeout_seconds: 7200
+    fail_on_error: true
+
+  post_success:
+    script: |
+      #!/bin/bash
+      # Note: mailcow-backup.sh handles its own retention via --delete-days
+      # This script is for any additional cleanup
+      BACKUP_DIR="${BACKUP_DIR:-/var/backups/mailcow}"
+
+      echo "Mailcow backup succeeded"
+      echo "Backup location: $BACKUP_DIR"
+
+      # List recent backups
+      echo "Recent backups:"
+      ls -lt "$BACKUP_DIR" 2>/dev/null | head -10 || true
+    timeout_seconds: 300
+    fail_on_error: false
+
+  post_failure:
+    script: |
+      #!/bin/bash
+      echo "Mailcow backup failed - manual intervention may be required"
+      echo "Check mailcow container status and disk space"
+      echo "Review logs at /opt/mailcow-dockerized/data/logs/"
+    timeout_seconds: 60
+    fail_on_error: false

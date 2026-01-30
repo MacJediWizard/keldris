@@ -166,6 +166,9 @@ func NewRouter(
 	backupScriptsHandler := handlers.NewBackupScriptsHandler(database, logger)
 	backupScriptsHandler.RegisterRoutes(apiV1)
 
+	backupHookTemplatesHandler := handlers.NewBackupHookTemplatesHandler(database, logger)
+	backupHookTemplatesHandler.RegisterRoutes(apiV1)
+
 	policiesHandler := handlers.NewPoliciesHandler(database, logger)
 	policiesHandler.RegisterRoutes(apiV1)
 
