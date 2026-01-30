@@ -173,6 +173,9 @@ func NewRouter(
 	containerHooksHandler := handlers.NewContainerHooksHandler(database, logger)
 	containerHooksHandler.RegisterRoutes(apiV1)
 
+	backupHookTemplatesHandler := handlers.NewBackupHookTemplatesHandler(database, logger)
+	backupHookTemplatesHandler.RegisterRoutes(apiV1)
+
 	policiesHandler := handlers.NewPoliciesHandler(database, logger)
 	policiesHandler.RegisterRoutes(apiV1)
 

@@ -1,0 +1,113 @@
+# MariaDB Backup Hook Template
+# Uses mysqldump/mariadb-dump to create a database dump before backup
+name: MariaDB
+description: Creates a MariaDB database dump using mariadb-dump before backing up
+service_type: mariadb
+icon: database
+tags:
+  - database
+  - mariadb
+  - mysql
+  - sql
+
+# Variables that users can customize
+variables:
+  - name: MARIADB_HOST
+    description: MariaDB host
+    default: localhost
+    required: true
+  - name: MARIADB_PORT
+    description: MariaDB port
+    default: "3306"
+    required: true
+  - name: MARIADB_USER
+    description: MariaDB username
+    default: root
+    required: true
+  - name: MARIADB_PASSWORD
+    description: MariaDB password
+    default: ""
+    required: false
+    sensitive: true
+  - name: MARIADB_DATABASE
+    description: Database name to backup (leave empty for all databases)
+    default: ""
+    required: false
+  - name: DUMP_DIR
+    description: Directory to store the dump file
+    default: /var/backups/mariadb
+    required: true
+  - name: EXTRA_OPTS
+    description: Additional dump options
+    default: "--single-transaction --quick --lock-tables=false"
+    required: false
+
+scripts:
+  pre_backup:
+    script: |
+      #!/bin/bash
+      set -e
+
+      # MariaDB backup script
+      TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/mariadb}"
+      EXTRA_OPTS="${EXTRA_OPTS:---single-transaction --quick --lock-tables=false}"
+
+      # Create dump directory if it doesn't exist
+      mkdir -p "$DUMP_DIR"
+
+      # Detect available dump tool (mariadb-dump or mysqldump)
+      if command -v mariadb-dump &> /dev/null; then
+        DUMP_CMD="mariadb-dump"
+      else
+        DUMP_CMD="mysqldump"
+      fi
+
+      # Build connection options
+      CONN_OPTS="-h${MARIADB_HOST:-localhost} -P${MARIADB_PORT:-3306} -u${MARIADB_USER:-root}"
+      if [ -n "${MARIADB_PASSWORD}" ]; then
+        export MYSQL_PWD="${MARIADB_PASSWORD}"
+      fi
+
+      if [ -n "${MARIADB_DATABASE}" ]; then
+        # Backup single database
+        DUMP_FILE="$DUMP_DIR/${MARIADB_DATABASE}_${TIMESTAMP}.sql"
+        echo "Backing up database: ${MARIADB_DATABASE} using $DUMP_CMD"
+        $DUMP_CMD $CONN_OPTS $EXTRA_OPTS "${MARIADB_DATABASE}" > "$DUMP_FILE"
+        echo "Database dump created: $DUMP_FILE"
+      else
+        # Backup all databases
+        DUMP_FILE="$DUMP_DIR/all_databases_${TIMESTAMP}.sql"
+        echo "Backing up all databases using $DUMP_CMD"
+        $DUMP_CMD $CONN_OPTS $EXTRA_OPTS --all-databases > "$DUMP_FILE"
+        echo "Full dump created: $DUMP_FILE"
+      fi
+
+      # Compress the dump
+      gzip "$DUMP_FILE"
+      echo "Compressed dump: ${DUMP_FILE}.gz"
+
+      echo "MariaDB backup completed successfully"
+    timeout_seconds: 3600
+    fail_on_error: true
+
+  post_success:
+    script: |
+      #!/bin/bash
+      # Cleanup old dumps (keep last 7 days)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/mariadb}"
+      RETENTION_DAYS=7
+
+      echo "Cleaning up dumps older than $RETENTION_DAYS days"
+      find "$DUMP_DIR" -type f -name "*.sql.gz" -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
+      echo "Cleanup completed"
+    timeout_seconds: 300
+    fail_on_error: false
+
+  post_failure:
+    script: |
+      #!/bin/bash
+      echo "MariaDB backup failed - manual intervention may be required"
+      echo "Check MariaDB connectivity and credentials"
+    timeout_seconds: 60
+    fail_on_error: false

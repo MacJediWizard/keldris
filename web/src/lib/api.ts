@@ -32,6 +32,8 @@ import type {
 	AlertsResponse,
 	Announcement,
 	AnnouncementsResponse,
+	ApplyBackupHookTemplateRequest,
+	ApplyBackupHookTemplateResponse,
 	ApplyPolicyRequest,
 	ApplyPolicyResponse,
 	AssignSLARequest,
@@ -43,6 +45,8 @@ import type {
 	BackupCalendarResponse,
 	BackupDurationTrend,
 	BackupDurationTrendResponse,
+	BackupHookTemplate,
+	BackupHookTemplatesResponse,
 	BackupQueueResponse,
 	BackupQueueSummary,
 	BackupScript,
@@ -88,6 +92,7 @@ import type {
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
 	CreateAnnouncementRequest,
+	CreateBackupHookTemplateRequest,
 	CreateBackupScriptRequest,
 	CreateCloudRestoreRequest,
 	CreateContainerBackupHookRequest,
@@ -385,6 +390,7 @@ import type {
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
 	UpdateAnnouncementRequest,
+	UpdateBackupHookTemplateRequest,
 	UpdateBackupScriptRequest,
 	UpdateConcurrencyRequest,
 	UpdateContainerBackupHookRequest,
@@ -963,6 +969,72 @@ export const backupScriptsApi = {
 		fetchApi<MessageResponse>(`/schedules/${scheduleId}/scripts/${id}`, {
 			method: 'DELETE',
 		}),
+};
+
+// Backup Hook Templates API
+export const backupHookTemplatesApi = {
+	list: async (params?: {
+		service_type?: string;
+		visibility?: string;
+		tag?: string;
+	}): Promise<BackupHookTemplate[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.service_type)
+			searchParams.set('service_type', params.service_type);
+		if (params?.visibility) searchParams.set('visibility', params.visibility);
+		if (params?.tag) searchParams.set('tag', params.tag);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/backup-hook-templates?${query}`
+			: '/backup-hook-templates';
+		const response = await fetchApi<BackupHookTemplatesResponse>(endpoint);
+		return response.templates ?? [];
+	},
+
+	listBuiltIn: async (): Promise<BackupHookTemplate[]> => {
+		const response = await fetchApi<BackupHookTemplatesResponse>(
+			'/backup-hook-templates/built-in',
+		);
+		return response.templates ?? [];
+	},
+
+	get: async (id: string): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>(`/backup-hook-templates/${id}`),
+
+	create: async (
+		data: CreateBackupHookTemplateRequest,
+	): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>('/backup-hook-templates', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateBackupHookTemplateRequest,
+	): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>(`/backup-hook-templates/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/backup-hook-templates/${id}`, {
+			method: 'DELETE',
+		}),
+
+	apply: async (
+		id: string,
+		data: ApplyBackupHookTemplateRequest,
+	): Promise<ApplyBackupHookTemplateResponse> =>
+		fetchApi<ApplyBackupHookTemplateResponse>(
+			`/backup-hook-templates/${id}/apply`,
+			{
+				method: 'POST',
+				body: JSON.stringify(data),
+			},
+		),
 };
 
 // Container Backup Hooks API
