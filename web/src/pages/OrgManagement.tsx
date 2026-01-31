@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { useMe } from '../hooks/useAuth';
 import {
 	useAdminCreateOrganization,
 	useAdminDeleteOrganization,
-	useAdminOrganizations,
 	useAdminOrgUsageStats,
+	useAdminOrganizations,
 	useAdminTransferOwnership,
 	useAdminUpdateOrganization,
 } from '../hooks/useAdminOrganizations';
+import { useMe } from '../hooks/useAuth';
 import type {
 	AdminCreateOrgRequest,
-	AdminOrganization,
 	AdminOrgSettings,
+	AdminOrganization,
 	OrgFeatureFlags,
 } from '../lib/types';
 
@@ -257,9 +257,9 @@ function CreateOrgModal({ isOpen, onClose }: CreateOrgModalProps) {
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Feature Flags
-						</label>
+						</span>
 						<div className="space-y-2">
 							{[
 								{ key: 'sso_enabled', label: 'SSO Enabled' },
@@ -272,9 +272,8 @@ function CreateOrgModal({ isOpen, onClose }: CreateOrgModalProps) {
 									<input
 										type="checkbox"
 										checked={
-											formData.feature_flags?.[
-												key as keyof OrgFeatureFlags
-											] ?? false
+											formData.feature_flags?.[key as keyof OrgFeatureFlags] ??
+											false
 										}
 										onChange={(e) =>
 											setFormData((prev) => ({
@@ -314,7 +313,9 @@ function CreateOrgModal({ isOpen, onClose }: CreateOrgModalProps) {
 							disabled={createOrganization.isPending}
 							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 						>
-							{createOrganization.isPending ? 'Creating...' : 'Create Organization'}
+							{createOrganization.isPending
+								? 'Creating...'
+								: 'Create Organization'}
 						</button>
 					</div>
 				</form>
@@ -461,7 +462,9 @@ function EditOrgModal({ isOpen, onClose, organization }: EditOrgModalProps) {
 							onChange={(e) =>
 								setFormData((prev) => ({
 									...prev,
-									slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+									slug: e.target.value
+										.toLowerCase()
+										.replace(/[^a-z0-9-]/g, '-'),
 								}))
 							}
 							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -545,9 +548,9 @@ function EditOrgModal({ isOpen, onClose, organization }: EditOrgModalProps) {
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Feature Flags
-						</label>
+						</span>
 						<div className="grid grid-cols-2 gap-2">
 							{[
 								{ key: 'sso_enabled', label: 'SSO Enabled' },
@@ -560,9 +563,8 @@ function EditOrgModal({ isOpen, onClose, organization }: EditOrgModalProps) {
 									<input
 										type="checkbox"
 										checked={
-											formData.feature_flags?.[
-												key as keyof OrgFeatureFlags
-											] ?? false
+											formData.feature_flags?.[key as keyof OrgFeatureFlags] ??
+											false
 										}
 										onChange={(e) =>
 											setFormData((prev) => ({
@@ -627,7 +629,11 @@ interface DeleteOrgModalProps {
 	organization: AdminOrganization;
 }
 
-function DeleteOrgModal({ isOpen, onClose, organization }: DeleteOrgModalProps) {
+function DeleteOrgModal({
+	isOpen,
+	onClose,
+	organization,
+}: DeleteOrgModalProps) {
 	const deleteOrganization = useAdminDeleteOrganization();
 	const [confirmText, setConfirmText] = useState('');
 
@@ -706,7 +712,9 @@ function DeleteOrgModal({ isOpen, onClose, organization }: DeleteOrgModalProps) 
 						}
 						className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
 					>
-						{deleteOrganization.isPending ? 'Deleting...' : 'Delete Organization'}
+						{deleteOrganization.isPending
+							? 'Deleting...'
+							: 'Delete Organization'}
 					</button>
 				</div>
 			</div>
@@ -822,7 +830,9 @@ export function OrgManagement() {
 
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [editingOrg, setEditingOrg] = useState<AdminOrganization | null>(null);
-	const [deletingOrg, setDeletingOrg] = useState<AdminOrganization | null>(null);
+	const [deletingOrg, setDeletingOrg] = useState<AdminOrganization | null>(
+		null,
+	);
 	const [transferringOrg, setTransferringOrg] =
 		useState<AdminOrganization | null>(null);
 
