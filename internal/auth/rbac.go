@@ -24,6 +24,16 @@ const (
 	PermMemberUpdate Permission = "member:update"
 	PermMemberRemove Permission = "member:remove"
 
+	// User management permissions (admin-level control)
+	PermUserRead         Permission = "user:read"
+	PermUserInvite       Permission = "user:invite"
+	PermUserUpdate       Permission = "user:update"
+	PermUserDisable      Permission = "user:disable"
+	PermUserDelete       Permission = "user:delete"
+	PermUserResetPassword Permission = "user:reset_password"
+	PermUserImpersonate  Permission = "user:impersonate"
+	PermUserActivityView Permission = "user:activity_view"
+
 	// Agent permissions
 	PermAgentRead   Permission = "agent:read"
 	PermAgentCreate Permission = "agent:create"
@@ -55,6 +65,9 @@ var rolePermissions = map[models.OrgRole][]Permission{
 		PermOrgRead, PermOrgUpdate, PermOrgDelete,
 		// Members
 		PermMemberRead, PermMemberInvite, PermMemberUpdate, PermMemberRemove,
+		// Users (full control)
+		PermUserRead, PermUserInvite, PermUserUpdate, PermUserDisable, PermUserDelete,
+		PermUserResetPassword, PermUserActivityView,
 		// Agents
 		PermAgentRead, PermAgentCreate, PermAgentUpdate, PermAgentDelete,
 		// Repositories
@@ -69,6 +82,9 @@ var rolePermissions = map[models.OrgRole][]Permission{
 		PermOrgRead, PermOrgUpdate,
 		// Members (cannot remove owner)
 		PermMemberRead, PermMemberInvite, PermMemberUpdate, PermMemberRemove,
+		// Users (can manage users except owners, cannot delete)
+		PermUserRead, PermUserInvite, PermUserUpdate, PermUserDisable,
+		PermUserResetPassword, PermUserActivityView,
 		// Agents
 		PermAgentRead, PermAgentCreate, PermAgentUpdate, PermAgentDelete,
 		// Repositories
@@ -83,6 +99,8 @@ var rolePermissions = map[models.OrgRole][]Permission{
 		PermOrgRead,
 		// Members
 		PermMemberRead,
+		// Users (read only)
+		PermUserRead,
 		// Agents
 		PermAgentRead, PermAgentCreate, PermAgentUpdate, PermAgentDelete,
 		// Repositories
@@ -97,6 +115,8 @@ var rolePermissions = map[models.OrgRole][]Permission{
 		PermOrgRead,
 		// Members
 		PermMemberRead,
+		// Users (read only)
+		PermUserRead,
 		// Agents
 		PermAgentRead,
 		// Repositories

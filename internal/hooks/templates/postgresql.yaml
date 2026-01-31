@@ -1,0 +1,111 @@
+# PostgreSQL Backup Hook Template
+# Uses pg_dump to create a database dump before backup
+name: PostgreSQL
+description: Creates a PostgreSQL database dump using pg_dump before backing up
+service_type: postgresql
+icon: database
+tags:
+  - database
+  - postgresql
+  - sql
+
+# Variables that users can customize
+variables:
+  - name: PGHOST
+    description: PostgreSQL host
+    default: localhost
+    required: true
+  - name: PGPORT
+    description: PostgreSQL port
+    default: "5432"
+    required: true
+  - name: PGUSER
+    description: PostgreSQL username
+    default: postgres
+    required: true
+  - name: PGPASSWORD
+    description: PostgreSQL password (or use .pgpass file)
+    default: ""
+    required: false
+    sensitive: true
+  - name: PGDATABASE
+    description: Database name to backup (leave empty for all databases)
+    default: ""
+    required: false
+  - name: DUMP_DIR
+    description: Directory to store the dump file
+    default: /var/backups/postgresql
+    required: true
+  - name: DUMP_FORMAT
+    description: Output format (plain, custom, directory, tar)
+    default: custom
+    required: false
+
+scripts:
+  pre_backup:
+    script: |
+      #!/bin/bash
+      set -e
+
+      # PostgreSQL backup script
+      TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/postgresql}"
+      DUMP_FORMAT="${DUMP_FORMAT:-custom}"
+
+      # Create dump directory if it doesn't exist
+      mkdir -p "$DUMP_DIR"
+
+      # Set file extension based on format
+      case "$DUMP_FORMAT" in
+        plain) EXT="sql" ;;
+        custom) EXT="dump" ;;
+        tar) EXT="tar" ;;
+        directory) EXT="dir" ;;
+        *) EXT="dump" ;;
+      esac
+
+      if [ -n "${PGDATABASE}" ]; then
+        # Backup single database
+        DUMP_FILE="$DUMP_DIR/${PGDATABASE}_${TIMESTAMP}.${EXT}"
+        echo "Backing up database: ${PGDATABASE}"
+        pg_dump -F "$DUMP_FORMAT" -f "$DUMP_FILE" "${PGDATABASE}"
+        echo "Database dump created: $DUMP_FILE"
+      else
+        # Backup all databases
+        DUMP_FILE="$DUMP_DIR/all_databases_${TIMESTAMP}.sql"
+        echo "Backing up all databases"
+        pg_dumpall > "$DUMP_FILE"
+        echo "Full dump created: $DUMP_FILE"
+      fi
+
+      # Compress if plain format
+      if [ "$DUMP_FORMAT" = "plain" ]; then
+        gzip "$DUMP_FILE"
+        DUMP_FILE="${DUMP_FILE}.gz"
+        echo "Compressed dump: $DUMP_FILE"
+      fi
+
+      echo "PostgreSQL backup completed successfully"
+    timeout_seconds: 3600
+    fail_on_error: true
+
+  post_success:
+    script: |
+      #!/bin/bash
+      # Cleanup old dumps (keep last 7 days)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/postgresql}"
+      RETENTION_DAYS=7
+
+      echo "Cleaning up dumps older than $RETENTION_DAYS days"
+      find "$DUMP_DIR" -type f -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
+      echo "Cleanup completed"
+    timeout_seconds: 300
+    fail_on_error: false
+
+  post_failure:
+    script: |
+      #!/bin/bash
+      echo "PostgreSQL backup failed - manual intervention may be required"
+      echo "Check PostgreSQL connectivity and credentials"
+    timeout_seconds: 60
+    fail_on_error: false
