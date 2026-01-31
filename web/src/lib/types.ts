@@ -1146,13 +1146,57 @@ export interface TransferOwnershipRequest {
 	new_owner_user_id: string;
 }
 
+export type PlanType = 'free' | 'starter' | 'professional' | 'enterprise';
+
 export interface BillingSettings {
-	plan_type: 'free' | 'starter' | 'professional' | 'enterprise';
+	plan_type: PlanType;
 	billing_email?: string;
 	billing_cycle?: 'monthly' | 'annual';
 	next_billing_date?: string;
 	payment_method_last4?: string;
 }
+
+export interface PlanLimits {
+	agent_limit?: number;
+	storage_quota_bytes?: number;
+	backup_retention_days?: number;
+	concurrent_backups?: number;
+}
+
+export interface PlanFeatures {
+	sso_enabled: boolean;
+	api_access: boolean;
+	advanced_reporting: boolean;
+	audit_logs: boolean;
+	custom_branding: boolean;
+	priority_support: boolean;
+	geo_replication: boolean;
+	lifecycle_policies: boolean;
+	legal_holds: boolean;
+}
+
+export interface OrganizationPlanInfo {
+	plan_type: PlanType;
+	limits: PlanLimits;
+	features: PlanFeatures;
+	usage: {
+		agent_count: number;
+		storage_used_bytes: number;
+	};
+}
+
+export type UpgradeFeature =
+	| 'agents'
+	| 'storage'
+	| 'sso'
+	| 'api_access'
+	| 'advanced_reporting'
+	| 'audit_logs'
+	| 'custom_branding'
+	| 'priority_support'
+	| 'geo_replication'
+	| 'lifecycle_policies'
+	| 'legal_holds';
 
 // API response wrappers
 export interface AgentsResponse {
