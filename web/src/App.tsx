@@ -32,6 +32,7 @@ import { NotFound } from './pages/NotFound';
 import { NotificationRules } from './pages/NotificationRules';
 import { Notifications } from './pages/Notifications';
 import { Onboarding } from './pages/Onboarding';
+import { OrgManagement } from './pages/OrgManagement';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
@@ -151,6 +152,7 @@ function App() {
 							<Route path="organization/new" element={<NewOrganization />} />
 							<Route path="admin/logs" element={<AdminLogs />} />
 							<Route path="admin/docker-logs" element={<DockerLogs />} />
+							<Route path="admin/organizations" element={<OrgManagement />} />
 							<Route
 								path="admin/rate-limits"
 								element={<RateLimitDashboard />}

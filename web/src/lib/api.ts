@@ -7,6 +7,11 @@ import type {
 	ActivityEventFilter,
 	ActivityEventsResponse,
 	AddAgentToGroupRequest,
+	AdminCreateOrgRequest,
+	AdminOrgSettings,
+	AdminOrgUsageStats,
+	AdminOrganization,
+	AdminOrganizationsResponse,
 	Agent,
 	AgentBackupsResponse,
 	AgentCommand,
@@ -400,6 +405,7 @@ import type {
 	TestSMTPRequest,
 	TestSMTPResponse,
 	TrackRecentItemRequest,
+	TransferOwnershipRequest,
 	TriggerDockerStackBackupRequest,
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
@@ -1540,6 +1546,59 @@ export const organizationsApi = {
 		fetchApi<OrgResponse>('/invitations/accept', {
 			method: 'POST',
 			body: JSON.stringify({ token }),
+		}),
+};
+
+// Admin Organizations API (superuser only)
+export const adminOrganizationsApi = {
+	list: async (params?: {
+		search?: string;
+		limit?: number;
+		offset?: number;
+	}): Promise<AdminOrganizationsResponse> => {
+		const query = new URLSearchParams();
+		if (params?.search) query.set('search', params.search);
+		if (params?.limit) query.set('limit', params.limit.toString());
+		if (params?.offset) query.set('offset', params.offset.toString());
+		const queryStr = query.toString();
+		return fetchApi<AdminOrganizationsResponse>(
+			`/admin/organizations${queryStr ? `?${queryStr}` : ''}`,
+		);
+	},
+
+	get: async (id: string): Promise<AdminOrganization> =>
+		fetchApi<AdminOrganization>(`/admin/organizations/${id}`),
+
+	create: async (data: AdminCreateOrgRequest): Promise<AdminOrganization> =>
+		fetchApi<AdminOrganization>('/admin/organizations', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: AdminOrgSettings,
+	): Promise<AdminOrganization> =>
+		fetchApi<AdminOrganization>(`/admin/organizations/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/organizations/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getUsageStats: async (id: string): Promise<AdminOrgUsageStats> =>
+		fetchApi<AdminOrgUsageStats>(`/admin/organizations/${id}/usage`),
+
+	transferOwnership: async (
+		id: string,
+		data: TransferOwnershipRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/organizations/${id}/transfer-ownership`, {
+			method: 'POST',
+			body: JSON.stringify(data),
 		}),
 };
 
