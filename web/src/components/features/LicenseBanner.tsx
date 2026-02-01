@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useLicensePurchaseUrl, useLicenseWarnings } from '../../hooks/useLicenses';
+import {
+	useLicensePurchaseUrl,
+	useLicenseWarnings,
+} from '../../hooks/useLicenses';
 import type { LicenseLimitsWarning } from '../../lib/types';
 
 function formatLimitType(type: LicenseLimitsWarning['type']): string {
@@ -58,8 +61,8 @@ export function LicenseBanner() {
 					</div>
 
 					<p className="text-gray-600 dark:text-gray-400 mb-6">
-						Your license has expired and the grace period has ended. Please renew
-						your license to continue using all features.
+						Your license has expired and the grace period has ended. Please
+						renew your license to continue using all features.
 					</p>
 
 					<div className="flex flex-col sm:flex-row gap-3">
@@ -116,7 +119,9 @@ export function LicenseBanner() {
 								</svg>
 							</span>
 							<p className="ml-3 font-medium text-orange-700 dark:text-orange-200">
-								<span className="font-bold">License Expired - Grace Period Active.</span>{' '}
+								<span className="font-bold">
+									License Expired - Grace Period Active.
+								</span>{' '}
 								{daysRemaining > 0
 									? `You have ${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'} remaining to renew.`
 									: 'Grace period ends today.'}
@@ -264,13 +269,14 @@ export function LicenseBanner() {
 									<span className="font-bold">Limit Reached! </span>
 								) : null}
 								You're using {Math.round(mostCritical.percentage)}% of your{' '}
-								{formatLimitType(mostCritical.type)} limit ({mostCritical.current} /{' '}
-								{mostCritical.limit}).
+								{formatLimitType(mostCritical.type)} limit (
+								{mostCritical.current} / {mostCritical.limit}).
 								{criticalLimits.length > 1 && (
 									<span>
 										{' '}
 										+{criticalLimits.length - 1} more{' '}
-										{criticalLimits.length - 1 === 1 ? 'limit' : 'limits'} approaching.
+										{criticalLimits.length - 1 === 1 ? 'limit' : 'limits'}{' '}
+										approaching.
 									</span>
 								)}
 							</p>

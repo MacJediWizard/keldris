@@ -7,7 +7,12 @@ import {
 	useLicensePurchaseUrl,
 	useValidateLicense,
 } from '../hooks/useLicenses';
-import type { LicenseHistory, LicenseTier, OrgRole, ProFeature } from '../lib/types';
+import type {
+	LicenseHistory,
+	LicenseTier,
+	OrgRole,
+	ProFeature,
+} from '../lib/types';
 
 function formatBytes(bytes: number): string {
 	if (bytes === 0) return '0 B';
@@ -57,7 +62,8 @@ function UsageBar({
 			<div className="flex justify-between text-sm mb-1">
 				<span className="text-gray-600 dark:text-gray-400">{label}</span>
 				<span className="font-medium text-gray-900 dark:text-white">
-					{used.toLocaleString()} / {limit > 0 ? limit.toLocaleString() : 'Unlimited'}
+					{used.toLocaleString()} /{' '}
+					{limit > 0 ? limit.toLocaleString() : 'Unlimited'}
 				</span>
 			</div>
 			{limit > 0 && (
@@ -226,7 +232,10 @@ export function License() {
 			const result = await validateLicense.mutateAsync(licenseKey);
 			setValidationResult(result);
 		} catch {
-			setValidationResult({ valid: false, error: 'Failed to validate license key' });
+			setValidationResult({
+				valid: false,
+				error: 'Failed to validate license key',
+			});
 		}
 	};
 
@@ -486,12 +495,17 @@ export function License() {
 												Valid License Key
 											</h3>
 											<p className="text-sm text-green-700 dark:text-green-300 mt-1">
-												Plan: <span className="capitalize">{validationResult.tier}</span>
+												Plan:{' '}
+												<span className="capitalize">
+													{validationResult.tier}
+												</span>
 												{validationResult.valid_until && (
 													<>
 														{' '}
 														| Expires:{' '}
-														{new Date(validationResult.valid_until).toLocaleDateString()}
+														{new Date(
+															validationResult.valid_until,
+														).toLocaleDateString()}
 													</>
 												)}
 											</p>
@@ -518,7 +532,8 @@ export function License() {
 												Invalid License Key
 											</h3>
 											<p className="text-sm text-red-700 dark:text-red-300 mt-1">
-												{validationResult.error ?? 'The license key is not valid.'}
+												{validationResult.error ??
+													'The license key is not valid.'}
 											</p>
 										</div>
 									</div>
@@ -556,7 +571,9 @@ export function License() {
 									disabled={activateLicense.isPending}
 									className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
 								>
-									{activateLicense.isPending ? 'Activating...' : 'Activate License'}
+									{activateLicense.isPending
+										? 'Activating...'
+										: 'Activate License'}
 								</button>
 							)}
 						</div>

@@ -5656,7 +5656,11 @@ export interface KomodoConnectionTestResponse {
 
 // License types
 export type LicenseTier = 'free' | 'pro' | 'professional' | 'enterprise';
-export type LicenseStatus = 'active' | 'expiring_soon' | 'expired' | 'grace_period';
+export type LicenseStatus =
+	| 'active'
+	| 'expiring_soon'
+	| 'expired'
+	| 'grace_period';
 
 export interface LicenseFeatures {
 	max_agents: number;
@@ -5699,7 +5703,13 @@ export interface LicenseHistory {
 	id: string;
 	license_id: string;
 	org_id: string;
-	action: 'created' | 'renewed' | 'upgraded' | 'downgraded' | 'expired' | 'activated';
+	action:
+		| 'created'
+		| 'renewed'
+		| 'upgraded'
+		| 'downgraded'
+		| 'expired'
+		| 'activated';
 	previous_tier?: LicenseTier;
 	new_tier?: LicenseTier;
 	previous_expiry?: string;
