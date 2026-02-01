@@ -5654,9 +5654,139 @@ export interface KomodoConnectionTestResponse {
 	status: KomodoIntegrationStatus;
 }
 
-// License and Feature Flag types
-export type LicenseTier = 'free' | 'pro' | 'enterprise';
+// License types
+export type LicenseTier = 'free' | 'pro' | 'professional' | 'enterprise';
+export type LicenseStatus =
+	| 'active'
+	| 'expiring_soon'
+	| 'expired'
+	| 'grace_period';
 
+export interface LicenseFeatures {
+	max_agents: number;
+	max_repositories: number;
+	max_storage_bytes: number;
+	sso_enabled: boolean;
+	api_access: boolean;
+	advanced_reporting: boolean;
+	custom_branding: boolean;
+	priority_support: boolean;
+	backup_hooks: boolean;
+	multi_destination: boolean;
+}
+
+export interface LicenseUsage {
+	agents_used: number;
+	agents_limit: number;
+	repositories_used: number;
+	repositories_limit: number;
+	storage_used_bytes: number;
+	storage_limit_bytes: number;
+}
+
+export interface License {
+	id: string;
+	org_id: string;
+	license_key: string;
+	tier: LicenseTier;
+	status: LicenseStatus;
+	valid_from: string;
+	valid_until: string;
+	grace_period_days: number;
+	features: LicenseFeatures;
+	usage: LicenseUsage;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface LicenseHistory {
+	id: string;
+	license_id: string;
+	org_id: string;
+	action:
+		| 'created'
+		| 'renewed'
+		| 'upgraded'
+		| 'downgraded'
+		| 'expired'
+		| 'activated';
+	previous_tier?: LicenseTier;
+	new_tier?: LicenseTier;
+	previous_expiry?: string;
+	new_expiry?: string;
+	notes?: string;
+	created_at: string;
+}
+
+export interface LicenseExpirationInfo {
+	license_id: string;
+	is_expired: boolean;
+	is_in_grace_period: boolean;
+	days_until_expiry: number;
+	grace_period_ends_at?: string;
+}
+
+export interface LicenseLimitsWarning {
+	type: 'agents' | 'repositories' | 'storage';
+	current: number;
+	limit: number;
+	percentage: number;
+}
+
+export interface LicenseWarnings {
+	expiration?: LicenseExpirationInfo;
+	limits: LicenseLimitsWarning[];
+}
+
+export interface CreateLicenseKeyRequest {
+	license_key: string;
+}
+
+export interface UpdateLicenseRequest {
+	tier?: LicenseTier;
+	valid_until?: string;
+	features?: Partial<LicenseFeatures>;
+}
+
+export interface LicenseResponse {
+	license: License;
+}
+
+export interface LicensesResponse {
+	licenses: License[];
+	total_count: number;
+}
+
+export interface LicenseHistoryResponse {
+	history: LicenseHistory[];
+	total_count: number;
+}
+
+export interface LicenseValidateResponse {
+	valid: boolean;
+	tier?: LicenseTier;
+	valid_until?: string;
+	features?: LicenseFeatures;
+	error?: string;
+}
+
+export interface LicenseWarningsResponse {
+	warnings: LicenseWarnings;
+}
+
+export type ProFeature =
+	| 'sso'
+	| 'api_access'
+	| 'advanced_reporting'
+	| 'custom_branding'
+	| 'priority_support'
+	| 'backup_hooks'
+	| 'multi_destination'
+	| 'unlimited_agents'
+	| 'unlimited_repositories'
+	| 'unlimited_storage';
+
+// License Feature Flag types
 export type LicenseFeature =
 	| 'oidc'
 	| 'audit_logs'
@@ -5706,7 +5836,7 @@ export interface TiersResponse {
 	tiers: TierInfo[];
 }
 
-export interface LicenseResponse {
+export interface LicenseInfoResponse {
 	license: LicenseInfo;
 }
 
