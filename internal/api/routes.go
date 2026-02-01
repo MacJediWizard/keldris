@@ -9,6 +9,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/backup/docker"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/logs"
 	"github.com/MacJediWizard/keldris/internal/monitoring"
 	"github.com/MacJediWizard/keldris/internal/reports"
@@ -342,6 +343,11 @@ func NewRouter(
 	// System settings routes (admin only)
 	systemSettingsHandler := handlers.NewSystemSettingsHandler(database, logger)
 	systemSettingsHandler.RegisterRoutes(apiV1)
+
+	// License and feature flags routes
+	featureChecker := license.NewFeatureChecker(database)
+	licenseHandler := handlers.NewLicenseHandler(database, featureChecker, logger)
+	licenseHandler.RegisterRoutes(apiV1)
 
 	// Superuser routes (requires superuser privileges)
 	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
