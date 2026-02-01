@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { useCurrentLicense, useLicensePurchaseUrl } from '../../hooks/useLicenses';
+import {
+	useCurrentLicense,
+	useLicensePurchaseUrl,
+} from '../../hooks/useLicenses';
 import type { ProFeature } from '../../lib/types';
 
 interface FeatureGateProps {
@@ -82,7 +85,9 @@ export function FeatureGate({ feature, children, fallback }: FeatureGateProps) {
 	// Default fallback: upgrade prompt
 	return (
 		<div className="relative">
-			<div className="opacity-50 pointer-events-none select-none">{children}</div>
+			<div className="opacity-50 pointer-events-none select-none">
+				{children}
+			</div>
 			<div className="absolute inset-0 flex items-center justify-center bg-gray-900/5 dark:bg-gray-900/20 rounded-lg">
 				<div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 max-w-sm text-center">
 					<div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200 mb-3">
@@ -124,7 +129,11 @@ interface ProBadgeProps {
 	size?: 'sm' | 'md';
 }
 
-export function ProBadge({ feature, showLabel = false, size = 'sm' }: ProBadgeProps) {
+export function ProBadge({
+	feature,
+	showLabel = false,
+	size = 'sm',
+}: ProBadgeProps) {
 	const { data: license, isLoading } = useCurrentLicense();
 
 	if (isLoading) {
@@ -140,7 +149,8 @@ export function ProBadge({ feature, showLabel = false, size = 'sm' }: ProBadgePr
 		return null;
 	}
 
-	const sizeClasses = size === 'sm' ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-0.5 text-sm';
+	const sizeClasses =
+		size === 'sm' ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-0.5 text-sm';
 
 	return (
 		<span

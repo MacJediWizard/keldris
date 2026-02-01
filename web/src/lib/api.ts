@@ -116,6 +116,7 @@ import type {
 	CreateImmutabilityLockRequest,
 	CreateKomodoIntegrationRequest,
 	CreateLegalHoldRequest,
+	CreateLicenseKeyRequest,
 	CreateLifecyclePolicyRequest,
 	CreateMaintenanceWindowRequest,
 	CreateMetadataSchemaRequest,
@@ -269,11 +270,9 @@ import type {
 	LicenseInfo,
 	LicenseInfoResponse,
 	LicenseResponse,
-	LicensesResponse,
 	LicenseValidateResponse,
 	LicenseWarningsResponse,
-	CreateLicenseKeyRequest,
-	UpdateLicenseRequest,
+	LicensesResponse,
 	LifecycleDeletionEvent,
 	LifecycleDeletionEventsResponse,
 	LifecycleDryRunRequest,
@@ -444,6 +443,7 @@ import type {
 	UpdateIPAllowlistSettingsRequest,
 	UpdateKomodoContainerRequest,
 	UpdateKomodoIntegrationRequest,
+	UpdateLicenseRequest,
 	UpdateLifecyclePolicyRequest,
 	UpdateMaintenanceWindowRequest,
 	UpdateMemberRequest,
@@ -4450,10 +4450,7 @@ export const licensesApi = {
 	getWarnings: async (): Promise<LicenseWarningsResponse> =>
 		fetchApi<LicenseWarningsResponse>('/licenses/warnings'),
 
-	getHistory: async (
-		limit = 50,
-		offset = 0,
-	): Promise<LicenseHistoryResponse> =>
+	getHistory: async (limit = 50, offset = 0): Promise<LicenseHistoryResponse> =>
 		fetchApi<LicenseHistoryResponse>(
 			`/licenses/history?limit=${limit}&offset=${offset}`,
 		),

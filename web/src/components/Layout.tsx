@@ -19,9 +19,9 @@ import {
 } from '../hooks/useReadOnlyMode';
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
-import { LicenseBanner } from './features/LicenseBanner';
 import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
+import { LicenseBanner } from './features/LicenseBanner';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { RecentItemsDropdown } from './features/RecentItems';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
