@@ -5653,3 +5653,63 @@ export interface KomodoConnectionTestResponse {
 	message: string;
 	status: KomodoIntegrationStatus;
 }
+
+// License and Feature Flag types
+export type LicenseTier = 'free' | 'pro' | 'enterprise';
+
+export type LicenseFeature =
+	| 'oidc'
+	| 'audit_logs'
+	| 'multi_org'
+	| 'sla_tracking'
+	| 'white_label';
+
+export interface FeatureInfo {
+	name: LicenseFeature;
+	display_name: string;
+	description: string;
+	required_tier: LicenseTier;
+}
+
+export interface TierInfo {
+	name: LicenseTier;
+	display_name: string;
+	description: string;
+	features: LicenseFeature[];
+}
+
+export interface UpgradeInfo {
+	required_tier: LicenseTier;
+	display_name: string;
+	message: string;
+}
+
+export interface FeatureCheckResult {
+	feature: LicenseFeature;
+	enabled: boolean;
+	current_tier: LicenseTier;
+	required_tier: LicenseTier;
+	upgrade_info?: UpgradeInfo;
+}
+
+export interface LicenseInfo {
+	org_id: string;
+	tier: LicenseTier;
+	features: LicenseFeature[];
+}
+
+export interface FeaturesResponse {
+	features: FeatureInfo[];
+}
+
+export interface TiersResponse {
+	tiers: TierInfo[];
+}
+
+export interface LicenseResponse {
+	license: LicenseInfo;
+}
+
+export interface FeatureCheckResponse {
+	result: FeatureCheckResult;
+}
