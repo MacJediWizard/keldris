@@ -1,4 +1,4 @@
--- 077_usage_metrics.sql
+-- 078_usage_metrics.sql
 -- Add usage metering for limits and billing tracking
 
 -- Daily usage snapshots for organizations
