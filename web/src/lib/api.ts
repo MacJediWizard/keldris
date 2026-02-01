@@ -204,6 +204,10 @@ import type {
 	Favorite,
 	FavoriteEntityType,
 	FavoritesResponse,
+	FeatureCheckResponse,
+	FeatureCheckResult,
+	FeatureInfo,
+	FeaturesResponse,
 	FileDiffResponse,
 	FileHistoryParams,
 	FileHistoryResponse,
@@ -259,6 +263,9 @@ import type {
 	KomodoWebhookEventsResponse,
 	LegalHold,
 	LegalHoldsResponse,
+	LicenseFeature,
+	LicenseInfo,
+	LicenseResponse,
 	LifecycleDeletionEvent,
 	LifecycleDeletionEventsResponse,
 	LifecycleDryRunRequest,
@@ -402,6 +409,8 @@ import type {
 	TestNotificationRuleResponse,
 	TestOIDCResponse,
 	TestRepositoryResponse,
+	TierInfo,
+	TiersResponse,
 	TestSMTPRequest,
 	TestSMTPResponse,
 	TrackRecentItemRequest,
@@ -4421,5 +4430,34 @@ export const usersApi = {
 			`/users/impersonation-logs?limit=${limit}&offset=${offset}`,
 		);
 		return response.impersonation_logs ?? [];
+	},
+};
+
+// License and Feature Flags API
+export const licenseApi = {
+	// Get current organization's license info
+	getLicense: async (): Promise<LicenseInfo> => {
+		const response = await fetchApi<LicenseResponse>('/license');
+		return response.license;
+	},
+
+	// Check if a specific feature is enabled
+	checkFeature: async (feature: LicenseFeature): Promise<FeatureCheckResult> => {
+		const response = await fetchApi<FeatureCheckResponse>(
+			`/license/features/${feature}/check`,
+		);
+		return response.result;
+	},
+
+	// Get all available features with their tier requirements
+	getFeatures: async (): Promise<FeatureInfo[]> => {
+		const response = await fetchApi<FeaturesResponse>('/license/features');
+		return response.features ?? [];
+	},
+
+	// Get all tier information
+	getTiers: async (): Promise<TierInfo[]> => {
+		const response = await fetchApi<TiersResponse>('/license/tiers');
+		return response.tiers ?? [];
 	},
 };
