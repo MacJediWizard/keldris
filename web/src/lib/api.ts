@@ -259,6 +259,14 @@ import type {
 	KomodoWebhookEventsResponse,
 	LegalHold,
 	LegalHoldsResponse,
+	License,
+	LicenseHistoryResponse,
+	LicenseResponse,
+	LicensesResponse,
+	LicenseValidateResponse,
+	LicenseWarningsResponse,
+	CreateLicenseKeyRequest,
+	UpdateLicenseRequest,
 	LifecycleDeletionEvent,
 	LifecycleDeletionEventsResponse,
 	LifecycleDryRunRequest,
@@ -4422,4 +4430,80 @@ export const usersApi = {
 		);
 		return response.impersonation_logs ?? [];
 	},
+};
+
+export const licensesApi = {
+	getCurrent: async (): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>('/licenses/current');
+		return response.license;
+	},
+
+	getWarnings: async (): Promise<LicenseWarningsResponse> =>
+		fetchApi<LicenseWarningsResponse>('/licenses/warnings'),
+
+	getHistory: async (
+		limit = 50,
+		offset = 0,
+	): Promise<LicenseHistoryResponse> =>
+		fetchApi<LicenseHistoryResponse>(
+			`/licenses/history?limit=${limit}&offset=${offset}`,
+		),
+
+	validate: async (key: string): Promise<LicenseValidateResponse> =>
+		fetchApi<LicenseValidateResponse>('/licenses/validate', {
+			method: 'POST',
+			body: JSON.stringify({ license_key: key }),
+		}),
+
+	activate: async (data: CreateLicenseKeyRequest): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>('/licenses/activate', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		});
+		return response.license;
+	},
+
+	// Admin endpoints
+	adminList: async (params?: {
+		org_id?: string;
+		tier?: string;
+		status?: string;
+		limit?: number;
+		offset?: number;
+	}): Promise<LicensesResponse> => {
+		const query = new URLSearchParams();
+		if (params?.org_id) query.set('org_id', params.org_id);
+		if (params?.tier) query.set('tier', params.tier);
+		if (params?.status) query.set('status', params.status);
+		if (params?.limit) query.set('limit', params.limit.toString());
+		if (params?.offset) query.set('offset', params.offset.toString());
+		const queryStr = query.toString();
+		return fetchApi<LicensesResponse>(
+			`/admin/licenses${queryStr ? `?${queryStr}` : ''}`,
+		);
+	},
+
+	adminGet: async (id: string): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>(`/admin/licenses/${id}`);
+		return response.license;
+	},
+
+	adminUpdate: async (
+		id: string,
+		data: UpdateLicenseRequest,
+	): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>(`/admin/licenses/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		});
+		return response.license;
+	},
+
+	adminRevoke: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/licenses/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getPurchaseUrl: async (): Promise<{ url: string }> =>
+		fetchApi<{ url: string }>('/licenses/purchase-url'),
 };
