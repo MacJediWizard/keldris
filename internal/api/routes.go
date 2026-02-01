@@ -9,7 +9,9 @@ import (
 	"github.com/MacJediWizard/keldris/internal/backup/docker"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/logs"
+	"github.com/MacJediWizard/keldris/internal/metering"
 	"github.com/MacJediWizard/keldris/internal/monitoring"
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/gin-gonic/gin"
@@ -42,6 +44,8 @@ type Config struct {
 	LogBuffer *logs.LogBuffer
 	// ActivityFeed for real-time activity events (optional).
 	ActivityFeed *activity.Feed
+	// MeteringService for usage tracking and billing (optional).
+	MeteringService *metering.Service
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -343,6 +347,11 @@ func NewRouter(
 	systemSettingsHandler := handlers.NewSystemSettingsHandler(database, logger)
 	systemSettingsHandler.RegisterRoutes(apiV1)
 
+	// License and feature flags routes
+	featureChecker := license.NewFeatureChecker(database)
+	licenseHandler := handlers.NewLicenseHandler(database, featureChecker, logger)
+	licenseHandler.RegisterRoutes(apiV1)
+
 	// Superuser routes (requires superuser privileges)
 	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
 	superuserHandler.RegisterRoutes(apiV1)
@@ -377,6 +386,12 @@ func NewRouter(
 	// Pi-hole backup routes
 	piholeHandler := handlers.NewPiholeHandler(database, logger)
 	piholeHandler.RegisterRoutes(apiV1)
+
+	// Usage metering routes (requires MeteringService)
+	if cfg.MeteringService != nil {
+		usageHandler := handlers.NewUsageHandler(database, cfg.MeteringService, logger)
+		usageHandler.RegisterRoutes(apiV1)
+	}
 
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server

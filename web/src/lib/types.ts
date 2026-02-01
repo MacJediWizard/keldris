@@ -5655,7 +5655,7 @@ export interface KomodoConnectionTestResponse {
 }
 
 // License types
-export type LicenseTier = 'free' | 'professional' | 'enterprise';
+export type LicenseTier = 'free' | 'pro' | 'professional' | 'enterprise';
 export type LicenseStatus = 'active' | 'expiring_soon' | 'expired' | 'grace_period';
 
 export interface LicenseFeatures {
@@ -5775,3 +5775,61 @@ export type ProFeature =
 	| 'unlimited_agents'
 	| 'unlimited_repositories'
 	| 'unlimited_storage';
+
+// License Feature Flag types
+export type LicenseFeature =
+	| 'oidc'
+	| 'audit_logs'
+	| 'multi_org'
+	| 'sla_tracking'
+	| 'white_label';
+
+export interface FeatureInfo {
+	name: LicenseFeature;
+	display_name: string;
+	description: string;
+	required_tier: LicenseTier;
+}
+
+export interface TierInfo {
+	name: LicenseTier;
+	display_name: string;
+	description: string;
+	features: LicenseFeature[];
+}
+
+export interface UpgradeInfo {
+	required_tier: LicenseTier;
+	display_name: string;
+	message: string;
+}
+
+export interface FeatureCheckResult {
+	feature: LicenseFeature;
+	enabled: boolean;
+	current_tier: LicenseTier;
+	required_tier: LicenseTier;
+	upgrade_info?: UpgradeInfo;
+}
+
+export interface LicenseInfo {
+	org_id: string;
+	tier: LicenseTier;
+	features: LicenseFeature[];
+}
+
+export interface FeaturesResponse {
+	features: FeatureInfo[];
+}
+
+export interface TiersResponse {
+	tiers: TierInfo[];
+}
+
+export interface LicenseInfoResponse {
+	license: LicenseInfo;
+}
+
+export interface FeatureCheckResponse {
+	result: FeatureCheckResult;
+}
