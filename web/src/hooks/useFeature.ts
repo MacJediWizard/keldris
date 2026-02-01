@@ -21,6 +21,7 @@ const FEATURE_TIERS: Record<LicenseFeature, LicenseTier> = {
 const TIER_ORDER: Record<LicenseTier, number> = {
 	free: 0,
 	pro: 1,
+	professional: 1,
 	enterprise: 2,
 };
 
@@ -99,6 +100,7 @@ export function getTierDisplayName(tier: LicenseTier): string {
 		case 'free':
 			return 'Free';
 		case 'pro':
+		case 'professional':
 			return 'Professional';
 		case 'enterprise':
 			return 'Enterprise';
