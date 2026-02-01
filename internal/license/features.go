@@ -192,21 +192,21 @@ func GetAllTierInfo() []TierInfo {
 	}
 }
 
-// LicenseStore defines the interface for license persistence.
-type LicenseStore interface {
+// FeatureStore defines the interface for feature/tier persistence.
+type FeatureStore interface {
 	GetOrgTier(ctx context.Context, orgID uuid.UUID) (Tier, error)
 	SetOrgTier(ctx context.Context, orgID uuid.UUID, tier Tier) error
 }
 
 // FeatureChecker provides runtime feature checking for organizations.
 type FeatureChecker struct {
-	store LicenseStore
+	store FeatureStore
 	cache map[uuid.UUID]Tier
 	mu    sync.RWMutex
 }
 
 // NewFeatureChecker creates a new FeatureChecker.
-func NewFeatureChecker(store LicenseStore) *FeatureChecker {
+func NewFeatureChecker(store FeatureStore) *FeatureChecker {
 	return &FeatureChecker{
 		store: store,
 		cache: make(map[uuid.UUID]Tier),
