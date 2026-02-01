@@ -409,10 +409,10 @@ import type {
 	TestNotificationRuleResponse,
 	TestOIDCResponse,
 	TestRepositoryResponse,
-	TierInfo,
-	TiersResponse,
 	TestSMTPRequest,
 	TestSMTPResponse,
+	TierInfo,
+	TiersResponse,
 	TrackRecentItemRequest,
 	TransferOwnershipRequest,
 	TriggerDockerStackBackupRequest,
@@ -4442,7 +4442,9 @@ export const licenseApi = {
 	},
 
 	// Check if a specific feature is enabled
-	checkFeature: async (feature: LicenseFeature): Promise<FeatureCheckResult> => {
+	checkFeature: async (
+		feature: LicenseFeature,
+	): Promise<FeatureCheckResult> => {
 		const response = await fetchApi<FeatureCheckResponse>(
 			`/license/features/${feature}/check`,
 		);

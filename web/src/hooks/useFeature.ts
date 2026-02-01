@@ -181,4 +181,11 @@ export const ENTERPRISE_FEATURES: LicenseFeature[] = [
 ];
 
 // Re-export types for convenience
-export type { FeatureCheckResult, FeatureInfo, LicenseFeature, LicenseInfo, LicenseTier, TierInfo };
+export type {
+	FeatureCheckResult,
+	FeatureInfo,
+	LicenseFeature,
+	LicenseInfo,
+	LicenseTier,
+	TierInfo,
+};
