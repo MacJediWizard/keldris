@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTrialStatus, useStartTrial } from '../../hooks/useTrial';
+import { useStartTrial, useTrialStatus } from '../../hooks/useTrial';
 import type { TrialInfo } from '../../lib/types';
 
 function getTrialBannerStyles(daysRemaining: number): {
@@ -42,15 +42,27 @@ function ActiveTrialBanner({ info }: { info: TrialInfo }) {
 
 	const getMessage = () => {
 		if (info.days_remaining <= 0) {
-			return t('trial.expiredMessage', 'Your Pro trial has expired. Upgrade to continue using Pro features.');
+			return t(
+				'trial.expiredMessage',
+				'Your Pro trial has expired. Upgrade to continue using Pro features.',
+			);
 		}
 		if (info.days_remaining === 1) {
-			return t('trial.lastDayMessage', 'Your Pro trial expires tomorrow. Upgrade now to keep Pro features.');
+			return t(
+				'trial.lastDayMessage',
+				'Your Pro trial expires tomorrow. Upgrade now to keep Pro features.',
+			);
 		}
 		if (info.days_remaining <= 3) {
-			return t('trial.expiringMessage', 'Your Pro trial expires in {{days}} days. Upgrade to keep Pro features.', { days: info.days_remaining });
+			return t(
+				'trial.expiringMessage',
+				'Your Pro trial expires in {{days}} days. Upgrade to keep Pro features.',
+				{ days: info.days_remaining },
+			);
 		}
-		return t('trial.activeMessage', 'Pro trial: {{days}} days remaining', { days: info.days_remaining });
+		return t('trial.activeMessage', 'Pro trial: {{days}} days remaining', {
+			days: info.days_remaining,
+		});
 	};
 
 	return (
@@ -115,7 +127,10 @@ function ExpiredTrialBanner() {
 								{t('trial.expiredTitle', 'Pro Trial Expired')}
 							</span>
 							<span className="text-red-600 dark:text-red-300 text-xs">
-								{t('trial.expiredDescription', 'Some features are now limited. Upgrade to restore full access.')}
+								{t(
+									'trial.expiredDescription',
+									'Some features are now limited. Upgrade to restore full access.',
+								)}
 							</span>
 						</div>
 					</div>
@@ -202,7 +217,10 @@ function StartTrialBanner() {
 						/>
 					</svg>
 					<span className="text-blue-800 dark:text-blue-200 font-medium text-sm">
-						{t('trial.enterEmail', 'Enter your email to start your 30-day Pro trial:')}
+						{t(
+							'trial.enterEmail',
+							'Enter your email to start your 30-day Pro trial:',
+						)}
 					</span>
 					<input
 						type="email"
@@ -217,14 +235,22 @@ function StartTrialBanner() {
 						disabled={startTrialMutation.isPending || !email}
 						className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
 					>
-						{startTrialMutation.isPending ? t('common.starting', 'Starting...') : t('trial.startTrial', 'Start Trial')}
+						{startTrialMutation.isPending
+							? t('common.starting', 'Starting...')
+							: t('trial.startTrial', 'Start Trial')}
 					</button>
 					<button
 						type="button"
 						onClick={() => setShowForm(false)}
 						className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+						aria-label="Close trial form"
 					>
-						<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+						<svg
+							className="w-5 h-5"
+							fill="currentColor"
+							viewBox="0 0 20 20"
+							aria-hidden="true"
+						>
 							<path
 								fillRule="evenodd"
 								d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
