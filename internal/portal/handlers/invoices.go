@@ -165,12 +165,6 @@ func (h *InvoicesHandler) Download(c *gin.Context) {
 		Str("invoice_id", invoice.ID.String()).
 		Msg("invoice downloaded")
 
-	// Convert items
-	var invoiceItems []interface{}
-	for _, item := range items {
-		invoiceItems = append(invoiceItems, item)
-	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"invoice":          invoice,
 		"items":            items,

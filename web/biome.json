@@ -1,7 +1,7 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
 	"files": {
-		"includes": [
+		"include": [
 			"src/**/*.ts",
 			"src/**/*.tsx",
 			"portal/src/**/*.ts",
@@ -24,7 +24,7 @@
 	"javascript": {
 		"formatter": { "quoteStyle": "single", "semicolons": "always" }
 	},
-	"assist": {
+	"assists": {
 		"actions": {
 			"source": {
 				"organizeImports": {
