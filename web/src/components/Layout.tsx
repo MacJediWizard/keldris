@@ -19,6 +19,7 @@ import {
 } from '../hooks/useReadOnlyMode';
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
+import { TrialBanner } from './features/TrialBanner';
 import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
@@ -1144,6 +1145,7 @@ export function Layout() {
 				<MaintenanceCountdown />
 				<AnnouncementBanner />
 				<PasswordExpirationBanner />
+				<TrialBanner />
 				<div className="flex flex-1">
 					<Sidebar />
 					<div className="flex-1 flex flex-col">
