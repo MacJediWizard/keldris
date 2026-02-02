@@ -25,6 +25,7 @@ import { LicenseBanner } from './features/LicenseBanner';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { RecentItemsDropdown } from './features/RecentItems';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
+import { TrialBanner } from './features/TrialBanner';
 import { WhatsNewModal } from './features/WhatsNewModal';
 import { Breadcrumbs } from './ui/Breadcrumbs';
 
@@ -1172,6 +1173,7 @@ export function Layout() {
 				<AnnouncementBanner />
 				<LicenseBanner />
 				<PasswordExpirationBanner />
+				<TrialBanner />
 				<div className="flex flex-1">
 					<Sidebar />
 					<div className="flex-1 flex flex-col">

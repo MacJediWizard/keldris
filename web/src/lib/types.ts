@@ -5887,3 +5887,74 @@ export interface LicenseInfoResponse {
 export interface FeatureCheckResponse {
 	result: FeatureCheckResult;
 }
+
+// Trial types
+export type PlanTier = 'free' | 'pro' | 'enterprise';
+export type TrialStatus = 'none' | 'active' | 'expired' | 'converted';
+
+export interface TrialInfo {
+	org_id: string;
+	plan_tier: PlanTier;
+	trial_status: TrialStatus;
+	trial_started_at?: string;
+	trial_ends_at?: string;
+	trial_email?: string;
+	trial_converted_at?: string;
+	days_remaining: number;
+	is_trial_active: boolean;
+	has_pro_features: boolean;
+}
+
+export interface TrialExtension {
+	id: string;
+	org_id: string;
+	extended_by: string;
+	extended_by_name?: string;
+	extension_days: number;
+	reason?: string;
+	previous_ends_at: string;
+	new_ends_at: string;
+	created_at: string;
+}
+
+export interface TrialActivity {
+	id: string;
+	org_id: string;
+	user_id?: string;
+	feature_name: string;
+	action: string;
+	details?: Record<string, unknown>;
+	created_at: string;
+}
+
+export interface TrialProFeature {
+	name: string;
+	description: string;
+	available: boolean;
+	limit?: number;
+}
+
+export interface StartTrialRequest {
+	email: string;
+}
+
+export interface ExtendTrialRequest {
+	extension_days: number;
+	reason: string;
+}
+
+export interface ConvertTrialRequest {
+	plan_tier: PlanTier;
+}
+
+export interface TrialFeaturesResponse {
+	features: TrialProFeature[];
+}
+
+export interface TrialActivityResponse {
+	activities: TrialActivity[];
+}
+
+export interface TrialExtensionsResponse {
+	extensions: TrialExtension[];
+}
