@@ -352,6 +352,10 @@ func NewRouter(
 	licenseHandler := handlers.NewLicenseHandler(database, featureChecker, logger)
 	licenseHandler.RegisterRoutes(apiV1)
 
+	// Trial management routes
+	trialHandler := handlers.NewTrialHandler(database, logger)
+	trialHandler.RegisterRoutes(apiV1)
+
 	// Superuser routes (requires superuser privileges)
 	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
 	superuserHandler.RegisterRoutes(apiV1)
