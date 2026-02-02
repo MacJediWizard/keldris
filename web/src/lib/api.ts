@@ -86,6 +86,7 @@ import type {
 	ContainerHookExecutionsResponse,
 	ContainerHookTemplateInfo,
 	ContainerHookTemplatesResponse,
+	ConvertTrialRequest,
 	CostAlert,
 	CostAlertsResponse,
 	CostForecastResponse,
@@ -202,6 +203,7 @@ import type {
 	ExportBundleRequest,
 	ExportFormat,
 	ExtendImmutabilityLockRequest,
+	ExtendTrialRequest,
 	Favorite,
 	FavoriteEntityType,
 	FavoritesResponse,
@@ -400,6 +402,7 @@ import type {
 	SnapshotMount,
 	SnapshotMountsResponse,
 	SnapshotsResponse,
+	StartTrialRequest,
 	StorageDefaultSettings,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
@@ -422,6 +425,11 @@ import type {
 	TiersResponse,
 	TrackRecentItemRequest,
 	TransferOwnershipRequest,
+	TrialActivityResponse,
+	TrialExtension,
+	TrialExtensionsResponse,
+	TrialFeaturesResponse,
+	TrialInfo,
 	TriggerDockerStackBackupRequest,
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
@@ -496,14 +504,6 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
-	TrialInfo,
-	TrialExtension,
-	TrialFeaturesResponse,
-	TrialActivityResponse,
-	TrialExtensionsResponse,
-	StartTrialRequest,
-	ExtendTrialRequest,
-	ConvertTrialRequest,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -3904,10 +3904,7 @@ export const trialApi = {
 		fetchApi<TrialFeaturesResponse>('/trial/features'),
 
 	// Get trial activity log
-	getActivity: async (
-		limit = 50,
-		offset = 0,
-	): Promise<TrialActivityResponse> =>
+	getActivity: async (limit = 50, offset = 0): Promise<TrialActivityResponse> =>
 		fetchApi<TrialActivityResponse>(
 			`/trial/activity?limit=${limit}&offset=${offset}`,
 		),

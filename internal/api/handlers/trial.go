@@ -27,7 +27,7 @@ type TrialStore interface {
 
 // TrialHandler handles trial-related HTTP endpoints.
 type TrialHandler struct {
-	manager *license.Manager
+	manager *license.TrialManager
 	store   TrialStore
 	logger  zerolog.Logger
 }
@@ -35,7 +35,7 @@ type TrialHandler struct {
 // NewTrialHandler creates a new TrialHandler.
 func NewTrialHandler(store TrialStore, logger zerolog.Logger) *TrialHandler {
 	return &TrialHandler{
-		manager: license.NewManager(store),
+		manager: license.NewTrialManager(store),
 		store:   store,
 		logger:  logger.With().Str("component", "trial_handler").Logger(),
 	}
