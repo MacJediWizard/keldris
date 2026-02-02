@@ -1,4 +1,4 @@
-package portal
+package portalctx
 
 import (
 	"context"
@@ -31,11 +31,11 @@ type Store interface {
 	CleanupExpiredSessions(ctx context.Context) (int64, error)
 
 	// License operations
-	GetLicensesByCustomerID(ctx context.Context, customerID uuid.UUID) ([]*models.License, error)
-	GetLicenseByID(ctx context.Context, id uuid.UUID) (*models.License, error)
-	GetLicenseByKey(ctx context.Context, key string) (*models.License, error)
-	CreateLicense(ctx context.Context, license *models.License) error
-	UpdateLicense(ctx context.Context, license *models.License) error
+	GetLicensesByCustomerID(ctx context.Context, customerID uuid.UUID) ([]*models.PortalLicense, error)
+	GetLicenseByID(ctx context.Context, id uuid.UUID) (*models.PortalLicense, error)
+	GetLicenseByKey(ctx context.Context, key string) (*models.PortalLicense, error)
+	CreateLicense(ctx context.Context, license *models.PortalLicense) error
+	UpdateLicense(ctx context.Context, license *models.PortalLicense) error
 
 	// Invoice operations
 	GetInvoicesByCustomerID(ctx context.Context, customerID uuid.UUID) ([]*models.Invoice, error)
@@ -48,7 +48,7 @@ type Store interface {
 
 	// Admin operations
 	ListCustomers(ctx context.Context, limit, offset int) ([]*models.Customer, int, error)
-	ListLicenses(ctx context.Context, limit, offset int) ([]*models.LicenseWithCustomer, int, error)
+	ListLicenses(ctx context.Context, limit, offset int) ([]*models.PortalLicenseWithCustomer, int, error)
 	ListInvoices(ctx context.Context, limit, offset int) ([]*models.InvoiceWithCustomer, int, error)
 	GenerateInvoiceNumber(ctx context.Context) (string, error)
 }

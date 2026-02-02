@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
 import { useMe } from '../hooks/useAuth';
-import { useLicenses } from '../hooks/useLicenses';
 import { useInvoices } from '../hooks/useInvoices';
+import { useLicenses } from '../hooks/useLicenses';
 
 export function Dashboard() {
 	const { data: customer } = useMe();
@@ -14,7 +14,9 @@ export function Dashboard() {
 	const invoices = invoicesData?.invoices || [];
 
 	const activeLicenses = licenses.filter((l) => l.status === 'active').length;
-	const unpaidInvoices = invoices.filter((i) => i.status !== 'paid' && i.status !== 'cancelled').length;
+	const unpaidInvoices = invoices.filter(
+		(i) => i.status !== 'paid' && i.status !== 'cancelled',
+	).length;
 
 	return (
 		<div className="space-y-6">

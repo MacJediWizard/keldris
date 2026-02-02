@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/MacJediWizard/keldris/internal/portal"
+	"github.com/MacJediWizard/keldris/internal/portal/portalctx"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -11,12 +11,12 @@ import (
 
 // InvoicesHandler handles invoice-related endpoints for the portal.
 type InvoicesHandler struct {
-	store  portal.Store
+	store  portalctx.Store
 	logger zerolog.Logger
 }
 
 // NewInvoicesHandler creates a new InvoicesHandler.
-func NewInvoicesHandler(store portal.Store, logger zerolog.Logger) *InvoicesHandler {
+func NewInvoicesHandler(store portalctx.Store, logger zerolog.Logger) *InvoicesHandler {
 	return &InvoicesHandler{
 		store:  store,
 		logger: logger.With().Str("component", "portal_invoices_handler").Logger(),
@@ -45,7 +45,7 @@ func (h *InvoicesHandler) RegisterRoutes(r *gin.RouterGroup) {
 //	@Security		PortalSession
 //	@Router			/portal/invoices [get]
 func (h *InvoicesHandler) List(c *gin.Context) {
-	customer := portal.RequireCustomer(c)
+	customer := portalctx.RequireCustomer(c)
 	if customer == nil {
 		return
 	}
@@ -75,7 +75,7 @@ func (h *InvoicesHandler) List(c *gin.Context) {
 //	@Security		PortalSession
 //	@Router			/portal/invoices/{id} [get]
 func (h *InvoicesHandler) Get(c *gin.Context) {
-	customer := portal.RequireCustomer(c)
+	customer := portalctx.RequireCustomer(c)
 	if customer == nil {
 		return
 	}
@@ -128,7 +128,7 @@ func (h *InvoicesHandler) Get(c *gin.Context) {
 //	@Security		PortalSession
 //	@Router			/portal/invoices/{id}/download [get]
 func (h *InvoicesHandler) Download(c *gin.Context) {
-	customer := portal.RequireCustomer(c)
+	customer := portalctx.RequireCustomer(c)
 	if customer == nil {
 		return
 	}

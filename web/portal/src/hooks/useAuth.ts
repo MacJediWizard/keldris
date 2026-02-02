@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../lib/api';
-import type { CustomerLoginRequest, CustomerRegisterRequest } from '../lib/types';
+import type {
+	CustomerLoginRequest,
+	CustomerRegisterRequest,
+} from '../lib/types';
 
 export function useMe() {
 	return useQuery({
@@ -40,7 +43,12 @@ export function useLogout() {
 
 export function useChangePassword() {
 	return useMutation({
-		mutationFn: ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) =>
-			authApi.changePassword(currentPassword, newPassword),
+		mutationFn: ({
+			currentPassword,
+			newPassword,
+		}: {
+			currentPassword: string;
+			newPassword: string;
+		}) => authApi.changePassword(currentPassword, newPassword),
 	});
 }

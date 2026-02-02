@@ -53,7 +53,10 @@ export function Register() {
 					)}
 					<div className="space-y-4">
 						<div>
-							<label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label
+								htmlFor="name"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>
 								Full name
 							</label>
 							<input
@@ -66,7 +69,10 @@ export function Register() {
 							/>
 						</div>
 						<div>
-							<label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label
+								htmlFor="email"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>
 								Email address
 							</label>
 							<input
@@ -79,7 +85,10 @@ export function Register() {
 							/>
 						</div>
 						<div>
-							<label htmlFor="company" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label
+								htmlFor="company"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>
 								Company (optional)
 							</label>
 							<input
@@ -91,7 +100,10 @@ export function Register() {
 							/>
 						</div>
 						<div>
-							<label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label
+								htmlFor="password"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>
 								Password
 							</label>
 							<input
@@ -105,7 +117,10 @@ export function Register() {
 							/>
 						</div>
 						<div>
-							<label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label
+								htmlFor="confirmPassword"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>
 								Confirm password
 							</label>
 							<input
@@ -129,7 +144,10 @@ export function Register() {
 
 					<p className="text-center text-sm text-gray-600 dark:text-gray-400">
 						Already have an account?{' '}
-						<Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+						<Link
+							to="/login"
+							className="font-medium text-blue-600 hover:text-blue-500"
+						>
 							Sign in
 						</Link>
 					</p>

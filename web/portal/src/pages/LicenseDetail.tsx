@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
 import { useLicense } from '../hooks/useLicenses';
@@ -32,7 +32,9 @@ export function LicenseDetail() {
 		setDownloading(true);
 		try {
 			const data = await licensesApi.download(id);
-			const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+			const blob = new Blob([JSON.stringify(data, null, 2)], {
+				type: 'application/json',
+			});
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
@@ -88,6 +90,7 @@ export function LicenseDetail() {
 								{license.license_key}
 							</code>
 							<button
+								type="button"
 								onClick={handleCopy}
 								className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
 							>
@@ -96,6 +99,7 @@ export function LicenseDetail() {
 						</div>
 						<div className="mt-4">
 							<button
+								type="button"
 								onClick={handleDownload}
 								disabled={downloading || license.status !== 'active'}
 								className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -193,6 +197,7 @@ export function LicenseDetail() {
 										className="w-4 h-4 mr-2 text-green-500"
 										fill="currentColor"
 										viewBox="0 0 20 20"
+										aria-hidden="true"
 									>
 										<path
 											fillRule="evenodd"

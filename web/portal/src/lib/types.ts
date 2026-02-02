@@ -55,7 +55,13 @@ export interface LicenseDownload {
 }
 
 // Invoice types
-export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'refunded';
+export type InvoiceStatus =
+	| 'draft'
+	| 'sent'
+	| 'paid'
+	| 'overdue'
+	| 'cancelled'
+	| 'refunded';
 export type PaymentMethod = 'card' | 'bank_transfer' | 'paypal' | 'invoice';
 
 export interface Invoice {
