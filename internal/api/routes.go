@@ -343,6 +343,10 @@ func NewRouter(
 	systemSettingsHandler := handlers.NewSystemSettingsHandler(database, logger)
 	systemSettingsHandler.RegisterRoutes(apiV1)
 
+	// Trial management routes
+	trialHandler := handlers.NewTrialHandler(database, logger)
+	trialHandler.RegisterRoutes(apiV1)
+
 	// Superuser routes (requires superuser privileges)
 	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
 	superuserHandler.RegisterRoutes(apiV1)

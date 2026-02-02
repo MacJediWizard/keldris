@@ -1,0 +1,316 @@
+// Package license provides trial and subscription management for Keldris.
+package license
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// DefaultTrialDays is the standard trial period duration.
+const DefaultTrialDays = 30
+
+// MaxExtensionDays is the maximum days an admin can extend a trial.
+const MaxExtensionDays = 90
+
+// PlanTier represents the subscription level.
+type PlanTier string
+
+const (
+	PlanTierFree       PlanTier = "free"
+	PlanTierPro        PlanTier = "pro"
+	PlanTierEnterprise PlanTier = "enterprise"
+)
+
+// TrialStatus represents the current state of a trial.
+type TrialStatus string
+
+const (
+	TrialStatusNone      TrialStatus = "none"
+	TrialStatusActive    TrialStatus = "active"
+	TrialStatusExpired   TrialStatus = "expired"
+	TrialStatusConverted TrialStatus = "converted"
+)
+
+// TrialInfo holds the trial status for an organization.
+type TrialInfo struct {
+	OrgID            uuid.UUID   `json:"org_id"`
+	PlanTier         PlanTier    `json:"plan_tier"`
+	TrialStatus      TrialStatus `json:"trial_status"`
+	TrialStartedAt   *time.Time  `json:"trial_started_at,omitempty"`
+	TrialEndsAt      *time.Time  `json:"trial_ends_at,omitempty"`
+	TrialEmail       string      `json:"trial_email,omitempty"`
+	TrialConvertedAt *time.Time  `json:"trial_converted_at,omitempty"`
+	DaysRemaining    int         `json:"days_remaining"`
+	IsTrialActive    bool        `json:"is_trial_active"`
+	HasProFeatures   bool        `json:"has_pro_features"`
+}
+
+// TrialExtension records a trial period extension.
+type TrialExtension struct {
+	ID             uuid.UUID `json:"id"`
+	OrgID          uuid.UUID `json:"org_id"`
+	ExtendedBy     uuid.UUID `json:"extended_by"`
+	ExtendedByName string    `json:"extended_by_name,omitempty"`
+	ExtensionDays  int       `json:"extension_days"`
+	Reason         string    `json:"reason,omitempty"`
+	PreviousEndsAt time.Time `json:"previous_ends_at"`
+	NewEndsAt      time.Time `json:"new_ends_at"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// TrialActivity logs feature access during trial.
+type TrialActivity struct {
+	ID          uuid.UUID              `json:"id"`
+	OrgID       uuid.UUID              `json:"org_id"`
+	UserID      *uuid.UUID             `json:"user_id,omitempty"`
+	FeatureName string                 `json:"feature_name"`
+	Action      string                 `json:"action"` // accessed, blocked, limit_reached
+	Details     map[string]interface{} `json:"details,omitempty"`
+	CreatedAt   time.Time              `json:"created_at"`
+}
+
+// ProFeature defines a feature available in Pro tier.
+type ProFeature struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Available   bool   `json:"available"`
+	Limit       *int   `json:"limit,omitempty"` // nil means unlimited
+}
+
+// Feature names for Pro tier.
+const (
+	FeatureAdvancedScheduling  = "advanced_scheduling"
+	FeatureGeoReplication      = "geo_replication"
+	FeatureDRRunbooks          = "dr_runbooks"
+	FeatureStorageTiering      = "storage_tiering"
+	FeatureClassifications     = "classifications"
+	FeatureCustomReports       = "custom_reports"
+	FeatureSLAMonitoring       = "sla_monitoring"
+	FeatureCostEstimation      = "cost_estimation"
+	FeatureRansomwareDetection = "ransomware_detection"
+	FeatureUnlimitedAgents     = "unlimited_agents"
+	FeatureAPIAccess           = "api_access"
+	FeaturePrioritySupport     = "priority_support"
+)
+
+// StartTrialRequest is the request to start a trial.
+type StartTrialRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// ExtendTrialRequest is the request to extend a trial.
+type ExtendTrialRequest struct {
+	ExtensionDays int    `json:"extension_days" binding:"required,min=1,max=90"`
+	Reason        string `json:"reason" binding:"required,max=500"`
+}
+
+// ConvertTrialRequest is the request to convert a trial to paid.
+type ConvertTrialRequest struct {
+	PlanTier PlanTier `json:"plan_tier" binding:"required,oneof=pro enterprise"`
+}
+
+// TrialStore defines the interface for trial data persistence.
+type TrialStore interface {
+	GetTrialInfo(ctx context.Context, orgID uuid.UUID) (*TrialInfo, error)
+	StartTrial(ctx context.Context, orgID uuid.UUID, email string) error
+	ExtendTrial(ctx context.Context, orgID, extendedBy uuid.UUID, days int, reason string) (*TrialExtension, error)
+	ConvertTrial(ctx context.Context, orgID uuid.UUID, tier PlanTier) error
+	ExpireTrials(ctx context.Context) (int, error)
+	GetTrialExtensions(ctx context.Context, orgID uuid.UUID) ([]*TrialExtension, error)
+	LogTrialActivity(ctx context.Context, activity *TrialActivity) error
+	GetTrialActivity(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*TrialActivity, error)
+	GetExpiringTrials(ctx context.Context, withinDays int) ([]*TrialInfo, error)
+}
+
+// Manager handles trial-related business logic.
+type Manager struct {
+	store TrialStore
+}
+
+// NewManager creates a new trial manager.
+func NewManager(store TrialStore) *Manager {
+	return &Manager{store: store}
+}
+
+// GetTrialInfo returns the current trial status for an organization.
+func (m *Manager) GetTrialInfo(ctx context.Context, orgID uuid.UUID) (*TrialInfo, error) {
+	info, err := m.store.GetTrialInfo(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate derived fields
+	m.calculateDerivedFields(info)
+	return info, nil
+}
+
+// StartTrial begins a new trial for an organization.
+func (m *Manager) StartTrial(ctx context.Context, orgID uuid.UUID, email string) (*TrialInfo, error) {
+	// Check if already has trial or is paid
+	info, err := m.store.GetTrialInfo(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	if info.TrialStatus != TrialStatusNone {
+		return nil, errors.New("organization already has or had a trial")
+	}
+
+	if info.PlanTier != PlanTierFree {
+		return nil, errors.New("organization already has a paid subscription")
+	}
+
+	if err := m.store.StartTrial(ctx, orgID, email); err != nil {
+		return nil, err
+	}
+
+	return m.GetTrialInfo(ctx, orgID)
+}
+
+// ExtendTrial extends an active trial by the specified number of days.
+func (m *Manager) ExtendTrial(ctx context.Context, orgID, extendedBy uuid.UUID, days int, reason string) (*TrialExtension, error) {
+	if days < 1 || days > MaxExtensionDays {
+		return nil, errors.New("extension days must be between 1 and 90")
+	}
+
+	// Check if trial is active
+	info, err := m.store.GetTrialInfo(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	if info.TrialStatus != TrialStatusActive && info.TrialStatus != TrialStatusExpired {
+		return nil, errors.New("can only extend active or expired trials")
+	}
+
+	return m.store.ExtendTrial(ctx, orgID, extendedBy, days, reason)
+}
+
+// ConvertTrial converts a trial to a paid subscription.
+func (m *Manager) ConvertTrial(ctx context.Context, orgID uuid.UUID, tier PlanTier) error {
+	if tier != PlanTierPro && tier != PlanTierEnterprise {
+		return errors.New("invalid plan tier for conversion")
+	}
+
+	info, err := m.store.GetTrialInfo(ctx, orgID)
+	if err != nil {
+		return err
+	}
+
+	if info.TrialStatus == TrialStatusConverted {
+		return errors.New("trial already converted")
+	}
+
+	return m.store.ConvertTrial(ctx, orgID, tier)
+}
+
+// HasFeatureAccess checks if an organization has access to a Pro feature.
+func (m *Manager) HasFeatureAccess(ctx context.Context, orgID uuid.UUID, featureName string) (bool, error) {
+	info, err := m.GetTrialInfo(ctx, orgID)
+	if err != nil {
+		return false, err
+	}
+
+	return info.HasProFeatures, nil
+}
+
+// LogFeatureAccess logs when a user accesses a Pro feature.
+func (m *Manager) LogFeatureAccess(ctx context.Context, orgID uuid.UUID, userID *uuid.UUID, featureName, action string, details map[string]interface{}) error {
+	activity := &TrialActivity{
+		ID:          uuid.New(),
+		OrgID:       orgID,
+		UserID:      userID,
+		FeatureName: featureName,
+		Action:      action,
+		Details:     details,
+		CreatedAt:   time.Now(),
+	}
+	return m.store.LogTrialActivity(ctx, activity)
+}
+
+// GetProFeatures returns the list of Pro features with availability status.
+func (m *Manager) GetProFeatures(ctx context.Context, orgID uuid.UUID) ([]ProFeature, error) {
+	info, err := m.GetTrialInfo(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	features := []ProFeature{
+		{Name: FeatureAdvancedScheduling, Description: "Advanced backup scheduling with complex cron patterns", Available: info.HasProFeatures},
+		{Name: FeatureGeoReplication, Description: "Cross-region backup replication", Available: info.HasProFeatures},
+		{Name: FeatureDRRunbooks, Description: "Disaster recovery runbooks and automation", Available: info.HasProFeatures},
+		{Name: FeatureStorageTiering, Description: "Automatic storage tier management", Available: info.HasProFeatures},
+		{Name: FeatureClassifications, Description: "Data classification and compliance tagging", Available: info.HasProFeatures},
+		{Name: FeatureCustomReports, Description: "Custom report generation and scheduling", Available: info.HasProFeatures},
+		{Name: FeatureSLAMonitoring, Description: "SLA tracking and compliance monitoring", Available: info.HasProFeatures},
+		{Name: FeatureCostEstimation, Description: "Storage cost estimation and forecasting", Available: info.HasProFeatures},
+		{Name: FeatureRansomwareDetection, Description: "Ransomware detection and alerts", Available: info.HasProFeatures},
+		{Name: FeatureUnlimitedAgents, Description: "Unlimited backup agents", Available: info.HasProFeatures},
+		{Name: FeatureAPIAccess, Description: "Full REST API access", Available: info.HasProFeatures},
+		{Name: FeaturePrioritySupport, Description: "Priority email and chat support", Available: info.HasProFeatures},
+	}
+
+	return features, nil
+}
+
+// GetTrialExtensions returns the extension history for an organization.
+func (m *Manager) GetTrialExtensions(ctx context.Context, orgID uuid.UUID) ([]*TrialExtension, error) {
+	return m.store.GetTrialExtensions(ctx, orgID)
+}
+
+// GetExpiringTrials returns trials expiring within the specified days.
+func (m *Manager) GetExpiringTrials(ctx context.Context, withinDays int) ([]*TrialInfo, error) {
+	trials, err := m.store.GetExpiringTrials(ctx, withinDays)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, t := range trials {
+		m.calculateDerivedFields(t)
+	}
+	return trials, nil
+}
+
+// ExpireTrials marks all expired trials as expired.
+func (m *Manager) ExpireTrials(ctx context.Context) (int, error) {
+	return m.store.ExpireTrials(ctx)
+}
+
+// calculateDerivedFields computes IsTrialActive, DaysRemaining, and HasProFeatures.
+func (m *Manager) calculateDerivedFields(info *TrialInfo) {
+	now := time.Now()
+
+	// Calculate days remaining
+	if info.TrialEndsAt != nil && info.TrialStatus == TrialStatusActive {
+		remaining := info.TrialEndsAt.Sub(now)
+		info.DaysRemaining = int(remaining.Hours() / 24)
+		if info.DaysRemaining < 0 {
+			info.DaysRemaining = 0
+		}
+		info.IsTrialActive = info.DaysRemaining > 0 || remaining > 0
+	} else {
+		info.DaysRemaining = 0
+		info.IsTrialActive = false
+	}
+
+	// Determine if org has Pro features
+	switch info.PlanTier {
+	case PlanTierPro, PlanTierEnterprise:
+		info.HasProFeatures = true
+	default:
+		info.HasProFeatures = info.IsTrialActive
+	}
+}
+
+// AutoStartTrial automatically starts a trial for new organizations.
+// Called during organization creation if auto-trial is enabled.
+func (m *Manager) AutoStartTrial(ctx context.Context, orgID uuid.UUID, email string) (*TrialInfo, error) {
+	// For auto-start, we use the provided email or empty string
+	if err := m.store.StartTrial(ctx, orgID, email); err != nil {
+		return nil, err
+	}
+	return m.GetTrialInfo(ctx, orgID)
+}

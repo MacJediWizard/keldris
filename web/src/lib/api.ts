@@ -479,6 +479,14 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
+	TrialInfo,
+	TrialExtension,
+	TrialFeaturesResponse,
+	TrialActivityResponse,
+	TrialExtensionsResponse,
+	StartTrialRequest,
+	ExtendTrialRequest,
+	ConvertTrialRequest,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -3859,6 +3867,51 @@ export const orgSettingsApi = {
 		fetchApi<SettingsAuditLogsResponse>(
 			`/system-settings/audit-log?limit=${limit}&offset=${offset}`,
 		),
+};
+
+// Trial API
+export const trialApi = {
+	// Get current trial status
+	getStatus: async (): Promise<TrialInfo> =>
+		fetchApi<TrialInfo>('/trial/status'),
+
+	// Start a new trial
+	startTrial: async (data: StartTrialRequest): Promise<TrialInfo> =>
+		fetchApi<TrialInfo>('/trial/start', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// Get available Pro features
+	getFeatures: async (): Promise<TrialFeaturesResponse> =>
+		fetchApi<TrialFeaturesResponse>('/trial/features'),
+
+	// Get trial activity log
+	getActivity: async (
+		limit = 50,
+		offset = 0,
+	): Promise<TrialActivityResponse> =>
+		fetchApi<TrialActivityResponse>(
+			`/trial/activity?limit=${limit}&offset=${offset}`,
+		),
+
+	// Extend trial (admin/superuser only)
+	extendTrial: async (data: ExtendTrialRequest): Promise<TrialExtension> =>
+		fetchApi<TrialExtension>('/trial/extend', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// Convert trial to paid
+	convertTrial: async (data: ConvertTrialRequest): Promise<TrialInfo> =>
+		fetchApi<TrialInfo>('/trial/convert', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// Get extension history
+	getExtensions: async (): Promise<TrialExtensionsResponse> =>
+		fetchApi<TrialExtensionsResponse>('/trial/extensions'),
 };
 
 // Docker Container Logs API
