@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { useMe, useLogout } from '../hooks/useAuth';
+import { useLogout, useMe } from '../hooks/useAuth';
 
 export function Layout() {
 	const location = useLocation();
@@ -24,7 +24,10 @@ export function Layout() {
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="flex justify-between items-center h-16">
 						<div className="flex items-center">
-							<Link to="/" className="text-xl font-bold text-gray-900 dark:text-white">
+							<Link
+								to="/"
+								className="text-xl font-bold text-gray-900 dark:text-white"
+							>
 								Keldris Portal
 							</Link>
 						</div>
@@ -48,6 +51,7 @@ export function Layout() {
 								{customer?.name || customer?.email}
 							</span>
 							<button
+								type="button"
 								onClick={() => logout.mutate()}
 								className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
 							>

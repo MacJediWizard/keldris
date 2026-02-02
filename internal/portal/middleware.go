@@ -3,30 +3,23 @@ package portal
 import (
 	"net/http"
 
+	"github.com/MacJediWizard/keldris/internal/portal/portalctx"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
 
-// ContextKey is a type for context keys.
-type ContextKey string
-
-const (
-	// CustomerContextKey is the context key for the authenticated customer.
-	CustomerContextKey ContextKey = "portal_customer"
-)
-
 // AuthMiddleware validates the portal session and injects the customer into context.
-func AuthMiddleware(store Store, logger zerolog.Logger) gin.HandlerFunc {
+func AuthMiddleware(store portalctx.Store, logger zerolog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get session token from cookie
-		token, err := c.Cookie(SessionCookieName)
+		token, err := c.Cookie(portalctx.SessionCookieName)
 		if err != nil || token == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
 			return
 		}
 
 		// Validate session
-		tokenHash := HashSessionToken(token)
+		tokenHash := portalctx.HashSessionToken(token)
 		session, err := store.GetSessionByTokenHash(c.Request.Context(), tokenHash)
 		if err != nil || session == nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid session"})
@@ -61,34 +54,14 @@ func AuthMiddleware(store Store, logger zerolog.Logger) gin.HandlerFunc {
 		}
 
 		// Set customer in context
-		sessionUser := &SessionUser{
+		sessionUser := &portalctx.SessionUser{
 			ID:      customer.ID,
 			Email:   customer.Email,
 			Name:    customer.Name,
 			Company: customer.Company,
 		}
-		c.Set(string(CustomerContextKey), sessionUser)
+		c.Set(string(portalctx.CustomerContextKey), sessionUser)
 
 		c.Next()
 	}
-}
-
-// GetCustomer returns the authenticated customer from context.
-func GetCustomer(c *gin.Context) *SessionUser {
-	if val, exists := c.Get(string(CustomerContextKey)); exists {
-		if customer, ok := val.(*SessionUser); ok {
-			return customer
-		}
-	}
-	return nil
-}
-
-// RequireCustomer returns the authenticated customer or aborts with 401.
-func RequireCustomer(c *gin.Context) *SessionUser {
-	customer := GetCustomer(c)
-	if customer == nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
-		return nil
-	}
-	return customer
 }

@@ -3,10 +3,10 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Dashboard } from './pages/Dashboard';
-import { Invoices } from './pages/Invoices';
 import { InvoiceDetail } from './pages/InvoiceDetail';
-import { Licenses } from './pages/Licenses';
+import { Invoices } from './pages/Invoices';
 import { LicenseDetail } from './pages/LicenseDetail';
+import { Licenses } from './pages/Licenses';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 

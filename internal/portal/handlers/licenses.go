@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/models"
-	"github.com/MacJediWizard/keldris/internal/portal"
+	"github.com/MacJediWizard/keldris/internal/portal/portalctx"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -12,12 +12,12 @@ import (
 
 // LicensesHandler handles license-related endpoints for the portal.
 type LicensesHandler struct {
-	store  portal.Store
+	store  portalctx.Store
 	logger zerolog.Logger
 }
 
 // NewLicensesHandler creates a new LicensesHandler.
-func NewLicensesHandler(store portal.Store, logger zerolog.Logger) *LicensesHandler {
+func NewLicensesHandler(store portalctx.Store, logger zerolog.Logger) *LicensesHandler {
 	return &LicensesHandler{
 		store:  store,
 		logger: logger.With().Str("component", "portal_licenses_handler").Logger(),
@@ -41,12 +41,12 @@ func (h *LicensesHandler) RegisterRoutes(r *gin.RouterGroup) {
 //	@Tags			Portal Licenses
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	map[string][]models.License
+//	@Success		200	{object}	map[string][]models.PortalLicense
 //	@Failure		401	{object}	map[string]string
 //	@Security		PortalSession
 //	@Router			/portal/licenses [get]
 func (h *LicensesHandler) List(c *gin.Context) {
-	customer := portal.RequireCustomer(c)
+	customer := portalctx.RequireCustomer(c)
 	if customer == nil {
 		return
 	}
@@ -69,14 +69,14 @@ func (h *LicensesHandler) List(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"License ID"
-//	@Success		200	{object}	models.License
+//	@Success		200	{object}	models.PortalLicense
 //	@Failure		400	{object}	map[string]string
 //	@Failure		401	{object}	map[string]string
 //	@Failure		404	{object}	map[string]string
 //	@Security		PortalSession
 //	@Router			/portal/licenses/{id} [get]
 func (h *LicensesHandler) Get(c *gin.Context) {
-	customer := portal.RequireCustomer(c)
+	customer := portalctx.RequireCustomer(c)
 	if customer == nil {
 		return
 	}
@@ -111,14 +111,14 @@ func (h *LicensesHandler) Get(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"License ID"
-//	@Success		200	{object}	models.LicenseDownloadResponse
+//	@Success		200	{object}	models.PortalLicenseDownloadResponse
 //	@Failure		400	{object}	map[string]string
 //	@Failure		401	{object}	map[string]string
 //	@Failure		404	{object}	map[string]string
 //	@Security		PortalSession
 //	@Router			/portal/licenses/{id}/download [get]
 func (h *LicensesHandler) Download(c *gin.Context) {
-	customer := portal.RequireCustomer(c)
+	customer := portalctx.RequireCustomer(c)
 	if customer == nil {
 		return
 	}
@@ -158,12 +158,12 @@ func (h *LicensesHandler) Download(c *gin.Context) {
 
 // AdminLicensesHandler handles admin license operations.
 type AdminLicensesHandler struct {
-	store  portal.Store
+	store  portalctx.Store
 	logger zerolog.Logger
 }
 
 // NewAdminLicensesHandler creates a new AdminLicensesHandler.
-func NewAdminLicensesHandler(store portal.Store, logger zerolog.Logger) *AdminLicensesHandler {
+func NewAdminLicensesHandler(store portalctx.Store, logger zerolog.Logger) *AdminLicensesHandler {
 	return &AdminLicensesHandler{
 		store:  store,
 		logger: logger.With().Str("component", "admin_licenses_handler").Logger(),
@@ -222,14 +222,14 @@ func (h *AdminLicensesHandler) List(c *gin.Context) {
 //	@Tags			Admin Licenses
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		models.CreateLicenseRequest	true	"License details"
-//	@Success		201		{object}	models.License
+//	@Param			request	body		models.CreatePortalLicenseRequest	true	"License details"
+//	@Success		201		{object}	models.PortalLicense
 //	@Failure		400		{object}	map[string]string
 //	@Failure		401		{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/api/v1/admin/licenses [post]
 func (h *AdminLicensesHandler) Create(c *gin.Context) {
-	var req models.CreateLicenseRequest
+	var req models.CreatePortalLicenseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
 		return
@@ -243,7 +243,7 @@ func (h *AdminLicensesHandler) Create(c *gin.Context) {
 	}
 
 	// Create license
-	license := models.NewLicense(req.CustomerID, req.LicenseType, req.ProductName)
+	license := models.NewPortalLicense(req.CustomerID, req.LicenseType, req.ProductName)
 	license.MaxAgents = req.MaxAgents
 	license.MaxRepos = req.MaxRepos
 	license.MaxStorage = req.MaxStorage
@@ -274,7 +274,7 @@ func (h *AdminLicensesHandler) Create(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"License ID"
-//	@Success		200	{object}	models.License
+//	@Success		200	{object}	models.PortalLicense
 //	@Failure		400	{object}	map[string]string
 //	@Failure		401	{object}	map[string]string
 //	@Failure		404	{object}	map[string]string
@@ -304,9 +304,9 @@ func (h *AdminLicensesHandler) Get(c *gin.Context) {
 //	@Tags			Admin Licenses
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		string						true	"License ID"
-//	@Param			request	body		models.UpdateLicenseRequest	true	"License updates"
-//	@Success		200		{object}	models.License
+//	@Param			id		path		string							true	"License ID"
+//	@Param			request	body		models.UpdatePortalLicenseRequest	true	"License updates"
+//	@Success		200		{object}	models.PortalLicense
 //	@Failure		400		{object}	map[string]string
 //	@Failure		401		{object}	map[string]string
 //	@Failure		404		{object}	map[string]string
@@ -320,7 +320,7 @@ func (h *AdminLicensesHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req models.UpdateLicenseRequest
+	var req models.UpdatePortalLicenseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
 		return

@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
 import { useInvoice } from '../hooks/useInvoices';
@@ -87,7 +87,10 @@ export function InvoiceDetail() {
 							</tbody>
 							<tfoot className="bg-gray-50 dark:bg-dark-card">
 								<tr>
-									<td colSpan={3} className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400 text-right">
+									<td
+										colSpan={3}
+										className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400 text-right"
+									>
 										Subtotal
 									</td>
 									<td className="px-6 py-3 text-sm text-gray-900 dark:text-white text-right font-medium">
@@ -95,7 +98,10 @@ export function InvoiceDetail() {
 									</td>
 								</tr>
 								<tr>
-									<td colSpan={3} className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400 text-right">
+									<td
+										colSpan={3}
+										className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400 text-right"
+									>
 										Tax
 									</td>
 									<td className="px-6 py-3 text-sm text-gray-900 dark:text-white text-right font-medium">
@@ -103,7 +109,10 @@ export function InvoiceDetail() {
 									</td>
 								</tr>
 								<tr>
-									<td colSpan={3} className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white text-right">
+									<td
+										colSpan={3}
+										className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white text-right"
+									>
 										Total
 									</td>
 									<td className="px-6 py-3 text-lg text-gray-900 dark:text-white text-right font-bold">
@@ -187,7 +196,8 @@ export function InvoiceDetail() {
 									Amount Due
 								</div>
 								<div className="text-2xl font-bold text-gray-900 dark:text-white">
-									{invoice.currency} {((invoice.total - invoice.amount_paid) / 100).toFixed(2)}
+									{invoice.currency}{' '}
+									{((invoice.total - invoice.amount_paid) / 100).toFixed(2)}
 								</div>
 							</div>
 						)}

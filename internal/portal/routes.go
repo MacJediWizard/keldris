@@ -2,6 +2,7 @@ package portal
 
 import (
 	"github.com/MacJediWizard/keldris/internal/portal/handlers"
+	"github.com/MacJediWizard/keldris/internal/portal/portalctx"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
@@ -30,11 +31,11 @@ func DefaultConfig() Config {
 type Router struct {
 	Engine *gin.Engine
 	logger zerolog.Logger
-	store  Store
+	store  portalctx.Store
 }
 
 // NewRouter creates a new Router with the given dependencies.
-func NewRouter(cfg Config, store Store, logger zerolog.Logger) (*Router, error) {
+func NewRouter(cfg Config, store portalctx.Store, logger zerolog.Logger) (*Router, error) {
 	r := &Router{
 		Engine: gin.New(),
 		logger: logger.With().Str("component", "portal_router").Logger(),

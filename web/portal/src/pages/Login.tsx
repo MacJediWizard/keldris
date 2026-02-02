@@ -40,7 +40,10 @@ export function Login() {
 					)}
 					<div className="space-y-4">
 						<div>
-							<label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label
+								htmlFor="email"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>
 								Email address
 							</label>
 							<input
@@ -53,7 +56,10 @@ export function Login() {
 							/>
 						</div>
 						<div>
-							<label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							<label
+								htmlFor="password"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>
 								Password
 							</label>
 							<input
@@ -77,7 +83,10 @@ export function Login() {
 
 					<p className="text-center text-sm text-gray-600 dark:text-gray-400">
 						Don't have an account?{' '}
-						<Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+						<Link
+							to="/register"
+							className="font-medium text-blue-600 hover:text-blue-500"
+						>
 							Register
 						</Link>
 					</p>

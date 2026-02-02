@@ -4,10 +4,10 @@ import type {
 	CustomerRegisterRequest,
 	Invoice,
 	InvoiceItem,
+	InvoicesResponse,
 	License,
 	LicenseDownload,
 	LicensesResponse,
-	InvoicesResponse,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -33,7 +33,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 	});
 
 	if (!response.ok) {
-		const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+		const error = await response
+			.json()
+			.catch(() => ({ error: 'Unknown error' }));
 		throw new ApiError(error.error || 'Request failed', response.status);
 	}
 
@@ -53,10 +55,16 @@ export const authApi = {
 
 	me: (): Promise<Customer> => request('/auth/me'),
 
-	changePassword: (currentPassword: string, newPassword: string): Promise<{ message: string }> =>
+	changePassword: (
+		currentPassword: string,
+		newPassword: string,
+	): Promise<{ message: string }> =>
 		request('/auth/change-password', {
 			method: 'POST',
-			body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+			body: JSON.stringify({
+				current_password: currentPassword,
+				new_password: newPassword,
+			}),
 		}),
 };
 
@@ -66,7 +74,8 @@ export const licensesApi = {
 
 	get: (id: string): Promise<License> => request(`/licenses/${id}`),
 
-	download: (id: string): Promise<LicenseDownload> => request(`/licenses/${id}/download`),
+	download: (id: string): Promise<LicenseDownload> =>
+		request(`/licenses/${id}/download`),
 };
 
 // Invoices API
@@ -76,7 +85,9 @@ export const invoicesApi = {
 	get: (id: string): Promise<{ invoice: Invoice; items: InvoiceItem[] }> =>
 		request(`/invoices/${id}`),
 
-	download: (id: string): Promise<{
+	download: (
+		id: string,
+	): Promise<{
 		invoice: Invoice;
 		items: InvoiceItem[];
 		customer_name: string;

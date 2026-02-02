@@ -1,9 +1,14 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
 	"files": {
-		"ignore": ["node_modules", "dist", "*.json", "*.config.js", "*.config.ts"]
+		"includes": [
+			"src/**/*.ts",
+			"src/**/*.tsx",
+			"portal/src/**/*.ts",
+			"portal/src/**/*.tsx",
+			"*.css"
+		]
 	},
-	"organizeImports": { "enabled": true },
 	"linter": {
 		"enabled": true,
 		"rules": {
@@ -18,5 +23,14 @@
 	"formatter": { "indentStyle": "tab" },
 	"javascript": {
 		"formatter": { "quoteStyle": "single", "semicolons": "always" }
+	},
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": {
+					"level": "on"
+				}
+			}
+		}
 	}
 }

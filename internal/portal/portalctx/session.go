@@ -1,4 +1,4 @@
-package portal
+package portalctx
 
 import (
 	"crypto/rand"
@@ -31,10 +31,10 @@ type Session struct {
 
 // SessionUser represents the authenticated customer in a request context.
 type SessionUser struct {
-	ID       uuid.UUID `json:"id"`
-	Email    string    `json:"email"`
-	Name     string    `json:"name"`
-	Company  string    `json:"company,omitempty"`
+	ID      uuid.UUID `json:"id"`
+	Email   string    `json:"email"`
+	Name    string    `json:"name"`
+	Company string    `json:"company,omitempty"`
 }
 
 // GenerateSessionToken generates a cryptographically secure session token.

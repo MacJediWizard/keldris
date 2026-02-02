@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/models"
-	"github.com/MacJediWizard/keldris/internal/portal"
+	"github.com/MacJediWizard/keldris/internal/portal/portalctx"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
@@ -23,12 +23,12 @@ const (
 
 // AuthHandler handles customer authentication endpoints.
 type AuthHandler struct {
-	store  portal.Store
+	store  portalctx.Store
 	logger zerolog.Logger
 }
 
 // NewAuthHandler creates a new AuthHandler.
-func NewAuthHandler(store portal.Store, logger zerolog.Logger) *AuthHandler {
+func NewAuthHandler(store portalctx.Store, logger zerolog.Logger) *AuthHandler {
 	return &AuthHandler{
 		store:  store,
 		logger: logger.With().Str("component", "portal_auth_handler").Logger(),
@@ -125,7 +125,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Create session
 	clientIP := c.ClientIP()
 	userAgent := c.GetHeader("User-Agent")
-	session, token, err := portal.NewSession(customer.ID, clientIP, userAgent)
+	session, token, err := portalctx.NewSession(customer.ID, clientIP, userAgent)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to create session")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create session"})
@@ -145,9 +145,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// Set session cookie
 	c.SetCookie(
-		portal.SessionCookieName,
+		portalctx.SessionCookieName,
 		token,
-		int(portal.SessionDuration.Seconds()),
+		int(portalctx.SessionDuration.Seconds()),
 		"/",
 		"",
 		true,  // Secure
@@ -221,10 +221,10 @@ func (h *AuthHandler) Register(c *gin.Context) {
 //	@Router			/portal/auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	// Get session token from cookie
-	token, err := c.Cookie(portal.SessionCookieName)
+	token, err := c.Cookie(portalctx.SessionCookieName)
 	if err == nil && token != "" {
 		// Delete session from database
-		tokenHash := portal.HashSessionToken(token)
+		tokenHash := portalctx.HashSessionToken(token)
 		session, err := h.store.GetSessionByTokenHash(c.Request.Context(), tokenHash)
 		if err == nil && session != nil {
 			if err := h.store.DeleteSession(c.Request.Context(), session.ID); err != nil {
@@ -235,7 +235,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 	// Clear cookie
 	c.SetCookie(
-		portal.SessionCookieName,
+		portalctx.SessionCookieName,
 		"",
 		-1,
 		"/",
@@ -259,7 +259,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 //	@Security		PortalSession
 //	@Router			/portal/auth/me [get]
 func (h *AuthHandler) Me(c *gin.Context) {
-	customer := portal.RequireCustomer(c)
+	customer := portalctx.RequireCustomer(c)
 	if customer == nil {
 		return
 	}
@@ -371,7 +371,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 //	@Security		PortalSession
 //	@Router			/portal/auth/change-password [post]
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
-	customer := portal.RequireCustomer(c)
+	customer := portalctx.RequireCustomer(c)
 	if customer == nil {
 		return
 	}
