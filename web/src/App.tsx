@@ -25,6 +25,7 @@ import { FileHistory } from './pages/FileHistory';
 import { FileSearch } from './pages/FileSearch';
 import { IPAllowlistSettings } from './pages/IPAllowlistSettings';
 import { LegalHolds } from './pages/LegalHolds';
+import { License } from './pages/License';
 import { LifecyclePolicies } from './pages/LifecyclePolicies';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
@@ -149,6 +150,7 @@ function App() {
 								path="organization/password-policies"
 								element={<PasswordPolicies />}
 							/>
+							<Route path="organization/license" element={<License />} />
 							<Route path="organization/new" element={<NewOrganization />} />
 							<Route path="admin/logs" element={<AdminLogs />} />
 							<Route path="admin/docker-logs" element={<DockerLogs />} />
