@@ -9,6 +9,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/backup/docker"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/logs"
 	"github.com/MacJediWizard/keldris/internal/monitoring"
 	"github.com/MacJediWizard/keldris/internal/reports"
@@ -42,6 +43,8 @@ type Config struct {
 	LogBuffer *logs.LogBuffer
 	// ActivityFeed for real-time activity events (optional).
 	ActivityFeed *activity.Feed
+	// LicenseManager for air-gapped license management (optional).
+	LicenseManager *license.Manager
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -116,6 +119,14 @@ func NewRouter(
 	changelogHandler := handlers.NewChangelogHandler("CHANGELOG.md", cfg.Version, logger)
 	changelogHandler.RegisterPublicRoutes(r.Engine)
 
+	// Air-gap/license management (public status endpoint, protected management endpoints)
+	var airGapHandler *handlers.AirGapHandler
+	if cfg.LicenseManager != nil {
+		airGapHandler = handlers.NewAirGapHandler(cfg.LicenseManager, logger)
+		publicAPI := r.Engine.Group("/api/v1/public")
+		airGapHandler.RegisterRoutes(nil, publicAPI) // Will register to apiV1 later
+	}
+
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
@@ -136,6 +147,11 @@ func NewRouter(
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 	changelogHandler.RegisterRoutes(apiV1)
+
+	// Register air-gap protected routes (after auth middleware is applied)
+	if airGapHandler != nil {
+		airGapHandler.RegisterRoutes(apiV1, nil)
+	}
 
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
 	orgsHandler.RegisterRoutes(apiV1)
