@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useMe } from '../hooks/useAuth';
-import { useBrandingSettings, useUpdateBrandingSettings } from '../hooks/useBranding';
-import type { BrandingSettings, OrgRole } from '../lib/types';
+import {
+	useBrandingSettings,
+	useUpdateBrandingSettings,
+} from '../hooks/useBranding';
+import type {
+	BrandingSettings as BrandingSettingsType,
+	OrgRole,
+} from '../lib/types';
 
 export function BrandingSettings() {
 	const { data: user } = useMe();
@@ -12,7 +18,7 @@ export function BrandingSettings() {
 	const updateBranding = useUpdateBrandingSettings();
 
 	const [isEditing, setIsEditing] = useState(false);
-	const [form, setForm] = useState<BrandingSettings>({
+	const [form, setForm] = useState<BrandingSettingsType>({
 		enabled: false,
 		product_name: 'Keldris',
 		company_name: '',
@@ -78,7 +84,8 @@ export function BrandingSettings() {
 	}
 
 	if (isError) {
-		const errorMessage = (error as Error)?.message || 'Failed to load branding settings';
+		const errorMessage =
+			(error as Error)?.message || 'Failed to load branding settings';
 		const isEnterpriseError = errorMessage.toLowerCase().includes('enterprise');
 
 		return (
@@ -109,7 +116,9 @@ export function BrandingSettings() {
 						</svg>
 					</div>
 					<h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-						{isEnterpriseError ? 'Enterprise Feature' : 'Unable to Load Branding'}
+						{isEnterpriseError
+							? 'Enterprise Feature'
+							: 'Unable to Load Branding'}
 					</h2>
 					<p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
 						{isEnterpriseError
@@ -180,7 +189,8 @@ export function BrandingSettings() {
 							Enable Custom Branding
 						</h2>
 						<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-							When enabled, your custom branding will be applied throughout the application
+							When enabled, your custom branding will be applied throughout the
+							application
 						</p>
 					</div>
 					<label className="relative inline-flex items-center cursor-pointer">
@@ -220,7 +230,9 @@ export function BrandingSettings() {
 								id="product-name"
 								value={form.product_name}
 								disabled={!isEditing}
-								onChange={(e) => setForm({ ...form, product_name: e.target.value })}
+								onChange={(e) =>
+									setForm({ ...form, product_name: e.target.value })
+								}
 								placeholder="Keldris"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
@@ -237,7 +249,9 @@ export function BrandingSettings() {
 								id="company-name"
 								value={form.company_name}
 								disabled={!isEditing}
-								onChange={(e) => setForm({ ...form, company_name: e.target.value })}
+								onChange={(e) =>
+									setForm({ ...form, company_name: e.target.value })
+								}
 								placeholder="Your Company"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
@@ -255,7 +269,9 @@ export function BrandingSettings() {
 							id="footer-text"
 							value={form.footer_text}
 							disabled={!isEditing}
-							onChange={(e) => setForm({ ...form, footer_text: e.target.value })}
+							onChange={(e) =>
+								setForm({ ...form, footer_text: e.target.value })
+							}
 							placeholder="Custom footer text..."
 							rows={2}
 							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
@@ -268,7 +284,9 @@ export function BrandingSettings() {
 							id="hide-powered-by"
 							checked={form.hide_powered_by}
 							disabled={!isEditing}
-							onChange={(e) => setForm({ ...form, hide_powered_by: e.target.checked })}
+							onChange={(e) =>
+								setForm({ ...form, hide_powered_by: e.target.checked })
+							}
 							className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
 						/>
 						<label
@@ -334,7 +352,9 @@ export function BrandingSettings() {
 								id="logo-dark-url"
 								value={form.logo_dark_url}
 								disabled={!isEditing}
-								onChange={(e) => setForm({ ...form, logo_dark_url: e.target.value })}
+								onChange={(e) =>
+									setForm({ ...form, logo_dark_url: e.target.value })
+								}
 								placeholder="https://example.com/logo-dark.png"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
@@ -365,7 +385,9 @@ export function BrandingSettings() {
 							id="favicon-url"
 							value={form.favicon_url}
 							disabled={!isEditing}
-							onChange={(e) => setForm({ ...form, favicon_url: e.target.value })}
+							onChange={(e) =>
+								setForm({ ...form, favicon_url: e.target.value })
+							}
 							placeholder="https://example.com/favicon.ico"
 							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 						/>
@@ -398,14 +420,18 @@ export function BrandingSettings() {
 									id="primary-color"
 									value={form.primary_color}
 									disabled={!isEditing}
-									onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+									onChange={(e) =>
+										setForm({ ...form, primary_color: e.target.value })
+									}
 									className="h-10 w-14 p-1 border border-gray-300 dark:border-gray-600 rounded cursor-pointer disabled:cursor-not-allowed"
 								/>
 								<input
 									type="text"
 									value={form.primary_color}
 									disabled={!isEditing}
-									onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+									onChange={(e) =>
+										setForm({ ...form, primary_color: e.target.value })
+									}
 									placeholder="#4f46e5"
 									className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800 font-mono text-sm"
 								/>
@@ -424,14 +450,18 @@ export function BrandingSettings() {
 									id="secondary-color"
 									value={form.secondary_color}
 									disabled={!isEditing}
-									onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
+									onChange={(e) =>
+										setForm({ ...form, secondary_color: e.target.value })
+									}
 									className="h-10 w-14 p-1 border border-gray-300 dark:border-gray-600 rounded cursor-pointer disabled:cursor-not-allowed"
 								/>
 								<input
 									type="text"
 									value={form.secondary_color}
 									disabled={!isEditing}
-									onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
+									onChange={(e) =>
+										setForm({ ...form, secondary_color: e.target.value })
+									}
 									placeholder="#64748b"
 									className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800 font-mono text-sm"
 								/>
@@ -450,14 +480,18 @@ export function BrandingSettings() {
 									id="accent-color"
 									value={form.accent_color}
 									disabled={!isEditing}
-									onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+									onChange={(e) =>
+										setForm({ ...form, accent_color: e.target.value })
+									}
 									className="h-10 w-14 p-1 border border-gray-300 dark:border-gray-600 rounded cursor-pointer disabled:cursor-not-allowed"
 								/>
 								<input
 									type="text"
 									value={form.accent_color}
 									disabled={!isEditing}
-									onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+									onChange={(e) =>
+										setForm({ ...form, accent_color: e.target.value })
+									}
 									placeholder="#06b6d4"
 									className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800 font-mono text-sm"
 								/>
@@ -521,7 +555,9 @@ export function BrandingSettings() {
 								id="login-title"
 								value={form.login_title}
 								disabled={!isEditing}
-								onChange={(e) => setForm({ ...form, login_title: e.target.value })}
+								onChange={(e) =>
+									setForm({ ...form, login_title: e.target.value })
+								}
 								placeholder="Welcome Back"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
@@ -538,7 +574,9 @@ export function BrandingSettings() {
 								id="login-subtitle"
 								value={form.login_subtitle}
 								disabled={!isEditing}
-								onChange={(e) => setForm({ ...form, login_subtitle: e.target.value })}
+								onChange={(e) =>
+									setForm({ ...form, login_subtitle: e.target.value })
+								}
 								placeholder="Sign in to your account"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
@@ -557,7 +595,9 @@ export function BrandingSettings() {
 							id="login-bg-url"
 							value={form.login_bg_url}
 							disabled={!isEditing}
-							onChange={(e) => setForm({ ...form, login_bg_url: e.target.value })}
+							onChange={(e) =>
+								setForm({ ...form, login_bg_url: e.target.value })
+							}
 							placeholder="https://example.com/background.jpg"
 							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 						/>
@@ -589,7 +629,9 @@ export function BrandingSettings() {
 								id="support-url"
 								value={form.support_url}
 								disabled={!isEditing}
-								onChange={(e) => setForm({ ...form, support_url: e.target.value })}
+								onChange={(e) =>
+									setForm({ ...form, support_url: e.target.value })
+								}
 								placeholder="https://support.example.com"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
@@ -606,7 +648,9 @@ export function BrandingSettings() {
 								id="support-email"
 								value={form.support_email}
 								disabled={!isEditing}
-								onChange={(e) => setForm({ ...form, support_email: e.target.value })}
+								onChange={(e) =>
+									setForm({ ...form, support_email: e.target.value })
+								}
 								placeholder="support@example.com"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
@@ -626,7 +670,9 @@ export function BrandingSettings() {
 								id="privacy-url"
 								value={form.privacy_url}
 								disabled={!isEditing}
-								onChange={(e) => setForm({ ...form, privacy_url: e.target.value })}
+								onChange={(e) =>
+									setForm({ ...form, privacy_url: e.target.value })
+								}
 								placeholder="https://example.com/privacy"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
@@ -643,7 +689,9 @@ export function BrandingSettings() {
 								id="terms-url"
 								value={form.terms_url}
 								disabled={!isEditing}
-								onChange={(e) => setForm({ ...form, terms_url: e.target.value })}
+								onChange={(e) =>
+									setForm({ ...form, terms_url: e.target.value })
+								}
 								placeholder="https://example.com/terms"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
@@ -672,7 +720,8 @@ export function BrandingSettings() {
 						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800 font-mono text-sm"
 					/>
 					<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-						Maximum 10,000 characters. CSS is applied globally and should be used with caution.
+						Maximum 10,000 characters. CSS is applied globally and should be
+						used with caution.
 					</p>
 				</div>
 			</div>

@@ -320,12 +320,12 @@ import type {
 	PasswordPolicy,
 	PasswordPolicyResponse,
 	PasswordRequirements,
-	PublicBrandingSettings,
 	PathClassificationRule,
 	PendingRegistration,
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	PublicBrandingSettings,
 	RateLimitConfig,
 	RateLimitConfigsResponse,
 	RateLimitDashboardStats,
@@ -3938,7 +3938,9 @@ export const brandingApi = {
 		fetchApi<BrandingSettings>('/branding'),
 
 	// Update branding settings
-	update: async (data: UpdateBrandingSettingsRequest): Promise<BrandingSettings> =>
+	update: async (
+		data: UpdateBrandingSettingsRequest,
+	): Promise<BrandingSettings> =>
 		fetchApi<BrandingSettings>('/branding', {
 			method: 'PUT',
 			body: JSON.stringify(data),

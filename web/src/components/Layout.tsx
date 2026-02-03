@@ -362,7 +362,9 @@ function Sidebar() {
 				{logoUrl && branding?.enabled ? (
 					<img src={logoUrl} alt={productName} className="h-8 mb-2" />
 				) : (
-					<h1 className="text-2xl font-bold">{branding?.enabled ? productName : t('common.appName')}</h1>
+					<h1 className="text-2xl font-bold">
+						{branding?.enabled ? productName : t('common.appName')}
+					</h1>
 				)}
 				<p className="text-gray-400 text-sm">{t('common.tagline')}</p>
 			</div>
