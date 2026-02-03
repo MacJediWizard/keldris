@@ -356,6 +356,11 @@ func NewRouter(
 	trialHandler := handlers.NewTrialHandler(database, logger)
 	trialHandler.RegisterRoutes(apiV1)
 
+	// Branding settings routes (Enterprise only)
+	brandingHandler := handlers.NewBrandingHandler(database, logger)
+	brandingHandler.RegisterRoutes(apiV1)
+	brandingHandler.RegisterPublicRoutes(r.Engine.Group("/api/public"))
+
 	// Superuser routes (requires superuser privileges)
 	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
 	superuserHandler.RegisterRoutes(apiV1)
