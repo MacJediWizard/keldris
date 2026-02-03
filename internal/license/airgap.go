@@ -17,46 +17,34 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// License validation errors.
+// Air-gap specific validation errors.
 var (
-	ErrLicenseExpired     = errors.New("license has expired")
-	ErrLicenseInvalid     = errors.New("license signature is invalid")
-	ErrLicenseNotFound    = errors.New("license file not found")
-	ErrLicenseMalformed   = errors.New("license file is malformed")
-	ErrLicenseRevoked     = errors.New("license has been revoked")
-	ErrFeatureNotLicensed = errors.New("feature not included in license")
-	ErrAirGapModeRequired = errors.New("operation not available in air-gapped mode")
+	ErrAirGapLicenseInvalid     = errors.New("license signature is invalid")
+	ErrAirGapLicenseNotFound    = errors.New("license file not found")
+	ErrAirGapLicenseMalformed   = errors.New("license file is malformed")
+	ErrAirGapLicenseRevoked     = errors.New("license has been revoked")
+	ErrAirGapFeatureNotLicensed = errors.New("feature not included in license")
+	ErrAirGapModeRequired       = errors.New("operation not available in air-gapped mode")
 )
 
-// LicenseType represents the tier of license.
-type LicenseType string
+// AirGapLicenseType represents the tier of license for air-gap deployments.
+type AirGapLicenseType string
 
 const (
-	LicenseTypeCommunity  LicenseType = "community"
-	LicenseTypePro        LicenseType = "pro"
-	LicenseTypeEnterprise LicenseType = "enterprise"
+	AirGapLicenseTypeCommunity  AirGapLicenseType = "community"
+	AirGapLicenseTypePro        AirGapLicenseType = "pro"
+	AirGapLicenseTypeEnterprise AirGapLicenseType = "enterprise"
 )
 
-// Feature represents a licensable feature.
-type Feature string
-
+// Air-gap specific features
 const (
-	FeatureAirGapMode       Feature = "airgap_mode"
-	FeatureMultiOrg         Feature = "multi_org"
-	FeatureAdvancedReports  Feature = "advanced_reports"
-	FeatureGeoReplication   Feature = "geo_replication"
-	FeatureRansomwareDetect Feature = "ransomware_detection"
-	FeatureLegalHolds       Feature = "legal_holds"
-	FeatureDisasterRecovery Feature = "disaster_recovery"
-	FeatureCustomBranding   Feature = "custom_branding"
-	FeaturePrioritySupport  Feature = "priority_support"
-	FeatureUnlimitedAgents  Feature = "unlimited_agents"
+	FeatureAirGapMode Feature = "airgap_mode"
 )
 
-// License represents a validated license.
-type License struct {
+// AirGapLicense represents a validated license for air-gapped environments.
+type AirGapLicense struct {
 	ID             string            `json:"id"`
-	Type           LicenseType       `json:"type"`
+	Type           AirGapLicenseType `json:"type"`
 	Organization   string            `json:"organization"`
 	Email          string            `json:"email"`
 	MaxAgents      int               `json:"max_agents"`
@@ -70,12 +58,12 @@ type License struct {
 }
 
 // IsExpired returns true if the license has expired.
-func (l *License) IsExpired() bool {
+func (l *AirGapLicense) IsExpired() bool {
 	return time.Now().After(l.ExpiresAt)
 }
 
 // DaysUntilExpiry returns the number of days until the license expires.
-func (l *License) DaysUntilExpiry() int {
+func (l *AirGapLicense) DaysUntilExpiry() int {
 	duration := time.Until(l.ExpiresAt)
 	if duration < 0 {
 		return 0
@@ -84,7 +72,7 @@ func (l *License) DaysUntilExpiry() int {
 }
 
 // HasFeature checks if the license includes a specific feature.
-func (l *License) HasFeature(f Feature) bool {
+func (l *AirGapLicense) HasFeature(f Feature) bool {
 	for _, feature := range l.Features {
 		if feature == f {
 			return true
@@ -94,12 +82,12 @@ func (l *License) HasFeature(f Feature) bool {
 }
 
 // IsAirGapMode returns true if this is an air-gap license.
-func (l *License) IsAirGapMode() bool {
+func (l *AirGapLicense) IsAirGapMode() bool {
 	return l.AirGapEnabled && l.HasFeature(FeatureAirGapMode)
 }
 
-// LicenseFile represents the signed license file format.
-type LicenseFile struct {
+// AirGapLicenseFile represents the signed license file format.
+type AirGapLicenseFile struct {
 	Version   int    `json:"version"`
 	License   string `json:"license"`   // Base64-encoded JSON
 	Signature string `json:"signature"` // Base64-encoded Ed25519 signature
@@ -107,16 +95,16 @@ type LicenseFile struct {
 
 // AirGapConfig holds configuration for air-gapped operation.
 type AirGapConfig struct {
-	Enabled                bool   `json:"enabled"`
-	LicensePath            string `json:"license_path"`
-	UpdatePackagePath      string `json:"update_package_path"`
-	DocumentationPath      string `json:"documentation_path"`
-	RevocationListPath     string `json:"revocation_list_path"`
-	DisableUpdateChecker   bool   `json:"disable_update_checker"`
-	DisableTelemetry       bool   `json:"disable_telemetry"`
-	DisableExternalLinks   bool   `json:"disable_external_links"`
-	OfflineDocsVersion     string `json:"offline_docs_version"`
-	LastRevocationCheck    time.Time `json:"last_revocation_check"`
+	Enabled              bool      `json:"enabled"`
+	LicensePath          string    `json:"license_path"`
+	UpdatePackagePath    string    `json:"update_package_path"`
+	DocumentationPath    string    `json:"documentation_path"`
+	RevocationListPath   string    `json:"revocation_list_path"`
+	DisableUpdateChecker bool      `json:"disable_update_checker"`
+	DisableTelemetry     bool      `json:"disable_telemetry"`
+	DisableExternalLinks bool      `json:"disable_external_links"`
+	OfflineDocsVersion   string    `json:"offline_docs_version"`
+	LastRevocationCheck  time.Time `json:"last_revocation_check"`
 }
 
 // DefaultAirGapConfig returns the default air-gap configuration.
@@ -133,18 +121,18 @@ func DefaultAirGapConfig() AirGapConfig {
 	}
 }
 
-// Manager handles license validation and management for air-gapped environments.
-type Manager struct {
+// AirGapManager handles license validation and management for air-gapped environments.
+type AirGapManager struct {
 	config        AirGapConfig
 	publicKey     ed25519.PublicKey
-	license       *License
+	license       *AirGapLicense
 	revocationSet map[string]bool
 	mu            sync.RWMutex
 	logger        zerolog.Logger
 }
 
-// NewManager creates a new license manager.
-func NewManager(config AirGapConfig, publicKeyBase64 string, logger zerolog.Logger) (*Manager, error) {
+// NewAirGapManager creates a new air-gap license manager.
+func NewAirGapManager(config AirGapConfig, publicKeyBase64 string, logger zerolog.Logger) (*AirGapManager, error) {
 	pubKeyBytes, err := base64.StdEncoding.DecodeString(publicKeyBase64)
 	if err != nil {
 		return nil, fmt.Errorf("decode public key: %w", err)
@@ -154,16 +142,16 @@ func NewManager(config AirGapConfig, publicKeyBase64 string, logger zerolog.Logg
 		return nil, fmt.Errorf("invalid public key size: expected %d, got %d", ed25519.PublicKeySize, len(pubKeyBytes))
 	}
 
-	return &Manager{
+	return &AirGapManager{
 		config:        config,
 		publicKey:     ed25519.PublicKey(pubKeyBytes),
 		revocationSet: make(map[string]bool),
-		logger:        logger.With().Str("component", "license_manager").Logger(),
+		logger:        logger.With().Str("component", "airgap_license_manager").Logger(),
 	}, nil
 }
 
 // LoadLicense loads and validates the license from the configured path.
-func (m *Manager) LoadLicense(ctx context.Context) error {
+func (m *AirGapManager) LoadLicense(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -176,38 +164,38 @@ func (m *Manager) LoadLicense(ctx context.Context) error {
 	data, err := os.ReadFile(m.config.LicensePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return ErrLicenseNotFound
+			return ErrAirGapLicenseNotFound
 		}
 		return fmt.Errorf("read license file: %w", err)
 	}
 
 	// Parse license file
-	var licFile LicenseFile
+	var licFile AirGapLicenseFile
 	if err := json.Unmarshal(data, &licFile); err != nil {
-		return ErrLicenseMalformed
+		return ErrAirGapLicenseMalformed
 	}
 
 	// Decode license data
 	licenseJSON, err := base64.StdEncoding.DecodeString(licFile.License)
 	if err != nil {
-		return ErrLicenseMalformed
+		return ErrAirGapLicenseMalformed
 	}
 
 	// Decode signature
 	signature, err := base64.StdEncoding.DecodeString(licFile.Signature)
 	if err != nil {
-		return ErrLicenseMalformed
+		return ErrAirGapLicenseMalformed
 	}
 
 	// Verify signature
 	if !ed25519.Verify(m.publicKey, licenseJSON, signature) {
-		return ErrLicenseInvalid
+		return ErrAirGapLicenseInvalid
 	}
 
 	// Parse license
-	var license License
+	var license AirGapLicense
 	if err := json.Unmarshal(licenseJSON, &license); err != nil {
-		return ErrLicenseMalformed
+		return ErrAirGapLicenseMalformed
 	}
 
 	// Compute revocation hash
@@ -216,7 +204,7 @@ func (m *Manager) LoadLicense(ctx context.Context) error {
 
 	// Check revocation
 	if m.revocationSet[license.RevocationHash] {
-		return ErrLicenseRevoked
+		return ErrAirGapLicenseRevoked
 	}
 
 	// Validate expiration
@@ -231,7 +219,7 @@ func (m *Manager) LoadLicense(ctx context.Context) error {
 		if err != nil {
 			m.logger.Warn().Err(err).Msg("failed to get hardware ID")
 		} else if currentHWID != license.HardwareID {
-			return ErrLicenseInvalid
+			return ErrAirGapLicenseInvalid
 		}
 	}
 
@@ -249,40 +237,40 @@ func (m *Manager) LoadLicense(ctx context.Context) error {
 }
 
 // GetLicense returns the current license (may be nil).
-func (m *Manager) GetLicense() *License {
+func (m *AirGapManager) GetLicense() *AirGapLicense {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.license
 }
 
 // GetConfig returns the air-gap configuration.
-func (m *Manager) GetConfig() AirGapConfig {
+func (m *AirGapManager) GetConfig() AirGapConfig {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.config
 }
 
 // IsAirGapMode returns true if running in air-gapped mode.
-func (m *Manager) IsAirGapMode() bool {
+func (m *AirGapManager) IsAirGapMode() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.config.Enabled
 }
 
 // IsValid returns true if there is a valid, non-expired license.
-func (m *Manager) IsValid() bool {
+func (m *AirGapManager) IsValid() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.license != nil && !m.license.IsExpired()
 }
 
 // CheckFeature returns an error if the feature is not licensed.
-func (m *Manager) CheckFeature(f Feature) error {
+func (m *AirGapManager) CheckFeature(f Feature) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	if m.license == nil {
-		return ErrLicenseNotFound
+		return ErrAirGapLicenseNotFound
 	}
 
 	if m.license.IsExpired() {
@@ -290,14 +278,14 @@ func (m *Manager) CheckFeature(f Feature) error {
 	}
 
 	if !m.license.HasFeature(f) {
-		return ErrFeatureNotLicensed
+		return ErrAirGapFeatureNotLicensed
 	}
 
 	return nil
 }
 
 // loadRevocationList loads the revocation list from disk.
-func (m *Manager) loadRevocationList() error {
+func (m *AirGapManager) loadRevocationList() error {
 	data, err := os.ReadFile(m.config.RevocationListPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -325,7 +313,7 @@ func (m *Manager) loadRevocationList() error {
 }
 
 // UpdateRevocationList updates the revocation list from a new file.
-func (m *Manager) UpdateRevocationList(data []byte) error {
+func (m *AirGapManager) UpdateRevocationList(data []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -369,7 +357,7 @@ func (m *Manager) UpdateRevocationList(data []byte) error {
 	// Check if current license is now revoked
 	if m.license != nil && m.revocationSet[m.license.RevocationHash] {
 		m.logger.Warn().Str("license_id", m.license.ID).Msg("current license has been revoked")
-		return ErrLicenseRevoked
+		return ErrAirGapLicenseRevoked
 	}
 
 	m.config.LastRevocationCheck = time.Now()
@@ -379,7 +367,7 @@ func (m *Manager) UpdateRevocationList(data []byte) error {
 }
 
 // ApplyNewLicense validates and applies a new license file.
-func (m *Manager) ApplyNewLicense(data []byte) error {
+func (m *AirGapManager) ApplyNewLicense(data []byte) error {
 	// Write to a temp file first
 	tempPath := m.config.LicensePath + ".new"
 	if err := os.WriteFile(tempPath, data, 0600); err != nil {
@@ -416,7 +404,7 @@ func (m *Manager) ApplyNewLicense(data []byte) error {
 }
 
 // getHardwareID generates a hardware fingerprint for license binding.
-func (m *Manager) getHardwareID() (string, error) {
+func (m *AirGapManager) getHardwareID() (string, error) {
 	// Collect hardware identifiers
 	var identifiers []string
 
@@ -449,17 +437,17 @@ func (m *Manager) getHardwareID() (string, error) {
 }
 
 // GenerateRenewalRequest creates a license renewal request for manual submission.
-func (m *Manager) GenerateRenewalRequest() (*RenewalRequest, error) {
+func (m *AirGapManager) GenerateRenewalRequest() (*AirGapRenewalRequest, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	if m.license == nil {
-		return nil, ErrLicenseNotFound
+		return nil, ErrAirGapLicenseNotFound
 	}
 
 	hwID, _ := m.getHardwareID()
 
-	return &RenewalRequest{
+	return &AirGapRenewalRequest{
 		LicenseID:    m.license.ID,
 		Organization: m.license.Organization,
 		Email:        m.license.Email,
@@ -470,19 +458,19 @@ func (m *Manager) GenerateRenewalRequest() (*RenewalRequest, error) {
 	}, nil
 }
 
-// RenewalRequest represents a license renewal request.
-type RenewalRequest struct {
-	LicenseID    string      `json:"license_id"`
-	Organization string      `json:"organization"`
-	Email        string      `json:"email"`
-	CurrentType  LicenseType `json:"current_type"`
-	HardwareID   string      `json:"hardware_id"`
-	RequestedAt  time.Time   `json:"requested_at"`
-	ExpiresAt    time.Time   `json:"expires_at"`
+// AirGapRenewalRequest represents a license renewal request.
+type AirGapRenewalRequest struct {
+	LicenseID    string            `json:"license_id"`
+	Organization string            `json:"organization"`
+	Email        string            `json:"email"`
+	CurrentType  AirGapLicenseType `json:"current_type"`
+	HardwareID   string            `json:"hardware_id"`
+	RequestedAt  time.Time         `json:"requested_at"`
+	ExpiresAt    time.Time         `json:"expires_at"`
 }
 
 // GetUpdatePackages lists available offline update packages.
-func (m *Manager) GetUpdatePackages() ([]UpdatePackage, error) {
+func (m *AirGapManager) GetUpdatePackages() ([]AirGapUpdatePackage, error) {
 	m.mu.RLock()
 	updatePath := m.config.UpdatePackagePath
 	m.mu.RUnlock()
@@ -495,7 +483,7 @@ func (m *Manager) GetUpdatePackages() ([]UpdatePackage, error) {
 		return nil, fmt.Errorf("read update directory: %w", err)
 	}
 
-	var packages []UpdatePackage
+	var packages []AirGapUpdatePackage
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -511,7 +499,7 @@ func (m *Manager) GetUpdatePackages() ([]UpdatePackage, error) {
 			continue
 		}
 
-		packages = append(packages, UpdatePackage{
+		packages = append(packages, AirGapUpdatePackage{
 			Filename:  name,
 			Path:      filepath.Join(updatePath, name),
 			Size:      info.Size(),
@@ -522,8 +510,8 @@ func (m *Manager) GetUpdatePackages() ([]UpdatePackage, error) {
 	return packages, nil
 }
 
-// UpdatePackage represents an offline update package.
-type UpdatePackage struct {
+// AirGapUpdatePackage represents an offline update package.
+type AirGapUpdatePackage struct {
 	Filename  string    `json:"filename"`
 	Path      string    `json:"path"`
 	Size      int64     `json:"size"`
@@ -539,10 +527,10 @@ func isUpdatePackage(name string) bool {
 		name[:15] == "keldris-update-"
 }
 
-// LicenseStatus represents the current license status for API responses.
-type LicenseStatus struct {
+// AirGapLicenseStatus represents the current license status for API responses.
+type AirGapLicenseStatus struct {
 	Valid           bool              `json:"valid"`
-	Type            LicenseType       `json:"type,omitempty"`
+	Type            AirGapLicenseType `json:"type,omitempty"`
 	Organization    string            `json:"organization,omitempty"`
 	ExpiresAt       *time.Time        `json:"expires_at,omitempty"`
 	DaysUntilExpiry int               `json:"days_until_expiry,omitempty"`
@@ -554,11 +542,11 @@ type LicenseStatus struct {
 }
 
 // GetStatus returns the current license status.
-func (m *Manager) GetStatus() LicenseStatus {
+func (m *AirGapManager) GetStatus() AirGapLicenseStatus {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	status := LicenseStatus{
+	status := AirGapLicenseStatus{
 		AirGapMode: m.config.Enabled,
 	}
 

@@ -16,12 +16,12 @@ import (
 
 // AirGapHandler handles air-gapped operation and license management endpoints.
 type AirGapHandler struct {
-	licenseManager *license.Manager
+	licenseManager *license.AirGapManager
 	logger         zerolog.Logger
 }
 
 // NewAirGapHandler creates a new AirGapHandler.
-func NewAirGapHandler(licenseManager *license.Manager, logger zerolog.Logger) *AirGapHandler {
+func NewAirGapHandler(licenseManager *license.AirGapManager, logger zerolog.Logger) *AirGapHandler {
 	return &AirGapHandler{
 		licenseManager: licenseManager,
 		logger:         logger.With().Str("component", "airgap_handler").Logger(),
