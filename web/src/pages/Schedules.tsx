@@ -1080,9 +1080,10 @@ function formatBandwidth(kbps?: number): string {
 	return `${kbps} KB/s`;
 }
 
-function formatBackupWindow(window?: { start?: string; end?: string }):
-	| string
-	| null {
+function formatBackupWindow(window?: {
+	start?: string;
+	end?: string;
+}): string | null {
 	if (!window || (!window.start && !window.end)) return null;
 	const start = window.start || '00:00';
 	const end = window.end || '23:59';
