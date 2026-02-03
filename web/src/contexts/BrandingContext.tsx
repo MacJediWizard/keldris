@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
+import {
+	type ReactNode,
+	createContext,
+	useContext,
+	useEffect,
+	useMemo,
+} from 'react';
 import { useBrandingSettings } from '../hooks/useBranding';
 import type { BrandingSettings } from '../lib/types';
 
@@ -49,9 +55,9 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 	const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
 	return result
 		? {
-				r: parseInt(result[1], 16),
-				g: parseInt(result[2], 16),
-				b: parseInt(result[3], 16),
+				r: Number.parseInt(result[1], 16),
+				g: Number.parseInt(result[2], 16),
+				b: Number.parseInt(result[3], 16),
 			}
 		: null;
 }
@@ -84,13 +90,13 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 		if (effectiveBranding.primary_color) {
 			document.documentElement.style.setProperty(
 				'--brand-primary',
-				effectiveBranding.primary_color
+				effectiveBranding.primary_color,
 			);
 			const rgb = hexToRgb(effectiveBranding.primary_color);
 			if (rgb) {
 				document.documentElement.style.setProperty(
 					'--brand-primary-rgb',
-					`${rgb.r}, ${rgb.g}, ${rgb.b}`
+					`${rgb.r}, ${rgb.g}, ${rgb.b}`,
 				);
 			}
 		}
@@ -99,13 +105,13 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 		if (effectiveBranding.secondary_color) {
 			document.documentElement.style.setProperty(
 				'--brand-secondary',
-				effectiveBranding.secondary_color
+				effectiveBranding.secondary_color,
 			);
 			const rgb = hexToRgb(effectiveBranding.secondary_color);
 			if (rgb) {
 				document.documentElement.style.setProperty(
 					'--brand-secondary-rgb',
-					`${rgb.r}, ${rgb.g}, ${rgb.b}`
+					`${rgb.r}, ${rgb.g}, ${rgb.b}`,
 				);
 			}
 		}
@@ -114,13 +120,13 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 		if (effectiveBranding.accent_color) {
 			document.documentElement.style.setProperty(
 				'--brand-accent',
-				effectiveBranding.accent_color
+				effectiveBranding.accent_color,
 			);
 			const rgb = hexToRgb(effectiveBranding.accent_color);
 			if (rgb) {
 				document.documentElement.style.setProperty(
 					'--brand-accent-rgb',
-					`${rgb.r}, ${rgb.g}, ${rgb.b}`
+					`${rgb.r}, ${rgb.g}, ${rgb.b}`,
 				);
 			}
 		}
@@ -179,7 +185,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 			logoUrl: effectiveBranding.logo_url || '',
 			logoDarkUrl: effectiveBranding.logo_dark_url || '',
 		}),
-		[effectiveBranding, isLoading]
+		[effectiveBranding, isLoading],
 	);
 
 	return (
