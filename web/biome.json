@@ -24,13 +24,7 @@
 	"javascript": {
 		"formatter": { "quoteStyle": "single", "semicolons": "always" }
 	},
-	"assists": {
-		"actions": {
-			"source": {
-				"organizeImports": {
-					"level": "on"
-				}
-			}
-		}
+	"organizeImports": {
+		"enabled": true
 	}
 }
