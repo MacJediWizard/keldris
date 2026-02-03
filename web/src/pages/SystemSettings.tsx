@@ -6,16 +6,16 @@ import {
 	useTestOIDC,
 	useTestSMTP,
 	useUpdateOIDCSettings,
-	useUpdateSecuritySettings,
 	useUpdateSMTPSettings,
+	useUpdateSecuritySettings,
 	useUpdateStorageDefaultSettings,
 } from '../hooks/useSystemSettings';
 import type {
 	OIDCSettings,
 	OrgRole,
+	SMTPSettings,
 	SecuritySettings,
 	SettingsAuditLog,
-	SMTPSettings,
 	StorageDefaultSettings,
 } from '../lib/types';
 
