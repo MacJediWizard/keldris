@@ -60,6 +60,7 @@ import type {
 	BackupSuccessRatesResponse,
 	BackupsResponse,
 	BlockedRequestsResponse,
+	BrandingSettings,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
 	BulkCloneResponse,
@@ -324,6 +325,7 @@ import type {
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	PublicBrandingSettings,
 	RateLimitConfig,
 	RateLimitConfigsResponse,
 	RateLimitDashboardStats,
@@ -437,6 +439,7 @@ import type {
 	UpdateAnnouncementRequest,
 	UpdateBackupHookTemplateRequest,
 	UpdateBackupScriptRequest,
+	UpdateBrandingSettingsRequest,
 	UpdateConcurrencyRequest,
 	UpdateContainerBackupHookRequest,
 	UpdateCostAlertRequest,
@@ -3926,6 +3929,48 @@ export const trialApi = {
 	// Get extension history
 	getExtensions: async (): Promise<TrialExtensionsResponse> =>
 		fetchApi<TrialExtensionsResponse>('/trial/extensions'),
+};
+
+// Branding Settings API (Enterprise)
+export const brandingApi = {
+	// Get branding settings
+	get: async (): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding'),
+
+	// Update branding settings
+	update: async (
+		data: UpdateBrandingSettingsRequest,
+	): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// Get public branding settings (no auth required, for login page)
+	getPublic: async (orgSlug: string): Promise<PublicBrandingSettings> =>
+		fetch(`/api/public/branding/${orgSlug}`).then((res) => {
+			if (!res.ok) {
+				// Return default branding on error
+				return {
+					enabled: false,
+					product_name: 'Keldris',
+					logo_url: '',
+					logo_dark_url: '',
+					favicon_url: '',
+					primary_color: '#4f46e5',
+					secondary_color: '#64748b',
+					accent_color: '#06b6d4',
+					support_url: '',
+					privacy_url: '',
+					terms_url: '',
+					login_title: '',
+					login_subtitle: '',
+					login_bg_url: '',
+					hide_powered_by: false,
+				};
+			}
+			return res.json();
+		}),
 };
 
 // Docker Container Logs API
