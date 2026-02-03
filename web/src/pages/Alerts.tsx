@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { SaveFilterButton } from '../components/features/SaveFilterButton';
 import { SavedFiltersDropdown } from '../components/features/SavedFiltersDropdown';
+import { SaveFilterButton } from '../components/features/SaveFilterButton';
 import {
 	useAcknowledgeAlert,
 	useAlerts,
@@ -194,7 +194,7 @@ export function Alerts() {
 		if (defaultFilter) {
 			handleApplyFilter(defaultFilter.filters);
 		}
-	}, [savedFilters]);
+	}, [savedFilters, handleApplyFilter]);
 
 	const handleApplyFilter = (filters: Record<string, unknown>) => {
 		if (filters.status !== undefined) {
