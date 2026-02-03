@@ -1105,6 +1105,69 @@ export interface OrgFeatureFlags {
 	priority_support?: boolean;
 }
 
+// Branding Settings (Enterprise)
+export interface BrandingSettings {
+	enabled: boolean;
+	product_name: string;
+	company_name: string;
+	logo_url: string;
+	logo_dark_url: string;
+	favicon_url: string;
+	primary_color: string;
+	secondary_color: string;
+	accent_color: string;
+	support_url: string;
+	support_email: string;
+	privacy_url: string;
+	terms_url: string;
+	footer_text: string;
+	login_title: string;
+	login_subtitle: string;
+	login_bg_url: string;
+	hide_powered_by: boolean;
+	custom_css: string;
+}
+
+export interface PublicBrandingSettings {
+	enabled: boolean;
+	product_name: string;
+	logo_url: string;
+	logo_dark_url: string;
+	favicon_url: string;
+	primary_color: string;
+	secondary_color: string;
+	accent_color: string;
+	support_url: string;
+	privacy_url: string;
+	terms_url: string;
+	login_title: string;
+	login_subtitle: string;
+	login_bg_url: string;
+	hide_powered_by: boolean;
+}
+
+export interface UpdateBrandingSettingsRequest {
+	enabled?: boolean;
+	product_name?: string;
+	company_name?: string;
+	logo_url?: string;
+	logo_dark_url?: string;
+	favicon_url?: string;
+	primary_color?: string;
+	secondary_color?: string;
+	accent_color?: string;
+	support_url?: string;
+	support_email?: string;
+	privacy_url?: string;
+	terms_url?: string;
+	footer_text?: string;
+	login_title?: string;
+	login_subtitle?: string;
+	login_bg_url?: string;
+	hide_powered_by?: boolean;
+	custom_css?: string;
+}
+
 export interface AdminOrgSettings {
 	name?: string;
 	slug?: string;
