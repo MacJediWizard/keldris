@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { UpgradePrompt } from '../components/features/UpgradePrompt';
 import { useMe } from '../hooks/useAuth';
 import { useDeleteLegalHold, useLegalHolds } from '../hooks/useLegalHolds';
+import { usePlanLimits } from '../hooks/usePlanLimits';
 import { formatDateTime } from '../lib/utils';
 
 function LoadingRow() {
@@ -31,9 +33,33 @@ export function LegalHolds() {
 	const { data: holds, isLoading, isError, refetch } = useLegalHolds();
 	const deleteHold = useDeleteLegalHold();
 	const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+	const { hasFeature } = usePlanLimits();
+	const hasLegalHolds = hasFeature('legal_holds');
 
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
+
+	// Feature gate check
+	if (!hasLegalHolds) {
+		return (
+			<div className="space-y-6">
+				<div>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Legal Holds
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						Preserve snapshots for litigation or compliance purposes
+					</p>
+				</div>
+				<UpgradePrompt
+					feature="legal_holds"
+					variant="card"
+					source="legal-holds-page"
+					showBenefits={true}
+				/>
+			</div>
+		);
+	}
 
 	// Non-admins should not see this page
 	if (!isAdmin) {

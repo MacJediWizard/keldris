@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useBranding } from '../contexts/BrandingContext';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
 import {
@@ -22,9 +23,11 @@ import { AirGapIndicator } from './features/AirGapIndicator';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
+import { LicenseBanner } from './features/LicenseBanner';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { RecentItemsDropdown } from './features/RecentItems';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
+import { TrialBanner } from './features/TrialBanner';
 import { WhatsNewModal } from './features/WhatsNewModal';
 import { Breadcrumbs } from './ui/Breadcrumbs';
 
@@ -350,13 +353,20 @@ function Sidebar() {
 	const { data: user } = useMe();
 	const { t } = useLocale();
 	const { hasNewVersion, latestVersion } = useNewVersionAvailable();
+	const { productName, logoUrl, branding } = useBranding();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
 	return (
 		<aside className="w-64 bg-gray-900 text-white flex flex-col">
 			<div className="p-6">
-				<h1 className="text-2xl font-bold">{t('common.appName')}</h1>
+				{logoUrl && branding?.enabled ? (
+					<img src={logoUrl} alt={productName} className="h-8 mb-2" />
+				) : (
+					<h1 className="text-2xl font-bold">
+						{branding?.enabled ? productName : t('common.appName')}
+					</h1>
+				)}
 				<p className="text-gray-400 text-sm">{t('common.tagline')}</p>
 			</div>
 			<nav className="flex-1 px-4">
@@ -462,6 +472,32 @@ function Sidebar() {
 							</li>
 							<li>
 								<Link
+									to="/organization/license"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/license'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+										/>
+									</svg>
+									<span>License</span>
+								</Link>
+							</li>
+							<li>
+								<Link
 									to="/organization/sso"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/organization/sso'
@@ -562,6 +598,32 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Password Policy</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/organization/branding"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/branding'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+										/>
+									</svg>
+									<span>Branding</span>
 								</Link>
 							</li>
 							<li>
@@ -1095,6 +1157,29 @@ function Header() {
 								</svg>
 								Active Sessions
 							</Link>
+							<a
+								href="/portal"
+								target="_blank"
+								rel="noopener noreferrer"
+								onClick={() => setShowDropdown(false)}
+								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+							>
+								<svg
+									aria-hidden="true"
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+									/>
+								</svg>
+								Manage License
+							</a>
 							<button
 								type="button"
 								onClick={() => logout.mutate()}
@@ -1171,7 +1256,9 @@ export function Layout() {
 			<div className="min-h-screen bg-gray-50 flex flex-col">
 				<MaintenanceCountdown />
 				<AnnouncementBanner />
+				<LicenseBanner />
 				<PasswordExpirationBanner />
+				<TrialBanner />
 				<div className="flex flex-1">
 					<Sidebar />
 					<div className="flex-1 flex flex-col">
