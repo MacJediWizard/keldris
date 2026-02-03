@@ -12,6 +12,8 @@ import { Announcements } from './pages/Announcements';
 import { AuditLogs } from './pages/AuditLogs';
 import { BackupHookTemplates } from './pages/BackupHookTemplates';
 import { Backups } from './pages/Backups';
+import { BrandingSettings } from './pages/BrandingSettings';
+import { BrandingProvider } from './contexts/BrandingContext';
 import { Changelog } from './pages/Changelog';
 import { Classifications } from './pages/Classifications';
 import { CostEstimation } from './pages/CostEstimation';
@@ -74,8 +76,9 @@ function App() {
 	return (
 		<ErrorBoundary>
 			<QueryClientProvider client={queryClient}>
-				<BrowserRouter>
-					<Routes>
+				<BrandingProvider>
+					<BrowserRouter>
+						<Routes>
 						<Route path="/" element={<Layout />}>
 							<Route index element={<Dashboard />} />
 							<Route path="agents" element={<Agents />} />
@@ -151,6 +154,10 @@ function App() {
 								element={<PasswordPolicies />}
 							/>
 							<Route path="organization/license" element={<License />} />
+							<Route
+								path="organization/branding"
+								element={<BrandingSettings />}
+							/>
 							<Route path="organization/new" element={<NewOrganization />} />
 							<Route path="admin/logs" element={<AdminLogs />} />
 							<Route path="admin/docker-logs" element={<DockerLogs />} />
@@ -165,8 +172,9 @@ function App() {
 							<Route path="changelog" element={<Changelog />} />
 							<Route path="*" element={<NotFound />} />
 						</Route>
-					</Routes>
-				</BrowserRouter>
+						</Routes>
+					</BrowserRouter>
+				</BrandingProvider>
 			</QueryClientProvider>
 		</ErrorBoundary>
 	);

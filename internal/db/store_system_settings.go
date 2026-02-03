@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/branding"
 	"github.com/MacJediWizard/keldris/internal/settings"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -373,4 +374,114 @@ func (db *DB) EnsureSystemSettingsExist(ctx context.Context, orgID uuid.UUID) er
 	}
 
 	return nil
+}
+
+// Branding Settings methods
+
+// GetBrandingSettings returns branding settings for an organization.
+func (db *DB) GetBrandingSettings(ctx context.Context, orgID uuid.UUID) (*branding.BrandingSettings, error) {
+	setting, err := db.GetOrgSetting(ctx, orgID, "branding")
+	if err != nil {
+		// Return defaults if not found
+		defaults := branding.DefaultBrandingSettings()
+		return &defaults, nil
+	}
+
+	var b branding.BrandingSettings
+	if err := json.Unmarshal(setting.Value, &b); err != nil {
+		return nil, fmt.Errorf("unmarshal branding settings: %w", err)
+	}
+
+	return &b, nil
+}
+
+// UpdateBrandingSettings updates branding settings for an organization.
+func (db *DB) UpdateBrandingSettings(ctx context.Context, orgID uuid.UUID, b *branding.BrandingSettings) error {
+	value, err := json.Marshal(b)
+	if err != nil {
+		return fmt.Errorf("marshal branding settings: %w", err)
+	}
+
+	s := settings.NewSystemSetting(orgID, "branding", "White-label branding configuration (Enterprise)")
+	s.Value = value
+
+	return db.UpsertSystemSetting(ctx, s)
+}
+
+// GetPublicBrandingSettings returns public branding settings for an organization by slug.
+// This can be called without authentication for login page branding.
+func (db *DB) GetPublicBrandingSettings(ctx context.Context, orgSlug string) (*branding.PublicBrandingSettings, error) {
+	// First get the org ID from slug
+	var orgID uuid.UUID
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id FROM organizations WHERE slug = $1
+	`, orgSlug).Scan(&orgID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			// Return default branding for unknown orgs
+			defaults := branding.DefaultBrandingSettings()
+			public := defaults.ToPublic()
+			return &public, nil
+		}
+		return nil, fmt.Errorf("get org by slug: %w", err)
+	}
+
+	// Check if org has custom_branding feature flag enabled
+	var featureFlags json.RawMessage
+	err = db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(feature_flags, '{}')::jsonb
+		FROM organizations
+		WHERE id = $1
+	`, orgID).Scan(&featureFlags)
+	if err != nil {
+		return nil, fmt.Errorf("get feature flags: %w", err)
+	}
+
+	// Parse feature flags
+	var flags map[string]bool
+	if err := json.Unmarshal(featureFlags, &flags); err != nil {
+		flags = make(map[string]bool)
+	}
+
+	// If custom_branding is not enabled, return defaults
+	if !flags["custom_branding"] {
+		defaults := branding.DefaultBrandingSettings()
+		public := defaults.ToPublic()
+		return &public, nil
+	}
+
+	// Get branding settings
+	b, err := db.GetBrandingSettings(ctx, orgID)
+	if err != nil {
+		defaults := branding.DefaultBrandingSettings()
+		public := defaults.ToPublic()
+		return &public, nil
+	}
+
+	public := b.ToPublic()
+	return &public, nil
+}
+
+// HasFeatureFlag checks if an organization has a specific feature flag enabled.
+func (db *DB) HasFeatureFlag(ctx context.Context, orgID uuid.UUID, flag string) (bool, error) {
+	var featureFlags json.RawMessage
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(feature_flags, '{}')::jsonb
+		FROM organizations
+		WHERE id = $1
+	`, orgID).Scan(&featureFlags)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return false, nil
+		}
+		return false, fmt.Errorf("get feature flags: %w", err)
+	}
+
+	// Parse feature flags
+	var flags map[string]bool
+	if err := json.Unmarshal(featureFlags, &flags); err != nil {
+		return false, nil
+	}
+
+	return flags[flag], nil
 }
