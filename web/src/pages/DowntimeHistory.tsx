@@ -86,13 +86,7 @@ function formatDuration(seconds: number) {
 	return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
-function UptimeBadge({
-	percent,
-	label,
-}: {
-	percent: number;
-	label: string;
-}) {
+function UptimeBadge({ percent, label }: { percent: number; label: string }) {
 	let color = 'bg-green-500';
 	if (percent < 95) {
 		color = 'bg-red-500';
