@@ -25,6 +25,7 @@ import { FileHistory } from './pages/FileHistory';
 import { FileSearch } from './pages/FileSearch';
 import { IPAllowlistSettings } from './pages/IPAllowlistSettings';
 import { LegalHolds } from './pages/LegalHolds';
+import { LicenseManagement } from './pages/admin/LicenseManagement';
 import { LifecyclePolicies } from './pages/LifecyclePolicies';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
@@ -158,6 +159,7 @@ function App() {
 								element={<RateLimitDashboard />}
 							/>
 							<Route path="admin/rate-limit-configs" element={<RateLimits />} />
+							<Route path="admin/license" element={<LicenseManagement />} />
 							<Route path="account/sessions" element={<UserSessions />} />
 							<Route path="onboarding" element={<Onboarding />} />
 							<Route path="changelog" element={<Changelog />} />
