@@ -339,6 +339,10 @@ func NewRouter(
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
 
+	// Job queue routes
+	jobQueueHandler := handlers.NewJobQueueHandler(database, rbac, logger)
+	jobQueueHandler.RegisterRoutes(apiV1)
+
 	// System settings routes (admin only)
 	systemSettingsHandler := handlers.NewSystemSettingsHandler(database, logger)
 	systemSettingsHandler.RegisterRoutes(apiV1)
