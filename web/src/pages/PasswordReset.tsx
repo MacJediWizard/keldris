@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 
 interface ValidateResponse {
 	valid: boolean;
@@ -80,7 +80,9 @@ export function PasswordReset() {
 			} else if (response.status === 429) {
 				setRequestError('Too many requests. Please try again later.');
 			} else {
-				setRequestError((data as ErrorResponse).error || 'Failed to request password reset');
+				setRequestError(
+					(data as ErrorResponse).error || 'Failed to request password reset',
+				);
 			}
 		} catch {
 			setRequestError('Failed to send request. Please try again.');
@@ -117,7 +119,9 @@ export function PasswordReset() {
 			if (response.ok) {
 				setResetSubmitted(true);
 			} else {
-				setResetError((data as ErrorResponse).error || 'Failed to reset password');
+				setResetError(
+					(data as ErrorResponse).error || 'Failed to reset password',
+				);
 			}
 		} catch {
 			setResetError('Failed to reset password. Please try again.');
@@ -132,7 +136,7 @@ export function PasswordReset() {
 			<div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
 				<div className="sm:mx-auto sm:w-full sm:max-w-md">
 					<div className="text-center">
-						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
 						<p className="mt-4 text-gray-600">Validating reset link...</p>
 					</div>
 				</div>
@@ -157,13 +161,23 @@ export function PasswordReset() {
 							<div className="rounded-md bg-green-50 p-4 mb-6">
 								<div className="flex">
 									<div className="flex-shrink-0">
-										<svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-											<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+										<svg
+											className="h-5 w-5 text-green-400"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											aria-hidden="true"
+										>
+											<path
+												fillRule="evenodd"
+												d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+												clipRule="evenodd"
+											/>
 										</svg>
 									</div>
 									<div className="ml-3">
 										<p className="text-sm text-green-700">
-											Your password has been reset successfully. You can now log in with your new password.
+											Your password has been reset successfully. You can now log
+											in with your new password.
 										</p>
 									</div>
 								</div>
@@ -195,8 +209,17 @@ export function PasswordReset() {
 							<div className="rounded-md bg-red-50 p-4 mb-6">
 								<div className="flex">
 									<div className="flex-shrink-0">
-										<svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-											<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+										<svg
+											className="h-5 w-5 text-red-400"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											aria-hidden="true"
+										>
+											<path
+												fillRule="evenodd"
+												d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+												clipRule="evenodd"
+											/>
 										</svg>
 									</div>
 									<div className="ml-3">
@@ -237,8 +260,17 @@ export function PasswordReset() {
 								<div className="rounded-md bg-red-50 p-4">
 									<div className="flex">
 										<div className="flex-shrink-0">
-											<svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-												<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+											<svg
+												className="h-5 w-5 text-red-400"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												aria-hidden="true"
+											>
+												<path
+													fillRule="evenodd"
+													d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+													clipRule="evenodd"
+												/>
 											</svg>
 										</div>
 										<div className="ml-3">
@@ -249,7 +281,10 @@ export function PasswordReset() {
 							)}
 
 							<div>
-								<label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+								<label
+									htmlFor="newPassword"
+									className="block text-sm font-medium text-gray-700"
+								>
 									New Password
 								</label>
 								<div className="mt-1">
@@ -268,7 +303,10 @@ export function PasswordReset() {
 							</div>
 
 							<div>
-								<label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+								<label
+									htmlFor="confirmPassword"
+									className="block text-sm font-medium text-gray-700"
+								>
 									Confirm Password
 								</label>
 								<div className="mt-1">
@@ -317,14 +355,20 @@ export function PasswordReset() {
 						<div className="rounded-md bg-blue-50 p-4 mb-6">
 							<div className="flex">
 								<div className="flex-shrink-0">
-									<svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+									<svg
+										className="h-5 w-5 text-blue-400"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										aria-hidden="true"
+									>
 										<path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
 										<path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
 									</svg>
 								</div>
 								<div className="ml-3">
 									<p className="text-sm text-blue-700">
-										If an account exists with that email, you will receive a password reset link shortly. The link will expire in 1 hour.
+										If an account exists with that email, you will receive a
+										password reset link shortly. The link will expire in 1 hour.
 									</p>
 								</div>
 							</div>
@@ -349,7 +393,8 @@ export function PasswordReset() {
 					Reset Your Password
 				</h2>
 				<p className="mt-2 text-center text-sm text-gray-600">
-					Enter your email address and we'll send you a link to reset your password.
+					Enter your email address and we'll send you a link to reset your
+					password.
 				</p>
 			</div>
 
@@ -360,8 +405,17 @@ export function PasswordReset() {
 							<div className="rounded-md bg-red-50 p-4">
 								<div className="flex">
 									<div className="flex-shrink-0">
-										<svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-											<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+										<svg
+											className="h-5 w-5 text-red-400"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											aria-hidden="true"
+										>
+											<path
+												fillRule="evenodd"
+												d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+												clipRule="evenodd"
+											/>
 										</svg>
 									</div>
 									<div className="ml-3">
@@ -372,7 +426,10 @@ export function PasswordReset() {
 						)}
 
 						<div>
-							<label htmlFor="email" className="block text-sm font-medium text-gray-700">
+							<label
+								htmlFor="email"
+								className="block text-sm font-medium text-gray-700"
+							>
 								Email address
 							</label>
 							<div className="mt-1">
