@@ -41,6 +41,7 @@ import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
 import { PasswordPolicies } from './pages/PasswordPolicies';
+import { PasswordReset } from './pages/PasswordReset';
 import { Policies } from './pages/Policies';
 import { RateLimitDashboard } from './pages/RateLimitDashboard';
 import { RateLimits } from './pages/RateLimits';
@@ -83,8 +84,9 @@ function App() {
 				<BrandingProvider>
 					<BrowserRouter>
 						<Routes>
-							{/* Setup route - outside Layout, no auth required */}
+							{/* Public routes - outside Layout, no auth required */}
 							<Route path="/setup" element={<Setup />} />
+							<Route path="/reset-password" element={<PasswordReset />} />
 							<Route path="/" element={<Layout />}>
 								<Route index element={<Dashboard />} />
 								<Route path="agents" element={<Agents />} />
