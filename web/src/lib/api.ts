@@ -1,5 +1,7 @@
 import type {
 	AcknowledgeBreachRequest,
+	ActivateLicenseRequest,
+	ActivateLicenseResponse,
 	ActiveMaintenanceResponse,
 	ActivityCategoriesResponse,
 	ActivityEvent,
@@ -113,6 +115,7 @@ import type {
 	CreateDowntimeEventRequest,
 	CreateExcludePatternRequest,
 	CreateFavoriteRequest,
+	CreateFirstOrgRequest,
 	CreateIPAllowlistRequest,
 	CreateIPBanRequest,
 	CreateImmutabilityLockRequest,
@@ -141,6 +144,8 @@ import type {
 	CreateScheduleRequest,
 	CreateSnapshotCommentRequest,
 	CreateStoragePricingRequest,
+	CreateSuperuserRequest,
+	CreateSuperuserResponse,
 	CreateTagRequest,
 	CreateTemplateRequest,
 	CreateVerificationScheduleRequest,
@@ -156,6 +161,7 @@ import type {
 	DailyBackupStatsResponse,
 	DashboardStats,
 	DataTypesResponse,
+	DatabaseTestResponse,
 	DefaultPricingResponse,
 	DiscoverDockerStacksRequest,
 	DiscoverDockerStacksResponse,
@@ -352,6 +358,7 @@ import type {
 	RepositoryStatsListItem,
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
+	RerunStatusResponse,
 	ResetPasswordRequest,
 	ResolveDowntimeEventRequest,
 	Restore,
@@ -392,10 +399,14 @@ import type {
 	ServerLogComponentsResponse,
 	ServerLogFilter,
 	ServerLogsResponse,
+	ServerSetupStatus,
 	SetDebugModeRequest,
 	SetDebugModeResponse,
 	SetScheduleClassificationRequest,
 	SettingsAuditLogsResponse,
+	SetupCompleteResponse,
+	SetupStartTrialRequest,
+	SetupStartTrialResponse,
 	Snapshot,
 	SnapshotComment,
 	SnapshotCommentsResponse,
@@ -507,17 +518,6 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
-	ServerSetupStatus,
-	CreateSuperuserRequest,
-	CreateSuperuserResponse,
-	DatabaseTestResponse,
-	ActivateLicenseRequest,
-	ActivateLicenseResponse,
-	SetupStartTrialRequest,
-	SetupStartTrialResponse,
-	CreateFirstOrgRequest,
-	SetupCompleteResponse,
-	RerunStatusResponse,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -4589,7 +4589,9 @@ export const setupApi = {
 			body: JSON.stringify(data),
 		}),
 
-	startTrial: async (data: SetupStartTrialRequest): Promise<SetupStartTrialResponse> =>
+	startTrial: async (
+		data: SetupStartTrialRequest,
+	): Promise<SetupStartTrialResponse> =>
 		fetchApi<SetupStartTrialResponse>('/setup/license/trial', {
 			method: 'POST',
 			body: JSON.stringify(data),

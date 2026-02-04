@@ -79,7 +79,7 @@ function App() {
 	return (
 		<ErrorBoundary>
 			<QueryClientProvider client={queryClient}>
-<BrandingProvider>
+				<BrandingProvider>
 					<BrowserRouter>
 						<Routes>
 							{/* Setup route - outside Layout, no auth required */}

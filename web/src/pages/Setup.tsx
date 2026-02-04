@@ -17,12 +17,24 @@ import {
 import type { OIDCSettings, SMTPSettings } from '../lib/types';
 
 const SETUP_STEPS = [
-	{ id: 'database', label: 'Database', description: 'Verify database connection' },
+	{
+		id: 'database',
+		label: 'Database',
+		description: 'Verify database connection',
+	},
 	{ id: 'superuser', label: 'Superuser', description: 'Create admin account' },
 	{ id: 'smtp', label: 'Email (Optional)', description: 'Configure SMTP' },
 	{ id: 'oidc', label: 'SSO (Optional)', description: 'Configure OIDC' },
-	{ id: 'license', label: 'License', description: 'Enter license or start trial' },
-	{ id: 'organization', label: 'Organization', description: 'Create first organization' },
+	{
+		id: 'license',
+		label: 'License',
+		description: 'Enter license or start trial',
+	},
+	{
+		id: 'organization',
+		label: 'Organization',
+		description: 'Create first organization',
+	},
 ];
 
 interface StepProps {
@@ -46,6 +58,7 @@ function DatabaseStep({ onComplete, isLoading }: StepProps) {
 		});
 	};
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run only on mount
 	useEffect(() => {
 		// Auto-test on mount
 		handleTest();
@@ -70,13 +83,24 @@ function DatabaseStep({ onComplete, isLoading }: StepProps) {
 			{testDatabase.isError && (
 				<div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-6">
 					<div className="flex items-center gap-2 text-red-800">
-						<svg aria-hidden="true" className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-							<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="currentColor"
+							viewBox="0 0 20 20"
+						>
+							<path
+								fillRule="evenodd"
+								d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+								clipRule="evenodd"
+							/>
 						</svg>
 						<span className="font-medium">Connection failed</span>
 					</div>
 					<p className="mt-1 text-sm text-red-700">
-						{testDatabase.error instanceof Error ? testDatabase.error.message : 'Unknown error'}
+						{testDatabase.error instanceof Error
+							? testDatabase.error.message
+							: 'Unknown error'}
 					</p>
 				</div>
 			)}
@@ -84,8 +108,17 @@ function DatabaseStep({ onComplete, isLoading }: StepProps) {
 			{tested && testDatabase.data?.ok && (
 				<div className="p-4 bg-green-50 border border-green-200 rounded-lg mb-6">
 					<div className="flex items-center gap-2 text-green-800">
-						<svg aria-hidden="true" className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-							<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="currentColor"
+							viewBox="0 0 20 20"
+						>
+							<path
+								fillRule="evenodd"
+								d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+								clipRule="evenodd"
+							/>
 						</svg>
 						<span className="font-medium">Database connection successful</span>
 					</div>
@@ -99,7 +132,11 @@ function DatabaseStep({ onComplete, isLoading }: StepProps) {
 					disabled={testDatabase.isPending || isLoading}
 					className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 				>
-					{testDatabase.isPending ? 'Testing...' : tested ? 'Continue' : 'Test Connection'}
+					{testDatabase.isPending
+						? 'Testing...'
+						: tested
+							? 'Continue'
+							: 'Test Connection'}
 				</button>
 			</div>
 		</div>
@@ -132,7 +169,10 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 			{ email, password, name },
 			{
 				onSuccess: () => onComplete(),
-				onError: (err) => setError(err instanceof Error ? err.message : 'Failed to create superuser'),
+				onError: (err) =>
+					setError(
+						err instanceof Error ? err.message : 'Failed to create superuser',
+					),
 			},
 		);
 	};
@@ -143,12 +183,16 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 				Create Superuser Account
 			</h2>
 			<p className="text-gray-600 mb-6">
-				Create the administrator account that will have full access to manage the server.
+				Create the administrator account that will have full access to manage
+				the server.
 			</p>
 
 			<form onSubmit={handleSubmit} className="space-y-4">
 				<div>
-					<label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="name"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Name <span className="text-red-500">*</span>
 					</label>
 					<input
@@ -163,7 +207,10 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 				</div>
 
 				<div>
-					<label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="email"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Email <span className="text-red-500">*</span>
 					</label>
 					<input
@@ -178,7 +225,10 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 				</div>
 
 				<div>
-					<label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="password"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Password <span className="text-red-500">*</span>
 					</label>
 					<input
@@ -194,7 +244,10 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 				</div>
 
 				<div>
-					<label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="confirmPassword"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Confirm Password <span className="text-red-500">*</span>
 					</label>
 					<input
@@ -209,7 +262,10 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 
 				{(error || createSuperuser.isError) && (
 					<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-						{error || (createSuperuser.error instanceof Error ? createSuperuser.error.message : 'An error occurred')}
+						{error ||
+							(createSuperuser.error instanceof Error
+								? createSuperuser.error.message
+								: 'An error occurred')}
 					</div>
 				)}
 
@@ -262,34 +318,48 @@ function SMTPStepComponent({ onComplete, onSkip, isLoading }: StepProps) {
 				Email Configuration (Optional)
 			</h2>
 			<p className="text-gray-600 mb-6">
-				Configure SMTP settings to enable email notifications. You can skip this and configure it later.
+				Configure SMTP settings to enable email notifications. You can skip this
+				and configure it later.
 			</p>
 
 			<form onSubmit={handleSubmit} className="space-y-4">
 				<div className="grid grid-cols-2 gap-4">
 					<div>
-						<label htmlFor="smtp-host" className="block text-sm font-medium text-gray-700 mb-1">
+						<label
+							htmlFor="smtp-host"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
 							SMTP Host
 						</label>
 						<input
 							id="smtp-host"
 							type="text"
 							value={settings.host}
-							onChange={(e) => setSettings({ ...settings, host: e.target.value })}
+							onChange={(e) =>
+								setSettings({ ...settings, host: e.target.value })
+							}
 							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							placeholder="smtp.example.com"
 						/>
 					</div>
 
 					<div>
-						<label htmlFor="smtp-port" className="block text-sm font-medium text-gray-700 mb-1">
+						<label
+							htmlFor="smtp-port"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
 							Port
 						</label>
 						<input
 							id="smtp-port"
 							type="number"
 							value={settings.port}
-							onChange={(e) => setSettings({ ...settings, port: parseInt(e.target.value, 10) })}
+							onChange={(e) =>
+								setSettings({
+									...settings,
+									port: Number.parseInt(e.target.value, 10),
+								})
+							}
 							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 					</div>
@@ -297,27 +367,37 @@ function SMTPStepComponent({ onComplete, onSkip, isLoading }: StepProps) {
 
 				<div className="grid grid-cols-2 gap-4">
 					<div>
-						<label htmlFor="smtp-username" className="block text-sm font-medium text-gray-700 mb-1">
+						<label
+							htmlFor="smtp-username"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
 							Username
 						</label>
 						<input
 							id="smtp-username"
 							type="text"
 							value={settings.username}
-							onChange={(e) => setSettings({ ...settings, username: e.target.value })}
+							onChange={(e) =>
+								setSettings({ ...settings, username: e.target.value })
+							}
 							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 					</div>
 
 					<div>
-						<label htmlFor="smtp-password" className="block text-sm font-medium text-gray-700 mb-1">
+						<label
+							htmlFor="smtp-password"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
 							Password
 						</label>
 						<input
 							id="smtp-password"
 							type="password"
 							value={settings.password}
-							onChange={(e) => setSettings({ ...settings, password: e.target.value })}
+							onChange={(e) =>
+								setSettings({ ...settings, password: e.target.value })
+							}
 							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 					</div>
@@ -325,28 +405,38 @@ function SMTPStepComponent({ onComplete, onSkip, isLoading }: StepProps) {
 
 				<div className="grid grid-cols-2 gap-4">
 					<div>
-						<label htmlFor="smtp-from-email" className="block text-sm font-medium text-gray-700 mb-1">
+						<label
+							htmlFor="smtp-from-email"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
 							From Email
 						</label>
 						<input
 							id="smtp-from-email"
 							type="email"
 							value={settings.from_email}
-							onChange={(e) => setSettings({ ...settings, from_email: e.target.value })}
+							onChange={(e) =>
+								setSettings({ ...settings, from_email: e.target.value })
+							}
 							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							placeholder="noreply@example.com"
 						/>
 					</div>
 
 					<div>
-						<label htmlFor="smtp-from-name" className="block text-sm font-medium text-gray-700 mb-1">
+						<label
+							htmlFor="smtp-from-name"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
 							From Name
 						</label>
 						<input
 							id="smtp-from-name"
 							type="text"
 							value={settings.from_name}
-							onChange={(e) => setSettings({ ...settings, from_name: e.target.value })}
+							onChange={(e) =>
+								setSettings({ ...settings, from_name: e.target.value })
+							}
 							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							placeholder="Keldris Backups"
 						/>
@@ -354,13 +444,21 @@ function SMTPStepComponent({ onComplete, onSkip, isLoading }: StepProps) {
 				</div>
 
 				<div>
-					<label htmlFor="smtp-encryption" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="smtp-encryption"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Encryption
 					</label>
 					<select
 						id="smtp-encryption"
 						value={settings.encryption}
-						onChange={(e) => setSettings({ ...settings, encryption: e.target.value as 'none' | 'tls' | 'starttls' })}
+						onChange={(e) =>
+							setSettings({
+								...settings,
+								encryption: e.target.value as 'none' | 'tls' | 'starttls',
+							})
+						}
 						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					>
 						<option value="starttls">STARTTLS</option>
@@ -371,7 +469,9 @@ function SMTPStepComponent({ onComplete, onSkip, isLoading }: StepProps) {
 
 				{configureSMTP.isError && (
 					<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-						{configureSMTP.error instanceof Error ? configureSMTP.error.message : 'Failed to configure SMTP'}
+						{configureSMTP.error instanceof Error
+							? configureSMTP.error.message
+							: 'Failed to configure SMTP'}
 					</div>
 				)}
 
@@ -432,19 +532,25 @@ function OIDCStepComponent({ onComplete, onSkip, isLoading }: StepProps) {
 				Single Sign-On (Optional)
 			</h2>
 			<p className="text-gray-600 mb-6">
-				Configure OpenID Connect (OIDC) for single sign-on authentication. You can skip this and configure it later.
+				Configure OpenID Connect (OIDC) for single sign-on authentication. You
+				can skip this and configure it later.
 			</p>
 
 			<form onSubmit={handleSubmit} className="space-y-4">
 				<div>
-					<label htmlFor="oidc-issuer" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="oidc-issuer"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Issuer URL
 					</label>
 					<input
 						id="oidc-issuer"
 						type="url"
 						value={settings.issuer}
-						onChange={(e) => setSettings({ ...settings, issuer: e.target.value })}
+						onChange={(e) =>
+							setSettings({ ...settings, issuer: e.target.value })
+						}
 						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						placeholder="https://auth.example.com"
 					/>
@@ -452,52 +558,70 @@ function OIDCStepComponent({ onComplete, onSkip, isLoading }: StepProps) {
 
 				<div className="grid grid-cols-2 gap-4">
 					<div>
-						<label htmlFor="oidc-client-id" className="block text-sm font-medium text-gray-700 mb-1">
+						<label
+							htmlFor="oidc-client-id"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
 							Client ID
 						</label>
 						<input
 							id="oidc-client-id"
 							type="text"
 							value={settings.client_id}
-							onChange={(e) => setSettings({ ...settings, client_id: e.target.value })}
+							onChange={(e) =>
+								setSettings({ ...settings, client_id: e.target.value })
+							}
 							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 					</div>
 
 					<div>
-						<label htmlFor="oidc-client-secret" className="block text-sm font-medium text-gray-700 mb-1">
+						<label
+							htmlFor="oidc-client-secret"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
 							Client Secret
 						</label>
 						<input
 							id="oidc-client-secret"
 							type="password"
 							value={settings.client_secret}
-							onChange={(e) => setSettings({ ...settings, client_secret: e.target.value })}
+							onChange={(e) =>
+								setSettings({ ...settings, client_secret: e.target.value })
+							}
 							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 					</div>
 				</div>
 
 				<div>
-					<label htmlFor="oidc-redirect" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="oidc-redirect"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Redirect URL
 					</label>
 					<input
 						id="oidc-redirect"
 						type="url"
 						value={settings.redirect_url}
-						onChange={(e) => setSettings({ ...settings, redirect_url: e.target.value })}
+						onChange={(e) =>
+							setSettings({ ...settings, redirect_url: e.target.value })
+						}
 						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						placeholder="https://your-domain.com/auth/callback"
 					/>
 					<p className="mt-1 text-xs text-gray-500">
-						The URL that the OIDC provider will redirect to after authentication.
+						The URL that the OIDC provider will redirect to after
+						authentication.
 					</p>
 				</div>
 
 				{configureOIDC.isError && (
 					<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-						{configureOIDC.error instanceof Error ? configureOIDC.error.message : 'Failed to configure OIDC'}
+						{configureOIDC.error instanceof Error
+							? configureOIDC.error.message
+							: 'Failed to configure OIDC'}
 					</div>
 				)}
 
@@ -549,9 +673,7 @@ function LicenseStep({ onComplete, isLoading }: StepProps) {
 
 	return (
 		<div className="py-4">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
-				License
-			</h2>
+			<h2 className="text-xl font-semibold text-gray-900 mb-2">License</h2>
 			<p className="text-gray-600 mb-6">
 				Enter your license key or start a 14-day free trial.
 			</p>
@@ -586,7 +708,10 @@ function LicenseStep({ onComplete, isLoading }: StepProps) {
 			{mode === 'trial' ? (
 				<form onSubmit={handleStartTrial} className="space-y-4">
 					<div>
-						<label htmlFor="trial-email" className="block text-sm font-medium text-gray-700 mb-1">
+						<label
+							htmlFor="trial-email"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
 							Email <span className="text-red-500">*</span>
 						</label>
 						<input
@@ -601,7 +726,10 @@ function LicenseStep({ onComplete, isLoading }: StepProps) {
 					</div>
 
 					<div>
-						<label htmlFor="trial-company" className="block text-sm font-medium text-gray-700 mb-1">
+						<label
+							htmlFor="trial-company"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
 							Company Name
 						</label>
 						<input
@@ -625,7 +753,9 @@ function LicenseStep({ onComplete, isLoading }: StepProps) {
 
 					{startTrial.isError && (
 						<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-							{startTrial.error instanceof Error ? startTrial.error.message : 'Failed to start trial'}
+							{startTrial.error instanceof Error
+								? startTrial.error.message
+								: 'Failed to start trial'}
 						</div>
 					)}
 
@@ -642,7 +772,10 @@ function LicenseStep({ onComplete, isLoading }: StepProps) {
 			) : (
 				<form onSubmit={handleActivateLicense} className="space-y-4">
 					<div>
-						<label htmlFor="license-key" className="block text-sm font-medium text-gray-700 mb-1">
+						<label
+							htmlFor="license-key"
+							className="block text-sm font-medium text-gray-700 mb-1"
+						>
 							License Key <span className="text-red-500">*</span>
 						</label>
 						<input
@@ -658,7 +791,9 @@ function LicenseStep({ onComplete, isLoading }: StepProps) {
 
 					{activateLicense.isError && (
 						<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-							{activateLicense.error instanceof Error ? activateLicense.error.message : 'Failed to activate license'}
+							{activateLicense.error instanceof Error
+								? activateLicense.error.message
+								: 'Failed to activate license'}
 						</div>
 					)}
 
@@ -695,12 +830,16 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 				Create Organization
 			</h2>
 			<p className="text-gray-600 mb-6">
-				Create your first organization. Organizations help you manage resources and team members.
+				Create your first organization. Organizations help you manage resources
+				and team members.
 			</p>
 
 			<form onSubmit={handleSubmit} className="space-y-4">
 				<div>
-					<label htmlFor="org-name" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="org-name"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Organization Name
 					</label>
 					<input
@@ -718,7 +857,9 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 
 				{createOrg.isError && (
 					<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-						{createOrg.error instanceof Error ? createOrg.error.message : 'Failed to create organization'}
+						{createOrg.error instanceof Error
+							? createOrg.error.message
+							: 'Failed to create organization'}
 					</div>
 				)}
 
@@ -776,11 +917,14 @@ function CompleteSetupStep() {
 			<h2 className="text-2xl font-bold text-gray-900 mb-4">Setup Complete!</h2>
 
 			<p className="text-gray-600 max-w-md mx-auto mb-8">
-				Your Keldris server is now configured and ready to use. Click the button below to start using your backup system.
+				Your Keldris server is now configured and ready to use. Click the button
+				below to start using your backup system.
 			</p>
 
 			<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8 max-w-md mx-auto text-left">
-				<h3 className="text-sm font-semibold text-green-900 mb-2">What's next?</h3>
+				<h3 className="text-sm font-semibold text-green-900 mb-2">
+					What's next?
+				</h3>
 				<ul className="text-sm text-green-700 space-y-1">
 					<li>- Log in with your superuser account</li>
 					<li>- Create repositories to store backups</li>
@@ -791,7 +935,9 @@ function CompleteSetupStep() {
 
 			{completeSetup.isError && (
 				<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 mb-4 max-w-md mx-auto">
-					{completeSetup.error instanceof Error ? completeSetup.error.message : 'Failed to complete setup'}
+					{completeSetup.error instanceof Error
+						? completeSetup.error.message
+						: 'Failed to complete setup'}
 				</div>
 			)}
 
@@ -948,7 +1094,9 @@ export function Setup() {
 							/>
 						</svg>
 					</div>
-					<h1 className="text-3xl font-bold text-gray-900">Keldris Server Setup</h1>
+					<h1 className="text-3xl font-bold text-gray-900">
+						Keldris Server Setup
+					</h1>
 					<p className="text-gray-600 mt-2">
 						Configure your Keldris backup server
 					</p>

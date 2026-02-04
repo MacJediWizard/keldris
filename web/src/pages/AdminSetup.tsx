@@ -34,7 +34,9 @@ export function AdminSetup() {
 			{/* License Status */}
 			{status?.license && (
 				<div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">Current License</h2>
+					<h2 className="text-lg font-semibold text-gray-900 mb-4">
+						Current License
+					</h2>
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 						<div>
 							<dt className="text-sm text-gray-500">Type</dt>
@@ -44,9 +46,13 @@ export function AdminSetup() {
 						</div>
 						<div>
 							<dt className="text-sm text-gray-500">Status</dt>
-							<dd className={`text-sm font-medium capitalize ${
-								status.license.status === 'active' ? 'text-green-600' : 'text-red-600'
-							}`}>
+							<dd
+								className={`text-sm font-medium capitalize ${
+									status.license.status === 'active'
+										? 'text-green-600'
+										: 'text-red-600'
+								}`}
+							>
 								{status.license.status}
 							</dd>
 						</div>
@@ -76,7 +82,9 @@ export function AdminSetup() {
 					title="Email (SMTP)"
 					description="Configure SMTP settings for email notifications"
 					isOpen={activeSection === 'smtp'}
-					onToggle={() => setActiveSection(activeSection === 'smtp' ? null : 'smtp')}
+					onToggle={() =>
+						setActiveSection(activeSection === 'smtp' ? null : 'smtp')
+					}
 				>
 					<SMTPConfigForm onSuccess={() => setActiveSection(null)} />
 				</ConfigCard>
@@ -85,7 +93,9 @@ export function AdminSetup() {
 					title="Single Sign-On (OIDC)"
 					description="Configure OpenID Connect for SSO authentication"
 					isOpen={activeSection === 'oidc'}
-					onToggle={() => setActiveSection(activeSection === 'oidc' ? null : 'oidc')}
+					onToggle={() =>
+						setActiveSection(activeSection === 'oidc' ? null : 'oidc')
+					}
 				>
 					<OIDCConfigForm onSuccess={() => setActiveSection(null)} />
 				</ConfigCard>
@@ -94,7 +104,9 @@ export function AdminSetup() {
 					title="License"
 					description="Update your license key"
 					isOpen={activeSection === 'license'}
-					onToggle={() => setActiveSection(activeSection === 'license' ? null : 'license')}
+					onToggle={() =>
+						setActiveSection(activeSection === 'license' ? null : 'license')
+					}
 				>
 					<LicenseConfigForm onSuccess={() => setActiveSection(null)} />
 				</ConfigCard>
@@ -111,7 +123,13 @@ interface ConfigCardProps {
 	children: React.ReactNode;
 }
 
-function ConfigCard({ title, description, isOpen, onToggle, children }: ConfigCardProps) {
+function ConfigCard({
+	title,
+	description,
+	isOpen,
+	onToggle,
+	children,
+}: ConfigCardProps) {
 	return (
 		<div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
 			<button
@@ -130,7 +148,12 @@ function ConfigCard({ title, description, isOpen, onToggle, children }: ConfigCa
 					stroke="currentColor"
 					viewBox="0 0 24 24"
 				>
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M19 9l-7 7-7-7"
+					/>
 				</svg>
 			</button>
 			{isOpen && (
@@ -166,7 +189,10 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 		<form onSubmit={handleSubmit} className="space-y-4">
 			<div className="grid grid-cols-2 gap-4">
 				<div>
-					<label htmlFor="admin-smtp-host" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="admin-smtp-host"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						SMTP Host
 					</label>
 					<input
@@ -179,14 +205,22 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 					/>
 				</div>
 				<div>
-					<label htmlFor="admin-smtp-port" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="admin-smtp-port"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Port
 					</label>
 					<input
 						id="admin-smtp-port"
 						type="number"
 						value={settings.port}
-						onChange={(e) => setSettings({ ...settings, port: parseInt(e.target.value, 10) })}
+						onChange={(e) =>
+							setSettings({
+								...settings,
+								port: Number.parseInt(e.target.value, 10),
+							})
+						}
 						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					/>
 				</div>
@@ -194,26 +228,36 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 
 			<div className="grid grid-cols-2 gap-4">
 				<div>
-					<label htmlFor="admin-smtp-username" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="admin-smtp-username"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Username
 					</label>
 					<input
 						id="admin-smtp-username"
 						type="text"
 						value={settings.username}
-						onChange={(e) => setSettings({ ...settings, username: e.target.value })}
+						onChange={(e) =>
+							setSettings({ ...settings, username: e.target.value })
+						}
 						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					/>
 				</div>
 				<div>
-					<label htmlFor="admin-smtp-password" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="admin-smtp-password"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Password
 					</label>
 					<input
 						id="admin-smtp-password"
 						type="password"
 						value={settings.password}
-						onChange={(e) => setSettings({ ...settings, password: e.target.value })}
+						onChange={(e) =>
+							setSettings({ ...settings, password: e.target.value })
+						}
 						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					/>
 				</div>
@@ -221,27 +265,37 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 
 			<div className="grid grid-cols-2 gap-4">
 				<div>
-					<label htmlFor="admin-smtp-from-email" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="admin-smtp-from-email"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						From Email
 					</label>
 					<input
 						id="admin-smtp-from-email"
 						type="email"
 						value={settings.from_email}
-						onChange={(e) => setSettings({ ...settings, from_email: e.target.value })}
+						onChange={(e) =>
+							setSettings({ ...settings, from_email: e.target.value })
+						}
 						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						placeholder="noreply@example.com"
 					/>
 				</div>
 				<div>
-					<label htmlFor="admin-smtp-from-name" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="admin-smtp-from-name"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						From Name
 					</label>
 					<input
 						id="admin-smtp-from-name"
 						type="text"
 						value={settings.from_name}
-						onChange={(e) => setSettings({ ...settings, from_name: e.target.value })}
+						onChange={(e) =>
+							setSettings({ ...settings, from_name: e.target.value })
+						}
 						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						placeholder="Keldris Backups"
 					/>
@@ -249,13 +303,21 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 			</div>
 
 			<div>
-				<label htmlFor="admin-smtp-encryption" className="block text-sm font-medium text-gray-700 mb-1">
+				<label
+					htmlFor="admin-smtp-encryption"
+					className="block text-sm font-medium text-gray-700 mb-1"
+				>
 					Encryption
 				</label>
 				<select
 					id="admin-smtp-encryption"
 					value={settings.encryption}
-					onChange={(e) => setSettings({ ...settings, encryption: e.target.value as 'none' | 'tls' | 'starttls' })}
+					onChange={(e) =>
+						setSettings({
+							...settings,
+							encryption: e.target.value as 'none' | 'tls' | 'starttls',
+						})
+					}
 					className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 				>
 					<option value="starttls">STARTTLS</option>
@@ -266,7 +328,9 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 
 			{configureSMTP.isError && (
 				<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-					{configureSMTP.error instanceof Error ? configureSMTP.error.message : 'Failed to configure SMTP'}
+					{configureSMTP.error instanceof Error
+						? configureSMTP.error.message
+						: 'Failed to configure SMTP'}
 				</div>
 			)}
 
@@ -312,7 +376,10 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 	return (
 		<form onSubmit={handleSubmit} className="space-y-4">
 			<div>
-				<label htmlFor="admin-oidc-issuer" className="block text-sm font-medium text-gray-700 mb-1">
+				<label
+					htmlFor="admin-oidc-issuer"
+					className="block text-sm font-medium text-gray-700 mb-1"
+				>
 					Issuer URL
 				</label>
 				<input
@@ -327,40 +394,55 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 
 			<div className="grid grid-cols-2 gap-4">
 				<div>
-					<label htmlFor="admin-oidc-client-id" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="admin-oidc-client-id"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Client ID
 					</label>
 					<input
 						id="admin-oidc-client-id"
 						type="text"
 						value={settings.client_id}
-						onChange={(e) => setSettings({ ...settings, client_id: e.target.value })}
+						onChange={(e) =>
+							setSettings({ ...settings, client_id: e.target.value })
+						}
 						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					/>
 				</div>
 				<div>
-					<label htmlFor="admin-oidc-client-secret" className="block text-sm font-medium text-gray-700 mb-1">
+					<label
+						htmlFor="admin-oidc-client-secret"
+						className="block text-sm font-medium text-gray-700 mb-1"
+					>
 						Client Secret
 					</label>
 					<input
 						id="admin-oidc-client-secret"
 						type="password"
 						value={settings.client_secret}
-						onChange={(e) => setSettings({ ...settings, client_secret: e.target.value })}
+						onChange={(e) =>
+							setSettings({ ...settings, client_secret: e.target.value })
+						}
 						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					/>
 				</div>
 			</div>
 
 			<div>
-				<label htmlFor="admin-oidc-redirect" className="block text-sm font-medium text-gray-700 mb-1">
+				<label
+					htmlFor="admin-oidc-redirect"
+					className="block text-sm font-medium text-gray-700 mb-1"
+				>
 					Redirect URL
 				</label>
 				<input
 					id="admin-oidc-redirect"
 					type="url"
 					value={settings.redirect_url}
-					onChange={(e) => setSettings({ ...settings, redirect_url: e.target.value })}
+					onChange={(e) =>
+						setSettings({ ...settings, redirect_url: e.target.value })
+					}
 					className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					placeholder="https://your-domain.com/auth/callback"
 				/>
@@ -371,17 +453,24 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 					id="admin-oidc-auto-create"
 					type="checkbox"
 					checked={settings.auto_create_users}
-					onChange={(e) => setSettings({ ...settings, auto_create_users: e.target.checked })}
+					onChange={(e) =>
+						setSettings({ ...settings, auto_create_users: e.target.checked })
+					}
 					className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
 				/>
-				<label htmlFor="admin-oidc-auto-create" className="text-sm text-gray-700">
+				<label
+					htmlFor="admin-oidc-auto-create"
+					className="text-sm text-gray-700"
+				>
 					Auto-create users on first login
 				</label>
 			</div>
 
 			{configureOIDC.isError && (
 				<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-					{configureOIDC.error instanceof Error ? configureOIDC.error.message : 'Failed to configure OIDC'}
+					{configureOIDC.error instanceof Error
+						? configureOIDC.error.message
+						: 'Failed to configure OIDC'}
 				</div>
 			)}
 
@@ -416,7 +505,10 @@ function LicenseConfigForm({ onSuccess }: { onSuccess: () => void }) {
 	return (
 		<form onSubmit={handleSubmit} className="space-y-4">
 			<div>
-				<label htmlFor="admin-license-key" className="block text-sm font-medium text-gray-700 mb-1">
+				<label
+					htmlFor="admin-license-key"
+					className="block text-sm font-medium text-gray-700 mb-1"
+				>
 					License Key
 				</label>
 				<input
@@ -432,7 +524,9 @@ function LicenseConfigForm({ onSuccess }: { onSuccess: () => void }) {
 
 			{updateLicense.isError && (
 				<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-					{updateLicense.error instanceof Error ? updateLicense.error.message : 'Failed to update license'}
+					{updateLicense.error instanceof Error
+						? updateLicense.error.message
+						: 'Failed to update license'}
 				</div>
 			)}
 
