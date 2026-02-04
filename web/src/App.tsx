@@ -41,6 +41,7 @@ import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
 import { PasswordPolicies } from './pages/PasswordPolicies';
+import { PasswordReset } from './pages/PasswordReset';
 import { Policies } from './pages/Policies';
 import { RateLimitDashboard } from './pages/RateLimitDashboard';
 import { RateLimits } from './pages/RateLimits';
@@ -59,7 +60,6 @@ import { Templates } from './pages/Templates';
 import { UserManagement } from './pages/UserManagement';
 import { UserSessions } from './pages/UserSessions';
 import { LicenseManagement } from './pages/admin/LicenseManagement';
-import { PasswordReset } from './pages/PasswordReset';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
