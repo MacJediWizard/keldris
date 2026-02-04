@@ -20,6 +20,18 @@
 			}
 		}
 	},
+	"overrides": [
+		{
+			"include": ["src/pages/Documentation.tsx"],
+			"linter": {
+				"rules": {
+					"security": {
+						"noDangerouslySetInnerHtml": "off"
+					}
+				}
+			}
+		}
+	],
 	"formatter": { "indentStyle": "tab" },
 	"javascript": {
 		"formatter": { "quoteStyle": "single", "semicolons": "always" }
