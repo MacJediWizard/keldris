@@ -5653,3 +5653,83 @@ export interface KomodoConnectionTestResponse {
 	message: string;
 	status: KomodoIntegrationStatus;
 }
+
+// System Health types (Admin)
+export type SystemHealthStatus = 'healthy' | 'warning' | 'critical';
+
+export interface ServerStatus {
+	status: SystemHealthStatus;
+	cpu_usage: number;
+	memory_usage: number;
+	memory_alloc_mb: number;
+	memory_total_alloc_mb: number;
+	memory_sys_mb: number;
+	goroutine_count: number;
+	num_cpu: number;
+	go_version: string;
+	uptime_seconds: number;
+}
+
+export interface DatabaseStatus {
+	status: SystemHealthStatus;
+	connected: boolean;
+	latency: string;
+	active_connections: number;
+	max_connections: number;
+	size_bytes: number;
+	size_formatted: string;
+}
+
+export interface QueueStatus {
+	status: SystemHealthStatus;
+	pending_backups: number;
+	running_backups: number;
+	total_queued: number;
+}
+
+export interface BackgroundJobStatus {
+	status: SystemHealthStatus;
+	goroutine_count: number;
+	active_jobs: number;
+}
+
+export interface ServerError {
+	id: string;
+	level: string;
+	message: string;
+	component?: string;
+	timestamp: string;
+}
+
+export interface SystemHealthResponse {
+	status: SystemHealthStatus;
+	timestamp: string;
+	server: ServerStatus;
+	database: DatabaseStatus;
+	queue: QueueStatus;
+	background_jobs: BackgroundJobStatus;
+	recent_errors: ServerError[];
+	issues?: string[];
+}
+
+export interface HealthHistoryRecord {
+	id: string;
+	timestamp: string;
+	status: string;
+	cpu_usage: number;
+	memory_usage: number;
+	memory_alloc_mb: number;
+	memory_total_alloc_mb: number;
+	goroutine_count: number;
+	database_connections: number;
+	database_size_bytes: number;
+	pending_backups: number;
+	running_backups: number;
+	error_count: number;
+}
+
+export interface SystemHealthHistoryResponse {
+	records: HealthHistoryRecord[];
+	since: string;
+	until: string;
+}

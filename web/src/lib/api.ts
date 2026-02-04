@@ -395,6 +395,8 @@ import type {
 	StoragePricingResponse,
 	StorageStatsSummary,
 	SwitchOrgRequest,
+	SystemHealthHistoryResponse,
+	SystemHealthResponse,
 	Tag,
 	TagsResponse,
 	TestConnectionRequest,
@@ -4422,4 +4424,13 @@ export const usersApi = {
 		);
 		return response.impersonation_logs ?? [];
 	},
+};
+
+// System health API (admin only)
+export const systemHealthApi = {
+	getHealth: async (): Promise<SystemHealthResponse> =>
+		fetchApi<SystemHealthResponse>('/admin/health'),
+
+	getHistory: async (): Promise<SystemHealthHistoryResponse> =>
+		fetchApi<SystemHealthHistoryResponse>('/admin/health/history'),
 };
