@@ -147,7 +147,6 @@ function MarkdownRenderer({ content }: { content: string }) {
 		.replace(/^(?!<[hluop]|```)((?!<).+)$/gm, '<p class="my-3 text-gray-700 leading-relaxed">$1</p>');
 
 	return (
-		// biome-ignore lint/security/noDangerouslySetInnerHtml: Markdown content is sanitized by our converter
 		<div
 			className="prose prose-indigo max-w-none"
 			dangerouslySetInnerHTML={{ __html: html }}
