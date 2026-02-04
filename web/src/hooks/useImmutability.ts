@@ -78,8 +78,10 @@ export function useExtendImmutabilityLock() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: ExtendImmutabilityLockRequest }) =>
-			immutabilityApi.extendLock(id, data),
+		}: {
+			id: string;
+			data: ExtendImmutabilityLockRequest;
+		}) => immutabilityApi.extendLock(id, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['immutability-locks'] });
 			queryClient.invalidateQueries({ queryKey: ['snapshots'] });

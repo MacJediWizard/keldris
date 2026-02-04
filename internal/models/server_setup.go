@@ -84,18 +84,6 @@ const (
 	LicenseTypeEnterprise LicenseType = "enterprise"
 )
 
-// LicenseStatus represents the status of a license.
-type LicenseStatus string
-
-const (
-	// LicenseStatusActive is an active license.
-	LicenseStatusActive LicenseStatus = "active"
-	// LicenseStatusExpired is an expired license.
-	LicenseStatusExpired LicenseStatus = "expired"
-	// LicenseStatusRevoked is a revoked license.
-	LicenseStatusRevoked LicenseStatus = "revoked"
-)
-
 // LicenseKey represents a license key record.
 type LicenseKey struct {
 	ID              uuid.UUID       `json:"id"`
@@ -187,11 +175,6 @@ type CreateSuperuserRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8"`
 	Name     string `json:"name" binding:"required"`
-}
-
-// ActivateLicenseRequest is the request to activate a license key.
-type ActivateLicenseRequest struct {
-	LicenseKey string `json:"license_key" binding:"required"`
 }
 
 // StartTrialRequest is the request to start a trial license.

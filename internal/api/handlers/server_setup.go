@@ -28,7 +28,7 @@ type ServerSetupStore interface {
 	// License
 	GetActiveLicense(ctx context.Context) (*models.LicenseKey, error)
 	ActivateLicense(ctx context.Context, licenseKey string, activatedBy *uuid.UUID) (*models.LicenseKey, error)
-	StartTrial(ctx context.Context, companyName, contactEmail string, activatedBy *uuid.UUID) (*models.LicenseKey, error)
+	CreateTrialLicense(ctx context.Context, companyName, contactEmail string, activatedBy *uuid.UUID) (*models.LicenseKey, error)
 
 	// Organization
 	HasAnyOrganization(ctx context.Context) (bool, error)
@@ -419,9 +419,9 @@ func (h *ServerSetupHandler) StartTrial(c *gin.Context) {
 		return
 	}
 
-	license, err := h.store.StartTrial(ctx, req.CompanyName, req.ContactEmail, nil)
+	license, err := h.store.CreateTrialLicense(ctx, req.CompanyName, req.ContactEmail, nil)
 	if err != nil {
-		h.logger.Error().Err(err).Msg("failed to start trial")
+		h.logger.Error().Err(err).Msg("failed to create trial license")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

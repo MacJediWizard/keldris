@@ -576,7 +576,7 @@ function CreateTemplateModal({
 													updateScript(
 														type,
 														'timeout_seconds',
-														Number.parseInt(e.target.value),
+														Number.parseInt(e.target.value, 10),
 													)
 												}
 												min={1}
