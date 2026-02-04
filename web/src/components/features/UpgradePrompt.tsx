@@ -6,10 +6,10 @@ import {
 } from '../../hooks/usePlanLimits';
 import type { PlanType, UpgradeFeature } from '../../lib/types';
 import {
-	generateContactSalesLink,
-	generateUpgradeLink,
 	PLAN_NAMES,
 	PLAN_PRICING,
+	generateContactSalesLink,
+	generateUpgradeLink,
 	requiresSales,
 } from '../../lib/upgrade';
 
