@@ -6,7 +6,7 @@ import type {
 	CreateSuperuserRequest,
 	OIDCSettings,
 	SMTPSettings,
-	StartTrialRequest,
+	SetupStartTrialRequest,
 } from '../lib/types';
 
 export function useSetupStatus() {
@@ -93,7 +93,7 @@ export function useActivateLicense() {
 export function useStartTrial() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (data: StartTrialRequest) => setupApi.startTrial(data),
+		mutationFn: (data: SetupStartTrialRequest) => setupApi.startTrial(data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['setup'] });
 		},

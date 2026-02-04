@@ -1105,6 +1105,69 @@ export interface OrgFeatureFlags {
 	priority_support?: boolean;
 }
 
+// Branding Settings (Enterprise)
+export interface BrandingSettings {
+	enabled: boolean;
+	product_name: string;
+	company_name: string;
+	logo_url: string;
+	logo_dark_url: string;
+	favicon_url: string;
+	primary_color: string;
+	secondary_color: string;
+	accent_color: string;
+	support_url: string;
+	support_email: string;
+	privacy_url: string;
+	terms_url: string;
+	footer_text: string;
+	login_title: string;
+	login_subtitle: string;
+	login_bg_url: string;
+	hide_powered_by: boolean;
+	custom_css: string;
+}
+
+export interface PublicBrandingSettings {
+	enabled: boolean;
+	product_name: string;
+	logo_url: string;
+	logo_dark_url: string;
+	favicon_url: string;
+	primary_color: string;
+	secondary_color: string;
+	accent_color: string;
+	support_url: string;
+	privacy_url: string;
+	terms_url: string;
+	login_title: string;
+	login_subtitle: string;
+	login_bg_url: string;
+	hide_powered_by: boolean;
+}
+
+export interface UpdateBrandingSettingsRequest {
+	enabled?: boolean;
+	product_name?: string;
+	company_name?: string;
+	logo_url?: string;
+	logo_dark_url?: string;
+	favicon_url?: string;
+	primary_color?: string;
+	secondary_color?: string;
+	accent_color?: string;
+	support_url?: string;
+	support_email?: string;
+	privacy_url?: string;
+	terms_url?: string;
+	footer_text?: string;
+	login_title?: string;
+	login_subtitle?: string;
+	login_bg_url?: string;
+	hide_powered_by?: boolean;
+	custom_css?: string;
+}
+
 export interface AdminOrgSettings {
 	name?: string;
 	slug?: string;
@@ -1146,13 +1209,57 @@ export interface TransferOwnershipRequest {
 	new_owner_user_id: string;
 }
 
+export type PlanType = 'free' | 'starter' | 'professional' | 'enterprise';
+
 export interface BillingSettings {
-	plan_type: 'free' | 'starter' | 'professional' | 'enterprise';
+	plan_type: PlanType;
 	billing_email?: string;
 	billing_cycle?: 'monthly' | 'annual';
 	next_billing_date?: string;
 	payment_method_last4?: string;
 }
+
+export interface PlanLimits {
+	agent_limit?: number;
+	storage_quota_bytes?: number;
+	backup_retention_days?: number;
+	concurrent_backups?: number;
+}
+
+export interface PlanFeatures {
+	sso_enabled: boolean;
+	api_access: boolean;
+	advanced_reporting: boolean;
+	audit_logs: boolean;
+	custom_branding: boolean;
+	priority_support: boolean;
+	geo_replication: boolean;
+	lifecycle_policies: boolean;
+	legal_holds: boolean;
+}
+
+export interface OrganizationPlanInfo {
+	plan_type: PlanType;
+	limits: PlanLimits;
+	features: PlanFeatures;
+	usage: {
+		agent_count: number;
+		storage_used_bytes: number;
+	};
+}
+
+export type UpgradeFeature =
+	| 'agents'
+	| 'storage'
+	| 'sso'
+	| 'api_access'
+	| 'advanced_reporting'
+	| 'audit_logs'
+	| 'custom_branding'
+	| 'priority_support'
+	| 'geo_replication'
+	| 'lifecycle_policies'
+	| 'legal_holds';
 
 // API response wrappers
 export interface AgentsResponse {
@@ -5700,12 +5807,12 @@ export interface ActivateLicenseResponse {
 	message: string;
 }
 
-export interface StartTrialRequest {
+export interface SetupStartTrialRequest {
 	company_name?: string;
 	contact_email: string;
 }
 
-export interface StartTrialResponse {
+export interface SetupStartTrialResponse {
 	license_type: string;
 	expires_at: string;
 	message: string;
@@ -5720,7 +5827,7 @@ export interface SetupCompleteResponse {
 	redirect: string;
 }
 
-export interface LicenseInfo {
+export interface SetupLicenseInfo {
 	license_type: 'trial' | 'standard' | 'professional' | 'enterprise';
 	status: string;
 	max_agents?: number;
@@ -5733,5 +5840,266 @@ export interface LicenseInfo {
 export interface RerunStatusResponse {
 	setup_completed: boolean;
 	can_configure: string[];
-	license?: LicenseInfo;
+	license?: SetupLicenseInfo;
+}
+
+// License types
+export type LicenseTier = 'free' | 'pro' | 'professional' | 'enterprise';
+export type LicenseStatus =
+	| 'active'
+	| 'expiring_soon'
+	| 'expired'
+	| 'grace_period';
+
+export interface LicenseFeatures {
+	max_agents: number;
+	max_repositories: number;
+	max_storage_bytes: number;
+	sso_enabled: boolean;
+	api_access: boolean;
+	advanced_reporting: boolean;
+	custom_branding: boolean;
+	priority_support: boolean;
+	backup_hooks: boolean;
+	multi_destination: boolean;
+}
+
+export interface LicenseUsage {
+	agents_used: number;
+	agents_limit: number;
+	repositories_used: number;
+	repositories_limit: number;
+	storage_used_bytes: number;
+	storage_limit_bytes: number;
+}
+
+export interface License {
+	id: string;
+	org_id: string;
+	license_key: string;
+	tier: LicenseTier;
+	status: LicenseStatus;
+	valid_from: string;
+	valid_until: string;
+	grace_period_days: number;
+	features: LicenseFeatures;
+	usage: LicenseUsage;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface LicenseHistory {
+	id: string;
+	license_id: string;
+	org_id: string;
+	action:
+		| 'created'
+		| 'renewed'
+		| 'upgraded'
+		| 'downgraded'
+		| 'expired'
+		| 'activated';
+	previous_tier?: LicenseTier;
+	new_tier?: LicenseTier;
+	previous_expiry?: string;
+	new_expiry?: string;
+	notes?: string;
+	created_at: string;
+}
+
+export interface LicenseExpirationInfo {
+	license_id: string;
+	is_expired: boolean;
+	is_in_grace_period: boolean;
+	days_until_expiry: number;
+	grace_period_ends_at?: string;
+}
+
+export interface LicenseLimitsWarning {
+	type: 'agents' | 'repositories' | 'storage';
+	current: number;
+	limit: number;
+	percentage: number;
+}
+
+export interface LicenseWarnings {
+	expiration?: LicenseExpirationInfo;
+	limits: LicenseLimitsWarning[];
+}
+
+export interface CreateLicenseKeyRequest {
+	license_key: string;
+}
+
+export interface UpdateLicenseRequest {
+	tier?: LicenseTier;
+	valid_until?: string;
+	features?: Partial<LicenseFeatures>;
+}
+
+export interface LicenseResponse {
+	license: License;
+}
+
+export interface LicensesResponse {
+	licenses: License[];
+	total_count: number;
+}
+
+export interface LicenseHistoryResponse {
+	history: LicenseHistory[];
+	total_count: number;
+}
+
+export interface LicenseValidateResponse {
+	valid: boolean;
+	tier?: LicenseTier;
+	valid_until?: string;
+	features?: LicenseFeatures;
+	error?: string;
+}
+
+export interface LicenseWarningsResponse {
+	warnings: LicenseWarnings;
+}
+
+export type ProFeature =
+	| 'sso'
+	| 'api_access'
+	| 'advanced_reporting'
+	| 'custom_branding'
+	| 'priority_support'
+	| 'backup_hooks'
+	| 'multi_destination'
+	| 'unlimited_agents'
+	| 'unlimited_repositories'
+	| 'unlimited_storage';
+
+// License Feature Flag types
+export type LicenseFeature =
+	| 'oidc'
+	| 'audit_logs'
+	| 'multi_org'
+	| 'sla_tracking'
+	| 'white_label';
+
+export interface FeatureInfo {
+	name: LicenseFeature;
+	display_name: string;
+	description: string;
+	required_tier: LicenseTier;
+}
+
+export interface TierInfo {
+	name: LicenseTier;
+	display_name: string;
+	description: string;
+	features: LicenseFeature[];
+}
+
+export interface UpgradeInfo {
+	required_tier: LicenseTier;
+	display_name: string;
+	message: string;
+}
+
+export interface FeatureCheckResult {
+	feature: LicenseFeature;
+	enabled: boolean;
+	current_tier: LicenseTier;
+	required_tier: LicenseTier;
+	upgrade_info?: UpgradeInfo;
+}
+
+export interface LicenseInfo {
+	org_id: string;
+	tier: LicenseTier;
+	features: LicenseFeature[];
+}
+
+export interface FeaturesResponse {
+	features: FeatureInfo[];
+}
+
+export interface TiersResponse {
+	tiers: TierInfo[];
+}
+
+export interface LicenseInfoResponse {
+	license: LicenseInfo;
+}
+
+export interface FeatureCheckResponse {
+	result: FeatureCheckResult;
+}
+
+// Trial types
+export type PlanTier = 'free' | 'pro' | 'enterprise';
+export type TrialStatus = 'none' | 'active' | 'expired' | 'converted';
+
+export interface TrialInfo {
+	org_id: string;
+	plan_tier: PlanTier;
+	trial_status: TrialStatus;
+	trial_started_at?: string;
+	trial_ends_at?: string;
+	trial_email?: string;
+	trial_converted_at?: string;
+	days_remaining: number;
+	is_trial_active: boolean;
+	has_pro_features: boolean;
+}
+
+export interface TrialExtension {
+	id: string;
+	org_id: string;
+	extended_by: string;
+	extended_by_name?: string;
+	extension_days: number;
+	reason?: string;
+	previous_ends_at: string;
+	new_ends_at: string;
+	created_at: string;
+}
+
+export interface TrialActivity {
+	id: string;
+	org_id: string;
+	user_id?: string;
+	feature_name: string;
+	action: string;
+	details?: Record<string, unknown>;
+	created_at: string;
+}
+
+export interface TrialProFeature {
+	name: string;
+	description: string;
+	available: boolean;
+	limit?: number;
+}
+
+export interface StartTrialRequest {
+	email: string;
+}
+
+export interface ExtendTrialRequest {
+	extension_days: number;
+	reason: string;
+}
+
+export interface ConvertTrialRequest {
+	plan_tier: PlanTier;
+}
+
+export interface TrialFeaturesResponse {
+	features: TrialProFeature[];
+}
+
+export interface TrialActivityResponse {
+	activities: TrialActivity[];
+}
+
+export interface TrialExtensionsResponse {
+	extensions: TrialExtension[];
 }

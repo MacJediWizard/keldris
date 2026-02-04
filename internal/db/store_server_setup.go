@@ -392,8 +392,8 @@ func (db *DB) ActivateLicense(ctx context.Context, licenseKey string, activatedB
 	return license, nil
 }
 
-// StartTrial creates a new 14-day trial license.
-func (db *DB) StartTrial(ctx context.Context, companyName, contactEmail string, activatedBy *uuid.UUID) (*models.LicenseKey, error) {
+// CreateTrialLicense creates a new 14-day trial license during initial setup.
+func (db *DB) CreateTrialLicense(ctx context.Context, companyName, contactEmail string, activatedBy *uuid.UUID) (*models.LicenseKey, error) {
 	// Check if a trial has already been used
 	var count int
 	err := db.Pool.QueryRow(ctx, `

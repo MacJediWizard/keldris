@@ -7,11 +7,7 @@ interface GeoReplicationStatusCardProps {
 	onToggleEnabled?: (configId: string, enabled: boolean) => void;
 }
 
-function StatusBadge({
-	status,
-}: {
-	status: string;
-}) {
+function StatusBadge({ status }: { status: string }) {
 	const config = {
 		pending: {
 			bg: 'bg-gray-100',
