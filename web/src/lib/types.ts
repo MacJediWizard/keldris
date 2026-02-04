@@ -5761,6 +5761,88 @@ export interface KomodoConnectionTestResponse {
 	status: KomodoIntegrationStatus;
 }
 
+// Server Setup types
+export type ServerSetupStep =
+	| 'database'
+	| 'superuser'
+	| 'smtp'
+	| 'oidc'
+	| 'license'
+	| 'organization'
+	| 'complete';
+
+export interface ServerSetupStatus {
+	needs_setup: boolean;
+	setup_completed: boolean;
+	current_step: ServerSetupStep;
+	completed_steps: ServerSetupStep[];
+	database_ok: boolean;
+	has_superuser: boolean;
+}
+
+export interface CreateSuperuserRequest {
+	email: string;
+	password: string;
+	name: string;
+}
+
+export interface CreateSuperuserResponse {
+	user_id: string;
+	org_id: string;
+	message: string;
+}
+
+export interface DatabaseTestResponse {
+	ok: boolean;
+	message: string;
+}
+
+export interface ActivateLicenseRequest {
+	license_key: string;
+}
+
+export interface ActivateLicenseResponse {
+	license_type: string;
+	expires_at?: string;
+	message: string;
+}
+
+export interface SetupStartTrialRequest {
+	company_name?: string;
+	contact_email: string;
+}
+
+export interface SetupStartTrialResponse {
+	license_type: string;
+	expires_at: string;
+	message: string;
+}
+
+export interface CreateFirstOrgRequest {
+	name: string;
+}
+
+export interface SetupCompleteResponse {
+	message: string;
+	redirect: string;
+}
+
+export interface SetupLicenseInfo {
+	license_type: 'trial' | 'standard' | 'professional' | 'enterprise';
+	status: string;
+	max_agents?: number;
+	max_repositories?: number;
+	max_storage_gb?: number;
+	expires_at?: string;
+	company_name?: string;
+}
+
+export interface RerunStatusResponse {
+	setup_completed: boolean;
+	can_configure: string[];
+	license?: SetupLicenseInfo;
+}
+
 // License types
 export type LicenseTier = 'free' | 'pro' | 'professional' | 'enterprise';
 export type LicenseStatus =
