@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import { ExportImportModal } from '../components/features/ExportImportModal';
 import { ImportAgentsWizard } from '../components/features/ImportAgentsWizard';
+import { UpgradeLimitWarning } from '../components/features/UpgradePrompt';
 import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
 import {
 	BulkOperationProgress,
@@ -30,6 +31,7 @@ import {
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useFavoriteIds } from '../hooks/useFavorites';
 import { useLocale } from '../hooks/useLocale';
+import { usePlanLimits } from '../hooks/usePlanLimits';
 import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
 import { statusHelp } from '../lib/help-content';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
@@ -671,6 +673,7 @@ export function Agents() {
 	const { data: agentGroups } = useAgentGroups();
 	const { data: schedules } = useSchedules();
 	const favoriteIds = useFavoriteIds('agent');
+	const { limits, usage } = usePlanLimits();
 	const deleteAgent = useDeleteAgent();
 	const rotateApiKey = useRotateAgentApiKey();
 	const revokeApiKey = useRevokeAgentApiKey();
@@ -864,6 +867,14 @@ export function Agents() {
 
 	return (
 		<div className="space-y-6">
+			{limits.agent_limit && (
+				<UpgradeLimitWarning
+					type="agents"
+					current={agents?.length ?? usage.agentCount}
+					limit={limits.agent_limit}
+					source="agents-page"
+				/>
+			)}
 			<div className="flex items-center justify-between">
 				<div>
 					<div className="flex items-center gap-2">

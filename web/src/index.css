@@ -2,6 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Branding CSS custom properties (default values) */
+:root {
+	--brand-primary: #4f46e5;
+	--brand-primary-rgb: 79, 70, 229;
+	--brand-secondary: #64748b;
+	--brand-secondary-rgb: 100, 116, 139;
+	--brand-accent: #06b6d4;
+	--brand-accent-rgb: 6, 182, 212;
+}
+
+/* Utility classes for branded colors */
+.bg-brand-primary {
+	background-color: var(--brand-primary);
+}
+
+.text-brand-primary {
+	color: var(--brand-primary);
+}
+
+.border-brand-primary {
+	border-color: var(--brand-primary);
+}
+
+.bg-brand-secondary {
+	background-color: var(--brand-secondary);
+}
+
+.text-brand-secondary {
+	color: var(--brand-secondary);
+}
+
+.bg-brand-accent {
+	background-color: var(--brand-accent);
+}
+
+.text-brand-accent {
+	color: var(--brand-accent);
+}
+
+/* Focus ring with brand color */
+.focus-brand:focus {
+	outline: none;
+	box-shadow: 0 0 0 2px rgba(var(--brand-primary-rgb), 0.5);
+}
+
 /* Dark mode scrollbar styling */
 .dark {
 	color-scheme: dark;

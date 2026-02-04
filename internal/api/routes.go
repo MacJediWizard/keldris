@@ -11,8 +11,11 @@ import (
 	"github.com/MacJediWizard/keldris/internal/backup/docker"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/logs"
+	"github.com/MacJediWizard/keldris/internal/metering"
 	"github.com/MacJediWizard/keldris/internal/monitoring"
+	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -46,6 +49,12 @@ type Config struct {
 	ActivityFeed *activity.Feed
 	// DocsFS is the filesystem containing documentation markdown files (optional).
 	DocsFS fs.FS
+	// AirGapManager for air-gapped license management (optional).
+	AirGapManager *license.AirGapManager
+	// MeteringService for usage tracking and billing (optional).
+	MeteringService *metering.Service
+	// EmailService for sending emails (optional).
+	EmailService *notifications.EmailService
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -126,10 +135,22 @@ func NewRouter(
 		docsHandler.RegisterPublicRoutes(r.Engine)
 	}
 
+	// Air-gap/license management (public status endpoint, protected management endpoints)
+	var airGapHandler *handlers.AirGapHandler
+	if cfg.AirGapManager != nil {
+		airGapHandler = handlers.NewAirGapHandler(cfg.AirGapManager, logger)
+		publicAPI := r.Engine.Group("/api/v1/public")
+		airGapHandler.RegisterRoutes(nil, publicAPI) // Will register to apiV1 later
+	}
+
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
 	authHandler.RegisterRoutes(authGroup)
+
+	// Password reset routes (no auth required)
+	passwordResetHandler := handlers.NewPasswordResetHandler(database, cfg.EmailService, cfg.ServerURL, logger)
+	passwordResetHandler.RegisterPublicRoutes(r.Engine)
 
 	// API v1 routes (auth required)
 	apiV1 := r.Engine.Group("/api/v1")
@@ -151,6 +172,11 @@ func NewRouter(
 	if cfg.DocsFS != nil {
 		docsHandler := handlers.NewDocsHandler(cfg.DocsFS, logger)
 		docsHandler.RegisterRoutes(apiV1)
+	}
+
+	// Register air-gap protected routes (after auth middleware is applied)
+	if airGapHandler != nil {
+		airGapHandler.RegisterRoutes(apiV1, nil)
 	}
 
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
@@ -355,13 +381,35 @@ func NewRouter(
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
 
+	// Job queue routes
+	jobQueueHandler := handlers.NewJobQueueHandler(database, rbac, logger)
+	jobQueueHandler.RegisterRoutes(apiV1)
+
 	// System settings routes (admin only)
 	systemSettingsHandler := handlers.NewSystemSettingsHandler(database, logger)
 	systemSettingsHandler.RegisterRoutes(apiV1)
 
+	// License and feature flags routes
+	featureChecker := license.NewFeatureChecker(database)
+	licenseHandler := handlers.NewLicenseHandler(database, featureChecker, logger)
+	licenseHandler.RegisterRoutes(apiV1)
+
+	// Trial management routes
+	trialHandler := handlers.NewTrialHandler(database, logger)
+	trialHandler.RegisterRoutes(apiV1)
+
+	// Branding settings routes (Enterprise only)
+	brandingHandler := handlers.NewBrandingHandler(database, logger)
+	brandingHandler.RegisterRoutes(apiV1)
+	brandingHandler.RegisterPublicRoutes(r.Engine.Group("/api/public"))
+
 	// Superuser routes (requires superuser privileges)
 	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
 	superuserHandler.RegisterRoutes(apiV1)
+
+	// System health routes (requires superuser privileges)
+	systemHealthHandler := handlers.NewSystemHealthHandler(database, sessions, logger)
+	systemHealthHandler.RegisterRoutes(apiV1)
 
 	// Docker backup routes
 	dockerDiscoveryConfig := docker.DefaultDiscoveryConfig()
@@ -393,6 +441,12 @@ func NewRouter(
 	// Pi-hole backup routes
 	piholeHandler := handlers.NewPiholeHandler(database, logger)
 	piholeHandler.RegisterRoutes(apiV1)
+
+	// Usage metering routes (requires MeteringService)
+	if cfg.MeteringService != nil {
+		usageHandler := handlers.NewUsageHandler(database, cfg.MeteringService, logger)
+		usageHandler.RegisterRoutes(apiV1)
+	}
 
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
