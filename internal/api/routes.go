@@ -44,6 +44,8 @@ type Config struct {
 	LogBuffer *logs.LogBuffer
 	// ActivityFeed for real-time activity events (optional).
 	ActivityFeed *activity.Feed
+	// AirGapManager for air-gapped license management (optional).
+	AirGapManager *license.AirGapManager
 	// MeteringService for usage tracking and billing (optional).
 	MeteringService *metering.Service
 }
@@ -120,6 +122,14 @@ func NewRouter(
 	changelogHandler := handlers.NewChangelogHandler("CHANGELOG.md", cfg.Version, logger)
 	changelogHandler.RegisterPublicRoutes(r.Engine)
 
+	// Air-gap/license management (public status endpoint, protected management endpoints)
+	var airGapHandler *handlers.AirGapHandler
+	if cfg.AirGapManager != nil {
+		airGapHandler = handlers.NewAirGapHandler(cfg.AirGapManager, logger)
+		publicAPI := r.Engine.Group("/api/v1/public")
+		airGapHandler.RegisterRoutes(nil, publicAPI) // Will register to apiV1 later
+	}
+
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
@@ -140,6 +150,11 @@ func NewRouter(
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 	changelogHandler.RegisterRoutes(apiV1)
+
+	// Register air-gap protected routes (after auth middleware is applied)
+	if airGapHandler != nil {
+		airGapHandler.RegisterRoutes(apiV1, nil)
+	}
 
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
 	orgsHandler.RegisterRoutes(apiV1)

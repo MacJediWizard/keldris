@@ -55,6 +55,7 @@ import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
 import { UserManagement } from './pages/UserManagement';
 import { UserSessions } from './pages/UserSessions';
+import { LicenseManagement } from './pages/admin/LicenseManagement';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -170,6 +171,7 @@ function App() {
 									path="admin/rate-limit-configs"
 									element={<RateLimits />}
 								/>
+								<Route path="admin/license" element={<LicenseManagement />} />
 								<Route path="account/sessions" element={<UserSessions />} />
 								<Route path="onboarding" element={<Onboarding />} />
 								<Route path="changelog" element={<Changelog />} />
