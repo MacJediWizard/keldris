@@ -13,6 +13,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/logs"
 	"github.com/MacJediWizard/keldris/internal/metering"
 	"github.com/MacJediWizard/keldris/internal/monitoring"
+	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -48,6 +49,8 @@ type Config struct {
 	AirGapManager *license.AirGapManager
 	// MeteringService for usage tracking and billing (optional).
 	MeteringService *metering.Service
+	// EmailService for sending emails (optional).
+	EmailService *notifications.EmailService
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -134,6 +137,10 @@ func NewRouter(
 	authGroup := r.Engine.Group("/auth")
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
 	authHandler.RegisterRoutes(authGroup)
+
+	// Password reset routes (no auth required)
+	passwordResetHandler := handlers.NewPasswordResetHandler(database, cfg.EmailService, cfg.ServerURL, logger)
+	passwordResetHandler.RegisterPublicRoutes(r.Engine)
 
 	// API v1 routes (auth required)
 	apiV1 := r.Engine.Group("/api/v1")

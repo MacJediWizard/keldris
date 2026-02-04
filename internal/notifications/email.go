@@ -254,6 +254,33 @@ func (s *EmailService) SendReport(to []string, data ReportEmailData) error {
 	return s.sendTemplate(to, subject, "report_summary.html", data)
 }
 
+// PasswordResetRequestData holds data for password reset request email template
+type PasswordResetRequestData struct {
+	UserName  string
+	UserEmail string
+	ResetURL  string
+	ExpiresAt time.Time
+}
+
+// PasswordResetSuccessData holds data for password reset success email template
+type PasswordResetSuccessData struct {
+	UserName  string
+	UserEmail string
+	ChangedAt time.Time
+}
+
+// SendPasswordResetRequest sends a password reset request email
+func (s *EmailService) SendPasswordResetRequest(to []string, data PasswordResetRequestData) error {
+	subject := "Reset Your Keldris Password"
+	return s.sendTemplate(to, subject, "password_reset_request.html", data)
+}
+
+// SendPasswordResetSuccess sends a password reset success notification email
+func (s *EmailService) SendPasswordResetSuccess(to []string, data PasswordResetSuccessData) error {
+	subject := "Your Keldris Password Has Been Changed"
+	return s.sendTemplate(to, subject, "password_reset_success.html", data)
+}
+
 // FormatBytes formats bytes into a human-readable string
 func FormatBytes(bytes int64) string {
 	const (
