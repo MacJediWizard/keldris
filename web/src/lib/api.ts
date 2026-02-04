@@ -425,6 +425,8 @@ import type {
 	StoragePricingResponse,
 	StorageStatsSummary,
 	SwitchOrgRequest,
+	SystemHealthHistoryResponse,
+	SystemHealthResponse,
 	Tag,
 	TagsResponse,
 	TestConnectionRequest,
@@ -4547,6 +4549,14 @@ export const usersApi = {
 	},
 };
 
+// System health API (admin only)
+export const systemHealthApi = {
+	getHealth: async (): Promise<SystemHealthResponse> =>
+		fetchApi<SystemHealthResponse>('/admin/health'),
+
+	getHistory: async (): Promise<SystemHealthHistoryResponse> =>
+		fetchApi<SystemHealthHistoryResponse>('/admin/health/history'),
+};
 // Server Setup API
 export const setupApi = {
 	getStatus: async (): Promise<ServerSetupStatus> =>

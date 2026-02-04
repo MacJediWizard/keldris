@@ -53,6 +53,7 @@ import { Schedules } from './pages/Schedules';
 import { Setup } from './pages/Setup';
 import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
+import { SystemHealth } from './pages/SystemHealth';
 import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
 import { UserManagement } from './pages/UserManagement';
@@ -175,6 +176,7 @@ function App() {
 									path="admin/rate-limit-configs"
 									element={<RateLimits />}
 								/>
+								<Route path="admin/health" element={<SystemHealth />} />
 								<Route path="admin/license" element={<LicenseManagement />} />
 								<Route path="admin/setup" element={<AdminSetup />} />
 								<Route path="account/sessions" element={<UserSessions />} />

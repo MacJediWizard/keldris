@@ -380,6 +380,10 @@ func NewRouter(
 	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
 	superuserHandler.RegisterRoutes(apiV1)
 
+	// System health routes (requires superuser privileges)
+	systemHealthHandler := handlers.NewSystemHealthHandler(database, sessions, logger)
+	systemHealthHandler.RegisterRoutes(apiV1)
+
 	// Docker backup routes
 	dockerDiscoveryConfig := docker.DefaultDiscoveryConfig()
 	dockerDiscoveryService := docker.NewDiscoveryService(database, dockerDiscoveryConfig, logger)
