@@ -582,6 +582,58 @@ async function fetchAuth<T>(
 	return handleResponse<T>(response);
 }
 
+async function fetchFormData<T>(
+	endpoint: string,
+	formData: FormData,
+): Promise<T> {
+	const response = await fetch(`${API_BASE}${endpoint}`, {
+		method: 'POST',
+		credentials: 'include',
+		body: formData,
+		// Don't set Content-Type header - browser will set it with boundary
+	});
+
+	return handleResponse<T>(response);
+}
+
+// Bulk invite types
+export interface BulkInviteEntry {
+	email: string;
+	role: string;
+}
+
+export interface BulkInviteResult {
+	email: string;
+	role: string;
+	token?: string;
+}
+
+export interface BulkInviteError {
+	email: string;
+	error: string;
+}
+
+export interface BulkInviteResponse {
+	successful: BulkInviteResult[];
+	failed: BulkInviteError[];
+	total: number;
+}
+
+export interface InvitationDetails {
+	id: string;
+	org_id: string;
+	org_name: string;
+	email: string;
+	role: string;
+	inviter_name: string;
+	expires_at: string;
+	created_at: string;
+}
+
+export interface InvitationDetailsResponse {
+	invitation: InvitationDetails;
+}
+
 // Auth API
 export const authApi = {
 	me: async (): Promise<User> => fetchAuth<User>('/auth/me'),
@@ -1582,6 +1634,43 @@ export const organizationsApi = {
 				method: 'DELETE',
 			},
 		),
+
+	resendInvitation: async (
+		orgId: string,
+		invitationId: string,
+	): Promise<InviteResponse> =>
+		fetchApi<InviteResponse>(
+			`/organizations/${orgId}/invitations/${invitationId}/resend`,
+			{
+				method: 'POST',
+			},
+		),
+
+	bulkInvite: async (
+		orgId: string,
+		invites: BulkInviteEntry[],
+	): Promise<BulkInviteResponse> =>
+		fetchApi<BulkInviteResponse>(`/organizations/${orgId}/invitations/bulk`, {
+			method: 'POST',
+			body: JSON.stringify({ invites }),
+		}),
+
+	bulkInviteCSV: async (
+		orgId: string,
+		file: File,
+	): Promise<BulkInviteResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		return fetchFormData<BulkInviteResponse>(
+			`/organizations/${orgId}/invitations/bulk`,
+			formData,
+		);
+	},
+
+	getInvitationByToken: async (
+		token: string,
+	): Promise<InvitationDetailsResponse> =>
+		fetchApi<InvitationDetailsResponse>(`/invitations/${token}`),
 
 	acceptInvitation: async (token: string): Promise<OrgResponse> =>
 		fetchApi<OrgResponse>('/invitations/accept', {

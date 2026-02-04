@@ -198,6 +198,16 @@ type ReportIssue struct {
 	OccurredAt  time.Time `json:"occurred_at"`
 }
 
+// InvitationData holds data for invitation email template
+type InvitationData struct {
+	OrgName     string
+	InviterName string
+	Role        string
+	InviteLink  string
+	ExpiresAt   time.Time
+	ExpiresIn   string
+}
+
 // EmailVerificationData holds data for email verification template
 type EmailVerificationData struct {
 	UserName        string
@@ -252,6 +262,12 @@ func (s *EmailService) SendValidationFailed(to []string, data ValidationFailedDa
 func (s *EmailService) SendReport(to []string, data ReportEmailData) error {
 	subject := fmt.Sprintf("%s Backup Report: %s", data.Frequency, data.OrgName)
 	return s.sendTemplate(to, subject, "report_summary.html", data)
+}
+
+// SendInvitation sends an organization invitation email
+func (s *EmailService) SendInvitation(to []string, data InvitationData) error {
+	subject := fmt.Sprintf("You're invited to join %s on Keldris", data.OrgName)
+	return s.sendTemplate(to, subject, "invitation.html", data)
 }
 
 // PasswordResetRequestData holds data for password reset request email template
