@@ -43,8 +43,10 @@ export function useUpdateSavedFilter() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: UpdateSavedFilterRequest }) =>
-			savedFiltersApi.update(id, data),
+		}: {
+			id: string;
+			data: UpdateSavedFilterRequest;
+		}) => savedFiltersApi.update(id, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['savedFilters'] });
 		},
