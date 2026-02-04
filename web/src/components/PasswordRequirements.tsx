@@ -71,7 +71,7 @@ export function PasswordRequirements({
 		},
 		{
 			label: 'Special character (!@#$%^&*...)',
-			met: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+			met: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
 			required: requirements.require_special,
 		},
 	].filter((req) => req.required !== false);

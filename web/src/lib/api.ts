@@ -1,5 +1,7 @@
 import type {
 	AcknowledgeBreachRequest,
+	ActivateLicenseRequest,
+	ActivateLicenseResponse,
 	ActiveMaintenanceResponse,
 	ActivityCategoriesResponse,
 	ActivityEvent,
@@ -60,6 +62,7 @@ import type {
 	BackupSuccessRatesResponse,
 	BackupsResponse,
 	BlockedRequestsResponse,
+	BrandingSettings,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
 	BulkCloneResponse,
@@ -86,6 +89,7 @@ import type {
 	ContainerHookExecutionsResponse,
 	ContainerHookTemplateInfo,
 	ContainerHookTemplatesResponse,
+	ConvertTrialRequest,
 	CostAlert,
 	CostAlertsResponse,
 	CostForecastResponse,
@@ -111,11 +115,13 @@ import type {
 	CreateDowntimeEventRequest,
 	CreateExcludePatternRequest,
 	CreateFavoriteRequest,
+	CreateFirstOrgRequest,
 	CreateIPAllowlistRequest,
 	CreateIPBanRequest,
 	CreateImmutabilityLockRequest,
 	CreateKomodoIntegrationRequest,
 	CreateLegalHoldRequest,
+	CreateLicenseKeyRequest,
 	CreateLifecyclePolicyRequest,
 	CreateMaintenanceWindowRequest,
 	CreateMetadataSchemaRequest,
@@ -138,6 +144,8 @@ import type {
 	CreateScheduleRequest,
 	CreateSnapshotCommentRequest,
 	CreateStoragePricingRequest,
+	CreateSuperuserRequest,
+	CreateSuperuserResponse,
 	CreateTagRequest,
 	CreateTemplateRequest,
 	CreateVerificationScheduleRequest,
@@ -153,6 +161,7 @@ import type {
 	DailyBackupStatsResponse,
 	DashboardStats,
 	DataTypesResponse,
+	DatabaseTestResponse,
 	DefaultPricingResponse,
 	DiscoverDockerStacksRequest,
 	DiscoverDockerStacksResponse,
@@ -201,9 +210,14 @@ import type {
 	ExportBundleRequest,
 	ExportFormat,
 	ExtendImmutabilityLockRequest,
+	ExtendTrialRequest,
 	Favorite,
 	FavoriteEntityType,
 	FavoritesResponse,
+	FeatureCheckResponse,
+	FeatureCheckResult,
+	FeatureInfo,
+	FeaturesResponse,
 	FileDiffResponse,
 	FileHistoryParams,
 	FileHistoryResponse,
@@ -259,6 +273,15 @@ import type {
 	KomodoWebhookEventsResponse,
 	LegalHold,
 	LegalHoldsResponse,
+	License,
+	LicenseFeature,
+	LicenseHistoryResponse,
+	LicenseInfo,
+	LicenseInfoResponse,
+	LicenseResponse,
+	LicenseValidateResponse,
+	LicenseWarningsResponse,
+	LicensesResponse,
 	LifecycleDeletionEvent,
 	LifecycleDeletionEventsResponse,
 	LifecycleDryRunRequest,
@@ -308,6 +331,7 @@ import type {
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	PublicBrandingSettings,
 	RateLimitConfig,
 	RateLimitConfigsResponse,
 	RateLimitDashboardStats,
@@ -334,6 +358,7 @@ import type {
 	RepositoryStatsListItem,
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
+	RerunStatusResponse,
 	ResetPasswordRequest,
 	ResolveDowntimeEventRequest,
 	Restore,
@@ -374,10 +399,14 @@ import type {
 	ServerLogComponentsResponse,
 	ServerLogFilter,
 	ServerLogsResponse,
+	ServerSetupStatus,
 	SetDebugModeRequest,
 	SetDebugModeResponse,
 	SetScheduleClassificationRequest,
 	SettingsAuditLogsResponse,
+	SetupCompleteResponse,
+	SetupStartTrialRequest,
+	SetupStartTrialResponse,
 	Snapshot,
 	SnapshotComment,
 	SnapshotCommentsResponse,
@@ -386,6 +415,7 @@ import type {
 	SnapshotMount,
 	SnapshotMountsResponse,
 	SnapshotsResponse,
+	StartTrialRequest,
 	StorageDefaultSettings,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
@@ -395,6 +425,8 @@ import type {
 	StoragePricingResponse,
 	StorageStatsSummary,
 	SwitchOrgRequest,
+	SystemHealthHistoryResponse,
+	SystemHealthResponse,
 	Tag,
 	TagsResponse,
 	TestConnectionRequest,
@@ -404,8 +436,15 @@ import type {
 	TestRepositoryResponse,
 	TestSMTPRequest,
 	TestSMTPResponse,
+	TierInfo,
+	TiersResponse,
 	TrackRecentItemRequest,
 	TransferOwnershipRequest,
+	TrialActivityResponse,
+	TrialExtension,
+	TrialExtensionsResponse,
+	TrialFeaturesResponse,
+	TrialInfo,
 	TriggerDockerStackBackupRequest,
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
@@ -413,6 +452,7 @@ import type {
 	UpdateAnnouncementRequest,
 	UpdateBackupHookTemplateRequest,
 	UpdateBackupScriptRequest,
+	UpdateBrandingSettingsRequest,
 	UpdateConcurrencyRequest,
 	UpdateContainerBackupHookRequest,
 	UpdateCostAlertRequest,
@@ -427,6 +467,7 @@ import type {
 	UpdateIPAllowlistSettingsRequest,
 	UpdateKomodoContainerRequest,
 	UpdateKomodoIntegrationRequest,
+	UpdateLicenseRequest,
 	UpdateLifecyclePolicyRequest,
 	UpdateMaintenanceWindowRequest,
 	UpdateMemberRequest,
@@ -3950,6 +3991,90 @@ export const orgSettingsApi = {
 		),
 };
 
+// Trial API
+export const trialApi = {
+	// Get current trial status
+	getStatus: async (): Promise<TrialInfo> =>
+		fetchApi<TrialInfo>('/trial/status'),
+
+	// Start a new trial
+	startTrial: async (data: StartTrialRequest): Promise<TrialInfo> =>
+		fetchApi<TrialInfo>('/trial/start', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// Get available Pro features
+	getFeatures: async (): Promise<TrialFeaturesResponse> =>
+		fetchApi<TrialFeaturesResponse>('/trial/features'),
+
+	// Get trial activity log
+	getActivity: async (limit = 50, offset = 0): Promise<TrialActivityResponse> =>
+		fetchApi<TrialActivityResponse>(
+			`/trial/activity?limit=${limit}&offset=${offset}`,
+		),
+
+	// Extend trial (admin/superuser only)
+	extendTrial: async (data: ExtendTrialRequest): Promise<TrialExtension> =>
+		fetchApi<TrialExtension>('/trial/extend', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// Convert trial to paid
+	convertTrial: async (data: ConvertTrialRequest): Promise<TrialInfo> =>
+		fetchApi<TrialInfo>('/trial/convert', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// Get extension history
+	getExtensions: async (): Promise<TrialExtensionsResponse> =>
+		fetchApi<TrialExtensionsResponse>('/trial/extensions'),
+};
+
+// Branding Settings API (Enterprise)
+export const brandingApi = {
+	// Get branding settings
+	get: async (): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding'),
+
+	// Update branding settings
+	update: async (
+		data: UpdateBrandingSettingsRequest,
+	): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// Get public branding settings (no auth required, for login page)
+	getPublic: async (orgSlug: string): Promise<PublicBrandingSettings> =>
+		fetch(`/api/public/branding/${orgSlug}`).then((res) => {
+			if (!res.ok) {
+				// Return default branding on error
+				return {
+					enabled: false,
+					product_name: 'Keldris',
+					logo_url: '',
+					logo_dark_url: '',
+					favicon_url: '',
+					primary_color: '#4f46e5',
+					secondary_color: '#64748b',
+					accent_color: '#06b6d4',
+					support_url: '',
+					privacy_url: '',
+					terms_url: '',
+					login_title: '',
+					login_subtitle: '',
+					login_bg_url: '',
+					hide_powered_by: false,
+				};
+			}
+			return res.json();
+		}),
+};
+
 // Docker Container Logs API
 export const dockerLogsApi = {
 	// List all backups
@@ -4510,5 +4635,203 @@ export const usersApi = {
 			`/users/impersonation-logs?limit=${limit}&offset=${offset}`,
 		);
 		return response.impersonation_logs ?? [];
+	},
+};
+
+// System health API (admin only)
+export const systemHealthApi = {
+	getHealth: async (): Promise<SystemHealthResponse> =>
+		fetchApi<SystemHealthResponse>('/admin/health'),
+
+	getHistory: async (): Promise<SystemHealthHistoryResponse> =>
+		fetchApi<SystemHealthHistoryResponse>('/admin/health/history'),
+};
+// Server Setup API
+export const setupApi = {
+	getStatus: async (): Promise<ServerSetupStatus> =>
+		fetchApi<ServerSetupStatus>('/setup/status'),
+
+	testDatabase: async (): Promise<DatabaseTestResponse> =>
+		fetchApi<DatabaseTestResponse>('/setup/database/test', { method: 'POST' }),
+
+	createSuperuser: async (
+		data: CreateSuperuserRequest,
+	): Promise<CreateSuperuserResponse> =>
+		fetchApi<CreateSuperuserResponse>('/setup/superuser', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	configureSMTP: async (data: SMTPSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/smtp', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	skipSMTP: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/smtp/skip', { method: 'POST' }),
+
+	configureOIDC: async (data: OIDCSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/oidc', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	skipOIDC: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/oidc/skip', { method: 'POST' }),
+
+	activateLicense: async (
+		data: ActivateLicenseRequest,
+	): Promise<ActivateLicenseResponse> =>
+		fetchApi<ActivateLicenseResponse>('/setup/license/activate', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	startTrial: async (
+		data: SetupStartTrialRequest,
+	): Promise<SetupStartTrialResponse> =>
+		fetchApi<SetupStartTrialResponse>('/setup/license/trial', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	createOrganization: async (
+		data: CreateFirstOrgRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/organization', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	completeSetup: async (): Promise<SetupCompleteResponse> =>
+		fetchApi<SetupCompleteResponse>('/setup/complete', { method: 'POST' }),
+
+	// Superuser re-run endpoints
+	getRerunStatus: async (): Promise<RerunStatusResponse> =>
+		fetchApi<RerunStatusResponse>('/setup/rerun'),
+
+	rerunConfigureSMTP: async (data: SMTPSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/rerun/smtp', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	rerunConfigureOIDC: async (data: OIDCSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/rerun/oidc', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	rerunUpdateLicense: async (
+		data: ActivateLicenseRequest,
+	): Promise<ActivateLicenseResponse> =>
+		fetchApi<ActivateLicenseResponse>('/setup/rerun/license', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+};
+
+export const licensesApi = {
+	getCurrent: async (): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>('/licenses/current');
+		return response.license;
+	},
+
+	getWarnings: async (): Promise<LicenseWarningsResponse> =>
+		fetchApi<LicenseWarningsResponse>('/licenses/warnings'),
+
+	getHistory: async (limit = 50, offset = 0): Promise<LicenseHistoryResponse> =>
+		fetchApi<LicenseHistoryResponse>(
+			`/licenses/history?limit=${limit}&offset=${offset}`,
+		),
+
+	validate: async (key: string): Promise<LicenseValidateResponse> =>
+		fetchApi<LicenseValidateResponse>('/licenses/validate', {
+			method: 'POST',
+			body: JSON.stringify({ license_key: key }),
+		}),
+
+	activate: async (data: CreateLicenseKeyRequest): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>('/licenses/activate', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		});
+		return response.license;
+	},
+
+	// Admin endpoints
+	adminList: async (params?: {
+		org_id?: string;
+		tier?: string;
+		status?: string;
+		limit?: number;
+		offset?: number;
+	}): Promise<LicensesResponse> => {
+		const query = new URLSearchParams();
+		if (params?.org_id) query.set('org_id', params.org_id);
+		if (params?.tier) query.set('tier', params.tier);
+		if (params?.status) query.set('status', params.status);
+		if (params?.limit) query.set('limit', params.limit.toString());
+		if (params?.offset) query.set('offset', params.offset.toString());
+		const queryStr = query.toString();
+		return fetchApi<LicensesResponse>(
+			`/admin/licenses${queryStr ? `?${queryStr}` : ''}`,
+		);
+	},
+
+	adminGet: async (id: string): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>(`/admin/licenses/${id}`);
+		return response.license;
+	},
+
+	adminUpdate: async (
+		id: string,
+		data: UpdateLicenseRequest,
+	): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>(`/admin/licenses/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		});
+		return response.license;
+	},
+
+	adminRevoke: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/licenses/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getPurchaseUrl: async (): Promise<{ url: string }> =>
+		fetchApi<{ url: string }>('/licenses/purchase-url'),
+};
+
+// License and Feature Flags API
+export const licenseApi = {
+	// Get current organization's license info
+	getLicense: async (): Promise<LicenseInfo> => {
+		const response = await fetchApi<LicenseInfoResponse>('/license');
+		return response.license;
+	},
+
+	// Check if a specific feature is enabled
+	checkFeature: async (
+		feature: LicenseFeature,
+	): Promise<FeatureCheckResult> => {
+		const response = await fetchApi<FeatureCheckResponse>(
+			`/license/features/${feature}/check`,
+		);
+		return response.result;
+	},
+
+	// Get all available features with their tier requirements
+	getFeatures: async (): Promise<FeatureInfo[]> => {
+		const response = await fetchApi<FeaturesResponse>('/license/features');
+		return response.features ?? [];
+	},
+
+	// Get all tier information
+	getTiers: async (): Promise<TierInfo[]> => {
+		const response = await fetchApi<TiersResponse>('/license/tiers');
+		return response.tiers ?? [];
 	},
 };

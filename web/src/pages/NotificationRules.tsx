@@ -246,7 +246,9 @@ function AddRuleModal({ isOpen, onClose, editRule }: AddRuleModalProps) {
 										id="count"
 										min={1}
 										value={count}
-										onChange={(e) => setCount(Number.parseInt(e.target.value))}
+										onChange={(e) =>
+											setCount(Number.parseInt(e.target.value, 10))
+										}
 										className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 									/>
 									<p className="text-xs text-gray-500 mt-1">
@@ -266,7 +268,7 @@ function AddRuleModal({ isOpen, onClose, editRule }: AddRuleModalProps) {
 										min={1}
 										value={timeWindow}
 										onChange={(e) =>
-											setTimeWindow(Number.parseInt(e.target.value))
+											setTimeWindow(Number.parseInt(e.target.value, 10))
 										}
 										className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 									/>
@@ -380,6 +382,7 @@ function AddRuleModal({ isOpen, onClose, editRule }: AddRuleModalProps) {
 													updateAction(index, {
 														suppress_duration_minutes: Number.parseInt(
 															e.target.value,
+															10,
 														),
 													})
 												}
@@ -429,7 +432,9 @@ function AddRuleModal({ isOpen, onClose, editRule }: AddRuleModalProps) {
 									id="priority"
 									min={0}
 									value={priority}
-									onChange={(e) => setPriority(Number.parseInt(e.target.value))}
+									onChange={(e) =>
+										setPriority(Number.parseInt(e.target.value, 10))
+									}
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								/>
 								<p className="text-xs text-gray-500 mt-1">
