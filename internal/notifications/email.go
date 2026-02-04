@@ -198,6 +198,20 @@ type ReportIssue struct {
 	OccurredAt  time.Time `json:"occurred_at"`
 }
 
+// EmailVerificationData holds data for email verification template
+type EmailVerificationData struct {
+	UserName        string
+	Email           string
+	VerificationURL string
+	ExpiresAt       time.Time
+}
+
+// SendEmailVerification sends an email verification notification
+func (s *EmailService) SendEmailVerification(to string, data EmailVerificationData) error {
+	subject := "Verify your email address - Keldris"
+	return s.sendTemplate([]string{to}, subject, "email_verification.html", data)
+}
+
 // SendBackupSuccess sends a backup success notification email
 func (s *EmailService) SendBackupSuccess(to []string, data BackupSuccessData) error {
 	subject := fmt.Sprintf("Backup Successful: %s - %s", data.Hostname, data.ScheduleName)
