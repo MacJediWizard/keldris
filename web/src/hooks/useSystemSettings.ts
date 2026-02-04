@@ -3,8 +3,8 @@ import { orgSettingsApi } from '../lib/api';
 import type {
 	TestSMTPRequest,
 	UpdateOIDCSettingsRequest,
-	UpdateSMTPSettingsRequest,
 	UpdateSecuritySettingsRequest,
+	UpdateSMTPSettingsRequest,
 	UpdateStorageDefaultsRequest,
 } from '../lib/types';
 
