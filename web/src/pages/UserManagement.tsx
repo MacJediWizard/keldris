@@ -1,6 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useMe } from '../hooks/useAuth';
-import { useCurrentOrganization } from '../hooks/useOrganizations';
+import {
+	useBulkInviteCSV,
+	useCurrentOrganization,
+	useDeleteInvitation,
+	useOrgInvitations,
+	useResendInvitation,
+} from '../hooks/useOrganizations';
 import {
 	useDeleteUser,
 	useDisableUser,
@@ -14,6 +20,7 @@ import {
 	useUsers,
 } from '../hooks/useUsers';
 import type {
+	OrgInvitation,
 	OrgRole,
 	UserActivityLog,
 	UserStatus,
@@ -567,6 +574,224 @@ function ActivityModal({ isOpen, onClose, user }: ActivityModalProps) {
 	);
 }
 
+interface BulkInviteModalProps {
+	isOpen: boolean;
+	onClose: () => void;
+	orgId: string;
+}
+
+function BulkInviteModal({ isOpen, onClose, orgId }: BulkInviteModalProps) {
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [dragActive, setDragActive] = useState(false);
+	const [selectedFile, setSelectedFile] = useState<File | null>(null);
+	const bulkInviteCSV = useBulkInviteCSV();
+	const [result, setResult] = useState<{
+		successful: number;
+		failed: { email: string; error: string }[];
+	} | null>(null);
+
+	const handleDrag = (e: React.DragEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (e.type === 'dragenter' || e.type === 'dragover') {
+			setDragActive(true);
+		} else if (e.type === 'dragleave') {
+			setDragActive(false);
+		}
+	};
+
+	const handleDrop = (e: React.DragEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setDragActive(false);
+
+		if (e.dataTransfer.files?.[0]) {
+			setSelectedFile(e.dataTransfer.files[0]);
+		}
+	};
+
+	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (e.target.files?.[0]) {
+			setSelectedFile(e.target.files[0]);
+		}
+	};
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!selectedFile) return;
+
+		try {
+			const response = await bulkInviteCSV.mutateAsync({
+				orgId,
+				file: selectedFile,
+			});
+			setResult({
+				successful: response.successful.length,
+				failed: response.failed,
+			});
+		} catch {
+			// Error handled by mutation
+		}
+	};
+
+	const handleClose = () => {
+		setSelectedFile(null);
+		setResult(null);
+		onClose();
+	};
+
+	const downloadTemplate = () => {
+		const csvContent = 'email,role\nexample@company.com,member\n';
+		const blob = new Blob([csvContent], { type: 'text/csv' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = 'invite_template.csv';
+		a.click();
+		URL.revokeObjectURL(url);
+	};
+
+	if (!isOpen) return null;
+
+	return (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+					Bulk Invite Users
+				</h3>
+
+				{result ? (
+					<div>
+						<div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+							<p className="text-green-800 dark:text-green-200">
+								Successfully invited {result.successful} user(s)
+							</p>
+						</div>
+						{result.failed.length > 0 && (
+							<div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+								<p className="text-red-800 dark:text-red-200 font-medium mb-2">
+									Failed to invite {result.failed.length} user(s):
+								</p>
+								<ul className="text-sm text-red-700 dark:text-red-300 list-disc list-inside">
+									{result.failed.map((f, i) => (
+										<li key={i}>
+											{f.email}: {f.error}
+										</li>
+									))}
+								</ul>
+							</div>
+						)}
+						<button
+							type="button"
+							onClick={handleClose}
+							className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+						>
+							Done
+						</button>
+					</div>
+				) : (
+					<form onSubmit={handleSubmit}>
+						<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+							Upload a CSV file with email and role columns.{' '}
+							<button
+								type="button"
+								onClick={downloadTemplate}
+								className="text-indigo-600 dark:text-indigo-400 hover:underline"
+							>
+								Download template
+							</button>
+						</p>
+
+						<div
+							className={`mb-4 border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+								dragActive
+									? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+									: 'border-gray-300 dark:border-gray-600'
+							}`}
+							onDragEnter={handleDrag}
+							onDragLeave={handleDrag}
+							onDragOver={handleDrag}
+							onDrop={handleDrop}
+						>
+							{selectedFile ? (
+								<div>
+									<p className="text-gray-900 dark:text-white font-medium">
+										{selectedFile.name}
+									</p>
+									<button
+										type="button"
+										onClick={() => setSelectedFile(null)}
+										className="text-sm text-red-600 hover:underline mt-1"
+									>
+										Remove
+									</button>
+								</div>
+							) : (
+								<div>
+									<svg
+										aria-hidden="true"
+										className="w-10 h-10 mx-auto text-gray-400 mb-2"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+										/>
+									</svg>
+									<p className="text-gray-600 dark:text-gray-400">
+										Drag and drop CSV file here, or{' '}
+										<button
+											type="button"
+											onClick={() => fileInputRef.current?.click()}
+											className="text-indigo-600 dark:text-indigo-400 hover:underline"
+										>
+											browse
+										</button>
+									</p>
+									<input
+										ref={fileInputRef}
+										type="file"
+										accept=".csv"
+										onChange={handleFileChange}
+										className="hidden"
+									/>
+								</div>
+							)}
+						</div>
+
+						{bulkInviteCSV.isError && (
+							<p className="text-sm text-red-600 mb-4">
+								Failed to process invitations. Please check your CSV file.
+							</p>
+						)}
+
+						<div className="flex justify-end gap-3">
+							<button
+								type="button"
+								onClick={handleClose}
+								className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								type="submit"
+								disabled={!selectedFile || bulkInviteCSV.isPending}
+								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+							>
+								{bulkInviteCSV.isPending ? 'Sending...' : 'Send Invitations'}
+							</button>
+						</div>
+					</form>
+				)}
+			</div>
+		</div>
+	);
+}
+
 function getStatusBadgeColor(status: UserStatus) {
 	switch (status) {
 		case 'active':
@@ -861,6 +1086,7 @@ export function UserManagement() {
 	);
 	const [impersonateUser, setImpersonateUser] =
 		useState<UserWithMembership | null>(null);
+	const [showBulkInviteModal, setShowBulkInviteModal] = useState(false);
 
 	const { data: me } = useMe();
 	const { data: currentOrg, isLoading: orgLoading } = useCurrentOrganization();
@@ -870,6 +1096,11 @@ export function UserManagement() {
 		isError: usersError,
 	} = useUsers();
 	const endImpersonation = useEndImpersonation();
+	const orgId = currentOrg?.organization.id ?? '';
+	const { data: invitations, isLoading: invitationsLoading } =
+		useOrgInvitations(orgId);
+	const deleteInvitation = useDeleteInvitation();
+	const resendInvitation = useResendInvitation();
 
 	const currentUserRole = (me?.current_org_role ?? 'member') as OrgRole;
 	const canInvite = currentUserRole === 'owner' || currentUserRole === 'admin';
@@ -877,6 +1108,25 @@ export function UserManagement() {
 	const isImpersonating = me?.is_impersonating ?? false;
 
 	const isLoading = orgLoading || usersLoading;
+
+	const pendingInvitations = invitations?.filter(
+		(inv) => !inv.accepted_at && new Date(inv.expires_at) > new Date(),
+	);
+
+	const handleRevokeInvitation = (invitationId: string) => {
+		if (confirm('Are you sure you want to revoke this invitation?')) {
+			deleteInvitation.mutate({ orgId, invitationId });
+		}
+	};
+
+	const handleResendInvitation = (invitationId: string) => {
+		resendInvitation.mutate({ orgId, invitationId });
+	};
+
+	const copyInviteLink = (token: string) => {
+		const link = `${window.location.origin}/invite/${token}`;
+		navigator.clipboard.writeText(link);
+	};
 
 	const handleEndImpersonation = () => {
 		if (confirm('Are you sure you want to end the impersonation session?')) {
@@ -1043,9 +1293,158 @@ export function UserManagement() {
 				)}
 			</div>
 
+			{/* Pending Invitations Section */}
+			{canInvite && (
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+					<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+							Pending Invitations
+						</h2>
+						<button
+							type="button"
+							onClick={() => setShowBulkInviteModal(true)}
+							className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+						>
+							Bulk Invite (CSV)
+						</button>
+					</div>
+
+					{invitationsLoading ? (
+						<div className="p-6 text-center">
+							<div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto" />
+						</div>
+					) : pendingInvitations && pendingInvitations.length > 0 ? (
+						<table className="w-full">
+							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+								<tr>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Email
+									</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Role
+									</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Invited By
+									</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Expires
+									</th>
+									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+										Actions
+									</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+								{pendingInvitations.map((inv: OrgInvitation) => (
+									<tr
+										key={inv.id}
+										className="hover:bg-gray-50 dark:hover:bg-gray-700"
+									>
+										<td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+											{inv.email}
+										</td>
+										<td className="px-6 py-4">
+											<span
+												className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getRoleBadgeColor(inv.role)}`}
+											>
+												{inv.role}
+											</span>
+										</td>
+										<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+											{inv.inviter_name}
+										</td>
+										<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+											{formatDate(inv.expires_at)}
+										</td>
+										<td className="px-6 py-4 text-right">
+											<div className="flex items-center justify-end gap-2">
+												<button
+													type="button"
+													onClick={() => copyInviteLink(inv.id)}
+													className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm"
+													title="Copy invite link"
+												>
+													<svg
+														aria-hidden="true"
+														className="w-4 h-4"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+														/>
+													</svg>
+												</button>
+												<button
+													type="button"
+													onClick={() => handleResendInvitation(inv.id)}
+													disabled={resendInvitation.isPending}
+													className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm disabled:opacity-50"
+													title="Resend invitation"
+												>
+													<svg
+														aria-hidden="true"
+														className="w-4 h-4"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+														/>
+													</svg>
+												</button>
+												<button
+													type="button"
+													onClick={() => handleRevokeInvitation(inv.id)}
+													disabled={deleteInvitation.isPending}
+													className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
+													title="Revoke invitation"
+												>
+													<svg
+														aria-hidden="true"
+														className="w-4 h-4"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+														/>
+													</svg>
+												</button>
+											</div>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					) : (
+						<div className="p-6 text-center text-gray-500 dark:text-gray-400">
+							No pending invitations
+						</div>
+					)}
+				</div>
+			)}
+
 			<InviteModal
 				isOpen={showInviteModal}
 				onClose={() => setShowInviteModal(false)}
+			/>
+			<BulkInviteModal
+				isOpen={showBulkInviteModal}
+				onClose={() => setShowBulkInviteModal(false)}
+				orgId={orgId}
 			/>
 			<EditUserModal
 				isOpen={!!editingUser}

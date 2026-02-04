@@ -185,3 +185,64 @@ export function useAcceptInvitation() {
 		},
 	});
 }
+
+export function useResendInvitation() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			orgId,
+			invitationId,
+		}: {
+			orgId: string;
+			invitationId: string;
+		}) => organizationsApi.resendInvitation(orgId, invitationId),
+		onSuccess: (_, { orgId }) => {
+			queryClient.invalidateQueries({
+				queryKey: ['organizations', orgId, 'invitations'],
+			});
+		},
+	});
+}
+
+export function useBulkInvite() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			orgId,
+			invites,
+		}: {
+			orgId: string;
+			invites: { email: string; role: string }[];
+		}) => organizationsApi.bulkInvite(orgId, invites),
+		onSuccess: (_, { orgId }) => {
+			queryClient.invalidateQueries({
+				queryKey: ['organizations', orgId, 'invitations'],
+			});
+		},
+	});
+}
+
+export function useBulkInviteCSV() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ orgId, file }: { orgId: string; file: File }) =>
+			organizationsApi.bulkInviteCSV(orgId, file),
+		onSuccess: (_, { orgId }) => {
+			queryClient.invalidateQueries({
+				queryKey: ['organizations', orgId, 'invitations'],
+			});
+		},
+	});
+}
+
+export function useInvitationByToken(token: string) {
+	return useQuery({
+		queryKey: ['invitations', token],
+		queryFn: () => organizationsApi.getInvitationByToken(token),
+		enabled: !!token,
+		retry: false,
+	});
+}

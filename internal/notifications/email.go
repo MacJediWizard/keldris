@@ -198,6 +198,16 @@ type ReportIssue struct {
 	OccurredAt  time.Time `json:"occurred_at"`
 }
 
+// InvitationData holds data for invitation email template
+type InvitationData struct {
+	OrgName     string
+	InviterName string
+	Role        string
+	InviteLink  string
+	ExpiresAt   time.Time
+	ExpiresIn   string
+}
+
 // SendBackupSuccess sends a backup success notification email
 func (s *EmailService) SendBackupSuccess(to []string, data BackupSuccessData) error {
 	subject := fmt.Sprintf("Backup Successful: %s - %s", data.Hostname, data.ScheduleName)
@@ -238,6 +248,12 @@ func (s *EmailService) SendValidationFailed(to []string, data ValidationFailedDa
 func (s *EmailService) SendReport(to []string, data ReportEmailData) error {
 	subject := fmt.Sprintf("%s Backup Report: %s", data.Frequency, data.OrgName)
 	return s.sendTemplate(to, subject, "report_summary.html", data)
+}
+
+// SendInvitation sends an organization invitation email
+func (s *EmailService) SendInvitation(to []string, data InvitationData) error {
+	subject := fmt.Sprintf("You're invited to join %s on Keldris", data.OrgName)
+	return s.sendTemplate(to, subject, "invitation.html", data)
 }
 
 // FormatBytes formats bytes into a human-readable string
