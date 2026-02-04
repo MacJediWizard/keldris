@@ -2,6 +2,8 @@
 package api
 
 import (
+	"io/fs"
+
 	"github.com/MacJediWizard/keldris/internal/activity"
 	"github.com/MacJediWizard/keldris/internal/api/handlers"
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
@@ -42,6 +44,8 @@ type Config struct {
 	LogBuffer *logs.LogBuffer
 	// ActivityFeed for real-time activity events (optional).
 	ActivityFeed *activity.Feed
+	// DocsFS is the filesystem containing documentation markdown files (optional).
+	DocsFS fs.FS
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -116,6 +120,12 @@ func NewRouter(
 	changelogHandler := handlers.NewChangelogHandler("CHANGELOG.md", cfg.Version, logger)
 	changelogHandler.RegisterPublicRoutes(r.Engine)
 
+	// Documentation endpoint (no auth required for public access)
+	if cfg.DocsFS != nil {
+		docsHandler := handlers.NewDocsHandler(cfg.DocsFS, logger)
+		docsHandler.RegisterPublicRoutes(r.Engine)
+	}
+
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
@@ -136,6 +146,12 @@ func NewRouter(
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 	changelogHandler.RegisterRoutes(apiV1)
+
+	// Documentation routes (authenticated)
+	if cfg.DocsFS != nil {
+		docsHandler := handlers.NewDocsHandler(cfg.DocsFS, logger)
+		docsHandler.RegisterRoutes(apiV1)
+	}
 
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
 	orgsHandler.RegisterRoutes(apiV1)
