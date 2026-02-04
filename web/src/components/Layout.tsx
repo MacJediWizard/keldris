@@ -18,6 +18,7 @@ import {
 	ReadOnlyModeContext,
 	useReadOnlyModeValue,
 } from '../hooks/useReadOnlyMode';
+import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AirGapIndicator } from './features/AirGapIndicator';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { GlobalSearchBar } from './features/GlobalSearchBar';
@@ -28,7 +29,6 @@ import { RecentItemsDropdown } from './features/RecentItems';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { TrialBanner } from './features/TrialBanner';
 import { WhatsNewModal } from './features/WhatsNewModal';
-import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { Breadcrumbs } from './ui/Breadcrumbs';
 
 interface NavItem {
