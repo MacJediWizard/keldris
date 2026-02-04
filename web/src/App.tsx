@@ -48,6 +48,7 @@ import { SLA } from './pages/SLA';
 import { Schedules } from './pages/Schedules';
 import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
+import { SystemHealth } from './pages/SystemHealth';
 import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
 import { UserManagement } from './pages/UserManagement';
@@ -158,6 +159,7 @@ function App() {
 								element={<RateLimitDashboard />}
 							/>
 							<Route path="admin/rate-limit-configs" element={<RateLimits />} />
+							<Route path="admin/health" element={<SystemHealth />} />
 							<Route path="account/sessions" element={<UserSessions />} />
 							<Route path="onboarding" element={<Onboarding />} />
 							<Route path="changelog" element={<Changelog />} />
