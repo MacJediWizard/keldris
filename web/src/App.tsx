@@ -18,6 +18,7 @@ import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
 import { DockerLogs } from './pages/DockerLogs';
+import { Documentation } from './pages/Documentation';
 import { DockerRegistries } from './pages/DockerRegistries';
 import { DowntimeHistory } from './pages/DowntimeHistory';
 import { FileDiff } from './pages/FileDiff';
@@ -161,6 +162,8 @@ function App() {
 							<Route path="account/sessions" element={<UserSessions />} />
 							<Route path="onboarding" element={<Onboarding />} />
 							<Route path="changelog" element={<Changelog />} />
+							<Route path="docs" element={<Documentation />} />
+							<Route path="docs/:slug" element={<Documentation />} />
 							<Route path="*" element={<NotFound />} />
 						</Route>
 					</Routes>
