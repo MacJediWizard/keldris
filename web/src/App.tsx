@@ -59,6 +59,7 @@ import { Templates } from './pages/Templates';
 import { UserManagement } from './pages/UserManagement';
 import { UserSessions } from './pages/UserSessions';
 import { LicenseManagement } from './pages/admin/LicenseManagement';
+import { PasswordReset } from './pages/PasswordReset';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -83,8 +84,9 @@ function App() {
 				<BrandingProvider>
 					<BrowserRouter>
 						<Routes>
-							{/* Setup route - outside Layout, no auth required */}
+							{/* Public routes - outside Layout, no auth required */}
 							<Route path="/setup" element={<Setup />} />
+							<Route path="/reset-password" element={<PasswordReset />} />
 							<Route path="/" element={<Layout />}>
 								<Route index element={<Dashboard />} />
 								<Route path="agents" element={<Agents />} />
