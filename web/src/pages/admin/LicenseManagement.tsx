@@ -106,6 +106,7 @@ export function LicenseManagement() {
 								className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg"
 							>
 								<svg
+									aria-hidden="true"
 									className="w-4 h-4 text-green-600"
 									fill="currentColor"
 									viewBox="0 0 20 20"
@@ -138,6 +139,7 @@ export function LicenseManagement() {
 							className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
 						>
 							<svg
+								aria-hidden="true"
 								className="w-5 h-5"
 								fill="none"
 								stroke="currentColor"
@@ -160,6 +162,7 @@ export function LicenseManagement() {
 							className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
 						>
 							<svg
+								aria-hidden="true"
 								className="w-5 h-5"
 								fill="none"
 								stroke="currentColor"
@@ -183,6 +186,7 @@ export function LicenseManagement() {
 							className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
 						>
 							<svg
+								aria-hidden="true"
 								className="w-5 h-5"
 								fill="none"
 								stroke="currentColor"
@@ -234,6 +238,7 @@ export function LicenseManagement() {
 											<td className="py-3">
 												<div className="flex items-center gap-2">
 													<svg
+														aria-hidden="true"
 														className="w-5 h-5 text-gray-400"
 														fill="none"
 														stroke="currentColor"
@@ -288,6 +293,7 @@ export function LicenseManagement() {
 					) : (
 						<div className="text-center py-8 text-gray-500">
 							<svg
+								aria-hidden="true"
 								className="w-12 h-12 mx-auto text-gray-300 mb-3"
 								fill="none"
 								stroke="currentColor"

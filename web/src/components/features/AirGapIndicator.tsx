@@ -36,11 +36,11 @@ export function AirGapIndicator({
 		>
 			{/* Air-gap icon (cloud with slash) */}
 			<svg
+				aria-hidden="true"
 				className="w-3.5 h-3.5"
 				fill="none"
 				stroke="currentColor"
 				viewBox="0 0 24 24"
-				aria-hidden="true"
 			>
 				<path
 					strokeLinecap="round"
@@ -91,6 +91,7 @@ export function AirGapStatusCard() {
 				<div className="flex items-center gap-3 mb-4">
 					<div className="p-2 bg-blue-100 rounded-lg">
 						<svg
+							aria-hidden="true"
 							className="w-5 h-5 text-blue-600"
 							fill="none"
 							stroke="currentColor"
@@ -126,6 +127,7 @@ export function AirGapStatusCard() {
 			<div className="flex items-center gap-3 mb-4">
 				<div className="p-2 bg-slate-100 rounded-lg">
 					<svg
+						aria-hidden="true"
 						className="w-5 h-5 text-slate-600"
 						fill="none"
 						stroke="currentColor"
@@ -159,7 +161,12 @@ export function AirGapStatusCard() {
 					<span className="text-sm text-gray-600">License Status</span>
 					{license?.valid ? (
 						<span className="inline-flex items-center gap-1 text-sm text-green-700 bg-green-50 px-2 py-0.5 rounded">
-							<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="currentColor"
+								viewBox="0 0 20 20"
+							>
 								<path
 									fillRule="evenodd"
 									d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -170,7 +177,12 @@ export function AirGapStatusCard() {
 						</span>
 					) : (
 						<span className="inline-flex items-center gap-1 text-sm text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
-							<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="currentColor"
+								viewBox="0 0 20 20"
+							>
 								<path
 									fillRule="evenodd"
 									d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
@@ -255,7 +267,8 @@ export function AirGapStatusCard() {
 /**
  * External link wrapper that respects air-gap mode settings.
  */
-interface ExternalLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
+interface ExternalLinkProps
+	extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
 	href: string;
 	children: React.ReactNode;
 	fallbackMessage?: string;
@@ -278,6 +291,7 @@ export function ExternalLink({
 			>
 				{children}
 				<svg
+					aria-hidden="true"
 					className="inline-block w-3 h-3 ml-1 opacity-50"
 					fill="none"
 					stroke="currentColor"

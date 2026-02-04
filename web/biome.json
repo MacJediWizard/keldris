@@ -1,12 +1,12 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.3.14/schema.json",
 	"files": {
-		"include": [
-			"src/**/*.ts",
-			"src/**/*.tsx",
-			"portal/src/**/*.ts",
-			"portal/src/**/*.tsx",
-			"*.css"
+		"includes": [
+			"**/src/**/*.ts",
+			"**/src/**/*.tsx",
+			"**/portal/src/**/*.ts",
+			"**/portal/src/**/*.tsx",
+			"**/*.css"
 		]
 	},
 	"linter": {
@@ -24,7 +24,5 @@
 	"javascript": {
 		"formatter": { "quoteStyle": "single", "semicolons": "always" }
 	},
-	"organizeImports": {
-		"enabled": true
-	}
+	"assist": { "actions": { "source": { "organizeImports": "on" } } }
 }
