@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useMe } from '../hooks/useAuth';
 import {
 	useBulkInviteCSV,
@@ -673,8 +673,8 @@ function BulkInviteModal({ isOpen, onClose, orgId }: BulkInviteModalProps) {
 									Failed to invite {result.failed.length} user(s):
 								</p>
 								<ul className="text-sm text-red-700 dark:text-red-300 list-disc list-inside">
-									{result.failed.map((f, i) => (
-										<li key={i}>
+									{result.failed.map((f) => (
+										<li key={f.email}>
 											{f.email}: {f.error}
 										</li>
 									))}
