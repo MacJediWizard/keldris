@@ -479,6 +479,17 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
+	ServerSetupStatus,
+	CreateSuperuserRequest,
+	CreateSuperuserResponse,
+	DatabaseTestResponse,
+	ActivateLicenseRequest,
+	ActivateLicenseResponse,
+	StartTrialRequest,
+	StartTrialResponse,
+	CreateFirstOrgRequest,
+	SetupCompleteResponse,
+	RerunStatusResponse,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -4422,4 +4433,88 @@ export const usersApi = {
 		);
 		return response.impersonation_logs ?? [];
 	},
+};
+
+// Server Setup API
+export const setupApi = {
+	getStatus: async (): Promise<ServerSetupStatus> =>
+		fetchApi<ServerSetupStatus>('/setup/status'),
+
+	testDatabase: async (): Promise<DatabaseTestResponse> =>
+		fetchApi<DatabaseTestResponse>('/setup/database/test', { method: 'POST' }),
+
+	createSuperuser: async (
+		data: CreateSuperuserRequest,
+	): Promise<CreateSuperuserResponse> =>
+		fetchApi<CreateSuperuserResponse>('/setup/superuser', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	configureSMTP: async (data: SMTPSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/smtp', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	skipSMTP: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/smtp/skip', { method: 'POST' }),
+
+	configureOIDC: async (data: OIDCSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/oidc', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	skipOIDC: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/oidc/skip', { method: 'POST' }),
+
+	activateLicense: async (
+		data: ActivateLicenseRequest,
+	): Promise<ActivateLicenseResponse> =>
+		fetchApi<ActivateLicenseResponse>('/setup/license/activate', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	startTrial: async (data: StartTrialRequest): Promise<StartTrialResponse> =>
+		fetchApi<StartTrialResponse>('/setup/license/trial', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	createOrganization: async (
+		data: CreateFirstOrgRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/organization', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	completeSetup: async (): Promise<SetupCompleteResponse> =>
+		fetchApi<SetupCompleteResponse>('/setup/complete', { method: 'POST' }),
+
+	// Superuser re-run endpoints
+	getRerunStatus: async (): Promise<RerunStatusResponse> =>
+		fetchApi<RerunStatusResponse>('/setup/rerun'),
+
+	rerunConfigureSMTP: async (data: SMTPSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/rerun/smtp', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	rerunConfigureOIDC: async (data: OIDCSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/rerun/oidc', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	rerunUpdateLicense: async (
+		data: ActivateLicenseRequest,
+	): Promise<ActivateLicenseResponse> =>
+		fetchApi<ActivateLicenseResponse>('/setup/rerun/license', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };

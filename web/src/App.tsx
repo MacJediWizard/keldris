@@ -4,6 +4,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { Activity } from './pages/Activity';
 import { AdminLogs } from './pages/AdminLogs';
+import { AdminSetup } from './pages/AdminSetup';
 import { AgentDetails } from './pages/AgentDetails';
 import { AgentGroups } from './pages/AgentGroups';
 import { Agents } from './pages/Agents';
@@ -46,6 +47,7 @@ import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
 import { Restore } from './pages/Restore';
 import { SLA } from './pages/SLA';
 import { Schedules } from './pages/Schedules';
+import { Setup } from './pages/Setup';
 import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
 import { Tags } from './pages/Tags';
@@ -75,6 +77,8 @@ function App() {
 			<QueryClientProvider client={queryClient}>
 				<BrowserRouter>
 					<Routes>
+						{/* Setup route - outside Layout, no auth required */}
+						<Route path="/setup" element={<Setup />} />
 						<Route path="/" element={<Layout />}>
 							<Route index element={<Dashboard />} />
 							<Route path="agents" element={<Agents />} />
@@ -158,6 +162,7 @@ function App() {
 								element={<RateLimitDashboard />}
 							/>
 							<Route path="admin/rate-limit-configs" element={<RateLimits />} />
+							<Route path="admin/setup" element={<AdminSetup />} />
 							<Route path="account/sessions" element={<UserSessions />} />
 							<Route path="onboarding" element={<Onboarding />} />
 							<Route path="changelog" element={<Changelog />} />
