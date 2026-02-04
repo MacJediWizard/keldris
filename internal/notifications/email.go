@@ -208,6 +208,20 @@ type InvitationData struct {
 	ExpiresIn   string
 }
 
+// EmailVerificationData holds data for email verification template
+type EmailVerificationData struct {
+	UserName        string
+	Email           string
+	VerificationURL string
+	ExpiresAt       time.Time
+}
+
+// SendEmailVerification sends an email verification notification
+func (s *EmailService) SendEmailVerification(to string, data EmailVerificationData) error {
+	subject := "Verify your email address - Keldris"
+	return s.sendTemplate([]string{to}, subject, "email_verification.html", data)
+}
+
 // SendBackupSuccess sends a backup success notification email
 func (s *EmailService) SendBackupSuccess(to []string, data BackupSuccessData) error {
 	subject := fmt.Sprintf("Backup Successful: %s - %s", data.Hostname, data.ScheduleName)
@@ -254,6 +268,33 @@ func (s *EmailService) SendReport(to []string, data ReportEmailData) error {
 func (s *EmailService) SendInvitation(to []string, data InvitationData) error {
 	subject := fmt.Sprintf("You're invited to join %s on Keldris", data.OrgName)
 	return s.sendTemplate(to, subject, "invitation.html", data)
+}
+
+// PasswordResetRequestData holds data for password reset request email template
+type PasswordResetRequestData struct {
+	UserName  string
+	UserEmail string
+	ResetURL  string
+	ExpiresAt time.Time
+}
+
+// PasswordResetSuccessData holds data for password reset success email template
+type PasswordResetSuccessData struct {
+	UserName  string
+	UserEmail string
+	ChangedAt time.Time
+}
+
+// SendPasswordResetRequest sends a password reset request email
+func (s *EmailService) SendPasswordResetRequest(to []string, data PasswordResetRequestData) error {
+	subject := "Reset Your Keldris Password"
+	return s.sendTemplate(to, subject, "password_reset_request.html", data)
+}
+
+// SendPasswordResetSuccess sends a password reset success notification email
+func (s *EmailService) SendPasswordResetSuccess(to []string, data PasswordResetSuccessData) error {
+	subject := "Your Keldris Password Has Been Changed"
+	return s.sendTemplate(to, subject, "password_reset_success.html", data)
 }
 
 // FormatBytes formats bytes into a human-readable string
