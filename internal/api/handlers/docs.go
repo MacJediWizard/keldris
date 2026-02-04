@@ -15,6 +15,12 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Compiled regex patterns for markdown parsing.
+var (
+	numberedListPattern   = regexp.MustCompile(`^\d+\. `)
+	tableSeparatorPattern = regexp.MustCompile(`^\|[-:\s|]+\|$`)
+)
+
 // DocPage represents a documentation page.
 type DocPage struct {
 	Slug        string `json:"slug"`
@@ -406,7 +412,7 @@ func (h *DocsHandler) markdownToHTML(md string) string {
 		// Tables
 		if strings.HasPrefix(line, "|") && strings.HasSuffix(strings.TrimSpace(line), "|") {
 			// Check if this is a separator line
-			if regexp.MustCompile(`^\|[-:\s|]+\|$`).MatchString(line) {
+			if tableSeparatorPattern.MatchString(line) {
 				tableHeaderDone = true
 				continue
 			}
@@ -463,12 +469,12 @@ func (h *DocsHandler) markdownToHTML(md string) string {
 		}
 
 		// Numbered lists
-		if matched, _ := regexp.MatchString(`^\d+\. `, line); matched {
+		if numberedListPattern.MatchString(line) {
 			if !inList {
 				html.WriteString("<ol>\n")
 				inList = true
 			}
-			content := regexp.MustCompile(`^\d+\. `).ReplaceAllString(line, "")
+			content := numberedListPattern.ReplaceAllString(line, "")
 			html.WriteString("<li>" + h.inlineMarkdown(content) + "</li>\n")
 			continue
 		}
