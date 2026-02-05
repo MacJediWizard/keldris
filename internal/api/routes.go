@@ -2,6 +2,8 @@
 package api
 
 import (
+	"io/fs"
+
 	"github.com/MacJediWizard/keldris/internal/activity"
 	"github.com/MacJediWizard/keldris/internal/api/handlers"
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
@@ -45,6 +47,8 @@ type Config struct {
 	LogBuffer *logs.LogBuffer
 	// ActivityFeed for real-time activity events (optional).
 	ActivityFeed *activity.Feed
+	// DocsFS is the filesystem containing documentation markdown files (optional).
+	DocsFS fs.FS
 	// AirGapManager for air-gapped license management (optional).
 	AirGapManager *license.AirGapManager
 	// MeteringService for usage tracking and billing (optional).
@@ -125,6 +129,12 @@ func NewRouter(
 	changelogHandler := handlers.NewChangelogHandler("CHANGELOG.md", cfg.Version, logger)
 	changelogHandler.RegisterPublicRoutes(r.Engine)
 
+	// Documentation endpoint (no auth required for public access)
+	if cfg.DocsFS != nil {
+		docsHandler := handlers.NewDocsHandler(cfg.DocsFS, logger)
+		docsHandler.RegisterPublicRoutes(r.Engine)
+	}
+
 	// Air-gap/license management (public status endpoint, protected management endpoints)
 	var airGapHandler *handlers.AirGapHandler
 	if cfg.AirGapManager != nil {
@@ -157,6 +167,12 @@ func NewRouter(
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 	changelogHandler.RegisterRoutes(apiV1)
+
+	// Documentation routes (authenticated)
+	if cfg.DocsFS != nil {
+		docsHandler := handlers.NewDocsHandler(cfg.DocsFS, logger)
+		docsHandler.RegisterRoutes(apiV1)
+	}
 
 	// Register air-gap protected routes (after auth middleware is applied)
 	if airGapHandler != nil {
