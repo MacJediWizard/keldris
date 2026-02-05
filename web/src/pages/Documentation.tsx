@@ -127,24 +127,45 @@ function MarkdownRenderer({ content }: { content: string }) {
 	// Basic markdown rendering - in production, use a proper markdown library
 	const html = content
 		// Headers
-		.replace(/^#### (.+)$/gm, '<h4 class="text-lg font-medium mt-6 mb-2">$1</h4>')
-		.replace(/^### (.+)$/gm, '<h3 class="text-xl font-semibold mt-8 mb-3">$1</h3>')
-		.replace(/^## (.+)$/gm, '<h2 class="text-2xl font-bold mt-10 mb-4 pb-2 border-b">$1</h2>')
+		.replace(
+			/^#### (.+)$/gm,
+			'<h4 class="text-lg font-medium mt-6 mb-2">$1</h4>',
+		)
+		.replace(
+			/^### (.+)$/gm,
+			'<h3 class="text-xl font-semibold mt-8 mb-3">$1</h3>',
+		)
+		.replace(
+			/^## (.+)$/gm,
+			'<h2 class="text-2xl font-bold mt-10 mb-4 pb-2 border-b">$1</h2>',
+		)
 		.replace(/^# (.+)$/gm, '<h1 class="text-3xl font-bold mb-6">$1</h1>')
 		// Code blocks
-		.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-4"><code>$2</code></pre>')
+		.replace(
+			/```(\w+)?\n([\s\S]*?)```/g,
+			'<pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-4"><code>$2</code></pre>',
+		)
 		// Inline code
-		.replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm">$1</code>')
+		.replace(
+			/`([^`]+)`/g,
+			'<code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm">$1</code>',
+		)
 		// Bold
 		.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
 		// Italic
 		.replace(/\*([^*]+)\*/g, '<em>$1</em>')
 		// Links
-		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-600 hover:text-indigo-800 underline">$1</a>')
+		.replace(
+			/\[([^\]]+)\]\(([^)]+)\)/g,
+			'<a href="$2" class="text-indigo-600 hover:text-indigo-800 underline">$1</a>',
+		)
 		// Unordered lists
 		.replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>')
 		// Paragraphs (simple approach)
-		.replace(/^(?!<[hluop]|```)((?!<).+)$/gm, '<p class="my-3 text-gray-700 leading-relaxed">$1</p>');
+		.replace(
+			/^(?!<[hluop]|```)((?!<).+)$/gm,
+			'<p class="my-3 text-gray-700 leading-relaxed">$1</p>',
+		);
 
 	return (
 		<div
@@ -168,9 +189,7 @@ function SearchResults({
 	return (
 		<div className="flex-1 p-6">
 			<div className="flex items-center justify-between mb-6">
-				<h2 className="text-xl font-semibold">
-					Search results for "{query}"
-				</h2>
+				<h2 className="text-xl font-semibold">Search results for "{query}"</h2>
 				<button
 					type="button"
 					onClick={onClose}
@@ -207,7 +226,9 @@ export function Documentation() {
 	const [doc, setDoc] = useState<DocPage | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [searchResults, setSearchResults] = useState<DocSearchResult[] | null>(null);
+	const [searchResults, setSearchResults] = useState<DocSearchResult[] | null>(
+		null,
+	);
 	const [searchQuery, setSearchQuery] = useState('');
 
 	useEffect(() => {
@@ -228,7 +249,9 @@ export function Documentation() {
 				const data = await response.json();
 				setDoc(data);
 			} catch (err) {
-				setError(err instanceof Error ? err.message : 'Failed to load documentation');
+				setError(
+					err instanceof Error ? err.message : 'Failed to load documentation',
+				);
 			} finally {
 				setLoading(false);
 			}
@@ -246,7 +269,9 @@ export function Documentation() {
 		setSearchQuery(query);
 
 		try {
-			const response = await fetch(`/docs/search?q=${encodeURIComponent(query)}`);
+			const response = await fetch(
+				`/docs/search?q=${encodeURIComponent(query)}`,
+			);
 			if (response.ok) {
 				const data = await response.json();
 				setSearchResults(data.results);
@@ -269,7 +294,8 @@ export function Documentation() {
 				<div className="flex-1 p-6">
 					<h1 className="text-3xl font-bold mb-6">{t('help.documentation')}</h1>
 					<p className="text-gray-600 mb-8">
-						Welcome to the Keldris documentation. Select a topic from the sidebar to get started.
+						Welcome to the Keldris documentation. Select a topic from the
+						sidebar to get started.
 					</p>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -279,7 +305,9 @@ export function Documentation() {
 								to={`/docs/${page.slug}`}
 								className="p-4 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all"
 							>
-								<h3 className="font-medium text-gray-900">{t(page.labelKey)}</h3>
+								<h3 className="font-medium text-gray-900">
+									{t(page.labelKey)}
+								</h3>
 							</Link>
 						))}
 					</div>
@@ -318,7 +346,9 @@ export function Documentation() {
 				<DocSidebar currentSlug={slug} onSearch={handleSearch} />
 				<div className="flex-1 p-6">
 					<div className="bg-red-50 border border-red-200 rounded-lg p-4">
-						<h2 className="text-red-800 font-medium">Documentation not found</h2>
+						<h2 className="text-red-800 font-medium">
+							Documentation not found
+						</h2>
 						<p className="text-red-600 text-sm mt-1">
 							The requested documentation page could not be found.
 						</p>
