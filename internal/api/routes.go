@@ -12,6 +12,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/logs"
 	"github.com/MacJediWizard/keldris/internal/monitoring"
 	"github.com/MacJediWizard/keldris/internal/reports"
+	"github.com/MacJediWizard/keldris/internal/telemetry"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	swaggerFiles "github.com/swaggo/files"
@@ -42,6 +43,8 @@ type Config struct {
 	LogBuffer *logs.LogBuffer
 	// ActivityFeed for real-time activity events (optional).
 	ActivityFeed *activity.Feed
+	// TelemetryService for anonymous usage telemetry (optional).
+	TelemetryService *telemetry.Service
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -346,6 +349,10 @@ func NewRouter(
 	// Superuser routes (requires superuser privileges)
 	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
 	superuserHandler.RegisterRoutes(apiV1)
+
+	// Telemetry routes (opt-in anonymous usage telemetry)
+	telemetryHandler := handlers.NewTelemetryHandler(database, cfg.TelemetryService, logger)
+	telemetryHandler.RegisterRoutes(apiV1)
 
 	// Docker backup routes
 	dockerDiscoveryConfig := docker.DefaultDiscoveryConfig()
