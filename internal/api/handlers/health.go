@@ -18,6 +18,7 @@ type HealthStatus string
 const (
 	HealthStatusHealthy   HealthStatus = "healthy"
 	HealthStatusUnhealthy HealthStatus = "unhealthy"
+	HealthStatusDraining  HealthStatus = "draining"
 )
 
 // HealthCheckResult represents the result of a health check.
@@ -30,9 +31,9 @@ type HealthCheckResult struct {
 
 // HealthResponse is the response for health check endpoints.
 type HealthResponse struct {
-	Status HealthStatus              `json:"status"`
+	Status HealthStatus                  `json:"status"`
 	Checks map[string]*HealthCheckResult `json:"checks,omitempty"`
-	Error  string                    `json:"error,omitempty"`
+	Error  string                        `json:"error,omitempty"`
 }
 
 // DatabaseHealthChecker defines the interface for database health checking.
@@ -47,12 +48,32 @@ type OIDCHealthChecker interface {
 	HealthCheck(ctx context.Context) error
 }
 
+// ShutdownStatus represents the current shutdown status.
+type ShutdownStatus struct {
+	State             string        `json:"state"`
+	StartedAt         *time.Time    `json:"started_at,omitempty"`
+	TimeRemaining     time.Duration `json:"time_remaining,omitempty"`
+	RunningBackups    int           `json:"running_backups"`
+	CheckpointedCount int           `json:"checkpointed_count"`
+	AcceptingNewJobs  bool          `json:"accepting_new_jobs"`
+	Message           string        `json:"message,omitempty"`
+}
+
+// ShutdownStatusProvider defines the interface for providing shutdown status.
+type ShutdownStatusProvider interface {
+	// GetStatus returns the current shutdown status.
+	GetStatus() ShutdownStatus
+	// IsAcceptingJobs returns true if the server is accepting new backup jobs.
+	IsAcceptingJobs() bool
+}
+
 // HealthHandler handles health-related HTTP endpoints.
 type HealthHandler struct {
 	db            DatabaseHealthChecker
 	oidc          OIDCHealthChecker
 	sessions      *auth.SessionStore
 	backupService *maintenance.DatabaseBackupService
+	shutdown      ShutdownStatusProvider
 	logger        zerolog.Logger
 }
 
@@ -75,6 +96,12 @@ func (h *HealthHandler) SetDatabaseBackupService(service *maintenance.DatabaseBa
 	h.backupService = service
 }
 
+// SetShutdownStatusProvider sets the shutdown status provider.
+// This should be called after server initialization to enable shutdown status endpoint.
+func (h *HealthHandler) SetShutdownStatusProvider(provider ShutdownStatusProvider) {
+	h.shutdown = provider
+}
+
 // RegisterPublicRoutes registers health check routes that don't require authentication.
 func (h *HealthHandler) RegisterPublicRoutes(r *gin.Engine) {
 	health := r.Group("/health")
@@ -82,6 +109,7 @@ func (h *HealthHandler) RegisterPublicRoutes(r *gin.Engine) {
 		health.GET("", h.Overall)
 		health.GET("/db", h.Database)
 		health.GET("/oidc", h.OIDC)
+		health.GET("/shutdown", h.Shutdown)
 	}
 }
 
@@ -227,6 +255,64 @@ func (h *HealthHandler) checkOIDC(ctx context.Context) *HealthCheckResult {
 	result.Details = map[string]any{"configured": true}
 
 	return result
+}
+
+// ShutdownResponse is the response for the shutdown status endpoint.
+type ShutdownResponse struct {
+	State             string `json:"state"`
+	StartedAt         string `json:"started_at,omitempty"`
+	TimeRemaining     string `json:"time_remaining,omitempty"`
+	RunningBackups    int    `json:"running_backups"`
+	CheckpointedCount int    `json:"checkpointed_count"`
+	AcceptingNewJobs  bool   `json:"accepting_new_jobs"`
+	Message           string `json:"message,omitempty"`
+}
+
+// Shutdown returns the current shutdown status.
+// GET /health/shutdown
+// @Summary Get shutdown status
+// @Description Returns the current shutdown state, including whether the server is accepting new jobs and the status of running backups
+// @Tags Health
+// @Produce json
+// @Success 200 {object} ShutdownResponse
+// @Router /health/shutdown [get]
+func (h *HealthHandler) Shutdown(c *gin.Context) {
+	if h.shutdown == nil {
+		// Shutdown provider not configured, return default running state
+		response := ShutdownResponse{
+			State:            "running",
+			AcceptingNewJobs: true,
+			Message:          "Server is running normally",
+		}
+		c.JSON(http.StatusOK, response)
+		return
+	}
+
+	status := h.shutdown.GetStatus()
+
+	response := ShutdownResponse{
+		State:             status.State,
+		RunningBackups:    status.RunningBackups,
+		CheckpointedCount: status.CheckpointedCount,
+		AcceptingNewJobs:  status.AcceptingNewJobs,
+		Message:           status.Message,
+	}
+
+	if status.StartedAt != nil {
+		response.StartedAt = status.StartedAt.Format(time.RFC3339)
+	}
+
+	if status.TimeRemaining > 0 {
+		response.TimeRemaining = status.TimeRemaining.String()
+	}
+
+	// Return 503 Service Unavailable if the server is shutting down
+	if status.State != "running" {
+		c.JSON(http.StatusServiceUnavailable, response)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // SystemHealth returns comprehensive system health including database backups.
