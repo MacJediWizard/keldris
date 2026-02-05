@@ -53,8 +53,10 @@ export function useUpdateBackupHookTemplate() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: UpdateBackupHookTemplateRequest }) =>
-			backupHookTemplatesApi.update(id, data),
+		}: {
+			id: string;
+			data: UpdateBackupHookTemplateRequest;
+		}) => backupHookTemplatesApi.update(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['backupHookTemplates'] });
 			queryClient.invalidateQueries({ queryKey: ['backupHookTemplates', id] });

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { UpgradePrompt } from '../components/features/UpgradePrompt';
 import { useMe } from '../hooks/useAuth';
 import {
 	useCreateLifecyclePolicy,
@@ -8,6 +9,7 @@ import {
 	useOrgLifecycleDeletions,
 	useUpdateLifecyclePolicy,
 } from '../hooks/useLifecyclePolicies';
+import { usePlanLimits } from '../hooks/usePlanLimits';
 import type {
 	ClassificationLevel,
 	ClassificationRetention,
@@ -539,6 +541,8 @@ export function LifecyclePolicies() {
 	const { data: deletions } = useOrgLifecycleDeletions(10);
 	const deletePolicy = useDeleteLifecyclePolicy();
 	const updatePolicy = useUpdateLifecyclePolicy();
+	const { hasFeature } = usePlanLimits();
+	const hasLifecyclePolicies = hasFeature('lifecycle_policies');
 
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [dryRunPolicy, setDryRunPolicy] = useState<LifecyclePolicy | null>(
@@ -548,6 +552,27 @@ export function LifecyclePolicies() {
 
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
+
+	if (!hasLifecyclePolicies) {
+		return (
+			<div className="space-y-6">
+				<div>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Lifecycle Policies
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						Automate snapshot retention and cleanup based on custom rules
+					</p>
+				</div>
+				<UpgradePrompt
+					feature="lifecycle_policies"
+					variant="card"
+					source="lifecycle-policies-page"
+					showBenefits={true}
+				/>
+			</div>
+		);
+	}
 
 	if (!isAdmin) {
 		return (
