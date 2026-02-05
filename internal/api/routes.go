@@ -13,6 +13,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/logs"
+	"github.com/MacJediWizard/keldris/internal/maintenance"
 	"github.com/MacJediWizard/keldris/internal/metering"
 	"github.com/MacJediWizard/keldris/internal/monitoring"
 	"github.com/MacJediWizard/keldris/internal/notifications"
@@ -47,6 +48,8 @@ type Config struct {
 	LogBuffer *logs.LogBuffer
 	// ActivityFeed for real-time activity events (optional).
 	ActivityFeed *activity.Feed
+	// DatabaseBackupService for PostgreSQL backup management (optional).
+	DatabaseBackupService *maintenance.DatabaseBackupService
 	// SecurityHeaders configures security headers for hardening.
 	// If nil, default production settings are used.
 	SecurityHeaders *middleware.SecurityHeadersConfig
@@ -133,8 +136,12 @@ func NewRouter(
 	}
 	r.Engine.Use(rateLimiter)
 
-	// Health check endpoints (no auth required)
+	// Health check endpoints (no auth required for basic checks)
 	healthHandler := handlers.NewHealthHandler(database, oidc, logger)
+	healthHandler.SetSessionStore(sessions)
+	if cfg.DatabaseBackupService != nil {
+		healthHandler.SetDatabaseBackupService(cfg.DatabaseBackupService)
+	}
 	healthHandler.RegisterPublicRoutes(r.Engine)
 
 	// Prometheus metrics endpoint (no auth required)
@@ -197,6 +204,7 @@ func NewRouter(
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 	changelogHandler.RegisterRoutes(apiV1)
+	healthHandler.RegisterRoutes(apiV1)
 	securityHandler.RegisterRoutes(apiV1)
 
 	// Documentation routes (authenticated)
@@ -437,6 +445,12 @@ func NewRouter(
 	// Superuser routes (requires superuser privileges)
 	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
 	superuserHandler.RegisterRoutes(apiV1)
+
+	// Database backup routes (requires superuser privileges)
+	if cfg.DatabaseBackupService != nil {
+		databaseBackupHandler := handlers.NewDatabaseBackupHandler(database, sessions, cfg.DatabaseBackupService, logger)
+		databaseBackupHandler.RegisterRoutes(apiV1)
+	}
 
 	// System health routes (requires superuser privileges)
 	systemHealthHandler := handlers.NewSystemHealthHandler(database, sessions, logger)
