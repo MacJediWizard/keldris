@@ -19,6 +19,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/MacJediWizard/keldris/internal/telemetry"
+	"github.com/MacJediWizard/keldris/internal/updates"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	swaggerFiles "github.com/swaggo/files"
@@ -64,6 +65,8 @@ type Config struct {
 	MeteringService *metering.Service
 	// EmailService for sending emails (optional).
 	EmailService *notifications.EmailService
+	// UpdateChecker for checking for new Keldris versions (optional).
+	UpdateChecker *updates.Checker
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -183,6 +186,10 @@ func NewRouter(
 		airGapHandler.RegisterRoutes(nil, publicAPI) // Will register to apiV1 later
 	}
 
+	// Update checker endpoint (no auth required for banner display)
+	updatesHandler := handlers.NewUpdatesHandler(cfg.UpdateChecker, logger)
+	updatesHandler.RegisterPublicRoutes(r.Engine)
+
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
@@ -209,6 +216,7 @@ func NewRouter(
 	changelogHandler.RegisterRoutes(apiV1)
 	healthHandler.RegisterRoutes(apiV1)
 	securityHandler.RegisterRoutes(apiV1)
+	updatesHandler.RegisterRoutes(apiV1)
 
 	// Documentation routes (authenticated)
 	if cfg.DocsFS != nil {
