@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useBranding } from '../contexts/BrandingContext';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
 import {
@@ -18,12 +19,15 @@ import {
 	useReadOnlyModeValue,
 } from '../hooks/useReadOnlyMode';
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
+import { AirGapIndicator } from './features/AirGapIndicator';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
+import { LicenseBanner } from './features/LicenseBanner';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { RecentItemsDropdown } from './features/RecentItems';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
+import { TrialBanner } from './features/TrialBanner';
 import { WhatsNewModal } from './features/WhatsNewModal';
 import { Breadcrumbs } from './ui/Breadcrumbs';
 
@@ -349,13 +353,20 @@ function Sidebar() {
 	const { data: user } = useMe();
 	const { t } = useLocale();
 	const { hasNewVersion, latestVersion } = useNewVersionAvailable();
+	const { productName, logoUrl, branding } = useBranding();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
 	return (
 		<aside className="w-64 bg-gray-900 text-white flex flex-col">
 			<div className="p-6">
-				<h1 className="text-2xl font-bold">{t('common.appName')}</h1>
+				{logoUrl && branding?.enabled ? (
+					<img src={logoUrl} alt={productName} className="h-8 mb-2" />
+				) : (
+					<h1 className="text-2xl font-bold">
+						{branding?.enabled ? productName : t('common.appName')}
+					</h1>
+				)}
 				<p className="text-gray-400 text-sm">{t('common.tagline')}</p>
 			</div>
 			<nav className="flex-1 px-4">
@@ -461,6 +472,32 @@ function Sidebar() {
 							</li>
 							<li>
 								<Link
+									to="/organization/license"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/license'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+										/>
+									</svg>
+									<span>License</span>
+								</Link>
+							</li>
+							<li>
+								<Link
 									to="/organization/sso"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/organization/sso'
@@ -561,6 +598,32 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Password Policy</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/organization/branding"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/branding'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+										/>
+									</svg>
+									<span>Branding</span>
 								</Link>
 							</li>
 							<li>
@@ -754,6 +817,64 @@ function Sidebar() {
 									<span>Organizations</span>
 								</Link>
 							</li>
+							<li>
+								<Link
+									to="/admin/license"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/admin/license'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+										/>
+									</svg>
+									<span>License</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/admin/setup"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/admin/setup'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+										/>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+										/>
+									</svg>
+									<span>Server Setup</span>
+								</Link>
+							</li>
 						</ul>
 					</>
 				)}
@@ -887,7 +1008,103 @@ function OrgSwitcher() {
 	);
 }
 
-function Header() {
+function HelpMenu({ onShowShortcuts }: { onShowShortcuts: () => void }) {
+	const [showDropdown, setShowDropdown] = useState(false);
+	const { t } = useLocale();
+
+	const helpLinks = [
+		{ path: '/docs/getting-started', label: t('help.gettingStarted') },
+		{ path: '/docs/configuration', label: t('help.configuration') },
+		{ path: '/docs/agent-deployment', label: t('help.agentDeployment') },
+		{ path: '/docs/api-reference', label: t('help.apiReference') },
+		{ path: '/docs/troubleshooting', label: t('help.troubleshooting') },
+	];
+
+	return (
+		<div className="relative">
+			<button
+				type="button"
+				onClick={() => setShowDropdown(!showDropdown)}
+				className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+				aria-label={t('help.title')}
+			>
+				<svg
+					aria-hidden="true"
+					className="w-5 h-5"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+					/>
+				</svg>
+			</button>
+			{showDropdown && (
+				<div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+					<div className="px-4 py-2 border-b border-gray-100">
+						<p className="text-sm font-semibold text-gray-900">
+							{t('help.title')}
+						</p>
+					</div>
+					<div className="py-1">
+						{helpLinks.map((link) => (
+							<Link
+								key={link.path}
+								to={link.path}
+								onClick={() => setShowDropdown(false)}
+								className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+							>
+								{link.label}
+							</Link>
+						))}
+					</div>
+					<div className="border-t border-gray-100 py-1">
+						<button
+							type="button"
+							onClick={() => {
+								setShowDropdown(false);
+								onShowShortcuts();
+							}}
+							className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
+						>
+							<span>{t('help.keyboardShortcuts')}</span>
+							<span className="text-xs text-gray-400 font-mono">?</span>
+						</button>
+						<a
+							href="/api/docs"
+							target="_blank"
+							rel="noopener noreferrer"
+							onClick={() => setShowDropdown(false)}
+							className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+						>
+							{t('help.swaggerDocs')}
+							<svg
+								aria-hidden="true"
+								className="w-3 h-3 text-gray-400"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+								/>
+							</svg>
+						</a>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
+function Header({ onShowShortcuts }: { onShowShortcuts: () => void }) {
 	const [showDropdown, setShowDropdown] = useState(false);
 	const { data: user } = useMe();
 	const { data: alertCount } = useAlertCount();
@@ -962,8 +1179,10 @@ function Header() {
 						</span>
 					</div>
 				)}
+				<AirGapIndicator showDetails />
 				<LanguageSelector />
 				<RecentItemsDropdown />
+				<HelpMenu onShowShortcuts={onShowShortcuts} />
 				<Link
 					to="/alerts"
 					aria-label={t('nav.alerts')}
@@ -1067,6 +1286,29 @@ function Header() {
 								</svg>
 								Active Sessions
 							</Link>
+							<a
+								href="/portal"
+								target="_blank"
+								rel="noopener noreferrer"
+								onClick={() => setShowDropdown(false)}
+								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+							>
+								<svg
+									aria-hidden="true"
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+									/>
+								</svg>
+								Manage License
+							</a>
 							<button
 								type="button"
 								onClick={() => logout.mutate()}
@@ -1143,11 +1385,13 @@ export function Layout() {
 			<div className="min-h-screen bg-gray-50 flex flex-col">
 				<MaintenanceCountdown />
 				<AnnouncementBanner />
+				<LicenseBanner />
 				<PasswordExpirationBanner />
+				<TrialBanner />
 				<div className="flex flex-1">
 					<Sidebar />
 					<div className="flex-1 flex flex-col">
-						<Header />
+						<Header onShowShortcuts={() => setShowShortcutHelp(true)} />
 						<main className="flex-1 p-6">
 							<Breadcrumbs />
 							<Outlet />

@@ -47,8 +47,10 @@ export function useUpdateOrgConcurrency() {
 		mutationFn: ({
 			orgId,
 			data,
-		}: { orgId: string; data: UpdateConcurrencyRequest }) =>
-			concurrencyApi.updateOrgConcurrency(orgId, data),
+		}: {
+			orgId: string;
+			data: UpdateConcurrencyRequest;
+		}) => concurrencyApi.updateOrgConcurrency(orgId, data),
 		onSuccess: (_, { orgId }) => {
 			queryClient.invalidateQueries({
 				queryKey: ['concurrency', 'org', orgId],
@@ -74,8 +76,10 @@ export function useUpdateAgentConcurrency() {
 		mutationFn: ({
 			agentId,
 			data,
-		}: { agentId: string; data: UpdateConcurrencyRequest }) =>
-			concurrencyApi.updateAgentConcurrency(agentId, data),
+		}: {
+			agentId: string;
+			data: UpdateConcurrencyRequest;
+		}) => concurrencyApi.updateAgentConcurrency(agentId, data),
 		onSuccess: (_, { agentId }) => {
 			queryClient.invalidateQueries({
 				queryKey: ['concurrency', 'agent', agentId],

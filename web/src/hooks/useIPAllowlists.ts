@@ -41,8 +41,10 @@ export function useUpdateIPAllowlist() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: UpdateIPAllowlistRequest }) =>
-			ipAllowlistsApi.update(id, data),
+		}: {
+			id: string;
+			data: UpdateIPAllowlistRequest;
+		}) => ipAllowlistsApi.update(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['ip-allowlists'] });
 			queryClient.invalidateQueries({ queryKey: ['ip-allowlists', id] });

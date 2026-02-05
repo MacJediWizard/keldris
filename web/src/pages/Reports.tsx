@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { UpgradePrompt } from '../components/features/UpgradePrompt';
 import { useNotificationChannels } from '../hooks/useNotifications';
+import { usePlanLimits } from '../hooks/usePlanLimits';
 import {
 	useCreateReportSchedule,
 	useDeleteReportSchedule,
@@ -634,9 +636,30 @@ export default function Reports() {
 		'schedules',
 	);
 	const [showAddModal, setShowAddModal] = useState(false);
+	const { hasFeature } = usePlanLimits();
+	const hasAdvancedReporting = hasFeature('advanced_reporting');
 
 	const { data: schedules, isLoading: schedulesLoading } = useReportSchedules();
 	const { data: history, isLoading: historyLoading } = useReportHistory();
+
+	if (!hasAdvancedReporting) {
+		return (
+			<div className="p-6 space-y-6">
+				<div>
+					<h1 className="text-2xl font-bold text-gray-900">Email Reports</h1>
+					<p className="text-sm text-gray-500 mt-1">
+						Schedule automated backup summary reports
+					</p>
+				</div>
+				<UpgradePrompt
+					feature="advanced_reporting"
+					variant="card"
+					source="reports-page"
+					showBenefits={true}
+				/>
+			</div>
+		);
+	}
 
 	return (
 		<div className="p-6">
