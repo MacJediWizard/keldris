@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { UpgradePrompt } from '../components/features/UpgradePrompt';
 import { useMe } from '../hooks/useAuth';
+import { usePlanLimits } from '../hooks/usePlanLimits';
 import {
 	useCreateSSOGroupMapping,
 	useDeleteSSOGroupMapping,
@@ -17,6 +19,8 @@ export function OrganizationSSOSettings() {
 	const orgId = user?.current_org_id ?? '';
 	const currentUserRole = (user?.current_org_role ?? 'member') as OrgRole;
 	const canEdit = currentUserRole === 'owner' || currentUserRole === 'admin';
+	const { hasFeature } = usePlanLimits();
+	const hasSSO = hasFeature('sso_enabled');
 
 	const { data: mappings, isLoading: mappingsLoading } =
 		useSSOGroupMappings(orgId);
@@ -112,6 +116,28 @@ export function OrganizationSSOSettings() {
 		setAutoCreateOrgs(settings?.auto_create_orgs ?? false);
 		setSettingsEditing(true);
 	};
+
+	if (!hasSSO) {
+		return (
+			<div className="space-y-6">
+				<div>
+					<h1 className="text-2xl font-bold text-gray-900">
+						SSO Group Sync Settings
+					</h1>
+					<p className="text-gray-600 mt-1">
+						Map OIDC groups from your identity provider to Keldris organization
+						roles
+					</p>
+				</div>
+				<UpgradePrompt
+					feature="sso"
+					variant="card"
+					source="sso-settings-page"
+					showBenefits={true}
+				/>
+			</div>
+		);
+	}
 
 	if (mappingsLoading || settingsLoading) {
 		return (

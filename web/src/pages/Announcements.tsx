@@ -37,7 +37,9 @@ function getAnnouncementStatus(
 
 function StatusBadge({
 	status,
-}: { status: 'active' | 'scheduled' | 'ended' | 'inactive' }) {
+}: {
+	status: 'active' | 'scheduled' | 'ended' | 'inactive';
+}) {
 	const colors = {
 		active: 'bg-green-100 text-green-800',
 		scheduled: 'bg-blue-100 text-blue-800',

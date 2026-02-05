@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/maintenance"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
@@ -28,9 +31,9 @@ type HealthCheckResult struct {
 
 // HealthResponse is the response for health check endpoints.
 type HealthResponse struct {
-	Status HealthStatus              `json:"status"`
+	Status HealthStatus                  `json:"status"`
 	Checks map[string]*HealthCheckResult `json:"checks,omitempty"`
-	Error  string                    `json:"error,omitempty"`
+	Error  string                        `json:"error,omitempty"`
 }
 
 // DatabaseHealthChecker defines the interface for database health checking.
@@ -66,10 +69,12 @@ type ShutdownStatusProvider interface {
 
 // HealthHandler handles health-related HTTP endpoints.
 type HealthHandler struct {
-	db       DatabaseHealthChecker
-	oidc     OIDCHealthChecker
-	shutdown ShutdownStatusProvider
-	logger   zerolog.Logger
+	db            DatabaseHealthChecker
+	oidc          OIDCHealthChecker
+	sessions      *auth.SessionStore
+	backupService *maintenance.DatabaseBackupService
+	shutdown      ShutdownStatusProvider
+	logger        zerolog.Logger
 }
 
 // NewHealthHandler creates a new HealthHandler.
@@ -79,6 +84,16 @@ func NewHealthHandler(db DatabaseHealthChecker, oidc OIDCHealthChecker, logger z
 		oidc:   oidc,
 		logger: logger.With().Str("component", "health_handler").Logger(),
 	}
+}
+
+// SetSessionStore sets the session store for authenticated routes.
+func (h *HealthHandler) SetSessionStore(sessions *auth.SessionStore) {
+	h.sessions = sessions
+}
+
+// SetDatabaseBackupService sets the database backup service for health checks.
+func (h *HealthHandler) SetDatabaseBackupService(service *maintenance.DatabaseBackupService) {
+	h.backupService = service
 }
 
 // SetShutdownStatusProvider sets the shutdown status provider.
@@ -95,6 +110,14 @@ func (h *HealthHandler) RegisterPublicRoutes(r *gin.Engine) {
 		health.GET("/db", h.Database)
 		health.GET("/oidc", h.OIDC)
 		health.GET("/shutdown", h.Shutdown)
+	}
+}
+
+// RegisterRoutes registers authenticated health check routes.
+func (h *HealthHandler) RegisterRoutes(r *gin.RouterGroup) {
+	health := r.Group("/health")
+	{
+		health.GET("/system", h.SystemHealth)
 	}
 }
 
@@ -290,4 +313,112 @@ func (h *HealthHandler) Shutdown(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// SystemHealth returns comprehensive system health including database backups.
+// GET /api/v1/health/system
+// This endpoint requires superuser privileges.
+func (h *HealthHandler) SystemHealth(c *gin.Context) {
+	user := middleware.RequireSuperuser(c)
+	if user == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	response := &HealthResponse{
+		Status: HealthStatusHealthy,
+		Checks: make(map[string]*HealthCheckResult),
+	}
+
+	// Check database health
+	dbResult := h.checkDatabase(ctx)
+	response.Checks["database"] = dbResult
+
+	// Check OIDC health
+	oidcResult := h.checkOIDC(ctx)
+	response.Checks["oidc"] = oidcResult
+
+	// Check database backup health
+	backupResult := h.checkDatabaseBackup(ctx)
+	response.Checks["database_backup"] = backupResult
+
+	// Determine overall status
+	hasUnhealthy := false
+	for _, check := range response.Checks {
+		if check.Status == HealthStatusUnhealthy {
+			hasUnhealthy = true
+			break
+		}
+	}
+
+	if hasUnhealthy {
+		response.Status = HealthStatusUnhealthy
+		c.JSON(http.StatusServiceUnavailable, response)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// checkDatabaseBackup performs a database backup service health check.
+func (h *HealthHandler) checkDatabaseBackup(ctx context.Context) *HealthCheckResult {
+	start := time.Now()
+	result := &HealthCheckResult{
+		Status: HealthStatusHealthy,
+	}
+
+	if h.backupService == nil {
+		result.Details = map[string]any{
+			"configured": false,
+			"message":    "database backup service not configured",
+		}
+		result.Duration = time.Since(start).String()
+		return result
+	}
+
+	healthy, message := h.backupService.IsHealthy(ctx)
+	result.Duration = time.Since(start).String()
+
+	if !healthy {
+		result.Status = HealthStatusUnhealthy
+		result.Error = message
+		result.Details = map[string]any{
+			"configured": true,
+			"healthy":    false,
+		}
+		h.logger.Warn().Str("message", message).Msg("database backup health check failed")
+		return result
+	}
+
+	// Get additional status info
+	status, err := h.backupService.GetStatus(ctx)
+	if err == nil && status != nil {
+		result.Details = map[string]any{
+			"configured":       true,
+			"healthy":          true,
+			"enabled":          status.Enabled,
+			"total_backups":    status.TotalBackups,
+			"total_size_bytes": status.TotalSizeBytes,
+			"schedule":         status.Schedule,
+			"retention_days":   status.Retention,
+		}
+		if status.LastBackupTime != nil {
+			result.Details["last_backup_time"] = status.LastBackupTime
+		}
+		if status.NextBackupTime != nil {
+			result.Details["next_backup_time"] = status.NextBackupTime
+		}
+		if status.LastBackupStatus != "" {
+			result.Details["last_backup_status"] = status.LastBackupStatus
+		}
+	} else {
+		result.Details = map[string]any{
+			"configured": true,
+			"healthy":    true,
+		}
+	}
+
+	return result
 }
