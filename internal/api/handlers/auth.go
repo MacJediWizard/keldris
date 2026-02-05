@@ -469,6 +469,18 @@ func (h *AuthHandler) PasswordLogin(c *gin.Context) {
 		return
 	}
 
+	// Check if email verification is required for non-OIDC users
+	// OIDC users (user.OIDCSubject != "") are automatically verified
+	if user.RequiresEmailVerification() {
+		h.logger.Debug().Str("user_id", user.ID.String()).Msg("email not verified")
+		c.JSON(http.StatusForbidden, gin.H{
+			"error":                 "email_not_verified",
+			"message":               "Please verify your email address before logging in",
+			"requires_verification": true,
+		})
+		return
+	}
+
 	// Get user's memberships
 	memberships, err := h.userStore.GetMembershipsByUserID(c.Request.Context(), user.ID)
 	if err != nil {
