@@ -42,8 +42,10 @@ export function useUpdateSLA() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: UpdateSLADefinitionRequest }) =>
-			slaApi.update(id, data),
+		}: {
+			id: string;
+			data: UpdateSLADefinitionRequest;
+		}) => slaApi.update(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['slas'] });
 			queryClient.invalidateQueries({ queryKey: ['slas', id] });
@@ -93,8 +95,10 @@ export function useDeleteSLAAssignment() {
 		mutationFn: ({
 			slaId,
 			assignmentId,
-		}: { slaId: string; assignmentId: string }) =>
-			slaApi.deleteAssignment(slaId, assignmentId),
+		}: {
+			slaId: string;
+			assignmentId: string;
+		}) => slaApi.deleteAssignment(slaId, assignmentId),
 		onSuccess: (_, { slaId }) => {
 			queryClient.invalidateQueries({ queryKey: ['slas'] });
 			queryClient.invalidateQueries({
@@ -162,8 +166,10 @@ export function useAcknowledgeBreach() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data?: AcknowledgeBreachRequest }) =>
-			slaApi.acknowledgeBreach(id, data),
+		}: {
+			id: string;
+			data?: AcknowledgeBreachRequest;
+		}) => slaApi.acknowledgeBreach(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['sla-breaches'] });
 			queryClient.invalidateQueries({ queryKey: ['sla-breaches', id] });

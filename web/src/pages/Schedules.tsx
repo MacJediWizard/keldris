@@ -1080,9 +1080,10 @@ function formatBandwidth(kbps?: number): string {
 	return `${kbps} KB/s`;
 }
 
-function formatBackupWindow(window?: { start?: string; end?: string }):
-	| string
-	| null {
+function formatBackupWindow(window?: {
+	start?: string;
+	end?: string;
+}): string | null {
 	if (!window || (!window.start && !window.end)) return null;
 	const start = window.start || '00:00';
 	const end = window.end || '23:59';
@@ -2161,9 +2162,17 @@ export function Schedules() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-						Schedules
-					</h1>
+					<div className="flex items-center gap-2">
+						<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+							Schedules
+						</h1>
+						<HelpTooltip
+							content="Create and manage automated backup schedules with cron expressions, retention policies, and notification settings."
+							title="Backup Schedules"
+							docsUrl="/docs/configuration#schedule-configuration"
+							size="md"
+						/>
+					</div>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Configure automated backup jobs
 					</p>
