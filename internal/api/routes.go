@@ -42,10 +42,14 @@ type Config struct {
 	LogBuffer *logs.LogBuffer
 	// ActivityFeed for real-time activity events (optional).
 	ActivityFeed *activity.Feed
+	// SecurityHeaders configures security headers for hardening.
+	// If nil, default production settings are used.
+	SecurityHeaders *middleware.SecurityHeadersConfig
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
 func DefaultConfig() Config {
+	devSecurityHeaders := middleware.DevelopmentSecurityHeadersConfig()
 	return Config{
 		AllowedOrigins:    []string{},
 		RateLimitRequests: 100,
@@ -53,6 +57,21 @@ func DefaultConfig() Config {
 		Version:           "dev",
 		Commit:            "unknown",
 		BuildDate:         "unknown",
+		SecurityHeaders:   &devSecurityHeaders,
+	}
+}
+
+// ProductionConfig returns a Config with secure defaults for production.
+func ProductionConfig() Config {
+	prodSecurityHeaders := middleware.DefaultSecurityHeadersConfig()
+	return Config{
+		AllowedOrigins:    []string{},
+		RateLimitRequests: 100,
+		RateLimitPeriod:   "1m",
+		Version:           "unknown",
+		Commit:            "unknown",
+		BuildDate:         "unknown",
+		SecurityHeaders:   &prodSecurityHeaders,
 	}
 }
 
@@ -87,6 +106,13 @@ func NewRouter(
 	r.Engine.Use(middleware.RequestLogger(logger))
 	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins))
 
+	// Security headers middleware
+	securityHeadersConfig := middleware.DefaultSecurityHeadersConfig()
+	if cfg.SecurityHeaders != nil {
+		securityHeadersConfig = *cfg.SecurityHeaders
+	}
+	r.Engine.Use(middleware.SecurityHeaders(securityHeadersConfig))
+
 	// Rate limiting
 	rateLimiter, err := middleware.NewRateLimiter(cfg.RateLimitRequests, cfg.RateLimitPeriod)
 	if err != nil {
@@ -112,6 +138,10 @@ func NewRouter(
 	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)
 	versionHandler.RegisterPublicRoutes(r.Engine)
 
+	// Security headers test endpoint (no auth required for verification)
+	securityHandler := handlers.NewSecurityHandler(logger)
+	securityHandler.RegisterPublicRoutes(r.Engine)
+
 	// Changelog endpoint (no auth required for public access)
 	changelogHandler := handlers.NewChangelogHandler("CHANGELOG.md", cfg.Version, logger)
 	changelogHandler.RegisterPublicRoutes(r.Engine)
@@ -136,6 +166,7 @@ func NewRouter(
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 	changelogHandler.RegisterRoutes(apiV1)
+	securityHandler.RegisterRoutes(apiV1)
 
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
 	orgsHandler.RegisterRoutes(apiV1)
