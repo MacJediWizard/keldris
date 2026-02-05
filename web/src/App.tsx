@@ -50,6 +50,7 @@ import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
 import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
+import { MigrationSettings } from './pages/MigrationSettings';
 import { UserManagement } from './pages/UserManagement';
 import { UserSessions } from './pages/UserSessions';
 
@@ -158,6 +159,7 @@ function App() {
 								element={<RateLimitDashboard />}
 							/>
 							<Route path="admin/rate-limit-configs" element={<RateLimits />} />
+							<Route path="admin/migration" element={<MigrationSettings />} />
 							<Route path="account/sessions" element={<UserSessions />} />
 							<Route path="onboarding" element={<Onboarding />} />
 							<Route path="changelog" element={<Changelog />} />
