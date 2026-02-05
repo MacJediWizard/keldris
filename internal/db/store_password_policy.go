@@ -150,12 +150,14 @@ func (db *DB) GetUserByEmail(ctx context.Context, email string) (*models.User, e
 	var roleStr string
 	var oidcSubject *string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, oidc_subject, email, name, role, is_superuser, created_at, updated_at
+		SELECT id, org_id, oidc_subject, email, name, role, is_superuser,
+		       COALESCE(email_verified, false), email_verified_at, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`, email).Scan(
 		&user.ID, &user.OrgID, &oidcSubject, &user.Email,
-		&user.Name, &roleStr, &user.IsSuperuser, &user.CreatedAt, &user.UpdatedAt,
+		&user.Name, &roleStr, &user.IsSuperuser,
+		&user.EmailVerified, &user.EmailVerifiedAt, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get user by email: %w", err)
@@ -277,4 +279,138 @@ func (db *DB) HasPasswordAuth(ctx context.Context, userID uuid.UUID) (bool, erro
 		return false, fmt.Errorf("check password auth: %w", err)
 	}
 	return hasPassword, nil
+}
+
+// Password Reset Token methods
+
+// CreatePasswordResetToken creates a new password reset token.
+func (db *DB) CreatePasswordResetToken(ctx context.Context, token *models.PasswordResetToken) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, ip_address, user_agent, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, token.ID, token.UserID, token.TokenHash, token.ExpiresAt, token.IPAddress, token.UserAgent, token.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create password reset token: %w", err)
+	}
+	return nil
+}
+
+// GetPasswordResetTokenByHash returns a password reset token by its hash.
+func (db *DB) GetPasswordResetTokenByHash(ctx context.Context, tokenHash string) (*models.PasswordResetToken, error) {
+	var token models.PasswordResetToken
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, user_id, token_hash, expires_at, used_at, ip_address, user_agent, created_at
+		FROM password_reset_tokens
+		WHERE token_hash = $1
+	`, tokenHash).Scan(
+		&token.ID, &token.UserID, &token.TokenHash, &token.ExpiresAt,
+		&token.UsedAt, &token.IPAddress, &token.UserAgent, &token.CreatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("password reset token not found")
+		}
+		return nil, fmt.Errorf("get password reset token: %w", err)
+	}
+	return &token, nil
+}
+
+// MarkPasswordResetTokenUsed marks a password reset token as used.
+func (db *DB) MarkPasswordResetTokenUsed(ctx context.Context, tokenID uuid.UUID) error {
+	now := time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE password_reset_tokens
+		SET used_at = $2
+		WHERE id = $1
+	`, tokenID, now)
+	if err != nil {
+		return fmt.Errorf("mark password reset token used: %w", err)
+	}
+	return nil
+}
+
+// InvalidateUserResetTokens marks all unused reset tokens for a user as used.
+func (db *DB) InvalidateUserResetTokens(ctx context.Context, userID uuid.UUID) error {
+	now := time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE password_reset_tokens
+		SET used_at = $2
+		WHERE user_id = $1 AND used_at IS NULL
+	`, userID, now)
+	if err != nil {
+		return fmt.Errorf("invalidate user reset tokens: %w", err)
+	}
+	return nil
+}
+
+// CleanupExpiredResetTokens removes expired password reset tokens.
+func (db *DB) CleanupExpiredResetTokens(ctx context.Context) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM password_reset_tokens
+		WHERE expires_at < NOW() - INTERVAL '24 hours'
+		   OR (used_at IS NOT NULL AND used_at < NOW() - INTERVAL '24 hours')
+	`)
+	if err != nil {
+		return fmt.Errorf("cleanup expired reset tokens: %w", err)
+	}
+	return nil
+}
+
+// Password Reset Rate Limiting methods
+
+// GetResetRateLimit returns the rate limit entry for an identifier.
+func (db *DB) GetResetRateLimit(ctx context.Context, identifier, identifierType string) (*models.PasswordResetRateLimit, error) {
+	var limit models.PasswordResetRateLimit
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, identifier, identifier_type, request_count, window_start, created_at
+		FROM password_reset_rate_limits
+		WHERE identifier = $1 AND identifier_type = $2
+		  AND window_start > NOW() - INTERVAL '15 minutes'
+	`, identifier, identifierType).Scan(
+		&limit.ID, &limit.Identifier, &limit.IdentifierType,
+		&limit.RequestCount, &limit.WindowStart, &limit.CreatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil // No rate limit entry exists
+		}
+		return nil, fmt.Errorf("get reset rate limit: %w", err)
+	}
+	return &limit, nil
+}
+
+// IncrementResetRateLimit increments the rate limit counter for an identifier.
+func (db *DB) IncrementResetRateLimit(ctx context.Context, identifier, identifierType string, windowDuration time.Duration) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO password_reset_rate_limits (identifier, identifier_type, request_count, window_start)
+		VALUES ($1, $2, 1, NOW())
+		ON CONFLICT (identifier, identifier_type)
+		DO UPDATE SET
+			request_count = CASE
+				WHEN password_reset_rate_limits.window_start < NOW() - $3::interval
+				THEN 1
+				ELSE password_reset_rate_limits.request_count + 1
+			END,
+			window_start = CASE
+				WHEN password_reset_rate_limits.window_start < NOW() - $3::interval
+				THEN NOW()
+				ELSE password_reset_rate_limits.window_start
+			END
+	`, identifier, identifierType, windowDuration.String())
+	if err != nil {
+		return fmt.Errorf("increment reset rate limit: %w", err)
+	}
+	return nil
+}
+
+// CleanupExpiredRateLimits removes expired rate limit entries.
+func (db *DB) CleanupExpiredRateLimits(ctx context.Context, windowDuration time.Duration) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM password_reset_rate_limits
+		WHERE window_start < NOW() - $1::interval
+	`, windowDuration.String())
+	if err != nil {
+		return fmt.Errorf("cleanup expired rate limits: %w", err)
+	}
+	return nil
 }
