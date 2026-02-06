@@ -22,13 +22,16 @@ class ApiError extends Error {
 export function useGenerateExportKey() {
 	return useMutation({
 		mutationFn: async (): Promise<{ key: string }> => {
-			const response = await fetch(`${API_BASE}/migration/export/generate-key`, {
-				method: 'POST',
-				credentials: 'include',
-				headers: {
-					'Content-Type': 'application/json',
+			const response = await fetch(
+				`${API_BASE}/migration/export/generate-key`,
+				{
+					method: 'POST',
+					credentials: 'include',
+					headers: {
+						'Content-Type': 'application/json',
+					},
 				},
-			});
+			);
 			if (!response.ok) {
 				const errorData = await response
 					.json()

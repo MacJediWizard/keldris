@@ -350,8 +350,8 @@ export function MigrationSettings() {
 											</button>
 										</div>
 										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-											Save this key securely - you&apos;ll need it to import
-											the data
+											Save this key securely - you&apos;ll need it to import the
+											data
 										</p>
 									</div>
 								</div>
@@ -407,8 +407,7 @@ export function MigrationSettings() {
 								type="button"
 								onClick={handleExport}
 								disabled={
-									exportMutation.isPending ||
-									(useEncryption && !encryptionKey)
+									exportMutation.isPending || (useEncryption && !encryptionKey)
 								}
 								className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 							>
