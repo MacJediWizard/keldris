@@ -653,8 +653,8 @@ export function MigrationSettings() {
 														Warnings:
 													</p>
 													<ul className="text-sm text-yellow-700 dark:text-yellow-300 list-disc list-inside">
-														{validationResult.warnings.map((warning, idx) => (
-															<li key={`validation-warning-${idx}`}>{warning}</li>
+														{validationResult.warnings.map((warning) => (
+															<li key={warning}>{warning}</li>
 														))}
 													</ul>
 												</div>
@@ -690,8 +690,8 @@ export function MigrationSettings() {
 										{validationResult.errors &&
 											validationResult.errors.length > 0 && (
 												<ul className="text-sm text-red-700 dark:text-red-300 list-disc list-inside">
-													{validationResult.errors.map((error, idx) => (
-														<li key={`validation-error-${idx}`}>{error}</li>
+													{validationResult.errors.map((error) => (
+														<li key={error}>{error}</li>
 													))}
 												</ul>
 											)}
@@ -894,8 +894,8 @@ export function MigrationSettings() {
 														Warnings:
 													</p>
 													<ul className="text-sm text-yellow-700 dark:text-yellow-300 list-disc list-inside">
-														{importResult.warnings.map((warning, idx) => (
-															<li key={`import-warning-${idx}`}>{warning}</li>
+														{importResult.warnings.map((warning) => (
+															<li key={warning}>{warning}</li>
 														))}
 													</ul>
 												</div>
@@ -938,8 +938,8 @@ export function MigrationSettings() {
 										)}
 										{importResult.errors && importResult.errors.length > 0 && (
 											<ul className="text-sm text-red-700 dark:text-red-300 list-disc list-inside">
-												{importResult.errors.map((error, idx) => (
-													<li key={`import-error-${idx}`}>{error}</li>
+												{importResult.errors.map((error) => (
+													<li key={error}>{error}</li>
 												))}
 											</ul>
 										)}
