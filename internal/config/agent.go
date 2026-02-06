@@ -35,6 +35,34 @@ type AgentConfig struct {
 	AgentID         string `yaml:"agent_id,omitempty"`
 	Hostname        string `yaml:"hostname,omitempty"`
 	AutoCheckUpdate bool   `yaml:"auto_check_update,omitempty"`
+
+	// Proxy configuration
+	Proxy *ProxyConfig `yaml:"proxy,omitempty"`
+}
+
+// ProxyConfig holds proxy settings for agent network connections.
+type ProxyConfig struct {
+	// HTTPProxy is the proxy URL for HTTP requests (e.g., http://proxy:8080)
+	HTTPProxy string `yaml:"http_proxy,omitempty"`
+	// HTTPSProxy is the proxy URL for HTTPS requests (e.g., http://proxy:8080)
+	HTTPSProxy string `yaml:"https_proxy,omitempty"`
+	// NoProxy is a comma-separated list of hosts to exclude from proxying
+	NoProxy string `yaml:"no_proxy,omitempty"`
+	// SOCKS5Proxy is the SOCKS5 proxy URL (e.g., socks5://user:pass@proxy:1080)
+	SOCKS5Proxy string `yaml:"socks5_proxy,omitempty"`
+}
+
+// HasProxy returns true if any proxy is configured.
+func (p *ProxyConfig) HasProxy() bool {
+	if p == nil {
+		return false
+	}
+	return p.HTTPProxy != "" || p.HTTPSProxy != "" || p.SOCKS5Proxy != ""
+}
+
+// GetProxyConfig returns the proxy configuration or nil if not configured.
+func (c *AgentConfig) GetProxyConfig() *ProxyConfig {
+	return c.Proxy
 }
 
 // Validate checks that the configuration has required fields for operation.
