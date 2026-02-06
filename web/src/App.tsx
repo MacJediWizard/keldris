@@ -32,6 +32,7 @@ import { LegalHolds } from './pages/LegalHolds';
 import { License } from './pages/License';
 import { LifecyclePolicies } from './pages/LifecyclePolicies';
 import { Maintenance } from './pages/Maintenance';
+import { MigrationSettings } from './pages/MigrationSettings';
 import { NewOrganization } from './pages/NewOrganization';
 import { NotFound } from './pages/NotFound';
 import { NotificationRules } from './pages/NotificationRules';
@@ -182,6 +183,7 @@ function App() {
 								<Route path="admin/health" element={<SystemHealth />} />
 								<Route path="admin/license" element={<LicenseManagement />} />
 								<Route path="admin/setup" element={<AdminSetup />} />
+								<Route path="admin/migration" element={<MigrationSettings />} />
 								<Route path="account/sessions" element={<UserSessions />} />
 								<Route path="onboarding" element={<Onboarding />} />
 								<Route path="changelog" element={<Changelog />} />
