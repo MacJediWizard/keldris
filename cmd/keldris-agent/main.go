@@ -19,6 +19,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/diagnostics"
 	"github.com/MacJediWizard/keldris/internal/support"
 	"github.com/MacJediWizard/keldris/internal/updater"
 	"github.com/google/uuid"
@@ -72,7 +73,7 @@ Run 'keldris-agent register' to connect to a server.`,
 		SilenceUsage: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// Skip auto-check for certain commands
-			if cmd.Name() == "update" || cmd.Name() == "version" || cmd.Name() == "help" {
+			if cmd.Name() == "update" || cmd.Name() == "version" || cmd.Name() == "help" || cmd.Name() == "diagnostics" {
 				return
 			}
 			checkUpdateOnStartup()
@@ -90,6 +91,7 @@ Run 'keldris-agent register' to connect to a server.`,
 		newMountsCmd(),
 		newSnapshotMountCmd(),
 		newSupportBundleCmd(),
+		newDiagnosticsCmd(),
 	)
 
 	return rootCmd
@@ -778,6 +780,120 @@ func newSnapshotMountListCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newDiagnosticsCmd() *cobra.Command {
+	var jsonOutput bool
+
+	cmd := &cobra.Command{
+		Use:   "diagnostics",
+		Short: "Run self-test diagnostics",
+		Long: `Run diagnostic checks to verify the agent is properly configured and operational.
+
+Checks performed:
+  - Server connectivity: Tests connection to the Keldris server
+  - API key validation: Verifies the API key is valid
+  - Restic binary: Checks that restic is installed and working
+  - Disk space: Verifies adequate free space
+  - Config permissions: Checks file permissions on config directory
+
+Use --json for machine-readable output suitable for automation.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runDiagnostics(jsonOutput)
+		},
+	}
+
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output results as JSON")
+
+	return cmd
+}
+
+func runDiagnostics(jsonOutput bool) error {
+	cfg, err := config.LoadDefault()
+	if err != nil {
+		if jsonOutput {
+			fmt.Printf(`{"error": "failed to load config: %s"}`, err.Error())
+			fmt.Println()
+		} else {
+			fmt.Printf("Warning: Could not load config: %v\n", err)
+		}
+		cfg = &config.AgentConfig{}
+	}
+
+	runner := diagnostics.NewRunner(cfg, Version)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	result := runner.Run(ctx)
+
+	if jsonOutput {
+		data, err := result.ToJSON()
+		if err != nil {
+			return fmt.Errorf("marshal JSON: %w", err)
+		}
+		fmt.Println(string(data))
+		if !result.Summary.AllPass {
+			return fmt.Errorf("diagnostics failed: %d check(s) failed", result.Summary.Failed)
+		}
+		return nil
+	}
+
+	// Human-readable output
+	fmt.Println("Keldris Agent Diagnostics")
+	fmt.Println("========================")
+	fmt.Printf("Version:   %s\n", result.AgentVersion)
+	fmt.Printf("Hostname:  %s\n", result.Hostname)
+	fmt.Printf("OS/Arch:   %s/%s\n", result.OS, result.Arch)
+	fmt.Printf("Timestamp: %s\n", result.Timestamp.Format(time.RFC3339))
+	fmt.Println()
+
+	// Print each check result
+	for _, check := range result.Checks {
+		var statusIcon string
+		switch check.Status {
+		case diagnostics.StatusPass:
+			statusIcon = "✓"
+		case diagnostics.StatusFail:
+			statusIcon = "✗"
+		case diagnostics.StatusWarn:
+			statusIcon = "!"
+		case diagnostics.StatusSkip:
+			statusIcon = "-"
+		}
+
+		fmt.Printf("[%s] %s\n", statusIcon, formatCheckName(check.Name))
+		if check.Message != "" {
+			fmt.Printf("    %s\n", check.Message)
+		}
+	}
+
+	fmt.Println()
+	fmt.Println("Summary")
+	fmt.Println("-------")
+	fmt.Printf("Total:   %d\n", result.Summary.Total)
+	fmt.Printf("Passed:  %d\n", result.Summary.Passed)
+	fmt.Printf("Failed:  %d\n", result.Summary.Failed)
+	fmt.Printf("Warned:  %d\n", result.Summary.Warned)
+	fmt.Printf("Skipped: %d\n", result.Summary.Skipped)
+	fmt.Println()
+
+	if result.Summary.AllPass {
+		fmt.Println("All checks passed!")
+		return nil
+	}
+
+	return fmt.Errorf("diagnostics failed: %d check(s) failed", result.Summary.Failed)
+}
+
+// formatCheckName converts a check name from snake_case to Title Case.
+func formatCheckName(name string) string {
+	words := strings.Split(name, "_")
+	for i, word := range words {
+		if len(word) > 0 {
+			words[i] = strings.ToUpper(word[:1]) + word[1:]
+		}
+	}
+	return strings.Join(words, " ")
 }
 
 func runSupportBundle(outputPath string) error {
