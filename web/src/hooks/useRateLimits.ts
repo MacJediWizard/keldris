@@ -82,8 +82,10 @@ export function useUpdateRateLimitConfig() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: UpdateRateLimitConfigRequest }) =>
-			rateLimitConfigsApi.update(id, data),
+		}: {
+			id: string;
+			data: UpdateRateLimitConfigRequest;
+		}) => rateLimitConfigsApi.update(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['rate-limit-configs'] });
 			queryClient.invalidateQueries({ queryKey: ['rate-limit-configs', id] });

@@ -50,8 +50,10 @@ export function useUpdateAnnouncement() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: UpdateAnnouncementRequest }) =>
-			announcementsApi.update(id, data),
+		}: {
+			id: string;
+			data: UpdateAnnouncementRequest;
+		}) => announcementsApi.update(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['announcements'] });
 			queryClient.invalidateQueries({ queryKey: ['announcements', id] });
