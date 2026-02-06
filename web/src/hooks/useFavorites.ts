@@ -31,8 +31,10 @@ export function useRemoveFavorite() {
 		mutationFn: ({
 			entityType,
 			entityId,
-		}: { entityType: FavoriteEntityType; entityId: string }) =>
-			favoritesApi.delete(entityType, entityId),
+		}: {
+			entityType: FavoriteEntityType;
+			entityId: string;
+		}) => favoritesApi.delete(entityType, entityId),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['favorites'] });
 		},

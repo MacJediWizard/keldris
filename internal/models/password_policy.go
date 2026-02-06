@@ -201,3 +201,69 @@ type UserPasswordInfo struct {
 	PasswordExpiresAt  *time.Time `json:"password_expires_at,omitempty"`
 	MustChangePassword bool       `json:"must_change_password"`
 }
+
+// PasswordResetToken represents a password reset token.
+type PasswordResetToken struct {
+	ID        uuid.UUID  `json:"id"`
+	UserID    uuid.UUID  `json:"user_id"`
+	TokenHash string     `json:"-"` // Never expose hash in JSON
+	ExpiresAt time.Time  `json:"expires_at"`
+	UsedAt    *time.Time `json:"used_at,omitempty"`
+	IPAddress string     `json:"ip_address,omitempty"`
+	UserAgent string     `json:"user_agent,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+// NewPasswordResetToken creates a new PasswordResetToken.
+func NewPasswordResetToken(userID uuid.UUID, tokenHash string, expiresAt time.Time, ipAddress, userAgent string) *PasswordResetToken {
+	return &PasswordResetToken{
+		ID:        uuid.New(),
+		UserID:    userID,
+		TokenHash: tokenHash,
+		ExpiresAt: expiresAt,
+		IPAddress: ipAddress,
+		UserAgent: userAgent,
+		CreatedAt: time.Now(),
+	}
+}
+
+// IsExpired returns true if the token has expired.
+func (t *PasswordResetToken) IsExpired() bool {
+	return time.Now().After(t.ExpiresAt)
+}
+
+// IsUsed returns true if the token has been used.
+func (t *PasswordResetToken) IsUsed() bool {
+	return t.UsedAt != nil
+}
+
+// IsValid returns true if the token is valid (not expired and not used).
+func (t *PasswordResetToken) IsValid() bool {
+	return !t.IsExpired() && !t.IsUsed()
+}
+
+// PasswordResetRateLimit represents a rate limit entry for password reset requests.
+type PasswordResetRateLimit struct {
+	ID             uuid.UUID `json:"id"`
+	Identifier     string    `json:"identifier"`      // email or IP address
+	IdentifierType string    `json:"identifier_type"` // "email" or "ip"
+	RequestCount   int       `json:"request_count"`
+	WindowStart    time.Time `json:"window_start"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// PasswordResetRequestPayload is the request body for requesting a password reset.
+type PasswordResetRequestPayload struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// PasswordResetPayload is the request body for resetting the password.
+type PasswordResetPayload struct {
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
+}
+
+// PasswordResetResponse is the response for password reset request.
+type PasswordResetResponse struct {
+	Message string `json:"message"`
+}
