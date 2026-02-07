@@ -691,9 +691,7 @@ export function AgentGroups() {
 						</tbody>
 					</table>
 				) : (
-					<EmptyStateNoGroups
-						onCreateGroup={() => setShowCreateModal(true)}
-					/>
+					<EmptyStateNoGroups onCreateGroup={() => setShowCreateModal(true)} />
 				)}
 			</div>
 
