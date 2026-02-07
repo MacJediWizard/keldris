@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/rs/zerolog"
 )
@@ -20,16 +22,27 @@ type DiscordService struct {
 }
 
 // NewDiscordService creates a new Discord notification service.
-func NewDiscordService(config models.DiscordChannelConfig, logger zerolog.Logger) (*DiscordService, error) {
-	if err := ValidateDiscordConfig(&config); err != nil {
+func NewDiscordService(cfg models.DiscordChannelConfig, logger zerolog.Logger) (*DiscordService, error) {
+	return NewDiscordServiceWithProxy(cfg, nil, logger)
+}
+
+// NewDiscordServiceWithProxy creates a Discord notification service with proxy support.
+func NewDiscordServiceWithProxy(cfg models.DiscordChannelConfig, proxyConfig *config.ProxyConfig, logger zerolog.Logger) (*DiscordService, error) {
+	if err := ValidateDiscordConfig(&cfg); err != nil {
 		return nil, err
 	}
 
+	client, err := httpclient.New(httpclient.Options{
+		Timeout:     30 * time.Second,
+		ProxyConfig: proxyConfig,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create http client: %w", err)
+	}
+
 	return &DiscordService{
-		config: config,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		config: cfg,
+		client: client,
 		logger: logger.With().Str("component", "discord_service").Logger(),
 	}, nil
 }

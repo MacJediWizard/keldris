@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/rs/zerolog"
 )
 
@@ -25,11 +27,12 @@ type Client struct {
 
 // ClientConfig holds configuration for creating a new Komodo client
 type ClientConfig struct {
-	BaseURL  string
-	APIKey   string
-	Username string
-	Password string
-	Timeout  time.Duration
+	BaseURL     string
+	APIKey      string
+	Username    string
+	Password    string
+	Timeout     time.Duration
+	ProxyConfig *config.ProxyConfig
 }
 
 // NewClient creates a new Komodo API client
@@ -49,15 +52,21 @@ func NewClient(cfg ClientConfig, logger zerolog.Logger) (*Client, error) {
 		timeout = 30 * time.Second
 	}
 
+	client, err := httpclient.New(httpclient.Options{
+		Timeout:     timeout,
+		ProxyConfig: cfg.ProxyConfig,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("komodo client: create http client: %w", err)
+	}
+
 	return &Client{
-		baseURL:  parsedURL.String(),
-		apiKey:   cfg.APIKey,
-		username: cfg.Username,
-		password: cfg.Password,
-		httpClient: &http.Client{
-			Timeout: timeout,
-		},
-		logger: logger.With().Str("component", "komodo_client").Logger(),
+		baseURL:    parsedURL.String(),
+		apiKey:     cfg.APIKey,
+		username:   cfg.Username,
+		password:   cfg.Password,
+		httpClient: client,
+		logger:     logger.With().Str("component", "komodo_client").Logger(),
 	}, nil
 }
 

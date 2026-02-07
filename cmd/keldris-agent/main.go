@@ -20,6 +20,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/diagnostics"
+	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/support"
 	"github.com/MacJediWizard/keldris/internal/updater"
 	"github.com/google/uuid"
@@ -47,7 +48,7 @@ func checkUpdateOnStartup() {
 		return
 	}
 
-	u := updater.New(Version)
+	u := updater.NewWithProxy(Version, cfg.GetProxyConfig())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -194,7 +195,158 @@ func newConfigCmd() *cobra.Command {
 		newConfigShowCmd(),
 		newConfigSetServerCmd(),
 		newConfigSetAutoUpdateCmd(),
+		newConfigSetProxyCmd(),
+		newConfigClearProxyCmd(),
+		newConfigTestProxyCmd(),
 	)
+
+	return cmd
+}
+
+func newConfigSetProxyCmd() *cobra.Command {
+	var httpProxy, httpsProxy, noProxy, socks5Proxy string
+
+	cmd := &cobra.Command{
+		Use:   "set-proxy",
+		Short: "Configure proxy settings",
+		Long: `Configure proxy settings for agent network connections.
+
+Examples:
+  # Set HTTP proxy
+  keldris-agent config set-proxy --http http://proxy:8080
+
+  # Set HTTPS proxy (often the same as HTTP proxy)
+  keldris-agent config set-proxy --https http://proxy:8080
+
+  # Set SOCKS5 proxy
+  keldris-agent config set-proxy --socks5 socks5://user:pass@proxy:1080
+
+  # Set hosts to bypass
+  keldris-agent config set-proxy --no-proxy "localhost,127.0.0.1,.internal.com"
+
+  # Set all at once
+  keldris-agent config set-proxy --http http://proxy:8080 --https http://proxy:8080 --no-proxy localhost`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if httpProxy == "" && httpsProxy == "" && socks5Proxy == "" && noProxy == "" {
+				return fmt.Errorf("at least one proxy option is required")
+			}
+
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			// Initialize proxy config if nil
+			if cfg.Proxy == nil {
+				cfg.Proxy = &config.ProxyConfig{}
+			}
+
+			// Update only provided values
+			if httpProxy != "" {
+				cfg.Proxy.HTTPProxy = httpProxy
+			}
+			if httpsProxy != "" {
+				cfg.Proxy.HTTPSProxy = httpsProxy
+			}
+			if noProxy != "" {
+				cfg.Proxy.NoProxy = noProxy
+			}
+			if socks5Proxy != "" {
+				cfg.Proxy.SOCKS5Proxy = socks5Proxy
+			}
+
+			if err := cfg.SaveDefault(); err != nil {
+				return fmt.Errorf("save config: %w", err)
+			}
+
+			fmt.Println("Proxy configuration updated:")
+			fmt.Printf("  %s\n", httpclient.ProxyInfo(cfg.Proxy))
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&httpProxy, "http", "", "HTTP proxy URL (e.g., http://proxy:8080)")
+	cmd.Flags().StringVar(&httpsProxy, "https", "", "HTTPS proxy URL (e.g., http://proxy:8080)")
+	cmd.Flags().StringVar(&noProxy, "no-proxy", "", "Comma-separated hosts to bypass proxy")
+	cmd.Flags().StringVar(&socks5Proxy, "socks5", "", "SOCKS5 proxy URL (e.g., socks5://user:pass@proxy:1080)")
+
+	return cmd
+}
+
+func newConfigClearProxyCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "clear-proxy",
+		Short: "Remove all proxy settings",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			cfg.Proxy = nil
+
+			if err := cfg.SaveDefault(); err != nil {
+				return fmt.Errorf("save config: %w", err)
+			}
+
+			fmt.Println("Proxy configuration cleared.")
+			return nil
+		},
+	}
+}
+
+func newConfigTestProxyCmd() *cobra.Command {
+	var testURL string
+
+	cmd := &cobra.Command{
+		Use:   "test-proxy",
+		Short: "Test proxy configuration",
+		Long: `Test the proxy configuration by making a request to a test URL.
+
+By default, tests connectivity to https://www.google.com. Use --url to specify
+a different test endpoint.
+
+Examples:
+  # Test with default URL
+  keldris-agent config test-proxy
+
+  # Test with custom URL
+  keldris-agent config test-proxy --url https://api.github.com
+
+  # Test against the configured server
+  keldris-agent config test-proxy --url $(keldris-agent config show | grep "Server URL" | cut -d: -f2-)`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			proxyConfig := cfg.GetProxyConfig()
+			if proxyConfig == nil || !proxyConfig.HasProxy() {
+				fmt.Println("No proxy configured.")
+				fmt.Println("Use 'keldris-agent config set-proxy' to configure a proxy.")
+				return nil
+			}
+
+			fmt.Printf("Proxy: %s\n", httpclient.ProxyInfo(proxyConfig))
+			fmt.Printf("Testing connection to: %s\n", testURL)
+			fmt.Print("Connecting... ")
+
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			if err := httpclient.TestProxy(ctx, proxyConfig, testURL); err != nil {
+				fmt.Println("FAILED")
+				return fmt.Errorf("proxy test failed: %w", err)
+			}
+
+			fmt.Println("OK")
+			fmt.Println("Proxy connection successful!")
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&testURL, "url", "https://www.google.com", "URL to test connectivity")
 
 	return cmd
 }
@@ -227,6 +379,7 @@ func newConfigShowCmd() *cobra.Command {
 				fmt.Printf("Hostname:          %s\n", cfg.Hostname)
 			}
 			fmt.Printf("Auto-check update: %v\n", cfg.AutoCheckUpdate)
+			fmt.Printf("Proxy:             %s\n", httpclient.ProxyInfo(cfg.GetProxyConfig()))
 
 			return nil
 		},
@@ -323,12 +476,19 @@ func newStatusCmd() *cobra.Command {
 
 			fmt.Printf("Server:   %s\n", cfg.ServerURL)
 			fmt.Printf("Hostname: %s\n", cfg.Hostname)
+			if cfg.Proxy != nil && cfg.Proxy.HasProxy() {
+				fmt.Printf("Proxy:    %s\n", httpclient.ProxyInfo(cfg.Proxy))
+			}
 			fmt.Println()
 
 			// Ping the server
 			fmt.Print("Checking server connection... ")
 
-			client := &http.Client{Timeout: 10 * time.Second}
+			client, err := httpclient.NewWithConfig(cfg, 10*time.Second)
+			if err != nil {
+				fmt.Println("FAILED")
+				return fmt.Errorf("create http client: %w", err)
+			}
 			healthURL := cfg.ServerURL + "/health"
 
 			resp, err := client.Get(healthURL)
@@ -456,7 +616,13 @@ Use --check to only check without installing.`,
 }
 
 func runUpdate(checkOnly, force bool) error {
-	u := updater.New(Version)
+	cfg, _ := config.LoadDefault()
+	var proxyConfig *config.ProxyConfig
+	if cfg != nil {
+		proxyConfig = cfg.GetProxyConfig()
+	}
+
+	u := updater.NewWithProxy(Version, proxyConfig)
 
 	fmt.Printf("Current version: %s\n", Version)
 	fmt.Println("Checking for updates...")
