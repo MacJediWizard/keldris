@@ -21,6 +21,7 @@ import {
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { FormLabelWithHelp, HelpTooltip } from '../components/ui/HelpTooltip';
+import { ScheduleRowSkeleton } from '../components/ui/PageSkeletons';
 import { StarButton } from '../components/ui/StarButton';
 import { useAgents } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
@@ -55,30 +56,6 @@ import type {
 	ScheduleRepositoryRequest,
 } from '../lib/types';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4 w-12">
-				<div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
 
 interface CreateScheduleModalProps {
 	isOpen: boolean;
@@ -2313,9 +2290,9 @@ export function Schedules() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<ScheduleRowSkeleton />
+							<ScheduleRowSkeleton />
+							<ScheduleRowSkeleton />
 						</tbody>
 					</table>
 				) : filteredSchedules && filteredSchedules.length > 0 ? (
