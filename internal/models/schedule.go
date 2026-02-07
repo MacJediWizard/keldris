@@ -47,6 +47,8 @@ const (
 	BackupTypeDocker BackupType = "docker"
 	// BackupTypePihole is a Pi-hole specific backup using teleporter.
 	BackupTypePihole BackupType = "pihole"
+	// BackupTypeMySQL is a MySQL/MariaDB database backup using mysqldump.
+	BackupTypeMySQL BackupType = "mysql"
 )
 
 // ValidBackupTypes returns all valid backup types.
@@ -56,6 +58,7 @@ func ValidBackupTypes() []BackupType {
 		BackupTypeFiles,
 		BackupTypeDocker,
 		BackupTypePihole,
+		BackupTypeMySQL,
 	}
 }
 
@@ -93,6 +96,22 @@ type PiholeBackupConfig struct {
 	DNSMasqDir string `json:"dnsmasq_dir,omitempty"`
 }
 
+// MySQLBackupConfig contains MySQL/MariaDB specific backup configuration.
+type MySQLBackupConfig struct {
+	// DatabaseConnectionID is the ID of the database connection to use.
+	DatabaseConnectionID *uuid.UUID `json:"database_connection_id,omitempty"`
+	// Database is a specific database to backup. Empty means all databases.
+	Database string `json:"database,omitempty"`
+	// Databases is a list of specific databases to backup.
+	Databases []string `json:"databases,omitempty"`
+	// ExcludeDatabases are databases to exclude from "all databases" backup.
+	ExcludeDatabases []string `json:"exclude_databases,omitempty"`
+	// Compress enables gzip compression of the backup output.
+	Compress bool `json:"compress"`
+	// ExtraArgs are additional arguments to pass to mysqldump.
+	ExtraArgs []string `json:"extra_args,omitempty"`
+}
+
 // Schedule represents a backup schedule configuration.
 // A schedule can be assigned to either an individual agent (via AgentID)
 // or to an agent group (via AgentGroupID). When AgentGroupID is set,
@@ -103,7 +122,7 @@ type Schedule struct {
 	AgentGroupID            *uuid.UUID             `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
 	PolicyID                *uuid.UUID             `json:"policy_id,omitempty"`      // Policy this schedule was created from
 	Name                    string                 `json:"name"`
-	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker, pihole
+	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker, pihole, mysql
 	CronExpression          string                 `json:"cron_expression"`
 	Paths                   []string               `json:"paths"`
 	Excludes                []string               `json:"excludes,omitempty"`
@@ -120,6 +139,7 @@ type Schedule struct {
 	Preemptible             bool                   `json:"preemptible"`                    // Can be preempted by higher priority backups
 	DockerOptions           *DockerBackupOptions   `json:"docker_options,omitempty"`       // Docker-specific backup options
 	PiholeConfig            *PiholeBackupConfig    `json:"pihole_config,omitempty"`        // Pi-hole specific backup configuration
+	MySQLConfig             *MySQLBackupConfig     `json:"mysql_config,omitempty"`         // MySQL/MariaDB specific backup configuration
 	Metadata                map[string]interface{} `json:"metadata,omitempty"`
 	Enabled                 bool                   `json:"enabled"`
 	Repositories            []ScheduleRepository   `json:"repositories,omitempty"`
@@ -480,6 +500,65 @@ func DefaultPiholeConfig() *PiholeBackupConfig {
 		IncludeQueryLogs: true,
 		ConfigDir:        "/etc/pihole",
 		DNSMasqDir:       "/etc/dnsmasq.d",
+	}
+}
+
+// SetMySQLConfig sets the MySQL config from JSON bytes.
+func (s *Schedule) SetMySQLConfig(data []byte) error {
+	if len(data) == 0 {
+		s.MySQLConfig = nil
+		return nil
+	}
+	var config MySQLBackupConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return err
+	}
+	s.MySQLConfig = &config
+	return nil
+}
+
+// MySQLConfigJSON returns the MySQL config as JSON bytes for database storage.
+func (s *Schedule) MySQLConfigJSON() ([]byte, error) {
+	if s.MySQLConfig == nil {
+		return nil, nil
+	}
+	return json.Marshal(s.MySQLConfig)
+}
+
+// DefaultMySQLConfig returns a sensible default MySQL backup configuration.
+func DefaultMySQLConfig() *MySQLBackupConfig {
+	return &MySQLBackupConfig{
+		Compress:         true,
+		ExcludeDatabases: []string{"information_schema", "performance_schema", "sys"},
+	}
+}
+
+// IsMySQLBackup returns true if this is a MySQL backup schedule.
+func (s *Schedule) IsMySQLBackup() bool {
+	return s.BackupType == BackupTypeMySQL
+}
+
+// NewMySQLSchedule creates a new Schedule for MySQL backups.
+func NewMySQLSchedule(agentID uuid.UUID, name, cronExpr string, databaseConnectionID *uuid.UUID) *Schedule {
+	now := time.Now()
+	return &Schedule{
+		ID:                 uuid.New(),
+		AgentID:            agentID,
+		Name:               name,
+		CronExpression:     cronExpr,
+		BackupType:         BackupTypeMySQL,
+		Paths:              []string{},
+		OnMountUnavailable: MountBehaviorFail,
+		Priority:           PriorityMedium,
+		Preemptible:        false,
+		MySQLConfig: &MySQLBackupConfig{
+			DatabaseConnectionID: databaseConnectionID,
+			Compress:             true,
+			ExcludeDatabases:     []string{"information_schema", "performance_schema", "sys"},
+		},
+		Enabled:   true,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 }
 

@@ -362,6 +362,10 @@ func NewRouter(
 	dockerRegistriesHandler := handlers.NewDockerRegistriesHandler(database, keyManager, logger)
 	dockerRegistriesHandler.RegisterRoutes(apiV1)
 
+	// Database connections routes (MySQL/MariaDB backup)
+	databaseConnectionsHandler := handlers.NewDatabaseConnectionsHandler(database, keyManager, logger)
+	databaseConnectionsHandler.RegisterRoutes(apiV1)
+
 	// Activity feed routes
 	if cfg.ActivityFeed != nil {
 		activityHandler := handlers.NewActivityHandler(database, cfg.ActivityFeed, logger)
