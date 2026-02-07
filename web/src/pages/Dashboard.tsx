@@ -7,7 +7,11 @@ import {
 	DashboardFavoritesSkeleton,
 	DashboardQueueSkeleton,
 } from '../components/ui/PageSkeletons';
-import { Skeleton, TextSkeleton } from '../components/ui/Skeleton';
+import {
+	Skeleton,
+	TextSkeleton,
+	skeletonKeys,
+} from '../components/ui/Skeleton';
 import { StarButton } from '../components/ui/StarButton';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
@@ -77,7 +81,6 @@ function StatCard({
 		</div>
 	);
 }
-
 
 export function Dashboard() {
 	const { data: agents, isLoading: agentsLoading } = useAgents();
@@ -706,8 +709,8 @@ export function Dashboard() {
 				</div>
 				{statsLoading ? (
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-						{[1, 2, 3, 4].map((i) => (
-							<div key={i} className="animate-pulse">
+						{skeletonKeys(4, 'efficiency').map((key) => (
+							<div key={key} className="animate-pulse">
 								<TextSkeleton width="md" size="sm" className="mb-2" />
 								<Skeleton className="h-8 w-20 mb-1" />
 								<TextSkeleton width="lg" size="sm" />

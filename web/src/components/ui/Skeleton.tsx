@@ -13,6 +13,13 @@ export function Skeleton({ className = '' }: SkeletonProps) {
 	);
 }
 
+/**
+ * Generate stable keys for skeleton list items
+ */
+export function skeletonKeys(count: number, prefix = 'sk'): string[] {
+	return Array.from({ length: count }, (_, i) => `${prefix}-${i}`);
+}
+
 interface TextSkeletonProps {
 	width?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
 	size?: 'xs' | 'sm' | 'base' | 'lg' | 'xl';
@@ -149,9 +156,9 @@ export function CardSkeleton({
 				</div>
 			)}
 			<div className="space-y-3">
-				{Array.from({ length: lines }).map((_, i) => (
+				{skeletonKeys(lines, 'card-line').map((key, i) => (
 					<TextSkeleton
-						key={i}
+						key={key}
 						width={i === lines - 1 ? 'lg' : 'full'}
 						size="base"
 					/>
@@ -194,8 +201,8 @@ export function TableRowSkeleton({
 					<Skeleton className="h-4 w-4" />
 				</td>
 			)}
-			{Array.from({ length: contentCols }).map((_, i) => (
-				<td key={i} className="px-6 py-4">
+			{skeletonKeys(contentCols, 'col').map((key, i) => (
+				<td key={key} className="px-6 py-4">
 					{i === 0 ? (
 						<div className="space-y-1">
 							<TextSkeleton width="lg" />
@@ -275,8 +282,8 @@ export function FormSectionSkeleton({
 }: FormSectionSkeletonProps) {
 	return (
 		<div className={`space-y-4 ${className}`}>
-			{Array.from({ length: fields }).map((_, i) => (
-				<InputSkeleton key={i} />
+			{skeletonKeys(fields, 'field').map((key) => (
+				<InputSkeleton key={key} />
 			))}
 		</div>
 	);

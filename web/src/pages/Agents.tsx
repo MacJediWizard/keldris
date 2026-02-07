@@ -36,7 +36,6 @@ import { statusHelp } from '../lib/help-content';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
 import { getAgentStatusColor } from '../lib/utils';
 
-
 interface GenerateCodeModalProps {
 	isOpen: boolean;
 	onClose: () => void;
