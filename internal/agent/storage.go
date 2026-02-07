@@ -364,11 +364,6 @@ func (s *SQLiteStore) queryBackups(ctx context.Context, query string, args ...an
 	return backups, nil
 }
 
-// scanner is an interface for Row and Rows.
-type scanner interface {
-	Scan(dest ...any) error
-}
-
 // scanQueuedBackup scans a single row into a QueuedBackup.
 func (s *SQLiteStore) scanQueuedBackup(row *sql.Row) (*QueuedBackup, error) {
 	var (
