@@ -51,6 +51,8 @@ const (
 	BackupTypeMySQL BackupType = "mysql"
 	// BackupTypePostgres is a PostgreSQL database backup using pg_dump.
 	BackupTypePostgres BackupType = "postgres"
+	// BackupTypeProxmox backs up Proxmox VMs and containers via vzdump.
+	BackupTypeProxmox BackupType = "proxmox"
 )
 
 // ValidBackupTypes returns all valid backup types.
@@ -62,6 +64,7 @@ func ValidBackupTypes() []BackupType {
 		BackupTypePihole,
 		BackupTypeMySQL,
 		BackupTypePostgres,
+		BackupTypeProxmox,
 	}
 }
 
@@ -165,6 +168,28 @@ type PostgresBackupConfig struct {
 	PgDumpPath string `json:"pg_dump_path,omitempty"`
 }
 
+// ProxmoxBackupOptions contains Proxmox-specific backup configuration.
+type ProxmoxBackupOptions struct {
+	// ConnectionID is the ID of the Proxmox connection to use.
+	ConnectionID string `json:"connection_id,omitempty"`
+	// VMIDs specifies which VMs to backup (empty means all).
+	VMIDs []int `json:"vm_ids,omitempty"`
+	// ContainerIDs specifies which LXC containers to backup (empty means all).
+	ContainerIDs []int `json:"container_ids,omitempty"`
+	// Mode is the backup mode: snapshot, suspend, or stop.
+	Mode string `json:"mode"`
+	// Compress is the compression algorithm: 0 (none), gzip, lzo, or zstd.
+	Compress string `json:"compress"`
+	// Storage is the Proxmox storage for temporary backup files.
+	Storage string `json:"storage,omitempty"`
+	// MaxWait is the maximum wait time in minutes for backup task completion.
+	MaxWait int `json:"max_wait,omitempty"`
+	// IncludeRAM includes RAM state in VM backups (requires snapshot mode).
+	IncludeRAM bool `json:"include_ram"`
+	// RemoveAfter removes the backup from Proxmox after storing in Restic.
+	RemoveAfter bool `json:"remove_after"`
+}
+
 // Schedule represents a backup schedule configuration.
 // A schedule can be assigned to either an individual agent (via AgentID)
 // or to an agent group (via AgentGroupID). When AgentGroupID is set,
@@ -194,6 +219,7 @@ type Schedule struct {
 	PiholeConfig            *PiholeBackupConfig    `json:"pihole_config,omitempty"`        // Pi-hole specific backup configuration
 	MySQLConfig             *MySQLBackupConfig     `json:"mysql_config,omitempty"`         // MySQL/MariaDB specific backup configuration
 	PostgresConfig          *PostgresBackupConfig  `json:"postgres_config,omitempty"`      // PostgreSQL specific backup configuration
+	ProxmoxOptions          *ProxmoxBackupOptions  `json:"proxmox_options,omitempty"`      // Proxmox-specific backup options
 	Metadata                map[string]interface{} `json:"metadata,omitempty"`
 	Enabled                 bool                   `json:"enabled"`
 	Repositories            []ScheduleRepository   `json:"repositories,omitempty"`
@@ -283,6 +309,26 @@ func NewPostgresSchedule(agentID uuid.UUID, name, cronExpr string, config *Postg
 	}
 }
 
+// NewProxmoxSchedule creates a new Schedule for Proxmox VM/container backups.
+func NewProxmoxSchedule(agentID uuid.UUID, name, cronExpr string, opts *ProxmoxBackupOptions) *Schedule {
+	now := time.Now()
+	return &Schedule{
+		ID:                 uuid.New(),
+		AgentID:            agentID,
+		Name:               name,
+		CronExpression:     cronExpr,
+		BackupType:         BackupTypeProxmox,
+		Paths:              []string{}, // Proxmox backups don't use paths
+		ProxmoxOptions:     opts,
+		OnMountUnavailable: MountBehaviorFail,
+		Priority:           PriorityMedium,
+		Preemptible:        false,
+		Enabled:            true,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+}
+
 // IsDockerBackup returns true if this is a Docker backup schedule.
 func (s *Schedule) IsDockerBackup() bool {
 	return s.BackupType == BackupTypeDocker
@@ -296,6 +342,11 @@ func (s *Schedule) IsPiholeBackup() bool {
 // IsPostgresBackup returns true if this is a PostgreSQL backup schedule.
 func (s *Schedule) IsPostgresBackup() bool {
 	return s.BackupType == BackupTypePostgres
+}
+
+// IsProxmoxBackup returns true if this is a Proxmox backup schedule.
+func (s *Schedule) IsProxmoxBackup() bool {
+	return s.BackupType == BackupTypeProxmox
 }
 
 // SetDockerOptions sets the Docker backup options from JSON bytes.
@@ -672,6 +723,39 @@ func DefaultPostgresConfig() *PostgresBackupConfig {
 		OutputFormat:     PostgresFormatCustom,
 		CompressionLevel: 6,
 		SSLMode:          "prefer",
+	}
+}
+
+// SetProxmoxOptions sets the Proxmox options from JSON bytes.
+func (s *Schedule) SetProxmoxOptions(data []byte) error {
+	if len(data) == 0 {
+		s.ProxmoxOptions = nil
+		return nil
+	}
+	var opts ProxmoxBackupOptions
+	if err := json.Unmarshal(data, &opts); err != nil {
+		return err
+	}
+	s.ProxmoxOptions = &opts
+	return nil
+}
+
+// ProxmoxOptionsJSON returns the Proxmox options as JSON bytes for database storage.
+func (s *Schedule) ProxmoxOptionsJSON() ([]byte, error) {
+	if s.ProxmoxOptions == nil {
+		return nil, nil
+	}
+	return json.Marshal(s.ProxmoxOptions)
+}
+
+// DefaultProxmoxOptions returns a sensible default Proxmox backup configuration.
+func DefaultProxmoxOptions() *ProxmoxBackupOptions {
+	return &ProxmoxBackupOptions{
+		Mode:        "snapshot",
+		Compress:    "zstd",
+		MaxWait:     60, // 60 minutes
+		IncludeRAM:  false,
+		RemoveAfter: true,
 	}
 }
 
