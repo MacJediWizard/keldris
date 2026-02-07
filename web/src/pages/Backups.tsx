@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ClassificationBadge } from '../components/ClassificationBadge';
 import { BackupCalendar } from '../components/features/BackupCalendar';
 import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
@@ -11,6 +12,7 @@ import {
 	BulkSelectHeader,
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
+import { EmptyStateNoBackups } from '../components/ui/EmptyState';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
@@ -624,6 +626,7 @@ function BackupRow({
 }
 
 export function Backups() {
+	const navigate = useNavigate();
 	const [viewMode, setViewMode] = useState<ViewMode>('list');
 	const [searchQuery, setSearchQuery] = useState('');
 	const [agentFilter, setAgentFilter] = useState<string>('all');
@@ -1002,63 +1005,9 @@ export function Backups() {
 								</tbody>
 							</table>
 						) : (
-							<table className="w-full">
-								<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-									<tr>
-										<th className="px-6 py-3 w-12" />
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Snapshot ID
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Agent
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Repository
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Size
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Status
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Created
-										</th>
-										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Actions
-										</th>
-									</tr>
-								</thead>
-								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-									<tr>
-										<td
-											colSpan={8}
-											className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
-										>
-											<svg
-												aria-hidden="true"
-												className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-												/>
-											</svg>
-											<p className="font-medium text-gray-900 dark:text-white">
-												No backups found
-											</p>
-											<p className="text-sm">
-												Backups will appear here once agents start running
-											</p>
-										</td>
-									</tr>
-								</tbody>
-							</table>
+							<EmptyStateNoBackups
+								onCreateSchedule={() => navigate('/schedules')}
+							/>
 						)}
 					</div>
 				</div>
