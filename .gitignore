@@ -33,6 +33,7 @@ Thumbs.db
 *.dylib
 /bin/
 /keldris
+/keldris-agent
 
 # Test binary
 *.test

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/rs/zerolog"
 )
@@ -25,21 +27,32 @@ type PagerDutyService struct {
 }
 
 // NewPagerDutyService creates a new PagerDuty notification service.
-func NewPagerDutyService(config models.PagerDutyChannelConfig, logger zerolog.Logger) (*PagerDutyService, error) {
-	if err := ValidatePagerDutyConfig(&config); err != nil {
+func NewPagerDutyService(cfg models.PagerDutyChannelConfig, logger zerolog.Logger) (*PagerDutyService, error) {
+	return NewPagerDutyServiceWithProxy(cfg, nil, logger)
+}
+
+// NewPagerDutyServiceWithProxy creates a PagerDuty notification service with proxy support.
+func NewPagerDutyServiceWithProxy(cfg models.PagerDutyChannelConfig, proxyConfig *config.ProxyConfig, logger zerolog.Logger) (*PagerDutyService, error) {
+	if err := ValidatePagerDutyConfig(&cfg); err != nil {
 		return nil, err
 	}
 
 	// Set default severity if not specified
-	if config.Severity == "" {
-		config.Severity = "warning"
+	if cfg.Severity == "" {
+		cfg.Severity = "warning"
+	}
+
+	client, err := httpclient.New(httpclient.Options{
+		Timeout:     30 * time.Second,
+		ProxyConfig: proxyConfig,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create http client: %w", err)
 	}
 
 	return &PagerDutyService{
-		config: config,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		config: cfg,
+		client: client,
 		logger: logger.With().Str("component", "pagerduty_service").Logger(),
 	}, nil
 }

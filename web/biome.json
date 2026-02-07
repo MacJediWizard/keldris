@@ -1,9 +1,14 @@
 {
 	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
 	"files": {
-		"ignore": ["node_modules", "dist", "*.json", "*.config.js", "*.config.ts"]
+		"include": [
+			"src/**/*.ts",
+			"src/**/*.tsx",
+			"portal/src/**/*.ts",
+			"portal/src/**/*.tsx",
+			"*.css"
+		]
 	},
-	"organizeImports": { "enabled": true },
 	"linter": {
 		"enabled": true,
 		"rules": {
@@ -15,8 +20,23 @@
 			}
 		}
 	},
+	"overrides": [
+		{
+			"include": ["src/pages/Documentation.tsx"],
+			"linter": {
+				"rules": {
+					"security": {
+						"noDangerouslySetInnerHtml": "off"
+					}
+				}
+			}
+		}
+	],
 	"formatter": { "indentStyle": "tab" },
 	"javascript": {
 		"formatter": { "quoteStyle": "single", "semicolons": "always" }
+	},
+	"organizeImports": {
+		"enabled": true
 	}
 }

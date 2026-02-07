@@ -22,8 +22,8 @@ const (
 	defaultPgDumpAllBinary = "pg_dumpall"
 	defaultPsqlBinary      = "psql"
 	defaultPostgresPort    = 5432
-	defaultBackupTimeout   = 30 * time.Minute
-	defaultConnectTimeout  = 30 * time.Second
+	defaultPgBackupTimeout = 30 * time.Minute
+	defaultPgConnTimeout   = 30 * time.Second
 )
 
 // PostgresBackup implements database backup for PostgreSQL using pg_dump.
@@ -46,8 +46,8 @@ type DatabaseInfo struct {
 	Databases []string `json:"databases,omitempty"`
 }
 
-// BackupResult contains the result of a PostgreSQL backup operation.
-type BackupResult struct {
+// PostgresBackupResult contains the result of a PostgreSQL backup operation.
+type PostgresBackupResult struct {
 	Success      bool     `json:"success"`
 	BackupPath   string   `json:"backup_path,omitempty"`
 	BackupFiles  []string `json:"backup_files,omitempty"`
@@ -57,8 +57,8 @@ type BackupResult struct {
 	ErrorMessage string   `json:"error_message,omitempty"`
 }
 
-// RestoreResult contains the result of a PostgreSQL restore operation.
-type RestoreResult struct {
+// PostgresRestoreResult contains the result of a PostgreSQL restore operation.
+type PostgresRestoreResult struct {
 	Success       bool   `json:"success"`
 	DatabaseName  string `json:"database_name,omitempty"`
 	ErrorMessage  string `json:"error_message,omitempty"`
@@ -99,7 +99,7 @@ func (p *PostgresBackup) TestConnection(ctx context.Context) (*DatabaseInfo, err
 		Connected: false,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, defaultConnectTimeout)
+	ctx, cancel := context.WithTimeout(ctx, defaultPgConnTimeout)
 	defer cancel()
 
 	// Build connection string for psql
@@ -171,9 +171,9 @@ func (p *PostgresBackup) listDatabases(ctx context.Context) ([]string, error) {
 }
 
 // Backup creates a backup of the PostgreSQL database(s).
-func (p *PostgresBackup) Backup(ctx context.Context, outputDir string) (*BackupResult, error) {
+func (p *PostgresBackup) Backup(ctx context.Context, outputDir string) (*PostgresBackupResult, error) {
 	startTime := time.Now()
-	result := &BackupResult{
+	result := &PostgresBackupResult{
 		Success:     false,
 		BackupFiles: make([]string, 0),
 	}
@@ -204,13 +204,13 @@ func (p *PostgresBackup) Backup(ctx context.Context, outputDir string) (*BackupR
 }
 
 // backupSingleDatabase backs up a single database using pg_dump.
-func (p *PostgresBackup) backupSingleDatabase(ctx context.Context, outputDir, database string, result *BackupResult, startTime time.Time) (*BackupResult, error) {
+func (p *PostgresBackup) backupSingleDatabase(ctx context.Context, outputDir, database string, result *PostgresBackupResult, startTime time.Time) (*PostgresBackupResult, error) {
 	p.logger.Info().
 		Str("host", p.Config.Host).
 		Str("database", database).
 		Msg("starting PostgreSQL backup")
 
-	ctx, cancel := context.WithTimeout(ctx, defaultBackupTimeout)
+	ctx, cancel := context.WithTimeout(ctx, defaultPgBackupTimeout)
 	defer cancel()
 
 	// Generate backup filename
@@ -260,12 +260,12 @@ func (p *PostgresBackup) backupSingleDatabase(ctx context.Context, outputDir, da
 }
 
 // backupMultipleDatabases backs up multiple specific databases.
-func (p *PostgresBackup) backupMultipleDatabases(ctx context.Context, outputDir string, databases []string, result *BackupResult, startTime time.Time) (*BackupResult, error) {
+func (p *PostgresBackup) backupMultipleDatabases(ctx context.Context, outputDir string, databases []string, result *PostgresBackupResult, startTime time.Time) (*PostgresBackupResult, error) {
 	var totalSize int64
 	var lastErr error
 
 	for _, database := range databases {
-		dbResult, err := p.backupSingleDatabase(ctx, outputDir, database, &BackupResult{}, startTime)
+		dbResult, err := p.backupSingleDatabase(ctx, outputDir, database, &PostgresBackupResult{}, startTime)
 		if err != nil {
 			p.logger.Error().Err(err).Str("database", database).Msg("failed to backup database")
 			lastErr = err
@@ -290,12 +290,12 @@ func (p *PostgresBackup) backupMultipleDatabases(ctx context.Context, outputDir 
 }
 
 // backupAllDatabases backs up all databases using pg_dumpall.
-func (p *PostgresBackup) backupAllDatabases(ctx context.Context, outputDir string, result *BackupResult, startTime time.Time) (*BackupResult, error) {
+func (p *PostgresBackup) backupAllDatabases(ctx context.Context, outputDir string, result *PostgresBackupResult, startTime time.Time) (*PostgresBackupResult, error) {
 	p.logger.Info().
 		Str("host", p.Config.Host).
 		Msg("starting PostgreSQL backup of all databases")
 
-	ctx, cancel := context.WithTimeout(ctx, defaultBackupTimeout)
+	ctx, cancel := context.WithTimeout(ctx, defaultPgBackupTimeout)
 	defer cancel()
 
 	// Generate backup filename

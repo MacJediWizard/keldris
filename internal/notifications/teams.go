@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/rs/zerolog"
 )
@@ -20,16 +22,27 @@ type TeamsService struct {
 }
 
 // NewTeamsService creates a new Microsoft Teams notification service.
-func NewTeamsService(config models.TeamsChannelConfig, logger zerolog.Logger) (*TeamsService, error) {
-	if err := ValidateTeamsConfig(&config); err != nil {
+func NewTeamsService(cfg models.TeamsChannelConfig, logger zerolog.Logger) (*TeamsService, error) {
+	return NewTeamsServiceWithProxy(cfg, nil, logger)
+}
+
+// NewTeamsServiceWithProxy creates a Teams notification service with proxy support.
+func NewTeamsServiceWithProxy(cfg models.TeamsChannelConfig, proxyConfig *config.ProxyConfig, logger zerolog.Logger) (*TeamsService, error) {
+	if err := ValidateTeamsConfig(&cfg); err != nil {
 		return nil, err
 	}
 
+	client, err := httpclient.New(httpclient.Options{
+		Timeout:     30 * time.Second,
+		ProxyConfig: proxyConfig,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create http client: %w", err)
+	}
+
 	return &TeamsService{
-		config: config,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		config: cfg,
+		client: client,
 		logger: logger.With().Str("component", "teams_service").Logger(),
 	}, nil
 }
