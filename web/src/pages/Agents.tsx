@@ -15,6 +15,7 @@ import {
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
+import { AgentRowSkeleton } from '../components/ui/PageSkeletons';
 import { StarButton } from '../components/ui/StarButton';
 import { useAddAgentToGroup, useAgentGroups } from '../hooks/useAgentGroups';
 import {
@@ -36,31 +37,6 @@ import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
 import { statusHelp } from '../lib/help-content';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
 import { getAgentStatusColor } from '../lib/utils';
-
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4 w-12">
-				<div className="h-4 w-4 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
 
 interface GenerateCodeModalProps {
 	isOpen: boolean;
@@ -1132,9 +1108,9 @@ export function Agents() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<AgentRowSkeleton />
+							<AgentRowSkeleton />
+							<AgentRowSkeleton />
 						</tbody>
 					</table>
 				) : filteredAgents && filteredAgents.length > 0 ? (
