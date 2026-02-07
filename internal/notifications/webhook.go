@@ -11,6 +11,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/rs/zerolog"
 )
@@ -23,24 +25,35 @@ type WebhookService struct {
 }
 
 // NewWebhookService creates a new generic webhook notification service.
-func NewWebhookService(config models.WebhookChannelConfig, logger zerolog.Logger) (*WebhookService, error) {
-	if err := ValidateWebhookConfig(&config); err != nil {
+func NewWebhookService(cfg models.WebhookChannelConfig, logger zerolog.Logger) (*WebhookService, error) {
+	return NewWebhookServiceWithProxy(cfg, nil, logger)
+}
+
+// NewWebhookServiceWithProxy creates a webhook service with proxy support.
+func NewWebhookServiceWithProxy(cfg models.WebhookChannelConfig, proxyConfig *config.ProxyConfig, logger zerolog.Logger) (*WebhookService, error) {
+	if err := ValidateWebhookConfig(&cfg); err != nil {
 		return nil, err
 	}
 
 	// Set defaults
-	if config.Method == "" {
-		config.Method = http.MethodPost
+	if cfg.Method == "" {
+		cfg.Method = http.MethodPost
 	}
-	if config.ContentType == "" {
-		config.ContentType = "application/json"
+	if cfg.ContentType == "" {
+		cfg.ContentType = "application/json"
+	}
+
+	client, err := httpclient.New(httpclient.Options{
+		Timeout:     30 * time.Second,
+		ProxyConfig: proxyConfig,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create http client: %w", err)
 	}
 
 	return &WebhookService{
-		config: config,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		config: cfg,
+		client: client,
 		logger: logger.With().Str("component", "webhook_service").Logger(),
 	}, nil
 }

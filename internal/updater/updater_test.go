@@ -103,7 +103,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewWithConfig(t *testing.T) {
-	u := NewWithConfig("2.0.0", "custom-owner", "custom-repo")
+	u := NewWithConfig("2.0.0", "custom-owner", "custom-repo", nil)
 	if u == nil {
 		t.Fatal("NewWithConfig() returned nil")
 	}
