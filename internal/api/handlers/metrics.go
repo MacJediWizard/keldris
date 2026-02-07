@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/metrics"
+	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
@@ -15,19 +17,26 @@ import (
 type MetricsStore interface {
 	Ping(ctx context.Context) error
 	Health() map[string]any
+	// Prometheus metrics methods
+	GetAllAgents(ctx context.Context) ([]*models.Agent, error)
+	GetAllBackups(ctx context.Context) ([]*models.Backup, error)
+	GetBackupsByStatus(ctx context.Context, status models.BackupStatus) ([]*models.Backup, error)
+	GetStorageStatsSummaryGlobal(ctx context.Context) (*models.StorageStatsSummary, error)
 }
 
 // MetricsHandler handles Prometheus-compatible metrics endpoints.
 type MetricsHandler struct {
-	db     MetricsStore
-	logger zerolog.Logger
+	db                  MetricsStore
+	prometheusCollector *metrics.PrometheusCollector
+	logger              zerolog.Logger
 }
 
 // NewMetricsHandler creates a new MetricsHandler.
 func NewMetricsHandler(db MetricsStore, logger zerolog.Logger) *MetricsHandler {
 	return &MetricsHandler{
-		db:     db,
-		logger: logger.With().Str("component", "metrics_handler").Logger(),
+		db:                  db,
+		prometheusCollector: metrics.NewPrometheusCollector(db, logger),
+		logger:              logger.With().Str("component", "metrics_handler").Logger(),
 	}
 }
 
@@ -37,9 +46,14 @@ func (h *MetricsHandler) RegisterPublicRoutes(r *gin.Engine) {
 }
 
 // Metrics returns metrics in Prometheus exposition format.
-// GET /metrics
+// @Summary Prometheus metrics endpoint
+// @Description Returns metrics in Prometheus exposition format for scraping
+// @Tags Monitoring
+// @Produce text/plain
+// @Success 200 {string} string "Prometheus metrics"
+// @Router /metrics [get]
 func (h *MetricsHandler) Metrics(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
 	var sb strings.Builder
@@ -131,6 +145,17 @@ func (h *MetricsHandler) Metrics(c *gin.Context) {
 		sb.WriteString("# TYPE keldris_db_idle_destroy_total counter\n")
 		if v, ok := poolStats["max_idle_dest"].(int64); ok {
 			sb.WriteString(fmt.Sprintf("keldris_db_idle_destroy_total %d\n", v))
+		}
+		sb.WriteString("\n")
+	}
+
+	// Collect and append Prometheus metrics (backup, agent, storage)
+	if h.prometheusCollector != nil {
+		promMetrics, err := h.prometheusCollector.Collect(ctx)
+		if err != nil {
+			h.logger.Warn().Err(err).Msg("failed to collect prometheus metrics")
+		} else {
+			sb.WriteString(h.prometheusCollector.Format(promMetrics))
 		}
 	}
 
