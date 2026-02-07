@@ -56,7 +56,6 @@ import type {
 	ScheduleRepositoryRequest,
 } from '../lib/types';
 
-
 interface CreateScheduleModalProps {
 	isOpen: boolean;
 	onClose: () => void;
