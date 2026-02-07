@@ -16,9 +16,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/agent"
 	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/diagnostics"
+	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/support"
 	"github.com/MacJediWizard/keldris/internal/updater"
 	"github.com/google/uuid"
@@ -46,7 +49,7 @@ func checkUpdateOnStartup() {
 		return
 	}
 
-	u := updater.New(Version)
+	u := updater.NewWithProxy(Version, cfg.GetProxyConfig())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -72,7 +75,7 @@ Run 'keldris-agent register' to connect to a server.`,
 		SilenceUsage: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// Skip auto-check for certain commands
-			if cmd.Name() == "update" || cmd.Name() == "version" || cmd.Name() == "help" {
+			if cmd.Name() == "update" || cmd.Name() == "version" || cmd.Name() == "help" || cmd.Name() == "diagnostics" {
 				return
 			}
 			checkUpdateOnStartup()
@@ -90,6 +93,8 @@ Run 'keldris-agent register' to connect to a server.`,
 		newMountsCmd(),
 		newSnapshotMountCmd(),
 		newSupportBundleCmd(),
+		newDiagnosticsCmd(),
+		newQueueCmd(),
 	)
 
 	return rootCmd
@@ -192,7 +197,159 @@ func newConfigCmd() *cobra.Command {
 		newConfigShowCmd(),
 		newConfigSetServerCmd(),
 		newConfigSetAutoUpdateCmd(),
+		newConfigSetProxyCmd(),
+		newConfigClearProxyCmd(),
+		newConfigTestProxyCmd(),
+		newConfigSetMaxQueueSizeCmd(),
 	)
+
+	return cmd
+}
+
+func newConfigSetProxyCmd() *cobra.Command {
+	var httpProxy, httpsProxy, noProxy, socks5Proxy string
+
+	cmd := &cobra.Command{
+		Use:   "set-proxy",
+		Short: "Configure proxy settings",
+		Long: `Configure proxy settings for agent network connections.
+
+Examples:
+  # Set HTTP proxy
+  keldris-agent config set-proxy --http http://proxy:8080
+
+  # Set HTTPS proxy (often the same as HTTP proxy)
+  keldris-agent config set-proxy --https http://proxy:8080
+
+  # Set SOCKS5 proxy
+  keldris-agent config set-proxy --socks5 socks5://user:pass@proxy:1080
+
+  # Set hosts to bypass
+  keldris-agent config set-proxy --no-proxy "localhost,127.0.0.1,.internal.com"
+
+  # Set all at once
+  keldris-agent config set-proxy --http http://proxy:8080 --https http://proxy:8080 --no-proxy localhost`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if httpProxy == "" && httpsProxy == "" && socks5Proxy == "" && noProxy == "" {
+				return fmt.Errorf("at least one proxy option is required")
+			}
+
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			// Initialize proxy config if nil
+			if cfg.Proxy == nil {
+				cfg.Proxy = &config.ProxyConfig{}
+			}
+
+			// Update only provided values
+			if httpProxy != "" {
+				cfg.Proxy.HTTPProxy = httpProxy
+			}
+			if httpsProxy != "" {
+				cfg.Proxy.HTTPSProxy = httpsProxy
+			}
+			if noProxy != "" {
+				cfg.Proxy.NoProxy = noProxy
+			}
+			if socks5Proxy != "" {
+				cfg.Proxy.SOCKS5Proxy = socks5Proxy
+			}
+
+			if err := cfg.SaveDefault(); err != nil {
+				return fmt.Errorf("save config: %w", err)
+			}
+
+			fmt.Println("Proxy configuration updated:")
+			fmt.Printf("  %s\n", httpclient.ProxyInfo(cfg.Proxy))
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&httpProxy, "http", "", "HTTP proxy URL (e.g., http://proxy:8080)")
+	cmd.Flags().StringVar(&httpsProxy, "https", "", "HTTPS proxy URL (e.g., http://proxy:8080)")
+	cmd.Flags().StringVar(&noProxy, "no-proxy", "", "Comma-separated hosts to bypass proxy")
+	cmd.Flags().StringVar(&socks5Proxy, "socks5", "", "SOCKS5 proxy URL (e.g., socks5://user:pass@proxy:1080)")
+
+	return cmd
+}
+
+func newConfigClearProxyCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "clear-proxy",
+		Short: "Remove all proxy settings",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			cfg.Proxy = nil
+
+			if err := cfg.SaveDefault(); err != nil {
+				return fmt.Errorf("save config: %w", err)
+			}
+
+			fmt.Println("Proxy configuration cleared.")
+			return nil
+		},
+	}
+}
+
+func newConfigTestProxyCmd() *cobra.Command {
+	var testURL string
+
+	cmd := &cobra.Command{
+		Use:   "test-proxy",
+		Short: "Test proxy configuration",
+		Long: `Test the proxy configuration by making a request to a test URL.
+
+By default, tests connectivity to https://www.google.com. Use --url to specify
+a different test endpoint.
+
+Examples:
+  # Test with default URL
+  keldris-agent config test-proxy
+
+  # Test with custom URL
+  keldris-agent config test-proxy --url https://api.github.com
+
+  # Test against the configured server
+  keldris-agent config test-proxy --url $(keldris-agent config show | grep "Server URL" | cut -d: -f2-)`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			proxyConfig := cfg.GetProxyConfig()
+			if proxyConfig == nil || !proxyConfig.HasProxy() {
+				fmt.Println("No proxy configured.")
+				fmt.Println("Use 'keldris-agent config set-proxy' to configure a proxy.")
+				return nil
+			}
+
+			fmt.Printf("Proxy: %s\n", httpclient.ProxyInfo(proxyConfig))
+			fmt.Printf("Testing connection to: %s\n", testURL)
+			fmt.Print("Connecting... ")
+
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			if err := httpclient.TestProxy(ctx, proxyConfig, testURL); err != nil {
+				fmt.Println("FAILED")
+				return fmt.Errorf("proxy test failed: %w", err)
+			}
+
+			fmt.Println("OK")
+			fmt.Println("Proxy connection successful!")
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&testURL, "url", "https://www.google.com", "URL to test connectivity")
 
 	return cmd
 }
@@ -225,7 +382,46 @@ func newConfigShowCmd() *cobra.Command {
 				fmt.Printf("Hostname:          %s\n", cfg.Hostname)
 			}
 			fmt.Printf("Auto-check update: %v\n", cfg.AutoCheckUpdate)
+			fmt.Printf("Proxy:             %s\n", httpclient.ProxyInfo(cfg.GetProxyConfig()))
+			fmt.Printf("Max queue size:    %d\n", cfg.GetMaxQueueSize())
 
+			return nil
+		},
+	}
+}
+
+func newConfigSetMaxQueueSizeCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "set-max-queue-size <size>",
+		Short: "Set the maximum offline backup queue size",
+		Long: `Set the maximum number of backups that can be queued locally when offline.
+
+When this limit is reached, new scheduled backups will be skipped until
+connectivity is restored and the queue is synced.
+
+Default: 100`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var size int
+			if _, err := fmt.Sscanf(args[0], "%d", &size); err != nil {
+				return fmt.Errorf("invalid size: must be a number")
+			}
+			if size < 1 || size > 10000 {
+				return fmt.Errorf("size must be between 1 and 10000")
+			}
+
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			cfg.MaxQueueSize = size
+
+			if err := cfg.SaveDefault(); err != nil {
+				return fmt.Errorf("save config: %w", err)
+			}
+
+			fmt.Printf("Max queue size set to: %d\n", size)
 			return nil
 		},
 	}
@@ -321,12 +517,19 @@ func newStatusCmd() *cobra.Command {
 
 			fmt.Printf("Server:   %s\n", cfg.ServerURL)
 			fmt.Printf("Hostname: %s\n", cfg.Hostname)
+			if cfg.Proxy != nil && cfg.Proxy.HasProxy() {
+				fmt.Printf("Proxy:    %s\n", httpclient.ProxyInfo(cfg.Proxy))
+			}
 			fmt.Println()
 
 			// Ping the server
 			fmt.Print("Checking server connection... ")
 
-			client := &http.Client{Timeout: 10 * time.Second}
+			client, err := httpclient.NewWithConfig(cfg, 10*time.Second)
+			if err != nil {
+				fmt.Println("FAILED")
+				return fmt.Errorf("create http client: %w", err)
+			}
 			healthURL := cfg.ServerURL + "/health"
 
 			resp, err := client.Get(healthURL)
@@ -454,7 +657,13 @@ Use --check to only check without installing.`,
 }
 
 func runUpdate(checkOnly, force bool) error {
-	u := updater.New(Version)
+	cfg, _ := config.LoadDefault()
+	var proxyConfig *config.ProxyConfig
+	if cfg != nil {
+		proxyConfig = cfg.GetProxyConfig()
+	}
+
+	u := updater.NewWithProxy(Version, proxyConfig)
 
 	fmt.Printf("Current version: %s\n", Version)
 	fmt.Println("Checking for updates...")
@@ -778,6 +987,388 @@ func newSnapshotMountListCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newDiagnosticsCmd() *cobra.Command {
+	var jsonOutput bool
+
+	cmd := &cobra.Command{
+		Use:   "diagnostics",
+		Short: "Run self-test diagnostics",
+		Long: `Run diagnostic checks to verify the agent is properly configured and operational.
+
+Checks performed:
+  - Server connectivity: Tests connection to the Keldris server
+  - API key validation: Verifies the API key is valid
+  - Restic binary: Checks that restic is installed and working
+  - Disk space: Verifies adequate free space
+  - Config permissions: Checks file permissions on config directory
+
+Use --json for machine-readable output suitable for automation.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runDiagnostics(jsonOutput)
+		},
+	}
+
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output results as JSON")
+
+	return cmd
+}
+
+func newQueueCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "queue",
+		Short: "Manage offline backup queue",
+		Long: `Manage backups that were queued while the server was unreachable.
+
+When the agent cannot reach the server, scheduled backups are queued locally.
+Once connectivity is restored, queued backups are automatically synced to
+the server.`,
+	}
+
+	cmd.AddCommand(
+		newQueueStatusCmd(),
+		newQueueListCmd(),
+		newQueueSyncCmd(),
+		newQueueClearCmd(),
+	)
+
+	return cmd
+}
+
+func runDiagnostics(jsonOutput bool) error {
+	cfg, err := config.LoadDefault()
+	if err != nil {
+		if jsonOutput {
+			fmt.Printf(`{"error": "failed to load config: %s"}`, err.Error())
+			fmt.Println()
+		} else {
+			fmt.Printf("Warning: Could not load config: %v\n", err)
+		}
+		cfg = &config.AgentConfig{}
+	}
+
+	runner := diagnostics.NewRunner(cfg, Version)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	result := runner.Run(ctx)
+
+	if jsonOutput {
+		data, err := result.ToJSON()
+		if err != nil {
+			return fmt.Errorf("marshal JSON: %w", err)
+		}
+		fmt.Println(string(data))
+		if !result.Summary.AllPass {
+			return fmt.Errorf("diagnostics failed: %d check(s) failed", result.Summary.Failed)
+		}
+		return nil
+	}
+
+	// Human-readable output
+	fmt.Println("Keldris Agent Diagnostics")
+	fmt.Println("========================")
+	fmt.Printf("Version:   %s\n", result.AgentVersion)
+	fmt.Printf("Hostname:  %s\n", result.Hostname)
+	fmt.Printf("OS/Arch:   %s/%s\n", result.OS, result.Arch)
+	fmt.Printf("Timestamp: %s\n", result.Timestamp.Format(time.RFC3339))
+	fmt.Println()
+
+	// Print each check result
+	for _, check := range result.Checks {
+		var statusIcon string
+		switch check.Status {
+		case diagnostics.StatusPass:
+			statusIcon = "✓"
+		case diagnostics.StatusFail:
+			statusIcon = "✗"
+		case diagnostics.StatusWarn:
+			statusIcon = "!"
+		case diagnostics.StatusSkip:
+			statusIcon = "-"
+		}
+
+		fmt.Printf("[%s] %s\n", statusIcon, formatCheckName(check.Name))
+		if check.Message != "" {
+			fmt.Printf("    %s\n", check.Message)
+		}
+	}
+
+	fmt.Println()
+	fmt.Println("Summary")
+	fmt.Println("-------")
+	fmt.Printf("Total:   %d\n", result.Summary.Total)
+	fmt.Printf("Passed:  %d\n", result.Summary.Passed)
+	fmt.Printf("Failed:  %d\n", result.Summary.Failed)
+	fmt.Printf("Warned:  %d\n", result.Summary.Warned)
+	fmt.Printf("Skipped: %d\n", result.Summary.Skipped)
+	fmt.Println()
+
+	if result.Summary.AllPass {
+		fmt.Println("All checks passed!")
+		return nil
+	}
+
+	return fmt.Errorf("diagnostics failed: %d check(s) failed", result.Summary.Failed)
+}
+
+// formatCheckName converts a check name from snake_case to Title Case.
+func formatCheckName(name string) string {
+	words := strings.Split(name, "_")
+	for i, word := range words {
+		if len(word) > 0 {
+			words[i] = strings.ToUpper(word[:1]) + word[1:]
+		}
+	}
+	return strings.Join(words, " ")
+}
+
+func newQueueStatusCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "status",
+		Short: "Show offline backup queue status",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			configDir, err := config.DefaultConfigDir()
+			if err != nil {
+				return fmt.Errorf("get config dir: %w", err)
+			}
+
+			logger := zerolog.New(os.Stderr).Level(zerolog.Disabled)
+			store, err := agent.NewSQLiteStore(configDir, logger)
+			if err != nil {
+				return fmt.Errorf("open queue database: %w", err)
+			}
+			defer store.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			status, err := store.GetQueueStatus(ctx)
+			if err != nil {
+				return fmt.Errorf("get queue status: %w", err)
+			}
+
+			maxQueueSize := cfg.GetMaxQueueSize()
+
+			fmt.Println("Offline Backup Queue Status")
+			fmt.Println(strings.Repeat("-", 40))
+			fmt.Printf("Pending:        %d\n", status.PendingCount)
+			fmt.Printf("Synced:         %d\n", status.SyncedCount)
+			fmt.Printf("Failed:         %d\n", status.FailedCount)
+			fmt.Printf("Total entries:  %d\n", status.TotalQueued)
+			fmt.Printf("Max queue size: %d\n", maxQueueSize)
+			fmt.Println()
+
+			if status.OldestQueuedAt != nil {
+				fmt.Printf("Oldest pending: %s\n", status.OldestQueuedAt.Format(time.RFC3339))
+			}
+
+			// Check server connectivity
+			if cfg.IsConfigured() {
+				fmt.Print("\nServer status:  ")
+				client := &http.Client{Timeout: 5 * time.Second}
+				resp, checkErr := client.Get(cfg.ServerURL + "/health")
+				if checkErr != nil {
+					fmt.Println("OFFLINE")
+				} else {
+					resp.Body.Close()
+					if resp.StatusCode == http.StatusOK {
+						fmt.Println("ONLINE")
+					} else {
+						fmt.Printf("ERROR (HTTP %d)\n", resp.StatusCode)
+					}
+				}
+			}
+
+			return nil
+		},
+	}
+}
+
+func newQueueListCmd() *cobra.Command {
+	var showAll bool
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List queued backups",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			configDir, err := config.DefaultConfigDir()
+			if err != nil {
+				return fmt.Errorf("get config dir: %w", err)
+			}
+
+			logger := zerolog.New(os.Stderr).Level(zerolog.Disabled)
+			store, err := agent.NewSQLiteStore(configDir, logger)
+			if err != nil {
+				return fmt.Errorf("open queue database: %w", err)
+			}
+			defer store.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			var backups []*agent.QueuedBackup
+			if showAll {
+				backups, err = store.ListAllBackups(ctx)
+			} else {
+				backups, err = store.ListPendingBackups(ctx)
+			}
+			if err != nil {
+				return fmt.Errorf("list backups: %w", err)
+			}
+
+			if len(backups) == 0 {
+				if showAll {
+					fmt.Println("No backups in queue")
+				} else {
+					fmt.Println("No pending backups in queue")
+				}
+				return nil
+			}
+
+			fmt.Printf("%-36s %-20s %-10s %-8s %-25s\n", "ID", "SCHEDULE", "STATUS", "RETRIES", "QUEUED AT")
+			fmt.Println(strings.Repeat("-", 105))
+			for _, b := range backups {
+				name := b.ScheduleName
+				if len(name) > 18 {
+					name = name[:17] + "..."
+				}
+				fmt.Printf("%-36s %-20s %-10s %-8d %-25s\n",
+					b.ID.String(),
+					name,
+					b.Status,
+					b.RetryCount,
+					b.QueuedAt.Format(time.RFC3339))
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all backups (including synced/failed)")
+
+	return cmd
+}
+
+func newQueueSyncCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "sync",
+		Short: "Force sync queued backups to server",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			if !cfg.IsConfigured() {
+				return fmt.Errorf("agent not configured, run 'keldris-agent register' first")
+			}
+
+			configDir, err := config.DefaultConfigDir()
+			if err != nil {
+				return fmt.Errorf("get config dir: %w", err)
+			}
+
+			logger := zerolog.New(os.Stderr).Level(zerolog.InfoLevel).With().Timestamp().Logger()
+
+			store, err := agent.NewSQLiteStore(configDir, logger)
+			if err != nil {
+				return fmt.Errorf("open queue database: %w", err)
+			}
+			defer store.Close()
+
+			client := agent.NewHTTPServerClient(cfg.ServerURL, cfg.APIKey, logger)
+			queueCfg := agent.DefaultQueueConfig()
+			queue := agent.NewQueue(store, client, queueCfg, logger)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+
+			fmt.Println("Syncing queued backups...")
+			if err := queue.SyncNow(ctx); err != nil {
+				if errors.Is(err, agent.ErrServerUnreachable) {
+					fmt.Println("Server is unreachable. Backups remain queued.")
+					return nil
+				}
+				return fmt.Errorf("sync: %w", err)
+			}
+
+			fmt.Println("Sync completed successfully.")
+			return nil
+		},
+	}
+}
+
+func newQueueClearCmd() *cobra.Command {
+	var force bool
+	var status string
+
+	cmd := &cobra.Command{
+		Use:   "clear",
+		Short: "Clear queued backups",
+		Long: `Clear backups from the offline queue.
+
+By default, only synced entries are cleared. Use --status to clear
+entries with a specific status (pending, synced, failed), or --force
+to clear all entries regardless of status.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			configDir, err := config.DefaultConfigDir()
+			if err != nil {
+				return fmt.Errorf("get config dir: %w", err)
+			}
+
+			logger := zerolog.New(os.Stderr).Level(zerolog.Disabled)
+			store, err := agent.NewSQLiteStore(configDir, logger)
+			if err != nil {
+				return fmt.Errorf("open queue database: %w", err)
+			}
+			defer store.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			if force {
+				// Clear all entries
+				backups, err := store.ListAllBackups(ctx)
+				if err != nil {
+					return fmt.Errorf("list backups: %w", err)
+				}
+
+				for _, b := range backups {
+					if err := store.DeleteQueuedBackup(ctx, b.ID); err != nil {
+						fmt.Printf("Failed to delete %s: %v\n", b.ID, err)
+					}
+				}
+				fmt.Printf("Cleared %d queue entries\n", len(backups))
+				return nil
+			}
+
+			// Clear by status
+			if status == "" {
+				status = "synced"
+			}
+
+			// Prune old synced/failed entries
+			pruned, err := store.PruneOldEntries(ctx, 0)
+			if err != nil {
+				return fmt.Errorf("prune entries: %w", err)
+			}
+
+			fmt.Printf("Cleared %d queue entries\n", pruned)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "Clear all entries regardless of status")
+	cmd.Flags().StringVar(&status, "status", "synced", "Status of entries to clear (pending, synced, failed)")
+
+	return cmd
 }
 
 func runSupportBundle(outputPath string) error {

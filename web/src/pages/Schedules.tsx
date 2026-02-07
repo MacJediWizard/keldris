@@ -20,7 +20,9 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { EmptyStateNoSchedules } from '../components/ui/EmptyState';
 import { FormLabelWithHelp, HelpTooltip } from '../components/ui/HelpTooltip';
+import { ScheduleRowSkeleton } from '../components/ui/PageSkeletons';
 import { StarButton } from '../components/ui/StarButton';
 import { useAgents } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
@@ -54,31 +56,6 @@ import type {
 	SchedulePriority,
 	ScheduleRepositoryRequest,
 } from '../lib/types';
-
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4 w-12">
-				<div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
 
 interface CreateScheduleModalProps {
 	isOpen: boolean;
@@ -1080,9 +1057,10 @@ function formatBandwidth(kbps?: number): string {
 	return `${kbps} KB/s`;
 }
 
-function formatBackupWindow(window?: { start?: string; end?: string }):
-	| string
-	| null {
+function formatBackupWindow(window?: {
+	start?: string;
+	end?: string;
+}): string | null {
 	if (!window || (!window.start && !window.end)) return null;
 	const start = window.start || '00:00';
 	const end = window.end || '23:59';
@@ -2161,9 +2139,17 @@ export function Schedules() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-						Schedules
-					</h1>
+					<div className="flex items-center gap-2">
+						<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+							Schedules
+						</h1>
+						<HelpTooltip
+							content="Create and manage automated backup schedules with cron expressions, retention policies, and notification settings."
+							title="Backup Schedules"
+							docsUrl="/docs/configuration#schedule-configuration"
+							size="md"
+						/>
+					</div>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Configure automated backup jobs
 					</p>
@@ -2313,9 +2299,9 @@ export function Schedules() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<ScheduleRowSkeleton />
+							<ScheduleRowSkeleton />
+							<ScheduleRowSkeleton />
 						</tbody>
 					</table>
 				) : filteredSchedules && filteredSchedules.length > 0 ? (
@@ -2387,51 +2373,9 @@ export function Schedules() {
 						</tbody>
 					</table>
 				) : (
-					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
-						<svg
-							aria-hidden="true"
-							className="w-16 h-16 mx-auto mb-4 text-gray-300"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
-						</svg>
-						<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-							No schedules configured
-						</h3>
-						<p className="mb-4">Create a schedule to automate your backups</p>
-						<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-w-md mx-auto text-left space-y-2">
-							<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-								Common schedules:
-							</p>
-							<div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-								<p>
-									<span className="font-mono bg-gray-200 px-1 rounded">
-										0 2 * * *
-									</span>{' '}
-									— Daily at 2 AM
-								</p>
-								<p>
-									<span className="font-mono bg-gray-200 px-1 rounded">
-										0 */6 * * *
-									</span>{' '}
-									— Every 6 hours
-								</p>
-								<p>
-									<span className="font-mono bg-gray-200 px-1 rounded">
-										0 3 * * 0
-									</span>{' '}
-									— Weekly on Sunday
-								</p>
-							</div>
-						</div>
-					</div>
+					<EmptyStateNoSchedules
+						onCreateSchedule={() => setShowCreateModal(true)}
+					/>
 				)}
 			</div>
 

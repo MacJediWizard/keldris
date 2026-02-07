@@ -57,8 +57,10 @@ export function useUpdateDockerRegistry() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: UpdateDockerRegistryRequest }) =>
-			dockerRegistriesApi.update(id, data),
+		}: {
+			id: string;
+			data: UpdateDockerRegistryRequest;
+		}) => dockerRegistriesApi.update(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['docker-registries'] });
 			queryClient.invalidateQueries({ queryKey: ['docker-registries', id] });
@@ -129,8 +131,10 @@ export function useRotateDockerRegistryCredentials() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: RotateCredentialsRequest }) =>
-			dockerRegistriesApi.rotateCredentials(id, data),
+		}: {
+			id: string;
+			data: RotateCredentialsRequest;
+		}) => dockerRegistriesApi.rotateCredentials(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['docker-registries'] });
 			queryClient.invalidateQueries({ queryKey: ['docker-registries', id] });
