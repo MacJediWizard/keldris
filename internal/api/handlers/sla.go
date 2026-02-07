@@ -808,11 +808,11 @@ func (h *SLAHandler) GetReport(c *gin.Context) {
 	}
 
 	report := models.SLAReport{
-		OrgID:          user.CurrentOrgID,
-		ReportMonth:    reportMonth,
-		GeneratedAt:    time.Now(),
-		TotalBreaches:  stats.ActiveBreaches,
-		SLASummaries:   []models.SLAComplianceSummary{},
+		OrgID:         user.CurrentOrgID,
+		ReportMonth:   reportMonth,
+		GeneratedAt:   time.Now(),
+		TotalBreaches: stats.ActiveBreaches,
+		SLASummaries:  []models.SLAComplianceSummary{},
 	}
 
 	c.JSON(http.StatusOK, models.SLAReportResponse{Report: report})

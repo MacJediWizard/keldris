@@ -425,13 +425,13 @@ type PathMappingRequest struct {
 // CreateRestoreRequest is the request body for creating a restore job.
 type CreateRestoreRequest struct {
 	SnapshotID    string               `json:"snapshot_id" binding:"required"`
-	AgentID       string               `json:"agent_id" binding:"required"`               // Target agent (where restore executes)
-	SourceAgentID string               `json:"source_agent_id,omitempty"`                 // Source agent for cross-agent restores
+	AgentID       string               `json:"agent_id" binding:"required"` // Target agent (where restore executes)
+	SourceAgentID string               `json:"source_agent_id,omitempty"`   // Source agent for cross-agent restores
 	RepositoryID  string               `json:"repository_id" binding:"required"`
 	TargetPath    string               `json:"target_path" binding:"required"`
 	IncludePaths  []string             `json:"include_paths,omitempty"`
 	ExcludePaths  []string             `json:"exclude_paths,omitempty"`
-	PathMappings  []PathMappingRequest `json:"path_mappings,omitempty"`                   // Path remapping for cross-agent restores
+	PathMappings  []PathMappingRequest `json:"path_mappings,omitempty"` // Path remapping for cross-agent restores
 }
 
 // CloudRestoreTargetRequest represents the cloud storage target for a restore operation.
@@ -478,8 +478,8 @@ type CloudRestoreProgressResponse struct {
 // RestorePreviewRequest is the request body for previewing a restore operation.
 type RestorePreviewRequest struct {
 	SnapshotID    string               `json:"snapshot_id" binding:"required"`
-	AgentID       string               `json:"agent_id" binding:"required"`               // Target agent
-	SourceAgentID string               `json:"source_agent_id,omitempty"`                 // Source agent for cross-agent restores
+	AgentID       string               `json:"agent_id" binding:"required"` // Target agent
+	SourceAgentID string               `json:"source_agent_id,omitempty"`   // Source agent for cross-agent restores
 	RepositoryID  string               `json:"repository_id" binding:"required"`
 	TargetPath    string               `json:"target_path" binding:"required"`
 	IncludePaths  []string             `json:"include_paths,omitempty"`
@@ -527,22 +527,22 @@ type RestoreProgressResponse struct {
 
 // RestoreResponse represents a restore job in API responses.
 type RestoreResponse struct {
-	ID             string                   `json:"id"`
-	AgentID        string                   `json:"agent_id"`                      // Target agent
-	SourceAgentID  string                   `json:"source_agent_id,omitempty"`     // Source agent for cross-agent restores
-	RepositoryID   string                   `json:"repository_id"`
-	SnapshotID     string                   `json:"snapshot_id"`
-	TargetPath     string                   `json:"target_path"`
-	IncludePaths   []string                 `json:"include_paths,omitempty"`
-	ExcludePaths   []string                 `json:"exclude_paths,omitempty"`
-	PathMappings   []PathMappingResponse    `json:"path_mappings,omitempty"`
-	Status         string                   `json:"status"`
-	Progress       *RestoreProgressResponse `json:"progress,omitempty"`
-	IsCrossAgent   bool                     `json:"is_cross_agent"`
-	StartedAt      string                   `json:"started_at,omitempty"`
-	CompletedAt    string                   `json:"completed_at,omitempty"`
-	ErrorMessage   string                   `json:"error_message,omitempty"`
-	CreatedAt      string                   `json:"created_at"`
+	ID            string                   `json:"id"`
+	AgentID       string                   `json:"agent_id"`                  // Target agent
+	SourceAgentID string                   `json:"source_agent_id,omitempty"` // Source agent for cross-agent restores
+	RepositoryID  string                   `json:"repository_id"`
+	SnapshotID    string                   `json:"snapshot_id"`
+	TargetPath    string                   `json:"target_path"`
+	IncludePaths  []string                 `json:"include_paths,omitempty"`
+	ExcludePaths  []string                 `json:"exclude_paths,omitempty"`
+	PathMappings  []PathMappingResponse    `json:"path_mappings,omitempty"`
+	Status        string                   `json:"status"`
+	Progress      *RestoreProgressResponse `json:"progress,omitempty"`
+	IsCrossAgent  bool                     `json:"is_cross_agent"`
+	StartedAt     string                   `json:"started_at,omitempty"`
+	CompletedAt   string                   `json:"completed_at,omitempty"`
+	ErrorMessage  string                   `json:"error_message,omitempty"`
+	CreatedAt     string                   `json:"created_at"`
 	// Cloud restore fields
 	IsCloudRestore      bool                          `json:"is_cloud_restore,omitempty"`
 	CloudTarget         *CloudRestoreTargetRequest    `json:"cloud_target,omitempty"`

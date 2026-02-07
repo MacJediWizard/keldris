@@ -107,6 +107,32 @@ type DockerInfo struct {
 	DetectedAt      *time.Time            `json:"detected_at,omitempty"`
 }
 
+// ProxmoxVMInfo represents a Proxmox VM or LXC container.
+type ProxmoxVMInfo struct {
+	VMID    int    `json:"vmid"`
+	Name    string `json:"name"`
+	Type    string `json:"type"`   // qemu or lxc
+	Status  string `json:"status"` // running, stopped, paused
+	Node    string `json:"node"`
+	CPUs    int    `json:"cpus"`
+	MaxMem  int64  `json:"maxmem"`  // bytes
+	MaxDisk int64  `json:"maxdisk"` // bytes
+}
+
+// ProxmoxInfo contains information about Proxmox VMs/containers accessible from an agent.
+type ProxmoxInfo struct {
+	Available    bool            `json:"available"`
+	Host         string          `json:"host,omitempty"`
+	Node         string          `json:"node,omitempty"`
+	Version      string          `json:"version,omitempty"`
+	VMCount      int             `json:"vm_count"`
+	LXCCount     int             `json:"lxc_count"`
+	VMs          []ProxmoxVMInfo `json:"vms,omitempty"`
+	ConnectionID string          `json:"connection_id,omitempty"`
+	Error        string          `json:"error,omitempty"`
+	DetectedAt   *time.Time      `json:"detected_at,omitempty"`
+}
+
 // Agent represents a backup agent installed on a host.
 type Agent struct {
 	ID                   uuid.UUID              `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
@@ -115,6 +141,7 @@ type Agent struct {
 	APIKeyHash           string                 `json:"-"` // Never expose in JSON
 	OSInfo               *OSInfo                `json:"os_info,omitempty"`
 	DockerInfo           *DockerInfo            `json:"docker_info,omitempty"`
+	ProxmoxInfo          *ProxmoxInfo           `json:"proxmox_info,omitempty"`
 	NetworkMounts        []NetworkMount         `json:"network_mounts,omitempty"`
 	LastSeen             *time.Time             `json:"last_seen,omitempty"`
 	Status               AgentStatus            `json:"status" example:"active"`
@@ -190,6 +217,32 @@ func (a *Agent) DockerInfoJSON() ([]byte, error) {
 // HasDocker returns true if Docker is available on this agent.
 func (a *Agent) HasDocker() bool {
 	return a.DockerInfo != nil && a.DockerInfo.Available
+}
+
+// SetProxmoxInfo sets the Proxmox information from JSON bytes.
+func (a *Agent) SetProxmoxInfo(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	var info ProxmoxInfo
+	if err := json.Unmarshal(data, &info); err != nil {
+		return err
+	}
+	a.ProxmoxInfo = &info
+	return nil
+}
+
+// ProxmoxInfoJSON returns the Proxmox info as JSON bytes for database storage.
+func (a *Agent) ProxmoxInfoJSON() ([]byte, error) {
+	if a.ProxmoxInfo == nil {
+		return nil, nil
+	}
+	return json.Marshal(a.ProxmoxInfo)
+}
+
+// HasProxmox returns true if Proxmox VMs/containers are available from this agent.
+func (a *Agent) HasProxmox() bool {
+	return a.ProxmoxInfo != nil && a.ProxmoxInfo.Available
 }
 
 // IsOnline returns true if the agent has been seen within the threshold.

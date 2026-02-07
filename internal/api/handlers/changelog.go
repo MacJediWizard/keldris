@@ -13,15 +13,15 @@ import (
 
 // ChangelogEntry represents a single changelog entry for a version.
 type ChangelogEntry struct {
-	Version     string   `json:"version"`
-	Date        string   `json:"date"`
-	Added       []string `json:"added,omitempty"`
-	Changed     []string `json:"changed,omitempty"`
-	Deprecated  []string `json:"deprecated,omitempty"`
-	Removed     []string `json:"removed,omitempty"`
-	Fixed       []string `json:"fixed,omitempty"`
-	Security    []string `json:"security,omitempty"`
-	IsUnreleased bool    `json:"is_unreleased,omitempty"`
+	Version      string   `json:"version"`
+	Date         string   `json:"date"`
+	Added        []string `json:"added,omitempty"`
+	Changed      []string `json:"changed,omitempty"`
+	Deprecated   []string `json:"deprecated,omitempty"`
+	Removed      []string `json:"removed,omitempty"`
+	Fixed        []string `json:"fixed,omitempty"`
+	Security     []string `json:"security,omitempty"`
+	IsUnreleased bool     `json:"is_unreleased,omitempty"`
 }
 
 // ChangelogResponse is the response for the changelog endpoint.

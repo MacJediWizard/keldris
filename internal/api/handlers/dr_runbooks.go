@@ -68,26 +68,26 @@ func (h *DRRunbooksHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // CreateDRRunbookRequest is the request body for creating a DR runbook.
 type CreateDRRunbookRequest struct {
-	ScheduleID                 *uuid.UUID               `json:"schedule_id,omitempty"`
-	Name                       string                   `json:"name" binding:"required,min=1,max=255"`
-	Description                string                   `json:"description,omitempty"`
-	Steps                      []models.DRRunbookStep   `json:"steps,omitempty"`
+	ScheduleID                 *uuid.UUID                `json:"schedule_id,omitempty"`
+	Name                       string                    `json:"name" binding:"required,min=1,max=255"`
+	Description                string                    `json:"description,omitempty"`
+	Steps                      []models.DRRunbookStep    `json:"steps,omitempty"`
 	Contacts                   []models.DRRunbookContact `json:"contacts,omitempty"`
-	CredentialsLocation        string                   `json:"credentials_location,omitempty"`
-	RecoveryTimeObjectiveMins  *int                     `json:"recovery_time_objective_minutes,omitempty"`
-	RecoveryPointObjectiveMins *int                     `json:"recovery_point_objective_minutes,omitempty"`
+	CredentialsLocation        string                    `json:"credentials_location,omitempty"`
+	RecoveryTimeObjectiveMins  *int                      `json:"recovery_time_objective_minutes,omitempty"`
+	RecoveryPointObjectiveMins *int                      `json:"recovery_point_objective_minutes,omitempty"`
 }
 
 // UpdateDRRunbookRequest is the request body for updating a DR runbook.
 type UpdateDRRunbookRequest struct {
-	Name                       string                   `json:"name,omitempty"`
-	Description                string                   `json:"description,omitempty"`
-	Steps                      []models.DRRunbookStep   `json:"steps,omitempty"`
+	Name                       string                    `json:"name,omitempty"`
+	Description                string                    `json:"description,omitempty"`
+	Steps                      []models.DRRunbookStep    `json:"steps,omitempty"`
 	Contacts                   []models.DRRunbookContact `json:"contacts,omitempty"`
-	CredentialsLocation        string                   `json:"credentials_location,omitempty"`
-	RecoveryTimeObjectiveMins  *int                     `json:"recovery_time_objective_minutes,omitempty"`
-	RecoveryPointObjectiveMins *int                     `json:"recovery_point_objective_minutes,omitempty"`
-	ScheduleID                 *uuid.UUID               `json:"schedule_id,omitempty"`
+	CredentialsLocation        string                    `json:"credentials_location,omitempty"`
+	RecoveryTimeObjectiveMins  *int                      `json:"recovery_time_objective_minutes,omitempty"`
+	RecoveryPointObjectiveMins *int                      `json:"recovery_point_objective_minutes,omitempty"`
+	ScheduleID                 *uuid.UUID                `json:"schedule_id,omitempty"`
 }
 
 // CreateTestScheduleRequest is the request body for creating a test schedule.

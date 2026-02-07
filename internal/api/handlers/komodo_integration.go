@@ -121,9 +121,9 @@ func (h *KomodoHandler) ListIntegrations(c *gin.Context) {
 
 // CreateIntegrationRequest is the request body for creating a Komodo integration.
 type CreateIntegrationRequest struct {
-	Name   string                          `json:"name" binding:"required,min=1,max=255"`
-	URL    string                          `json:"url" binding:"required"`
-	Config models.KomodoIntegrationConfig  `json:"config" binding:"required"`
+	Name   string                         `json:"name" binding:"required,min=1,max=255"`
+	URL    string                         `json:"url" binding:"required"`
+	Config models.KomodoIntegrationConfig `json:"config" binding:"required"`
 }
 
 // CreateIntegration creates a new Komodo integration.
@@ -227,10 +227,10 @@ func (h *KomodoHandler) GetIntegration(c *gin.Context) {
 
 // UpdateIntegrationRequest is the request body for updating a Komodo integration.
 type UpdateIntegrationRequest struct {
-	Name    *string                          `json:"name,omitempty"`
-	URL     *string                          `json:"url,omitempty"`
-	Config  *models.KomodoIntegrationConfig  `json:"config,omitempty"`
-	Enabled *bool                            `json:"enabled,omitempty"`
+	Name    *string                         `json:"name,omitempty"`
+	URL     *string                         `json:"url,omitempty"`
+	Config  *models.KomodoIntegrationConfig `json:"config,omitempty"`
+	Enabled *bool                           `json:"enabled,omitempty"`
 }
 
 // UpdateIntegration updates an existing Komodo integration.

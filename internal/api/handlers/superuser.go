@@ -31,10 +31,10 @@ type SuperuserStore interface {
 
 // SuperuserHandler handles superuser-related HTTP endpoints.
 type SuperuserHandler struct {
-	store      SuperuserStore
-	sessions   *auth.SessionStore
-	superuser  *auth.Superuser
-	logger     zerolog.Logger
+	store     SuperuserStore
+	sessions  *auth.SessionStore
+	superuser *auth.Superuser
+	logger    zerolog.Logger
 }
 
 // NewSuperuserHandler creates a new SuperuserHandler.
