@@ -30,6 +30,7 @@ import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { TrialBanner } from './features/TrialBanner';
 import { WhatsNewModal } from './features/WhatsNewModal';
 import { Breadcrumbs } from './ui/Breadcrumbs';
+import { ToastProvider } from './ui/Toast';
 
 interface NavItem {
 	path: string;
@@ -1407,36 +1408,38 @@ export function Layout() {
 	}
 
 	return (
-		<ReadOnlyModeContext.Provider value={readOnlyModeValue}>
-			<div className="min-h-screen bg-gray-50 flex flex-col">
-				<MaintenanceCountdown />
-				<AnnouncementBanner />
-				<LicenseBanner />
-				<PasswordExpirationBanner />
-				<TrialBanner />
-				<div className="flex flex-1">
-					<Sidebar />
-					<div className="flex-1 flex flex-col">
-						<Header onShowShortcuts={() => setShowShortcutHelp(true)} />
-						<main className="flex-1 p-6">
-							<Breadcrumbs />
-							<Outlet />
-						</main>
+		<ToastProvider>
+			<ReadOnlyModeContext.Provider value={readOnlyModeValue}>
+				<div className="min-h-screen bg-gray-50 flex flex-col">
+					<MaintenanceCountdown />
+					<AnnouncementBanner />
+					<LicenseBanner />
+					<PasswordExpirationBanner />
+					<TrialBanner />
+					<div className="flex flex-1">
+						<Sidebar />
+						<div className="flex-1 flex flex-col">
+							<Header onShowShortcuts={() => setShowShortcutHelp(true)} />
+							<main className="flex-1 p-6">
+								<Breadcrumbs />
+								<Outlet />
+							</main>
+						</div>
 					</div>
-				</div>
-				<ShortcutHelpModal
-					isOpen={showShortcutHelp}
-					onClose={() => setShowShortcutHelp(false)}
-					shortcuts={shortcuts}
-				/>
-				{showWhatsNew && (
-					<WhatsNewModal
-						entry={latestEntry ?? null}
-						currentVersion={currentVersion}
-						onDismiss={() => setShowWhatsNew(false)}
+					<ShortcutHelpModal
+						isOpen={showShortcutHelp}
+						onClose={() => setShowShortcutHelp(false)}
+						shortcuts={shortcuts}
 					/>
-				)}
-			</div>
-		</ReadOnlyModeContext.Provider>
+					{showWhatsNew && (
+						<WhatsNewModal
+							entry={latestEntry ?? null}
+							currentVersion={currentVersion}
+							onDismiss={() => setShowWhatsNew(false)}
+						/>
+					)}
+				</div>
+			</ReadOnlyModeContext.Provider>
+		</ToastProvider>
 	);
 }
