@@ -21,7 +21,6 @@ import {
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AirGapIndicator } from './features/AirGapIndicator';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
-import { ToastProvider } from './ui/Toast';
 import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
 import { LicenseBanner } from './features/LicenseBanner';
@@ -31,6 +30,7 @@ import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { TrialBanner } from './features/TrialBanner';
 import { WhatsNewModal } from './features/WhatsNewModal';
 import { Breadcrumbs } from './ui/Breadcrumbs';
+import { ToastProvider } from './ui/Toast';
 
 interface NavItem {
 	path: string;
