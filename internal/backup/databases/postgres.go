@@ -569,8 +569,8 @@ func (p *PostgresBackup) GetRestoreInstructions(backupPath string) *RestoreInstr
 			"2. Use pg_restore to restore the backup",
 		}
 		instructions.Commands = []string{
-			fmt.Sprintf("createdb -h <host> -U <user> <database_name>"),
-			fmt.Sprintf("pg_restore -h <host> -U <user> -d <database_name> -v %s", backupPath),
+			"createdb -h <host> -U <user> <database_name>",
+			"pg_restore -h <host> -U <user> -d <database_name> -v " + backupPath,
 		}
 		instructions.Notes = []string{
 			"Add --clean to drop existing objects before restoring",
@@ -585,8 +585,8 @@ func (p *PostgresBackup) GetRestoreInstructions(backupPath string) *RestoreInstr
 			"2. Use pg_restore with --jobs for faster parallel restore",
 		}
 		instructions.Commands = []string{
-			fmt.Sprintf("createdb -h <host> -U <user> <database_name>"),
-			fmt.Sprintf("pg_restore -h <host> -U <user> -d <database_name> --jobs=4 -v %s", backupPath),
+			"createdb -h <host> -U <user> <database_name>",
+			"pg_restore -h <host> -U <user> -d <database_name> --jobs=4 -v " + backupPath,
 		}
 
 	case models.PostgresFormatTar:
@@ -596,8 +596,8 @@ func (p *PostgresBackup) GetRestoreInstructions(backupPath string) *RestoreInstr
 			"2. Use pg_restore to restore from the tar archive",
 		}
 		instructions.Commands = []string{
-			fmt.Sprintf("createdb -h <host> -U <user> <database_name>"),
-			fmt.Sprintf("pg_restore -h <host> -U <user> -d <database_name> -v %s", backupPath),
+			"createdb -h <host> -U <user> <database_name>",
+			"pg_restore -h <host> -U <user> -d <database_name> -v " + backupPath,
 		}
 
 	case models.PostgresFormatPlain:
@@ -607,8 +607,8 @@ func (p *PostgresBackup) GetRestoreInstructions(backupPath string) *RestoreInstr
 			"2. Use psql to execute the SQL file",
 		}
 		instructions.Commands = []string{
-			fmt.Sprintf("createdb -h <host> -U <user> <database_name>"),
-			fmt.Sprintf("psql -h <host> -U <user> -d <database_name> -f %s", backupPath),
+			"createdb -h <host> -U <user> <database_name>",
+			"psql -h <host> -U <user> -d <database_name> -f " + backupPath,
 		}
 		instructions.Notes = []string{
 			"For compressed SQL files (.sql.gz), decompress first: gunzip -c backup.sql.gz | psql ...",
