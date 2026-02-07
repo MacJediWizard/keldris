@@ -14,6 +14,7 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { EmptyStateNoAgents } from '../components/ui/EmptyState';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
 import { AgentRowSkeleton } from '../components/ui/PageSkeletons';
 import { StarButton } from '../components/ui/StarButton';
@@ -1162,49 +1163,12 @@ export function Agents() {
 						</tbody>
 					</table>
 				) : (
-					<div className="p-8 text-center text-gray-500">
-						<svg
-							aria-hidden="true"
-							className="w-16 h-16 mx-auto mb-4 text-gray-300"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-							/>
-						</svg>
-						<h3 className="text-lg font-medium text-gray-900 mb-2">
-							{t('agents.noAgentsRegistered')}
-						</h3>
-						<p className="mb-6">
-							Generate a registration code to start backing up your systems
-						</p>
-						<button
-							type="button"
-							onClick={() => setShowGenerateModal(true)}
-							className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-						>
-							<svg
-								aria-hidden="true"
-								className="w-5 h-5"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M12 4v16m8-8H4"
-								/>
-							</svg>
-							Generate Registration Code
-						</button>
-					</div>
+					<EmptyStateNoAgents
+						onAddAgent={() => setShowGenerateModal(true)}
+						title={t('agents.noAgentsRegistered')}
+						description="Generate a registration code to start backing up your systems"
+						actionLabel="Generate Registration Code"
+					/>
 				)}
 			</div>
 

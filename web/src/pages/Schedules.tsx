@@ -20,6 +20,7 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { EmptyStateNoSchedules } from '../components/ui/EmptyState';
 import { FormLabelWithHelp, HelpTooltip } from '../components/ui/HelpTooltip';
 import { ScheduleRowSkeleton } from '../components/ui/PageSkeletons';
 import { StarButton } from '../components/ui/StarButton';
@@ -2372,51 +2373,9 @@ export function Schedules() {
 						</tbody>
 					</table>
 				) : (
-					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
-						<svg
-							aria-hidden="true"
-							className="w-16 h-16 mx-auto mb-4 text-gray-300"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
-						</svg>
-						<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-							No schedules configured
-						</h3>
-						<p className="mb-4">Create a schedule to automate your backups</p>
-						<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-w-md mx-auto text-left space-y-2">
-							<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-								Common schedules:
-							</p>
-							<div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-								<p>
-									<span className="font-mono bg-gray-200 px-1 rounded">
-										0 2 * * *
-									</span>{' '}
-									— Daily at 2 AM
-								</p>
-								<p>
-									<span className="font-mono bg-gray-200 px-1 rounded">
-										0 */6 * * *
-									</span>{' '}
-									— Every 6 hours
-								</p>
-								<p>
-									<span className="font-mono bg-gray-200 px-1 rounded">
-										0 3 * * 0
-									</span>{' '}
-									— Weekly on Sunday
-								</p>
-							</div>
-						</div>
-					</div>
+					<EmptyStateNoSchedules
+						onCreateSchedule={() => setShowCreateModal(true)}
+					/>
 				)}
 			</div>
 
