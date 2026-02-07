@@ -38,6 +38,9 @@ type AgentConfig struct {
 
 	// Proxy configuration
 	Proxy *ProxyConfig `yaml:"proxy,omitempty"`
+
+	// Queue settings for offline backup handling
+	MaxQueueSize int `yaml:"max_queue_size,omitempty"` // Maximum number of offline backups to queue (default: 100)
 }
 
 // ProxyConfig holds proxy settings for agent network connections.
@@ -79,6 +82,14 @@ func (c *AgentConfig) Validate() error {
 // IsConfigured returns true if the agent has been registered with a server.
 func (c *AgentConfig) IsConfigured() bool {
 	return c.ServerURL != "" && c.APIKey != ""
+}
+
+// GetMaxQueueSize returns the configured max queue size, or the default if not set.
+func (c *AgentConfig) GetMaxQueueSize() int {
+	if c.MaxQueueSize <= 0 {
+		return 100 // default
+	}
+	return c.MaxQueueSize
 }
 
 // Load reads the configuration from the given path.
