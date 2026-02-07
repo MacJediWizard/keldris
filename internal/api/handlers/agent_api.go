@@ -27,6 +27,8 @@ type AgentAPIStore interface {
 	GetPendingCommandsForAgent(ctx context.Context, agentID uuid.UUID) ([]*models.AgentCommand, error)
 	GetAgentCommandByID(ctx context.Context, id uuid.UUID) (*models.AgentCommand, error)
 	UpdateAgentCommand(ctx context.Context, cmd *models.AgentCommand) error
+	CreateBackup(ctx context.Context, backup *models.Backup) error
+	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error)
 }
 
 // AgentAPIHandler handles agent-facing API endpoints (authenticated via API key).
@@ -51,6 +53,8 @@ func (h *AgentAPIHandler) RegisterRoutes(r *gin.RouterGroup) {
 	r.GET("/commands", h.GetCommands)
 	r.POST("/commands/:id/ack", h.AcknowledgeCommand)
 	r.POST("/commands/:id/result", h.ReportCommandResult)
+	r.POST("/queued-backups", h.ReportQueuedBackups)
+	r.POST("/reconnect", h.NotifyReconnection)
 }
 
 // AgentHealthReport is the request body for agent health reporting.
@@ -584,4 +588,207 @@ func (h *AgentAPIHandler) ReportCommandResult(c *gin.Context) {
 		Msg("command result reported")
 
 	c.JSON(http.StatusOK, gin.H{"updated": true})
+}
+
+// QueuedBackupResult represents a backup that was executed while offline.
+type QueuedBackupResult struct {
+	ID           string     `json:"id" binding:"required"`
+	ScheduleID   string     `json:"schedule_id" binding:"required"`
+	ScheduleName string     `json:"schedule_name"`
+	ScheduledAt  time.Time  `json:"scheduled_at" binding:"required"`
+	QueuedAt     time.Time  `json:"queued_at" binding:"required"`
+	Success      bool       `json:"success"`
+	StartedAt    *time.Time `json:"started_at,omitempty"`
+	CompletedAt  *time.Time `json:"completed_at,omitempty"`
+	BytesAdded   int64      `json:"bytes_added,omitempty"`
+	FilesNew     int        `json:"files_new,omitempty"`
+	FilesChanged int        `json:"files_changed,omitempty"`
+	SnapshotID   string     `json:"snapshot_id,omitempty"`
+	ErrorMessage string     `json:"error_message,omitempty"`
+	RepositoryID string     `json:"repository_id,omitempty"`
+}
+
+// ReportQueuedBackupsRequest is the request body for reporting queued backups.
+type ReportQueuedBackupsRequest struct {
+	Backups []QueuedBackupResult `json:"backups" binding:"required"`
+}
+
+// ReportQueuedBackupsResponse is the response for queued backup reporting.
+type ReportQueuedBackupsResponse struct {
+	Acknowledged bool `json:"acknowledged"`
+	Processed    int  `json:"processed"`
+}
+
+// ReportQueuedBackups handles reports of backups executed while offline.
+// POST /api/v1/agent/queued-backups
+func (h *AgentAPIHandler) ReportQueuedBackups(c *gin.Context) {
+	agent := middleware.RequireAgent(c)
+	if agent == nil {
+		return
+	}
+
+	var req ReportQueuedBackupsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	if len(req.Backups) == 0 {
+		c.JSON(http.StatusOK, ReportQueuedBackupsResponse{
+			Acknowledged: true,
+			Processed:    0,
+		})
+		return
+	}
+
+	ctx := c.Request.Context()
+	processed := 0
+
+	for _, qb := range req.Backups {
+		scheduleID, err := uuid.Parse(qb.ScheduleID)
+		if err != nil {
+			h.logger.Warn().Err(err).Str("schedule_id", qb.ScheduleID).Msg("invalid schedule ID in queued backup")
+			continue
+		}
+
+		// Verify schedule exists and belongs to this agent
+		schedule, err := h.store.GetScheduleByID(ctx, scheduleID)
+		if err != nil {
+			h.logger.Warn().Err(err).Str("schedule_id", qb.ScheduleID).Msg("schedule not found for queued backup")
+			continue
+		}
+
+		// Verify schedule belongs to this agent
+		if schedule.AgentID != agent.ID {
+			h.logger.Warn().
+				Str("schedule_id", qb.ScheduleID).
+				Str("agent_id", agent.ID.String()).
+				Str("schedule_agent_id", schedule.AgentID.String()).
+				Msg("schedule agent mismatch for queued backup")
+			continue
+		}
+
+		// Create backup record using the existing constructor
+		backup := models.NewBackup(scheduleID, agent.ID, nil)
+		backup.BackupType = schedule.BackupType
+		backup.CreatedAt = qb.ScheduledAt
+
+		if qb.StartedAt != nil {
+			backup.StartedAt = *qb.StartedAt
+		} else {
+			backup.StartedAt = qb.ScheduledAt
+		}
+
+		if qb.CompletedAt != nil {
+			backup.CompletedAt = qb.CompletedAt
+		}
+
+		if !qb.Success {
+			backup.Status = models.BackupStatusFailed
+			backup.ErrorMessage = qb.ErrorMessage
+		} else {
+			backup.Status = models.BackupStatusCompleted
+			backup.SnapshotID = qb.SnapshotID
+			if qb.BytesAdded > 0 {
+				backup.SizeBytes = &qb.BytesAdded
+			}
+			if qb.FilesNew > 0 {
+				backup.FilesNew = &qb.FilesNew
+			}
+			if qb.FilesChanged > 0 {
+				backup.FilesChanged = &qb.FilesChanged
+			}
+		}
+
+		if err := h.store.CreateBackup(ctx, backup); err != nil {
+			h.logger.Error().Err(err).
+				Str("schedule_id", qb.ScheduleID).
+				Msg("failed to create backup record from queue")
+			continue
+		}
+
+		processed++
+	}
+
+	h.logger.Info().
+		Str("agent_id", agent.ID.String()).
+		Str("hostname", agent.Hostname).
+		Int("received", len(req.Backups)).
+		Int("processed", processed).
+		Msg("queued backups reported")
+
+	c.JSON(http.StatusOK, ReportQueuedBackupsResponse{
+		Acknowledged: true,
+		Processed:    processed,
+	})
+}
+
+// ReconnectionNotification is the request body for reconnection alerts.
+type ReconnectionNotification struct {
+	QueuedCount int `json:"queued_count" binding:"required"`
+}
+
+// ReconnectionResponse is the response for reconnection notification.
+type ReconnectionResponse struct {
+	Acknowledged bool `json:"acknowledged"`
+	AlertCreated bool `json:"alert_created"`
+}
+
+// NotifyReconnection handles agent reconnection notifications.
+// POST /api/v1/agent/reconnect
+func (h *AgentAPIHandler) NotifyReconnection(c *gin.Context) {
+	agent := middleware.RequireAgent(c)
+	if agent == nil {
+		return
+	}
+
+	var req ReconnectionNotification
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	ctx := c.Request.Context()
+	alertCreated := false
+
+	if req.QueuedCount > 0 {
+		// Create alert for reconnection with queued backups
+		alert := models.NewAlert(
+			agent.OrgID,
+			models.AlertTypeAgentReconnectedWithQueue,
+			models.AlertSeverityInfo,
+			fmt.Sprintf("Agent %s reconnected with queued backups", agent.Hostname),
+			fmt.Sprintf("Agent reconnected after being offline and has %d backups queued for sync.", req.QueuedCount),
+		)
+		alert.SetResource(models.ResourceTypeAgent, agent.ID)
+		alert.Metadata = map[string]any{
+			"hostname":      agent.Hostname,
+			"queued_count":  req.QueuedCount,
+			"reconnected_at": time.Now().Format(time.RFC3339),
+		}
+
+		if err := h.store.CreateAlert(ctx, alert); err != nil {
+			h.logger.Error().Err(err).
+				Str("agent_id", agent.ID.String()).
+				Msg("failed to create reconnection alert")
+		} else {
+			alertCreated = true
+			h.logger.Info().
+				Str("agent_id", agent.ID.String()).
+				Str("hostname", agent.Hostname).
+				Int("queued_count", req.QueuedCount).
+				Msg("agent reconnection alert created")
+		}
+	}
+
+	// Update agent's last seen time
+	agent.MarkSeen()
+	if err := h.store.UpdateAgent(ctx, agent); err != nil {
+		h.logger.Error().Err(err).Str("agent_id", agent.ID.String()).Msg("failed to update agent on reconnection")
+	}
+
+	c.JSON(http.StatusOK, ReconnectionResponse{
+		Acknowledged: true,
+		AlertCreated: alertCreated,
+	})
 }
