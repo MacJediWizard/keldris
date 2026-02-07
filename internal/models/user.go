@@ -49,6 +49,8 @@ type User struct {
 	InvitedBy           *uuid.UUID `json:"invited_by,omitempty"`
 	InvitedAt           *time.Time `json:"invited_at,omitempty"`
 	IsSuperuser         bool       `json:"is_superuser"`
+	EmailVerified       bool       `json:"email_verified"`
+	EmailVerifiedAt     *time.Time `json:"email_verified_at,omitempty"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
 }
@@ -88,6 +90,21 @@ func (u *User) IsLocked() bool {
 		return true
 	}
 	return false
+}
+
+// IsEmailVerified returns true if the user's email is verified.
+// OIDC users are automatically considered verified.
+func (u *User) IsEmailVerified() bool {
+	// OIDC users are automatically verified
+	if u.OIDCSubject != "" {
+		return true
+	}
+	return u.EmailVerified
+}
+
+// RequiresEmailVerification returns true if the user needs to verify their email.
+func (u *User) RequiresEmailVerification() bool {
+	return u.OIDCSubject == "" && !u.EmailVerified
 }
 
 // UserWithMembership includes user details with their org membership.

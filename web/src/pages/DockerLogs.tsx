@@ -427,7 +427,9 @@ function SettingsModal({ agentId, agentName, onClose }: SettingsModalProps) {
 							id="maxAge"
 							value={maxAgeDays}
 							onChange={(e) =>
-								setMaxAgeDays(Math.max(1, Number.parseInt(e.target.value) || 1))
+								setMaxAgeDays(
+									Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+								)
 							}
 							min={1}
 							max={365}

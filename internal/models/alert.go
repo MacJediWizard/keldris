@@ -35,6 +35,8 @@ const (
 	AlertTypeVolumeSpaceLow AlertType = "volume_space_low"
 	// AlertTypeDockerDaemonUnavailable indicates Docker daemon is not responding.
 	AlertTypeDockerDaemonUnavailable AlertType = "docker_daemon_unavailable"
+	// AlertTypeAgentReconnectedWithQueue indicates an agent reconnected with queued backups.
+	AlertTypeAgentReconnectedWithQueue AlertType = "agent_reconnected_with_queue"
 )
 
 // AlertSeverity represents the severity level of an alert.

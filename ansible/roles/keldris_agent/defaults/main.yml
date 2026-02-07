@@ -40,3 +40,9 @@ keldris_force_registration: false
 
 # Security settings
 keldris_remove_quarantine: true  # macOS only: remove quarantine attribute from downloaded binary
+
+# Proxy settings (optional)
+# keldris_http_proxy: "http://proxy:8080"       # HTTP proxy URL
+# keldris_https_proxy: "http://proxy:8080"      # HTTPS proxy URL
+# keldris_no_proxy: "localhost,127.0.0.1"       # Hosts to bypass proxy
+# keldris_socks5_proxy: "socks5://proxy:1080"   # SOCKS5 proxy URL

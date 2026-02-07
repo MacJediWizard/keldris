@@ -31,6 +31,10 @@ const (
 	SuperuserActionViewUsers SuperuserAction = "view_users"
 	// SuperuserActionViewAuditLogs is viewing superuser audit logs.
 	SuperuserActionViewAuditLogs SuperuserAction = "view_superuser_audit_logs"
+	// SuperuserActionExport is exporting system configuration.
+	SuperuserActionExport SuperuserAction = "export_migration"
+	// SuperuserActionImport is importing system configuration.
+	SuperuserActionImport SuperuserAction = "import_migration"
 )
 
 // SuperuserAuditLog records actions taken by superusers for compliance.
