@@ -12207,3 +12207,74 @@ func (db *DB) UpdateKomodoWebhookEvent(ctx context.Context, event *models.Komodo
 	}
 	return nil
 }
+
+// =============================================================================
+// Prometheus Metrics Methods
+// =============================================================================
+
+// GetAllBackups returns all backups across all organizations (for Prometheus metrics).
+func (db *DB) GetAllBackups(ctx context.Context) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
+		       status, size_bytes, files_new, files_changed, error_message,
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
+		       pre_script_output, pre_script_error, post_script_output, post_script_error,
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
+		FROM backups
+		ORDER BY started_at DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("get all backups: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackups(rows)
+}
+
+// GetBackupsByStatus returns all backups with the specified status (for Prometheus metrics).
+func (db *DB) GetBackupsByStatus(ctx context.Context, status models.BackupStatus) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
+		       status, size_bytes, files_new, files_changed, error_message,
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
+		       pre_script_output, pre_script_error, post_script_output, post_script_error,
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
+		FROM backups
+		WHERE status = $1
+		ORDER BY started_at DESC
+	`, status)
+	if err != nil {
+		return nil, fmt.Errorf("get backups by status: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackups(rows)
+}
+
+// GetStorageStatsSummaryGlobal returns aggregated storage statistics across all organizations.
+func (db *DB) GetStorageStatsSummaryGlobal(ctx context.Context) (*models.StorageStatsSummary, error) {
+	var summary models.StorageStatsSummary
+	err := db.Pool.QueryRow(ctx, `
+		SELECT
+			COALESCE(SUM(latest.raw_data_size), 0) as total_raw_size,
+			COALESCE(SUM(latest.restore_size), 0) as total_restore_size,
+			COALESCE(SUM(latest.space_saved), 0) as total_space_saved,
+			COALESCE(AVG(latest.dedup_ratio), 0) as avg_dedup_ratio,
+			COUNT(DISTINCT latest.repository_id) as repository_count,
+			COALESCE(SUM(latest.snapshot_count), 0) as total_snapshots
+		FROM (
+			SELECT DISTINCT ON (s.repository_id)
+				s.repository_id, s.raw_data_size, s.restore_size, s.space_saved,
+				s.dedup_ratio, s.snapshot_count
+			FROM storage_stats s
+			ORDER BY s.repository_id, s.collected_at DESC
+		) as latest
+	`).Scan(
+		&summary.TotalRawSize, &summary.TotalRestoreSize, &summary.TotalSpaceSaved,
+		&summary.AvgDedupRatio, &summary.RepositoryCount, &summary.TotalSnapshots,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get storage stats summary global: %w", err)
+	}
+	return &summary, nil
+}
