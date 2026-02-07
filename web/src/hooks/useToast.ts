@@ -44,7 +44,7 @@ export function useToastValue(): ToastContextValue {
 		(
 			message: string,
 			variant: ToastVariant = 'info',
-			duration: number = 5000,
+			duration = 5000,
 		): string => {
 			const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 			const toast: Toast = { id, message, variant, duration };
@@ -63,17 +63,20 @@ export function useToastValue(): ToastContextValue {
 	);
 
 	const success = useCallback(
-		(message: string, duration?: number) => addToast(message, 'success', duration),
+		(message: string, duration?: number) =>
+			addToast(message, 'success', duration),
 		[addToast],
 	);
 
 	const error = useCallback(
-		(message: string, duration?: number) => addToast(message, 'error', duration),
+		(message: string, duration?: number) =>
+			addToast(message, 'error', duration),
 		[addToast],
 	);
 
 	const warning = useCallback(
-		(message: string, duration?: number) => addToast(message, 'warning', duration),
+		(message: string, duration?: number) =>
+			addToast(message, 'warning', duration),
 		[addToast],
 	);
 

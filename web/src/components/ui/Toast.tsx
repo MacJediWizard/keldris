@@ -83,7 +83,6 @@ function ToastIcon({ variant }: { variant: ToastVariant }) {
 					/>
 				</svg>
 			);
-		case 'info':
 		default:
 			return (
 				<svg
@@ -134,9 +133,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
 		<div
 			role="alert"
 			className={`flex items-start gap-3 p-4 rounded-lg border shadow-lg transition-all duration-150 ${styles.bg} ${styles.border} ${
-				isExiting
-					? 'opacity-0 translate-x-4'
-					: 'opacity-100 translate-x-0'
+				isExiting ? 'opacity-0 translate-x-4' : 'opacity-100 translate-x-0'
 			}`}
 		>
 			<ToastIcon variant={toast.variant} />
