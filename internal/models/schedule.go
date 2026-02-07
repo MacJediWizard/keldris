@@ -47,6 +47,8 @@ const (
 	BackupTypeDocker BackupType = "docker"
 	// BackupTypePihole is a Pi-hole specific backup using teleporter.
 	BackupTypePihole BackupType = "pihole"
+	// BackupTypePostgres is a PostgreSQL database backup using pg_dump.
+	BackupTypePostgres BackupType = "postgres"
 )
 
 // ValidBackupTypes returns all valid backup types.
@@ -56,6 +58,7 @@ func ValidBackupTypes() []BackupType {
 		BackupTypeFiles,
 		BackupTypeDocker,
 		BackupTypePihole,
+		BackupTypePostgres,
 	}
 }
 
@@ -93,6 +96,56 @@ type PiholeBackupConfig struct {
 	DNSMasqDir string `json:"dnsmasq_dir,omitempty"`
 }
 
+// PostgresOutputFormat represents the output format for pg_dump.
+type PostgresOutputFormat string
+
+const (
+	// PostgresFormatPlain outputs plain SQL text (default).
+	PostgresFormatPlain PostgresOutputFormat = "plain"
+	// PostgresFormatCustom outputs custom archive format (recommended for restore flexibility).
+	PostgresFormatCustom PostgresOutputFormat = "custom"
+	// PostgresFormatDirectory outputs directory format (parallel restore).
+	PostgresFormatDirectory PostgresOutputFormat = "directory"
+	// PostgresFormatTar outputs tar archive format.
+	PostgresFormatTar PostgresOutputFormat = "tar"
+)
+
+// PostgresBackupConfig contains PostgreSQL specific backup configuration.
+type PostgresBackupConfig struct {
+	// Host is the PostgreSQL server hostname or IP address.
+	Host string `json:"host"`
+	// Port is the PostgreSQL server port (default: 5432).
+	Port int `json:"port,omitempty"`
+	// Username is the database user for authentication.
+	Username string `json:"username"`
+	// PasswordEncrypted is the encrypted database password (never exposed in JSON responses).
+	PasswordEncrypted string `json:"-"`
+	// Database is the specific database to backup. Empty means all databases (pg_dumpall).
+	Database string `json:"database,omitempty"`
+	// Databases is a list of specific databases to backup (used when multiple but not all).
+	Databases []string `json:"databases,omitempty"`
+	// OutputFormat specifies the pg_dump output format.
+	OutputFormat PostgresOutputFormat `json:"output_format,omitempty"`
+	// CompressionLevel is the gzip compression level (0-9, 0=no compression).
+	CompressionLevel int `json:"compression_level,omitempty"`
+	// IncludeSchemaOnly backs up only schema definitions, not data.
+	IncludeSchemaOnly bool `json:"include_schema_only,omitempty"`
+	// IncludeDataOnly backs up only data, not schema definitions.
+	IncludeDataOnly bool `json:"include_data_only,omitempty"`
+	// ExcludeTables is a list of table patterns to exclude from backup.
+	ExcludeTables []string `json:"exclude_tables,omitempty"`
+	// IncludeTables is a list of specific tables to include (if set, only these tables are backed up).
+	IncludeTables []string `json:"include_tables,omitempty"`
+	// NoOwner omits owner information from the dump.
+	NoOwner bool `json:"no_owner,omitempty"`
+	// NoPrivileges omits privilege information from the dump.
+	NoPrivileges bool `json:"no_privileges,omitempty"`
+	// SSLMode specifies the SSL connection mode (disable, allow, prefer, require, verify-ca, verify-full).
+	SSLMode string `json:"ssl_mode,omitempty"`
+	// PgDumpPath overrides the default pg_dump binary path.
+	PgDumpPath string `json:"pg_dump_path,omitempty"`
+}
+
 // Schedule represents a backup schedule configuration.
 // A schedule can be assigned to either an individual agent (via AgentID)
 // or to an agent group (via AgentGroupID). When AgentGroupID is set,
@@ -120,6 +173,7 @@ type Schedule struct {
 	Preemptible             bool                   `json:"preemptible"`                    // Can be preempted by higher priority backups
 	DockerOptions           *DockerBackupOptions   `json:"docker_options,omitempty"`       // Docker-specific backup options
 	PiholeConfig            *PiholeBackupConfig    `json:"pihole_config,omitempty"`        // Pi-hole specific backup configuration
+	PostgresConfig          *PostgresBackupConfig  `json:"postgres_config,omitempty"`      // PostgreSQL specific backup configuration
 	Metadata                map[string]interface{} `json:"metadata,omitempty"`
 	Enabled                 bool                   `json:"enabled"`
 	Repositories            []ScheduleRepository   `json:"repositories,omitempty"`
@@ -189,6 +243,26 @@ func NewPiholeSchedule(agentID uuid.UUID, name, cronExpr string) *Schedule {
 	}
 }
 
+// NewPostgresSchedule creates a new Schedule for PostgreSQL backups.
+func NewPostgresSchedule(agentID uuid.UUID, name, cronExpr string, config *PostgresBackupConfig) *Schedule {
+	now := time.Now()
+	return &Schedule{
+		ID:                 uuid.New(),
+		AgentID:            agentID,
+		Name:               name,
+		CronExpression:     cronExpr,
+		BackupType:         BackupTypePostgres,
+		Paths:              []string{}, // PostgreSQL backups don't use filesystem paths
+		OnMountUnavailable: MountBehaviorFail,
+		Priority:           PriorityMedium,
+		Preemptible:        false,
+		PostgresConfig:     config,
+		Enabled:            true,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+}
+
 // IsDockerBackup returns true if this is a Docker backup schedule.
 func (s *Schedule) IsDockerBackup() bool {
 	return s.BackupType == BackupTypeDocker
@@ -197,6 +271,11 @@ func (s *Schedule) IsDockerBackup() bool {
 // IsPiholeBackup returns true if this is a Pi-hole backup schedule.
 func (s *Schedule) IsPiholeBackup() bool {
 	return s.BackupType == BackupTypePihole
+}
+
+// IsPostgresBackup returns true if this is a PostgreSQL backup schedule.
+func (s *Schedule) IsPostgresBackup() bool {
+	return s.BackupType == BackupTypePostgres
 }
 
 // SetDockerOptions sets the Docker backup options from JSON bytes.
@@ -480,6 +559,40 @@ func DefaultPiholeConfig() *PiholeBackupConfig {
 		IncludeQueryLogs: true,
 		ConfigDir:        "/etc/pihole",
 		DNSMasqDir:       "/etc/dnsmasq.d",
+	}
+}
+
+// SetPostgresConfig sets the PostgreSQL config from JSON bytes.
+func (s *Schedule) SetPostgresConfig(data []byte) error {
+	if len(data) == 0 {
+		s.PostgresConfig = nil
+		return nil
+	}
+	var config PostgresBackupConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return err
+	}
+	s.PostgresConfig = &config
+	return nil
+}
+
+// PostgresConfigJSON returns the PostgreSQL config as JSON bytes for database storage.
+func (s *Schedule) PostgresConfigJSON() ([]byte, error) {
+	if s.PostgresConfig == nil {
+		return nil, nil
+	}
+	return json.Marshal(s.PostgresConfig)
+}
+
+// DefaultPostgresConfig returns a sensible default PostgreSQL backup configuration.
+func DefaultPostgresConfig() *PostgresBackupConfig {
+	return &PostgresBackupConfig{
+		Host:             "localhost",
+		Port:             5432,
+		Username:         "postgres",
+		OutputFormat:     PostgresFormatCustom,
+		CompressionLevel: 6,
+		SSLMode:          "prefer",
 	}
 }
 
