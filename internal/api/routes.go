@@ -2,6 +2,8 @@
 package api
 
 import (
+	"io/fs"
+
 	"github.com/MacJediWizard/keldris/internal/activity"
 	"github.com/MacJediWizard/keldris/internal/api/handlers"
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
@@ -9,9 +11,15 @@ import (
 	"github.com/MacJediWizard/keldris/internal/backup/docker"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/logs"
+	"github.com/MacJediWizard/keldris/internal/maintenance"
+	"github.com/MacJediWizard/keldris/internal/metering"
 	"github.com/MacJediWizard/keldris/internal/monitoring"
+	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/MacJediWizard/keldris/internal/reports"
+	"github.com/MacJediWizard/keldris/internal/telemetry"
+	"github.com/MacJediWizard/keldris/internal/updates"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	swaggerFiles "github.com/swaggo/files"
@@ -42,10 +50,28 @@ type Config struct {
 	LogBuffer *logs.LogBuffer
 	// ActivityFeed for real-time activity events (optional).
 	ActivityFeed *activity.Feed
+	// TelemetryService for anonymous usage telemetry (optional).
+	TelemetryService *telemetry.Service
+	// DatabaseBackupService for PostgreSQL backup management (optional).
+	DatabaseBackupService *maintenance.DatabaseBackupService
+	// SecurityHeaders configures security headers for hardening.
+	// If nil, default production settings are used.
+	SecurityHeaders *middleware.SecurityHeadersConfig
+	// DocsFS is the filesystem containing documentation markdown files (optional).
+	DocsFS fs.FS
+	// AirGapManager for air-gapped license management (optional).
+	AirGapManager *license.AirGapManager
+	// MeteringService for usage tracking and billing (optional).
+	MeteringService *metering.Service
+	// EmailService for sending emails (optional).
+	EmailService *notifications.EmailService
+	// UpdateChecker for checking for new Keldris versions (optional).
+	UpdateChecker *updates.Checker
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
 func DefaultConfig() Config {
+	devSecurityHeaders := middleware.DevelopmentSecurityHeadersConfig()
 	return Config{
 		AllowedOrigins:    []string{},
 		RateLimitRequests: 100,
@@ -53,6 +79,21 @@ func DefaultConfig() Config {
 		Version:           "dev",
 		Commit:            "unknown",
 		BuildDate:         "unknown",
+		SecurityHeaders:   &devSecurityHeaders,
+	}
+}
+
+// ProductionConfig returns a Config with secure defaults for production.
+func ProductionConfig() Config {
+	prodSecurityHeaders := middleware.DefaultSecurityHeadersConfig()
+	return Config{
+		AllowedOrigins:    []string{},
+		RateLimitRequests: 100,
+		RateLimitPeriod:   "1m",
+		Version:           "unknown",
+		Commit:            "unknown",
+		BuildDate:         "unknown",
+		SecurityHeaders:   &prodSecurityHeaders,
 	}
 }
 
@@ -87,6 +128,13 @@ func NewRouter(
 	r.Engine.Use(middleware.RequestLogger(logger))
 	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins))
 
+	// Security headers middleware
+	securityHeadersConfig := middleware.DefaultSecurityHeadersConfig()
+	if cfg.SecurityHeaders != nil {
+		securityHeadersConfig = *cfg.SecurityHeaders
+	}
+	r.Engine.Use(middleware.SecurityHeaders(securityHeadersConfig))
+
 	// Rate limiting
 	rateLimiter, err := middleware.NewRateLimiter(cfg.RateLimitRequests, cfg.RateLimitPeriod)
 	if err != nil {
@@ -94,8 +142,12 @@ func NewRouter(
 	}
 	r.Engine.Use(rateLimiter)
 
-	// Health check endpoints (no auth required)
+	// Health check endpoints (no auth required for basic checks)
 	healthHandler := handlers.NewHealthHandler(database, oidc, logger)
+	healthHandler.SetSessionStore(sessions)
+	if cfg.DatabaseBackupService != nil {
+		healthHandler.SetDatabaseBackupService(cfg.DatabaseBackupService)
+	}
 	healthHandler.RegisterPublicRoutes(r.Engine)
 
 	// Prometheus metrics endpoint (no auth required)
@@ -112,14 +164,40 @@ func NewRouter(
 	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)
 	versionHandler.RegisterPublicRoutes(r.Engine)
 
+	// Security headers test endpoint (no auth required for verification)
+	securityHandler := handlers.NewSecurityHandler(logger)
+	securityHandler.RegisterPublicRoutes(r.Engine)
+
 	// Changelog endpoint (no auth required for public access)
 	changelogHandler := handlers.NewChangelogHandler("CHANGELOG.md", cfg.Version, logger)
 	changelogHandler.RegisterPublicRoutes(r.Engine)
+
+	// Documentation endpoint (no auth required for public access)
+	if cfg.DocsFS != nil {
+		docsHandler := handlers.NewDocsHandler(cfg.DocsFS, logger)
+		docsHandler.RegisterPublicRoutes(r.Engine)
+	}
+
+	// Air-gap/license management (public status endpoint, protected management endpoints)
+	var airGapHandler *handlers.AirGapHandler
+	if cfg.AirGapManager != nil {
+		airGapHandler = handlers.NewAirGapHandler(cfg.AirGapManager, logger)
+		publicAPI := r.Engine.Group("/api/v1/public")
+		airGapHandler.RegisterRoutes(nil, publicAPI) // Will register to apiV1 later
+	}
+
+	// Update checker endpoint (no auth required for banner display)
+	updatesHandler := handlers.NewUpdatesHandler(cfg.UpdateChecker, logger)
+	updatesHandler.RegisterPublicRoutes(r.Engine)
 
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
 	authHandler.RegisterRoutes(authGroup)
+
+	// Password reset routes (no auth required)
+	passwordResetHandler := handlers.NewPasswordResetHandler(database, cfg.EmailService, cfg.ServerURL, logger)
+	passwordResetHandler.RegisterPublicRoutes(r.Engine)
 
 	// API v1 routes (auth required)
 	apiV1 := r.Engine.Group("/api/v1")
@@ -136,6 +214,20 @@ func NewRouter(
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 	changelogHandler.RegisterRoutes(apiV1)
+	healthHandler.RegisterRoutes(apiV1)
+	securityHandler.RegisterRoutes(apiV1)
+	updatesHandler.RegisterRoutes(apiV1)
+
+	// Documentation routes (authenticated)
+	if cfg.DocsFS != nil {
+		docsHandler := handlers.NewDocsHandler(cfg.DocsFS, logger)
+		docsHandler.RegisterRoutes(apiV1)
+	}
+
+	// Register air-gap protected routes (after auth middleware is applied)
+	if airGapHandler != nil {
+		airGapHandler.RegisterRoutes(apiV1, nil)
+	}
 
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
 	orgsHandler.RegisterRoutes(apiV1)
@@ -339,13 +431,45 @@ func NewRouter(
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
 
+	// Job queue routes
+	jobQueueHandler := handlers.NewJobQueueHandler(database, rbac, logger)
+	jobQueueHandler.RegisterRoutes(apiV1)
+
 	// System settings routes (admin only)
 	systemSettingsHandler := handlers.NewSystemSettingsHandler(database, logger)
 	systemSettingsHandler.RegisterRoutes(apiV1)
 
+	// License and feature flags routes
+	featureChecker := license.NewFeatureChecker(database)
+	licenseHandler := handlers.NewLicenseHandler(database, featureChecker, logger)
+	licenseHandler.RegisterRoutes(apiV1)
+
+	// Trial management routes
+	trialHandler := handlers.NewTrialHandler(database, logger)
+	trialHandler.RegisterRoutes(apiV1)
+
+	// Branding settings routes (Enterprise only)
+	brandingHandler := handlers.NewBrandingHandler(database, logger)
+	brandingHandler.RegisterRoutes(apiV1)
+	brandingHandler.RegisterPublicRoutes(r.Engine.Group("/api/public"))
+
 	// Superuser routes (requires superuser privileges)
 	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
 	superuserHandler.RegisterRoutes(apiV1)
+
+	// Telemetry routes (opt-in anonymous usage telemetry)
+	telemetryHandler := handlers.NewTelemetryHandler(database, cfg.TelemetryService, logger)
+	telemetryHandler.RegisterRoutes(apiV1)
+
+	// Database backup routes (requires superuser privileges)
+	if cfg.DatabaseBackupService != nil {
+		databaseBackupHandler := handlers.NewDatabaseBackupHandler(database, sessions, cfg.DatabaseBackupService, logger)
+		databaseBackupHandler.RegisterRoutes(apiV1)
+	}
+
+	// System health routes (requires superuser privileges)
+	systemHealthHandler := handlers.NewSystemHealthHandler(database, sessions, logger)
+	systemHealthHandler.RegisterRoutes(apiV1)
 
 	// Docker backup routes
 	dockerDiscoveryConfig := docker.DefaultDiscoveryConfig()
@@ -362,6 +486,10 @@ func NewRouter(
 	dockerRegistriesHandler := handlers.NewDockerRegistriesHandler(database, keyManager, logger)
 	dockerRegistriesHandler.RegisterRoutes(apiV1)
 
+	// Database connections routes (MySQL/MariaDB backup)
+	databaseConnectionsHandler := handlers.NewDatabaseConnectionsHandler(database, keyManager, logger)
+	databaseConnectionsHandler.RegisterRoutes(apiV1)
+
 	// Activity feed routes
 	if cfg.ActivityFeed != nil {
 		activityHandler := handlers.NewActivityHandler(database, cfg.ActivityFeed, logger)
@@ -377,6 +505,12 @@ func NewRouter(
 	// Pi-hole backup routes
 	piholeHandler := handlers.NewPiholeHandler(database, logger)
 	piholeHandler.RegisterRoutes(apiV1)
+
+	// Usage metering routes (requires MeteringService)
+	if cfg.MeteringService != nil {
+		usageHandler := handlers.NewUsageHandler(database, cfg.MeteringService, logger)
+		usageHandler.RegisterRoutes(apiV1)
+	}
 
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server

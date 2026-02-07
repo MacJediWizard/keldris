@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/rs/zerolog"
 )
@@ -20,16 +22,27 @@ type SlackService struct {
 }
 
 // NewSlackService creates a new Slack notification service.
-func NewSlackService(config models.SlackChannelConfig, logger zerolog.Logger) (*SlackService, error) {
-	if err := ValidateSlackConfig(&config); err != nil {
+func NewSlackService(cfg models.SlackChannelConfig, logger zerolog.Logger) (*SlackService, error) {
+	return NewSlackServiceWithProxy(cfg, nil, logger)
+}
+
+// NewSlackServiceWithProxy creates a Slack notification service with proxy support.
+func NewSlackServiceWithProxy(cfg models.SlackChannelConfig, proxyConfig *config.ProxyConfig, logger zerolog.Logger) (*SlackService, error) {
+	if err := ValidateSlackConfig(&cfg); err != nil {
 		return nil, err
 	}
 
+	client, err := httpclient.New(httpclient.Options{
+		Timeout:     30 * time.Second,
+		ProxyConfig: proxyConfig,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create http client: %w", err)
+	}
+
 	return &SlackService{
-		config: config,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		config: cfg,
+		client: client,
 		logger: logger.With().Str("component", "slack_service").Logger(),
 	}, nil
 }

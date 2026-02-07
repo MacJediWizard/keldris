@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import { ExportImportModal } from '../components/features/ExportImportModal';
 import { ImportAgentsWizard } from '../components/features/ImportAgentsWizard';
+import { UpgradeLimitWarning } from '../components/features/UpgradePrompt';
 import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
 import {
 	BulkOperationProgress,
@@ -13,7 +14,9 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { EmptyStateNoAgents } from '../components/ui/EmptyState';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
+import { AgentRowSkeleton } from '../components/ui/PageSkeletons';
 import { StarButton } from '../components/ui/StarButton';
 import { useAddAgentToGroup, useAgentGroups } from '../hooks/useAgentGroups';
 import {
@@ -30,35 +33,11 @@ import {
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useFavoriteIds } from '../hooks/useFavorites';
 import { useLocale } from '../hooks/useLocale';
+import { usePlanLimits } from '../hooks/usePlanLimits';
 import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
 import { statusHelp } from '../lib/help-content';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
 import { getAgentStatusColor } from '../lib/utils';
-
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4 w-12">
-				<div className="h-4 w-4 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
 
 interface GenerateCodeModalProps {
 	isOpen: boolean;
@@ -671,6 +650,7 @@ export function Agents() {
 	const { data: agentGroups } = useAgentGroups();
 	const { data: schedules } = useSchedules();
 	const favoriteIds = useFavoriteIds('agent');
+	const { limits, usage } = usePlanLimits();
 	const deleteAgent = useDeleteAgent();
 	const rotateApiKey = useRotateAgentApiKey();
 	const revokeApiKey = useRevokeAgentApiKey();
@@ -864,11 +844,27 @@ export function Agents() {
 
 	return (
 		<div className="space-y-6">
+			{limits.agent_limit && (
+				<UpgradeLimitWarning
+					type="agents"
+					current={agents?.length ?? usage.agentCount}
+					limit={limits.agent_limit}
+					source="agents-page"
+				/>
+			)}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">
-						{t('agents.title')}
-					</h1>
+					<div className="flex items-center gap-2">
+						<h1 className="text-2xl font-bold text-gray-900">
+							{t('agents.title')}
+						</h1>
+						<HelpTooltip
+							content="Learn how to install, configure, and manage backup agents across your infrastructure."
+							title="Agent Management"
+							docsUrl="/docs/agent-deployment"
+							size="md"
+						/>
+					</div>
 					<p className="text-gray-600 mt-1">{t('agents.subtitle')}</p>
 				</div>
 				<div className="flex items-center gap-3">
@@ -1113,9 +1109,9 @@ export function Agents() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<AgentRowSkeleton />
+							<AgentRowSkeleton />
+							<AgentRowSkeleton />
 						</tbody>
 					</table>
 				) : filteredAgents && filteredAgents.length > 0 ? (
@@ -1167,49 +1163,12 @@ export function Agents() {
 						</tbody>
 					</table>
 				) : (
-					<div className="p-8 text-center text-gray-500">
-						<svg
-							aria-hidden="true"
-							className="w-16 h-16 mx-auto mb-4 text-gray-300"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-							/>
-						</svg>
-						<h3 className="text-lg font-medium text-gray-900 mb-2">
-							{t('agents.noAgentsRegistered')}
-						</h3>
-						<p className="mb-6">
-							Generate a registration code to start backing up your systems
-						</p>
-						<button
-							type="button"
-							onClick={() => setShowGenerateModal(true)}
-							className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-						>
-							<svg
-								aria-hidden="true"
-								className="w-5 h-5"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M12 4v16m8-8H4"
-								/>
-							</svg>
-							Generate Registration Code
-						</button>
-					</div>
+					<EmptyStateNoAgents
+						onAddAgent={() => setShowGenerateModal(true)}
+						title={t('agents.noAgentsRegistered')}
+						description="Generate a registration code to start backing up your systems"
+						actionLabel="Generate Registration Code"
+					/>
 				)}
 			</div>
 

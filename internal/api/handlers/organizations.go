@@ -3,7 +3,9 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
+	"encoding/csv"
 	"encoding/hex"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -31,12 +33,15 @@ type OrganizationStore interface {
 	UpdateMembership(ctx context.Context, m *models.OrgMembership) error
 	DeleteMembership(ctx context.Context, userID, orgID uuid.UUID) error
 	CreateInvitation(ctx context.Context, inv *models.OrgInvitation) error
+	GetInvitationByID(ctx context.Context, id uuid.UUID) (*models.OrgInvitation, error)
 	GetInvitationByToken(ctx context.Context, token string) (*models.OrgInvitation, error)
 	GetPendingInvitationsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.OrgInvitationWithDetails, error)
 	GetPendingInvitationsByEmail(ctx context.Context, email string) ([]*models.OrgInvitationWithDetails, error)
 	AcceptInvitation(ctx context.Context, id uuid.UUID) error
 	DeleteInvitation(ctx context.Context, id uuid.UUID) error
+	UpdateInvitationResent(ctx context.Context, id uuid.UUID) error
 	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 }
 
 // OrganizationsHandler handles organization-related HTTP endpoints.
@@ -77,11 +82,15 @@ func (h *OrganizationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		// Invitations
 		orgs.GET("/:id/invitations", h.ListInvitations)
 		orgs.POST("/:id/invitations", h.CreateInvitation)
+		orgs.POST("/:id/invitations/bulk", h.BulkInvite)
+		orgs.POST("/:id/invitations/:invitation_id/resend", h.ResendInvitation)
 		orgs.DELETE("/:id/invitations/:invitation_id", h.DeleteInvitation)
 	}
 
 	// Invitation acceptance (public endpoint for accepting invites)
 	r.POST("/invitations/accept", h.AcceptInvitation)
+	// Public endpoint to get invitation details by token
+	r.GET("/invitations/:token", h.GetInvitationByToken)
 }
 
 // CreateOrgRequest is the request body for creating an organization.
@@ -823,4 +832,367 @@ func generateInviteToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+// BulkInviteRequest is the structure for each invitation in a bulk request.
+type BulkInviteEntry struct {
+	Email string `json:"email" binding:"required,email"`
+	Role  string `json:"role" binding:"required,oneof=admin member readonly"`
+}
+
+// BulkInviteResponse is the response for a bulk invitation request.
+type BulkInviteResponse struct {
+	Successful []BulkInviteResult `json:"successful"`
+	Failed     []BulkInviteError  `json:"failed"`
+	Total      int                `json:"total"`
+}
+
+// BulkInviteResult represents a successful invitation.
+type BulkInviteResult struct {
+	Email string `json:"email"`
+	Role  string `json:"role"`
+	Token string `json:"token,omitempty"`
+}
+
+// BulkInviteError represents a failed invitation.
+type BulkInviteError struct {
+	Email string `json:"email"`
+	Error string `json:"error"`
+}
+
+// BulkInvite creates multiple invitations from a JSON array or CSV file.
+// POST /api/v1/organizations/:id/invitations/bulk
+func (h *OrganizationsHandler) BulkInvite(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	orgID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
+		return
+	}
+
+	// Check permission
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, orgID, auth.PermMemberInvite); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
+	var invites []BulkInviteEntry
+
+	// Check content type to determine if JSON or CSV
+	contentType := c.GetHeader("Content-Type")
+	if strings.Contains(contentType, "multipart/form-data") {
+		// Handle CSV file upload
+		file, _, err := c.Request.FormFile("file")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "file upload required"})
+			return
+		}
+		defer file.Close()
+
+		invites, err = parseCSVInvites(file)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		// Handle JSON array
+		var req struct {
+			Invites []BulkInviteEntry `json:"invites" binding:"required,dive"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+			return
+		}
+		invites = req.Invites
+	}
+
+	if len(invites) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no invitations provided"})
+		return
+	}
+
+	if len(invites) > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "maximum 100 invitations per batch"})
+		return
+	}
+
+	response := BulkInviteResponse{
+		Successful: make([]BulkInviteResult, 0),
+		Failed:     make([]BulkInviteError, 0),
+		Total:      len(invites),
+	}
+
+	for _, invite := range invites {
+		email := strings.ToLower(strings.TrimSpace(invite.Email))
+		role := models.OrgRole(invite.Role)
+
+		// Check if user can assign this role
+		canAssign, err := h.rbac.CanAssignRole(c.Request.Context(), user.ID, orgID, role)
+		if err != nil || !canAssign {
+			response.Failed = append(response.Failed, BulkInviteError{
+				Email: email,
+				Error: "cannot invite with this role",
+			})
+			continue
+		}
+
+		// Check if already a member
+		existingUser, err := h.store.GetUserByEmail(c.Request.Context(), email)
+		if err == nil && existingUser != nil {
+			membership, err := h.store.GetMembershipByUserAndOrg(c.Request.Context(), existingUser.ID, orgID)
+			if err == nil && membership != nil {
+				response.Failed = append(response.Failed, BulkInviteError{
+					Email: email,
+					Error: "user is already a member",
+				})
+				continue
+			}
+		}
+
+		// Check for existing pending invitation
+		pending, err := h.store.GetPendingInvitationsByEmail(c.Request.Context(), email)
+		if err == nil {
+			hasExisting := false
+			for _, inv := range pending {
+				if inv.OrgID == orgID && time.Now().Before(inv.ExpiresAt) && inv.AcceptedAt == nil {
+					hasExisting = true
+					break
+				}
+			}
+			if hasExisting {
+				response.Failed = append(response.Failed, BulkInviteError{
+					Email: email,
+					Error: "pending invitation already exists",
+				})
+				continue
+			}
+		}
+
+		// Generate token
+		token, err := generateInviteToken()
+		if err != nil {
+			response.Failed = append(response.Failed, BulkInviteError{
+				Email: email,
+				Error: "failed to generate token",
+			})
+			continue
+		}
+
+		// Create invitation
+		inv := models.NewOrgInvitation(
+			orgID,
+			email,
+			role,
+			token,
+			user.ID,
+			time.Now().Add(7*24*time.Hour),
+		)
+
+		if err := h.store.CreateInvitation(c.Request.Context(), inv); err != nil {
+			response.Failed = append(response.Failed, BulkInviteError{
+				Email: email,
+				Error: "failed to create invitation",
+			})
+			continue
+		}
+
+		response.Successful = append(response.Successful, BulkInviteResult{
+			Email: email,
+			Role:  invite.Role,
+			Token: token,
+		})
+	}
+
+	h.logger.Info().
+		Str("org_id", orgID.String()).
+		Int("total", response.Total).
+		Int("successful", len(response.Successful)).
+		Int("failed", len(response.Failed)).
+		Str("inviter_id", user.ID.String()).
+		Msg("bulk invitations created")
+
+	c.JSON(http.StatusCreated, response)
+}
+
+// parseCSVInvites parses a CSV file containing invite data (email,role format).
+func parseCSVInvites(reader io.Reader) ([]BulkInviteEntry, error) {
+	csvReader := csv.NewReader(reader)
+	csvReader.TrimLeadingSpace = true
+
+	var invites []BulkInviteEntry
+	lineNum := 0
+
+	for {
+		record, err := csvReader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		lineNum++
+
+		// Skip header row if present
+		if lineNum == 1 && (strings.EqualFold(record[0], "email") || strings.EqualFold(record[0], "e-mail")) {
+			continue
+		}
+
+		if len(record) < 1 {
+			continue
+		}
+
+		email := strings.TrimSpace(record[0])
+		if email == "" {
+			continue
+		}
+
+		// Default role is member
+		role := "member"
+		if len(record) >= 2 {
+			roleStr := strings.TrimSpace(strings.ToLower(record[1]))
+			switch roleStr {
+			case "admin":
+				role = "admin"
+			case "member":
+				role = "member"
+			case "readonly", "read-only", "viewer":
+				role = "readonly"
+			default:
+				role = "member"
+			}
+		}
+
+		invites = append(invites, BulkInviteEntry{
+			Email: email,
+			Role:  role,
+		})
+	}
+
+	return invites, nil
+}
+
+// ResendInvitation resends an invitation email.
+// POST /api/v1/organizations/:id/invitations/:invitation_id/resend
+func (h *OrganizationsHandler) ResendInvitation(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	orgID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
+		return
+	}
+
+	invitationID, err := uuid.Parse(c.Param("invitation_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid invitation ID"})
+		return
+	}
+
+	// Check permission
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, orgID, auth.PermMemberInvite); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
+	// Get invitation
+	inv, err := h.store.GetInvitationByID(c.Request.Context(), invitationID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "invitation not found"})
+		return
+	}
+
+	// Verify invitation belongs to this org
+	if inv.OrgID != orgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "invitation not found"})
+		return
+	}
+
+	if inv.IsAccepted() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invitation has already been accepted"})
+		return
+	}
+
+	if inv.IsExpired() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invitation has expired"})
+		return
+	}
+
+	// Update resent timestamp
+	if err := h.store.UpdateInvitationResent(c.Request.Context(), invitationID); err != nil {
+		h.logger.Warn().Err(err).Msg("failed to update resent timestamp")
+	}
+
+	h.logger.Info().
+		Str("invitation_id", invitationID.String()).
+		Str("email", inv.Email).
+		Str("resent_by", user.ID.String()).
+		Msg("invitation resent")
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "invitation resent",
+		"token":   inv.Token,
+	})
+}
+
+// GetInvitationByToken returns invitation details by token (public endpoint).
+// GET /api/v1/invitations/:token
+func (h *OrganizationsHandler) GetInvitationByToken(c *gin.Context) {
+	token := c.Param("token")
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "token required"})
+		return
+	}
+
+	inv, err := h.store.GetInvitationByToken(c.Request.Context(), token)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "invitation not found"})
+		return
+	}
+
+	if inv.IsExpired() {
+		c.JSON(http.StatusGone, gin.H{"error": "invitation has expired"})
+		return
+	}
+
+	if inv.IsAccepted() {
+		c.JSON(http.StatusConflict, gin.H{"error": "invitation has already been accepted"})
+		return
+	}
+
+	// Get organization details
+	org, err := h.store.GetOrganizationByID(c.Request.Context(), inv.OrgID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get organization"})
+		return
+	}
+
+	// Get inviter details
+	inviterName := "A team member"
+	inviter, err := h.store.GetUserByID(c.Request.Context(), inv.InvitedBy)
+	if err == nil && inviter != nil {
+		inviterName = inviter.Name
+		if inviterName == "" {
+			inviterName = inviter.Email
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"invitation": gin.H{
+			"id":           inv.ID,
+			"org_id":       inv.OrgID,
+			"org_name":     org.Name,
+			"email":        inv.Email,
+			"role":         inv.Role,
+			"inviter_name": inviterName,
+			"expires_at":   inv.ExpiresAt,
+			"created_at":   inv.CreatedAt,
+		},
+	})
 }
