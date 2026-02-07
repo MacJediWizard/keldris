@@ -2,6 +2,12 @@ import { Link } from 'react-router-dom';
 import { ActivityFeedWidget } from '../components/features/ActivityFeed';
 import { MiniBackupCalendar } from '../components/features/BackupCalendar';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
+import {
+	DashboardBackupListSkeleton,
+	DashboardFavoritesSkeleton,
+	DashboardQueueSkeleton,
+} from '../components/ui/PageSkeletons';
+import { Skeleton, TextSkeleton } from '../components/ui/Skeleton';
 import { StarButton } from '../components/ui/StarButton';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
@@ -57,7 +63,7 @@ function StatCard({
 					</p>
 					<p className="text-2xl font-bold text-gray-900 mt-1">
 						{isLoading ? (
-							<span className="inline-block w-8 h-7 bg-gray-200 rounded animate-pulse" />
+							<TextSkeleton width="xs" size="xl" className="inline-block" />
 						) : (
 							value
 						)}
@@ -72,17 +78,6 @@ function StatCard({
 	);
 }
 
-function LoadingRow() {
-	return (
-		<div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-			<div className="space-y-2">
-				<div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
-				<div className="h-3 w-24 bg-gray-100 rounded animate-pulse" />
-			</div>
-			<div className="h-6 w-20 bg-gray-200 rounded-full animate-pulse" />
-		</div>
-	);
-}
 
 export function Dashboard() {
 	const { data: agents, isLoading: agentsLoading } = useAgents();
@@ -256,14 +251,7 @@ export function Dashboard() {
 					</Link>
 				</div>
 				{schedulesLoading ? (
-					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-						{[1, 2, 3, 4].map((i) => (
-							<div key={i} className="animate-pulse">
-								<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-								<div className="h-8 w-12 bg-gray-200 dark:bg-gray-700 rounded" />
-							</div>
-						))}
-					</div>
+					<DashboardQueueSkeleton />
 				) : (
 					<div className="grid grid-cols-2 md:grid-cols-5 gap-4">
 						<div>
@@ -434,14 +422,7 @@ export function Dashboard() {
 						</h2>
 					</div>
 					{favoritesLoading ? (
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							{[1, 2, 3].map((i) => (
-								<div key={i} className="animate-pulse">
-									<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-									<div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-								</div>
-							))}
-						</div>
+						<DashboardFavoritesSkeleton />
 					) : (
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 							{/* Favorite Agents */}
@@ -604,11 +585,7 @@ export function Dashboard() {
 						/>
 					</h2>
 					{isLoading ? (
-						<div className="space-y-1">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
-						</div>
+						<DashboardBackupListSkeleton />
 					) : recentBackups.length === 0 ? (
 						<div className="text-center py-8 text-gray-500">
 							<svg
@@ -731,8 +708,9 @@ export function Dashboard() {
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 						{[1, 2, 3, 4].map((i) => (
 							<div key={i} className="animate-pulse">
-								<div className="h-4 w-24 bg-gray-200 rounded mb-2" />
-								<div className="h-8 w-20 bg-gray-200 rounded" />
+								<TextSkeleton width="md" size="sm" className="mb-2" />
+								<Skeleton className="h-8 w-20 mb-1" />
+								<TextSkeleton width="lg" size="sm" />
 							</div>
 						))}
 					</div>
