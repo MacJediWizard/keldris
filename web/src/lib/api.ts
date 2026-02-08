@@ -149,6 +149,7 @@ import type {
 	CreateTagRequest,
 	CreateTemplateRequest,
 	CreateVerificationScheduleRequest,
+	CreateWebhookEndpointRequest,
 	DRRunbook,
 	DRRunbookRenderResponse,
 	DRRunbooksResponse,
@@ -436,6 +437,8 @@ import type {
 	TestRepositoryResponse,
 	TestSMTPRequest,
 	TestSMTPResponse,
+	TestWebhookRequest,
+	TestWebhookResponse,
 	TierInfo,
 	TiersResponse,
 	TrackRecentItemRequest,
@@ -498,6 +501,7 @@ import type {
 	UpdateUserPreferencesRequest,
 	UpdateUserRequest,
 	UpdateVerificationScheduleRequest,
+	UpdateWebhookEndpointRequest,
 	UptimeBadge,
 	UptimeBadgesResponse,
 	UptimeSummary,
@@ -525,10 +529,6 @@ import type {
 	WebhookEndpoint,
 	WebhookEndpointsResponse,
 	WebhookEventTypesResponse,
-	CreateWebhookEndpointRequest,
-	UpdateWebhookEndpointRequest,
-	TestWebhookRequest,
-	TestWebhookResponse,
 } from './types';
 
 const API_BASE = '/api/v1';

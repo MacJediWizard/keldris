@@ -95,7 +95,8 @@ export function useWebhookEndpointDeliveries(
 ) {
 	return useQuery({
 		queryKey: ['webhook-deliveries', endpointId, { limit, offset }],
-		queryFn: () => webhooksApi.listEndpointDeliveries(endpointId, limit, offset),
+		queryFn: () =>
+			webhooksApi.listEndpointDeliveries(endpointId, limit, offset),
 		enabled: !!endpointId,
 		staleTime: 10 * 1000,
 	});
