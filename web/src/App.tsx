@@ -62,6 +62,7 @@ import { Templates } from './pages/Templates';
 import { UserManagement } from './pages/UserManagement';
 import { UserSessions } from './pages/UserSessions';
 import { LicenseManagement } from './pages/admin/LicenseManagement';
+import Webhooks from './pages/Webhooks';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -117,6 +118,7 @@ function App() {
 									path="notification-rules"
 									element={<NotificationRules />}
 								/>
+								<Route path="webhooks" element={<Webhooks />} />
 								<Route path="reports" element={<Reports />} />
 								<Route path="audit-logs" element={<AuditLogs />} />
 								<Route path="legal-holds" element={<LegalHolds />} />
