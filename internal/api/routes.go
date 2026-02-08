@@ -20,6 +20,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/MacJediWizard/keldris/internal/telemetry"
 	"github.com/MacJediWizard/keldris/internal/updates"
+	"github.com/MacJediWizard/keldris/internal/webhooks"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	swaggerFiles "github.com/swaggo/files"
@@ -67,6 +68,8 @@ type Config struct {
 	EmailService *notifications.EmailService
 	// UpdateChecker for checking for new Keldris versions (optional).
 	UpdateChecker *updates.Checker
+	// WebhookDispatcher for outbound webhook delivery (optional).
+	WebhookDispatcher *webhooks.Dispatcher
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -514,6 +517,12 @@ func NewRouter(
 	if cfg.MeteringService != nil {
 		usageHandler := handlers.NewUsageHandler(database, cfg.MeteringService, logger)
 		usageHandler.RegisterRoutes(apiV1)
+	}
+
+	// Outbound webhooks routes
+	if cfg.WebhookDispatcher != nil {
+		webhooksHandler := handlers.NewWebhooksHandler(database, keyManager, cfg.WebhookDispatcher, logger)
+		webhooksHandler.RegisterRoutes(apiV1)
 	}
 
 	// Agent API routes (API key auth required)
