@@ -149,6 +149,7 @@ import type {
 	CreateTagRequest,
 	CreateTemplateRequest,
 	CreateVerificationScheduleRequest,
+	CreateWebhookEndpointRequest,
 	DRRunbook,
 	DRRunbookRenderResponse,
 	DRRunbooksResponse,
@@ -436,6 +437,8 @@ import type {
 	TestRepositoryResponse,
 	TestSMTPRequest,
 	TestSMTPResponse,
+	TestWebhookRequest,
+	TestWebhookResponse,
 	TierInfo,
 	TiersResponse,
 	TrackRecentItemRequest,
@@ -498,6 +501,7 @@ import type {
 	UpdateUserPreferencesRequest,
 	UpdateUserRequest,
 	UpdateVerificationScheduleRequest,
+	UpdateWebhookEndpointRequest,
 	UptimeBadge,
 	UptimeBadgesResponse,
 	UptimeSummary,
@@ -520,6 +524,11 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
+	WebhookDeliveriesResponse,
+	WebhookDelivery,
+	WebhookEndpoint,
+	WebhookEndpointsResponse,
+	WebhookEventTypesResponse,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -4834,4 +4843,78 @@ export const licenseApi = {
 		const response = await fetchApi<TiersResponse>('/license/tiers');
 		return response.tiers ?? [];
 	},
+};
+
+export const webhooksApi = {
+	// Event types
+	listEventTypes: async (): Promise<WebhookEventTypesResponse> =>
+		fetchApi<WebhookEventTypesResponse>('/webhooks/event-types'),
+
+	// Endpoints
+	listEndpoints: async (): Promise<WebhookEndpoint[]> => {
+		const response = await fetchApi<WebhookEndpointsResponse>(
+			'/webhooks/endpoints',
+		);
+		return response.endpoints ?? [];
+	},
+
+	getEndpoint: async (id: string): Promise<WebhookEndpoint> =>
+		fetchApi<WebhookEndpoint>(`/webhooks/endpoints/${id}`),
+
+	createEndpoint: async (
+		data: CreateWebhookEndpointRequest,
+	): Promise<WebhookEndpoint> =>
+		fetchApi<WebhookEndpoint>('/webhooks/endpoints', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateEndpoint: async (
+		id: string,
+		data: UpdateWebhookEndpointRequest,
+	): Promise<WebhookEndpoint> =>
+		fetchApi<WebhookEndpoint>(`/webhooks/endpoints/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteEndpoint: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/webhooks/endpoints/${id}`, {
+			method: 'DELETE',
+		}),
+
+	testEndpoint: async (
+		id: string,
+		data?: TestWebhookRequest,
+	): Promise<TestWebhookResponse> =>
+		fetchApi<TestWebhookResponse>(`/webhooks/endpoints/${id}/test`, {
+			method: 'POST',
+			body: JSON.stringify(data ?? {}),
+		}),
+
+	// Deliveries
+	listDeliveries: async (
+		limit = 50,
+		offset = 0,
+	): Promise<WebhookDeliveriesResponse> =>
+		fetchApi<WebhookDeliveriesResponse>(
+			`/webhooks/deliveries?limit=${limit}&offset=${offset}`,
+		),
+
+	listEndpointDeliveries: async (
+		endpointId: string,
+		limit = 50,
+		offset = 0,
+	): Promise<WebhookDeliveriesResponse> =>
+		fetchApi<WebhookDeliveriesResponse>(
+			`/webhooks/endpoints/${endpointId}/deliveries?limit=${limit}&offset=${offset}`,
+		),
+
+	getDelivery: async (id: string): Promise<WebhookDelivery> =>
+		fetchApi<WebhookDelivery>(`/webhooks/deliveries/${id}`),
+
+	retryDelivery: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/webhooks/deliveries/${id}/retry`, {
+			method: 'POST',
+		}),
 };
