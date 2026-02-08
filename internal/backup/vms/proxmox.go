@@ -158,7 +158,7 @@ func (c *ProxmoxClient) parseResponse(resp *http.Response, v interface{}) error 
 
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("api error %d: %s", resp.StatusCode, string(body))
 	}
 
 	var pveResp proxmoxResponse
@@ -167,7 +167,7 @@ func (c *ProxmoxClient) parseResponse(resp *http.Response, v interface{}) error 
 	}
 
 	if pveResp.Error != "" {
-		return fmt.Errorf("Proxmox error: %s", pveResp.Error)
+		return fmt.Errorf("proxmox error: %s", pveResp.Error)
 	}
 
 	if v != nil && len(pveResp.Data) > 0 {
