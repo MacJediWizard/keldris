@@ -117,6 +117,95 @@ func (db *DB) CreateUser(ctx context.Context, user *models.User) error {
 	return nil
 }
 
+// ListUsers returns all users for an organization with their membership roles.
+func (db *DB) ListUsers(ctx context.Context, orgID uuid.UUID) ([]*models.User, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT u.id, u.org_id, u.oidc_subject, u.email, u.name, u.role,
+		       COALESCE(m.role, u.role) AS effective_role,
+		       u.created_at, u.updated_at
+		FROM users u
+		LEFT JOIN org_memberships m ON m.user_id = u.id AND m.org_id = u.org_id
+		WHERE u.org_id = $1
+		ORDER BY u.name, u.email
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		var u models.User
+		var roleStr string
+		var effectiveRoleStr string
+		if err := rows.Scan(&u.ID, &u.OrgID, &u.OIDCSubject, &u.Email, &u.Name, &roleStr, &effectiveRoleStr, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan user: %w", err)
+		}
+		u.Role = models.UserRole(effectiveRoleStr)
+		users = append(users, &u)
+	}
+	return users, nil
+}
+
+// UpdateUser updates a user's name, email, and role.
+func (db *DB) UpdateUser(ctx context.Context, user *models.User) error {
+	user.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE users
+		SET name = $2, email = $3, role = $4, updated_at = $5
+		WHERE id = $1
+	`, user.ID, user.Name, user.Email, string(user.Role), user.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update user: %w", err)
+	}
+
+	// Also update the membership role if one exists
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE org_memberships
+		SET role = $3, updated_at = $4
+		WHERE user_id = $1 AND org_id = $2
+	`, user.ID, user.OrgID, string(user.Role), user.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update user membership: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteUser deletes a user by ID. Returns an error if the user is the last owner of their organization.
+func (db *DB) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	// Check if the user is the last owner of any organization
+	var ownerCount int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM org_memberships
+		WHERE org_id = (SELECT org_id FROM org_memberships WHERE user_id = $1 AND role = 'owner' LIMIT 1)
+		  AND role = 'owner'
+	`, id).Scan(&ownerCount)
+	if err != nil {
+		return fmt.Errorf("check owner count: %w", err)
+	}
+
+	// If user is an owner and is the only one, block deletion
+	var isOwner bool
+	err = db.Pool.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM org_memberships WHERE user_id = $1 AND role = 'owner')
+	`, id).Scan(&isOwner)
+	if err != nil {
+		return fmt.Errorf("check if user is owner: %w", err)
+	}
+
+	if isOwner && ownerCount <= 1 {
+		return fmt.Errorf("cannot delete user: last owner of organization")
+	}
+
+	_, err = db.Pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete user: %w", err)
+	}
+	return nil
+}
+
 // Agent methods
 
 // GetAgentsByOrgID returns all agents for an organization.
