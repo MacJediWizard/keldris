@@ -190,6 +190,9 @@ func NewRouter(
 		verificationsHandler.RegisterRoutes(apiV1)
 	}
 
+	usersHandler := handlers.NewUsersHandler(database, rbac, logger)
+	usersHandler.RegisterRoutes(apiV1)
+
 	ssoGroupMappingsHandler := handlers.NewSSOGroupMappingsHandler(database, rbac, logger)
 	ssoGroupMappingsHandler.RegisterRoutes(apiV1)
 
