@@ -451,10 +451,10 @@ func (h *CostEstimationHandler) GetCostForecast(c *gin.Context) {
 	forecasts := h.calculator.CalculateForecast(totalStorageGB, monthlyGrowthRate, avgCostPerGB)
 
 	c.JSON(http.StatusOK, gin.H{
-		"forecasts":           forecasts,
-		"current_storage_gb":  totalStorageGB,
+		"forecasts":            forecasts,
+		"current_storage_gb":   totalStorageGB,
 		"current_monthly_cost": totalMonthlyCost,
-		"monthly_growth_rate": monthlyGrowthRate,
+		"monthly_growth_rate":  monthlyGrowthRate,
 	})
 }
 
@@ -491,7 +491,7 @@ func (h *CostEstimationHandler) GetCostHistory(c *gin.Context) {
 	growth, _ := h.store.GetAllStorageGrowth(c.Request.Context(), dbUser.OrgID, days)
 
 	c.JSON(http.StatusOK, gin.H{
-		"estimates":     estimates,
+		"estimates":      estimates,
 		"storage_growth": growth,
 	})
 }

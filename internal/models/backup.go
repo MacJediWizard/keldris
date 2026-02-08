@@ -102,6 +102,22 @@ func NewPiholeBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID, pih
 	}
 }
 
+// NewProxmoxBackup creates a new Backup record for a Proxmox VM/container backup.
+func NewProxmoxBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID) *Backup {
+	now := time.Now()
+	return &Backup{
+		ID:           uuid.New(),
+		ScheduleID:   scheduleID,
+		AgentID:      agentID,
+		RepositoryID: repositoryID,
+		StartedAt:    now,
+		Status:       BackupStatusRunning,
+		BackupType:   BackupTypeProxmox,
+		Resumed:      false,
+		CreatedAt:    now,
+	}
+}
+
 // NewResumedBackup creates a new Backup record that is resuming from a checkpoint.
 func NewResumedBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID, checkpointID uuid.UUID, originalBackupID *uuid.UUID) *Backup {
 	now := time.Now()

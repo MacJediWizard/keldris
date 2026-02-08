@@ -639,9 +639,9 @@ func (h *GeoReplicationHandler) toResponse(ctx context.Context, cfg *models.GeoR
 	targetRegion, _ := backup.GetRegionByCode(cfg.TargetRegion)
 
 	resp := models.GeoReplicationResponse{
-		ID:                  cfg.ID,
-		SourceRepositoryID:  cfg.SourceRepositoryID,
-		TargetRepositoryID:  cfg.TargetRepositoryID,
+		ID:                 cfg.ID,
+		SourceRepositoryID: cfg.SourceRepositoryID,
+		TargetRepositoryID: cfg.TargetRepositoryID,
 		SourceRegion: models.GeoRegion{
 			Code:        sourceRegion.Code,
 			Name:        sourceRegion.Name,

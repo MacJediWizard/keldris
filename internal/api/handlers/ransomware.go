@@ -233,12 +233,12 @@ func (h *RansomwareHandler) CreateSettings(c *gin.Context) {
 
 // UpdateSettingsRequest is the request body for updating ransomware settings.
 type UpdateSettingsRequest struct {
-	Enabled                 *bool     `json:"enabled,omitempty"`
-	ChangeThresholdPercent  *int      `json:"change_threshold_percent,omitempty"`
-	ExtensionsToDetect      []string  `json:"extensions_to_detect,omitempty"`
-	EntropyDetectionEnabled *bool     `json:"entropy_detection_enabled,omitempty"`
-	EntropyThreshold        *float64  `json:"entropy_threshold,omitempty"`
-	AutoPauseOnAlert        *bool     `json:"auto_pause_on_alert,omitempty"`
+	Enabled                 *bool    `json:"enabled,omitempty"`
+	ChangeThresholdPercent  *int     `json:"change_threshold_percent,omitempty"`
+	ExtensionsToDetect      []string `json:"extensions_to_detect,omitempty"`
+	EntropyDetectionEnabled *bool    `json:"entropy_detection_enabled,omitempty"`
+	EntropyThreshold        *float64 `json:"entropy_threshold,omitempty"`
+	AutoPauseOnAlert        *bool    `json:"auto_pause_on_alert,omitempty"`
 }
 
 // UpdateSettings updates existing ransomware settings.

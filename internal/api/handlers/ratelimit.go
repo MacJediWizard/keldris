@@ -99,12 +99,12 @@ func (h *RateLimitHandler) GetDashboardStats(c *gin.Context) {
 
 // RateLimitDashboardStatsResponse is the response for rate limit dashboard stats.
 type RateLimitDashboardStatsResponse struct {
-	DefaultLimit    int64                        `json:"default_limit"`
-	DefaultPeriod   string                       `json:"default_period"`
-	EndpointConfigs []EndpointRateLimitInfoResp  `json:"endpoint_configs"`
-	ClientStats     []RateLimitClientStatsResp   `json:"client_stats"`
-	TotalRequests   int64                        `json:"total_requests"`
-	TotalRejected   int64                        `json:"total_rejected"`
+	DefaultLimit    int64                       `json:"default_limit"`
+	DefaultPeriod   string                      `json:"default_period"`
+	EndpointConfigs []EndpointRateLimitInfoResp `json:"endpoint_configs"`
+	ClientStats     []RateLimitClientStatsResp  `json:"client_stats"`
+	TotalRequests   int64                       `json:"total_requests"`
+	TotalRejected   int64                       `json:"total_rejected"`
 }
 
 // EndpointRateLimitInfoResp holds rate limit info for an endpoint.

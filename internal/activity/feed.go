@@ -142,8 +142,8 @@ type Feed struct {
 	clientsMu  sync.RWMutex
 	orgClients map[uuid.UUID]map[uuid.UUID]*Client // orgID -> clientID -> client
 
-	broadcast chan *models.ActivityEvent
-	register  chan *Client
+	broadcast  chan *models.ActivityEvent
+	register   chan *Client
 	unregister chan *Client
 
 	done chan struct{}

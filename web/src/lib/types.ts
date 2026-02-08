@@ -79,6 +79,7 @@ export interface Agent {
 	hostname: string;
 	os_info?: OSInfo;
 	docker_info?: DockerInfo;
+	proxmox_info?: ProxmoxInfo;
 	network_mounts?: NetworkMount[];
 	last_seen?: string;
 	status: AgentStatus;
@@ -448,7 +449,7 @@ export type CompressionLevel = 'off' | 'auto' | 'max';
 export type SchedulePriority = 1 | 2 | 3; // 1=high, 2=medium, 3=low
 
 // Backup type determines what kind of backup to perform
-export type BackupType = 'file' | 'docker';
+export type BackupType = 'file' | 'docker' | 'proxmox';
 
 // Docker backup options
 export interface DockerBackupOptions {
@@ -464,6 +465,63 @@ export interface DockerStackScheduleConfig {
 	export_images: boolean;
 	include_env_files: boolean;
 	stop_for_backup: boolean;
+}
+
+// Proxmox backup options
+export interface ProxmoxBackupOptions {
+	connection_id?: string; // Proxmox connection ID
+	vm_ids?: number[]; // Specific VMs to backup (empty = all)
+	container_ids?: number[]; // Specific LXC containers to backup (empty = all)
+	mode: 'snapshot' | 'suspend' | 'stop'; // Backup mode
+	compress: '0' | 'gzip' | 'lzo' | 'zstd'; // Compression algorithm
+	storage?: string; // Proxmox storage for temp backup
+	max_wait?: number; // Max wait time in minutes
+	include_ram: boolean; // Include RAM state (VMs only, requires snapshot mode)
+	remove_after: boolean; // Remove from Proxmox after Restic backup
+}
+
+// Proxmox VM/container info
+export interface ProxmoxVMInfo {
+	vmid: number;
+	name: string;
+	type: 'qemu' | 'lxc';
+	status: string;
+	node: string;
+	cpus: number;
+	maxmem: number;
+	maxdisk: number;
+}
+
+// Proxmox connection info on agent
+export interface ProxmoxInfo {
+	available: boolean;
+	host?: string;
+	node?: string;
+	version?: string;
+	vm_count: number;
+	lxc_count: number;
+	vms?: ProxmoxVMInfo[];
+	connection_id?: string;
+	error?: string;
+	detected_at?: string;
+}
+
+// Proxmox connection configuration
+export interface ProxmoxConnection {
+	id: string;
+	org_id: string;
+	name: string;
+	host: string;
+	port: number;
+	node: string;
+	username: string;
+	token_id?: string;
+	has_token: boolean;
+	verify_ssl: boolean;
+	enabled: boolean;
+	last_connected_at?: string;
+	created_at: string;
+	updated_at: string;
 }
 
 export interface Schedule {
@@ -488,6 +546,7 @@ export interface Schedule {
 	preemptible: boolean; // Can be preempted by higher priority backups
 	docker_options?: DockerBackupOptions; // Docker-specific backup options
 	docker_stack_config?: DockerStackScheduleConfig; // Docker stack backup configuration
+	proxmox_options?: ProxmoxBackupOptions; // Proxmox-specific backup options
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -513,6 +572,7 @@ export interface CreateScheduleRequest {
 	preemptible?: boolean;
 	docker_options?: DockerBackupOptions; // Docker-specific backup options
 	docker_stack_config?: DockerStackScheduleConfig;
+	proxmox_options?: ProxmoxBackupOptions; // Proxmox-specific backup options
 	enabled?: boolean;
 }
 
@@ -533,6 +593,7 @@ export interface UpdateScheduleRequest {
 	priority?: SchedulePriority;
 	preemptible?: boolean;
 	docker_options?: DockerBackupOptions;
+	proxmox_options?: ProxmoxBackupOptions;
 	enabled?: boolean;
 }
 
