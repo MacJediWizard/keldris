@@ -41,9 +41,11 @@ type Schedule struct {
 	BackupWindow       *BackupWindow        `json:"backup_window,omitempty"`        // Allowed backup time window
 	ExcludedHours      []int                `json:"excluded_hours,omitempty"`       // Hours (0-23) when backups should not run
 	CompressionLevel   *string              `json:"compression_level,omitempty"`    // Compression level: off, auto, max
-	OnMountUnavailable MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
-	Enabled            bool                 `json:"enabled"`
-	Repositories       []ScheduleRepository `json:"repositories,omitempty"`
+	OnMountUnavailable   MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
+	DockerVolumes        []string             `json:"docker_volumes,omitempty"`        // Docker volume names to back up
+	DockerPauseContainers bool                `json:"docker_pause_containers,omitempty"` // Pause containers during volume backup
+	Enabled              bool                 `json:"enabled"`
+	Repositories         []ScheduleRepository `json:"repositories,omitempty"`
 	CreatedAt          time.Time            `json:"created_at"`
 	UpdatedAt          time.Time            `json:"updated_at"`
 }
@@ -123,6 +125,22 @@ func (s *Schedule) ExcludesJSON() ([]byte, error) {
 		return nil, nil
 	}
 	return json.Marshal(s.Excludes)
+}
+
+// SetDockerVolumes sets the Docker volumes from JSON bytes.
+func (s *Schedule) SetDockerVolumes(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	return json.Unmarshal(data, &s.DockerVolumes)
+}
+
+// DockerVolumesJSON returns the Docker volumes as JSON bytes for database storage.
+func (s *Schedule) DockerVolumesJSON() ([]byte, error) {
+	if s.DockerVolumes == nil {
+		return nil, nil
+	}
+	return json.Marshal(s.DockerVolumes)
 }
 
 // SetRetentionPolicy sets the retention policy from JSON bytes.
