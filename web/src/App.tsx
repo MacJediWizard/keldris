@@ -61,8 +61,8 @@ import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
 import { UserManagement } from './pages/UserManagement';
 import { UserSessions } from './pages/UserSessions';
-import { LicenseManagement } from './pages/admin/LicenseManagement';
 import Webhooks from './pages/Webhooks';
+import { LicenseManagement } from './pages/admin/LicenseManagement';
 
 const queryClient = new QueryClient({
 	defaultOptions: {

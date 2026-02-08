@@ -2,12 +2,12 @@ import { useState } from 'react';
 import {
 	useCreateWebhookEndpoint,
 	useDeleteWebhookEndpoint,
+	useRetryWebhookDelivery,
 	useTestWebhookEndpoint,
 	useUpdateWebhookEndpoint,
 	useWebhookEndpointDeliveries,
 	useWebhookEndpoints,
 	useWebhookEventTypes,
-	useRetryWebhookDelivery,
 } from '../hooks/useWebhooks';
 import type {
 	WebhookDelivery,
@@ -51,14 +51,18 @@ function LoadingRow() {
 
 function StatusBadge({ status }: { status: WebhookDeliveryStatus }) {
 	const styles: Record<WebhookDeliveryStatus, string> = {
-		pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-		delivered: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+		pending:
+			'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+		delivered:
+			'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
 		failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 		retrying: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
 	};
 
 	return (
-		<span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`}>
+		<span
+			className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status]}`}
+		>
 			{status}
 		</span>
 	);
@@ -111,20 +115,24 @@ function AddEndpointModal({ isOpen, onClose }: AddEndpointModalProps) {
 		setSelectedEvents((prev) =>
 			prev.includes(eventType)
 				? prev.filter((e) => e !== eventType)
-				: [...prev, eventType]
+				: [...prev, eventType],
 		);
 	};
 
 	const generateSecret = () => {
 		const array = new Uint8Array(32);
 		crypto.getRandomValues(array);
-		const secret = Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+		const secret = Array.from(array, (b) =>
+			b.toString(16).padStart(2, '0'),
+		).join('');
 		setSecret(secret);
 	};
 
 	if (!isOpen) return null;
 
-	const eventTypes = eventTypesData?.event_types ?? Object.keys(EVENT_TYPE_LABELS) as WebhookEventType[];
+	const eventTypes =
+		eventTypesData?.event_types ??
+		(Object.keys(EVENT_TYPE_LABELS) as WebhookEventType[]);
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -199,9 +207,9 @@ function AddEndpointModal({ isOpen, onClose }: AddEndpointModalProps) {
 							</p>
 						</div>
 						<div>
-							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 								Event Types
-							</label>
+							</span>
 							<div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg p-3">
 								{eventTypes.map((eventType) => (
 									<label
@@ -289,8 +297,16 @@ interface DeliveryLogModalProps {
 	endpoint: WebhookEndpoint | null;
 }
 
-function DeliveryLogModal({ isOpen, onClose, endpoint }: DeliveryLogModalProps) {
-	const { data, isLoading } = useWebhookEndpointDeliveries(endpoint?.id ?? '', 50, 0);
+function DeliveryLogModal({
+	isOpen,
+	onClose,
+	endpoint,
+}: DeliveryLogModalProps) {
+	const { data, isLoading } = useWebhookEndpointDeliveries(
+		endpoint?.id ?? '',
+		50,
+		0,
+	);
 	const retryDelivery = useRetryWebhookDelivery();
 
 	if (!isOpen || !endpoint) return null;
@@ -305,11 +321,25 @@ function DeliveryLogModal({ isOpen, onClose, endpoint }: DeliveryLogModalProps) 
 						Delivery Log: {endpoint.name}
 					</h3>
 					<button
+						type="button"
 						onClick={onClose}
 						className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
 					>
-						<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+						<svg
+							className="w-6 h-6"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+							role="img"
+							aria-label="Close"
+						>
+							<title>Close</title>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M6 18L18 6M6 6l12 12"
+							/>
 						</svg>
 					</button>
 				</div>
@@ -317,7 +347,9 @@ function DeliveryLogModal({ isOpen, onClose, endpoint }: DeliveryLogModalProps) 
 					{isLoading ? (
 						<div className="text-center py-8 text-gray-500">Loading...</div>
 					) : deliveries.length === 0 ? (
-						<div className="text-center py-8 text-gray-500">No deliveries yet</div>
+						<div className="text-center py-8 text-gray-500">
+							No deliveries yet
+						</div>
 					) : (
 						<table className="w-full">
 							<thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
@@ -344,20 +376,34 @@ function DeliveryLogModal({ isOpen, onClose, endpoint }: DeliveryLogModalProps) 
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 								{deliveries.map((delivery: WebhookDelivery) => (
-									<tr key={delivery.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+									<tr
+										key={delivery.id}
+										className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+									>
 										<td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-											{EVENT_TYPE_LABELS[delivery.event_type] ?? delivery.event_type}
+											{EVENT_TYPE_LABELS[delivery.event_type] ??
+												delivery.event_type}
 										</td>
 										<td className="px-4 py-3">
 											<StatusBadge status={delivery.status} />
 										</td>
 										<td className="px-4 py-3 text-sm">
 											{delivery.response_status ? (
-												<span className={delivery.response_status >= 200 && delivery.response_status < 300 ? 'text-green-600' : 'text-red-600'}>
+												<span
+													className={
+														delivery.response_status >= 200 &&
+														delivery.response_status < 300
+															? 'text-green-600'
+															: 'text-red-600'
+													}
+												>
 													{delivery.response_status}
 												</span>
 											) : delivery.error_message ? (
-												<span className="text-red-600 truncate max-w-xs block" title={delivery.error_message}>
+												<span
+													className="text-red-600 truncate max-w-xs block"
+													title={delivery.error_message}
+												>
 													{delivery.error_message}
 												</span>
 											) : (
@@ -373,6 +419,7 @@ function DeliveryLogModal({ isOpen, onClose, endpoint }: DeliveryLogModalProps) 
 										<td className="px-4 py-3 text-right">
 											{delivery.status === 'failed' && (
 												<button
+													type="button"
 													onClick={() => retryDelivery.mutate(delivery.id)}
 													disabled={retryDelivery.isPending}
 													className="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 text-sm"
@@ -394,9 +441,12 @@ function DeliveryLogModal({ isOpen, onClose, endpoint }: DeliveryLogModalProps) 
 
 export default function Webhooks() {
 	const [showAddModal, setShowAddModal] = useState(false);
-	const [selectedEndpoint, setSelectedEndpoint] = useState<WebhookEndpoint | null>(null);
+	const [selectedEndpoint, setSelectedEndpoint] =
+		useState<WebhookEndpoint | null>(null);
 	const [showDeliveryLog, setShowDeliveryLog] = useState(false);
-	const [testingEndpointId, setTestingEndpointId] = useState<string | null>(null);
+	const [testingEndpointId, setTestingEndpointId] = useState<string | null>(
+		null,
+	);
 
 	const { data: endpoints, isLoading } = useWebhookEndpoints();
 	const updateEndpoint = useUpdateWebhookEndpoint();
@@ -421,12 +471,18 @@ export default function Webhooks() {
 		try {
 			const result = await testEndpoint.mutateAsync({ id: endpoint.id });
 			if (result.success) {
-				alert(`Test successful! Response status: ${result.response_status} (${result.duration_ms}ms)`);
+				alert(
+					`Test successful! Response status: ${result.response_status} (${result.duration_ms}ms)`,
+				);
 			} else {
-				alert(`Test failed: ${result.error_message ?? `Status ${result.response_status}`}`);
+				alert(
+					`Test failed: ${result.error_message ?? `Status ${result.response_status}`}`,
+				);
 			}
 		} catch (err) {
-			alert(`Test failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+			alert(
+				`Test failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+			);
 		} finally {
 			setTestingEndpointId(null);
 		}
@@ -449,11 +505,23 @@ export default function Webhooks() {
 					</p>
 				</div>
 				<button
+					type="button"
 					onClick={() => setShowAddModal(true)}
 					className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
 				>
-					<svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+					<svg
+						className="w-5 h-5 mr-2"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<title>Add</title>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M12 4v16m8-8H4"
+						/>
 					</svg>
 					Add Endpoint
 				</button>
@@ -491,24 +559,45 @@ export default function Webhooks() {
 							<tr>
 								<td colSpan={5} className="px-6 py-12 text-center">
 									<div className="text-gray-500 dark:text-gray-400">
-										<svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+										<svg
+											className="mx-auto h-12 w-12 mb-4"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<title>No endpoints</title>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={1}
+												d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+											/>
 										</svg>
-										<p className="text-lg font-medium">No webhook endpoints configured</p>
-										<p className="mt-1">Add an endpoint to receive real-time event notifications</p>
+										<p className="text-lg font-medium">
+											No webhook endpoints configured
+										</p>
+										<p className="mt-1">
+											Add an endpoint to receive real-time event notifications
+										</p>
 									</div>
 								</td>
 							</tr>
 						) : (
 							endpoints.map((endpoint: WebhookEndpoint) => (
-								<tr key={endpoint.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+								<tr
+									key={endpoint.id}
+									className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+								>
 									<td className="px-6 py-4">
 										<div className="font-medium text-gray-900 dark:text-white">
 											{endpoint.name}
 										</div>
 									</td>
 									<td className="px-6 py-4">
-										<div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs" title={endpoint.url}>
+										<div
+											className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs"
+											title={endpoint.url}
+										>
 											{endpoint.url}
 										</div>
 									</td>
@@ -531,9 +620,12 @@ export default function Webhooks() {
 									</td>
 									<td className="px-6 py-4">
 										<button
+											type="button"
 											onClick={() => handleToggleEnabled(endpoint)}
 											className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-												endpoint.enabled ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+												endpoint.enabled
+													? 'bg-green-500'
+													: 'bg-gray-300 dark:bg-gray-600'
 											}`}
 										>
 											<span
@@ -546,19 +638,24 @@ export default function Webhooks() {
 									<td className="px-6 py-4 text-right">
 										<div className="flex justify-end gap-2">
 											<button
+												type="button"
 												onClick={() => handleTest(endpoint)}
 												disabled={testingEndpointId === endpoint.id}
 												className="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 text-sm font-medium"
 											>
-												{testingEndpointId === endpoint.id ? 'Testing...' : 'Test'}
+												{testingEndpointId === endpoint.id
+													? 'Testing...'
+													: 'Test'}
 											</button>
 											<button
+												type="button"
 												onClick={() => handleViewLog(endpoint)}
 												className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white text-sm font-medium"
 											>
 												Log
 											</button>
 											<button
+												type="button"
 												onClick={() => handleDelete(endpoint)}
 												className="text-red-600 hover:text-red-900 dark:hover:text-red-400 text-sm font-medium"
 											>
@@ -578,11 +675,15 @@ export default function Webhooks() {
 					Webhook Signature Verification
 				</h2>
 				<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-					All webhook payloads are signed using HMAC-SHA256. Verify the signature using the{' '}
-					<code className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">X-Keldris-Signature-256</code> header.
+					All webhook payloads are signed using HMAC-SHA256. Verify the
+					signature using the{' '}
+					<code className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">
+						X-Keldris-Signature-256
+					</code>{' '}
+					header.
 				</p>
 				<pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
-{`// Example verification (Node.js)
+					{`// Example verification (Node.js)
 const crypto = require('crypto');
 
 function verifyWebhook(payload, signature, secret) {

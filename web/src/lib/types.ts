@@ -6042,7 +6042,11 @@ export type WebhookEventType =
 	| 'alert.triggered'
 	| 'alert.resolved';
 
-export type WebhookDeliveryStatus = 'pending' | 'delivered' | 'failed' | 'retrying';
+export type WebhookDeliveryStatus =
+	| 'pending'
+	| 'delivered'
+	| 'failed'
+	| 'retrying';
 
 export interface WebhookEndpoint {
 	id: string;
