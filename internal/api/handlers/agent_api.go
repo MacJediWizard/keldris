@@ -518,8 +518,8 @@ func (h *AgentAPIHandler) AcknowledgeCommand(c *gin.Context) {
 
 // CommandResultRequest is the request body for reporting command results.
 type CommandResultRequest struct {
-	Status  string                `json:"status" binding:"required,oneof=running completed failed"`
-	Result  *models.CommandResult `json:"result,omitempty"`
+	Status string                `json:"status" binding:"required,oneof=running completed failed"`
+	Result *models.CommandResult `json:"result,omitempty"`
 }
 
 // ReportCommandResult reports the result of a command execution.

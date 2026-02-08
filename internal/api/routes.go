@@ -419,7 +419,7 @@ func NewRouter(
 	userSessionsHandler := handlers.NewUserSessionsHandler(database, logger)
 	userSessionsHandler.RegisterRoutes(apiV1)
 
-// User management routes (admin)
+	// User management routes (admin)
 	usersHandler := handlers.NewUsersHandler(database, sessions, rbac, logger)
 	usersHandler.RegisterRoutes(apiV1)
 
@@ -490,6 +490,10 @@ func NewRouter(
 	databaseConnectionsHandler := handlers.NewDatabaseConnectionsHandler(database, keyManager, logger)
 	databaseConnectionsHandler.RegisterRoutes(apiV1)
 
+	// Proxmox VM backup routes
+	proxmoxHandler := handlers.NewProxmoxHandler(database, keyManager, logger)
+	proxmoxHandler.RegisterRoutes(apiV1)
+
 	// Activity feed routes
 	if cfg.ActivityFeed != nil {
 		activityHandler := handlers.NewActivityHandler(database, cfg.ActivityFeed, logger)
@@ -525,4 +529,3 @@ func NewRouter(
 	r.logger.Info().Msg("API router initialized")
 	return r, nil
 }
-

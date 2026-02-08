@@ -32,10 +32,10 @@ type DockerRegistryStore interface {
 
 // DockerRegistriesHandler handles Docker registry-related HTTP endpoints.
 type DockerRegistriesHandler struct {
-	store          DockerRegistryStore
-	keyManager     *crypto.KeyManager
-	registryMgr    *docker.RegistryManager
-	logger         zerolog.Logger
+	store       DockerRegistryStore
+	keyManager  *crypto.KeyManager
+	registryMgr *docker.RegistryManager
+	logger      zerolog.Logger
 }
 
 // NewDockerRegistriesHandler creates a new DockerRegistriesHandler.

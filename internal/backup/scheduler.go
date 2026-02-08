@@ -375,6 +375,12 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		return
 	}
 
+	// Handle Proxmox VM backup
+	if schedule.IsProxmoxBackup() {
+		s.executeProxmoxBackup(ctx, schedule, agent, logger)
+		return
+	}
+
 	// Get enabled repositories sorted by priority
 	enabledRepos := schedule.GetEnabledRepositories()
 	if len(enabledRepos) == 0 {
@@ -1002,6 +1008,57 @@ func (s *Scheduler) executePiholeBackup(ctx context.Context, schedule models.Sch
 
 	// Replicate to other repositories if configured
 	s.replicateToOtherRepos(ctx, schedule, primaryRepo, stats.SnapshotID, resticCfg, enabledRepos, logger)
+}
+
+// executeProxmoxBackup runs a Proxmox VM/container backup for the given schedule.
+func (s *Scheduler) executeProxmoxBackup(ctx context.Context, schedule models.Schedule, agent *models.Agent, logger zerolog.Logger) {
+	logger.Info().Msg("starting Proxmox VM backup")
+
+	// Verify Proxmox options are configured
+	if schedule.ProxmoxOptions == nil {
+		logger.Error().Msg("Proxmox backup options not configured")
+		return
+	}
+
+	// Get enabled repositories sorted by priority
+	enabledRepos := schedule.GetEnabledRepositories()
+	if len(enabledRepos) == 0 {
+		logger.Error().Msg("no enabled repositories for schedule")
+		return
+	}
+
+	// Use primary repository for backup record
+	primaryRepo := schedule.GetPrimaryRepository()
+	if primaryRepo == nil {
+		logger.Error().Msg("no primary repository configured")
+		return
+	}
+
+	// Create backup record
+	backup := models.NewProxmoxBackup(schedule.ID, schedule.AgentID, &primaryRepo.RepositoryID)
+	if err := s.store.CreateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Msg("failed to create backup record")
+		return
+	}
+
+	// Note: The actual Proxmox backup execution would require:
+	// 1. Loading the ProxmoxConnection from the database using schedule.ProxmoxOptions.ConnectionID
+	// 2. Creating a ProxmoxClient with the connection settings
+	// 3. Using the ProxmoxBackupService to execute vzdump backups
+	// 4. Downloading the backup files to a temp directory
+	// 5. Backing up those files to Restic
+	// 6. Cleaning up temp files
+	//
+	// For now, we log that Proxmox backup is not yet fully integrated with the scheduler.
+	logger.Warn().
+		Str("connection_id", schedule.ProxmoxOptions.ConnectionID).
+		Ints("vm_ids", schedule.ProxmoxOptions.VMIDs).
+		Ints("container_ids", schedule.ProxmoxOptions.ContainerIDs).
+		Str("mode", schedule.ProxmoxOptions.Mode).
+		Msg("Proxmox backup scheduler integration pending - manual backup via API available")
+
+	// Mark backup as failed for now until full integration
+	s.failBackup(ctx, backup, "Proxmox backup scheduler integration pending", logger)
 }
 
 // sendBackupNotification sends a notification for a backup result.

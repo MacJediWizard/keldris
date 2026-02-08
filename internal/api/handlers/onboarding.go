@@ -45,11 +45,11 @@ func (h *OnboardingHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // OnboardingStatusResponse is the response for the onboarding status endpoint.
 type OnboardingStatusResponse struct {
-	NeedsOnboarding bool                     `json:"needs_onboarding"`
-	CurrentStep     models.OnboardingStep    `json:"current_step"`
-	CompletedSteps  []models.OnboardingStep  `json:"completed_steps"`
-	Skipped         bool                     `json:"skipped"`
-	IsComplete      bool                     `json:"is_complete"`
+	NeedsOnboarding bool                    `json:"needs_onboarding"`
+	CurrentStep     models.OnboardingStep   `json:"current_step"`
+	CompletedSteps  []models.OnboardingStep `json:"completed_steps"`
+	Skipped         bool                    `json:"skipped"`
+	IsComplete      bool                    `json:"is_complete"`
 }
 
 // GetStatus returns the onboarding status for the current organization.

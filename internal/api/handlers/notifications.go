@@ -154,9 +154,9 @@ func (h *NotificationsHandler) GetChannel(c *gin.Context) {
 
 // CreateChannelRequest is the request body for creating a notification channel.
 type CreateChannelRequest struct {
-	Name   string                      `json:"name" binding:"required,min=1,max=255"`
+	Name   string                         `json:"name" binding:"required,min=1,max=255"`
 	Type   models.NotificationChannelType `json:"type" binding:"required"`
-	Config json.RawMessage             `json:"config" binding:"required"`
+	Config json.RawMessage                `json:"config" binding:"required"`
 }
 
 // CreateChannel creates a new notification channel.
@@ -343,9 +343,9 @@ func (h *NotificationsHandler) ListPreferences(c *gin.Context) {
 
 // CreatePreferenceRequest is the request body for creating a notification preference.
 type CreatePreferenceRequest struct {
-	ChannelID uuid.UUID                  `json:"channel_id" binding:"required"`
+	ChannelID uuid.UUID                    `json:"channel_id" binding:"required"`
 	EventType models.NotificationEventType `json:"event_type" binding:"required"`
-	Enabled   bool                       `json:"enabled"`
+	Enabled   bool                         `json:"enabled"`
 }
 
 // CreatePreference creates a new notification preference.
@@ -615,10 +615,10 @@ func (h *NotificationsHandler) TestChannel(c *gin.Context) {
 
 // ChannelTypeInfo represents information about a notification channel type.
 type ChannelTypeInfo struct {
-	Type        models.NotificationChannelType `json:"type"`
-	Name        string                         `json:"name"`
-	Description string                         `json:"description"`
-	ConfigFields []ChannelConfigField          `json:"config_fields"`
+	Type         models.NotificationChannelType `json:"type"`
+	Name         string                         `json:"name"`
+	Description  string                         `json:"description"`
+	ConfigFields []ChannelConfigField           `json:"config_fields"`
 }
 
 // ChannelConfigField represents a configuration field for a channel type.

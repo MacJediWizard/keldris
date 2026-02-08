@@ -867,4 +867,3 @@ func (h *ConfigExportHandler) UseTemplate(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, result)
 	}
 }
-

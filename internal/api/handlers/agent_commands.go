@@ -45,7 +45,7 @@ func (h *AgentCommandsHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // CreateCommandRequest is the request body for creating a command.
 type CreateCommandRequest struct {
-	Type    string                  `json:"type" binding:"required,oneof=backup_now update restart diagnostics"`
+	Type    string                 `json:"type" binding:"required,oneof=backup_now update restart diagnostics"`
 	Payload *models.CommandPayload `json:"payload,omitempty"`
 }
 

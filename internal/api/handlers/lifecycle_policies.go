@@ -71,20 +71,20 @@ func (h *LifecyclePoliciesHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // LifecyclePolicyResponse represents a lifecycle policy in API responses.
 type LifecyclePolicyResponse struct {
-	ID              string                          `json:"id"`
-	Name            string                          `json:"name"`
-	Description     string                          `json:"description,omitempty"`
-	Status          string                          `json:"status"`
+	ID              string                           `json:"id"`
+	Name            string                           `json:"name"`
+	Description     string                           `json:"description,omitempty"`
+	Status          string                           `json:"status"`
 	Rules           []models.ClassificationRetention `json:"rules"`
-	RepositoryIDs   []string                        `json:"repository_ids,omitempty"`
-	ScheduleIDs     []string                        `json:"schedule_ids,omitempty"`
-	LastEvaluatedAt *string                         `json:"last_evaluated_at,omitempty"`
-	LastDeletionAt  *string                         `json:"last_deletion_at,omitempty"`
-	DeletionCount   int64                           `json:"deletion_count"`
-	BytesReclaimed  int64                           `json:"bytes_reclaimed"`
-	CreatedBy       string                          `json:"created_by"`
-	CreatedAt       string                          `json:"created_at"`
-	UpdatedAt       string                          `json:"updated_at"`
+	RepositoryIDs   []string                         `json:"repository_ids,omitempty"`
+	ScheduleIDs     []string                         `json:"schedule_ids,omitempty"`
+	LastEvaluatedAt *string                          `json:"last_evaluated_at,omitempty"`
+	LastDeletionAt  *string                          `json:"last_deletion_at,omitempty"`
+	DeletionCount   int64                            `json:"deletion_count"`
+	BytesReclaimed  int64                            `json:"bytes_reclaimed"`
+	CreatedBy       string                           `json:"created_by"`
+	CreatedAt       string                           `json:"created_at"`
+	UpdatedAt       string                           `json:"updated_at"`
 }
 
 func (h *LifecyclePoliciesHandler) toResponse(p *models.LifecyclePolicy) LifecyclePolicyResponse {
