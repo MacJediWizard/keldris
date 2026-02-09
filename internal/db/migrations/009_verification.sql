@@ -1,4 +1,4 @@
--- 002_verification.sql
+-- 009_verification.sql
 -- Migration: Add verification tables for backup integrity verification
 
 -- Verification schedules define when and how to verify repositories

@@ -1,4 +1,4 @@
--- 002_add_dr_tables.sql
+-- 012_add_dr_tables.sql
 -- Migration: Add disaster recovery runbook and test tables
 
 -- DR Runbooks - Templates for disaster recovery procedures

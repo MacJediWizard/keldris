@@ -1,4 +1,4 @@
--- 002_repository_keys.sql
+-- 005_repository_keys.sql
 -- Migration: Add repository encryption keys table
 
 CREATE TABLE repository_keys (

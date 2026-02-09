@@ -599,8 +599,8 @@ info:
   description: Keldris - Keeper of your data. Self-hosted backup solution with OIDC
     authentication, Restic backup engine, and cloud storage support.
   license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
   termsOfService: https://keldris.io/terms
   title: Keldris API
   version: "1.0"
