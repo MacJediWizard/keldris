@@ -754,3 +754,5 @@ export function CostEstimation() {
 		</div>
 	);
 }
+
+export default CostEstimation;

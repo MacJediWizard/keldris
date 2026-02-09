@@ -372,3 +372,5 @@ export function RepositoryStatsDetail() {
 		</div>
 	);
 }
+
+export default RepositoryStatsDetail;

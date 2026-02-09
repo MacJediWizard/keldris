@@ -340,3 +340,5 @@ export function StorageStats() {
 		</div>
 	);
 }
+
+export default StorageStats;

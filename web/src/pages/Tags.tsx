@@ -474,3 +474,5 @@ export function Tags() {
 		</div>
 	);
 }
+
+export default Tags;

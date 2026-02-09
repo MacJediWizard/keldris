@@ -1210,3 +1210,5 @@ export function Schedules() {
 		</div>
 	);
 }
+
+export default Schedules;

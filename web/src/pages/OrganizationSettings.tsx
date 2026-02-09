@@ -334,3 +334,5 @@ export function OrganizationSettings() {
 		</div>
 	);
 }
+
+export default OrganizationSettings;
