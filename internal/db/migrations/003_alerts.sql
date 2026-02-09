@@ -1,4 +1,4 @@
--- 002_alerts.sql
+-- 003_alerts.sql
 -- Migration: Add monitoring alerts and alert rules
 
 -- Alert rules define conditions that trigger alerts

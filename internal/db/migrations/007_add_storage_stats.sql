@@ -1,4 +1,4 @@
--- 002_add_storage_stats.sql
+-- 007_add_storage_stats.sql
 -- Migration: Add storage statistics table for tracking repository storage efficiency
 
 CREATE TABLE storage_stats (

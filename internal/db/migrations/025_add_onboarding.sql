@@ -1,4 +1,4 @@
--- 012_add_onboarding.sql
+-- 025_add_onboarding.sql
 -- Migration: Add onboarding progress tracking for organizations
 
 -- Track onboarding progress per organization
