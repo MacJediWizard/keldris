@@ -156,3 +156,5 @@ export function NewOrganization() {
 		</div>
 	);
 }
+
+export default NewOrganization;

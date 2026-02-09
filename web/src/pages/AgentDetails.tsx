@@ -1373,3 +1373,5 @@ export function AgentDetails() {
 		</div>
 	);
 }
+
+export default AgentDetails;

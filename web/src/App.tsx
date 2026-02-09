@@ -1,32 +1,39 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
-import { AgentDetails } from './pages/AgentDetails';
-import { AgentGroups } from './pages/AgentGroups';
-import { Agents } from './pages/Agents';
-import { Alerts } from './pages/Alerts';
-import { AuditLogs } from './pages/AuditLogs';
-import { Backups } from './pages/Backups';
-import { CostEstimation } from './pages/CostEstimation';
-import { DRRunbooks } from './pages/DRRunbooks';
-import { Dashboard } from './pages/Dashboard';
-import { FileHistory } from './pages/FileHistory';
-import { Maintenance } from './pages/Maintenance';
-import { NewOrganization } from './pages/NewOrganization';
-import { Notifications } from './pages/Notifications';
-import { Onboarding } from './pages/Onboarding';
-import { OrganizationMembers } from './pages/OrganizationMembers';
-import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
-import { OrganizationSettings } from './pages/OrganizationSettings';
-import { Policies } from './pages/Policies';
-import Reports from './pages/Reports';
-import { Repositories } from './pages/Repositories';
-import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
-import { Restore } from './pages/Restore';
-import { Schedules } from './pages/Schedules';
-import { SnapshotCompare } from './pages/SnapshotCompare';
-import { StorageStats } from './pages/StorageStats';
-import { Tags } from './pages/Tags';
+import { LoadingSpinner } from './components/ui/LoadingSpinner';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Agents = lazy(() => import('./pages/Agents'));
+const AgentDetails = lazy(() => import('./pages/AgentDetails'));
+const AgentGroups = lazy(() => import('./pages/AgentGroups'));
+const Repositories = lazy(() => import('./pages/Repositories'));
+const Schedules = lazy(() => import('./pages/Schedules'));
+const Policies = lazy(() => import('./pages/Policies'));
+const Backups = lazy(() => import('./pages/Backups'));
+const DRRunbooks = lazy(() => import('./pages/DRRunbooks'));
+const Restore = lazy(() => import('./pages/Restore'));
+const FileHistory = lazy(() => import('./pages/FileHistory'));
+const SnapshotCompare = lazy(() => import('./pages/SnapshotCompare'));
+const Alerts = lazy(() => import('./pages/Alerts'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Reports = lazy(() => import('./pages/Reports'));
+const AuditLogs = lazy(() => import('./pages/AuditLogs'));
+const StorageStats = lazy(() => import('./pages/StorageStats'));
+const RepositoryStatsDetail = lazy(
+	() => import('./pages/RepositoryStatsDetail'),
+);
+const Tags = lazy(() => import('./pages/Tags'));
+const CostEstimation = lazy(() => import('./pages/CostEstimation'));
+const OrganizationMembers = lazy(() => import('./pages/OrganizationMembers'));
+const OrganizationSettings = lazy(() => import('./pages/OrganizationSettings'));
+const OrganizationSSOSettings = lazy(
+	() => import('./pages/OrganizationSSOSettings'),
+);
+const Maintenance = lazy(() => import('./pages/Maintenance'));
+const NewOrganization = lazy(() => import('./pages/NewOrganization'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -48,45 +55,50 @@ function App() {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<BrowserRouter>
-				<Routes>
-					<Route path="/" element={<Layout />}>
-						<Route index element={<Dashboard />} />
-						<Route path="agents" element={<Agents />} />
-						<Route path="agents/:id" element={<AgentDetails />} />
-						<Route path="agent-groups" element={<AgentGroups />} />
-						<Route path="repositories" element={<Repositories />} />
-						<Route path="schedules" element={<Schedules />} />
-						<Route path="policies" element={<Policies />} />
-						<Route path="backups" element={<Backups />} />
-						<Route path="dr-runbooks" element={<DRRunbooks />} />
-						<Route path="restore" element={<Restore />} />
-						<Route path="file-history" element={<FileHistory />} />
-						<Route path="snapshots/compare" element={<SnapshotCompare />} />
-						<Route path="alerts" element={<Alerts />} />
-						<Route path="notifications" element={<Notifications />} />
-						<Route path="reports" element={<Reports />} />
-						<Route path="audit-logs" element={<AuditLogs />} />
-						<Route path="stats" element={<StorageStats />} />
-						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
-						<Route path="tags" element={<Tags />} />
-						<Route path="costs" element={<CostEstimation />} />
-						<Route
-							path="organization/members"
-							element={<OrganizationMembers />}
-						/>
-						<Route
-							path="organization/settings"
-							element={<OrganizationSettings />}
-						/>
-						<Route
-							path="organization/sso"
-							element={<OrganizationSSOSettings />}
-						/>
-						<Route path="organization/maintenance" element={<Maintenance />} />
-						<Route path="organization/new" element={<NewOrganization />} />
-						<Route path="onboarding" element={<Onboarding />} />
-					</Route>
-				</Routes>
+				<Suspense fallback={<LoadingSpinner />}>
+					<Routes>
+						<Route path="/" element={<Layout />}>
+							<Route index element={<Dashboard />} />
+							<Route path="agents" element={<Agents />} />
+							<Route path="agents/:id" element={<AgentDetails />} />
+							<Route path="agent-groups" element={<AgentGroups />} />
+							<Route path="repositories" element={<Repositories />} />
+							<Route path="schedules" element={<Schedules />} />
+							<Route path="policies" element={<Policies />} />
+							<Route path="backups" element={<Backups />} />
+							<Route path="dr-runbooks" element={<DRRunbooks />} />
+							<Route path="restore" element={<Restore />} />
+							<Route path="file-history" element={<FileHistory />} />
+							<Route path="snapshots/compare" element={<SnapshotCompare />} />
+							<Route path="alerts" element={<Alerts />} />
+							<Route path="notifications" element={<Notifications />} />
+							<Route path="reports" element={<Reports />} />
+							<Route path="audit-logs" element={<AuditLogs />} />
+							<Route path="stats" element={<StorageStats />} />
+							<Route path="stats/:id" element={<RepositoryStatsDetail />} />
+							<Route path="tags" element={<Tags />} />
+							<Route path="costs" element={<CostEstimation />} />
+							<Route
+								path="organization/members"
+								element={<OrganizationMembers />}
+							/>
+							<Route
+								path="organization/settings"
+								element={<OrganizationSettings />}
+							/>
+							<Route
+								path="organization/sso"
+								element={<OrganizationSSOSettings />}
+							/>
+							<Route
+								path="organization/maintenance"
+								element={<Maintenance />}
+							/>
+							<Route path="organization/new" element={<NewOrganization />} />
+							<Route path="onboarding" element={<Onboarding />} />
+						</Route>
+					</Routes>
+				</Suspense>
 			</BrowserRouter>
 		</QueryClientProvider>
 	);
