@@ -1,4 +1,4 @@
--- 002_add_bandwidth_controls.sql
+-- 010_add_bandwidth_controls.sql
 -- Migration: Add bandwidth and time window controls for schedules
 
 ALTER TABLE schedules ADD COLUMN bandwidth_limit_kbps INTEGER;
