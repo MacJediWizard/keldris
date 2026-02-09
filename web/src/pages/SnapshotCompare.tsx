@@ -593,3 +593,5 @@ export function SnapshotCompare() {
 		</div>
 	);
 }
+
+export default SnapshotCompare;

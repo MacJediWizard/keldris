@@ -519,3 +519,5 @@ export function OrganizationMembers() {
 		</div>
 	);
 }
+
+export default OrganizationMembers;

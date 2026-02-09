@@ -926,3 +926,5 @@ export function Policies() {
 		</div>
 	);
 }
+
+export default Policies;

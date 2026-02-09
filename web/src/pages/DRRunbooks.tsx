@@ -692,3 +692,5 @@ export function DRRunbooks() {
 		</div>
 	);
 }
+
+export default DRRunbooks;
