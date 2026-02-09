@@ -126,15 +126,80 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 		return
 	}
 
-	// Only handle email channels for now
-	if channel.Type != models.ChannelTypeEmail {
-		s.logger.Debug().
-			Str("channel_type", string(channel.Type)).
-			Msg("skipping non-email channel")
-		return
+	var subject string
+	var severity string
+	if result.Success {
+		subject = fmt.Sprintf("Backup Successful: %s - %s", result.Hostname, result.ScheduleName)
+		severity = "info"
+	} else {
+		subject = fmt.Sprintf("Backup Failed: %s - %s", result.Hostname, result.ScheduleName)
+		severity = "error"
 	}
 
-	// Parse email config
+	switch channel.Type {
+	case models.ChannelTypeEmail:
+		s.sendBackupEmail(ctx, channel, pref, result, subject)
+
+	case models.ChannelTypeSlack:
+		var cfg models.SlackChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse slack config")
+			return
+		}
+		log := models.NewNotificationLog(result.OrgID, &channel.ID, string(pref.EventType), cfg.WebhookURL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		var body string
+		if result.Success {
+			duration := result.CompletedAt.Sub(result.StartedAt)
+			body = fmt.Sprintf("*Host:* %s\n*Schedule:* %s\n*Snapshot:* %s\n*Duration:* %s\n*Size:* %s",
+				result.Hostname, result.ScheduleName, result.SnapshotID, formatDuration(duration), FormatBytes(result.SizeBytes))
+		} else {
+			body = fmt.Sprintf("*Host:* %s\n*Schedule:* %s\n*Error:* %s",
+				result.Hostname, result.ScheduleName, result.ErrorMessage)
+		}
+		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: severity}
+		sendErr := NewSlackSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
+
+	case models.ChannelTypeWebhook:
+		var cfg models.WebhookChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse webhook config")
+			return
+		}
+		log := models.NewNotificationLog(result.OrgID, &channel.ID, string(pref.EventType), cfg.URL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		payload := WebhookPayload{EventType: string(pref.EventType), Timestamp: time.Now(), Data: result}
+		sendErr := NewWebhookSender(s.logger).Send(ctx, cfg.URL, payload, cfg.Secret)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.URL)
+
+	case models.ChannelTypePagerDuty:
+		var cfg models.PagerDutyChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse pagerduty config")
+			return
+		}
+		log := models.NewNotificationLog(result.OrgID, &channel.ID, string(pref.EventType), "pagerduty", subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		event := PagerDutyEvent{Summary: subject, Source: result.Hostname, Severity: severity, Group: "backup"}
+		sendErr := NewPagerDutySender(s.logger).Send(ctx, cfg.RoutingKey, event)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), "pagerduty")
+
+	default:
+		s.logger.Warn().
+			Str("channel_type", string(channel.Type)).
+			Msg("unsupported notification channel type")
+	}
+}
+
+// sendBackupEmail sends a backup notification via email (extracted from original logic).
+func (s *Service) sendBackupEmail(ctx context.Context, channel *models.NotificationChannel, pref *models.NotificationPreference, result BackupResult, subject string) {
 	var emailConfig models.EmailChannelConfig
 	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
 		s.logger.Error().Err(err).
@@ -143,7 +208,6 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 		return
 	}
 
-	// Create email service
 	smtpConfig := SMTPConfig{
 		Host:     emailConfig.Host,
 		Port:     emailConfig.Port,
@@ -159,23 +223,13 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 		return
 	}
 
-	// Get recipient from config (use the from address as default recipient)
 	recipients := []string{emailConfig.From}
-
-	// Create log entry
-	var subject string
-	if result.Success {
-		subject = fmt.Sprintf("Backup Successful: %s - %s", result.Hostname, result.ScheduleName)
-	} else {
-		subject = fmt.Sprintf("Backup Failed: %s - %s", result.Hostname, result.ScheduleName)
-	}
 
 	log := models.NewNotificationLog(result.OrgID, &channel.ID, string(pref.EventType), recipients[0], subject)
 	if err := s.store.CreateNotificationLog(ctx, log); err != nil {
 		s.logger.Error().Err(err).Msg("failed to create notification log")
 	}
 
-	// Send the email
 	var sendErr error
 	if result.Success {
 		duration := result.CompletedAt.Sub(result.StartedAt)
@@ -202,25 +256,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 		sendErr = emailService.SendBackupFailed(recipients, data)
 	}
 
-	// Update log with result
-	if sendErr != nil {
-		log.MarkFailed(sendErr.Error())
-		s.logger.Error().Err(sendErr).
-			Str("channel_id", channel.ID.String()).
-			Str("recipient", recipients[0]).
-			Msg("failed to send email notification")
-	} else {
-		log.MarkSent()
-		s.logger.Info().
-			Str("channel_id", channel.ID.String()).
-			Str("recipient", recipients[0]).
-			Str("event_type", string(pref.EventType)).
-			Msg("email notification sent")
-	}
-
-	if err := s.store.UpdateNotificationLog(ctx, log); err != nil {
-		s.logger.Error().Err(err).Msg("failed to update notification log")
-	}
+	s.finalizeLog(ctx, log, sendErr, channel.ID.String(), recipients[0])
 }
 
 // sendAgentOfflineNotification sends an agent offline notification.
@@ -233,15 +269,64 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 		return
 	}
 
-	// Only handle email channels for now
-	if channel.Type != models.ChannelTypeEmail {
-		s.logger.Debug().
-			Str("channel_type", string(channel.Type)).
-			Msg("skipping non-email channel")
-		return
-	}
+	subject := fmt.Sprintf("Agent Offline: %s", data.Hostname)
 
-	// Parse email config
+	switch channel.Type {
+	case models.ChannelTypeEmail:
+		s.sendAgentOfflineEmail(ctx, channel, pref, data, orgID, subject)
+
+	case models.ChannelTypeSlack:
+		var cfg models.SlackChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse slack config")
+			return
+		}
+		log := models.NewNotificationLog(orgID, &channel.ID, string(models.EventAgentOffline), cfg.WebhookURL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		body := fmt.Sprintf("*Host:* %s\n*Agent ID:* %s\n*Offline for:* %s", data.Hostname, data.AgentID, data.OfflineSince)
+		msg := NotificationMessage{Title: subject, Body: body, EventType: string(models.EventAgentOffline), Severity: "warning"}
+		sendErr := NewSlackSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
+
+	case models.ChannelTypeWebhook:
+		var cfg models.WebhookChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse webhook config")
+			return
+		}
+		log := models.NewNotificationLog(orgID, &channel.ID, string(models.EventAgentOffline), cfg.URL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		payload := WebhookPayload{EventType: string(models.EventAgentOffline), Timestamp: time.Now(), Data: data}
+		sendErr := NewWebhookSender(s.logger).Send(ctx, cfg.URL, payload, cfg.Secret)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.URL)
+
+	case models.ChannelTypePagerDuty:
+		var cfg models.PagerDutyChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse pagerduty config")
+			return
+		}
+		log := models.NewNotificationLog(orgID, &channel.ID, string(models.EventAgentOffline), "pagerduty", subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		event := PagerDutyEvent{Summary: subject, Source: data.Hostname, Severity: "warning", Group: "agent"}
+		sendErr := NewPagerDutySender(s.logger).Send(ctx, cfg.RoutingKey, event)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), "pagerduty")
+
+	default:
+		s.logger.Warn().
+			Str("channel_type", string(channel.Type)).
+			Msg("unsupported notification channel type")
+	}
+}
+
+// sendAgentOfflineEmail sends an agent offline notification via email.
+func (s *Service) sendAgentOfflineEmail(ctx context.Context, channel *models.NotificationChannel, pref *models.NotificationPreference, data AgentOfflineData, orgID uuid.UUID, subject string) {
 	var emailConfig models.EmailChannelConfig
 	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
 		s.logger.Error().Err(err).
@@ -250,7 +335,6 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 		return
 	}
 
-	// Create email service
 	smtpConfig := SMTPConfig{
 		Host:     emailConfig.Host,
 		Port:     emailConfig.Port,
@@ -267,7 +351,6 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 	}
 
 	recipients := []string{emailConfig.From}
-	subject := fmt.Sprintf("Agent Offline: %s", data.Hostname)
 
 	log := models.NewNotificationLog(orgID, &channel.ID, string(models.EventAgentOffline), recipients[0], subject)
 	if err := s.store.CreateNotificationLog(ctx, log); err != nil {
@@ -275,25 +358,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 	}
 
 	sendErr := emailService.SendAgentOffline(recipients, data)
-
-	if sendErr != nil {
-		log.MarkFailed(sendErr.Error())
-		s.logger.Error().Err(sendErr).
-			Str("channel_id", channel.ID.String()).
-			Str("recipient", recipients[0]).
-			Msg("failed to send agent offline notification")
-	} else {
-		log.MarkSent()
-		s.logger.Info().
-			Str("channel_id", channel.ID.String()).
-			Str("recipient", recipients[0]).
-			Str("agent_id", data.AgentID).
-			Msg("agent offline notification sent")
-	}
-
-	if err := s.store.UpdateNotificationLog(ctx, log); err != nil {
-		s.logger.Error().Err(err).Msg("failed to update notification log")
-	}
+	s.finalizeLog(ctx, log, sendErr, channel.ID.String(), recipients[0])
 }
 
 // NotifyMaintenanceScheduled sends notifications for an upcoming maintenance window.
@@ -338,15 +403,65 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 		return
 	}
 
-	// Only handle email channels for now
-	if channel.Type != models.ChannelTypeEmail {
-		s.logger.Debug().
-			Str("channel_type", string(channel.Type)).
-			Msg("skipping non-email channel")
-		return
-	}
+	subject := fmt.Sprintf("Scheduled Maintenance: %s", data.Title)
 
-	// Parse email config
+	switch channel.Type {
+	case models.ChannelTypeEmail:
+		s.sendMaintenanceEmail(ctx, channel, pref, data, orgID, subject)
+
+	case models.ChannelTypeSlack:
+		var cfg models.SlackChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse slack config")
+			return
+		}
+		log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), cfg.WebhookURL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		body := fmt.Sprintf("*%s*\n%s\n*Starts:* %s\n*Ends:* %s\n*Duration:* %s",
+			data.Title, data.Message, data.StartsAt.Format(time.RFC822), data.EndsAt.Format(time.RFC822), data.Duration)
+		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: "warning"}
+		sendErr := NewSlackSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
+
+	case models.ChannelTypeWebhook:
+		var cfg models.WebhookChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse webhook config")
+			return
+		}
+		log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), cfg.URL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		payload := WebhookPayload{EventType: string(pref.EventType), Timestamp: time.Now(), Data: data}
+		sendErr := NewWebhookSender(s.logger).Send(ctx, cfg.URL, payload, cfg.Secret)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.URL)
+
+	case models.ChannelTypePagerDuty:
+		var cfg models.PagerDutyChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse pagerduty config")
+			return
+		}
+		log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), "pagerduty", subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		event := PagerDutyEvent{Summary: subject, Source: "keldris", Severity: "info", Group: "maintenance"}
+		sendErr := NewPagerDutySender(s.logger).Send(ctx, cfg.RoutingKey, event)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), "pagerduty")
+
+	default:
+		s.logger.Warn().
+			Str("channel_type", string(channel.Type)).
+			Msg("unsupported notification channel type")
+	}
+}
+
+// sendMaintenanceEmail sends a maintenance notification via email.
+func (s *Service) sendMaintenanceEmail(ctx context.Context, channel *models.NotificationChannel, pref *models.NotificationPreference, data MaintenanceScheduledData, orgID uuid.UUID, subject string) {
 	var emailConfig models.EmailChannelConfig
 	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
 		s.logger.Error().Err(err).
@@ -355,7 +470,6 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 		return
 	}
 
-	// Create email service
 	smtpConfig := SMTPConfig{
 		Host:     emailConfig.Host,
 		Port:     emailConfig.Port,
@@ -371,33 +485,32 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 		return
 	}
 
-	// Get recipient from config
 	recipients := []string{emailConfig.From}
 
-	// Create log entry
-	subject := fmt.Sprintf("Scheduled Maintenance: %s", data.Title)
 	log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), recipients[0], subject)
 	if err := s.store.CreateNotificationLog(ctx, log); err != nil {
 		s.logger.Error().Err(err).Msg("failed to create notification log")
 	}
 
-	// Send the email
 	sendErr := emailService.SendMaintenanceScheduled(recipients, data)
+	s.finalizeLog(ctx, log, sendErr, channel.ID.String(), recipients[0])
+}
 
-	// Update log with result
+// finalizeLog updates a notification log with the send result.
+func (s *Service) finalizeLog(ctx context.Context, log *models.NotificationLog, sendErr error, channelID, recipient string) {
 	if sendErr != nil {
 		log.MarkFailed(sendErr.Error())
 		s.logger.Error().Err(sendErr).
-			Str("channel_id", channel.ID.String()).
-			Str("recipient", recipients[0]).
-			Msg("failed to send maintenance notification")
+			Str("channel_id", channelID).
+			Str("recipient", recipient).
+			Msg("failed to send notification")
 	} else {
 		log.MarkSent()
 		s.logger.Info().
-			Str("channel_id", channel.ID.String()).
-			Str("recipient", recipients[0]).
-			Str("title", data.Title).
-			Msg("maintenance notification sent")
+			Str("channel_id", channelID).
+			Str("recipient", recipient).
+			Str("event_type", log.EventType).
+			Msg("notification sent")
 	}
 
 	if err := s.store.UpdateNotificationLog(ctx, log); err != nil {
