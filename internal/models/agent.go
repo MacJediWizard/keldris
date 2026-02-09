@@ -4,8 +4,12 @@ import (
 	"encoding/json"
 	"time"
 
+	pkgmodels "github.com/MacJediWizard/keldris/pkg/models"
 	"github.com/google/uuid"
 )
+
+// OSInfo is a type alias for the shared OSInfo type in pkg/models.
+type OSInfo = pkgmodels.OSInfo
 
 // AgentStatus represents the current status of an agent.
 type AgentStatus string
@@ -20,14 +24,6 @@ const (
 	// AgentStatusDisabled indicates the agent has been manually disabled.
 	AgentStatusDisabled AgentStatus = "disabled"
 )
-
-// OSInfo contains operating system information from the agent.
-type OSInfo struct {
-	OS       string `json:"os" example:"linux"`
-	Arch     string `json:"arch" example:"amd64"`
-	Hostname string `json:"hostname" example:"backup-server-01"`
-	Version  string `json:"version,omitempty" example:"Ubuntu 22.04"`
-}
 
 // HealthStatus represents the overall health status of an agent.
 type HealthStatus string
