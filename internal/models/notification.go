@@ -138,6 +138,22 @@ type EmailChannelConfig struct {
 	TLS      bool   `json:"tls"`
 }
 
+// SlackChannelConfig represents Slack webhook configuration
+type SlackChannelConfig struct {
+	WebhookURL string `json:"webhook_url"`
+}
+
+// WebhookChannelConfig represents generic webhook configuration
+type WebhookChannelConfig struct {
+	URL    string `json:"url"`
+	Secret string `json:"secret"`
+}
+
+// PagerDutyChannelConfig represents PagerDuty integration configuration
+type PagerDutyChannelConfig struct {
+	RoutingKey string `json:"routing_key"`
+}
+
 // CreateNotificationChannelRequest represents a request to create a notification channel
 type CreateNotificationChannelRequest struct {
 	Name   string                  `json:"name" binding:"required"`

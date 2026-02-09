@@ -1,0 +1,149 @@
+package notifications
+
+import (
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/rs/zerolog"
+)
+
+func TestWebhookSender_Send(t *testing.T) {
+	var receivedPayload WebhookPayload
+	var receivedSig string
+
+	secret := "test-secret"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		receivedSig = r.Header.Get("X-Keldris-Signature")
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("failed to read body: %v", err)
+		}
+		if err := json.Unmarshal(body, &receivedPayload); err != nil {
+			t.Fatalf("failed to unmarshal body: %v", err)
+		}
+
+		// Verify HMAC
+		mac := hmac.New(sha256.New, []byte(secret))
+		mac.Write(body)
+		expectedSig := "sha256=" + hex.EncodeToString(mac.Sum(nil))
+		if receivedSig != expectedSig {
+			t.Errorf("signature mismatch: got %q, want %q", receivedSig, expectedSig)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	sender := NewWebhookSender(zerolog.Nop())
+	payload := WebhookPayload{
+		EventType: "backup_success",
+		Timestamp: time.Now(),
+		Data:      map[string]string{"hostname": "server1"},
+	}
+
+	err := sender.Send(context.Background(), server.URL, payload, secret)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if receivedPayload.EventType != "backup_success" {
+		t.Errorf("expected event_type backup_success, got %s", receivedPayload.EventType)
+	}
+	if receivedSig == "" {
+		t.Error("expected X-Keldris-Signature header to be set")
+	}
+}
+
+func TestWebhookSender_SendNoSecret(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sig := r.Header.Get("X-Keldris-Signature")
+		if sig != "" {
+			t.Errorf("expected no signature header, got %s", sig)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	sender := NewWebhookSender(zerolog.Nop())
+	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
+
+	err := sender.Send(context.Background(), server.URL, payload, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestWebhookSender_Retry(t *testing.T) {
+	var attempts atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := attempts.Add(1)
+		if n < 3 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	sender := NewWebhookSender(zerolog.Nop())
+	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
+
+	err := sender.Send(context.Background(), server.URL, payload, "")
+	if err != nil {
+		t.Fatalf("expected success after retries, got: %v", err)
+	}
+	if got := attempts.Load(); got != 3 {
+		t.Errorf("expected 3 attempts, got %d", got)
+	}
+}
+
+func TestWebhookSender_RetryExhausted(t *testing.T) {
+	var attempts atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts.Add(1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	sender := NewWebhookSender(zerolog.Nop())
+	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
+
+	err := sender.Send(context.Background(), server.URL, payload, "")
+	if err == nil {
+		t.Fatal("expected error after exhausting retries")
+	}
+	if got := attempts.Load(); got != 3 {
+		t.Errorf("expected 3 attempts, got %d", got)
+	}
+}
+
+func TestComputeHMAC(t *testing.T) {
+	payload := []byte(`{"test":"data"}`)
+	secret := "my-secret"
+
+	result := computeHMAC(payload, secret)
+
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(payload)
+	expected := "sha256=" + hex.EncodeToString(mac.Sum(nil))
+
+	if result != expected {
+		t.Errorf("computeHMAC() = %q, want %q", result, expected)
+	}
+}
