@@ -452,3 +452,5 @@ export function Maintenance() {
 		</div>
 	);
 }
+
+export default Maintenance;

@@ -553,3 +553,5 @@ export function Agents() {
 		</div>
 	);
 }
+
+export default Agents;

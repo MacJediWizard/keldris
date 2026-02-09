@@ -585,3 +585,5 @@ export function FileHistory() {
 		</div>
 	);
 }
+
+export default FileHistory;

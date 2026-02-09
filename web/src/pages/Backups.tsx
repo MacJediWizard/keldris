@@ -702,3 +702,5 @@ export function Backups() {
 		</div>
 	);
 }
+
+export default Backups;

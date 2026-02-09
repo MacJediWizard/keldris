@@ -1371,3 +1371,5 @@ export function Repositories() {
 		</div>
 	);
 }
+
+export default Repositories;

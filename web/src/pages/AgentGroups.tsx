@@ -747,3 +747,5 @@ export function AgentGroups() {
 		</div>
 	);
 }
+
+export default AgentGroups;

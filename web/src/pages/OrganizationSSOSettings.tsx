@@ -575,3 +575,5 @@ export function OrganizationSSOSettings() {
 		</div>
 	);
 }
+
+export default OrganizationSSOSettings;
