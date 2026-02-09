@@ -14,6 +14,8 @@ const (
 	ChannelTypeSlack     NotificationChannelType = "slack"
 	ChannelTypeWebhook   NotificationChannelType = "webhook"
 	ChannelTypePagerDuty NotificationChannelType = "pagerduty"
+	ChannelTypeTeams     NotificationChannelType = "teams"
+	ChannelTypeDiscord   NotificationChannelType = "discord"
 )
 
 // NotificationEventType represents the type of notification event
@@ -152,6 +154,16 @@ type WebhookChannelConfig struct {
 // PagerDutyChannelConfig represents PagerDuty integration configuration
 type PagerDutyChannelConfig struct {
 	RoutingKey string `json:"routing_key"`
+}
+
+// TeamsChannelConfig represents Microsoft Teams webhook configuration
+type TeamsChannelConfig struct {
+	WebhookURL string `json:"webhook_url"`
+}
+
+// DiscordChannelConfig represents Discord webhook configuration
+type DiscordChannelConfig struct {
+	WebhookURL string `json:"webhook_url"`
 }
 
 // CreateNotificationChannelRequest represents a request to create a notification channel
