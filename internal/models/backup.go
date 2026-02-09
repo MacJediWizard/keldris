@@ -3,21 +3,18 @@ package models
 import (
 	"time"
 
+	pkgmodels "github.com/MacJediWizard/keldris/pkg/models"
 	"github.com/google/uuid"
 )
 
-// BackupStatus represents the current status of a backup.
-type BackupStatus string
+// BackupStatus is a type alias for the shared BackupStatus type in pkg/models.
+type BackupStatus = pkgmodels.BackupStatus
 
 const (
-	// BackupStatusRunning indicates the backup is in progress.
-	BackupStatusRunning BackupStatus = "running"
-	// BackupStatusCompleted indicates the backup completed successfully.
-	BackupStatusCompleted BackupStatus = "completed"
-	// BackupStatusFailed indicates the backup failed.
-	BackupStatusFailed BackupStatus = "failed"
-	// BackupStatusCanceled indicates the backup was canceled.
-	BackupStatusCanceled BackupStatus = "canceled"
+	BackupStatusRunning   = pkgmodels.BackupStatusRunning
+	BackupStatusCompleted = pkgmodels.BackupStatusCompleted
+	BackupStatusFailed    = pkgmodels.BackupStatusFailed
+	BackupStatusCanceled  = pkgmodels.BackupStatusCanceled
 )
 
 // Backup represents a single backup execution record.
