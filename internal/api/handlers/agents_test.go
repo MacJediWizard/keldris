@@ -447,4 +447,630 @@ func TestFleetHealth(t *testing.T) {
 			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
 		}
 	})
+
+	t.Run("store error", func(t *testing.T) {
+		noHealthStore := &mockAgentStore{
+			agentByID: map[uuid.UUID]*models.Agent{},
+		}
+		r := setupAgentTestRouter(noHealthStore, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/fleet-health", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected status 500, got %d", w.Code)
+		}
+	})
+}
+
+func TestHeartbeat(t *testing.T) {
+	orgID := uuid.New()
+	agentID := uuid.New()
+	otherOrgID := uuid.New()
+
+	agent := &models.Agent{
+		ID:       agentID,
+		OrgID:    orgID,
+		Hostname: "heartbeat-host",
+		Status:   models.AgentStatusPending,
+	}
+
+	store := &mockAgentStore{
+		agents:    []*models.Agent{agent},
+		agentByID: map[uuid.UUID]*models.Agent{agentID: agent},
+	}
+
+	user := &auth.SessionUser{
+		ID:           uuid.New(),
+		CurrentOrgID: orgID,
+	}
+
+	t.Run("success with os info", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		body := `{"os_info":{"os":"linux","arch":"amd64","version":"6.1.0"}}`
+		req, _ := http.NewRequest("POST", "/api/v1/agents/"+agentID.String()+"/heartbeat", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("success with empty body", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		body := `{}`
+		req, _ := http.NewRequest("POST", "/api/v1/agents/"+agentID.String()+"/heartbeat", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		body := `{}`
+		req, _ := http.NewRequest("POST", "/api/v1/agents/not-a-uuid/heartbeat", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected status 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		body := `{}`
+		req, _ := http.NewRequest("POST", "/api/v1/agents/"+uuid.New().String()+"/heartbeat", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		wrongUser := &auth.SessionUser{
+			ID:           uuid.New(),
+			CurrentOrgID: otherOrgID,
+		}
+		r := setupAgentTestRouter(store, wrongUser)
+		w := httptest.NewRecorder()
+		body := `{}`
+		req, _ := http.NewRequest("POST", "/api/v1/agents/"+agentID.String()+"/heartbeat", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("store update error", func(t *testing.T) {
+		errStore := &mockAgentStore{
+			agents:    []*models.Agent{agent},
+			agentByID: map[uuid.UUID]*models.Agent{agentID: agent},
+			updateErr: errors.New("db error"),
+		}
+		r := setupAgentTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		body := `{}`
+		req, _ := http.NewRequest("POST", "/api/v1/agents/"+agentID.String()+"/heartbeat", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected status 500, got %d", w.Code)
+		}
+	})
+}
+
+func TestRotateAPIKey(t *testing.T) {
+	orgID := uuid.New()
+	agentID := uuid.New()
+	userID := uuid.New()
+
+	agent := &models.Agent{
+		ID:       agentID,
+		OrgID:    orgID,
+		Hostname: "rotate-host",
+		Status:   models.AgentStatusActive,
+	}
+
+	dbUser := &models.User{
+		ID:    userID,
+		OrgID: orgID,
+		Role:  models.UserRoleAdmin,
+	}
+
+	store := &mockAgentStore{
+		agents:    []*models.Agent{agent},
+		agentByID: map[uuid.UUID]*models.Agent{agentID: agent},
+		user:      dbUser,
+	}
+
+	user := &auth.SessionUser{
+		ID:           userID,
+		CurrentOrgID: orgID,
+	}
+
+	t.Run("success", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/agents/"+agentID.String()+"/apikey/rotate", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		var resp RotateAPIKeyResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to unmarshal response: %v", err)
+		}
+		if resp.APIKey == "" {
+			t.Fatal("expected non-empty API key")
+		}
+		if !strings.HasPrefix(resp.APIKey, "kld_") {
+			t.Fatalf("expected API key prefix 'kld_', got %q", resp.APIKey)
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/agents/not-a-uuid/apikey/rotate", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected status 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("agent not found", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/agents/"+uuid.New().String()+"/apikey/rotate", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		otherUserID := uuid.New()
+		otherOrgID := uuid.New()
+		otherDBUser := &models.User{ID: otherUserID, OrgID: otherOrgID, Role: models.UserRoleAdmin}
+		wrongStore := &mockAgentStore{
+			agentByID: map[uuid.UUID]*models.Agent{agentID: agent},
+			user:      otherDBUser,
+		}
+		wrongUser := &auth.SessionUser{ID: otherUserID, CurrentOrgID: otherOrgID}
+		r := setupAgentTestRouter(wrongStore, wrongUser)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/agents/"+agentID.String()+"/apikey/rotate", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("store error on update", func(t *testing.T) {
+		errStore := &mockAgentStore{
+			agentByID:       map[uuid.UUID]*models.Agent{agentID: agent},
+			user:            dbUser,
+			updateAPIKeyErr: errors.New("db error"),
+		}
+		r := setupAgentTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/agents/"+agentID.String()+"/apikey/rotate", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected status 500, got %d", w.Code)
+		}
+	})
+}
+
+func TestRevokeAPIKey(t *testing.T) {
+	orgID := uuid.New()
+	agentID := uuid.New()
+	userID := uuid.New()
+
+	agent := &models.Agent{
+		ID:       agentID,
+		OrgID:    orgID,
+		Hostname: "revoke-host",
+		Status:   models.AgentStatusActive,
+	}
+
+	dbUser := &models.User{
+		ID:    userID,
+		OrgID: orgID,
+		Role:  models.UserRoleAdmin,
+	}
+
+	store := &mockAgentStore{
+		agentByID: map[uuid.UUID]*models.Agent{agentID: agent},
+		user:      dbUser,
+	}
+
+	user := &auth.SessionUser{
+		ID:           userID,
+		CurrentOrgID: orgID,
+	}
+
+	t.Run("success", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/agents/"+agentID.String()+"/apikey", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/agents/not-a-uuid/apikey", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected status 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("agent not found", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/agents/"+uuid.New().String()+"/apikey", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		otherUserID := uuid.New()
+		otherOrgID := uuid.New()
+		otherDBUser := &models.User{ID: otherUserID, OrgID: otherOrgID, Role: models.UserRoleAdmin}
+		wrongStore := &mockAgentStore{
+			agentByID: map[uuid.UUID]*models.Agent{agentID: agent},
+			user:      otherDBUser,
+		}
+		wrongUser := &auth.SessionUser{ID: otherUserID, CurrentOrgID: otherOrgID}
+		r := setupAgentTestRouter(wrongStore, wrongUser)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/agents/"+agentID.String()+"/apikey", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("store error on revoke", func(t *testing.T) {
+		errStore := &mockAgentStore{
+			agentByID:       map[uuid.UUID]*models.Agent{agentID: agent},
+			user:            dbUser,
+			revokeAPIKeyErr: errors.New("db error"),
+		}
+		r := setupAgentTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/agents/"+agentID.String()+"/apikey", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected status 500, got %d", w.Code)
+		}
+	})
+}
+
+func TestAgentStats(t *testing.T) {
+	orgID := uuid.New()
+	agentID := uuid.New()
+
+	agent := &models.Agent{
+		ID:       agentID,
+		OrgID:    orgID,
+		Hostname: "stats-host",
+		Status:   models.AgentStatusActive,
+	}
+
+	store := &mockAgentStore{
+		agentByID: map[uuid.UUID]*models.Agent{agentID: agent},
+		stats: &models.AgentStats{
+			AgentID:      agentID,
+			TotalBackups: 10,
+		},
+	}
+
+	user := &auth.SessionUser{
+		ID:           uuid.New(),
+		CurrentOrgID: orgID,
+	}
+
+	t.Run("success", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+agentID.String()+"/stats", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/bad-uuid/stats", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected status 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+uuid.New().String()+"/stats", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		wrongUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
+		r := setupAgentTestRouter(store, wrongUser)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+agentID.String()+"/stats", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("store error", func(t *testing.T) {
+		noStatsStore := &mockAgentStore{
+			agentByID: map[uuid.UUID]*models.Agent{agentID: agent},
+		}
+		r := setupAgentTestRouter(noStatsStore, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+agentID.String()+"/stats", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected status 500, got %d", w.Code)
+		}
+	})
+}
+
+func TestAgentBackups(t *testing.T) {
+	orgID := uuid.New()
+	agentID := uuid.New()
+
+	agent := &models.Agent{
+		ID:       agentID,
+		OrgID:    orgID,
+		Hostname: "backup-host",
+		Status:   models.AgentStatusActive,
+	}
+
+	store := &mockAgentStore{
+		agentByID: map[uuid.UUID]*models.Agent{agentID: agent},
+		backups:   []*models.Backup{},
+	}
+
+	user := &auth.SessionUser{
+		ID:           uuid.New(),
+		CurrentOrgID: orgID,
+	}
+
+	t.Run("success", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+agentID.String()+"/backups", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/bad-uuid/backups", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected status 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+uuid.New().String()+"/backups", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		wrongUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
+		r := setupAgentTestRouter(store, wrongUser)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+agentID.String()+"/backups", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+}
+
+func TestAgentSchedules(t *testing.T) {
+	orgID := uuid.New()
+	agentID := uuid.New()
+
+	agent := &models.Agent{
+		ID:       agentID,
+		OrgID:    orgID,
+		Hostname: "schedule-host",
+		Status:   models.AgentStatusActive,
+	}
+
+	store := &mockAgentStore{
+		agentByID: map[uuid.UUID]*models.Agent{agentID: agent},
+		schedules: []*models.Schedule{},
+	}
+
+	user := &auth.SessionUser{
+		ID:           uuid.New(),
+		CurrentOrgID: orgID,
+	}
+
+	t.Run("success", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+agentID.String()+"/schedules", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/bad-uuid/schedules", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected status 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+uuid.New().String()+"/schedules", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		wrongUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
+		r := setupAgentTestRouter(store, wrongUser)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+agentID.String()+"/schedules", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+}
+
+func TestAgentHealthHistory(t *testing.T) {
+	orgID := uuid.New()
+	agentID := uuid.New()
+
+	agent := &models.Agent{
+		ID:       agentID,
+		OrgID:    orgID,
+		Hostname: "health-host",
+		Status:   models.AgentStatusActive,
+	}
+
+	store := &mockAgentStore{
+		agentByID:     map[uuid.UUID]*models.Agent{agentID: agent},
+		healthHistory: []*models.AgentHealthHistory{},
+	}
+
+	user := &auth.SessionUser{
+		ID:           uuid.New(),
+		CurrentOrgID: orgID,
+	}
+
+	t.Run("success", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+agentID.String()+"/health-history", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("with custom limit", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+agentID.String()+"/health-history?limit=50", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/bad-uuid/health-history", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected status 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		r := setupAgentTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+uuid.New().String()+"/health-history", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		wrongUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
+		r := setupAgentTestRouter(store, wrongUser)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/agents/"+agentID.String()+"/health-history", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected status 404, got %d", w.Code)
+		}
+	})
 }
