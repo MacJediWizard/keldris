@@ -51,8 +51,6 @@ func newTestGenerator(store ReportStore) *Generator {
 	return NewGenerator(store, logger)
 }
 
-func int64Ptr(v int64) *int64 { return &v }
-
 func TestGenerator_GenerateReport(t *testing.T) {
 	orgID := uuid.New()
 	now := time.Now()
