@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"testing"
 )
@@ -814,38 +813,10 @@ func (failReader) Read([]byte) (int, error) {
 	return 0, errors.New("simulated rand failure")
 }
 
-// limitedReader returns n bytes then errors.
-type limitedReader struct {
-	remaining int
-}
-
-func (r *limitedReader) Read(p []byte) (int, error) {
-	if r.remaining <= 0 {
-		return 0, errors.New("simulated rand failure")
-	}
-	n := len(p)
-	if n > r.remaining {
-		n = r.remaining
-	}
-	for i := 0; i < n; i++ {
-		p[i] = 0xAA
-	}
-	r.remaining -= n
-	return n, nil
-}
-
 func withFailingRand(t *testing.T, fn func()) {
 	t.Helper()
 	original := rand.Reader
 	rand.Reader = failReader{}
-	defer func() { rand.Reader = original }()
-	fn()
-}
-
-func withLimitedRand(t *testing.T, n int, fn func()) {
-	t.Helper()
-	original := rand.Reader
-	rand.Reader = io.MultiReader(&limitedReader{remaining: n}, failReader{})
 	defer func() { rand.Reader = original }()
 	fn()
 }
