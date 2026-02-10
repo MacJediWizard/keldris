@@ -75,3 +75,149 @@ func TestFeaturesForTier(t *testing.T) {
 		}
 	})
 }
+
+func TestFeatures_HasFeature_AllTiers(t *testing.T) {
+	allFeatures := []Feature{
+		FeatureOIDC,
+		FeatureAuditLogs,
+		FeatureMultiOrg,
+		FeatureSLATracking,
+		FeatureWhiteLabel,
+		FeatureAirGap,
+	}
+
+	t.Run("free tier has no features at all", func(t *testing.T) {
+		for _, feature := range allFeatures {
+			if HasFeature(TierFree, feature) {
+				t.Errorf("free tier should not have feature %s", feature)
+			}
+		}
+	})
+
+	t.Run("pro tier has exactly OIDC and audit logs", func(t *testing.T) {
+		proFeatures := map[Feature]bool{
+			FeatureOIDC:     true,
+			FeatureAuditLogs: true,
+		}
+		for _, feature := range allFeatures {
+			got := HasFeature(TierPro, feature)
+			want := proFeatures[feature]
+			if got != want {
+				t.Errorf("HasFeature(TierPro, %s) = %v, want %v", feature, got, want)
+			}
+		}
+	})
+
+	t.Run("enterprise tier has all features", func(t *testing.T) {
+		for _, feature := range allFeatures {
+			if !HasFeature(TierEnterprise, feature) {
+				t.Errorf("enterprise tier should have feature %s", feature)
+			}
+		}
+	})
+
+	t.Run("unknown feature returns false for all tiers", func(t *testing.T) {
+		unknownFeature := Feature("nonexistent")
+		for _, tier := range ValidTiers() {
+			if HasFeature(tier, unknownFeature) {
+				t.Errorf("HasFeature(%s, %s) = true, want false", tier, unknownFeature)
+			}
+		}
+	})
+}
+
+func TestFeatures_FreeTierLimits(t *testing.T) {
+	features := FeaturesForTier(TierFree)
+	if len(features) != 0 {
+		t.Errorf("free tier should have 0 features, got %d", len(features))
+	}
+
+	// Verify free tier cannot access any gated feature
+	if HasFeature(TierFree, FeatureOIDC) {
+		t.Error("free tier should not have OIDC")
+	}
+	if HasFeature(TierFree, FeatureAuditLogs) {
+		t.Error("free tier should not have audit logs")
+	}
+	if HasFeature(TierFree, FeatureMultiOrg) {
+		t.Error("free tier should not have multi-org")
+	}
+	if HasFeature(TierFree, FeatureSLATracking) {
+		t.Error("free tier should not have SLA tracking")
+	}
+	if HasFeature(TierFree, FeatureWhiteLabel) {
+		t.Error("free tier should not have white label")
+	}
+	if HasFeature(TierFree, FeatureAirGap) {
+		t.Error("free tier should not have air gap")
+	}
+}
+
+func TestFeatures_ProTierLimits(t *testing.T) {
+	features := FeaturesForTier(TierPro)
+	if len(features) != 2 {
+		t.Fatalf("pro tier should have 2 features, got %d", len(features))
+	}
+
+	// Verify the exact features
+	featureSet := make(map[Feature]bool)
+	for _, f := range features {
+		featureSet[f] = true
+	}
+
+	if !featureSet[FeatureOIDC] {
+		t.Error("pro tier features should include OIDC")
+	}
+	if !featureSet[FeatureAuditLogs] {
+		t.Error("pro tier features should include audit logs")
+	}
+
+	// Verify enterprise-only features are not included
+	if featureSet[FeatureMultiOrg] {
+		t.Error("pro tier features should not include multi-org")
+	}
+	if featureSet[FeatureSLATracking] {
+		t.Error("pro tier features should not include SLA tracking")
+	}
+	if featureSet[FeatureWhiteLabel] {
+		t.Error("pro tier features should not include white label")
+	}
+	if featureSet[FeatureAirGap] {
+		t.Error("pro tier features should not include air gap")
+	}
+}
+
+func TestFeatures_EnterpriseTierLimits(t *testing.T) {
+	features := FeaturesForTier(TierEnterprise)
+	if len(features) != 6 {
+		t.Fatalf("enterprise tier should have 6 features, got %d", len(features))
+	}
+
+	// Verify all features are present
+	featureSet := make(map[Feature]bool)
+	for _, f := range features {
+		featureSet[f] = true
+	}
+
+	expectedFeatures := []Feature{
+		FeatureOIDC,
+		FeatureAuditLogs,
+		FeatureMultiOrg,
+		FeatureSLATracking,
+		FeatureWhiteLabel,
+		FeatureAirGap,
+	}
+
+	for _, expected := range expectedFeatures {
+		if !featureSet[expected] {
+			t.Errorf("enterprise tier should include feature %s", expected)
+		}
+	}
+
+	// Verify FeaturesForTier returns a copy (not a reference to the internal slice)
+	features[0] = Feature("tampered")
+	originalFeatures := FeaturesForTier(TierEnterprise)
+	if originalFeatures[0] == Feature("tampered") {
+		t.Error("FeaturesForTier should return a copy, not a reference")
+	}
+}
