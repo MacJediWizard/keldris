@@ -35,30 +35,6 @@ type fakeResponse struct {
 	exitCode int
 }
 
-// fakeDockerMulti creates a shell script that returns different outputs based on the first argument.
-func fakeDockerMulti(t *testing.T, responses map[string]fakeResponse) string {
-	t.Helper()
-	dir := t.TempDir()
-
-	var script string
-	script = "#!/bin/sh\n"
-	for subcmd, resp := range responses {
-		outFile := filepath.Join(dir, subcmd+".txt")
-		if err := os.WriteFile(outFile, []byte(resp.stdout), 0644); err != nil {
-			t.Fatal(err)
-		}
-		script += fmt.Sprintf("if [ \"$1\" = \"%s\" ]; then\n  cat '%s'\n  exit %d\nfi\n", subcmd, outFile, resp.exitCode)
-	}
-	script += "exit 0\n"
-
-	scriptPath := filepath.Join(dir, "docker")
-	if err := os.WriteFile(scriptPath, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	return scriptPath
-}
-
 func TestNewDockerClient(t *testing.T) {
 	logger := zerolog.Nop()
 	client := NewDockerClient(logger)
