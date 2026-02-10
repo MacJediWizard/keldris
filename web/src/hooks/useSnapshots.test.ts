@@ -1,12 +1,12 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import {
-	useSnapshots,
-	useSnapshot,
-	useSnapshotFiles,
-	useSnapshotCompare,
-} from './useSnapshots';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createWrapper } from '../test/helpers';
+import {
+	useSnapshot,
+	useSnapshotCompare,
+	useSnapshotFiles,
+	useSnapshots,
+} from './useSnapshots';
 
 vi.mock('../lib/api', () => ({
 	snapshotsApi: {
@@ -24,14 +24,18 @@ describe('useSnapshots', () => {
 
 	it('fetches snapshots', async () => {
 		vi.mocked(snapshotsApi.list).mockResolvedValue([]);
-		const { result } = renderHook(() => useSnapshots(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useSnapshots(), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
 	it('fetches with filter', async () => {
 		vi.mocked(snapshotsApi.list).mockResolvedValue([]);
 		const filter = { agent_id: 'a1' };
-		const { result } = renderHook(() => useSnapshots(filter), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useSnapshots(filter), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(snapshotsApi.list).toHaveBeenCalledWith(filter);
 	});
@@ -42,7 +46,9 @@ describe('useSnapshot', () => {
 
 	it('fetches a snapshot', async () => {
 		vi.mocked(snapshotsApi.get).mockResolvedValue({ id: 's1' });
-		const { result } = renderHook(() => useSnapshot('s1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useSnapshot('s1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
@@ -57,7 +63,9 @@ describe('useSnapshotFiles', () => {
 
 	it('fetches files', async () => {
 		vi.mocked(snapshotsApi.listFiles).mockResolvedValue({ files: [] });
-		const { result } = renderHook(() => useSnapshotFiles('s1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useSnapshotFiles('s1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
@@ -72,12 +80,16 @@ describe('useSnapshotCompare', () => {
 
 	it('compares snapshots', async () => {
 		vi.mocked(snapshotsApi.compare).mockResolvedValue({ diff: [] });
-		const { result } = renderHook(() => useSnapshotCompare('s1', 's2'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useSnapshotCompare('s1', 's2'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
 	it('does not compare when either id is empty', () => {
-		renderHook(() => useSnapshotCompare('', 's2'), { wrapper: createWrapper() });
+		renderHook(() => useSnapshotCompare('', 's2'), {
+			wrapper: createWrapper(),
+		});
 		expect(snapshotsApi.compare).not.toHaveBeenCalled();
 	});
 });

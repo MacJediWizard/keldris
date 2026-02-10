@@ -1,11 +1,11 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createWrapper } from '../test/helpers';
 import {
-	useOnboardingStatus,
 	useCompleteOnboardingStep,
+	useOnboardingStatus,
 	useSkipOnboarding,
 } from './useOnboarding';
-import { createWrapper } from '../test/helpers';
 
 vi.mock('../lib/api', () => ({
 	onboardingApi: {
@@ -56,7 +56,9 @@ describe('useCompleteOnboardingStep', () => {
 			wrapper: createWrapper(),
 		});
 
-		result.current.mutate('add_repository' as Parameters<typeof onboardingApi.completeStep>[0]);
+		result.current.mutate(
+			'add_repository' as Parameters<typeof onboardingApi.completeStep>[0],
+		);
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});

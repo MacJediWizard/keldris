@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { useBackups, useBackup } from './useBackups';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createWrapper } from '../test/helpers';
+import { useBackup, useBackups } from './useBackups';
 
 vi.mock('../lib/api', () => ({
 	backupsApi: {

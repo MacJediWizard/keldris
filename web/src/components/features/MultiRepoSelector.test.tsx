@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { MultiRepoSelector } from './MultiRepoSelector';
 import type { Repository, ScheduleRepositoryRequest } from '../../lib/types';
+import { MultiRepoSelector } from './MultiRepoSelector';
 
 const repositories: Repository[] = [
 	{

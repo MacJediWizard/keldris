@@ -1,14 +1,14 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createWrapper } from '../test/helpers';
 import {
-	useExcludePatterns,
-	useExcludePattern,
-	useExcludePatternsLibrary,
-	useExcludePatternCategories,
 	useCreateExcludePattern,
 	useDeleteExcludePattern,
+	useExcludePattern,
+	useExcludePatternCategories,
+	useExcludePatterns,
+	useExcludePatternsLibrary,
 } from './useExcludePatterns';
-import { createWrapper } from '../test/helpers';
 
 vi.mock('../lib/api', () => ({
 	excludePatternsApi: {
@@ -29,13 +29,17 @@ describe('useExcludePatterns', () => {
 
 	it('fetches patterns', async () => {
 		vi.mocked(excludePatternsApi.list).mockResolvedValue([]);
-		const { result } = renderHook(() => useExcludePatterns(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useExcludePatterns(), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
 	it('fetches with category filter', async () => {
 		vi.mocked(excludePatternsApi.list).mockResolvedValue([]);
-		const { result } = renderHook(() => useExcludePatterns('os'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useExcludePatterns('os'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(excludePatternsApi.list).toHaveBeenCalledWith('os');
 	});
@@ -46,7 +50,9 @@ describe('useExcludePattern', () => {
 
 	it('fetches a pattern', async () => {
 		vi.mocked(excludePatternsApi.get).mockResolvedValue({ id: 'ep1' });
-		const { result } = renderHook(() => useExcludePattern('ep1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useExcludePattern('ep1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
@@ -61,7 +67,9 @@ describe('useExcludePatternsLibrary', () => {
 
 	it('fetches built-in patterns', async () => {
 		vi.mocked(excludePatternsApi.getLibrary).mockResolvedValue([]);
-		const { result } = renderHook(() => useExcludePatternsLibrary(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useExcludePatternsLibrary(), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });
@@ -71,7 +79,9 @@ describe('useExcludePatternCategories', () => {
 
 	it('fetches categories', async () => {
 		vi.mocked(excludePatternsApi.getCategories).mockResolvedValue([]);
-		const { result } = renderHook(() => useExcludePatternCategories(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useExcludePatternCategories(), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });
@@ -81,8 +91,13 @@ describe('useCreateExcludePattern', () => {
 
 	it('creates a pattern', async () => {
 		vi.mocked(excludePatternsApi.create).mockResolvedValue({ id: 'ep1' });
-		const { result } = renderHook(() => useCreateExcludePattern(), { wrapper: createWrapper() });
-		result.current.mutate({ pattern: '*.tmp', description: 'Temp files' } as Parameters<typeof excludePatternsApi.create>[0]);
+		const { result } = renderHook(() => useCreateExcludePattern(), {
+			wrapper: createWrapper(),
+		});
+		result.current.mutate({
+			pattern: '*.tmp',
+			description: 'Temp files',
+		} as Parameters<typeof excludePatternsApi.create>[0]);
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });
@@ -91,8 +106,12 @@ describe('useDeleteExcludePattern', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('deletes a pattern', async () => {
-		vi.mocked(excludePatternsApi.delete).mockResolvedValue({ message: 'Deleted' });
-		const { result } = renderHook(() => useDeleteExcludePattern(), { wrapper: createWrapper() });
+		vi.mocked(excludePatternsApi.delete).mockResolvedValue({
+			message: 'Deleted',
+		});
+		const { result } = renderHook(() => useDeleteExcludePattern(), {
+			wrapper: createWrapper(),
+		});
 		result.current.mutate('ep1');
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});

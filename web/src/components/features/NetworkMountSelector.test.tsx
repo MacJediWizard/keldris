@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { NetworkMountSelector } from './NetworkMountSelector';
 import type { NetworkMount } from '../../lib/types';
+import { NetworkMountSelector } from './NetworkMountSelector';
 
 const mounts: NetworkMount[] = [
 	{

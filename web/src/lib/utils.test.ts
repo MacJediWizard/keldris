@@ -1,35 +1,35 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-	formatRelativeTime,
+	formatAuditAction,
+	formatBytes,
+	formatChartDate,
+	formatCurrency,
+	formatCurrencyCompact,
 	formatDate,
 	formatDateTime,
-	formatBytes,
+	formatDedupRatio,
 	formatDuration,
-	truncateSnapshotId,
+	formatDurationMs,
+	formatPercent,
+	formatRelativeTime,
+	formatResourceType,
+	formatUptime,
 	getAgentStatusColor,
-	getBackupStatusColor,
-	getRepositoryTypeBadge,
 	getAlertSeverityColor,
 	getAlertStatusColor,
 	getAlertTypeLabel,
 	getAuditActionColor,
 	getAuditResultColor,
-	formatAuditAction,
-	formatResourceType,
-	formatDedupRatio,
-	formatPercent,
+	getBackupStatusColor,
+	getCostColor,
 	getDedupRatioColor,
-	getSpaceSavedColor,
-	formatChartDate,
-	formatDurationMs,
-	getSuccessRateColor,
-	getSuccessRateBadge,
 	getHealthStatusColor,
 	getHealthStatusLabel,
-	formatUptime,
-	formatCurrency,
-	formatCurrencyCompact,
-	getCostColor,
+	getRepositoryTypeBadge,
+	getSpaceSavedColor,
+	getSuccessRateBadge,
+	getSuccessRateColor,
+	truncateSnapshotId,
 } from './utils';
 
 describe('formatRelativeTime', () => {
@@ -182,21 +182,21 @@ describe('formatDuration', () => {
 	});
 
 	it('formats seconds', () => {
-		expect(
-			formatDuration('2024-06-15T12:00:00Z', '2024-06-15T12:00:30Z'),
-		).toBe('30s');
+		expect(formatDuration('2024-06-15T12:00:00Z', '2024-06-15T12:00:30Z')).toBe(
+			'30s',
+		);
 	});
 
 	it('formats minutes and seconds', () => {
-		expect(
-			formatDuration('2024-06-15T12:00:00Z', '2024-06-15T12:05:30Z'),
-		).toBe('5m 30s');
+		expect(formatDuration('2024-06-15T12:00:00Z', '2024-06-15T12:05:30Z')).toBe(
+			'5m 30s',
+		);
 	});
 
 	it('formats hours and minutes', () => {
-		expect(
-			formatDuration('2024-06-15T12:00:00Z', '2024-06-15T14:30:00Z'),
-		).toBe('2h 30m');
+		expect(formatDuration('2024-06-15T12:00:00Z', '2024-06-15T14:30:00Z')).toBe(
+			'2h 30m',
+		);
 	});
 });
 

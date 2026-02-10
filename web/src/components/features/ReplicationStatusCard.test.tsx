@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { ReplicationStatusCard } from './ReplicationStatusCard';
 import type { ReplicationStatus, Repository } from '../../lib/types';
+import { ReplicationStatusCard } from './ReplicationStatusCard';
 
 const repositories: Repository[] = [
 	{
@@ -37,20 +37,13 @@ const statuses: ReplicationStatus[] = [
 
 describe('ReplicationStatusCard', () => {
 	it('shows empty state when no statuses', () => {
-		render(
-			<ReplicationStatusCard statuses={[]} repositories={repositories} />,
-		);
-		expect(
-			screen.getByText(/No replication configured/),
-		).toBeInTheDocument();
+		render(<ReplicationStatusCard statuses={[]} repositories={repositories} />);
+		expect(screen.getByText(/No replication configured/)).toBeInTheDocument();
 	});
 
 	it('renders replication status with repo names', () => {
 		render(
-			<ReplicationStatusCard
-				statuses={statuses}
-				repositories={repositories}
-			/>,
+			<ReplicationStatusCard statuses={statuses} repositories={repositories} />,
 		);
 		expect(screen.getByText('Replication Status')).toBeInTheDocument();
 		expect(screen.getByText('Primary Repo')).toBeInTheDocument();
@@ -59,20 +52,14 @@ describe('ReplicationStatusCard', () => {
 
 	it('shows synced status badge', () => {
 		render(
-			<ReplicationStatusCard
-				statuses={statuses}
-				repositories={repositories}
-			/>,
+			<ReplicationStatusCard statuses={statuses} repositories={repositories} />,
 		);
 		expect(screen.getByText('Synced')).toBeInTheDocument();
 	});
 
 	it('shows last sync time', () => {
 		render(
-			<ReplicationStatusCard
-				statuses={statuses}
-				repositories={repositories}
-			/>,
+			<ReplicationStatusCard statuses={statuses} repositories={repositories} />,
 		);
 		expect(screen.getByText(/Last synced:/)).toBeInTheDocument();
 	});

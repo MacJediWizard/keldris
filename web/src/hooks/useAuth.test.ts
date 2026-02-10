@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { useMe, useLogout, useUpdatePreferences } from './useAuth';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createWrapper } from '../test/helpers';
+import { useLogout, useMe, useUpdatePreferences } from './useAuth';
 
 vi.mock('../lib/api', () => ({
 	authApi: {

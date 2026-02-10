@@ -1,11 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NewOrganization } from './NewOrganization';
 
 vi.mock('../hooks/useOrganizations', () => ({
-	useCreateOrganization: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false }),
+	useCreateOrganization: () => ({
+		mutateAsync: vi.fn(),
+		isPending: false,
+		isError: false,
+	}),
 }));
 
 function renderPage() {

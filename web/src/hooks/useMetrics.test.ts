@@ -1,13 +1,13 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import {
-	useDashboardStats,
-	useBackupSuccessRates,
-	useStorageGrowthTrend,
-	useBackupDurationTrend,
-	useDailyBackupStats,
-} from './useMetrics';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createWrapper } from '../test/helpers';
+import {
+	useBackupDurationTrend,
+	useBackupSuccessRates,
+	useDailyBackupStats,
+	useDashboardStats,
+	useStorageGrowthTrend,
+} from './useMetrics';
 
 vi.mock('../lib/api', () => ({
 	metricsApi: {

@@ -1,14 +1,14 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createWrapper } from '../test/helpers';
 import {
-	useStorageStatsSummary,
-	useStorageGrowth,
-	useRepositoryStatsList,
-	useRepositoryStats,
 	useRepositoryGrowth,
 	useRepositoryHistory,
+	useRepositoryStats,
+	useRepositoryStatsList,
+	useStorageGrowth,
+	useStorageStatsSummary,
 } from './useStorageStats';
-import { createWrapper } from '../test/helpers';
 
 vi.mock('../lib/api', () => ({
 	statsApi: {
@@ -28,7 +28,9 @@ describe('useStorageStatsSummary', () => {
 
 	it('fetches storage summary', async () => {
 		vi.mocked(statsApi.getSummary).mockResolvedValue({ total_size: 1024 });
-		const { result } = renderHook(() => useStorageStatsSummary(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useStorageStatsSummary(), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });
@@ -38,14 +40,18 @@ describe('useStorageGrowth', () => {
 
 	it('fetches growth with default days', async () => {
 		vi.mocked(statsApi.getGrowth).mockResolvedValue([]);
-		const { result } = renderHook(() => useStorageGrowth(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useStorageGrowth(), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(statsApi.getGrowth).toHaveBeenCalledWith(30);
 	});
 
 	it('fetches growth with custom days', async () => {
 		vi.mocked(statsApi.getGrowth).mockResolvedValue([]);
-		const { result } = renderHook(() => useStorageGrowth(7), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useStorageGrowth(7), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(statsApi.getGrowth).toHaveBeenCalledWith(7);
 	});
@@ -56,7 +62,9 @@ describe('useRepositoryStatsList', () => {
 
 	it('fetches repository stats list', async () => {
 		vi.mocked(statsApi.listRepositoryStats).mockResolvedValue([]);
-		const { result } = renderHook(() => useRepositoryStatsList(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useRepositoryStatsList(), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });
@@ -66,7 +74,9 @@ describe('useRepositoryStats', () => {
 
 	it('fetches repo stats', async () => {
 		vi.mocked(statsApi.getRepositoryStats).mockResolvedValue({ id: 'r1' });
-		const { result } = renderHook(() => useRepositoryStats('r1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useRepositoryStats('r1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
@@ -81,7 +91,9 @@ describe('useRepositoryGrowth', () => {
 
 	it('fetches repo growth', async () => {
 		vi.mocked(statsApi.getRepositoryGrowth).mockResolvedValue({ growth: [] });
-		const { result } = renderHook(() => useRepositoryGrowth('r1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useRepositoryGrowth('r1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(statsApi.getRepositoryGrowth).toHaveBeenCalledWith('r1', 30);
 	});
@@ -92,7 +104,9 @@ describe('useRepositoryHistory', () => {
 
 	it('fetches repo history', async () => {
 		vi.mocked(statsApi.getRepositoryHistory).mockResolvedValue({ history: [] });
-		const { result } = renderHook(() => useRepositoryHistory('r1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useRepositoryHistory('r1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(statsApi.getRepositoryHistory).toHaveBeenCalledWith('r1', 30);
 	});

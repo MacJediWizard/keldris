@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../hooks/useMaintenance', () => ({
 	useActiveMaintenance: vi.fn(),
@@ -19,13 +19,17 @@ describe('MaintenanceBanner', () => {
 	});
 
 	it('renders nothing when no maintenance data', () => {
-		vi.mocked(useActiveMaintenance).mockReturnValue({ data: undefined } as ReturnType<typeof useActiveMaintenance>);
+		vi.mocked(useActiveMaintenance).mockReturnValue({
+			data: undefined,
+		} as ReturnType<typeof useActiveMaintenance>);
 		const { container } = render(<MaintenanceBanner />);
 		expect(container.innerHTML).toBe('');
 	});
 
 	it('renders nothing when no active or upcoming maintenance', () => {
-		vi.mocked(useActiveMaintenance).mockReturnValue({ data: { active: null, upcoming: null } } as ReturnType<typeof useActiveMaintenance>);
+		vi.mocked(useActiveMaintenance).mockReturnValue({
+			data: { active: null, upcoming: null },
+		} as ReturnType<typeof useActiveMaintenance>);
 		const { container } = render(<MaintenanceBanner />);
 		expect(container.innerHTML).toBe('');
 	});
@@ -34,7 +38,13 @@ describe('MaintenanceBanner', () => {
 		const futureDate = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(); // 2 hours from now
 		vi.mocked(useActiveMaintenance).mockReturnValue({
 			data: {
-				active: { id: 'mw-1', title: 'Database Migration', message: 'Upgrading DB', starts_at: '2024-01-01T00:00:00Z', ends_at: futureDate },
+				active: {
+					id: 'mw-1',
+					title: 'Database Migration',
+					message: 'Upgrading DB',
+					starts_at: '2024-01-01T00:00:00Z',
+					ends_at: futureDate,
+				},
 				upcoming: null,
 			},
 		} as ReturnType<typeof useActiveMaintenance>);
@@ -50,7 +60,12 @@ describe('MaintenanceBanner', () => {
 		vi.mocked(useActiveMaintenance).mockReturnValue({
 			data: {
 				active: null,
-				upcoming: { id: 'mw-2', title: 'Server Restart', starts_at: futureDate, ends_at: new Date(Date.now() + 90 * 60 * 1000).toISOString() },
+				upcoming: {
+					id: 'mw-2',
+					title: 'Server Restart',
+					starts_at: futureDate,
+					ends_at: new Date(Date.now() + 90 * 60 * 1000).toISOString(),
+				},
 			},
 		} as ReturnType<typeof useActiveMaintenance>);
 		render(<MaintenanceBanner />);
@@ -60,10 +75,17 @@ describe('MaintenanceBanner', () => {
 	});
 
 	it('displays time left in hours and minutes format', () => {
-		const futureDate = new Date(Date.now() + 3 * 60 * 60 * 1000 + 15 * 60 * 1000).toISOString(); // 3h 15m from now
+		const futureDate = new Date(
+			Date.now() + 3 * 60 * 60 * 1000 + 15 * 60 * 1000,
+		).toISOString(); // 3h 15m from now
 		vi.mocked(useActiveMaintenance).mockReturnValue({
 			data: {
-				active: { id: 'mw-1', title: 'Update', starts_at: '2024-01-01T00:00:00Z', ends_at: futureDate },
+				active: {
+					id: 'mw-1',
+					title: 'Update',
+					starts_at: '2024-01-01T00:00:00Z',
+					ends_at: futureDate,
+				},
 				upcoming: null,
 			},
 		} as ReturnType<typeof useActiveMaintenance>);
@@ -72,10 +94,17 @@ describe('MaintenanceBanner', () => {
 	});
 
 	it('displays time left in minutes and seconds format', () => {
-		const futureDate = new Date(Date.now() + 5 * 60 * 1000 + 30 * 1000).toISOString(); // 5m 30s from now
+		const futureDate = new Date(
+			Date.now() + 5 * 60 * 1000 + 30 * 1000,
+		).toISOString(); // 5m 30s from now
 		vi.mocked(useActiveMaintenance).mockReturnValue({
 			data: {
-				active: { id: 'mw-1', title: 'Quick Fix', starts_at: '2024-01-01T00:00:00Z', ends_at: futureDate },
+				active: {
+					id: 'mw-1',
+					title: 'Quick Fix',
+					starts_at: '2024-01-01T00:00:00Z',
+					ends_at: futureDate,
+				},
 				upcoming: null,
 			},
 		} as ReturnType<typeof useActiveMaintenance>);
@@ -87,7 +116,12 @@ describe('MaintenanceBanner', () => {
 		const futureDate = new Date(Date.now() + 45 * 1000).toISOString(); // 45s from now
 		vi.mocked(useActiveMaintenance).mockReturnValue({
 			data: {
-				active: { id: 'mw-1', title: 'Almost Done', starts_at: '2024-01-01T00:00:00Z', ends_at: futureDate },
+				active: {
+					id: 'mw-1',
+					title: 'Almost Done',
+					starts_at: '2024-01-01T00:00:00Z',
+					ends_at: futureDate,
+				},
 				upcoming: null,
 			},
 		} as ReturnType<typeof useActiveMaintenance>);
@@ -99,7 +133,12 @@ describe('MaintenanceBanner', () => {
 		const futureDate = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 		vi.mocked(useActiveMaintenance).mockReturnValue({
 			data: {
-				active: { id: 'mw-1', title: 'Silent Update', starts_at: '2024-01-01T00:00:00Z', ends_at: futureDate },
+				active: {
+					id: 'mw-1',
+					title: 'Silent Update',
+					starts_at: '2024-01-01T00:00:00Z',
+					ends_at: futureDate,
+				},
 				upcoming: null,
 			},
 		} as ReturnType<typeof useActiveMaintenance>);
@@ -111,8 +150,18 @@ describe('MaintenanceBanner', () => {
 		const futureDate = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 		vi.mocked(useActiveMaintenance).mockReturnValue({
 			data: {
-				active: { id: 'mw-1', title: 'Active Window', starts_at: '2024-01-01T00:00:00Z', ends_at: futureDate },
-				upcoming: { id: 'mw-2', title: 'Upcoming Window', starts_at: futureDate, ends_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() },
+				active: {
+					id: 'mw-1',
+					title: 'Active Window',
+					starts_at: '2024-01-01T00:00:00Z',
+					ends_at: futureDate,
+				},
+				upcoming: {
+					id: 'mw-2',
+					title: 'Upcoming Window',
+					starts_at: futureDate,
+					ends_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+				},
 			},
 		} as ReturnType<typeof useActiveMaintenance>);
 		render(<MaintenanceBanner />);

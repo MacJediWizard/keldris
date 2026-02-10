@@ -1,17 +1,17 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createWrapper } from '../test/helpers';
 import {
-	useAlerts,
-	useActiveAlerts,
-	useAlertCount,
-	useAlert,
 	useAcknowledgeAlert,
-	useResolveAlert,
+	useActiveAlerts,
+	useAlert,
+	useAlertCount,
 	useAlertRules,
+	useAlerts,
 	useCreateAlertRule,
 	useDeleteAlertRule,
+	useResolveAlert,
 } from './useAlerts';
-import { createWrapper } from '../test/helpers';
 
 vi.mock('../lib/api', () => ({
 	alertsApi: {
@@ -31,7 +31,7 @@ vi.mock('../lib/api', () => ({
 	},
 }));
 
-import { alertsApi, alertRulesApi } from '../lib/api';
+import { alertRulesApi, alertsApi } from '../lib/api';
 
 const mockAlerts = [
 	{
