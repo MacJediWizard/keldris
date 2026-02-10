@@ -1,10 +1,14 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../hooks/useRepositories', () => ({
 	useRepositories: vi.fn(),
-	useCreateRepository: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false }),
+	useCreateRepository: () => ({
+		mutateAsync: vi.fn(),
+		isPending: false,
+		isError: false,
+	}),
 	useDeleteRepository: () => ({ mutateAsync: vi.fn(), isPending: false }),
 	useTestRepository: () => ({ mutateAsync: vi.fn(), isPending: false }),
 	useTestConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -32,20 +36,32 @@ describe('Repositories', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('renders title', () => {
-		vi.mocked(useRepositories).mockReturnValue({ data: [], isLoading: false, isError: false } as ReturnType<typeof useRepositories>);
+		vi.mocked(useRepositories).mockReturnValue({
+			data: [],
+			isLoading: false,
+			isError: false,
+		} as ReturnType<typeof useRepositories>);
 		renderPage();
 		expect(screen.getByText('Repositories')).toBeInTheDocument();
 	});
 
 	it('shows loading state', () => {
-		vi.mocked(useRepositories).mockReturnValue({ data: undefined, isLoading: true, isError: false } as ReturnType<typeof useRepositories>);
+		vi.mocked(useRepositories).mockReturnValue({
+			data: undefined,
+			isLoading: true,
+			isError: false,
+		} as ReturnType<typeof useRepositories>);
 		renderPage();
 		const skeletons = document.querySelectorAll('.animate-pulse');
 		expect(skeletons.length).toBeGreaterThan(0);
 	});
 
 	it('shows empty state', () => {
-		vi.mocked(useRepositories).mockReturnValue({ data: [], isLoading: false, isError: false } as ReturnType<typeof useRepositories>);
+		vi.mocked(useRepositories).mockReturnValue({
+			data: [],
+			isLoading: false,
+			isError: false,
+		} as ReturnType<typeof useRepositories>);
 		renderPage();
 		expect(screen.getByText('No repositories configured')).toBeInTheDocument();
 	});
@@ -53,7 +69,14 @@ describe('Repositories', () => {
 	it('renders repository cards', () => {
 		vi.mocked(useRepositories).mockReturnValue({
 			data: [
-				{ id: 'r1', name: 'my-backups', type: 'local', path: '/backups', status: 'active', created_at: '2024-01-01T00:00:00Z' },
+				{
+					id: 'r1',
+					name: 'my-backups',
+					type: 'local',
+					path: '/backups',
+					status: 'active',
+					created_at: '2024-01-01T00:00:00Z',
+				},
 			],
 			isLoading: false,
 			isError: false,
@@ -63,13 +86,21 @@ describe('Repositories', () => {
 	});
 
 	it('shows error state', () => {
-		vi.mocked(useRepositories).mockReturnValue({ data: undefined, isLoading: false, isError: true } as ReturnType<typeof useRepositories>);
+		vi.mocked(useRepositories).mockReturnValue({
+			data: undefined,
+			isLoading: false,
+			isError: true,
+		} as ReturnType<typeof useRepositories>);
 		renderPage();
 		expect(screen.getByText('Failed to load repositories')).toBeInTheDocument();
 	});
 
 	it('shows add repository button', () => {
-		vi.mocked(useRepositories).mockReturnValue({ data: [], isLoading: false, isError: false } as ReturnType<typeof useRepositories>);
+		vi.mocked(useRepositories).mockReturnValue({
+			data: [],
+			isLoading: false,
+			isError: false,
+		} as ReturnType<typeof useRepositories>);
 		renderPage();
 		expect(screen.getByText('Add Repository')).toBeInTheDocument();
 	});
@@ -77,9 +108,30 @@ describe('Repositories', () => {
 	it('renders multiple repository cards', () => {
 		vi.mocked(useRepositories).mockReturnValue({
 			data: [
-				{ id: 'r1', name: 'local-backup', type: 'local', path: '/backups/local', status: 'active', created_at: '2024-01-01T00:00:00Z' },
-				{ id: 'r2', name: 's3-backup', type: 's3', path: 's3:mybucket', status: 'active', created_at: '2024-02-01T00:00:00Z' },
-				{ id: 'r3', name: 'sftp-backup', type: 'sftp', path: 'sftp:server:/backups', status: 'inactive', created_at: '2024-03-01T00:00:00Z' },
+				{
+					id: 'r1',
+					name: 'local-backup',
+					type: 'local',
+					path: '/backups/local',
+					status: 'active',
+					created_at: '2024-01-01T00:00:00Z',
+				},
+				{
+					id: 'r2',
+					name: 's3-backup',
+					type: 's3',
+					path: 's3:mybucket',
+					status: 'active',
+					created_at: '2024-02-01T00:00:00Z',
+				},
+				{
+					id: 'r3',
+					name: 'sftp-backup',
+					type: 'sftp',
+					path: 'sftp:server:/backups',
+					status: 'inactive',
+					created_at: '2024-03-01T00:00:00Z',
+				},
 			],
 			isLoading: false,
 			isError: false,
@@ -93,7 +145,14 @@ describe('Repositories', () => {
 	it('shows repository type badges', () => {
 		vi.mocked(useRepositories).mockReturnValue({
 			data: [
-				{ id: 'r1', name: 'local-backup', type: 'local', path: '/backups', status: 'active', created_at: '2024-01-01T00:00:00Z' },
+				{
+					id: 'r1',
+					name: 'local-backup',
+					type: 'local',
+					path: '/backups',
+					status: 'active',
+					created_at: '2024-01-01T00:00:00Z',
+				},
 			],
 			isLoading: false,
 			isError: false,
@@ -104,7 +163,11 @@ describe('Repositories', () => {
 
 	it('opens add repository modal', async () => {
 		const user = (await import('@testing-library/user-event')).default.setup();
-		vi.mocked(useRepositories).mockReturnValue({ data: [], isLoading: false, isError: false } as ReturnType<typeof useRepositories>);
+		vi.mocked(useRepositories).mockReturnValue({
+			data: [],
+			isLoading: false,
+			isError: false,
+		} as ReturnType<typeof useRepositories>);
 		renderPage();
 		await user.click(screen.getByText('Add Repository'));
 		expect(screen.getAllByText('Add Repository').length).toBeGreaterThan(1);
@@ -112,7 +175,11 @@ describe('Repositories', () => {
 
 	it('shows repository type selector in modal', async () => {
 		const user = (await import('@testing-library/user-event')).default.setup();
-		vi.mocked(useRepositories).mockReturnValue({ data: [], isLoading: false, isError: false } as ReturnType<typeof useRepositories>);
+		vi.mocked(useRepositories).mockReturnValue({
+			data: [],
+			isLoading: false,
+			isError: false,
+		} as ReturnType<typeof useRepositories>);
 		renderPage();
 		await user.click(screen.getByText('Add Repository'));
 		expect(screen.getByText('Local Filesystem')).toBeInTheDocument();
@@ -122,7 +189,14 @@ describe('Repositories', () => {
 	it('shows delete and test buttons on repository cards', () => {
 		vi.mocked(useRepositories).mockReturnValue({
 			data: [
-				{ id: 'r1', name: 'my-backup', type: 'local', path: '/backups', status: 'active', created_at: '2024-01-01T00:00:00Z' },
+				{
+					id: 'r1',
+					name: 'my-backup',
+					type: 'local',
+					path: '/backups',
+					status: 'active',
+					created_at: '2024-01-01T00:00:00Z',
+				},
 			],
 			isLoading: false,
 			isError: false,
@@ -135,7 +209,14 @@ describe('Repositories', () => {
 	it('shows integrity section on repository cards', () => {
 		vi.mocked(useRepositories).mockReturnValue({
 			data: [
-				{ id: 'r1', name: 'local-backup', type: 'local', path: '/backups/data', status: 'active', created_at: '2024-01-01T00:00:00Z' },
+				{
+					id: 'r1',
+					name: 'local-backup',
+					type: 'local',
+					path: '/backups/data',
+					status: 'active',
+					created_at: '2024-01-01T00:00:00Z',
+				},
 			],
 			isLoading: false,
 			isError: false,

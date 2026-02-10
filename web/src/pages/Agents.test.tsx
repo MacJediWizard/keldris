@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../test/helpers';
 
@@ -82,9 +82,7 @@ describe('Agents page', () => {
 
 	it('renders the subtitle', () => {
 		renderWithProviders(<Agents />);
-		expect(
-			screen.getByText('Manage your backup agents'),
-		).toBeInTheDocument();
+		expect(screen.getByText('Manage your backup agents')).toBeInTheDocument();
 	});
 
 	it('renders agent hostnames in the table', () => {

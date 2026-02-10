@@ -1,11 +1,11 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createWrapper } from '../test/helpers';
 import {
-	useSnapshotComments,
 	useCreateSnapshotComment,
 	useDeleteSnapshotComment,
+	useSnapshotComments,
 } from './useSnapshotComments';
-import { createWrapper } from '../test/helpers';
 
 vi.mock('../lib/api', () => ({
 	snapshotCommentsApi: {
@@ -22,7 +22,9 @@ describe('useSnapshotComments', () => {
 
 	it('fetches comments', async () => {
 		vi.mocked(snapshotCommentsApi.list).mockResolvedValue([]);
-		const { result } = renderHook(() => useSnapshotComments('s1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useSnapshotComments('s1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(snapshotCommentsApi.list).toHaveBeenCalledWith('s1');
 	});
@@ -33,10 +35,14 @@ describe('useCreateSnapshotComment', () => {
 
 	it('creates a comment', async () => {
 		vi.mocked(snapshotCommentsApi.create).mockResolvedValue({ id: 'c1' });
-		const { result } = renderHook(() => useCreateSnapshotComment('s1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useCreateSnapshotComment('s1'), {
+			wrapper: createWrapper(),
+		});
 		result.current.mutate({ content: 'Test comment' });
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(snapshotCommentsApi.create).toHaveBeenCalledWith('s1', { content: 'Test comment' });
+		expect(snapshotCommentsApi.create).toHaveBeenCalledWith('s1', {
+			content: 'Test comment',
+		});
 	});
 });
 
@@ -44,8 +50,12 @@ describe('useDeleteSnapshotComment', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('deletes a comment', async () => {
-		vi.mocked(snapshotCommentsApi.delete).mockResolvedValue({ message: 'Deleted' });
-		const { result } = renderHook(() => useDeleteSnapshotComment('s1'), { wrapper: createWrapper() });
+		vi.mocked(snapshotCommentsApi.delete).mockResolvedValue({
+			message: 'Deleted',
+		});
+		const { result } = renderHook(() => useDeleteSnapshotComment('s1'), {
+			wrapper: createWrapper(),
+		});
 		result.current.mutate('c1');
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(snapshotCommentsApi.delete).toHaveBeenCalledWith('c1');

@@ -1,12 +1,12 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createWrapper } from '../test/helpers';
 import {
-	useBackupScripts,
 	useBackupScript,
+	useBackupScripts,
 	useCreateBackupScript,
 	useDeleteBackupScript,
 } from './useBackupScripts';
-import { createWrapper } from '../test/helpers';
 
 vi.mock('../lib/api', () => ({
 	backupScriptsApi: {
@@ -25,7 +25,9 @@ describe('useBackupScripts', () => {
 
 	it('fetches scripts for a schedule', async () => {
 		vi.mocked(backupScriptsApi.list).mockResolvedValue([]);
-		const { result } = renderHook(() => useBackupScripts('sched-1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useBackupScripts('sched-1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(backupScriptsApi.list).toHaveBeenCalledWith('sched-1');
 	});
@@ -41,7 +43,9 @@ describe('useBackupScript', () => {
 
 	it('fetches a single script', async () => {
 		vi.mocked(backupScriptsApi.get).mockResolvedValue({ id: 'bs1' });
-		const { result } = renderHook(() => useBackupScript('sched-1', 'bs1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useBackupScript('sched-1', 'bs1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
@@ -56,10 +60,14 @@ describe('useCreateBackupScript', () => {
 
 	it('creates a script', async () => {
 		vi.mocked(backupScriptsApi.create).mockResolvedValue({ id: 'bs1' });
-		const { result } = renderHook(() => useCreateBackupScript(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useCreateBackupScript(), {
+			wrapper: createWrapper(),
+		});
 		result.current.mutate({
 			scheduleId: 'sched-1',
-			data: { type: 'pre_backup', script: 'echo hello' } as Parameters<typeof backupScriptsApi.create>[1],
+			data: { type: 'pre_backup', script: 'echo hello' } as Parameters<
+				typeof backupScriptsApi.create
+			>[1],
 		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
@@ -69,8 +77,12 @@ describe('useDeleteBackupScript', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('deletes a script', async () => {
-		vi.mocked(backupScriptsApi.delete).mockResolvedValue({ message: 'Deleted' });
-		const { result } = renderHook(() => useDeleteBackupScript(), { wrapper: createWrapper() });
+		vi.mocked(backupScriptsApi.delete).mockResolvedValue({
+			message: 'Deleted',
+		});
+		const { result } = renderHook(() => useDeleteBackupScript(), {
+			wrapper: createWrapper(),
+		});
 		result.current.mutate({ scheduleId: 'sched-1', id: 'bs1' });
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});

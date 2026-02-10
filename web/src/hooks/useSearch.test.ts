@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { useSearch } from './useSearch';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createWrapper } from '../test/helpers';
+import { useSearch } from './useSearch';
 
 vi.mock('../lib/api', () => ({
 	searchApi: {

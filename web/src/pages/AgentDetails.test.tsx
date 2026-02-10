@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-router-dom', async () => {
 	const actual = await vi.importActual('react-router-dom');
@@ -38,21 +38,36 @@ describe('AgentDetails', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('shows loading state', () => {
-		vi.mocked(useAgent).mockReturnValue({ data: undefined, isLoading: true, isError: false } as ReturnType<typeof useAgent>);
+		vi.mocked(useAgent).mockReturnValue({
+			data: undefined,
+			isLoading: true,
+			isError: false,
+		} as ReturnType<typeof useAgent>);
 		renderPage();
 		const skeletons = document.querySelectorAll('.animate-pulse');
 		expect(skeletons.length).toBeGreaterThan(0);
 	});
 
 	it('shows error state', () => {
-		vi.mocked(useAgent).mockReturnValue({ data: undefined, isLoading: false, isError: true } as ReturnType<typeof useAgent>);
+		vi.mocked(useAgent).mockReturnValue({
+			data: undefined,
+			isLoading: false,
+			isError: true,
+		} as ReturnType<typeof useAgent>);
 		renderPage();
 		expect(screen.getByText('Agent not found')).toBeInTheDocument();
 	});
 
 	it('renders agent details', () => {
 		vi.mocked(useAgent).mockReturnValue({
-			data: { id: 'agent-1', hostname: 'production-server', status: 'active', last_seen: '2024-01-01T00:00:00Z', created_at: '2024-01-01T00:00:00Z', os_info: { os: 'linux', arch: 'amd64', version: 'Ubuntu 22.04' } },
+			data: {
+				id: 'agent-1',
+				hostname: 'production-server',
+				status: 'active',
+				last_seen: '2024-01-01T00:00:00Z',
+				created_at: '2024-01-01T00:00:00Z',
+				os_info: { os: 'linux', arch: 'amd64', version: 'Ubuntu 22.04' },
+			},
 			isLoading: false,
 			isError: false,
 		} as ReturnType<typeof useAgent>);
@@ -62,7 +77,13 @@ describe('AgentDetails', () => {
 
 	it('shows tabs', () => {
 		vi.mocked(useAgent).mockReturnValue({
-			data: { id: 'agent-1', hostname: 'server', status: 'active', last_seen: '2024-01-01T00:00:00Z', created_at: '2024-01-01T00:00:00Z' },
+			data: {
+				id: 'agent-1',
+				hostname: 'server',
+				status: 'active',
+				last_seen: '2024-01-01T00:00:00Z',
+				created_at: '2024-01-01T00:00:00Z',
+			},
 			isLoading: false,
 			isError: false,
 		} as ReturnType<typeof useAgent>);
@@ -75,7 +96,13 @@ describe('AgentDetails', () => {
 
 	it('shows back to agents link', () => {
 		vi.mocked(useAgent).mockReturnValue({
-			data: { id: 'agent-1', hostname: 'server', status: 'active', last_seen: '2024-01-01T00:00:00Z', created_at: '2024-01-01T00:00:00Z' },
+			data: {
+				id: 'agent-1',
+				hostname: 'server',
+				status: 'active',
+				last_seen: '2024-01-01T00:00:00Z',
+				created_at: '2024-01-01T00:00:00Z',
+			},
 			isLoading: false,
 			isError: false,
 		} as ReturnType<typeof useAgent>);
@@ -86,7 +113,13 @@ describe('AgentDetails', () => {
 
 	it('shows agent status badge', () => {
 		vi.mocked(useAgent).mockReturnValue({
-			data: { id: 'agent-1', hostname: 'server', status: 'active', last_seen: '2024-01-01T00:00:00Z', created_at: '2024-01-01T00:00:00Z' },
+			data: {
+				id: 'agent-1',
+				hostname: 'server',
+				status: 'active',
+				last_seen: '2024-01-01T00:00:00Z',
+				created_at: '2024-01-01T00:00:00Z',
+			},
 			isLoading: false,
 			isError: false,
 		} as ReturnType<typeof useAgent>);
@@ -96,7 +129,14 @@ describe('AgentDetails', () => {
 
 	it('shows OS info when available', () => {
 		vi.mocked(useAgent).mockReturnValue({
-			data: { id: 'agent-1', hostname: 'server', status: 'active', last_seen: '2024-01-01T00:00:00Z', created_at: '2024-01-01T00:00:00Z', os_info: { os: 'linux', arch: 'amd64', version: 'Ubuntu 22.04' } },
+			data: {
+				id: 'agent-1',
+				hostname: 'server',
+				status: 'active',
+				last_seen: '2024-01-01T00:00:00Z',
+				created_at: '2024-01-01T00:00:00Z',
+				os_info: { os: 'linux', arch: 'amd64', version: 'Ubuntu 22.04' },
+			},
 			isLoading: false,
 			isError: false,
 		} as ReturnType<typeof useAgent>);
@@ -107,7 +147,13 @@ describe('AgentDetails', () => {
 
 	it('shows offline status', () => {
 		vi.mocked(useAgent).mockReturnValue({
-			data: { id: 'agent-1', hostname: 'offline-server', status: 'offline', last_seen: '2024-01-01T00:00:00Z', created_at: '2024-01-01T00:00:00Z' },
+			data: {
+				id: 'agent-1',
+				hostname: 'offline-server',
+				status: 'offline',
+				last_seen: '2024-01-01T00:00:00Z',
+				created_at: '2024-01-01T00:00:00Z',
+			},
 			isLoading: false,
 			isError: false,
 		} as ReturnType<typeof useAgent>);
@@ -118,7 +164,13 @@ describe('AgentDetails', () => {
 	it('shows backup history tab', async () => {
 		const user = (await import('@testing-library/user-event')).default.setup();
 		vi.mocked(useAgent).mockReturnValue({
-			data: { id: 'agent-1', hostname: 'server', status: 'active', last_seen: '2024-01-01T00:00:00Z', created_at: '2024-01-01T00:00:00Z' },
+			data: {
+				id: 'agent-1',
+				hostname: 'server',
+				status: 'active',
+				last_seen: '2024-01-01T00:00:00Z',
+				created_at: '2024-01-01T00:00:00Z',
+			},
 			isLoading: false,
 			isError: false,
 		} as ReturnType<typeof useAgent>);
@@ -131,7 +183,13 @@ describe('AgentDetails', () => {
 	it('shows health tab content', async () => {
 		const user = (await import('@testing-library/user-event')).default.setup();
 		vi.mocked(useAgent).mockReturnValue({
-			data: { id: 'agent-1', hostname: 'server', status: 'active', last_seen: '2024-01-01T00:00:00Z', created_at: '2024-01-01T00:00:00Z' },
+			data: {
+				id: 'agent-1',
+				hostname: 'server',
+				status: 'active',
+				last_seen: '2024-01-01T00:00:00Z',
+				created_at: '2024-01-01T00:00:00Z',
+			},
 			isLoading: false,
 			isError: false,
 		} as ReturnType<typeof useAgent>);
@@ -142,7 +200,13 @@ describe('AgentDetails', () => {
 
 	it('shows delete agent action', () => {
 		vi.mocked(useAgent).mockReturnValue({
-			data: { id: 'agent-1', hostname: 'server', status: 'active', last_seen: '2024-01-01T00:00:00Z', created_at: '2024-01-01T00:00:00Z' },
+			data: {
+				id: 'agent-1',
+				hostname: 'server',
+				status: 'active',
+				last_seen: '2024-01-01T00:00:00Z',
+				created_at: '2024-01-01T00:00:00Z',
+			},
 			isLoading: false,
 			isError: false,
 		} as ReturnType<typeof useAgent>);

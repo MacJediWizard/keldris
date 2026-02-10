@@ -1,72 +1,138 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockCreateMutateAsync = vi.fn();
 
 vi.mock('../../hooks/useExcludePatterns', () => ({
 	useExcludePatternsLibrary: vi.fn(),
 	useExcludePatternCategories: vi.fn(),
-	useCreateExcludePattern: vi.fn(() => ({ mutateAsync: mockCreateMutateAsync, isPending: false })),
+	useCreateExcludePattern: vi.fn(() => ({
+		mutateAsync: mockCreateMutateAsync,
+		isPending: false,
+	})),
 }));
 
-import { useExcludePatternsLibrary, useExcludePatternCategories, useCreateExcludePattern } from '../../hooks/useExcludePatterns';
+import {
+	useCreateExcludePattern,
+	useExcludePatternCategories,
+	useExcludePatternsLibrary,
+} from '../../hooks/useExcludePatterns';
 import { PatternLibraryModal } from './PatternLibraryModal';
 
 const mockOnClose = vi.fn();
 const mockOnAddPatterns = vi.fn();
 
 const sampleLibrary = [
-	{ name: 'Node.js', description: 'Node.js files', category: 'language' as const, patterns: ['node_modules/', '.npm/', 'package-lock.json'] },
-	{ name: 'Git', description: 'Git files', category: 'ide' as const, patterns: ['.git/', '.gitignore'] },
-	{ name: 'Temp Files', description: 'Temporary files', category: 'temp' as const, patterns: ['*.tmp', '*.swp', '.DS_Store'] },
-	{ name: 'OS Caches', description: 'OS cache files', category: 'cache' as const, patterns: ['.cache/', 'Thumbs.db'] },
+	{
+		name: 'Node.js',
+		description: 'Node.js files',
+		category: 'language' as const,
+		patterns: ['node_modules/', '.npm/', 'package-lock.json'],
+	},
+	{
+		name: 'Git',
+		description: 'Git files',
+		category: 'ide' as const,
+		patterns: ['.git/', '.gitignore'],
+	},
+	{
+		name: 'Temp Files',
+		description: 'Temporary files',
+		category: 'temp' as const,
+		patterns: ['*.tmp', '*.swp', '.DS_Store'],
+	},
+	{
+		name: 'OS Caches',
+		description: 'OS cache files',
+		category: 'cache' as const,
+		patterns: ['.cache/', 'Thumbs.db'],
+	},
 ];
 
 const sampleCategories = [
-	{ id: 'language' as const, name: 'Languages', description: 'Programming language patterns' },
+	{
+		id: 'language' as const,
+		name: 'Languages',
+		description: 'Programming language patterns',
+	},
 	{ id: 'ide' as const, name: 'IDE/Editor', description: 'IDE patterns' },
 	{ id: 'temp' as const, name: 'Temporary', description: 'Temp files' },
 	{ id: 'cache' as const, name: 'Caches', description: 'Cache patterns' },
 ];
 
-function setupMocks(overrides?: { library?: unknown[]; categories?: unknown[]; libraryLoading?: boolean }) {
+function setupMocks(overrides?: {
+	library?: unknown[];
+	categories?: unknown[];
+	libraryLoading?: boolean;
+}) {
 	vi.mocked(useExcludePatternsLibrary).mockReturnValue({
-		data: (overrides?.library ?? sampleLibrary) as ReturnType<typeof useExcludePatternsLibrary>['data'],
+		data: (overrides?.library ?? sampleLibrary) as ReturnType<
+			typeof useExcludePatternsLibrary
+		>['data'],
 		isLoading: overrides?.libraryLoading ?? false,
 	} as ReturnType<typeof useExcludePatternsLibrary>);
 	vi.mocked(useExcludePatternCategories).mockReturnValue({
-		data: (overrides?.categories ?? sampleCategories) as ReturnType<typeof useExcludePatternCategories>['data'],
+		data: (overrides?.categories ?? sampleCategories) as ReturnType<
+			typeof useExcludePatternCategories
+		>['data'],
 	} as ReturnType<typeof useExcludePatternCategories>);
 }
 
 describe('PatternLibraryModal', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(useCreateExcludePattern).mockReturnValue({ mutateAsync: mockCreateMutateAsync, isPending: false } as unknown as ReturnType<typeof useCreateExcludePattern>);
+		vi.mocked(useCreateExcludePattern).mockReturnValue({
+			mutateAsync: mockCreateMutateAsync,
+			isPending: false,
+		} as unknown as ReturnType<typeof useCreateExcludePattern>);
 		setupMocks();
 	});
 
 	it('renders nothing when not open', () => {
 		const { container } = render(
-			<PatternLibraryModal isOpen={false} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />,
+			<PatternLibraryModal
+				isOpen={false}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
 		);
 		expect(container.innerHTML).toBe('');
 	});
 
 	it('renders modal when open', () => {
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		expect(screen.getByText('Exclude Patterns Library')).toBeInTheDocument();
-		expect(screen.getByText('Select patterns to exclude from your backups')).toBeInTheDocument();
+		expect(
+			screen.getByText('Select patterns to exclude from your backups'),
+		).toBeInTheDocument();
 	});
 
 	it('shows All Categories button in sidebar', () => {
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		expect(screen.getByText('All Categories')).toBeInTheDocument();
 	});
 
 	it('shows category buttons in sidebar', () => {
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		expect(screen.getByText('Languages')).toBeInTheDocument();
 		expect(screen.getByText('IDE/Editor')).toBeInTheDocument();
 		expect(screen.getByText('Temporary')).toBeInTheDocument();
@@ -74,7 +140,13 @@ describe('PatternLibraryModal', () => {
 	});
 
 	it('shows all patterns when no category selected', () => {
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		expect(screen.getByText('Node.js')).toBeInTheDocument();
 		expect(screen.getByText('Git')).toBeInTheDocument();
 		expect(screen.getByText('Temp Files')).toBeInTheDocument();
@@ -83,29 +155,57 @@ describe('PatternLibraryModal', () => {
 
 	it('filters patterns by category', async () => {
 		const user = userEvent.setup();
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		await user.click(screen.getByText('Languages'));
 		expect(screen.getByText('Node.js')).toBeInTheDocument();
 		expect(screen.queryByText('Git')).not.toBeInTheDocument();
 	});
 
 	it('shows Add button on each pattern', () => {
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		const addButtons = screen.getAllByText('Add');
 		expect(addButtons.length).toBe(4);
 	});
 
 	it('adds single pattern on click', async () => {
 		const user = userEvent.setup();
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		const addButtons = screen.getAllByText('Add');
 		await user.click(addButtons[0]); // Add first pattern (Node.js)
-		expect(mockOnAddPatterns).toHaveBeenCalledWith(['node_modules/', '.npm/', 'package-lock.json']);
+		expect(mockOnAddPatterns).toHaveBeenCalledWith([
+			'node_modules/',
+			'.npm/',
+			'package-lock.json',
+		]);
 	});
 
 	it('selects and adds multiple patterns', async () => {
 		const user = userEvent.setup();
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 
 		// Select patterns using the toggle buttons
 		const selectButtons = screen.getAllByTitle('Select');
@@ -117,7 +217,9 @@ describe('PatternLibraryModal', () => {
 
 		// Click Add Selected
 		await user.click(screen.getByText('Add Selected'));
-		expect(mockOnAddPatterns).toHaveBeenCalledWith(expect.arrayContaining(['node_modules/', '.npm/', '.git/']));
+		expect(mockOnAddPatterns).toHaveBeenCalledWith(
+			expect.arrayContaining(['node_modules/', '.npm/', '.git/']),
+		);
 		expect(mockOnClose).toHaveBeenCalled();
 	});
 
@@ -147,58 +249,104 @@ describe('PatternLibraryModal', () => {
 
 	it('shows loading spinner', () => {
 		setupMocks({ libraryLoading: true });
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		const spinner = document.querySelector('.animate-spin');
 		expect(spinner).toBeInTheDocument();
 	});
 
 	it('calls onClose when clicking Cancel', async () => {
 		const user = userEvent.setup();
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		await user.click(screen.getByText('Cancel'));
 		expect(mockOnClose).toHaveBeenCalled();
 	});
 
 	it('opens Create Custom form', async () => {
 		const user = userEvent.setup();
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		await user.click(screen.getByText('Create Custom'));
 		expect(screen.getByText('Create Custom Pattern')).toBeInTheDocument();
 		expect(screen.getByLabelText('Name')).toBeInTheDocument();
 		expect(screen.getByLabelText('Description')).toBeInTheDocument();
 		expect(screen.getByLabelText('Category')).toBeInTheDocument();
-		expect(screen.getByLabelText('Patterns (one per line)')).toBeInTheDocument();
+		expect(
+			screen.getByLabelText('Patterns (one per line)'),
+		).toBeInTheDocument();
 	});
 
 	it('saves custom pattern', async () => {
 		const user = userEvent.setup();
 		mockCreateMutateAsync.mockResolvedValue({});
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		await user.click(screen.getByText('Create Custom'));
 
 		await user.type(screen.getByLabelText('Name'), 'My Patterns');
-		await user.type(screen.getByLabelText('Description'), 'Custom test patterns');
-		await user.type(screen.getByLabelText('Patterns (one per line)'), '*.log\ntemp/*');
+		await user.type(
+			screen.getByLabelText('Description'),
+			'Custom test patterns',
+		);
+		await user.type(
+			screen.getByLabelText('Patterns (one per line)'),
+			'*.log\ntemp/*',
+		);
 		await user.click(screen.getByText('Save and Add'));
 
-		expect(mockCreateMutateAsync).toHaveBeenCalledWith(expect.objectContaining({
-			name: 'My Patterns',
-			description: 'Custom test patterns',
-			patterns: ['*.log', 'temp/*'],
-		}));
+		expect(mockCreateMutateAsync).toHaveBeenCalledWith(
+			expect.objectContaining({
+				name: 'My Patterns',
+				description: 'Custom test patterns',
+				patterns: ['*.log', 'temp/*'],
+			}),
+		);
 		expect(mockOnAddPatterns).toHaveBeenCalledWith(['*.log', 'temp/*']);
 	});
 
 	it('disables save button when name or patterns are empty', async () => {
 		const user = userEvent.setup();
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		await user.click(screen.getByText('Create Custom'));
 		expect(screen.getByText('Save and Add')).toBeDisabled();
 	});
 
 	it('cancels custom form and returns to library view', async () => {
 		const user = userEvent.setup();
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		await user.click(screen.getByText('Create Custom'));
 		expect(screen.getByText('Create Custom Pattern')).toBeInTheDocument();
 		await user.click(screen.getAllByText('Cancel')[0]);
@@ -207,7 +355,13 @@ describe('PatternLibraryModal', () => {
 	});
 
 	it('shows pattern preview codes', () => {
-		render(<PatternLibraryModal isOpen={true} onClose={mockOnClose} onAddPatterns={mockOnAddPatterns} />);
+		render(
+			<PatternLibraryModal
+				isOpen={true}
+				onClose={mockOnClose}
+				onAddPatterns={mockOnAddPatterns}
+			/>,
+		);
 		expect(screen.getByText('node_modules/')).toBeInTheDocument();
 		expect(screen.getByText('.npm/')).toBeInTheDocument();
 		expect(screen.getByText('.git/')).toBeInTheDocument();
@@ -227,6 +381,9 @@ describe('PatternLibraryModal', () => {
 		const selectButtons = screen.getAllByTitle('Select');
 		await user.click(selectButtons[0]); // Node.js
 		await user.click(screen.getByText('Add Selected'));
-		expect(mockOnAddPatterns).toHaveBeenCalledWith(['.npm/', 'package-lock.json']);
+		expect(mockOnAddPatterns).toHaveBeenCalledWith([
+			'.npm/',
+			'package-lock.json',
+		]);
 	});
 });

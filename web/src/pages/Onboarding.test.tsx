@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../hooks/useOnboarding', () => ({
 	useOnboardingStatus: vi.fn(),
@@ -54,7 +54,10 @@ describe('Onboarding', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('shows loading state', () => {
-		vi.mocked(useOnboardingStatus).mockReturnValue({ data: undefined, isLoading: true } as ReturnType<typeof useOnboardingStatus>);
+		vi.mocked(useOnboardingStatus).mockReturnValue({
+			data: undefined,
+			isLoading: true,
+		} as ReturnType<typeof useOnboardingStatus>);
 		renderPage();
 		const spinner = document.querySelector('.animate-spin');
 		expect(spinner).not.toBeNull();
@@ -105,7 +108,9 @@ describe('Onboarding', () => {
 		renderPage();
 		expect(screen.getByText('Organization for your team')).toBeInTheDocument();
 		expect(screen.getByText('Backup storage repository')).toBeInTheDocument();
-		expect(screen.getByText('Backup agent on your machine')).toBeInTheDocument();
+		expect(
+			screen.getByText('Backup agent on your machine'),
+		).toBeInTheDocument();
 		expect(screen.getByText('Automated backup schedule')).toBeInTheDocument();
 	});
 
@@ -120,16 +125,24 @@ describe('Onboarding', () => {
 
 	it('renders SMTP step', () => {
 		vi.mocked(useOnboardingStatus).mockReturnValue({
-			data: { current_step: 'smtp', completed_steps: ['welcome', 'organization'] },
+			data: {
+				current_step: 'smtp',
+				completed_steps: ['welcome', 'organization'],
+			},
 			isLoading: false,
 		} as ReturnType<typeof useOnboardingStatus>);
 		renderPage();
-		expect(screen.getByText('Configure Email Notifications')).toBeInTheDocument();
+		expect(
+			screen.getByText('Configure Email Notifications'),
+		).toBeInTheDocument();
 	});
 
 	it('renders repository step', () => {
 		vi.mocked(useOnboardingStatus).mockReturnValue({
-			data: { current_step: 'repository', completed_steps: ['welcome', 'organization', 'smtp'] },
+			data: {
+				current_step: 'repository',
+				completed_steps: ['welcome', 'organization', 'smtp'],
+			},
 			isLoading: false,
 		} as ReturnType<typeof useOnboardingStatus>);
 		renderPage();
@@ -138,7 +151,10 @@ describe('Onboarding', () => {
 
 	it('renders agent step with downloads', () => {
 		vi.mocked(useOnboardingStatus).mockReturnValue({
-			data: { current_step: 'agent', completed_steps: ['welcome', 'organization', 'smtp', 'repository'] },
+			data: {
+				current_step: 'agent',
+				completed_steps: ['welcome', 'organization', 'smtp', 'repository'],
+			},
 			isLoading: false,
 		} as ReturnType<typeof useOnboardingStatus>);
 		renderPage();
@@ -147,7 +163,16 @@ describe('Onboarding', () => {
 
 	it('renders schedule step', () => {
 		vi.mocked(useOnboardingStatus).mockReturnValue({
-			data: { current_step: 'schedule', completed_steps: ['welcome', 'organization', 'smtp', 'repository', 'agent'] },
+			data: {
+				current_step: 'schedule',
+				completed_steps: [
+					'welcome',
+					'organization',
+					'smtp',
+					'repository',
+					'agent',
+				],
+			},
 			isLoading: false,
 		} as ReturnType<typeof useOnboardingStatus>);
 		renderPage();
@@ -156,7 +181,17 @@ describe('Onboarding', () => {
 
 	it('renders verify step', () => {
 		vi.mocked(useOnboardingStatus).mockReturnValue({
-			data: { current_step: 'verify', completed_steps: ['welcome', 'organization', 'smtp', 'repository', 'agent', 'schedule'] },
+			data: {
+				current_step: 'verify',
+				completed_steps: [
+					'welcome',
+					'organization',
+					'smtp',
+					'repository',
+					'agent',
+					'schedule',
+				],
+			},
 			isLoading: false,
 		} as ReturnType<typeof useOnboardingStatus>);
 		renderPage();
@@ -182,15 +217,22 @@ describe('Onboarding', () => {
 			isLoading: false,
 		} as ReturnType<typeof useOnboardingStatus>);
 		renderPage();
-		expect(screen.getByText('Learn more about organizations')).toBeInTheDocument();
+		expect(
+			screen.getByText('Learn more about organizations'),
+		).toBeInTheDocument();
 	});
 
 	it('shows SMTP step description', () => {
 		vi.mocked(useOnboardingStatus).mockReturnValue({
-			data: { current_step: 'smtp', completed_steps: ['welcome', 'organization'] },
+			data: {
+				current_step: 'smtp',
+				completed_steps: ['welcome', 'organization'],
+			},
 			isLoading: false,
 		} as ReturnType<typeof useOnboardingStatus>);
 		renderPage();
-		expect(screen.getByText(/optional and can be configured later/)).toBeInTheDocument();
+		expect(
+			screen.getByText(/optional and can be configured later/),
+		).toBeInTheDocument();
 	});
 });

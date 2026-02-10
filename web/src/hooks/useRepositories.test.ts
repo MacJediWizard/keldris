@@ -1,14 +1,14 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createWrapper } from '../test/helpers';
 import {
-	useRepositories,
-	useRepository,
 	useCreateRepository,
 	useDeleteRepository,
-	useTestRepository,
+	useRepositories,
+	useRepository,
 	useTestConnection,
+	useTestRepository,
 } from './useRepositories';
-import { createWrapper } from '../test/helpers';
 
 vi.mock('../lib/api', () => ({
 	repositoriesApi: {

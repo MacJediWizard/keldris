@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockSetLanguage = vi.fn();
 
@@ -28,7 +28,9 @@ describe('LanguageSelector', () => {
 
 	it('renders language button with current flag', () => {
 		render(<LanguageSelector />);
-		expect(screen.getByRole('button', { name: 'Language' })).toBeInTheDocument();
+		expect(
+			screen.getByRole('button', { name: 'Language' }),
+		).toBeInTheDocument();
 	});
 
 	it('does not show dropdown by default', () => {

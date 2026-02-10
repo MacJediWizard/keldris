@@ -10,18 +10,14 @@ const steps = [
 
 describe('Stepper', () => {
 	it('renders all steps', () => {
-		render(
-			<Stepper steps={steps} currentStep="step1" completedSteps={[]} />,
-		);
+		render(<Stepper steps={steps} currentStep="step1" completedSteps={[]} />);
 		expect(screen.getByText('Step 1')).toBeInTheDocument();
 		expect(screen.getByText('Step 2')).toBeInTheDocument();
 		expect(screen.getByText('Step 3')).toBeInTheDocument();
 	});
 
 	it('displays step numbers for non-completed steps', () => {
-		render(
-			<Stepper steps={steps} currentStep="step1" completedSteps={[]} />,
-		);
+		render(<Stepper steps={steps} currentStep="step1" completedSteps={[]} />);
 		expect(screen.getByText('1')).toBeInTheDocument();
 		expect(screen.getByText('2')).toBeInTheDocument();
 		expect(screen.getByText('3')).toBeInTheDocument();
@@ -29,11 +25,7 @@ describe('Stepper', () => {
 
 	it('shows checkmark for completed steps', () => {
 		const { container } = render(
-			<Stepper
-				steps={steps}
-				currentStep="step2"
-				completedSteps={['step1']}
-			/>,
+			<Stepper steps={steps} currentStep="step2" completedSteps={['step1']} />,
 		);
 		const svgs = container.querySelectorAll('svg');
 		expect(svgs.length).toBeGreaterThan(0);
@@ -84,9 +76,7 @@ describe('Stepper', () => {
 	});
 
 	it('renders progress nav element', () => {
-		render(
-			<Stepper steps={steps} currentStep="step1" completedSteps={[]} />,
-		);
+		render(<Stepper steps={steps} currentStep="step1" completedSteps={[]} />);
 		expect(screen.getByRole('navigation')).toHaveAttribute(
 			'aria-label',
 			'Progress',
@@ -95,11 +85,7 @@ describe('Stepper', () => {
 
 	it('renders connector lines between steps', () => {
 		const { container } = render(
-			<Stepper
-				steps={steps}
-				currentStep="step2"
-				completedSteps={['step1']}
-			/>,
+			<Stepper steps={steps} currentStep="step2" completedSteps={['step1']} />,
 		);
 		const connectors = container.querySelectorAll('.h-0\\.5');
 		// Should have connectors between steps (n-1 connectors)
@@ -108,11 +94,7 @@ describe('Stepper', () => {
 
 	it('applies indigo color to completed connectors', () => {
 		const { container } = render(
-			<Stepper
-				steps={steps}
-				currentStep="step2"
-				completedSteps={['step1']}
-			/>,
+			<Stepper steps={steps} currentStep="step2" completedSteps={['step1']} />,
 		);
 		const connectors = container.querySelectorAll('.h-0\\.5');
 		expect(connectors[0]).toHaveClass('bg-indigo-600');
@@ -122,11 +104,7 @@ describe('Stepper', () => {
 describe('VerticalStepper', () => {
 	it('renders all steps with labels', () => {
 		render(
-			<VerticalStepper
-				steps={steps}
-				currentStep="step1"
-				completedSteps={[]}
-			/>,
+			<VerticalStepper steps={steps} currentStep="step1" completedSteps={[]} />,
 		);
 		expect(screen.getByText('Step 1')).toBeInTheDocument();
 		expect(screen.getByText('Step 2')).toBeInTheDocument();
@@ -135,11 +113,7 @@ describe('VerticalStepper', () => {
 
 	it('renders step descriptions', () => {
 		render(
-			<VerticalStepper
-				steps={steps}
-				currentStep="step1"
-				completedSteps={[]}
-			/>,
+			<VerticalStepper steps={steps} currentStep="step1" completedSteps={[]} />,
 		);
 		expect(screen.getByText('First step')).toBeInTheDocument();
 		expect(screen.getByText('Second step')).toBeInTheDocument();
@@ -171,11 +145,7 @@ describe('VerticalStepper', () => {
 
 	it('applies pending styling for future steps', () => {
 		render(
-			<VerticalStepper
-				steps={steps}
-				currentStep="step1"
-				completedSteps={[]}
-			/>,
+			<VerticalStepper steps={steps} currentStep="step1" completedSteps={[]} />,
 		);
 		const step3Label = screen.getByText('Step 3');
 		expect(step3Label).toHaveClass('text-gray-500');
@@ -198,11 +168,7 @@ describe('VerticalStepper', () => {
 
 	it('renders navigation with progress label', () => {
 		render(
-			<VerticalStepper
-				steps={steps}
-				currentStep="step1"
-				completedSteps={[]}
-			/>,
+			<VerticalStepper steps={steps} currentStep="step1" completedSteps={[]} />,
 		);
 		expect(screen.getByRole('navigation')).toHaveAttribute(
 			'aria-label',

@@ -1,19 +1,19 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createWrapper } from '../test/helpers';
 import {
-	useDRRunbooks,
-	useDRRunbook,
-	useDRStatus,
-	useCreateDRRunbook,
-	useDeleteDRRunbook,
 	useActivateDRRunbook,
 	useArchiveDRRunbook,
-	useRenderDRRunbook,
-	useGenerateDRRunbook,
-	useDRTestSchedules,
+	useCreateDRRunbook,
 	useCreateDRTestSchedule,
+	useDRRunbook,
+	useDRRunbooks,
+	useDRStatus,
+	useDRTestSchedules,
+	useDeleteDRRunbook,
+	useGenerateDRRunbook,
+	useRenderDRRunbook,
 } from './useDRRunbooks';
-import { createWrapper } from '../test/helpers';
 
 vi.mock('../lib/api', () => ({
 	drRunbooksApi: {
@@ -39,7 +39,9 @@ describe('useDRRunbooks', () => {
 
 	it('fetches runbooks', async () => {
 		vi.mocked(drRunbooksApi.list).mockResolvedValue([]);
-		const { result } = renderHook(() => useDRRunbooks(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useDRRunbooks(), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });
@@ -49,7 +51,9 @@ describe('useDRRunbook', () => {
 
 	it('fetches a runbook', async () => {
 		vi.mocked(drRunbooksApi.get).mockResolvedValue({ id: 'rb1' });
-		const { result } = renderHook(() => useDRRunbook('rb1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useDRRunbook('rb1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
@@ -63,8 +67,12 @@ describe('useDRStatus', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('fetches DR status', async () => {
-		vi.mocked(drRunbooksApi.getStatus).mockResolvedValue({ overall_status: 'healthy' });
-		const { result } = renderHook(() => useDRStatus(), { wrapper: createWrapper() });
+		vi.mocked(drRunbooksApi.getStatus).mockResolvedValue({
+			overall_status: 'healthy',
+		});
+		const { result } = renderHook(() => useDRStatus(), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });
@@ -74,8 +82,12 @@ describe('useCreateDRRunbook', () => {
 
 	it('creates a runbook', async () => {
 		vi.mocked(drRunbooksApi.create).mockResolvedValue({ id: 'rb1' });
-		const { result } = renderHook(() => useCreateDRRunbook(), { wrapper: createWrapper() });
-		result.current.mutate({ name: 'DR Plan' } as Parameters<typeof drRunbooksApi.create>[0]);
+		const { result } = renderHook(() => useCreateDRRunbook(), {
+			wrapper: createWrapper(),
+		});
+		result.current.mutate({ name: 'DR Plan' } as Parameters<
+			typeof drRunbooksApi.create
+		>[0]);
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });
@@ -85,7 +97,9 @@ describe('useDeleteDRRunbook', () => {
 
 	it('deletes a runbook', async () => {
 		vi.mocked(drRunbooksApi.delete).mockResolvedValue({ message: 'Deleted' });
-		const { result } = renderHook(() => useDeleteDRRunbook(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useDeleteDRRunbook(), {
+			wrapper: createWrapper(),
+		});
 		result.current.mutate('rb1');
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
@@ -95,8 +109,13 @@ describe('useActivateDRRunbook', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('activates a runbook', async () => {
-		vi.mocked(drRunbooksApi.activate).mockResolvedValue({ id: 'rb1', status: 'active' });
-		const { result } = renderHook(() => useActivateDRRunbook(), { wrapper: createWrapper() });
+		vi.mocked(drRunbooksApi.activate).mockResolvedValue({
+			id: 'rb1',
+			status: 'active',
+		});
+		const { result } = renderHook(() => useActivateDRRunbook(), {
+			wrapper: createWrapper(),
+		});
 		result.current.mutate('rb1');
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
@@ -106,8 +125,13 @@ describe('useArchiveDRRunbook', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('archives a runbook', async () => {
-		vi.mocked(drRunbooksApi.archive).mockResolvedValue({ id: 'rb1', status: 'archived' });
-		const { result } = renderHook(() => useArchiveDRRunbook(), { wrapper: createWrapper() });
+		vi.mocked(drRunbooksApi.archive).mockResolvedValue({
+			id: 'rb1',
+			status: 'archived',
+		});
+		const { result } = renderHook(() => useArchiveDRRunbook(), {
+			wrapper: createWrapper(),
+		});
 		result.current.mutate('rb1');
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
@@ -118,7 +142,9 @@ describe('useRenderDRRunbook', () => {
 
 	it('renders a runbook', async () => {
 		vi.mocked(drRunbooksApi.render).mockResolvedValue({ html: '<p>Plan</p>' });
-		const { result } = renderHook(() => useRenderDRRunbook('rb1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useRenderDRRunbook('rb1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
@@ -132,8 +158,12 @@ describe('useGenerateDRRunbook', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('generates a runbook', async () => {
-		vi.mocked(drRunbooksApi.generateFromSchedule).mockResolvedValue({ id: 'rb1' });
-		const { result } = renderHook(() => useGenerateDRRunbook(), { wrapper: createWrapper() });
+		vi.mocked(drRunbooksApi.generateFromSchedule).mockResolvedValue({
+			id: 'rb1',
+		});
+		const { result } = renderHook(() => useGenerateDRRunbook(), {
+			wrapper: createWrapper(),
+		});
 		result.current.mutate('sched-1');
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
@@ -144,7 +174,9 @@ describe('useDRTestSchedules', () => {
 
 	it('fetches test schedules', async () => {
 		vi.mocked(drRunbooksApi.listTestSchedules).mockResolvedValue([]);
-		const { result } = renderHook(() => useDRTestSchedules('rb1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useDRTestSchedules('rb1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
@@ -158,9 +190,18 @@ describe('useCreateDRTestSchedule', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('creates a test schedule', async () => {
-		vi.mocked(drRunbooksApi.createTestSchedule).mockResolvedValue({ id: 'ts1' });
-		const { result } = renderHook(() => useCreateDRTestSchedule(), { wrapper: createWrapper() });
-		result.current.mutate({ runbookId: 'rb1', data: { cron: '0 0 * * *' } as Parameters<typeof drRunbooksApi.createTestSchedule>[1] });
+		vi.mocked(drRunbooksApi.createTestSchedule).mockResolvedValue({
+			id: 'ts1',
+		});
+		const { result } = renderHook(() => useCreateDRTestSchedule(), {
+			wrapper: createWrapper(),
+		});
+		result.current.mutate({
+			runbookId: 'rb1',
+			data: { cron: '0 0 * * *' } as Parameters<
+				typeof drRunbooksApi.createTestSchedule
+			>[1],
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });

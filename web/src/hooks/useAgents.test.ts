@@ -1,19 +1,19 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createWrapper } from '../test/helpers';
 import {
-	useAgents,
 	useAgent,
+	useAgentBackups,
+	useAgentHealthHistory,
+	useAgentSchedules,
+	useAgentStats,
+	useAgents,
 	useCreateAgent,
 	useDeleteAgent,
-	useRotateAgentApiKey,
-	useRevokeAgentApiKey,
-	useAgentStats,
-	useAgentBackups,
-	useAgentSchedules,
-	useAgentHealthHistory,
 	useFleetHealth,
+	useRevokeAgentApiKey,
+	useRotateAgentApiKey,
 } from './useAgents';
-import { createWrapper } from '../test/helpers';
 
 vi.mock('../lib/api', () => ({
 	agentsApi: {

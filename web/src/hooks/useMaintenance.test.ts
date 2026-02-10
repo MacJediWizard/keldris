@@ -1,13 +1,13 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createWrapper } from '../test/helpers';
 import {
-	useMaintenanceWindows,
-	useMaintenanceWindow,
 	useActiveMaintenance,
 	useCreateMaintenanceWindow,
 	useDeleteMaintenanceWindow,
+	useMaintenanceWindow,
+	useMaintenanceWindows,
 } from './useMaintenance';
-import { createWrapper } from '../test/helpers';
 
 vi.mock('../lib/api', () => ({
 	maintenanceApi: {
@@ -27,7 +27,9 @@ describe('useMaintenanceWindows', () => {
 
 	it('fetches maintenance windows', async () => {
 		vi.mocked(maintenanceApi.list).mockResolvedValue([]);
-		const { result } = renderHook(() => useMaintenanceWindows(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useMaintenanceWindows(), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });
@@ -37,7 +39,9 @@ describe('useMaintenanceWindow', () => {
 
 	it('fetches a single window', async () => {
 		vi.mocked(maintenanceApi.get).mockResolvedValue({ id: 'mw1' });
-		const { result } = renderHook(() => useMaintenanceWindow('mw1'), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useMaintenanceWindow('mw1'), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 
@@ -51,8 +55,13 @@ describe('useActiveMaintenance', () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	it('fetches active maintenance', async () => {
-		vi.mocked(maintenanceApi.getActive).mockResolvedValue({ active: null, upcoming: null });
-		const { result } = renderHook(() => useActiveMaintenance(), { wrapper: createWrapper() });
+		vi.mocked(maintenanceApi.getActive).mockResolvedValue({
+			active: null,
+			upcoming: null,
+		});
+		const { result } = renderHook(() => useActiveMaintenance(), {
+			wrapper: createWrapper(),
+		});
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });
@@ -62,8 +71,12 @@ describe('useCreateMaintenanceWindow', () => {
 
 	it('creates a window', async () => {
 		vi.mocked(maintenanceApi.create).mockResolvedValue({ id: 'mw1' });
-		const { result } = renderHook(() => useCreateMaintenanceWindow(), { wrapper: createWrapper() });
-		result.current.mutate({ title: 'Planned Maintenance' } as Parameters<typeof maintenanceApi.create>[0]);
+		const { result } = renderHook(() => useCreateMaintenanceWindow(), {
+			wrapper: createWrapper(),
+		});
+		result.current.mutate({ title: 'Planned Maintenance' } as Parameters<
+			typeof maintenanceApi.create
+		>[0]);
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});
 });
@@ -73,7 +86,9 @@ describe('useDeleteMaintenanceWindow', () => {
 
 	it('deletes a window', async () => {
 		vi.mocked(maintenanceApi.delete).mockResolvedValue({ message: 'Deleted' });
-		const { result } = renderHook(() => useDeleteMaintenanceWindow(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useDeleteMaintenanceWindow(), {
+			wrapper: createWrapper(),
+		});
 		result.current.mutate('mw1');
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 	});

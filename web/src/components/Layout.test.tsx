@@ -1,11 +1,12 @@
 import { render, screen } from '@testing-library/react';
-import { type Mock, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { type Mock, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-router-dom', async () => {
-	const actual = await vi.importActual<typeof import('react-router-dom')>(
-		'react-router-dom',
-	);
+	const actual =
+		await vi.importActual<typeof import('react-router-dom')>(
+			'react-router-dom',
+		);
 	return {
 		...actual,
 		Outlet: () => <div data-testid="outlet">Outlet Content</div>,

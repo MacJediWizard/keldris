@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { NetworkMountStatus } from './NetworkMountStatus';
 import type { NetworkMount } from '../../lib/types';
+import { NetworkMountStatus } from './NetworkMountStatus';
 
 const connectedMount: NetworkMount = {
 	path: '/mnt/backup',
@@ -74,9 +74,7 @@ describe('NetworkMountStatus', () => {
 	});
 
 	it('shows correct status colors', () => {
-		render(
-			<NetworkMountStatus mounts={[connectedMount, disconnectedMount]} />,
-		);
+		render(<NetworkMountStatus mounts={[connectedMount, disconnectedMount]} />);
 		expect(screen.getByText('connected')).toBeInTheDocument();
 		expect(screen.getByText('disconnected')).toBeInTheDocument();
 	});
