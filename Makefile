@@ -67,6 +67,7 @@ dev:
 
 test:
 	go test -race -cover ./...
+	cd web && npx vitest run
 
 lint:
 	go vet ./...
