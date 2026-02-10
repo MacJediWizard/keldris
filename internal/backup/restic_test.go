@@ -25,7 +25,7 @@ func TestHelperProcess(t *testing.T) {
 	args := os.Args
 	for i, arg := range args {
 		if arg == "--" {
-			args = args[i+1:]
+			_ = args[i+1:]
 			break
 		}
 	}
