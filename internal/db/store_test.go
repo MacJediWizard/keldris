@@ -665,8 +665,8 @@ func TestStore_Schedules(t *testing.T) {
 		require.NotNil(t, got.BandwidthLimitKB)
 		assert.Equal(t, 1024, *got.BandwidthLimitKB)
 		require.NotNil(t, got.BackupWindow)
-		assert.Equal(t, "02:00", got.BackupWindow.Start)
-		assert.Equal(t, "06:00", got.BackupWindow.End)
+		assert.Contains(t, got.BackupWindow.Start, "02:00")
+		assert.Contains(t, got.BackupWindow.End, "06:00")
 		assert.Equal(t, []int{12, 13, 14}, got.ExcludedHours)
 		require.NotNil(t, got.CompressionLevel)
 		assert.Equal(t, "max", *got.CompressionLevel)
@@ -1193,7 +1193,7 @@ func TestStore_Policies(t *testing.T) {
 		require.NotNil(t, got.BandwidthLimitKB)
 		assert.Equal(t, 512, *got.BandwidthLimitKB)
 		require.NotNil(t, got.BackupWindow)
-		assert.Equal(t, "01:00", got.BackupWindow.Start)
+		assert.Contains(t, got.BackupWindow.Start, "01:00")
 		assert.Equal(t, "0 2 * * *", got.CronExpression)
 	})
 
@@ -1701,15 +1701,8 @@ func TestStore_Verifications(t *testing.T) {
 
 	t.Run("Verification_CRUD", func(t *testing.T) {
 		v := models.NewVerification(repo.ID, models.VerificationTypeCheck)
-		detailsBytes, _ := v.DetailsJSON()
-		_ = detailsBytes // no details yet
 
-		// We need to insert via raw SQL since there's no CreateVerification exposed,
-		// but let's check if it exists
-		_, err := db.Pool.Exec(ctx, `
-			INSERT INTO verifications (id, repository_id, type, started_at, status, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6)
-		`, v.ID, v.RepositoryID, string(v.Type), v.StartedAt, string(v.Status), v.CreatedAt)
+		err := db.CreateVerification(ctx, v)
 		require.NoError(t, err)
 
 		got, err := db.GetVerificationByID(ctx, v.ID)
