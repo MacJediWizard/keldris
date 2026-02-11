@@ -29,6 +29,9 @@ type mockNotificationStore struct {
 	createPrefErr error
 	updatePrefErr error
 	deletePrefErr error
+	listChanErr   error
+	listPrefErr   error
+	listLogErr    error
 }
 
 func (m *mockNotificationStore) GetUserByID(_ context.Context, id uuid.UUID) (*models.User, error) {
@@ -39,6 +42,9 @@ func (m *mockNotificationStore) GetUserByID(_ context.Context, id uuid.UUID) (*m
 }
 
 func (m *mockNotificationStore) GetNotificationChannelsByOrgID(_ context.Context, orgID uuid.UUID) ([]*models.NotificationChannel, error) {
+	if m.listChanErr != nil {
+		return nil, m.listChanErr
+	}
 	var result []*models.NotificationChannel
 	for _, ch := range m.channels {
 		if ch.OrgID == orgID {
@@ -68,6 +74,9 @@ func (m *mockNotificationStore) DeleteNotificationChannel(_ context.Context, _ u
 }
 
 func (m *mockNotificationStore) GetNotificationPreferencesByOrgID(_ context.Context, orgID uuid.UUID) ([]*models.NotificationPreference, error) {
+	if m.listPrefErr != nil {
+		return nil, m.listPrefErr
+	}
 	var result []*models.NotificationPreference
 	for _, p := range m.preferences {
 		if p.OrgID == orgID {
@@ -100,6 +109,9 @@ func (m *mockNotificationStore) DeleteNotificationPreference(_ context.Context, 
 }
 
 func (m *mockNotificationStore) GetNotificationLogsByOrgID(_ context.Context, _ uuid.UUID, _ int) ([]*models.NotificationLog, error) {
+	if m.listLogErr != nil {
+		return nil, m.listLogErr
+	}
 	return m.logs, nil
 }
 
@@ -156,6 +168,32 @@ func TestListChannels(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		noUserStore := &mockNotificationStore{user: nil}
+		wrongSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
+		r := setupNotificationTestRouter(noUserStore, wrongSession)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/notifications/channels", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
+		}
+	})
+
+	t.Run("store error", func(t *testing.T) {
+		errStore := &mockNotificationStore{
+			user:        dbUser,
+			listChanErr: errors.New("db error"),
+		}
+		r := setupNotificationTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/notifications/channels", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 }
@@ -217,6 +255,16 @@ func TestGetChannel(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/notifications/channels/"+channelID.String(), nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
 		}
 	})
 }
@@ -283,6 +331,32 @@ func TestCreateChannel(t *testing.T) {
 			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		body := `{"name":"test","type":"slack","config":{"webhook_url":"https://x"}}`
+		req, _ := http.NewRequest("POST", "/api/v1/notifications/channels", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		noUserStore := &mockNotificationStore{user: nil}
+		wrongSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
+		r := setupNotificationTestRouter(noUserStore, wrongSession)
+		w := httptest.NewRecorder()
+		body := `{"name":"test","type":"slack","config":{"webhook_url":"https://x"}}`
+		req, _ := http.NewRequest("POST", "/api/v1/notifications/channels", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
+		}
+	})
 }
 
 func TestUpdateChannel(t *testing.T) {
@@ -319,6 +393,67 @@ func TestUpdateChannel(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		body := `{"name":"test"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/notifications/channels/"+channelID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"test"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/notifications/channels/bad-uuid", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		otherOrgID := uuid.New()
+		otherUserID := uuid.New()
+		otherUser := &models.User{ID: otherUserID, OrgID: otherOrgID, Role: models.UserRoleAdmin}
+		wrongStore := &mockNotificationStore{
+			channelByID: map[uuid.UUID]*models.NotificationChannel{channelID: channel},
+			user:        otherUser,
+		}
+		wrongSession := &auth.SessionUser{ID: otherUserID, CurrentOrgID: otherOrgID}
+		r := setupNotificationTestRouter(wrongStore, wrongSession)
+		w := httptest.NewRecorder()
+		body := `{"name":"test"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/notifications/channels/"+channelID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("store update error", func(t *testing.T) {
+		errStore := &mockNotificationStore{
+			channelByID:   map[uuid.UUID]*models.NotificationChannel{channelID: channel},
+			user:          dbUser,
+			updateChanErr: errors.New("db error"),
+		}
+		r := setupNotificationTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"fail"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/notifications/channels/"+channelID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 }
@@ -370,6 +505,44 @@ func TestDeleteChannel(t *testing.T) {
 			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/notifications/channels/"+channelID.String(), nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/notifications/channels/bad-uuid", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		otherOrgID := uuid.New()
+		otherUserID := uuid.New()
+		otherUser := &models.User{ID: otherUserID, OrgID: otherOrgID, Role: models.UserRoleAdmin}
+		wrongStore := &mockNotificationStore{
+			channelByID: map[uuid.UUID]*models.NotificationChannel{channelID: channel},
+			user:        otherUser,
+		}
+		wrongSession := &auth.SessionUser{ID: otherUserID, CurrentOrgID: otherOrgID}
+		r := setupNotificationTestRouter(wrongStore, wrongSession)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/notifications/channels/"+channelID.String(), nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
 }
 
 func TestListPreferences(t *testing.T) {
@@ -386,6 +559,28 @@ func TestListPreferences(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/notifications/preferences", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		noUserStore := &mockNotificationStore{user: nil}
+		wrongSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
+		r := setupNotificationTestRouter(noUserStore, wrongSession)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/notifications/preferences", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 }
@@ -438,6 +633,67 @@ func TestCreatePreference(t *testing.T) {
 			t.Fatalf("expected 400, got %d", w.Code)
 		}
 	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		body := `{"channel_id":"` + channelID.String() + `","event_type":"backup_success","enabled":true}`
+		req, _ := http.NewRequest("POST", "/api/v1/notifications/preferences", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("store create error", func(t *testing.T) {
+		errStore := &mockNotificationStore{
+			channelByID:   map[uuid.UUID]*models.NotificationChannel{channelID: channel},
+			user:          dbUser,
+			createPrefErr: errors.New("db error"),
+		}
+		r := setupNotificationTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		body := `{"channel_id":"` + channelID.String() + `","event_type":"backup_success","enabled":true}`
+		req, _ := http.NewRequest("POST", "/api/v1/notifications/preferences", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		noUserStore := &mockNotificationStore{user: nil}
+		wrongSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
+		r := setupNotificationTestRouter(noUserStore, wrongSession)
+		w := httptest.NewRecorder()
+		body := `{"channel_id":"` + channelID.String() + `","event_type":"backup_success","enabled":true}`
+		req, _ := http.NewRequest("POST", "/api/v1/notifications/preferences", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
+		}
+	})
+
+	t.Run("channel wrong org", func(t *testing.T) {
+		otherOrgID := uuid.New()
+		otherChannel := &models.NotificationChannel{ID: channelID, OrgID: otherOrgID, Name: "slack"}
+		wrongOrgStore := &mockNotificationStore{
+			channelByID: map[uuid.UUID]*models.NotificationChannel{channelID: otherChannel},
+			user:        dbUser,
+		}
+		r := setupNotificationTestRouter(wrongOrgStore, user)
+		w := httptest.NewRecorder()
+		body := `{"channel_id":"` + channelID.String() + `","event_type":"backup_success","enabled":true}`
+		req, _ := http.NewRequest("POST", "/api/v1/notifications/preferences", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
 }
 
 func TestUpdatePreference(t *testing.T) {
@@ -476,6 +732,47 @@ func TestUpdatePreference(t *testing.T) {
 			t.Fatalf("expected 404, got %d", w.Code)
 		}
 	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		body := `{"enabled":false}`
+		req, _ := http.NewRequest("PUT", "/api/v1/notifications/preferences/"+prefID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, user)
+		w := httptest.NewRecorder()
+		body := `{"enabled":false}`
+		req, _ := http.NewRequest("PUT", "/api/v1/notifications/preferences/bad-uuid", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("store update error", func(t *testing.T) {
+		errStore := &mockNotificationStore{
+			preferences:   []*models.NotificationPreference{pref},
+			user:          dbUser,
+			updatePrefErr: errors.New("db error"),
+		}
+		r := setupNotificationTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		body := `{"enabled":false}`
+		req, _ := http.NewRequest("PUT", "/api/v1/notifications/preferences/"+prefID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
+		}
+	})
 }
 
 func TestDeletePreference(t *testing.T) {
@@ -510,6 +807,41 @@ func TestDeletePreference(t *testing.T) {
 			t.Fatalf("expected 404, got %d", w.Code)
 		}
 	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/notifications/preferences/"+prefID.String(), nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/notifications/preferences/bad-uuid", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("store delete error", func(t *testing.T) {
+		errStore := &mockNotificationStore{
+			preferences:   []*models.NotificationPreference{pref},
+			user:          dbUser,
+			deletePrefErr: errors.New("db error"),
+		}
+		r := setupNotificationTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/notifications/preferences/"+prefID.String(), nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
+		}
+	})
 }
 
 func TestListLogs(t *testing.T) {
@@ -526,6 +858,28 @@ func TestListLogs(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupNotificationTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/notifications/logs", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		noUserStore := &mockNotificationStore{user: nil, logs: []*models.NotificationLog{}}
+		wrongSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
+		r := setupNotificationTestRouter(noUserStore, wrongSession)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/notifications/logs", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 }

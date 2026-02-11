@@ -37,6 +37,7 @@ type mockOrgStore struct {
 	createInvErr    error
 	deleteInvErr    error
 	acceptInvErr    error
+	listErr         error
 }
 
 func membershipKey(userID, orgID uuid.UUID) string {
@@ -70,6 +71,9 @@ func (m *mockOrgStore) DeleteOrganization(_ context.Context, _ uuid.UUID) error 
 }
 
 func (m *mockOrgStore) GetUserOrganizations(_ context.Context, _ uuid.UUID) ([]*models.Organization, error) {
+	if m.listErr != nil {
+		return nil, m.listErr
+	}
 	return m.orgs, nil
 }
 
@@ -195,6 +199,24 @@ func TestListOrganizations(t *testing.T) {
 			t.Fatalf("expected 401, got %d", w.Code)
 		}
 	})
+
+	t.Run("store error", func(t *testing.T) {
+		errStore := &mockOrgStore{
+			orgs:    []*models.Organization{org},
+			orgByID: map[uuid.UUID]*models.Organization{orgID: org},
+			memberships: map[string]*models.OrgMembership{
+				membershipKey(userID, orgID): {ID: uuid.New(), UserID: userID, OrgID: orgID, Role: models.OrgRoleOwner},
+			},
+			listErr: errors.New("db error"),
+		}
+		r := setupOrgTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/organizations", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
+		}
+	})
 }
 
 func TestCreateOrganization(t *testing.T) {
@@ -261,6 +283,26 @@ func TestCreateOrganization(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("store error", func(t *testing.T) {
+		errStore := &mockOrgStore{
+			orgByID:   map[uuid.UUID]*models.Organization{},
+			orgBySlug: map[string]*models.Organization{},
+			memberships: map[string]*models.OrgMembership{
+				membershipKey(userID, orgID): {ID: uuid.New(), UserID: userID, OrgID: orgID, Role: models.OrgRoleOwner},
+			},
+			createOrgErr: errors.New("db error"),
+		}
+		r := setupOrgTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"FailOrg","slug":"failorg"}`
+		req, _ := http.NewRequest("POST", "/api/v1/organizations", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
 		}
 	})
 }
@@ -396,6 +438,49 @@ func TestUpdateOrganization(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		missingOrgID := uuid.New()
+		ownerUser := &auth.SessionUser{ID: ownerID, CurrentOrgID: orgID}
+		notFoundStore := &mockOrgStore{
+			orgByID:   map[uuid.UUID]*models.Organization{orgID: org},
+			orgBySlug: map[string]*models.Organization{},
+			memberships: map[string]*models.OrgMembership{
+				membershipKey(ownerID, orgID):        {ID: uuid.New(), UserID: ownerID, OrgID: orgID, Role: models.OrgRoleOwner},
+				membershipKey(ownerID, missingOrgID): {ID: uuid.New(), UserID: ownerID, OrgID: missingOrgID, Role: models.OrgRoleOwner},
+			},
+		}
+		r := setupOrgTestRouter(notFoundStore, ownerUser)
+		w := httptest.NewRecorder()
+		body := `{"name":"Test"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/organizations/"+missingOrgID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("store error", func(t *testing.T) {
+		ownerUser := &auth.SessionUser{ID: ownerID, CurrentOrgID: orgID}
+		errStore := &mockOrgStore{
+			orgByID:   map[uuid.UUID]*models.Organization{orgID: org},
+			orgBySlug: map[string]*models.Organization{},
+			memberships: map[string]*models.OrgMembership{
+				membershipKey(ownerID, orgID): {ID: uuid.New(), UserID: ownerID, OrgID: orgID, Role: models.OrgRoleOwner},
+			},
+			updateOrgErr: errors.New("db error"),
+		}
+		r := setupOrgTestRouter(errStore, ownerUser)
+		w := httptest.NewRecorder()
+		body := `{"name":"Updated"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/organizations/"+orgID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
 		}
 	})
 }
@@ -794,6 +879,23 @@ func TestAcceptInvitation(t *testing.T) {
 		}
 	})
 
+	t.Run("success", func(t *testing.T) {
+		successStore := &mockOrgStore{
+			orgByID:     map[uuid.UUID]*models.Organization{orgID: org},
+			memberships: map[string]*models.OrgMembership{},
+			invByToken:  map[string]*models.OrgInvitation{"valid-token": inv},
+		}
+		r := setupOrgTestRouterWithSessions(successStore, user)
+		w := httptest.NewRecorder()
+		body := `{"token":"valid-token"}`
+		req, _ := http.NewRequest("POST", "/api/v1/invitations/accept", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
 	t.Run("expired invitation", func(t *testing.T) {
 		expiredInv := &models.OrgInvitation{
 			ID:        uuid.New(),
@@ -880,6 +982,114 @@ func TestUpdateMember(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+}
+
+func setupOrgTestRouterWithSessions(store *mockOrgStore, user *auth.SessionUser) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		if user != nil {
+			c.Set(string(middleware.UserContextKey), user)
+		}
+		c.Next()
+	})
+	rbac := auth.NewRBAC(store)
+	sessionStore, _ := auth.NewSessionStore(auth.SessionConfig{
+		Secret:     make([]byte, 32),
+		MaxAge:     3600,
+		CookiePath: "/",
+	}, zerolog.Nop())
+	handler := NewOrganizationsHandler(store, sessionStore, rbac, zerolog.Nop())
+	api := r.Group("/api/v1")
+	handler.RegisterRoutes(api)
+	return r
+}
+
+func TestSwitchOrganization(t *testing.T) {
+	orgID := uuid.New()
+	userID := uuid.New()
+
+	org := &models.Organization{ID: orgID, Name: "Target Org", Slug: "target"}
+
+	store := &mockOrgStore{
+		orgByID:   map[uuid.UUID]*models.Organization{orgID: org},
+		orgBySlug: map[string]*models.Organization{},
+		memberships: map[string]*models.OrgMembership{
+			membershipKey(userID, orgID): {ID: uuid.New(), UserID: userID, OrgID: orgID, Role: models.OrgRoleMember},
+		},
+	}
+
+	t.Run("success", func(t *testing.T) {
+		user := &auth.SessionUser{ID: userID, CurrentOrgID: uuid.New()}
+		r := setupOrgTestRouterWithSessions(store, user)
+		w := httptest.NewRecorder()
+		body := `{"org_id":"` + orgID.String() + `"}`
+		req, _ := http.NewRequest("POST", "/api/v1/organizations/switch", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid body", func(t *testing.T) {
+		user := &auth.SessionUser{ID: userID, CurrentOrgID: uuid.New()}
+		r := setupOrgTestRouterWithSessions(store, user)
+		w := httptest.NewRecorder()
+		body := `{}`
+		req, _ := http.NewRequest("POST", "/api/v1/organizations/switch", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("not a member", func(t *testing.T) {
+		otherUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
+		r := setupOrgTestRouterWithSessions(store, otherUser)
+		w := httptest.NewRecorder()
+		body := `{"org_id":"` + orgID.String() + `"}`
+		req, _ := http.NewRequest("POST", "/api/v1/organizations/switch", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("expected 403, got %d", w.Code)
+		}
+	})
+
+	t.Run("org not found", func(t *testing.T) {
+		unknownOrgID := uuid.New()
+		storeWithMembership := &mockOrgStore{
+			orgByID:   map[uuid.UUID]*models.Organization{},
+			orgBySlug: map[string]*models.Organization{},
+			memberships: map[string]*models.OrgMembership{
+				membershipKey(userID, unknownOrgID): {ID: uuid.New(), UserID: userID, OrgID: unknownOrgID, Role: models.OrgRoleMember},
+			},
+		}
+		user := &auth.SessionUser{ID: userID, CurrentOrgID: uuid.New()}
+		r := setupOrgTestRouterWithSessions(storeWithMembership, user)
+		w := httptest.NewRecorder()
+		body := `{"org_id":"` + unknownOrgID.String() + `"}`
+		req, _ := http.NewRequest("POST", "/api/v1/organizations/switch", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("no auth", func(t *testing.T) {
+		r := setupOrgTestRouterWithSessions(store, nil)
+		w := httptest.NewRecorder()
+		body := `{"org_id":"` + orgID.String() + `"}`
+		req, _ := http.NewRequest("POST", "/api/v1/organizations/switch", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
 		}
 	})
 }
