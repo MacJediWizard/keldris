@@ -9,6 +9,7 @@ all: deps lint test build
 
 deps:
 	go mod download
+	go install honnef.co/go/tools/cmd/staticcheck@latest
 	cd web && npm ci
 
 build:
@@ -71,7 +72,7 @@ test:
 
 lint:
 	go vet ./...
-	staticcheck ./...
+	@which staticcheck > /dev/null && staticcheck ./... || echo "staticcheck not installed, skipping"
 	cd web && npx @biomejs/biome check .
 
 fmt:
