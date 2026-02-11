@@ -1199,7 +1199,8 @@ func (db *DB) DeletePolicy(ctx context.Context, id uuid.UUID) error {
 func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
-		       retention_policy, enabled, created_at, updated_at
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE policy_id = $1
 		ORDER BY name
@@ -2027,7 +2028,7 @@ func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression, s.paths, s.excludes,
 		       s.retention_policy, s.bandwidth_limit_kbps, s.backup_window_start, s.backup_window_end,
-		       s.excluded_hours, s.compression_level, s.enabled, s.created_at, s.updated_at
+		       s.excluded_hours, s.compression_level, s.on_mount_unavailable, s.enabled, s.created_at, s.updated_at
 		FROM schedules s
 		WHERE s.enabled = true
 		ORDER BY s.name
@@ -4951,9 +4952,10 @@ func (db *DB) GetBackupsByTagIDs(ctx context.Context, tagIDs []uuid.UUID) ([]*mo
 	}
 
 	rows, err := db.Pool.Query(ctx, `
-		SELECT DISTINCT b.id, b.schedule_id, b.agent_id, b.snapshot_id, b.started_at, b.completed_at,
+		SELECT DISTINCT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at, b.completed_at,
 		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
-		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error, b.created_at
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
+		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error, b.created_at
 		FROM backups b
 		JOIN backup_tags bt ON b.id = bt.backup_id
 		WHERE bt.tag_id = ANY($1) AND b.deleted_at IS NULL
@@ -5253,9 +5255,10 @@ func (db *DB) searchRepositories(ctx context.Context, orgID uuid.UUID, query str
 // GetBackupsByOrgIDSince returns backups for an organization since a given time.
 func (db *DB) GetBackupsByOrgIDSince(ctx context.Context, orgID uuid.UUID, since time.Time) ([]*models.Backup, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT b.id, b.schedule_id, b.agent_id, b.snapshot_id, b.started_at, b.completed_at,
+		SELECT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at, b.completed_at,
 		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
-		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error, b.created_at
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
+		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error, b.created_at
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
@@ -5821,10 +5824,11 @@ func scanReportHistory(rows interface {
 // GetBackupsByOrgIDAndDateRange returns backups for an org within a date range.
 func (db *DB) GetBackupsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]*models.Backup, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT b.id, b.schedule_id, b.agent_id, b.snapshot_id, b.started_at,
+		SELECT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at,
 		       b.completed_at, b.status, b.size_bytes, b.files_new,
 		       b.files_changed, b.error_message,
-		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error, b.created_at
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
+		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error, b.created_at
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
@@ -5859,7 +5863,9 @@ func (db *DB) GetAlertsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID,
 func (db *DB) GetEnabledSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression,
-		       s.paths, s.excludes, s.retention_policy, s.enabled,
+		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps,
+		       s.backup_window_start, s.backup_window_end, s.excluded_hours,
+		       s.compression_level, s.on_mount_unavailable, s.enabled,
 		       s.created_at, s.updated_at
 		FROM schedules s
 		JOIN agents a ON s.agent_id = a.id
@@ -6139,7 +6145,8 @@ func (db *DB) GetAgentsByGroupID(ctx context.Context, groupID uuid.UUID) ([]uuid
 func (db *DB) GetSchedulesByAgentGroupID(ctx context.Context, agentGroupID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
-		       retention_policy, enabled, created_at, updated_at
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_group_id = $1
 		ORDER BY name
