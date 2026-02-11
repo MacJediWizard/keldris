@@ -6,10 +6,12 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -382,6 +384,346 @@ func TestRecoverKey(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
+}
+
+func setupRepositoryTestRouterWithKeyManager(store RepositoryStore, user *auth.SessionUser) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		if user != nil {
+			c.Set(string(middleware.UserContextKey), user)
+		}
+		c.Next()
+	})
+	km, _ := crypto.NewKeyManager(make([]byte, 32))
+	handler := NewRepositoriesHandler(store, km, zerolog.Nop())
+	api := r.Group("/api/v1")
+	handler.RegisterRoutes(api)
+	return r
+}
+
+func TestCreateRepository(t *testing.T) {
+	orgID := uuid.New()
+	user := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
+
+	t.Run("success", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: make(map[uuid.UUID]*models.Repository),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"test-repo","type":"local","config":{"path":"/tmp/test"}}`
+		req, _ := http.NewRequest("POST", "/api/v1/repositories", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusCreated {
+			t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp CreateRepositoryResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to unmarshal response: %v", err)
+		}
+		if resp.Repository.Name != "test-repo" {
+			t.Fatalf("expected name 'test-repo', got %q", resp.Repository.Name)
+		}
+		if resp.Password == "" {
+			t.Fatal("expected password in response")
+		}
+	})
+
+	t.Run("success with escrow", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: make(map[uuid.UUID]*models.Repository),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"test-repo","type":"local","config":{"path":"/tmp/test"},"escrow_enabled":true}`
+		req, _ := http.NewRequest("POST", "/api/v1/repositories", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusCreated {
+			t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp CreateRepositoryResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to unmarshal response: %v", err)
+		}
+		if !resp.Repository.EscrowEnabled {
+			t.Fatal("expected escrow_enabled to be true")
+		}
+	})
+
+	t.Run("no auth", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: make(map[uuid.UUID]*models.Repository),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, nil)
+		w := httptest.NewRecorder()
+		body := `{"name":"test-repo","type":"local","config":{"path":"/tmp/test"}}`
+		req, _ := http.NewRequest("POST", "/api/v1/repositories", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("no org", func(t *testing.T) {
+		noOrgUser := &auth.SessionUser{ID: uuid.New()}
+		store := &mockRepositoryStore{
+			repoByID: make(map[uuid.UUID]*models.Repository),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, noOrgUser)
+		w := httptest.NewRecorder()
+		body := `{"name":"test-repo","type":"local","config":{"path":"/tmp/test"}}`
+		req, _ := http.NewRequest("POST", "/api/v1/repositories", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid body", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: make(map[uuid.UUID]*models.Repository),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{}`
+		req, _ := http.NewRequest("POST", "/api/v1/repositories", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid type", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: make(map[uuid.UUID]*models.Repository),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"test","type":"badtype","config":{"a":"b"}}`
+		req, _ := http.NewRequest("POST", "/api/v1/repositories", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("store create error", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID:  make(map[uuid.UUID]*models.Repository),
+			createErr: errors.New("db error"),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"test-repo","type":"local","config":{"path":"/tmp/test"}}`
+		req, _ := http.NewRequest("POST", "/api/v1/repositories", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+}
+
+func TestUpdateRepository(t *testing.T) {
+	orgID := uuid.New()
+	repoID := uuid.New()
+	repo := &models.Repository{ID: repoID, OrgID: orgID, Name: "s3-backup", Type: models.RepositoryTypeS3}
+	user := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
+
+	t.Run("success with name", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: map[uuid.UUID]*models.Repository{repoID: repo},
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"new-name"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/repositories/"+repoID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp RepositoryResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to unmarshal response: %v", err)
+		}
+		if resp.Name != "new-name" {
+			t.Fatalf("expected name 'new-name', got %q", resp.Name)
+		}
+	})
+
+	t.Run("success with config", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: map[uuid.UUID]*models.Repository{repoID: repo},
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{"config":{"path":"/new"}}`
+		req, _ := http.NewRequest("PUT", "/api/v1/repositories/"+repoID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: map[uuid.UUID]*models.Repository{repoID: repo},
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"new-name"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/repositories/"+uuid.New().String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		wrongUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
+		store := &mockRepositoryStore{
+			repoByID: map[uuid.UUID]*models.Repository{repoID: repo},
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, wrongUser)
+		w := httptest.NewRecorder()
+		body := `{"name":"new-name"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/repositories/"+repoID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: map[uuid.UUID]*models.Repository{repoID: repo},
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"new-name"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/repositories/bad-uuid", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("store update error", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID:  map[uuid.UUID]*models.Repository{repoID: repo},
+			updateErr: errors.New("db error"),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"new-name"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/repositories/"+repoID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("no auth", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: map[uuid.UUID]*models.Repository{repoID: repo},
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, nil)
+		w := httptest.NewRecorder()
+		body := `{"name":"new-name"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/repositories/"+repoID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+}
+
+func TestTestConnection(t *testing.T) {
+	orgID := uuid.New()
+	user := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
+
+	t.Run("no auth", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: make(map[uuid.UUID]*models.Repository),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, nil)
+		w := httptest.NewRecorder()
+		body := `{"type":"local","config":{"path":"/tmp/test"}}`
+		req, _ := http.NewRequest("POST", "/api/v1/repositories/test-connection", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid body", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: make(map[uuid.UUID]*models.Repository),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{}`
+		req, _ := http.NewRequest("POST", "/api/v1/repositories/test-connection", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("invalid type", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: make(map[uuid.UUID]*models.Repository),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{"type":"badtype","config":{"a":"b"}}`
+		req, _ := http.NewRequest("POST", "/api/v1/repositories/test-connection", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("valid local config", func(t *testing.T) {
+		store := &mockRepositoryStore{
+			repoByID: make(map[uuid.UUID]*models.Repository),
+		}
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
+		w := httptest.NewRecorder()
+		body := `{"type":"local","config":{"path":"/tmp/test"}}`
+		req, _ := http.NewRequest("POST", "/api/v1/repositories/test-connection", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp TestRepositoryResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to unmarshal response: %v", err)
+		}
+		// The path /tmp/test likely exists on macOS/Linux (parent /tmp exists),
+		// but we accept either success or failure since both return 200.
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200 regardless of connection result, got %d", w.Code)
 		}
 	})
 }

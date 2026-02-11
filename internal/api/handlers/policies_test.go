@@ -28,9 +28,13 @@ type mockPolicyStore struct {
 	updateErr    error
 	deleteErr    error
 	createSchedErr error
+	listErr      error
 }
 
 func (m *mockPolicyStore) GetPoliciesByOrgID(_ context.Context, orgID uuid.UUID) ([]*models.Policy, error) {
+	if m.listErr != nil {
+		return nil, m.listErr
+	}
 	var result []*models.Policy
 	for _, p := range m.policies {
 		if p.OrgID == orgID {
@@ -153,6 +157,21 @@ func TestListPolicies(t *testing.T) {
 			t.Fatalf("expected 401, got %d", w.Code)
 		}
 	})
+
+	t.Run("store error", func(t *testing.T) {
+		errStore := &mockPolicyStore{
+			policies:   []*models.Policy{policy},
+			policyByID: map[uuid.UUID]*models.Policy{policyID: policy},
+			listErr:    errors.New("db error"),
+		}
+		r := setupPolicyTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/policies", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
+		}
+	})
 }
 
 func TestGetPolicy(t *testing.T) {
@@ -204,6 +223,17 @@ func TestGetPolicy(t *testing.T) {
 			t.Fatalf("expected 404, got %d", w.Code)
 		}
 	})
+
+	t.Run("no org", func(t *testing.T) {
+		noOrgUser := &auth.SessionUser{ID: uuid.New()}
+		r := setupPolicyTestRouter(store, noOrgUser)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/policies/"+policyID.String(), nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
 }
 
 func TestCreatePolicy(t *testing.T) {
@@ -245,6 +275,31 @@ func TestCreatePolicy(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusInternalServerError {
 			t.Fatalf("expected 500, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupPolicyTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		body := `{"name":"fail"}`
+		req, _ := http.NewRequest("POST", "/api/v1/policies", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("no org", func(t *testing.T) {
+		noOrgUser := &auth.SessionUser{ID: uuid.New()}
+		r := setupPolicyTestRouter(store, noOrgUser)
+		w := httptest.NewRecorder()
+		body := `{"name":"fail"}`
+		req, _ := http.NewRequest("POST", "/api/v1/policies", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
 		}
 	})
 }
@@ -294,6 +349,59 @@ func TestUpdatePolicy(t *testing.T) {
 			t.Fatalf("expected 404, got %d", w.Code)
 		}
 	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupPolicyTestRouter(store, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"x"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/policies/bad-uuid", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("store update error", func(t *testing.T) {
+		errStore := &mockPolicyStore{
+			policyByID: map[uuid.UUID]*models.Policy{policyID: policy},
+			updateErr:  errors.New("db error"),
+		}
+		r := setupPolicyTestRouter(errStore, user)
+		w := httptest.NewRecorder()
+		body := `{"name":"updated"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/policies/"+policyID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("expected 500, got %d", w.Code)
+		}
+	})
+
+	t.Run("no org", func(t *testing.T) {
+		noOrgUser := &auth.SessionUser{ID: uuid.New()}
+		r := setupPolicyTestRouter(store, noOrgUser)
+		w := httptest.NewRecorder()
+		body := `{"name":"x"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/policies/"+policyID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupPolicyTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		body := `{"name":"x"}`
+		req, _ := http.NewRequest("PUT", "/api/v1/policies/"+policyID.String(), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
 }
 
 func TestDeletePolicy(t *testing.T) {
@@ -338,6 +446,48 @@ func TestDeletePolicy(t *testing.T) {
 			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupPolicyTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/policies/bad-uuid", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		wrongUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
+		r := setupPolicyTestRouter(store, wrongUser)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/policies/"+policyID.String(), nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("no org", func(t *testing.T) {
+		noOrgUser := &auth.SessionUser{ID: uuid.New()}
+		r := setupPolicyTestRouter(store, noOrgUser)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/policies/"+policyID.String(), nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupPolicyTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/policies/"+policyID.String(), nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
 }
 
 func TestPolicyListSchedules(t *testing.T) {
@@ -367,6 +517,48 @@ func TestPolicyListSchedules(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupPolicyTestRouter(store, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/policies/bad-uuid/schedules", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org", func(t *testing.T) {
+		wrongUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
+		r := setupPolicyTestRouter(store, wrongUser)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/policies/"+policyID.String()+"/schedules", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("no org", func(t *testing.T) {
+		noOrgUser := &auth.SessionUser{ID: uuid.New()}
+		r := setupPolicyTestRouter(store, noOrgUser)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/policies/"+policyID.String()+"/schedules", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupPolicyTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/policies/"+policyID.String()+"/schedules", nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
 		}
 	})
 }
@@ -441,6 +633,75 @@ func TestApplyPolicy(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("wrong org policy", func(t *testing.T) {
+		wrongUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
+		r := setupPolicyTestRouter(store, wrongUser)
+		w := httptest.NewRecorder()
+		body := `{"agent_ids":["` + agentID.String() + `"],"repository_id":"` + repoID.String() + `"}`
+		req, _ := http.NewRequest("POST", "/api/v1/policies/"+policyID.String()+"/apply", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid id", func(t *testing.T) {
+		r := setupPolicyTestRouter(store, user)
+		w := httptest.NewRecorder()
+		body := `{"agent_ids":["` + agentID.String() + `"],"repository_id":"` + repoID.String() + `"}`
+		req, _ := http.NewRequest("POST", "/api/v1/policies/bad-uuid/apply", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("no org", func(t *testing.T) {
+		noOrgUser := &auth.SessionUser{ID: uuid.New()}
+		r := setupPolicyTestRouter(store, noOrgUser)
+		w := httptest.NewRecorder()
+		body := `{"agent_ids":["` + agentID.String() + `"],"repository_id":"` + repoID.String() + `"}`
+		req, _ := http.NewRequest("POST", "/api/v1/policies/"+policyID.String()+"/apply", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		r := setupPolicyTestRouter(store, nil)
+		w := httptest.NewRecorder()
+		body := `{"agent_ids":["` + agentID.String() + `"],"repository_id":"` + repoID.String() + `"}`
+		req, _ := http.NewRequest("POST", "/api/v1/policies/"+policyID.String()+"/apply", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("with schedule name", func(t *testing.T) {
+		r := setupPolicyTestRouter(store, user)
+		w := httptest.NewRecorder()
+		body := `{"agent_ids":["` + agentID.String() + `"],"repository_id":"` + repoID.String() + `","schedule_name":"custom-schedule"}`
+		req, _ := http.NewRequest("POST", "/api/v1/policies/"+policyID.String()+"/apply", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusCreated {
+			t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp ApplyPolicyResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+		if resp.SchedulesCreated != 1 {
+			t.Fatalf("expected 1 schedule created, got %d", resp.SchedulesCreated)
 		}
 	})
 }
