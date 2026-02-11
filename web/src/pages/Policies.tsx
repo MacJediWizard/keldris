@@ -733,13 +733,13 @@ function PolicyRow({
 					</button>
 					{showActions && (
 						<>
-							<div
-								className="fixed inset-0 z-10"
+							<button
+								type="button"
+								className="fixed inset-0 z-10 bg-transparent border-none cursor-default"
 								onClick={() => setShowActions(false)}
 								onKeyDown={(e) => {
 									if (e.key === 'Escape') setShowActions(false);
 								}}
-								role="button"
 								tabIndex={0}
 								aria-label="Close menu"
 							/>
