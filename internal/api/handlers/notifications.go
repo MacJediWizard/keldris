@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -30,15 +31,17 @@ type NotificationStore interface {
 
 // NotificationsHandler handles notification-related HTTP endpoints.
 type NotificationsHandler struct {
-	store  NotificationStore
-	logger zerolog.Logger
+	store      NotificationStore
+	keyManager *crypto.KeyManager
+	logger     zerolog.Logger
 }
 
 // NewNotificationsHandler creates a new NotificationsHandler.
-func NewNotificationsHandler(store NotificationStore, logger zerolog.Logger) *NotificationsHandler {
+func NewNotificationsHandler(store NotificationStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *NotificationsHandler {
 	return &NotificationsHandler{
-		store:  store,
-		logger: logger.With().Str("component", "notifications_handler").Logger(),
+		store:      store,
+		keyManager: keyManager,
+		logger:     logger.With().Str("component", "notifications_handler").Logger(),
 	}
 }
 
@@ -171,9 +174,14 @@ func (h *NotificationsHandler) CreateChannel(c *gin.Context) {
 		return
 	}
 
-	// TODO: Encrypt config before storing
-	// For now, store as-is (should use crypto/aes.go when implemented)
-	channel := models.NewNotificationChannel(dbUser.OrgID, req.Name, req.Type, req.Config)
+	configEncrypted, err := h.keyManager.Encrypt([]byte(req.Config))
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to encrypt channel config")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encrypt config"})
+		return
+	}
+
+	channel := models.NewNotificationChannel(dbUser.OrgID, req.Name, req.Type, configEncrypted)
 
 	if err := h.store.CreateNotificationChannel(c.Request.Context(), channel); err != nil {
 		h.logger.Error().Err(err).Str("name", req.Name).Msg("failed to create notification channel")
@@ -242,7 +250,13 @@ func (h *NotificationsHandler) UpdateChannel(c *gin.Context) {
 		channel.Name = *req.Name
 	}
 	if req.Config != nil {
-		channel.ConfigEncrypted = req.Config
+		configEncrypted, err := h.keyManager.Encrypt([]byte(req.Config))
+		if err != nil {
+			h.logger.Error().Err(err).Msg("failed to encrypt channel config")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encrypt config"})
+			return
+		}
+		channel.ConfigEncrypted = configEncrypted
 	}
 	if req.Enabled != nil {
 		channel.Enabled = *req.Enabled
