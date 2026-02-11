@@ -523,13 +523,37 @@ func (h *RepositoriesHandler) Test(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement decryption of config and test using backend.TestConnection()
-	// For now, return a message indicating test is not fully implemented.
-	h.logger.Info().Str("repo_id", id.String()).Msg("repository test requested")
+	// Decrypt the stored config
+	configJSON, err := h.keyManager.Decrypt(repo.ConfigEncrypted)
+	if err != nil {
+		h.logger.Error().Err(err).Str("repo_id", id.String()).Msg("failed to decrypt repository config")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to decrypt repository config"})
+		return
+	}
+
+	// Parse the backend from decrypted config
+	backend, err := backends.ParseBackend(repo.Type, configJSON)
+	if err != nil {
+		h.logger.Error().Err(err).Str("repo_id", id.String()).Msg("failed to parse backend config")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid backend config"})
+		return
+	}
+
+	// Test the connection
+	h.logger.Info().Str("repo_id", id.String()).Msg("testing repository connection")
+
+	if err := backend.TestConnection(); err != nil {
+		h.logger.Warn().Err(err).Str("repo_id", id.String()).Msg("repository connection test failed")
+		c.JSON(http.StatusOK, TestRepositoryResponse{
+			Success: false,
+			Message: "Connection failed: " + err.Error(),
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, TestRepositoryResponse{
 		Success: true,
-		Message: "Repository exists. Full connection test requires config decryption (not yet implemented).",
+		Message: "Connection successful",
 	})
 }
 

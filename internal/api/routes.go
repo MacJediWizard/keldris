@@ -155,7 +155,7 @@ func NewRouter(
 	alertsHandler := handlers.NewAlertsHandler(database, logger)
 	alertsHandler.RegisterRoutes(apiV1)
 
-	notificationsHandler := handlers.NewNotificationsHandler(database, logger)
+	notificationsHandler := handlers.NewNotificationsHandler(database, keyManager, logger)
 	notificationsHandler.RegisterRoutes(apiV1)
 
 	// Register reports handler if scheduler is available
