@@ -20,6 +20,8 @@
 | Routing | react-router-dom | 7+ |
 | OIDC | coreos/go-oidc + golang.org/x/oauth2 | latest |
 | Backup Engine | Restic (exec wrapper) | latest |
+| i18next | i18next | ^25.7.4 |
+| i18n React Bindings | react-i18next | ^15.x |
 | Linting | Biome (frontend), staticcheck (Go) | latest |
 
 ---
