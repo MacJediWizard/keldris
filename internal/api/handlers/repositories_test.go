@@ -267,7 +267,12 @@ func TestDeleteRepository(t *testing.T) {
 func TestTestRepository(t *testing.T) {
 	orgID := uuid.New()
 	repoID := uuid.New()
-	repo := &models.Repository{ID: repoID, OrgID: orgID, Name: "s3-backup", Type: models.RepositoryTypeS3}
+
+	km, _ := crypto.NewKeyManager(make([]byte, 32))
+	configJSON, _ := json.Marshal(map[string]any{"path": "/tmp/test-repo-conn"})
+	configEncrypted, _ := km.Encrypt(configJSON)
+
+	repo := &models.Repository{ID: repoID, OrgID: orgID, Name: "local-backup", Type: models.RepositoryTypeLocal, ConfigEncrypted: configEncrypted}
 
 	store := &mockRepositoryStore{
 		repoByID: map[uuid.UUID]*models.Repository{repoID: repo},
@@ -275,7 +280,7 @@ func TestTestRepository(t *testing.T) {
 	user := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
-		r := setupRepositoryTestRouter(store, user)
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/repositories/"+repoID.String()+"/test", nil)
 		r.ServeHTTP(w, req)
@@ -285,7 +290,7 @@ func TestTestRepository(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		r := setupRepositoryTestRouter(store, user)
+		r := setupRepositoryTestRouterWithKeyManager(store, user)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/repositories/"+uuid.New().String()+"/test", nil)
 		r.ServeHTTP(w, req)
@@ -296,7 +301,7 @@ func TestTestRepository(t *testing.T) {
 
 	t.Run("wrong org", func(t *testing.T) {
 		wrongUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
-		r := setupRepositoryTestRouter(store, wrongUser)
+		r := setupRepositoryTestRouterWithKeyManager(store, wrongUser)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/repositories/"+repoID.String()+"/test", nil)
 		r.ServeHTTP(w, req)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -124,7 +125,8 @@ func setupNotificationTestRouter(store NotificationStore, user *auth.SessionUser
 		}
 		c.Next()
 	})
-	handler := NewNotificationsHandler(store, zerolog.Nop())
+	km, _ := crypto.NewKeyManager(make([]byte, 32))
+	handler := NewNotificationsHandler(store, km, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r
