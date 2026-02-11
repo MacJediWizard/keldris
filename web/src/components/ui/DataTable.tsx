@@ -72,14 +72,32 @@ export function DataTable<T extends Record<string, unknown>>({
 									key={col.key}
 									scope="col"
 									className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 ${
-										col.sortable ? 'cursor-pointer select-none hover:text-gray-700' : ''
+										col.sortable
+											? 'cursor-pointer select-none hover:text-gray-700'
+											: ''
 									}`}
 									onClick={col.sortable ? () => handleSort(col.key) : undefined}
+									onKeyDown={
+										col.sortable
+											? (e) => {
+													if (e.key === 'Enter' || e.key === ' ') {
+														e.preventDefault();
+														handleSort(col.key);
+													}
+												}
+											: undefined
+									}
 								>
 									<span className="inline-flex items-center gap-1">
 										{col.header}
 										{col.sortable && sortKey === col.key && (
-											<span aria-label={sortDir === 'asc' ? 'sorted ascending' : 'sorted descending'}>
+											<span
+												aria-label={
+													sortDir === 'asc'
+														? 'sorted ascending'
+														: 'sorted descending'
+												}
+											>
 												{sortDir === 'asc' ? '\u2191' : '\u2193'}
 											</span>
 										)}
@@ -102,8 +120,13 @@ export function DataTable<T extends Record<string, unknown>>({
 							pageData.map((row) => (
 								<tr key={String(row[keyField])} className="hover:bg-gray-50">
 									{columns.map((col) => (
-										<td key={col.key} className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-											{col.render ? col.render(row) : String(row[col.key] ?? '')}
+										<td
+											key={col.key}
+											className="whitespace-nowrap px-6 py-4 text-sm text-gray-900"
+										>
+											{col.render
+												? col.render(row)
+												: String(row[col.key] ?? '')}
 										</td>
 									))}
 								</tr>
@@ -115,7 +138,8 @@ export function DataTable<T extends Record<string, unknown>>({
 			{totalPages > 1 && (
 				<div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
 					<p className="text-sm text-gray-700">
-						Showing {start + 1} to {Math.min(start + pageSize, sortedData.length)} of{' '}
+						Showing {start + 1} to{' '}
+						{Math.min(start + pageSize, sortedData.length)} of{' '}
 						{sortedData.length} results
 					</p>
 					<div className="flex gap-1">

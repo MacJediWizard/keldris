@@ -46,7 +46,8 @@ describe('Select', () => {
 
 	it('disables individual options', () => {
 		render(<Select options={options} />);
-		const disabledOption = screen.getByText('Option C')
+		const disabledOption = screen
+			.getByText('Option C')
 			.closest('option') as HTMLOptionElement;
 		expect(disabledOption.disabled).toBe(true);
 	});

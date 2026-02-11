@@ -28,11 +28,16 @@ export function Modal({ open, onClose, children }: ModalProps) {
 			<div
 				className="fixed inset-0 bg-black/50"
 				onClick={onClose}
+				onKeyDown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') onClose();
+				}}
+				role="button"
+				tabIndex={-1}
 				data-testid="modal-overlay"
 			/>
-			<div
+			<dialog
 				className="relative z-10 w-full max-w-lg rounded-lg bg-white shadow-xl"
-				role="dialog"
+				open
 				aria-modal="true"
 			>
 				<button
@@ -57,7 +62,7 @@ export function Modal({ open, onClose, children }: ModalProps) {
 					</svg>
 				</button>
 				{children}
-			</div>
+			</dialog>
 		</div>
 	);
 }

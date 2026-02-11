@@ -20,10 +20,7 @@ describe('Input', () => {
 
 	it('sets aria-invalid when error is present', () => {
 		render(<Input label="Email" error="Required" />);
-		expect(screen.getByRole('textbox')).toHaveAttribute(
-			'aria-invalid',
-			'true',
-		);
+		expect(screen.getByRole('textbox')).toHaveAttribute('aria-invalid', 'true');
 	});
 
 	it('applies error styling', () => {

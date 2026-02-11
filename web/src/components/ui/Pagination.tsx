@@ -11,8 +11,8 @@ export function Pagination({
 }: PaginationProps) {
 	if (totalPages <= 1) return null;
 
-	function getPageNumbers(): (number | 'ellipsis')[] {
-		const pages: (number | 'ellipsis')[] = [];
+	function getPageNumbers(): (number | string)[] {
+		const pages: (number | string)[] = [];
 
 		if (totalPages <= 7) {
 			for (let i = 1; i <= totalPages; i++) pages.push(i);
@@ -20,20 +20,23 @@ export function Pagination({
 		}
 
 		pages.push(1);
-		if (currentPage > 3) pages.push('ellipsis');
+		if (currentPage > 3) pages.push('ellipsis-start');
 
 		const start = Math.max(2, currentPage - 1);
 		const end = Math.min(totalPages - 1, currentPage + 1);
 		for (let i = start; i <= end; i++) pages.push(i);
 
-		if (currentPage < totalPages - 2) pages.push('ellipsis');
+		if (currentPage < totalPages - 2) pages.push('ellipsis-end');
 		pages.push(totalPages);
 
 		return pages;
 	}
 
 	return (
-		<nav aria-label="Pagination" className="flex items-center justify-center gap-1">
+		<nav
+			aria-label="Pagination"
+			className="flex items-center justify-center gap-1"
+		>
 			<button
 				type="button"
 				onClick={() => onPageChange(currentPage - 1)}
@@ -42,9 +45,9 @@ export function Pagination({
 			>
 				Previous
 			</button>
-			{getPageNumbers().map((page, index) =>
-				page === 'ellipsis' ? (
-					<span key={`ellipsis-${index}`} className="px-2 text-gray-400">
+			{getPageNumbers().map((page) =>
+				typeof page === 'string' ? (
+					<span key={page} className="px-2 text-gray-400">
 						...
 					</span>
 				) : (

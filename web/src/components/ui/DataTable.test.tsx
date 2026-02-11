@@ -88,9 +88,7 @@ describe('DataTable', () => {
 			},
 			{ key: 'status', header: 'Status' },
 		];
-		render(
-			<DataTable columns={columnsWithRender} data={data} keyField="id" />,
-		);
+		render(<DataTable columns={columnsWithRender} data={data} keyField="id" />);
 		expect(screen.getByText('Alpha').tagName).toBe('STRONG');
 	});
 
