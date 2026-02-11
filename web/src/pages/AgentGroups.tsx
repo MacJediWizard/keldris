@@ -514,10 +514,13 @@ function GroupRow({
 					</button>
 					{showMenu && (
 						<>
-							<div
-								className="fixed inset-0 z-10"
+							<button
+								type="button"
+								className="fixed inset-0 z-10 bg-transparent border-none cursor-default"
 								onClick={() => setShowMenu(false)}
 								onKeyDown={(e) => e.key === 'Escape' && setShowMenu(false)}
+								tabIndex={0}
+								aria-label="Close menu"
 							/>
 							<div className="absolute right-0 z-20 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
 								<button

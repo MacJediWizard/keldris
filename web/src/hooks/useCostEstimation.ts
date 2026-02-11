@@ -85,8 +85,10 @@ export function useUpdatePricing() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: UpdateStoragePricingRequest }) =>
-			pricingApi.update(id, data),
+		}: {
+			id: string;
+			data: UpdateStoragePricingRequest;
+		}) => pricingApi.update(id, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['pricing'] });
 			queryClient.invalidateQueries({ queryKey: ['costs'] });
