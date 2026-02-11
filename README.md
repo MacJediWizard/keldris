@@ -81,6 +81,9 @@ I wanted a backup solution that could:
 - Pre/post backup scripts
 - Network mount detection and handling
 - Email notifications
+- Slack notifications
+- Discord notifications
+- Teams notifications
 - Multi-org with RBAC
 - Audit logging
 - Dark mode
@@ -97,7 +100,6 @@ I wanted a backup solution that could:
 
 ### Roadmap
 - Snapshot mounting (FUSE)
-- Slack/Discord notifications
 - Import existing Restic repos
 - Mobile-friendly improvements
 
