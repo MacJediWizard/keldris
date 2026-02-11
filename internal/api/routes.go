@@ -75,6 +75,7 @@ func NewRouter(
 	// Global middleware
 	r.Engine.Use(gin.Recovery())
 	r.Engine.Use(middleware.RequestLogger(logger))
+	r.Engine.Use(middleware.SecurityHeaders())
 	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins))
 
 	// Rate limiting
