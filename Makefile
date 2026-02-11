@@ -72,7 +72,7 @@ test:
 
 lint:
 	go vet ./...
-	@which staticcheck > /dev/null && staticcheck ./... || echo "staticcheck not installed, skipping"
+	@PATH="$$PATH:$$(go env GOPATH)/bin" staticcheck ./... || echo "staticcheck not installed, skipping"
 	cd web && npx @biomejs/biome check .
 
 fmt:

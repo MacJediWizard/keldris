@@ -8,10 +8,10 @@ import {
 	useCurrentOrganization,
 	useDeleteInvitation,
 	useDeleteOrganization,
-	useOrgInvitations,
-	useOrgMembers,
 	useOrganization,
 	useOrganizations,
+	useOrgInvitations,
+	useOrgMembers,
 	useRemoveMember,
 	useSwitchOrganization,
 } from './useOrganizations';
