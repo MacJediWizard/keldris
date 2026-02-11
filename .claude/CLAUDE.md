@@ -21,7 +21,7 @@
 | OIDC | coreos/go-oidc + golang.org/x/oauth2 | latest |
 | Backup Engine | Restic (exec wrapper) | latest |
 | i18next | i18next | ^25.7.4 |
-| i18n React Bindings | react-i18next | ^15.x |
+| i18n React Bindings | react-i18next | ^16.x |
 | Linting | Biome (frontend), staticcheck (Go) | latest |
 
 ---
@@ -45,7 +45,7 @@ keldris/
 │   ├── backup/
 │   │   ├── restic.go
 │   │   ├── scheduler.go
-│   │   └── storage/           # One file per backend
+│   │   └── backends/           # One file per backend
 │   ├── config/
 │   │   ├── server.go
 │   │   └── agent.go
@@ -53,29 +53,29 @@ keldris/
 │   │   └── aes.go
 │   ├── db/
 │   │   ├── migrations/        # Sequential numbered SQL files
-│   │   ├── queries/           # One file per table
-│   │   └── db.go
+│   │   ├── db.go
+│   │   └── store.go           # Query methods
 │   ├── models/                # One file per model
 │   ├── notifications/
 │   │   ├── email.go
 │   │   ├── slack.go
 │   │   ├── webhook.go
 │   │   └── templates/
-│   └── services/              # Business logic layer
+│   └── ...                    # Business logic in domain packages (health/, metrics/, etc.)
 ├── pkg/models/                # Shared models (agent<->server)
 ├── web/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── ui/            # Reusable primitives (Button, Input, Modal, etc.)
-│   │   │   ├── layout/        # Layout components (Sidebar, Header, etc.)
+│   │   │   ├── Layout.tsx      # App layout component
 │   │   │   └── features/      # Feature-specific components
 │   │   ├── pages/             # One file per route
 │   │   ├── hooks/             # One file per resource (useAgents, useBackups, etc.)
 │   │   ├── lib/
 │   │   │   ├── api.ts         # API client
+│   │   │   ├── types.ts       # TypeScript types
 │   │   │   ├── utils.ts       # Utility functions
 │   │   │   └── constants.ts   # App constants
-│   │   ├── types/             # TypeScript types
 │   │   ├── App.tsx
 │   │   └── main.tsx
 │   └── ...
@@ -174,8 +174,8 @@ type UpdateAgentRequest struct {
 
 ### Go Database Query Pattern
 ```go
-// internal/db/queries/agents.go
-package queries
+// internal/db/store.go
+package db
 
 import (
 	"context"
@@ -232,7 +232,7 @@ CREATE INDEX idx_notification_channels_org ON notification_channels(org_id);
 ### React Component Pattern
 ```tsx
 // web/src/components/features/AgentCard.tsx
-import { Agent } from '@/types';
+import { Agent } from '@/lib/types';
 import { Badge } from '@/components/ui/Badge';
 import { formatDistanceToNow } from '@/lib/utils';
 
@@ -269,7 +269,7 @@ export function AgentCard({ agent, onDelete }: AgentCardProps) {
 // web/src/hooks/useAgents.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Agent, CreateAgentRequest } from '@/types';
+import { Agent, CreateAgentRequest } from '@/lib/types';
 
 export function useAgents() {
 	return useQuery({
@@ -396,7 +396,7 @@ export const api = {
 
 ### TypeScript Types Pattern
 ```tsx
-// web/src/types/index.ts
+// web/src/lib/types.ts
 export interface Agent {
 	id: string;
 	orgId: string;
