@@ -30,7 +30,13 @@ export function DropdownMenu({ trigger, items }: DropdownMenuProps) {
 
 	return (
 		<div className="relative inline-block" ref={ref}>
-			<div onClick={() => setOpen(!open)}>{trigger}</div>
+			<button
+				type="button"
+				onClick={() => setOpen(!open)}
+				className="inline-flex"
+			>
+				{trigger}
+			</button>
 			{open && (
 				<div
 					className="absolute right-0 z-50 mt-2 min-w-[160px] rounded-md border border-gray-200 bg-white py-1 shadow-lg"

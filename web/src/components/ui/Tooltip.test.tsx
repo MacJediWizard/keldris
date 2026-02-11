@@ -2,6 +2,12 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Tooltip } from './Tooltip';
 
+function getWrapper() {
+	const el = screen.getByText('Trigger').closest('div');
+	if (!el) throw new Error('Wrapper not found');
+	return el;
+}
+
 describe('Tooltip', () => {
 	it('renders children', () => {
 		render(
@@ -27,7 +33,7 @@ describe('Tooltip', () => {
 				<span>Trigger</span>
 			</Tooltip>,
 		);
-		fireEvent.mouseEnter(screen.getByText('Trigger').closest('div')!);
+		fireEvent.mouseEnter(getWrapper());
 		expect(screen.getByRole('tooltip')).toBeInTheDocument();
 		expect(screen.getByText('Help text')).toBeInTheDocument();
 	});
@@ -38,7 +44,7 @@ describe('Tooltip', () => {
 				<span>Trigger</span>
 			</Tooltip>,
 		);
-		const wrapper = screen.getByText('Trigger').closest('div')!;
+		const wrapper = getWrapper();
 		fireEvent.mouseEnter(wrapper);
 		expect(screen.getByRole('tooltip')).toBeInTheDocument();
 		fireEvent.mouseLeave(wrapper);
@@ -51,7 +57,7 @@ describe('Tooltip', () => {
 				<span>Trigger</span>
 			</Tooltip>,
 		);
-		fireEvent.mouseEnter(screen.getByText('Trigger').closest('div')!);
+		fireEvent.mouseEnter(getWrapper());
 		expect(screen.getByRole('tooltip')).toHaveClass('bottom-full');
 	});
 
@@ -61,7 +67,7 @@ describe('Tooltip', () => {
 				<span>Trigger</span>
 			</Tooltip>,
 		);
-		fireEvent.mouseEnter(screen.getByText('Trigger').closest('div')!);
+		fireEvent.mouseEnter(getWrapper());
 		expect(screen.getByRole('tooltip')).toHaveClass('top-full');
 	});
 });

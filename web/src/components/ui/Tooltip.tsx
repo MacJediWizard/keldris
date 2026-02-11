@@ -13,11 +13,7 @@ const positionClasses = {
 	right: 'left-full top-1/2 -translate-y-1/2 ml-2',
 } as const;
 
-export function Tooltip({
-	content,
-	children,
-	position = 'top',
-}: TooltipProps) {
+export function Tooltip({ content, children, position = 'top' }: TooltipProps) {
 	const [visible, setVisible] = useState(false);
 
 	return (
