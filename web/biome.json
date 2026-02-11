@@ -1,27 +1,14 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.14/schema.json",
+	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
 	"files": {
-		"includes": [
-			"**",
-			"!**/node_modules",
-			"!**/dist",
-			"!**/*.json",
-			"!**/*.config.js",
-			"!**/*.config.ts"
-		]
+		"ignore": ["node_modules", "dist", "*.json", "*.config.js", "*.config.ts"]
 	},
-	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"organizeImports": { "enabled": true },
 	"linter": {
 		"enabled": true,
 		"rules": {
 			"recommended": true,
-			"suspicious": {
-				"noExplicitAny": "error",
-				"noUnknownAtRules": "off"
-			},
-			"a11y": {
-				"noStaticElementInteractions": "warn"
-			},
+			"suspicious": { "noExplicitAny": "error" },
 			"correctness": {
 				"noUnusedImports": "error",
 				"noUnusedVariables": "error"
