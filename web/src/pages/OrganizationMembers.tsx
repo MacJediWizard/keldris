@@ -444,7 +444,7 @@ export function OrganizationMembers() {
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 							{members.map((member) => (
 								<MemberRow
-									key={member.id}
+									key={member.user_id}
 									member={member}
 									currentUserId={user?.id ?? ''}
 									currentUserRole={currentUserRole}
