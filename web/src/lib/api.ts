@@ -1640,10 +1640,7 @@ export const slaPoliciesApi = {
 	getStatus: async (id: string): Promise<SLAStatus> =>
 		fetchApi<SLAStatus>(`/sla/policies/${id}/status`),
 
-	getHistory: async (
-		id: string,
-		limit = 100,
-	): Promise<SLAStatusSnapshot[]> => {
+	getHistory: async (id: string, limit = 100): Promise<SLAStatusSnapshot[]> => {
 		const response = await fetchApi<SLAStatusHistoryResponse>(
 			`/sla/policies/${id}/history?limit=${limit}`,
 		);
