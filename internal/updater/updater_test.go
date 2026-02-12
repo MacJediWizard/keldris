@@ -161,15 +161,6 @@ func TestNewWithConfig(t *testing.T) {
 	}
 }
 
-// newTestUpdater creates an Updater that points its HTTP client at the test server.
-func newTestUpdater(version string, serverURL string) *Updater {
-	u := NewWithConfig(version, "test-owner", "test-repo")
-	u.httpClient = &http.Client{Timeout: 5 * time.Second}
-	// Override the GitHub API URL by setting owner/repo such that
-	// fetchLatestRelease builds a URL we intercept via the transport.
-	return u
-}
-
 // newTestServer creates an httptest.Server that returns the given release JSON.
 func newTestServer(t *testing.T, release Release) *httptest.Server {
 	t.Helper()
