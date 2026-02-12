@@ -6432,3 +6432,603 @@ func TestStore_ReportHistoryEmptyRecipients(t *testing.T) {
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(results), 1)
 }
+
+// TestStore_CanceledContextErrors tests that DB methods return errors when called with a canceled context.
+// This exercises the error-return paths in query, exec, and scan operations.
+func TestStore_CanceledContextErrors(t *testing.T) {
+	db := setupTestDB(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // immediately cancel
+
+	id := uuid.New()
+	orgID := uuid.New()
+	now := time.Now()
+
+	t.Run("OrganizationMethods", func(t *testing.T) {
+		_, err := db.GetAllOrganizations(ctx)
+		assert.Error(t, err)
+
+		_, err = db.GetOrganizationByID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetOrganizationBySlug(ctx, "test")
+		assert.Error(t, err)
+
+		err = db.UpdateOrganization(ctx, &models.Organization{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteOrganization(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("UserMethods", func(t *testing.T) {
+		_, err := db.GetUserByID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetUserByOIDCSubject(ctx, "sub")
+		assert.Error(t, err)
+
+		_, err = db.ListUsers(ctx, orgID)
+		assert.Error(t, err)
+
+		err = db.CreateUser(ctx, &models.User{ID: id, OrgID: orgID, OIDCSubject: "sub", Email: "a@b.com"})
+		assert.Error(t, err)
+
+		err = db.UpdateUser(ctx, &models.User{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteUser(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("AgentMethods", func(t *testing.T) {
+		_, err := db.GetAgentsByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetAgentByID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetAgentByAPIKeyHash(ctx, "hash")
+		assert.Error(t, err)
+
+		err = db.CreateAgent(ctx, &models.Agent{ID: id, OrgID: orgID, Hostname: "h"})
+		assert.Error(t, err)
+
+		err = db.UpdateAgent(ctx, &models.Agent{ID: id, Hostname: "h"})
+		assert.Error(t, err)
+
+		err = db.DeleteAgent(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateAgentAPIKeyHash(ctx, id, "hash")
+		assert.Error(t, err)
+
+		err = db.RevokeAgentAPIKey(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetFleetHealthSummary(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetAgentStats(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetAllAgents(ctx)
+		assert.Error(t, err)
+
+		_, err = db.GetOrgIDByAgentID(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("RepositoryMethods", func(t *testing.T) {
+		_, err := db.GetRepositoriesByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetRepositoryByID(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateRepository(ctx, &models.Repository{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteRepository(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("ScheduleMethods", func(t *testing.T) {
+		_, err := db.GetSchedulesByAgentID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetScheduleByID(ctx, id)
+		assert.Error(t, err)
+
+		err = db.DeleteSchedule(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetAllSchedules(ctx)
+		assert.Error(t, err)
+
+		_, err = db.GetEnabledSchedules(ctx)
+		assert.Error(t, err)
+
+		_, err = db.GetEnabledSchedulesByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetOrgIDByScheduleID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetSchedulesByAgentGroupID(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("BackupMethods", func(t *testing.T) {
+		_, err := db.GetBackupsByScheduleID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetBackupsByAgentID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetBackupByID(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateBackup(ctx, &models.Backup{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteBackup(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetLatestBackupByScheduleID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetBackupsByOrgIDSince(ctx, orgID, now)
+		assert.Error(t, err)
+
+		total, running, failed, err := db.GetBackupCountsByOrgID(ctx, orgID)
+		assert.Error(t, err)
+		assert.Equal(t, 0, total)
+		assert.Equal(t, 0, running)
+		assert.Equal(t, 0, failed)
+	})
+
+	t.Run("PolicyMethods", func(t *testing.T) {
+		_, err := db.GetPoliciesByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetPolicyByID(ctx, id)
+		assert.Error(t, err)
+
+		err = db.DeletePolicy(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetSchedulesByPolicyID(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("AlertMethods", func(t *testing.T) {
+		_, err := db.GetAlertsByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetActiveAlertsByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetActiveAlertCountByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetAlertByID(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateAlert(ctx, &models.Alert{ID: id})
+		assert.Error(t, err)
+
+		err = db.ResolveAlertsByResource(ctx, models.ResourceTypeAgent, id)
+		assert.Error(t, err)
+
+		_, err = db.GetAlertRulesByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetEnabledAlertRulesByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		err = db.UpdateAlertRule(ctx, &models.AlertRule{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteAlertRule(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("RestoreMethods", func(t *testing.T) {
+		_, err := db.GetRestoresByAgentID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetRestoreByID(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateRestore(ctx, &models.Restore{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteRestore(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("MembershipMethods", func(t *testing.T) {
+		_, err := db.GetMembershipsByUserID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetMembershipsByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		err = db.UpdateMembership(ctx, &models.OrgMembership{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteMembership(ctx, id, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetUserOrganizations(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateMembershipRole(ctx, id, models.OrgRoleAdmin)
+		assert.Error(t, err)
+	})
+
+	t.Run("InvitationMethods", func(t *testing.T) {
+		_, err := db.GetPendingInvitationsByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetPendingInvitationsByEmail(ctx, "a@b.com")
+		assert.Error(t, err)
+
+		err = db.AcceptInvitation(ctx, id)
+		assert.Error(t, err)
+
+		err = db.DeleteInvitation(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("NotificationMethods", func(t *testing.T) {
+		err := db.UpdateNotificationChannel(ctx, &models.NotificationChannel{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteNotificationChannel(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateNotificationPreference(ctx, &models.NotificationPreference{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteNotificationPreference(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateNotificationLog(ctx, &models.NotificationLog{ID: id})
+		assert.Error(t, err)
+	})
+
+	t.Run("RepositoryKeyMethods", func(t *testing.T) {
+		err := db.UpdateRepositoryKeyEscrow(ctx, id, true, []byte("key"))
+		assert.Error(t, err)
+
+		err = db.DeleteRepositoryKey(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetRepositoryKeysWithEscrowByOrgID(ctx, orgID)
+		assert.Error(t, err)
+	})
+
+	t.Run("StorageStatsMethods", func(t *testing.T) {
+		_, err := db.GetLatestStorageStats(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetStorageStatsSummary(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetStorageGrowth(ctx, id, 30)
+		assert.Error(t, err)
+
+		_, err = db.GetAllStorageGrowth(ctx, orgID, 30)
+		assert.Error(t, err)
+
+		_, err = db.GetLatestStatsForAllRepos(ctx, orgID)
+		assert.Error(t, err)
+	})
+
+	t.Run("VerificationMethods", func(t *testing.T) {
+		_, err := db.GetEnabledVerificationSchedules(ctx)
+		assert.Error(t, err)
+
+		_, err = db.GetVerificationSchedulesByRepoID(ctx, id)
+		assert.Error(t, err)
+
+		err = db.DeleteVerificationSchedule(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetVerificationsByRepoID(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateVerification(ctx, &models.Verification{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteVerification(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetConsecutiveFailedVerifications(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("MaintenanceMethods", func(t *testing.T) {
+		_, err := db.ListMaintenanceWindowsByOrg(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.ListActiveMaintenanceWindows(ctx, orgID, now)
+		assert.Error(t, err)
+
+		_, err = db.ListUpcomingMaintenanceWindows(ctx, orgID, now, 10)
+		assert.Error(t, err)
+
+		_, err = db.ListPendingMaintenanceNotifications(ctx)
+		assert.Error(t, err)
+
+		err = db.UpdateMaintenanceWindow(ctx, &models.MaintenanceWindow{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteMaintenanceWindow(ctx, id)
+		assert.Error(t, err)
+
+		err = db.MarkMaintenanceNotificationSent(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("ExcludePatternMethods", func(t *testing.T) {
+		_, err := db.GetExcludePatternsByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetBuiltinExcludePatterns(ctx)
+		assert.Error(t, err)
+
+		_, err = db.GetExcludePatternsByCategory(ctx, orgID, "logs")
+		assert.Error(t, err)
+
+		err = db.UpdateExcludePattern(ctx, &models.ExcludePattern{ID: id, Patterns: []string{"*.log"}})
+		assert.Error(t, err)
+
+		err = db.DeleteExcludePattern(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("SnapshotCommentMethods", func(t *testing.T) {
+		_, err := db.GetSnapshotCommentsBySnapshotID(ctx, "snap", orgID)
+		assert.Error(t, err)
+
+		err = db.DeleteSnapshotComment(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("DRMethods", func(t *testing.T) {
+		_, err := db.GetDRRunbooksByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		err = db.DeleteDRRunbook(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetDRTestsByRunbookID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetDRTestsByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		err = db.UpdateDRTest(ctx, &models.DRTest{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteDRTest(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetDRTestSchedulesByRunbookID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetEnabledDRTestSchedules(ctx)
+		assert.Error(t, err)
+
+		err = db.UpdateDRTestSchedule(ctx, &models.DRTestSchedule{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteDRTestSchedule(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetDRStatus(ctx, orgID)
+		assert.Error(t, err)
+	})
+
+	t.Run("TagMethods", func(t *testing.T) {
+		_, err := db.GetTagsByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetTagByNameAndOrgID(ctx, "name", orgID)
+		assert.Error(t, err)
+
+		err = db.UpdateTag(ctx, &models.Tag{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteTag(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetTagsByBackupID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetBackupIDsByTagID(ctx, id)
+		assert.Error(t, err)
+
+		err = db.RemoveTagFromBackup(ctx, id, id)
+		assert.Error(t, err)
+
+		_, err = db.GetTagsBySnapshotID(ctx, "snap")
+		assert.Error(t, err)
+
+		err = db.RemoveTagFromSnapshot(ctx, "snap", id)
+		assert.Error(t, err)
+	})
+
+	t.Run("DashboardMethods", func(t *testing.T) {
+		_, err := db.GetDashboardStats(ctx, orgID)
+		assert.Error(t, err)
+
+		_, _, err = db.GetBackupSuccessRates(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetStorageGrowthTrend(ctx, orgID, 30)
+		assert.Error(t, err)
+
+		_, err = db.GetBackupDurationTrend(ctx, orgID, 30)
+		assert.Error(t, err)
+
+		_, err = db.GetDailyBackupStats(ctx, orgID, 30)
+		assert.Error(t, err)
+	})
+
+	t.Run("ReportScheduleMethods", func(t *testing.T) {
+		_, err := db.GetEnabledReportSchedules(ctx)
+		assert.Error(t, err)
+
+		_, err = db.GetReportSchedulesByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetReportScheduleByID(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateReportScheduleLastSent(ctx, id, now)
+		assert.Error(t, err)
+
+		err = db.DeleteReportSchedule(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetReportHistoryByOrgID(ctx, orgID, 10)
+		assert.Error(t, err)
+	})
+
+	t.Run("BackupDateRangeMethods", func(t *testing.T) {
+		_, err := db.GetBackupsByOrgIDAndDateRange(ctx, orgID, now, now)
+		assert.Error(t, err)
+
+		_, err = db.GetAlertsByOrgIDAndDateRange(ctx, orgID, now, now)
+		assert.Error(t, err)
+	})
+
+	t.Run("AgentGroupMethods", func(t *testing.T) {
+		err := db.UpdateAgentGroup(ctx, &models.AgentGroup{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteAgentGroup(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetAgentGroupMembers(ctx, id)
+		assert.Error(t, err)
+
+		err = db.RemoveAgentFromGroup(ctx, id, id)
+		assert.Error(t, err)
+
+		_, err = db.GetAgentsWithGroupsByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetAgentsByGroupID(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("OnboardingMethods", func(t *testing.T) {
+		err := db.SkipOnboarding(ctx, orgID)
+		assert.Error(t, err)
+	})
+
+	t.Run("CostMethods", func(t *testing.T) {
+		err := db.UpdateStoragePricing(ctx, &models.StoragePricing{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteStoragePricing(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetLatestCostEstimates(ctx, orgID)
+		assert.Error(t, err)
+
+		_, err = db.GetCostEstimateHistory(ctx, id, 30)
+		assert.Error(t, err)
+
+		_, err = db.GetCostAlertsByOrgID(ctx, orgID)
+		assert.Error(t, err)
+
+		err = db.UpdateCostAlert(ctx, &models.CostAlert{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteCostAlert(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateCostAlertTriggered(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetEnabledCostAlerts(ctx, orgID)
+		assert.Error(t, err)
+	})
+
+	t.Run("SSOMethods", func(t *testing.T) {
+		err := db.UpdateSSOGroupMapping(ctx, &models.SSOGroupMapping{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteSSOGroupMapping(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpsertUserSSOGroups(ctx, id, []string{"g"})
+		assert.Error(t, err)
+
+		_, _, err = db.GetOrganizationSSOSettings(ctx, orgID)
+		assert.Error(t, err)
+
+		err = db.UpdateOrganizationSSOSettings(ctx, orgID, nil, false)
+		assert.Error(t, err)
+	})
+
+	t.Run("BackupScriptMethods", func(t *testing.T) {
+		_, err := db.GetBackupScriptsByScheduleID(ctx, id)
+		assert.Error(t, err)
+
+		_, err = db.GetEnabledBackupScriptsByScheduleID(ctx, id)
+		assert.Error(t, err)
+
+		err = db.UpdateBackupScript(ctx, &models.BackupScript{ID: id})
+		assert.Error(t, err)
+
+		err = db.DeleteBackupScript(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("ReplicationMethods", func(t *testing.T) {
+		err := db.UpdateReplicationStatus(ctx, &models.ReplicationStatus{ID: id})
+		assert.Error(t, err)
+	})
+
+	t.Run("ScheduleRepositoryMethods", func(t *testing.T) {
+		_, err := db.GetScheduleRepositories(ctx, id)
+		assert.Error(t, err)
+
+		err = db.DeleteScheduleRepositories(ctx, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("HealthHistoryMethods", func(t *testing.T) {
+		_, err := db.GetAgentHealthHistory(ctx, id, 10)
+		assert.Error(t, err)
+	})
+
+	t.Run("ExecTx", func(t *testing.T) {
+		err := db.ExecTx(ctx, func(tx pgx.Tx) error {
+			return nil
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("Migrate", func(t *testing.T) {
+		err := db.Migrate(ctx)
+		assert.Error(t, err)
+	})
+
+	t.Run("CurrentVersion", func(t *testing.T) {
+		_, err := db.CurrentVersion(ctx)
+		assert.Error(t, err)
+	})
+
+	t.Run("Ping", func(t *testing.T) {
+		err := db.Ping(ctx)
+		assert.Error(t, err)
+	})
+}
