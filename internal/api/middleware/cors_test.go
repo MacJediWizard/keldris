@@ -5,11 +5,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/gin-gonic/gin"
 )
 
 func TestCORS_AllowedOrigin(t *testing.T) {
-	mw := CORS([]string{"https://app.keldris.io", "https://admin.keldris.io"})
+	mw := CORS([]string{"https://app.keldris.io", "https://admin.keldris.io"}, config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -34,7 +35,7 @@ func TestCORS_AllowedOrigin(t *testing.T) {
 }
 
 func TestCORS_DisallowedOrigin(t *testing.T) {
-	mw := CORS([]string{"https://app.keldris.io"})
+	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -58,7 +59,7 @@ func TestCORS_DisallowedOrigin(t *testing.T) {
 }
 
 func TestCORS_Preflight(t *testing.T) {
-	mw := CORS([]string{"https://app.keldris.io"})
+	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -95,7 +96,7 @@ func TestCORS_Preflight(t *testing.T) {
 }
 
 func TestCORS_Credentials(t *testing.T) {
-	mw := CORS([]string{"https://app.keldris.io"})
+	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -115,7 +116,7 @@ func TestCORS_Credentials(t *testing.T) {
 
 func TestCORS_AllowAllOrigins(t *testing.T) {
 	// Empty allowed origins = allow all (dev mode)
-	mw := CORS([]string{})
+	mw := CORS([]string{}, config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -137,7 +138,7 @@ func TestCORS_AllowAllOrigins(t *testing.T) {
 }
 
 func TestCORS_CaseInsensitive(t *testing.T) {
-	mw := CORS([]string{"https://app.keldris.io"})
+	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -156,7 +157,7 @@ func TestCORS_CaseInsensitive(t *testing.T) {
 }
 
 func TestCORS_NoOriginHeader(t *testing.T) {
-	mw := CORS([]string{"https://app.keldris.io"})
+	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -179,7 +180,7 @@ func TestCORS_NoOriginHeader(t *testing.T) {
 }
 
 func TestCORS_PreflightDisallowedOrigin(t *testing.T) {
-	mw := CORS([]string{"https://app.keldris.io"})
+	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -198,5 +199,46 @@ func TestCORS_PreflightDisallowedOrigin(t *testing.T) {
 	}
 	if got := w.Header().Get("Access-Control-Allow-Origin"); got != "" {
 		t.Fatalf("expected no CORS origin for disallowed request, got %q", got)
+	}
+}
+
+func TestCORS_ProductionPanicsWithoutOrigins(t *testing.T) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic when CORS_ORIGINS is empty in production")
+		}
+		msg, ok := r.(string)
+		if !ok {
+			t.Fatalf("expected string panic, got %T", r)
+		}
+		if msg != "CORS_ORIGINS must be set in production; refusing to start with open CORS policy" {
+			t.Fatalf("unexpected panic message: %s", msg)
+		}
+	}()
+
+	CORS([]string{}, config.EnvProduction)
+}
+
+func TestCORS_ProductionWithOrigins(t *testing.T) {
+	// Should not panic when origins are provided in production
+	mw := CORS([]string{"https://app.keldris.io"}, config.EnvProduction)
+
+	r := gin.New()
+	r.Use(mw)
+	r.GET("/test", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	req.Header.Set("Origin", "https://app.keldris.io")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+	if got := w.Header().Get("Access-Control-Allow-Origin"); got != "https://app.keldris.io" {
+		t.Fatalf("expected Access-Control-Allow-Origin 'https://app.keldris.io', got %q", got)
 	}
 }
