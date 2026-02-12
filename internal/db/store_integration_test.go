@@ -1,8 +1,12 @@
+//go:build integration
+
 package db
 
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"os/exec"
 	"testing"
 	"time"
@@ -18,18 +22,12 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// dockerAvailable returns true if a Docker daemon is reachable.
-func dockerAvailable() bool {
-	cmd := exec.Command("docker", "info")
-	return cmd.Run() == nil
-}
+var testDB *DB
 
-// setupTestDB creates a PostgreSQL testcontainer, runs migrations, and returns a connected DB.
-func setupTestDB(t *testing.T) *DB {
-	t.Helper()
-
+func TestMain(m *testing.M) {
 	if !dockerAvailable() {
-		t.Skip("Docker is not available, skipping integration test")
+		fmt.Println("Docker is not available, skipping integration tests")
+		os.Exit(0)
 	}
 
 	ctx := context.Background()
@@ -45,27 +43,67 @@ func setupTestDB(t *testing.T) *DB {
 				WithStartupTimeout(30*time.Second),
 		),
 	)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		require.NoError(t, pgContainer.Terminate(ctx))
-	})
+	if err != nil {
+		log.Fatalf("failed to start postgres container: %v", err)
+	}
 
 	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
-	require.NoError(t, err)
+	if err != nil {
+		pgContainer.Terminate(ctx)
+		log.Fatalf("failed to get connection string: %v", err)
+	}
 
-	logger := zerolog.New(zerolog.NewTestWriter(t))
+	logger := zerolog.New(zerolog.NewConsoleWriter())
 	cfg := DefaultConfig(connStr)
 	cfg.MaxConns = 5
 	cfg.MinConns = 1
 
-	database, err := New(ctx, cfg, logger)
-	require.NoError(t, err)
-	t.Cleanup(func() { database.Close() })
+	testDB, err = New(ctx, cfg, logger)
+	if err != nil {
+		pgContainer.Terminate(ctx)
+		log.Fatalf("failed to connect to database: %v", err)
+	}
 
-	err = database.Migrate(ctx)
-	require.NoError(t, err)
+	if err := testDB.Migrate(ctx); err != nil {
+		testDB.Close()
+		pgContainer.Terminate(ctx)
+		log.Fatalf("failed to run migrations: %v", err)
+	}
 
-	return database
+	code := m.Run()
+
+	testDB.Close()
+	pgContainer.Terminate(ctx)
+
+	os.Exit(code)
+}
+
+// dockerAvailable returns true if a Docker daemon is reachable.
+func dockerAvailable() bool {
+	cmd := exec.Command("docker", "info")
+	return cmd.Run() == nil
+}
+
+// setupTestDB returns the shared test database after cleaning all tables.
+func setupTestDB(t *testing.T) *DB {
+	t.Helper()
+	cleanTables(t, testDB)
+	return testDB
+}
+
+// cleanTables truncates all user tables between tests for isolation.
+func cleanTables(t *testing.T, db *DB) {
+	t.Helper()
+	ctx := context.Background()
+	_, err := db.Pool.Exec(ctx, `
+		DO $$ DECLARE r RECORD;
+		BEGIN
+			FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != 'schema_migrations') LOOP
+				EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE';
+			END LOOP;
+		END $$;
+	`)
+	require.NoError(t, err)
 }
 
 // createTestOrg creates and persists a test organization.
