@@ -37,6 +37,8 @@ type Config struct {
 	VerificationTrigger handlers.VerificationTrigger
 	// ReportScheduler for report generation and sending (optional).
 	ReportScheduler *reports.Scheduler
+	// DRTestRunner for triggering DR test execution (optional).
+	DRTestRunner handlers.DRTestRunner
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -214,8 +216,8 @@ func NewRouter(
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
 	drRunbooksHandler.RegisterRoutes(apiV1)
 
-	// DR Test routes (runner is nil for now, will be set up when scheduler is integrated)
-	drTestsHandler := handlers.NewDRTestsHandler(database, nil, logger)
+	// DR Test routes
+	drTestsHandler := handlers.NewDRTestsHandler(database, cfg.DRTestRunner, logger)
 	drTestsHandler.RegisterRoutes(apiV1)
 
 	// Agent API routes (API key auth required)
