@@ -5,6 +5,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/api/handlers"
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/MacJediWizard/keldris/internal/reports"
@@ -18,6 +19,8 @@ import (
 
 // Config holds configuration for the API router.
 type Config struct {
+	// Environment is the deployment environment (development, staging, production).
+	Environment config.Environment
 	// AllowedOrigins for CORS. Empty means all origins allowed in dev mode.
 	AllowedOrigins []string
 	// RateLimitRequests is the number of requests allowed per period.
@@ -37,6 +40,7 @@ type Config struct {
 // DefaultConfig returns a Config with sensible defaults for development.
 func DefaultConfig() Config {
 	return Config{
+		Environment:       config.EnvDevelopment,
 		AllowedOrigins:    []string{},
 		RateLimitRequests: 100,
 		RateLimitPeriod:   "1m",
@@ -76,7 +80,7 @@ func NewRouter(
 	r.Engine.Use(gin.Recovery())
 	r.Engine.Use(middleware.RequestLogger(logger))
 	r.Engine.Use(middleware.SecurityHeaders())
-	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins))
+	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins, cfg.Environment))
 
 	// Rate limiting
 	rateLimiter, err := middleware.NewRateLimiter(cfg.RateLimitRequests, cfg.RateLimitPeriod)
