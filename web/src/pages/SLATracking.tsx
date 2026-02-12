@@ -74,9 +74,7 @@ function PolicyStatusDetails({ policyId, policy }: PolicyStatusDetailsProps) {
 	return (
 		<div className="mt-4 grid grid-cols-3 gap-4">
 			<div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
-				<div className="text-sm text-gray-500 dark:text-gray-400">
-					RPO
-				</div>
+				<div className="text-sm text-gray-500 dark:text-gray-400">RPO</div>
 				<div
 					className={`text-lg font-semibold ${status.current_rpo_hours <= policy.target_rpo_hours ? 'text-green-600' : 'text-red-600'}`}
 				>
@@ -87,9 +85,7 @@ function PolicyStatusDetails({ policyId, policy }: PolicyStatusDetailsProps) {
 				</div>
 			</div>
 			<div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
-				<div className="text-sm text-gray-500 dark:text-gray-400">
-					RTO
-				</div>
+				<div className="text-sm text-gray-500 dark:text-gray-400">RTO</div>
 				<div
 					className={`text-lg font-semibold ${status.current_rto_hours <= policy.target_rto_hours ? 'text-green-600' : 'text-red-600'}`}
 				>
@@ -252,17 +248,13 @@ function PolicyCard({ policy, onDelete, isDeleting }: PolicyCardProps) {
 			)}
 			<div className="mt-3 grid grid-cols-3 gap-4 text-sm">
 				<div>
-					<span className="text-gray-500 dark:text-gray-400">
-						Target RPO:
-					</span>{' '}
+					<span className="text-gray-500 dark:text-gray-400">Target RPO:</span>{' '}
 					<span className="font-medium text-gray-900 dark:text-white">
 						{policy.target_rpo_hours}h
 					</span>
 				</div>
 				<div>
-					<span className="text-gray-500 dark:text-gray-400">
-						Target RTO:
-					</span>{' '}
+					<span className="text-gray-500 dark:text-gray-400">Target RTO:</span>{' '}
 					<span className="font-medium text-gray-900 dark:text-white">
 						{policy.target_rto_hours}h
 					</span>
@@ -279,10 +271,7 @@ function PolicyCard({ policy, onDelete, isDeleting }: PolicyCardProps) {
 
 			{expanded && (
 				<>
-					<PolicyStatusDetails
-						policyId={policy.id}
-						policy={policy}
-					/>
+					<PolicyStatusDetails policyId={policy.id} policy={policy} />
 					<PolicyHistory policyId={policy.id} />
 				</>
 			)}
@@ -529,8 +518,7 @@ export function SLATracking() {
 						No SLA policies
 					</h3>
 					<p className="text-gray-500 dark:text-gray-400">
-						Create your first SLA policy to start tracking backup
-						compliance
+						Create your first SLA policy to start tracking backup compliance
 					</p>
 				</div>
 			)}

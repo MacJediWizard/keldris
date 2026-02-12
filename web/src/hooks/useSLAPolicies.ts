@@ -25,8 +25,7 @@ export function useCreateSLAPolicy() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (data: CreateSLAPolicyRequest) =>
-			slaPoliciesApi.create(data),
+		mutationFn: (data: CreateSLAPolicyRequest) => slaPoliciesApi.create(data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['slaPolicies'] });
 		},
@@ -37,10 +36,7 @@ export function useUpdateSLAPolicy() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({
-			id,
-			data,
-		}: { id: string; data: UpdateSLAPolicyRequest }) =>
+		mutationFn: ({ id, data }: { id: string; data: UpdateSLAPolicyRequest }) =>
 			slaPoliciesApi.update(id, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['slaPolicies'] });

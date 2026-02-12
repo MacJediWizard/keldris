@@ -75,9 +75,7 @@ describe('SLATracking', () => {
 			isError: true,
 		} as ReturnType<typeof useSLAPolicies>);
 		renderPage();
-		expect(
-			screen.getByText('Failed to load SLA policies'),
-		).toBeInTheDocument();
+		expect(screen.getByText('Failed to load SLA policies')).toBeInTheDocument();
 	});
 
 	it('shows empty state', () => {
