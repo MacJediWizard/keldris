@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/models"
@@ -606,17 +607,23 @@ func (s *Service) sendMaintenanceEmail(ctx context.Context, channel *models.Noti
 
 // finalizeLog updates a notification log with the send result.
 func (s *Service) finalizeLog(ctx context.Context, log *models.NotificationLog, sendErr error, channelID, recipient string) {
+	// Redact recipient if it looks like a URL (webhook URLs contain auth tokens)
+	logRecipient := recipient
+	if strings.HasPrefix(recipient, "http://") || strings.HasPrefix(recipient, "https://") {
+		logRecipient = "[redacted-url]"
+	}
+
 	if sendErr != nil {
 		log.MarkFailed(sendErr.Error())
 		s.logger.Error().Err(sendErr).
 			Str("channel_id", channelID).
-			Str("recipient", recipient).
+			Str("recipient", logRecipient).
 			Msg("failed to send notification")
 	} else {
 		log.MarkSent()
 		s.logger.Info().
 			Str("channel_id", channelID).
-			Str("recipient", recipient).
+			Str("recipient", logRecipient).
 			Str("event_type", log.EventType).
 			Msg("notification sent")
 	}

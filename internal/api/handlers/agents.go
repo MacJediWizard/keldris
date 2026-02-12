@@ -700,6 +700,9 @@ func (h *AgentsHandler) HealthHistory(c *gin.Context) {
 			limit = l
 		}
 	}
+	if limit > 1000 {
+		limit = 1000
+	}
 
 	history, err := h.store.GetAgentHealthHistory(c.Request.Context(), id, limit)
 	if err != nil {

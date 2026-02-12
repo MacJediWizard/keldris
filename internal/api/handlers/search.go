@@ -66,6 +66,10 @@ func (h *SearchHandler) Search(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "search query is required"})
 		return
 	}
+	if len(query) > 1000 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "search query too long (max 1000 characters)"})
+		return
+	}
 
 	filter := db.SearchFilter{
 		Query: query,
