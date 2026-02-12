@@ -81,7 +81,7 @@ func NewRouter(
 	// Global middleware
 	r.Engine.Use(gin.Recovery())
 	r.Engine.Use(middleware.RequestLogger(logger))
-	r.Engine.Use(middleware.SecurityHeaders())
+	r.Engine.Use(middleware.SecurityHeaders(cfg.Environment))
 	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins, cfg.Environment))
 
 	// Rate limiting
@@ -99,11 +99,15 @@ func NewRouter(
 	metricsHandler := handlers.NewMetricsHandler(database, logger)
 	metricsHandler.RegisterPublicRoutes(r.Engine)
 
-	// Swagger API documentation (no auth required)
-	r.Engine.GET("/api/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler,
-		ginSwagger.URL("/api/docs/doc.json"),
-		ginSwagger.DefaultModelsExpandDepth(-1),
-	))
+	// Swagger API documentation (no auth required, disabled in production for security)
+	if cfg.Environment != config.EnvProduction {
+		r.Engine.GET("/api/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler,
+			ginSwagger.URL("/api/docs/doc.json"),
+			ginSwagger.DefaultModelsExpandDepth(-1),
+		))
+	} else {
+		r.logger.Info().Msg("Swagger UI disabled in production for security")
+	}
 
 	// Version endpoint (no auth required)
 	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)

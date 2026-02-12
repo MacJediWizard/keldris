@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,10 +22,11 @@ const nonceBytes = 16
 // No scripts, styles, or other resources should be loaded from API responses.
 const cspAPI = "default-src 'none'; frame-ancestors 'none'"
 
-// cspSwagger is the Content-Security-Policy for Swagger UI routes.
+// cspSwaggerDev is the Content-Security-Policy for Swagger UI routes in development.
 // Swagger UI (swaggo) requires 'unsafe-inline' for its inline styles and scripts
-// which we cannot control. This policy is scoped only to /api/docs/* paths.
-const cspSwagger = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'"
+// which we cannot control. This policy is only applied in non-production environments.
+// Swagger UI is disabled entirely in production for security.
+const cspSwaggerDev = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'"
 
 // GetCSPNonce retrieves the per-request CSP nonce from the gin context.
 // Returns an empty string if no nonce is set (e.g., on API routes).
@@ -45,7 +47,11 @@ func generateNonce() (string, error) {
 }
 
 // SecurityHeaders returns a middleware that sets security-related HTTP response headers.
-func SecurityHeaders() gin.HandlerFunc {
+// The env parameter controls whether development-only CSP exceptions (e.g., Swagger UI)
+// are applied. In production, all routes use strict CSP without 'unsafe-inline'.
+func SecurityHeaders(env config.Environment) gin.HandlerFunc {
+	isProduction := env == config.EnvProduction
+
 	return func(c *gin.Context) {
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("X-Content-Type-Options", "nosniff")
@@ -64,9 +70,10 @@ func SecurityHeaders() gin.HandlerFunc {
 		case isAPIRoute(path):
 			// Strict CSP for API routes (JSON-only responses).
 			c.Header("Content-Security-Policy", cspAPI)
-		case isSwaggerRoute(path):
-			// Swagger UI requires 'unsafe-inline' for its third-party inline content.
-			c.Header("Content-Security-Policy", cspSwagger)
+		case !isProduction && isSwaggerRoute(path):
+			// Swagger UI requires 'unsafe-inline' for its inline content.
+			// Only applied in non-production; Swagger UI is disabled in production.
+			c.Header("Content-Security-Policy", cspSwaggerDev)
 		default:
 			// Frontend routes use nonce-based CSP to avoid 'unsafe-inline'.
 			nonce, err := generateNonce()
