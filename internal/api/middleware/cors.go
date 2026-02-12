@@ -1,15 +1,25 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
+	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/gin-gonic/gin"
 )
 
 // CORS returns a middleware that handles Cross-Origin Resource Sharing.
-// If allowedOrigins is empty, all origins are allowed (suitable for development).
-func CORS(allowedOrigins []string) gin.HandlerFunc {
+// In production, allowedOrigins must not be empty or the server will panic.
+// In non-production environments, empty allowedOrigins allows all origins with a warning.
+func CORS(allowedOrigins []string, env config.Environment) gin.HandlerFunc {
+	if len(allowedOrigins) == 0 {
+		if env == config.EnvProduction {
+			panic("CORS_ORIGINS must be set in production; refusing to start with open CORS policy")
+		}
+		log.Println("WARNING: CORS_ORIGINS is empty, all origins are allowed (not suitable for production)")
+	}
+
 	allowAll := len(allowedOrigins) == 0
 
 	originSet := make(map[string]struct{}, len(allowedOrigins))
