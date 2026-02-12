@@ -1,24 +1,29 @@
 package backends
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/models"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 // SFTPBackend represents an SFTP storage backend.
 type SFTPBackend struct {
-	Host       string `json:"host"`
-	Port       int    `json:"port,omitempty"`
-	User       string `json:"user"`
-	Path       string `json:"path"`
-	Password   string `json:"password,omitempty"`
-	PrivateKey string `json:"private_key,omitempty"`
+	Host           string `json:"host"`
+	Port           int    `json:"port,omitempty"`
+	User           string `json:"user"`
+	Path           string `json:"path"`
+	Password       string `json:"password,omitempty"`
+	PrivateKey     string `json:"private_key,omitempty"`
+	HostKey        string `json:"host_key,omitempty"`         // Base64-encoded SSH public key
+	KnownHostsFile string `json:"known_hosts_file,omitempty"` // Path to known_hosts file
 }
 
 // Type returns the repository type.
@@ -66,6 +71,35 @@ func (b *SFTPBackend) Validate() error {
 	return nil
 }
 
+// hostKeyCallback builds an ssh.HostKeyCallback based on the backend configuration.
+// Priority: HostKey field > KnownHostsFile > error.
+func (b *SFTPBackend) hostKeyCallback() (ssh.HostKeyCallback, error) {
+	if b.HostKey != "" {
+		hostKeyBytes, err := base64.StdEncoding.DecodeString(b.HostKey)
+		if err != nil {
+			return nil, fmt.Errorf("sftp backend: failed to decode host key: %w", err)
+		}
+		expectedKey, err := ssh.ParsePublicKey(hostKeyBytes)
+		if err != nil {
+			return nil, fmt.Errorf("sftp backend: failed to parse host key: %w", err)
+		}
+		return ssh.FixedHostKey(expectedKey), nil
+	}
+
+	if b.KnownHostsFile != "" {
+		if _, err := os.Stat(b.KnownHostsFile); err != nil {
+			return nil, fmt.Errorf("sftp backend: known_hosts file not found: %w", err)
+		}
+		callback, err := knownhosts.New(b.KnownHostsFile)
+		if err != nil {
+			return nil, fmt.Errorf("sftp backend: failed to parse known_hosts: %w", err)
+		}
+		return callback, nil
+	}
+
+	return nil, errors.New("sftp backend: host key verification required; provide host_key or known_hosts_file")
+}
+
 // TestConnection tests the SFTP backend connection by attempting to connect via SSH.
 func (b *SFTPBackend) TestConnection() error {
 	if err := b.Validate(); err != nil {
@@ -92,10 +126,15 @@ func (b *SFTPBackend) TestConnection() error {
 		authMethods = append(authMethods, ssh.PublicKeys(signer))
 	}
 
+	hostKeyCallback, err := b.hostKeyCallback()
+	if err != nil {
+		return err
+	}
+
 	config := &ssh.ClientConfig{
 		User:            b.User,
 		Auth:            authMethods,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         30 * time.Second,
 	}
 
@@ -115,4 +154,44 @@ func (b *SFTPBackend) TestConnection() error {
 
 	// Connection successful
 	return nil
+}
+
+// FetchHostKey connects to an SSH server and returns its host public key
+// as a base64-encoded string. This is used by the UI "Test Connection"
+// flow to retrieve the key for user approval before saving.
+func FetchHostKey(host string, port int) (string, error) {
+	if host == "" {
+		return "", errors.New("host is required")
+	}
+	if port <= 0 {
+		port = 22
+	}
+
+	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+
+	var capturedKey ssh.PublicKey
+	config := &ssh.ClientConfig{
+		User: "probe",
+		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			capturedKey = key
+			return errors.New("host key captured") // abort after capturing
+		},
+		Timeout: 10 * time.Second,
+	}
+
+	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	if err != nil {
+		return "", fmt.Errorf("failed to connect to %s: %w", addr, err)
+	}
+	defer conn.Close()
+
+	// The handshake will fail because our callback returns an error,
+	// but we will have captured the host key.
+	_, _, _, _ = ssh.NewClientConn(conn, addr, config)
+
+	if capturedKey == nil {
+		return "", fmt.Errorf("failed to retrieve host key from %s", addr)
+	}
+
+	return base64.StdEncoding.EncodeToString(capturedKey.Marshal()), nil
 }
