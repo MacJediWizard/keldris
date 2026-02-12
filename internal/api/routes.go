@@ -223,6 +223,11 @@ func NewRouter(
 	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
 	maintenanceHandler.RegisterRoutes(apiV1)
 
+	// Branding routes (Enterprise - White Label)
+	brandingGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureWhiteLabel, logger))
+	brandingHandler := handlers.NewBrandingHandler(database, logger)
+	brandingHandler.RegisterRoutes(brandingGroup)
+
 	// DR Runbook routes (Enterprise)
 	drRunbooksGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDRRunbooks, logger))
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
