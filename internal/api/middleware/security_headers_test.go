@@ -7,11 +7,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/gin-gonic/gin"
 )
 
 func TestSecurityHeaders_AllHeadersSet(t *testing.T) {
-	mw := SecurityHeaders()
+	mw := SecurityHeaders(config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -48,7 +49,7 @@ func TestSecurityHeaders_AllHeadersSet(t *testing.T) {
 }
 
 func TestSecurityHeaders_HSTSOnlyWithTLS(t *testing.T) {
-	mw := SecurityHeaders()
+	mw := SecurityHeaders(config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -71,7 +72,7 @@ func TestSecurityHeaders_HSTSOnlyWithTLS(t *testing.T) {
 }
 
 func TestSecurityHeaders_APIRouteStrictCSP(t *testing.T) {
-	mw := SecurityHeaders()
+	mw := SecurityHeaders(config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -93,7 +94,7 @@ func TestSecurityHeaders_APIRouteStrictCSP(t *testing.T) {
 }
 
 func TestSecurityHeaders_AuthRouteStrictCSP(t *testing.T) {
-	mw := SecurityHeaders()
+	mw := SecurityHeaders(config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -114,8 +115,8 @@ func TestSecurityHeaders_AuthRouteStrictCSP(t *testing.T) {
 	}
 }
 
-func TestSecurityHeaders_SwaggerRouteCSP(t *testing.T) {
-	mw := SecurityHeaders()
+func TestSecurityHeaders_SwaggerRouteCSP_Development(t *testing.T) {
+	mw := SecurityHeaders(config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -132,18 +133,55 @@ func TestSecurityHeaders_SwaggerRouteCSP(t *testing.T) {
 	}
 
 	got := w.Header().Get("Content-Security-Policy")
-	if got != cspSwagger {
-		t.Errorf("expected swagger CSP %q, got %q", cspSwagger, got)
+	if got != cspSwaggerDev {
+		t.Errorf("expected swagger dev CSP %q, got %q", cspSwaggerDev, got)
 	}
 
-	// Swagger must retain unsafe-inline for third-party Swagger UI content.
+	// Dev-only swagger CSP retains unsafe-inline for third-party Swagger UI content.
 	if !strings.Contains(got, "'unsafe-inline'") {
-		t.Error("swagger CSP should contain 'unsafe-inline'")
+		t.Error("swagger dev CSP should contain 'unsafe-inline'")
+	}
+}
+
+func TestSecurityHeaders_SwaggerRouteCSP_Production(t *testing.T) {
+	mw := SecurityHeaders(config.EnvProduction)
+
+	r := gin.New()
+	r.Use(mw)
+
+	var capturedNonce string
+	r.GET("/api/docs/index.html", func(c *gin.Context) {
+		capturedNonce = GetCSPNonce(c)
+		c.String(http.StatusOK, "<html></html>")
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/docs/index.html", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	got := w.Header().Get("Content-Security-Policy")
+
+	// In production, swagger routes must NOT get unsafe-inline CSP.
+	if strings.Contains(got, "'unsafe-inline'") {
+		t.Error("production swagger route should not contain 'unsafe-inline'")
+	}
+
+	// Should get nonce-based CSP instead (falls through to default).
+	if capturedNonce == "" {
+		t.Fatal("expected nonce to be set for swagger route in production")
+	}
+	nonceDirective := "'nonce-" + capturedNonce + "'"
+	if !strings.Contains(got, "script-src 'self' "+nonceDirective) {
+		t.Errorf("production swagger route missing nonce in script-src: %s", got)
 	}
 }
 
 func TestSecurityHeaders_FrontendRouteNonceCSP(t *testing.T) {
-	mw := SecurityHeaders()
+	mw := SecurityHeaders(config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -191,7 +229,7 @@ func TestSecurityHeaders_FrontendRouteNonceCSP(t *testing.T) {
 }
 
 func TestSecurityHeaders_NonceUniqueness(t *testing.T) {
-	mw := SecurityHeaders()
+	mw := SecurityHeaders(config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
@@ -225,7 +263,7 @@ func TestSecurityHeaders_NonceUniqueness(t *testing.T) {
 }
 
 func TestSecurityHeaders_NonceNotSetOnAPIRoutes(t *testing.T) {
-	mw := SecurityHeaders()
+	mw := SecurityHeaders(config.EnvDevelopment)
 
 	r := gin.New()
 	r.Use(mw)
