@@ -35,6 +35,11 @@ type mockNotificationStore struct {
 
 	schedule    *models.Schedule
 	scheduleErr error
+
+	// logDone is signaled each time UpdateNotificationLog completes.
+	// Tests that read log fields after async notify calls should wait
+	// on this channel instead of using time.Sleep to avoid data races.
+	logDone chan struct{}
 }
 
 func (m *mockNotificationStore) GetEnabledPreferencesForEvent(_ context.Context, _ uuid.UUID, _ models.NotificationEventType) ([]*models.NotificationPreference, error) {
@@ -67,18 +72,38 @@ func (m *mockNotificationStore) CreateNotificationLog(_ context.Context, log *mo
 
 func (m *mockNotificationStore) UpdateNotificationLog(_ context.Context, log *models.NotificationLog) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	if m.updateLogErr != nil {
+		m.mu.Unlock()
+		m.signalLogDone()
 		return m.updateLogErr
 	}
 	for i, l := range m.logs {
 		if l.ID == log.ID {
 			m.logs[i] = log
+			m.mu.Unlock()
+			m.signalLogDone()
 			return nil
 		}
 	}
 	m.logs = append(m.logs, log)
+	m.mu.Unlock()
+	m.signalLogDone()
 	return nil
+}
+
+func (m *mockNotificationStore) signalLogDone() {
+	if m.logDone != nil {
+		m.logDone <- struct{}{}
+	}
+}
+
+func (m *mockNotificationStore) waitForLogDone(t *testing.T) {
+	t.Helper()
+	select {
+	case <-m.logDone:
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out waiting for notification log to be finalized")
+	}
 }
 
 func (m *mockNotificationStore) GetAgentByID(_ context.Context, _ uuid.UUID) (*models.Agent, error) {
@@ -179,6 +204,7 @@ func TestService_NotifyBackupComplete_SlackSuccess(t *testing.T) {
 				Enabled:         true,
 			},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -200,7 +226,7 @@ func TestService_NotifyBackupComplete_SlackSuccess(t *testing.T) {
 	svc.NotifyBackupComplete(context.Background(), result)
 
 	// Wait for async goroutine
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -244,6 +270,7 @@ func TestService_NotifyBackupComplete_SlackFailed(t *testing.T) {
 				Enabled:         true,
 			},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -256,7 +283,7 @@ func TestService_NotifyBackupComplete_SlackFailed(t *testing.T) {
 	}
 
 	svc.NotifyBackupComplete(context.Background(), result)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -301,6 +328,7 @@ func TestService_NotifyBackupComplete_WebhookChannel(t *testing.T) {
 				Enabled:         true,
 			},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -312,7 +340,7 @@ func TestService_NotifyBackupComplete_WebhookChannel(t *testing.T) {
 	}
 
 	svc.NotifyBackupComplete(context.Background(), result)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -356,6 +384,7 @@ func TestService_NotifyBackupComplete_PagerDutyChannel(t *testing.T) {
 				Enabled:         true,
 			},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -376,7 +405,7 @@ func TestService_NotifyBackupComplete_PagerDutyChannel(t *testing.T) {
 	}
 
 	svc.NotifyBackupComplete(context.Background(), result)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -422,6 +451,7 @@ func TestService_NotifyBackupComplete_TeamsChannel(t *testing.T) {
 				Enabled:         true,
 			},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -437,7 +467,7 @@ func TestService_NotifyBackupComplete_TeamsChannel(t *testing.T) {
 	}
 
 	svc.NotifyBackupComplete(context.Background(), result)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -481,6 +511,7 @@ func TestService_NotifyBackupComplete_DiscordChannel(t *testing.T) {
 				Enabled:         true,
 			},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -493,7 +524,7 @@ func TestService_NotifyBackupComplete_DiscordChannel(t *testing.T) {
 	}
 
 	svc.NotifyBackupComplete(context.Background(), result)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -645,6 +676,7 @@ func TestService_NotifyBackupComplete_MultipleChannels(t *testing.T) {
 			slackChannelID:   {ID: slackChannelID, OrgID: orgID, Name: "Slack", Type: models.ChannelTypeSlack, ConfigEncrypted: slackConfig, Enabled: true},
 			discordChannelID: {ID: discordChannelID, OrgID: orgID, Name: "Discord", Type: models.ChannelTypeDiscord, ConfigEncrypted: discordConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 2),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -660,7 +692,8 @@ func TestService_NotifyBackupComplete_MultipleChannels(t *testing.T) {
 	}
 
 	svc.NotifyBackupComplete(context.Background(), result)
-	time.Sleep(300 * time.Millisecond)
+	store.waitForLogDone(t)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) != 2 {
@@ -725,6 +758,7 @@ func TestService_NotifyAgentOffline_SlackChannel(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Slack", Type: models.ChannelTypeSlack, ConfigEncrypted: slackConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -735,7 +769,7 @@ func TestService_NotifyAgentOffline_SlackChannel(t *testing.T) {
 	}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 10*time.Minute)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -764,13 +798,14 @@ func TestService_NotifyAgentOffline_WebhookChannel(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Webhook", Type: models.ChannelTypeWebhook, ConfigEncrypted: webhookConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -799,13 +834,14 @@ func TestService_NotifyAgentOffline_TeamsChannel(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Teams", Type: models.ChannelTypeTeams, ConfigEncrypted: teamsConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -834,13 +870,14 @@ func TestService_NotifyAgentOffline_DiscordChannel(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Discord", Type: models.ChannelTypeDiscord, ConfigEncrypted: discordConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -940,6 +977,7 @@ func TestService_NotifyAgentOffline_WithLastSeen(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Slack", Type: models.ChannelTypeSlack, ConfigEncrypted: slackConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -950,7 +988,7 @@ func TestService_NotifyAgentOffline_WithLastSeen(t *testing.T) {
 	}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 30*time.Minute)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -1016,6 +1054,7 @@ func TestService_NotifyMaintenanceScheduled_SlackChannel(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Slack", Type: models.ChannelTypeSlack, ConfigEncrypted: slackConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -1029,7 +1068,7 @@ func TestService_NotifyMaintenanceScheduled_SlackChannel(t *testing.T) {
 	}
 
 	svc.NotifyMaintenanceScheduled(context.Background(), window)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -1058,6 +1097,7 @@ func TestService_NotifyMaintenanceScheduled_WebhookChannel(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Webhook", Type: models.ChannelTypeWebhook, ConfigEncrypted: webhookConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -1071,7 +1111,7 @@ func TestService_NotifyMaintenanceScheduled_WebhookChannel(t *testing.T) {
 	}
 
 	svc.NotifyMaintenanceScheduled(context.Background(), window)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -1100,6 +1140,7 @@ func TestService_NotifyMaintenanceScheduled_TeamsChannel(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Teams", Type: models.ChannelTypeTeams, ConfigEncrypted: teamsConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -1113,7 +1154,7 @@ func TestService_NotifyMaintenanceScheduled_TeamsChannel(t *testing.T) {
 	}
 
 	svc.NotifyMaintenanceScheduled(context.Background(), window)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -1142,6 +1183,7 @@ func TestService_NotifyMaintenanceScheduled_DiscordChannel(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Discord", Type: models.ChannelTypeDiscord, ConfigEncrypted: discordConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -1155,7 +1197,7 @@ func TestService_NotifyMaintenanceScheduled_DiscordChannel(t *testing.T) {
 	}
 
 	svc.NotifyMaintenanceScheduled(context.Background(), window)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -1346,6 +1388,7 @@ func TestService_NotifyBackupComplete_SlackWebhookError(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Slack", Type: models.ChannelTypeSlack, ConfigEncrypted: slackConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -1357,7 +1400,7 @@ func TestService_NotifyBackupComplete_SlackWebhookError(t *testing.T) {
 	}
 
 	svc.NotifyBackupComplete(context.Background(), result)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -1468,13 +1511,14 @@ func TestService_NotifyAgentOffline_PagerDutyChannel(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "PD", Type: models.ChannelTypePagerDuty, ConfigEncrypted: pdConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -1496,6 +1540,7 @@ func TestService_NotifyMaintenanceScheduled_PagerDutyChannel(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "PD", Type: models.ChannelTypePagerDuty, ConfigEncrypted: pdConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -1508,7 +1553,7 @@ func TestService_NotifyMaintenanceScheduled_PagerDutyChannel(t *testing.T) {
 	}
 
 	svc.NotifyMaintenanceScheduled(context.Background(), window)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -1645,6 +1690,7 @@ func TestService_NotifyBackupComplete_EmailChannel_SuccessPath(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Email", Type: models.ChannelTypeEmail, ConfigEncrypted: emailConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -1662,7 +1708,7 @@ func TestService_NotifyBackupComplete_EmailChannel_SuccessPath(t *testing.T) {
 	}
 
 	svc.NotifyBackupComplete(context.Background(), result)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -1691,6 +1737,7 @@ func TestService_NotifyBackupComplete_EmailChannel_FailurePath(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Email", Type: models.ChannelTypeEmail, ConfigEncrypted: emailConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -1703,7 +1750,7 @@ func TestService_NotifyBackupComplete_EmailChannel_FailurePath(t *testing.T) {
 	}
 
 	svc.NotifyBackupComplete(context.Background(), result)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -1728,13 +1775,14 @@ func TestService_NotifyAgentOffline_EmailChannel_ValidConfig(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Email", Type: models.ChannelTypeEmail, ConfigEncrypted: emailConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -1759,6 +1807,7 @@ func TestService_NotifyMaintenanceScheduled_EmailChannel_ValidConfig(t *testing.
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Email", Type: models.ChannelTypeEmail, ConfigEncrypted: emailConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -1772,7 +1821,7 @@ func TestService_NotifyMaintenanceScheduled_EmailChannel_ValidConfig(t *testing.
 	}
 
 	svc.NotifyMaintenanceScheduled(context.Background(), window)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
@@ -2058,6 +2107,7 @@ func TestService_NotifyBackupComplete_EmailChannel_TLSPath(t *testing.T) {
 		channels: map[uuid.UUID]*models.NotificationChannel{
 			channelID: {ID: channelID, OrgID: orgID, Name: "Email", Type: models.ChannelTypeEmail, ConfigEncrypted: emailConfig, Enabled: true},
 		},
+		logDone: make(chan struct{}, 1),
 	}
 
 	svc := NewService(store, zerolog.Nop())
@@ -2073,7 +2123,7 @@ func TestService_NotifyBackupComplete_EmailChannel_TLSPath(t *testing.T) {
 	}
 
 	svc.NotifyBackupComplete(context.Background(), result)
-	time.Sleep(200 * time.Millisecond)
+	store.waitForLogDone(t)
 
 	logs := store.getLogs()
 	if len(logs) == 0 {
