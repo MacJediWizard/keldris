@@ -8,6 +8,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -39,6 +40,8 @@ type Config struct {
 	ReportScheduler *reports.Scheduler
 	// DRTestRunner for triggering DR test execution (optional).
 	DRTestRunner handlers.DRTestRunner
+	// License is the current server license for feature gating (optional).
+	License *license.License
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -125,6 +128,13 @@ func NewRouter(
 	apiV1.Use(middleware.AuthMiddleware(sessions, logger))
 	apiV1.Use(middleware.AuditMiddleware(database, logger))
 
+	// License middleware for feature gating
+	lic := cfg.License
+	if lic == nil {
+		lic = license.FreeLicense()
+	}
+	apiV1.Use(middleware.LicenseMiddleware(lic, logger))
+
 	// Create RBAC for permission checks
 	rbac := auth.NewRBAC(database)
 
@@ -167,8 +177,9 @@ func NewRouter(
 	alertsHandler := handlers.NewAlertsHandler(database, logger)
 	alertsHandler.RegisterRoutes(apiV1)
 
+	notificationsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureNotificationSlack, logger))
 	notificationsHandler := handlers.NewNotificationsHandler(database, keyManager, logger)
-	notificationsHandler.RegisterRoutes(apiV1)
+	notificationsHandler.RegisterRoutes(notificationsGroup)
 
 	// Register reports handler if scheduler is available
 	if cfg.ReportScheduler != nil {
@@ -212,13 +223,15 @@ func NewRouter(
 	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
 	maintenanceHandler.RegisterRoutes(apiV1)
 
-	// DR Runbook routes
+	// DR Runbook routes (Enterprise)
+	drRunbooksGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDRRunbooks, logger))
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
-	drRunbooksHandler.RegisterRoutes(apiV1)
+	drRunbooksHandler.RegisterRoutes(drRunbooksGroup)
 
-	// DR Test routes
+	// DR Test routes (Enterprise)
+	drTestsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDRTests, logger))
 	drTestsHandler := handlers.NewDRTestsHandler(database, cfg.DRTestRunner, logger)
-	drTestsHandler.RegisterRoutes(apiV1)
+	drTestsHandler.RegisterRoutes(drTestsGroup)
 
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
