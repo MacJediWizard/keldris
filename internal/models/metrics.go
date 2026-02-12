@@ -47,6 +47,24 @@ func NewMetricsHistory(orgID uuid.UUID) *MetricsHistory {
 	}
 }
 
+// MetricsDailySummary represents aggregated daily metrics.
+type MetricsDailySummary struct {
+	ID    uuid.UUID `json:"id"`
+	OrgID uuid.UUID `json:"org_id"`
+	Date  time.Time `json:"date"`
+
+	TotalBackups      int   `json:"total_backups"`
+	SuccessfulBackups int   `json:"successful_backups"`
+	FailedBackups     int   `json:"failed_backups"`
+	TotalSizeBytes    int64 `json:"total_size_bytes"`
+	TotalDurationSecs int64 `json:"total_duration_secs"`
+	AgentsActive      int   `json:"agents_active"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+
 // DashboardStats represents the main dashboard statistics.
 type DashboardStats struct {
 	// Agent counts

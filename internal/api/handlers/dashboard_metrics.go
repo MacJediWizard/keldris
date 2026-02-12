@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/models"
@@ -20,6 +21,7 @@ type DashboardMetricsStore interface {
 	GetStorageGrowthTrend(ctx context.Context, orgID uuid.UUID, days int) ([]*models.StorageGrowthTrend, error)
 	GetBackupDurationTrend(ctx context.Context, orgID uuid.UUID, days int) ([]*models.BackupDurationTrend, error)
 	GetDailyBackupStats(ctx context.Context, orgID uuid.UUID, days int) ([]*models.DailyBackupStats, error)
+	GetDailySummaries(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time) ([]models.MetricsDailySummary, error)
 }
 
 // DashboardMetricsHandler handles dashboard metrics related HTTP endpoints.
@@ -179,6 +181,8 @@ func (h *DashboardMetricsHandler) GetBackupDurationTrend(c *gin.Context) {
 }
 
 // GetDailyBackupStats returns daily backup statistics.
+// For ranges > 7 days, uses pre-aggregated daily summaries for performance.
+// Falls back to real-time query for recent data (7 days or less).
 // GET /api/v1/dashboard-metrics/daily-backups?days=30
 func (h *DashboardMetricsHandler) GetDailyBackupStats(c *gin.Context) {
 	user := middleware.RequireUser(c)
@@ -200,6 +204,33 @@ func (h *DashboardMetricsHandler) GetDailyBackupStats(c *gin.Context) {
 		}
 	}
 
+	// Use pre-aggregated summaries for longer ranges
+	if days > 7 {
+		now := time.Now().UTC()
+		startDate := now.AddDate(0, 0, -days)
+		endDate := now.AddDate(0, 0, -1) // Exclude today (not yet complete)
+
+		summaries, err := h.store.GetDailySummaries(c.Request.Context(), dbUser.OrgID, startDate, endDate)
+		if err == nil && len(summaries) > 0 {
+			stats := make([]*models.DailyBackupStats, 0, len(summaries))
+			for _, s := range summaries {
+				stats = append(stats, &models.DailyBackupStats{
+					Date:       s.Date,
+					Total:      s.TotalBackups,
+					Successful: s.SuccessfulBackups,
+					Failed:     s.FailedBackups,
+					TotalSize:  s.TotalSizeBytes,
+				})
+			}
+			c.JSON(http.StatusOK, gin.H{"stats": stats})
+			return
+		}
+		if err != nil {
+			h.logger.Warn().Err(err).Msg("failed to get daily summaries, falling back to real-time query")
+		}
+	}
+
+	// Fall back to real-time query
 	stats, err := h.store.GetDailyBackupStats(c.Request.Context(), dbUser.OrgID, days)
 	if err != nil {
 		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get daily backup stats")
