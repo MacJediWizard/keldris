@@ -8,6 +8,26 @@ const (
 	FeatureOIDC Feature = "oidc"
 	// FeatureAuditLogs enables audit logging (Pro+).
 	FeatureAuditLogs Feature = "audit_logs"
+	// FeatureNotificationSlack enables Slack notifications (Pro+).
+	FeatureNotificationSlack Feature = "notification_slack"
+	// FeatureNotificationTeams enables Microsoft Teams notifications (Pro+).
+	FeatureNotificationTeams Feature = "notification_teams"
+	// FeatureNotificationPagerDuty enables PagerDuty notifications (Pro+).
+	FeatureNotificationPagerDuty Feature = "notification_pagerduty"
+	// FeatureNotificationDiscord enables Discord notifications (Pro+).
+	FeatureNotificationDiscord Feature = "notification_discord"
+	// FeatureStorageS3 enables S3-compatible storage backends (Pro+).
+	FeatureStorageS3 Feature = "storage_s3"
+	// FeatureStorageB2 enables Backblaze B2 storage backend (Pro+).
+	FeatureStorageB2 Feature = "storage_b2"
+	// FeatureStorageSFTP enables SFTP storage backend (Pro+).
+	FeatureStorageSFTP Feature = "storage_sftp"
+	// FeatureDockerBackup enables Docker container backups (Pro+).
+	FeatureDockerBackup Feature = "docker_backup"
+	// FeatureMultiRepo enables multiple backup repositories (Pro+).
+	FeatureMultiRepo Feature = "multi_repo"
+	// FeatureAPIAccess enables programmatic API access (Pro+).
+	FeatureAPIAccess Feature = "api_access"
 	// FeatureMultiOrg enables multiple organizations (Enterprise).
 	FeatureMultiOrg Feature = "multi_org"
 	// FeatureSLATracking enables SLA tracking (Enterprise).
@@ -16,6 +36,10 @@ const (
 	FeatureWhiteLabel Feature = "white_label"
 	// FeatureAirGap enables air-gapped deployment (Enterprise).
 	FeatureAirGap Feature = "air_gap"
+	// FeatureDRRunbooks enables disaster recovery runbooks (Enterprise).
+	FeatureDRRunbooks Feature = "dr_runbooks"
+	// FeatureDRTests enables disaster recovery testing (Enterprise).
+	FeatureDRTests Feature = "dr_tests"
 )
 
 // featureAccess maps each license tier to the features it unlocks.
@@ -24,14 +48,36 @@ var featureAccess = map[LicenseTier][]Feature{
 	TierPro: {
 		FeatureOIDC,
 		FeatureAuditLogs,
+		FeatureNotificationSlack,
+		FeatureNotificationTeams,
+		FeatureNotificationPagerDuty,
+		FeatureNotificationDiscord,
+		FeatureStorageS3,
+		FeatureStorageB2,
+		FeatureStorageSFTP,
+		FeatureDockerBackup,
+		FeatureMultiRepo,
+		FeatureAPIAccess,
 	},
 	TierEnterprise: {
 		FeatureOIDC,
 		FeatureAuditLogs,
+		FeatureNotificationSlack,
+		FeatureNotificationTeams,
+		FeatureNotificationPagerDuty,
+		FeatureNotificationDiscord,
+		FeatureStorageS3,
+		FeatureStorageB2,
+		FeatureStorageSFTP,
+		FeatureDockerBackup,
+		FeatureMultiRepo,
+		FeatureAPIAccess,
 		FeatureMultiOrg,
 		FeatureSLATracking,
 		FeatureWhiteLabel,
 		FeatureAirGap,
+		FeatureDRRunbooks,
+		FeatureDRTests,
 	},
 }
 

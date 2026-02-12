@@ -98,6 +98,18 @@ func TestFeatureMiddleware_FreeTier(t *testing.T) {
 		{"OIDC blocked", license.FeatureOIDC, false},
 		{"audit logs blocked", license.FeatureAuditLogs, false},
 		{"multi-org blocked", license.FeatureMultiOrg, false},
+		{"Slack notifications blocked", license.FeatureNotificationSlack, false},
+		{"Teams notifications blocked", license.FeatureNotificationTeams, false},
+		{"PagerDuty notifications blocked", license.FeatureNotificationPagerDuty, false},
+		{"Discord notifications blocked", license.FeatureNotificationDiscord, false},
+		{"S3 storage blocked", license.FeatureStorageS3, false},
+		{"B2 storage blocked", license.FeatureStorageB2, false},
+		{"SFTP storage blocked", license.FeatureStorageSFTP, false},
+		{"Docker backup blocked", license.FeatureDockerBackup, false},
+		{"multi repo blocked", license.FeatureMultiRepo, false},
+		{"API access blocked", license.FeatureAPIAccess, false},
+		{"DR runbooks blocked", license.FeatureDRRunbooks, false},
+		{"DR tests blocked", license.FeatureDRTests, false},
 	}
 
 	for _, tt := range features {
@@ -133,9 +145,22 @@ func TestFeatureMiddleware_ProTier(t *testing.T) {
 	}{
 		{"OIDC allowed", license.FeatureOIDC, true},
 		{"audit logs allowed", license.FeatureAuditLogs, true},
+		{"Slack notifications allowed", license.FeatureNotificationSlack, true},
+		{"Teams notifications allowed", license.FeatureNotificationTeams, true},
+		{"PagerDuty notifications allowed", license.FeatureNotificationPagerDuty, true},
+		{"Discord notifications allowed", license.FeatureNotificationDiscord, true},
+		{"S3 storage allowed", license.FeatureStorageS3, true},
+		{"B2 storage allowed", license.FeatureStorageB2, true},
+		{"SFTP storage allowed", license.FeatureStorageSFTP, true},
+		{"Docker backup allowed", license.FeatureDockerBackup, true},
+		{"multi repo allowed", license.FeatureMultiRepo, true},
+		{"API access allowed", license.FeatureAPIAccess, true},
 		{"multi-org blocked", license.FeatureMultiOrg, false},
 		{"SLA tracking blocked", license.FeatureSLATracking, false},
 		{"white label blocked", license.FeatureWhiteLabel, false},
+		{"air gap blocked", license.FeatureAirGap, false},
+		{"DR runbooks blocked", license.FeatureDRRunbooks, false},
+		{"DR tests blocked", license.FeatureDRTests, false},
 	}
 
 	for _, tt := range features {
@@ -170,10 +195,22 @@ func TestFeatureMiddleware_EnterpriseTier(t *testing.T) {
 	}{
 		{"OIDC", license.FeatureOIDC},
 		{"audit logs", license.FeatureAuditLogs},
+		{"Slack notifications", license.FeatureNotificationSlack},
+		{"Teams notifications", license.FeatureNotificationTeams},
+		{"PagerDuty notifications", license.FeatureNotificationPagerDuty},
+		{"Discord notifications", license.FeatureNotificationDiscord},
+		{"S3 storage", license.FeatureStorageS3},
+		{"B2 storage", license.FeatureStorageB2},
+		{"SFTP storage", license.FeatureStorageSFTP},
+		{"Docker backup", license.FeatureDockerBackup},
+		{"multi repo", license.FeatureMultiRepo},
+		{"API access", license.FeatureAPIAccess},
 		{"multi-org", license.FeatureMultiOrg},
 		{"SLA tracking", license.FeatureSLATracking},
 		{"white label", license.FeatureWhiteLabel},
 		{"air gap", license.FeatureAirGap},
+		{"DR runbooks", license.FeatureDRRunbooks},
+		{"DR tests", license.FeatureDRTests},
 	}
 
 	for _, tt := range features {
