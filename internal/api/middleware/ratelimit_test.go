@@ -10,7 +10,7 @@ import (
 
 func TestNewRateLimiter(t *testing.T) {
 	t.Run("valid configuration", func(t *testing.T) {
-		mw, err := NewRateLimiter(10, "1m")
+		mw, err := NewRateLimiter(10, "1m", "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -20,7 +20,7 @@ func TestNewRateLimiter(t *testing.T) {
 	})
 
 	t.Run("invalid period", func(t *testing.T) {
-		_, err := NewRateLimiter(10, "invalid")
+		_, err := NewRateLimiter(10, "invalid", "")
 		if err == nil {
 			t.Fatal("expected error for invalid period")
 		}
@@ -28,7 +28,7 @@ func TestNewRateLimiter(t *testing.T) {
 }
 
 func TestRateLimiter_UnderLimit(t *testing.T) {
-	mw, err := NewRateLimiter(5, "1m")
+	mw, err := NewRateLimiter(5, "1m", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestRateLimiter_UnderLimit(t *testing.T) {
 }
 
 func TestRateLimiter_AtLimit(t *testing.T) {
-	mw, err := NewRateLimiter(5, "1m")
+	mw, err := NewRateLimiter(5, "1m", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestRateLimiter_AtLimit(t *testing.T) {
 }
 
 func TestRateLimiter_OverLimit(t *testing.T) {
-	mw, err := NewRateLimiter(2, "1m")
+	mw, err := NewRateLimiter(2, "1m", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestRateLimiter_OverLimit(t *testing.T) {
 
 func TestRateLimiter_Reset(t *testing.T) {
 	// Different IPs have separate limits, verifying isolation
-	mw, err := NewRateLimiter(1, "1m")
+	mw, err := NewRateLimiter(1, "1m", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestRateLimiter_Reset(t *testing.T) {
 }
 
 func TestRateLimiter_Headers(t *testing.T) {
-	mw, err := NewRateLimiter(5, "1m")
+	mw, err := NewRateLimiter(5, "1m", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -182,8 +182,33 @@ func TestRateLimiter_Headers(t *testing.T) {
 	}
 }
 
+func TestNewRateLimiter_MemoryStoreDefault(t *testing.T) {
+	mw, err := NewRateLimiter(10, "1m", "")
+	if err != nil {
+		t.Fatalf("unexpected error creating memory-backed limiter: %v", err)
+	}
+	if mw == nil {
+		t.Fatal("expected non-nil middleware for memory store")
+	}
+}
+
+func TestNewRateLimiter_InvalidRedisURL(t *testing.T) {
+	_, err := NewRateLimiter(10, "1m", "not-a-valid-url")
+	if err == nil {
+		t.Fatal("expected error for invalid Redis URL")
+	}
+}
+
+func TestNewRateLimiter_RedisStoreUnreachable(t *testing.T) {
+	// Valid URL format but unreachable host — NewStore will fail to preload Lua scripts
+	_, err := NewRateLimiter(10, "1m", "redis://localhost:59999/0")
+	if err == nil {
+		t.Fatal("expected error for unreachable Redis server")
+	}
+}
+
 func TestRateLimiter_DifferentIPsSeparateLimits(t *testing.T) {
-	mw, err := NewRateLimiter(1, "1m")
+	mw, err := NewRateLimiter(1, "1m", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
