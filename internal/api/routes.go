@@ -233,6 +233,11 @@ func NewRouter(
 	drTestsHandler := handlers.NewDRTestsHandler(database, cfg.DRTestRunner, logger)
 	drTestsHandler.RegisterRoutes(drTestsGroup)
 
+	// SLA Tracking routes (Enterprise)
+	slaGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureSLATracking, logger))
+	slaHandler := handlers.NewSLAHandler(database, logger)
+	slaHandler.RegisterRoutes(slaGroup)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
