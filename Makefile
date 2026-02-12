@@ -1,4 +1,4 @@
-.PHONY: all build dev test lint clean deps swagger swagger-fmt
+.PHONY: all build dev test test-integration lint clean deps swagger swagger-fmt
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -69,6 +69,9 @@ dev:
 test:
 	go test -race -cover ./...
 	cd web && npx vitest run
+
+test-integration:
+	go test -tags=integration -race -cover -coverprofile=coverage.out -v ./internal/db/...
 
 lint:
 	go vet ./...
