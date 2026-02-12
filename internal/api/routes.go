@@ -27,6 +27,8 @@ type Config struct {
 	RateLimitRequests int64
 	// RateLimitPeriod is the duration string for rate limiting (e.g. "1m", "1h").
 	RateLimitPeriod string
+	// RedisURL enables Redis-backed distributed rate limiting when set.
+	RedisURL string
 	// Version information for the version endpoint.
 	Version   string
 	Commit    string
@@ -83,7 +85,7 @@ func NewRouter(
 	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins, cfg.Environment))
 
 	// Rate limiting
-	rateLimiter, err := middleware.NewRateLimiter(cfg.RateLimitRequests, cfg.RateLimitPeriod)
+	rateLimiter, err := middleware.NewRateLimiter(cfg.RateLimitRequests, cfg.RateLimitPeriod, cfg.RedisURL)
 	if err != nil {
 		return nil, err
 	}
