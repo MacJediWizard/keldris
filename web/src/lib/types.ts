@@ -213,6 +213,8 @@ export interface SFTPBackendConfig {
 	path: string;
 	password?: string;
 	private_key?: string;
+	host_key?: string;
+	known_hosts_file?: string;
 }
 
 export interface RestBackendConfig {
