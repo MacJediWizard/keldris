@@ -8,6 +8,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog"
 )
 
@@ -280,8 +281,12 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		})
 	}
 
-	// TODO: Validate cron expression using robfig/cron parser
-	// For now we accept any string
+	// Validate cron expression
+	cronParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	if _, err := cronParser.Parse(req.CronExpression); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cron expression"})
+		return
+	}
 
 	schedule := models.NewSchedule(req.AgentID, req.Name, req.CronExpression, req.Paths)
 	schedule.Repositories = scheduleRepos
@@ -391,6 +396,11 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 		schedule.Name = req.Name
 	}
 	if req.CronExpression != "" {
+		cronParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+		if _, err := cronParser.Parse(req.CronExpression); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cron expression"})
+			return
+		}
 		schedule.CronExpression = req.CronExpression
 	}
 	if req.Paths != nil {

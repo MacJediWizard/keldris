@@ -546,7 +546,7 @@ func (h *RepositoriesHandler) Test(c *gin.Context) {
 		h.logger.Warn().Err(err).Str("repo_id", id.String()).Msg("repository connection test failed")
 		c.JSON(http.StatusOK, TestRepositoryResponse{
 			Success: false,
-			Message: "Connection failed: " + err.Error(),
+			Message: "Connection test failed",
 		})
 		return
 	}
@@ -623,7 +623,7 @@ func (h *RepositoriesHandler) TestConnection(c *gin.Context) {
 		h.logger.Warn().Err(err).Str("type", string(req.Type)).Msg("backend connection test failed")
 		c.JSON(http.StatusOK, TestRepositoryResponse{
 			Success: false,
-			Message: "Connection failed: " + err.Error(),
+			Message: "Connection test failed",
 		})
 		return
 	}
