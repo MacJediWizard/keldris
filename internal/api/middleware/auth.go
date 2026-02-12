@@ -32,6 +32,11 @@ func AuthMiddleware(sessions *auth.SessionStore, logger zerolog.Logger) gin.Hand
 			return
 		}
 
+		// Refresh last activity timestamp for idle timeout tracking
+		if err := sessions.TouchSession(c.Request, c.Writer); err != nil {
+			log.Warn().Err(err).Msg("failed to touch session")
+		}
+
 		// Store user in Gin context for handlers to access
 		c.Set(string(UserContextKey), sessionUser)
 
@@ -135,6 +140,9 @@ func SessionOrAPIKeyMiddleware(sessions *auth.SessionStore, validator *auth.APIK
 		// Try session auth first
 		sessionUser, err := sessions.GetUser(c.Request)
 		if err == nil && sessionUser != nil {
+			if err := sessions.TouchSession(c.Request, c.Writer); err != nil {
+				log.Warn().Err(err).Msg("failed to touch session")
+			}
 			c.Set(string(UserContextKey), sessionUser)
 			log.Debug().
 				Str("user_id", sessionUser.ID.String()).
