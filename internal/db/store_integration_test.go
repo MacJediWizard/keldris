@@ -3916,6 +3916,98 @@ func TestStore_DashboardAndMetrics(t *testing.T) {
 		assert.Equal(t, 0, rate7d.Total)
 		assert.Equal(t, 0, rate30d.Total)
 	})
+
+	t.Run("DailySummary_CreateAndGet", func(t *testing.T) {
+		now := time.Now()
+		date := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+		summary := &models.MetricsDailySummary{
+			ID:                uuid.New(),
+			OrgID:             org.ID,
+			Date:              date,
+			TotalBackups:      10,
+			SuccessfulBackups: 8,
+			FailedBackups:     2,
+			TotalSizeBytes:    1024 * 1024,
+			TotalDurationSecs: 600,
+			AgentsActive:      3,
+			CreatedAt:         now,
+			UpdatedAt:         now,
+		}
+		err := db.CreateOrUpdateDailySummary(ctx, summary)
+		require.NoError(t, err)
+
+		got, err := db.GetDailySummary(ctx, org.ID, date)
+		require.NoError(t, err)
+		assert.Equal(t, 10, got.TotalBackups)
+		assert.Equal(t, 8, got.SuccessfulBackups)
+		assert.Equal(t, 2, got.FailedBackups)
+		assert.Equal(t, int64(1024*1024), got.TotalSizeBytes)
+		assert.Equal(t, int64(600), got.TotalDurationSecs)
+		assert.Equal(t, 3, got.AgentsActive)
+	})
+
+	t.Run("DailySummary_Upsert", func(t *testing.T) {
+		now := time.Now()
+		date := time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, time.UTC)
+
+		summary := &models.MetricsDailySummary{
+			ID:                uuid.New(),
+			OrgID:             org.ID,
+			Date:              date,
+			TotalBackups:      5,
+			SuccessfulBackups: 4,
+			FailedBackups:     1,
+			TotalSizeBytes:    512,
+			TotalDurationSecs: 300,
+			AgentsActive:      2,
+			CreatedAt:         now,
+			UpdatedAt:         now,
+		}
+		require.NoError(t, db.CreateOrUpdateDailySummary(ctx, summary))
+
+		// Upsert with different values
+		summary.ID = uuid.New()
+		summary.TotalBackups = 20
+		summary.SuccessfulBackups = 18
+		summary.UpdatedAt = time.Now()
+		require.NoError(t, db.CreateOrUpdateDailySummary(ctx, summary))
+
+		got, err := db.GetDailySummary(ctx, org.ID, date)
+		require.NoError(t, err)
+		assert.Equal(t, 20, got.TotalBackups)
+		assert.Equal(t, 18, got.SuccessfulBackups)
+	})
+
+	t.Run("DailySummary_GetRange", func(t *testing.T) {
+		now := time.Now()
+		startDate := time.Date(now.Year(), now.Month(), now.Day()-2, 0, 0, 0, 0, time.UTC)
+		endDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+		summaries, err := db.GetDailySummaries(ctx, org.ID, startDate, endDate)
+		require.NoError(t, err)
+		assert.GreaterOrEqual(t, len(summaries), 1)
+	})
+
+	t.Run("DailySummary_Delete", func(t *testing.T) {
+		now := time.Now()
+		oldDate := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+
+		summary := &models.MetricsDailySummary{
+			ID:        uuid.New(),
+			OrgID:     org.ID,
+			Date:      oldDate,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		require.NoError(t, db.CreateOrUpdateDailySummary(ctx, summary))
+
+		err := db.DeleteDailySummariesBefore(ctx, org.ID, time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+
+		_, err = db.GetDailySummary(ctx, org.ID, oldDate)
+		assert.Error(t, err)
+	})
 }
 
 func TestStore_SearchBackupsAdvanced(t *testing.T) {

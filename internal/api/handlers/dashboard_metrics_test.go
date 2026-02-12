@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/models"
@@ -14,19 +15,21 @@ import (
 )
 
 type mockDashboardMetricsStore struct {
-	user         *models.User
-	dashStats    *models.DashboardStats
-	rate7d       *models.BackupSuccessRate
-	rate30d      *models.BackupSuccessRate
-	growthTrend  []*models.StorageGrowthTrend
-	durationTrend []*models.BackupDurationTrend
-	dailyStats   []*models.DailyBackupStats
-	getUserErr   error
-	dashErr      error
-	ratesErr     error
-	growthErr    error
-	durationErr  error
-	dailyErr     error
+	user           *models.User
+	dashStats      *models.DashboardStats
+	rate7d         *models.BackupSuccessRate
+	rate30d        *models.BackupSuccessRate
+	growthTrend    []*models.StorageGrowthTrend
+	durationTrend  []*models.BackupDurationTrend
+	dailyStats     []*models.DailyBackupStats
+	dailySummaries []models.MetricsDailySummary
+	getUserErr     error
+	dashErr        error
+	ratesErr       error
+	growthErr      error
+	durationErr    error
+	dailyErr       error
+	summariesErr   error
 }
 
 func (m *mockDashboardMetricsStore) GetUserByID(_ context.Context, _ uuid.UUID) (*models.User, error) {
@@ -69,6 +72,13 @@ func (m *mockDashboardMetricsStore) GetDailyBackupStats(_ context.Context, _ uui
 		return nil, m.dailyErr
 	}
 	return m.dailyStats, nil
+}
+
+func (m *mockDashboardMetricsStore) GetDailySummaries(_ context.Context, _ uuid.UUID, _, _ time.Time) ([]models.MetricsDailySummary, error) {
+	if m.summariesErr != nil {
+		return nil, m.summariesErr
+	}
+	return m.dailySummaries, nil
 }
 
 func setupDashboardMetricsTestRouter(store DashboardMetricsStore, user *auth.SessionUser) *gin.Engine {
@@ -256,6 +266,52 @@ func TestDashboardGetDailyBackupStats(t *testing.T) {
 		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/dashboard-metrics/daily-backups"))
 		if resp.Code != http.StatusInternalServerError {
 			t.Fatalf("expected 500, got %d", resp.Code)
+		}
+	})
+
+	t.Run("uses summaries for days > 7", func(t *testing.T) {
+		store := &mockDashboardMetricsStore{
+			user: dbUser,
+			dailySummaries: []models.MetricsDailySummary{
+				{
+					Date:              time.Now().AddDate(0, 0, -10),
+					TotalBackups:      5,
+					SuccessfulBackups: 4,
+					FailedBackups:     1,
+					TotalSizeBytes:    1024,
+				},
+			},
+		}
+		r := setupDashboardMetricsTestRouter(store, user)
+		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/dashboard-metrics/daily-backups?days=30"))
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", resp.Code, resp.Body.String())
+		}
+	})
+
+	t.Run("falls back to real-time when summaries empty", func(t *testing.T) {
+		store := &mockDashboardMetricsStore{
+			user:           dbUser,
+			dailySummaries: []models.MetricsDailySummary{},
+			dailyStats:     []*models.DailyBackupStats{},
+		}
+		r := setupDashboardMetricsTestRouter(store, user)
+		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/dashboard-metrics/daily-backups?days=30"))
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", resp.Code, resp.Body.String())
+		}
+	})
+
+	t.Run("falls back to real-time when summaries error", func(t *testing.T) {
+		store := &mockDashboardMetricsStore{
+			user:         dbUser,
+			summariesErr: errors.New("db error"),
+			dailyStats:   []*models.DailyBackupStats{},
+		}
+		r := setupDashboardMetricsTestRouter(store, user)
+		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/dashboard-metrics/daily-backups?days=30"))
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", resp.Code, resp.Body.String())
 		}
 	})
 }
