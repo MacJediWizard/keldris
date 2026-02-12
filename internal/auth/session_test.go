@@ -17,6 +17,9 @@ func TestDefaultSessionConfig(t *testing.T) {
 	if cfg.MaxAge != 86400 {
 		t.Errorf("expected MaxAge 86400, got %d", cfg.MaxAge)
 	}
+	if cfg.IdleTimeout != 1800 {
+		t.Errorf("expected IdleTimeout 1800, got %d", cfg.IdleTimeout)
+	}
 	if !cfg.Secure {
 		t.Error("expected Secure to be true")
 	}
@@ -48,6 +51,25 @@ func newTestSessionStore(t *testing.T) *SessionStore {
 	logger := zerolog.Nop()
 	secret := []byte("test-secret-that-is-at-least-32-bytes-long")
 	cfg := DefaultSessionConfig(secret, false)
+	store, err := NewSessionStore(cfg, logger)
+	if err != nil {
+		t.Fatalf("failed to create store: %v", err)
+	}
+	return store
+}
+
+func newTestSessionStoreWithIdleTimeout(t *testing.T, idleTimeout int) *SessionStore {
+	t.Helper()
+	logger := zerolog.Nop()
+	cfg := SessionConfig{
+		Secret:      []byte("test-secret-that-is-at-least-32-bytes-long"),
+		MaxAge:      86400,
+		IdleTimeout: idleTimeout,
+		Secure:      false,
+		HTTPOnly:    true,
+		SameSite:    http.SameSiteLaxMode,
+		CookiePath:  "/",
+	}
 	store, err := NewSessionStore(cfg, logger)
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
@@ -437,5 +459,198 @@ func TestSessionStore_Save(t *testing.T) {
 	cookies := resp.Cookies()
 	if len(cookies) == 0 {
 		t.Fatal("expected cookie to be set after save")
+	}
+}
+
+func TestSessionStore_IdleTimeout(t *testing.T) {
+	t.Run("session expires after idle timeout", func(t *testing.T) {
+		// Create store with 1-second idle timeout
+		store := newTestSessionStoreWithIdleTimeout(t, 1)
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
+		testUser := &SessionUser{
+			ID:          uuid.New(),
+			OIDCSubject: "sub-12345",
+			Email:       "test@example.com",
+		}
+		if err := store.SetUser(req, w, testUser); err != nil {
+			t.Fatalf("failed to set user: %v", err)
+		}
+
+		// Wait for idle timeout to expire
+		time.Sleep(1100 * time.Millisecond)
+
+		resp := w.Result()
+		req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+		for _, cookie := range resp.Cookies() {
+			req2.AddCookie(cookie)
+		}
+
+		// GetUser should fail due to idle timeout
+		_, err := store.GetUser(req2)
+		if err == nil {
+			t.Error("expected error for idle timeout expired session")
+		}
+
+		// IsAuthenticated should also return false
+		if store.IsAuthenticated(req2) {
+			t.Error("expected IsAuthenticated to be false after idle timeout")
+		}
+	})
+
+	t.Run("session valid within idle timeout", func(t *testing.T) {
+		store := newTestSessionStoreWithIdleTimeout(t, 3600)
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
+		testUser := &SessionUser{
+			ID:          uuid.New(),
+			OIDCSubject: "sub-12345",
+			Email:       "test@example.com",
+		}
+		if err := store.SetUser(req, w, testUser); err != nil {
+			t.Fatalf("failed to set user: %v", err)
+		}
+
+		resp := w.Result()
+		req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+		for _, cookie := range resp.Cookies() {
+			req2.AddCookie(cookie)
+		}
+
+		user, err := store.GetUser(req2)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if user.ID != testUser.ID {
+			t.Errorf("expected user ID %s, got %s", testUser.ID, user.ID)
+		}
+	})
+
+	t.Run("idle timeout disabled with zero", func(t *testing.T) {
+		store := newTestSessionStoreWithIdleTimeout(t, 0)
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
+		testUser := &SessionUser{
+			ID:          uuid.New(),
+			OIDCSubject: "sub-12345",
+			Email:       "test@example.com",
+		}
+		if err := store.SetUser(req, w, testUser); err != nil {
+			t.Fatalf("failed to set user: %v", err)
+		}
+
+		resp := w.Result()
+		req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+		for _, cookie := range resp.Cookies() {
+			req2.AddCookie(cookie)
+		}
+
+		// Should succeed regardless - idle timeout is disabled
+		user, err := store.GetUser(req2)
+		if err != nil {
+			t.Fatalf("unexpected error with idle timeout disabled: %v", err)
+		}
+		if user.ID != testUser.ID {
+			t.Errorf("expected user ID %s, got %s", testUser.ID, user.ID)
+		}
+	})
+}
+
+func TestSessionStore_TouchSession(t *testing.T) {
+	t.Run("touch updates last activity", func(t *testing.T) {
+		store := newTestSessionStoreWithIdleTimeout(t, 2)
+
+		// Set user
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
+		testUser := &SessionUser{
+			ID:          uuid.New(),
+			OIDCSubject: "sub-12345",
+			Email:       "test@example.com",
+		}
+		if err := store.SetUser(req, w, testUser); err != nil {
+			t.Fatalf("failed to set user: %v", err)
+		}
+
+		// Wait, then touch the session to keep it alive
+		time.Sleep(1 * time.Second)
+
+		resp := w.Result()
+		req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+		for _, cookie := range resp.Cookies() {
+			req2.AddCookie(cookie)
+		}
+		w2 := httptest.NewRecorder()
+
+		if err := store.TouchSession(req2, w2); err != nil {
+			t.Fatalf("failed to touch session: %v", err)
+		}
+
+		// Wait again, but total time since touch should be within timeout
+		time.Sleep(1 * time.Second)
+
+		resp2 := w2.Result()
+		req3 := httptest.NewRequest(http.MethodGet, "/", nil)
+		for _, cookie := range resp2.Cookies() {
+			req3.AddCookie(cookie)
+		}
+
+		// Session should still be valid because we touched it
+		user, err := store.GetUser(req3)
+		if err != nil {
+			t.Fatalf("unexpected error after touch: %v", err)
+		}
+		if user.ID != testUser.ID {
+			t.Errorf("expected user ID %s, got %s", testUser.ID, user.ID)
+		}
+	})
+
+	t.Run("touch is noop when idle timeout disabled", func(t *testing.T) {
+		store := newTestSessionStoreWithIdleTimeout(t, 0)
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
+
+		// Should succeed without error even with no session data
+		if err := store.TouchSession(req, w); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestSessionStore_IdleTimeout_IsAuthenticated(t *testing.T) {
+	store := newTestSessionStoreWithIdleTimeout(t, 1)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	testUser := &SessionUser{
+		ID:          uuid.New(),
+		OIDCSubject: "sub-12345",
+		Email:       "test@example.com",
+	}
+	if err := store.SetUser(req, w, testUser); err != nil {
+		t.Fatalf("failed to set user: %v", err)
+	}
+
+	resp := w.Result()
+	req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+	for _, cookie := range resp.Cookies() {
+		req2.AddCookie(cookie)
+	}
+
+	// Should be authenticated initially
+	if !store.IsAuthenticated(req2) {
+		t.Error("expected IsAuthenticated to be true immediately after login")
+	}
+
+	// Wait for idle timeout
+	time.Sleep(1100 * time.Millisecond)
+
+	// Should no longer be authenticated
+	if store.IsAuthenticated(req2) {
+		t.Error("expected IsAuthenticated to be false after idle timeout")
 	}
 }

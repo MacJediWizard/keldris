@@ -36,34 +36,39 @@ const (
 	CurrentOrgIDKey = "current_org_id"
 	// CurrentOrgRoleKey is the session key for the user's role in the current org.
 	CurrentOrgRoleKey = "current_org_role"
+	// LastActivityKey is the session key for the last activity timestamp.
+	LastActivityKey = "last_activity"
 )
 
 // SessionConfig holds session store configuration.
 type SessionConfig struct {
-	Secret     []byte
-	MaxAge     int  // seconds
-	Secure     bool // require HTTPS
-	HTTPOnly   bool // prevent JavaScript access
-	SameSite   http.SameSite
-	CookiePath string
+	Secret      []byte
+	MaxAge      int  // seconds
+	IdleTimeout int  // seconds, 0 to disable
+	Secure      bool // require HTTPS
+	HTTPOnly    bool // prevent JavaScript access
+	SameSite    http.SameSite
+	CookiePath  string
 }
 
 // DefaultSessionConfig returns a SessionConfig with secure defaults.
 func DefaultSessionConfig(secret []byte, secure bool) SessionConfig {
 	return SessionConfig{
-		Secret:     secret,
-		MaxAge:     86400, // 24 hours
-		Secure:     secure,
-		HTTPOnly:   true,
-		SameSite:   http.SameSiteLaxMode,
-		CookiePath: "/",
+		Secret:      secret,
+		MaxAge:      86400, // 24 hours
+		IdleTimeout: 1800,  // 30 minutes
+		Secure:      secure,
+		HTTPOnly:    true,
+		SameSite:    http.SameSiteLaxMode,
+		CookiePath:  "/",
 	}
 }
 
 // SessionStore wraps a gorilla/sessions store with helper methods.
 type SessionStore struct {
-	store  *sessions.CookieStore
-	logger zerolog.Logger
+	store       *sessions.CookieStore
+	idleTimeout time.Duration
+	logger      zerolog.Logger
 }
 
 // NewSessionStore creates a new session store.
@@ -82,13 +87,15 @@ func NewSessionStore(cfg SessionConfig, logger zerolog.Logger) (*SessionStore, e
 	}
 
 	s := &SessionStore{
-		store:  store,
-		logger: logger.With().Str("component", "session").Logger(),
+		store:       store,
+		idleTimeout: time.Duration(cfg.IdleTimeout) * time.Second,
+		logger:      logger.With().Str("component", "session").Logger(),
 	}
 
 	s.logger.Info().
 		Bool("secure", cfg.Secure).
 		Int("max_age", cfg.MaxAge).
+		Int("idle_timeout", cfg.IdleTimeout).
 		Msg("session store initialized")
 
 	return s, nil
@@ -163,6 +170,7 @@ func (s *SessionStore) SetUser(r *http.Request, w http.ResponseWriter, user *Ses
 	session.Values[AuthenticatedAtKey] = user.AuthenticatedAt
 	session.Values[CurrentOrgIDKey] = user.CurrentOrgID
 	session.Values[CurrentOrgRoleKey] = user.CurrentOrgRole
+	session.Values[LastActivityKey] = time.Now()
 	return s.Save(r, w, session)
 }
 
@@ -176,6 +184,14 @@ func (s *SessionStore) GetUser(r *http.Request) (*SessionUser, error) {
 	userID, ok := session.Values[UserIDKey].(uuid.UUID)
 	if !ok {
 		return nil, fmt.Errorf("no user in session")
+	}
+
+	// Check idle timeout if enabled
+	if s.idleTimeout > 0 {
+		lastActivity, ok := session.Values[LastActivityKey].(time.Time)
+		if ok && time.Since(lastActivity) > s.idleTimeout {
+			return nil, fmt.Errorf("session idle timeout exceeded")
+		}
 	}
 
 	oidcSubject, _ := session.Values[OIDCSubjectKey].(string)
@@ -194,6 +210,22 @@ func (s *SessionStore) GetUser(r *http.Request) (*SessionUser, error) {
 		CurrentOrgID:    currentOrgID,
 		CurrentOrgRole:  currentOrgRole,
 	}, nil
+}
+
+// TouchSession updates the last activity timestamp to keep the session alive.
+// Call this on each authenticated request to track idle timeout.
+func (s *SessionStore) TouchSession(r *http.Request, w http.ResponseWriter) error {
+	if s.idleTimeout <= 0 {
+		return nil
+	}
+
+	session, err := s.Get(r)
+	if err != nil {
+		return err
+	}
+
+	session.Values[LastActivityKey] = time.Now()
+	return s.Save(r, w, session)
 }
 
 // SetCurrentOrg updates the current organization in the session.
@@ -220,6 +252,7 @@ func (s *SessionStore) ClearUser(r *http.Request, w http.ResponseWriter) error {
 	delete(session.Values, AuthenticatedAtKey)
 	delete(session.Values, CurrentOrgIDKey)
 	delete(session.Values, CurrentOrgRoleKey)
+	delete(session.Values, LastActivityKey)
 	// Set MaxAge to -1 to delete the cookie
 	session.Options.MaxAge = -1
 	return s.Save(r, w, session)
@@ -232,5 +265,17 @@ func (s *SessionStore) IsAuthenticated(r *http.Request) bool {
 		return false
 	}
 	_, ok := session.Values[UserIDKey].(uuid.UUID)
-	return ok
+	if !ok {
+		return false
+	}
+
+	// Check idle timeout if enabled
+	if s.idleTimeout > 0 {
+		lastActivity, ok := session.Values[LastActivityKey].(time.Time)
+		if ok && time.Since(lastActivity) > s.idleTimeout {
+			return false
+		}
+	}
+
+	return true
 }
