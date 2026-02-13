@@ -212,6 +212,25 @@ The Free edition is open-source under AGPLv3. Pro and Enterprise are commercial 
 
 ---
 
+## Security
+
+Keldris is built with security as a priority:
+
+- **OIDC-first authentication** - No local passwords; delegates to your identity provider
+- **Encryption at rest** - Backup credentials and sensitive configuration encrypted with AES-256-GCM
+- **Session hardening** - HttpOnly, Secure, SameSite=Lax cookies with configurable idle and absolute timeouts
+- **Security headers** - CSP, HSTS, X-Frame-Options, and more applied by default
+- **Rate limiting** - Per-IP rate limiting with optional Redis backend for distributed deployments
+- **Multi-tenant isolation** - All queries scoped to organization ID
+- **Audit logging** - Track administrative actions for compliance
+
+For production deployment, see:
+
+- [Production Security Guide](docs/production-security.md) - Hardening recommendations
+- [Security Checklist](docs/security-checklist.md) - Pre-deployment checklist and proxy configuration
+
+---
+
 ## Contributing
 
 PRs welcome once this is more stable. For now, feel free to open issues.
