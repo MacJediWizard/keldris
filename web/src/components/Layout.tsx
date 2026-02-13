@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAirGapStatus } from '../hooks/useAirGap';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
 import { useLocale } from '../hooks/useLocale';
@@ -490,6 +491,36 @@ function OrgSwitcher() {
 	);
 }
 
+function AirGapIndicator() {
+	const { data: status } = useAirGapStatus();
+	const { t } = useLocale();
+
+	if (!status?.enabled) return null;
+
+	return (
+		<Link
+			to="/system/airgap"
+			className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors"
+		>
+			<svg
+				aria-hidden="true"
+				className="w-3.5 h-3.5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M18.364 5.636a9 9 0 010 12.728M5.636 5.636a9 9 0 000 12.728M12 12h.01"
+				/>
+			</svg>
+			{t('airGap.indicator')}
+		</Link>
+	);
+}
+
 function Header() {
 	const [showDropdown, setShowDropdown] = useState(false);
 	const { data: user } = useMe();
@@ -506,6 +537,7 @@ function Header() {
 		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
 			<div className="flex items-center gap-4">
 				<OrgSwitcher />
+				<AirGapIndicator />
 			</div>
 			<div className="flex items-center gap-4">
 				<LanguageSelector />

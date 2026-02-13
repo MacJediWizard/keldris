@@ -1844,3 +1844,24 @@ export interface CostHistoryResponse {
 export interface CostAlertsResponse {
 	alerts: CostAlert[];
 }
+
+// Air-Gap types
+
+export interface AirGapDisabledFeature {
+	name: string;
+	reason: string;
+}
+
+export interface AirGapLicenseInfo {
+	customer_id: string;
+	tier: string;
+	expires_at: string;
+	issued_at: string;
+	valid: boolean;
+}
+
+export interface AirGapStatus {
+	enabled: boolean;
+	disabled_features: AirGapDisabledFeature[];
+	license: AirGapLicenseInfo | null;
+}

@@ -38,6 +38,9 @@ var ErrNoUpdateAvailable = errors.New("no update available")
 // ErrUnsupportedPlatform is returned when the platform is not supported.
 var ErrUnsupportedPlatform = errors.New("unsupported platform")
 
+// ErrAirGapMode is returned when update checks are blocked by air-gap mode.
+var ErrAirGapMode = errors.New("updates disabled in air-gap mode")
+
 // Release represents a GitHub release.
 type Release struct {
 	TagName string  `json:"tag_name"`
@@ -69,6 +72,7 @@ type Updater struct {
 	httpClient     *http.Client
 	githubOwner    string
 	githubRepo     string
+	airGapMode     bool
 }
 
 // New creates a new Updater with the given current version.
@@ -95,8 +99,17 @@ func NewWithConfig(currentVersion, owner, repo string) *Updater {
 	}
 }
 
+// SetAirGapMode enables or disables air-gap mode on the updater.
+func (u *Updater) SetAirGapMode(enabled bool) {
+	u.airGapMode = enabled
+}
+
 // CheckForUpdate checks if a new version is available.
 func (u *Updater) CheckForUpdate(ctx context.Context) (*UpdateInfo, error) {
+	if u.airGapMode {
+		return nil, ErrAirGapMode
+	}
+
 	release, err := u.fetchLatestRelease(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("fetch latest release: %w", err)

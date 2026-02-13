@@ -34,6 +34,7 @@ const OrganizationSSOSettings = lazy(
 const Maintenance = lazy(() => import('./pages/Maintenance'));
 const NewOrganization = lazy(() => import('./pages/NewOrganization'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const AirGapLicense = lazy(() => import('./pages/AirGapLicense'));
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -96,6 +97,7 @@ function App() {
 							/>
 							<Route path="organization/new" element={<NewOrganization />} />
 							<Route path="onboarding" element={<Onboarding />} />
+							<Route path="system/airgap" element={<AirGapLicense />} />
 						</Route>
 					</Routes>
 				</Suspense>

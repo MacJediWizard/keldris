@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -22,11 +23,15 @@ type WebhookPayload struct {
 	Data      interface{} `json:"data"`
 }
 
+// ErrAirGapBlocked is returned when webhooks are blocked by air-gap mode.
+var ErrAirGapBlocked = errors.New("external webhooks are disabled in air-gap mode")
+
 // WebhookSender sends notifications via generic webhooks with HMAC signing and retry.
 type WebhookSender struct {
 	client     *http.Client
 	logger     zerolog.Logger
 	maxRetries int
+	airGapMode bool
 }
 
 // NewWebhookSender creates a new webhook sender.
@@ -38,8 +43,18 @@ func NewWebhookSender(logger zerolog.Logger) *WebhookSender {
 	}
 }
 
+// SetAirGapMode enables or disables air-gap mode on the webhook sender.
+func (w *WebhookSender) SetAirGapMode(enabled bool) {
+	w.airGapMode = enabled
+}
+
 // Send sends a webhook payload to the given URL with HMAC signature and retry.
 func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPayload, secret string) error {
+	if w.airGapMode {
+		w.logger.Warn().Str("url", url).Msg("webhook blocked: air-gap mode enabled")
+		return ErrAirGapBlocked
+	}
+
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshal webhook payload: %w", err)

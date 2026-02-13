@@ -402,5 +402,27 @@
     "downloadFor": "Download for {{platform}}",
     "installCommands": "Installation Commands",
     "copyCommand": "Copy command"
+  },
+  "airGap": {
+    "title": "Air-Gap Mode",
+    "subtitle": "Manage air-gapped deployment settings and offline license",
+    "indicator": "Air-Gap",
+    "modeStatus": "Air-Gap Mode Status",
+    "airGapEnabled": "Enabled",
+    "airGapDisabled": "Disabled",
+    "disabledFeatures": "Disabled Features",
+    "notInAirGapMode": "This server is not running in air-gap mode. All features are available.",
+    "offlineLicense": "Offline License",
+    "licenseValid": "Valid",
+    "licenseExpired": "Expired",
+    "customerIdLabel": "Customer ID",
+    "tierLabel": "License Tier",
+    "expiresLabel": "Expires",
+    "issuedLabel": "Issued",
+    "noLicense": "No offline license has been uploaded yet.",
+    "uploadLicense": "Upload License",
+    "uploading": "Uploading...",
+    "licenseUploaded": "License uploaded successfully.",
+    "failedToLoadStatus": "Failed to load air-gap status"
   }
 }

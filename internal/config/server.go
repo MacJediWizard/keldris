@@ -4,6 +4,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Environment represents the deployment environment.
@@ -21,8 +22,9 @@ const (
 // ServerConfig holds server-level configuration loaded from environment variables.
 type ServerConfig struct {
 	Environment        Environment
-	SessionMaxAge      int // session lifetime in seconds (default: 86400)
-	SessionIdleTimeout int // idle timeout in seconds, 0 to disable (default: 1800)
+	SessionMaxAge      int  // session lifetime in seconds (default: 86400)
+	SessionIdleTimeout int  // idle timeout in seconds, 0 to disable (default: 1800)
+	AirGapMode         bool // air-gapped deployment mode (no internet access)
 }
 
 // LoadServerConfig reads server configuration from environment variables.
@@ -45,10 +47,26 @@ func LoadServerConfig() ServerConfig {
 		sessionIdleTimeout = 1800
 	}
 
+	airGapMode := getEnvBool("AIR_GAP_MODE", false)
+
 	return ServerConfig{
 		Environment:        env,
 		SessionMaxAge:      sessionMaxAge,
 		SessionIdleTimeout: sessionIdleTimeout,
+		AirGapMode:         airGapMode,
+	}
+}
+
+// getEnvBool reads a boolean from an environment variable, returning the default if unset or invalid.
+func getEnvBool(key string, defaultVal bool) bool {
+	val := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	switch val {
+	case "true", "1", "yes":
+		return true
+	case "false", "0", "no":
+		return false
+	default:
+		return defaultVal
 	}
 }
 
