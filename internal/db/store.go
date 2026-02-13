@@ -7052,3 +7052,66 @@ func (db *DB) GetMaxRPOHoursForOrg(ctx context.Context, orgID uuid.UUID) (float6
 	}
 	return maxHours, nil
 }
+
+// Branding methods
+
+// GetBrandingSettings returns the branding settings for the given organization.
+// Returns nil if no custom branding has been configured.
+func (db *DB) GetBrandingSettings(ctx context.Context, orgID uuid.UUID) (*models.BrandingSettings, error) {
+	var b models.BrandingSettings
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, logo_url, favicon_url, product_name,
+		       primary_color, secondary_color, support_url, custom_css,
+		       created_at, updated_at
+		FROM branding_settings
+		WHERE org_id = $1
+	`, orgID).Scan(
+		&b.ID, &b.OrgID, &b.LogoURL, &b.FaviconURL, &b.ProductName,
+		&b.PrimaryColor, &b.SecondaryColor, &b.SupportURL, &b.CustomCSS,
+		&b.CreatedAt, &b.UpdatedAt,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get branding settings: %w", err)
+	}
+	return &b, nil
+}
+
+// UpsertBrandingSettings creates or updates branding settings for an organization.
+func (db *DB) UpsertBrandingSettings(ctx context.Context, b *models.BrandingSettings) error {
+	b.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO branding_settings (id, org_id, logo_url, favicon_url, product_name,
+		    primary_color, secondary_color, support_url, custom_css, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		ON CONFLICT (org_id) DO UPDATE SET
+		    logo_url = EXCLUDED.logo_url,
+		    favicon_url = EXCLUDED.favicon_url,
+		    product_name = EXCLUDED.product_name,
+		    primary_color = EXCLUDED.primary_color,
+		    secondary_color = EXCLUDED.secondary_color,
+		    support_url = EXCLUDED.support_url,
+		    custom_css = EXCLUDED.custom_css,
+		    updated_at = EXCLUDED.updated_at
+	`, b.ID, b.OrgID, b.LogoURL, b.FaviconURL, b.ProductName,
+		b.PrimaryColor, b.SecondaryColor, b.SupportURL, b.CustomCSS,
+		b.CreatedAt, b.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("upsert branding settings: %w", err)
+	}
+	return nil
+}
+
+// DeleteBrandingSettings removes branding settings for an organization.
+func (db *DB) DeleteBrandingSettings(ctx context.Context, orgID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM branding_settings WHERE org_id = $1
+	`, orgID)
+	if err != nil {
+		return fmt.Errorf("delete branding settings: %w", err)
+	}
+	return nil
+}

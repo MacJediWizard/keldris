@@ -1691,6 +1691,31 @@ export interface FileHistoryParams {
 	repository_id: string;
 }
 
+// Branding types
+export interface BrandingSettings {
+	id: string;
+	org_id: string;
+	logo_url: string;
+	favicon_url: string;
+	product_name: string;
+	primary_color: string;
+	secondary_color: string;
+	support_url: string;
+	custom_css: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface UpdateBrandingRequest {
+	logo_url?: string;
+	favicon_url?: string;
+	product_name?: string;
+	primary_color?: string;
+	secondary_color?: string;
+	support_url?: string;
+	custom_css?: string;
+}
+
 // Cost Estimation types
 export interface StoragePricing {
 	id: string;

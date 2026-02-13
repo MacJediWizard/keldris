@@ -30,6 +30,7 @@ import type {
 	BackupSuccessRate,
 	BackupSuccessRatesResponse,
 	BackupsResponse,
+	BrandingSettings,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
 	CategoriesResponse,
@@ -163,6 +164,7 @@ import type {
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
 	UpdateBackupScriptRequest,
+	UpdateBrandingRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
 	UpdateExcludePatternRequest,
@@ -1524,6 +1526,23 @@ export const onboardingApi = {
 	skip: async (): Promise<OnboardingStatus> =>
 		fetchApi<OnboardingStatus>('/onboarding/skip', {
 			method: 'POST',
+		}),
+};
+
+// Branding API
+export const brandingApi = {
+	get: async (): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding'),
+
+	update: async (data: UpdateBrandingRequest): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	reset: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/branding', {
+			method: 'DELETE',
 		}),
 };
 
