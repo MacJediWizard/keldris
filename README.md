@@ -131,7 +131,7 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-You'll need Docker, PostgreSQL 15+, and an OIDC provider.
+You'll need Docker, Go 1.25.7+ (for security patches), PostgreSQL 15+, and an OIDC provider.
 
 ---
 
