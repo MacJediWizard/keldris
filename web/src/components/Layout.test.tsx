@@ -71,6 +71,12 @@ vi.mock('../hooks/useAirGap', () => ({
 	}),
 }));
 
+vi.mock('../hooks/useBranding', () => ({
+	useBranding: vi.fn().mockReturnValue({
+		data: null,
+	}),
+}));
+
 vi.mock('./features/LanguageSelector', () => ({
 	LanguageSelector: () => (
 		<div data-testid="language-selector">Language Selector</div>

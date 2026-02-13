@@ -6880,6 +6880,242 @@ func (db *DB) DeleteDailySummariesBefore(ctx context.Context, orgID uuid.UUID, b
 	return nil
 }
 
+// SLA Policy methods
+
+// CreateSLAPolicy inserts a new SLA policy.
+func (db *DB) CreateSLAPolicy(ctx context.Context, policy *models.SLAPolicy) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO sla_policies (id, org_id, name, description, target_rpo_hours, target_rto_hours, target_success_rate, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, policy.ID, policy.OrgID, policy.Name, policy.Description, policy.TargetRPOHours, policy.TargetRTOHours, policy.TargetSuccessRate, policy.Enabled, policy.CreatedAt, policy.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create SLA policy: %w", err)
+	}
+	return nil
+}
+
+// GetSLAPolicyByID returns a single SLA policy by ID.
+func (db *DB) GetSLAPolicyByID(ctx context.Context, id uuid.UUID) (*models.SLAPolicy, error) {
+	var p models.SLAPolicy
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, description, target_rpo_hours, target_rto_hours, target_success_rate, enabled, created_at, updated_at
+		FROM sla_policies
+		WHERE id = $1
+	`, id).Scan(&p.ID, &p.OrgID, &p.Name, &p.Description, &p.TargetRPOHours, &p.TargetRTOHours, &p.TargetSuccessRate, &p.Enabled, &p.CreatedAt, &p.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get SLA policy: %w", err)
+	}
+	return &p, nil
+}
+
+// ListSLAPoliciesByOrgID returns all SLA policies for an organization.
+func (db *DB) ListSLAPoliciesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.SLAPolicy, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, description, target_rpo_hours, target_rto_hours, target_success_rate, enabled, created_at, updated_at
+		FROM sla_policies
+		WHERE org_id = $1
+		ORDER BY name ASC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list SLA policies: %w", err)
+	}
+	defer rows.Close()
+
+	var policies []*models.SLAPolicy
+	for rows.Next() {
+		var p models.SLAPolicy
+		if err := rows.Scan(&p.ID, &p.OrgID, &p.Name, &p.Description, &p.TargetRPOHours, &p.TargetRTOHours, &p.TargetSuccessRate, &p.Enabled, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan SLA policy: %w", err)
+		}
+		policies = append(policies, &p)
+	}
+	return policies, nil
+}
+
+// UpdateSLAPolicy updates an existing SLA policy.
+func (db *DB) UpdateSLAPolicy(ctx context.Context, policy *models.SLAPolicy) error {
+	policy.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE sla_policies
+		SET name = $2, description = $3, target_rpo_hours = $4, target_rto_hours = $5, target_success_rate = $6, enabled = $7, updated_at = $8
+		WHERE id = $1
+	`, policy.ID, policy.Name, policy.Description, policy.TargetRPOHours, policy.TargetRTOHours, policy.TargetSuccessRate, policy.Enabled, policy.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update SLA policy: %w", err)
+	}
+	return nil
+}
+
+// DeleteSLAPolicy deletes an SLA policy by ID.
+func (db *DB) DeleteSLAPolicy(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM sla_policies WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete SLA policy: %w", err)
+	}
+	return nil
+}
+
+// CreateSLAStatusSnapshot inserts a new SLA status history record.
+func (db *DB) CreateSLAStatusSnapshot(ctx context.Context, snapshot *models.SLAStatusSnapshot) error {
+	snapshot.ID = uuid.New()
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO sla_status_history (id, policy_id, rpo_hours, rto_hours, success_rate, compliant, calculated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, snapshot.ID, snapshot.PolicyID, snapshot.RPOHours, snapshot.RTOHours, snapshot.SuccessRate, snapshot.Compliant, snapshot.CalculatedAt)
+	if err != nil {
+		return fmt.Errorf("create SLA status snapshot: %w", err)
+	}
+	return nil
+}
+
+// GetSLAStatusHistory returns SLA status history for a policy, ordered by most recent first.
+func (db *DB) GetSLAStatusHistory(ctx context.Context, policyID uuid.UUID, limit int) ([]*models.SLAStatusSnapshot, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, policy_id, rpo_hours, rto_hours, success_rate, compliant, calculated_at
+		FROM sla_status_history
+		WHERE policy_id = $1
+		ORDER BY calculated_at DESC
+		LIMIT $2
+	`, policyID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get SLA status history: %w", err)
+	}
+	defer rows.Close()
+
+	var snapshots []*models.SLAStatusSnapshot
+	for rows.Next() {
+		var s models.SLAStatusSnapshot
+		if err := rows.Scan(&s.ID, &s.PolicyID, &s.RPOHours, &s.RTOHours, &s.SuccessRate, &s.Compliant, &s.CalculatedAt); err != nil {
+			return nil, fmt.Errorf("scan SLA status snapshot: %w", err)
+		}
+		snapshots = append(snapshots, &s)
+	}
+	return snapshots, nil
+}
+
+// GetLatestSLAStatus returns the most recent SLA status snapshot for a policy.
+func (db *DB) GetLatestSLAStatus(ctx context.Context, policyID uuid.UUID) (*models.SLAStatusSnapshot, error) {
+	var s models.SLAStatusSnapshot
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, policy_id, rpo_hours, rto_hours, success_rate, compliant, calculated_at
+		FROM sla_status_history
+		WHERE policy_id = $1
+		ORDER BY calculated_at DESC
+		LIMIT 1
+	`, policyID).Scan(&s.ID, &s.PolicyID, &s.RPOHours, &s.RTOHours, &s.SuccessRate, &s.Compliant, &s.CalculatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get latest SLA status: %w", err)
+	}
+	return &s, nil
+}
+
+// GetBackupSuccessRateForOrg calculates the backup success rate for an org over a given number of hours.
+func (db *DB) GetBackupSuccessRateForOrg(ctx context.Context, orgID uuid.UUID, hours int) (float64, error) {
+	var total, successful int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*),
+			COUNT(*) FILTER (WHERE status = 'completed')
+		FROM backups
+		WHERE org_id = $1 AND created_at >= NOW() - ($2 || ' hours')::INTERVAL
+	`, orgID, fmt.Sprintf("%d", hours)).Scan(&total, &successful)
+	if err != nil {
+		return 0, fmt.Errorf("get backup success rate: %w", err)
+	}
+	if total == 0 {
+		return 100, nil
+	}
+	return float64(successful) / float64(total) * 100, nil
+}
+
+// GetMaxRPOHoursForOrg returns the maximum hours since the last successful backup across all agents in an org.
+func (db *DB) GetMaxRPOHoursForOrg(ctx context.Context, orgID uuid.UUID) (float64, error) {
+	var maxHours float64
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(MAX(EXTRACT(EPOCH FROM (NOW() - last_backup))/3600), 0)
+		FROM (
+			SELECT a.id, MAX(b.completed_at) as last_backup
+			FROM agents a
+			LEFT JOIN backups b ON b.agent_id = a.id AND b.status = 'completed'
+			WHERE a.org_id = $1 AND a.status = 'active'
+			GROUP BY a.id
+		) sub
+		WHERE last_backup IS NOT NULL
+	`, orgID).Scan(&maxHours)
+	if err != nil {
+		return 0, fmt.Errorf("get max RPO hours: %w", err)
+	}
+	return maxHours, nil
+}
+
+// Branding methods
+
+// GetBrandingSettings returns the branding settings for the given organization.
+// Returns nil if no custom branding has been configured.
+func (db *DB) GetBrandingSettings(ctx context.Context, orgID uuid.UUID) (*models.BrandingSettings, error) {
+	var b models.BrandingSettings
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, logo_url, favicon_url, product_name,
+		       primary_color, secondary_color, support_url, custom_css,
+		       created_at, updated_at
+		FROM branding_settings
+		WHERE org_id = $1
+	`, orgID).Scan(
+		&b.ID, &b.OrgID, &b.LogoURL, &b.FaviconURL, &b.ProductName,
+		&b.PrimaryColor, &b.SecondaryColor, &b.SupportURL, &b.CustomCSS,
+		&b.CreatedAt, &b.UpdatedAt,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get branding settings: %w", err)
+	}
+	return &b, nil
+}
+
+// UpsertBrandingSettings creates or updates branding settings for an organization.
+func (db *DB) UpsertBrandingSettings(ctx context.Context, b *models.BrandingSettings) error {
+	b.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO branding_settings (id, org_id, logo_url, favicon_url, product_name,
+		    primary_color, secondary_color, support_url, custom_css, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		ON CONFLICT (org_id) DO UPDATE SET
+		    logo_url = EXCLUDED.logo_url,
+		    favicon_url = EXCLUDED.favicon_url,
+		    product_name = EXCLUDED.product_name,
+		    primary_color = EXCLUDED.primary_color,
+		    secondary_color = EXCLUDED.secondary_color,
+		    support_url = EXCLUDED.support_url,
+		    custom_css = EXCLUDED.custom_css,
+		    updated_at = EXCLUDED.updated_at
+	`, b.ID, b.OrgID, b.LogoURL, b.FaviconURL, b.ProductName,
+		b.PrimaryColor, b.SecondaryColor, b.SupportURL, b.CustomCSS,
+		b.CreatedAt, b.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("upsert branding settings: %w", err)
+	}
+	return nil
+}
+
+// DeleteBrandingSettings removes branding settings for an organization.
+func (db *DB) DeleteBrandingSettings(ctx context.Context, orgID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM branding_settings WHERE org_id = $1
+	`, orgID)
+	if err != nil {
+		return fmt.Errorf("delete branding settings: %w", err)
+	}
+	return nil
+}
+
 // Offline License methods
 
 // CreateOfflineLicense stores an offline license in the database.

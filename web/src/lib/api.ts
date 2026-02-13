@@ -32,6 +32,7 @@ import type {
 	BackupSuccessRate,
 	BackupSuccessRatesResponse,
 	BackupsResponse,
+	BrandingSettings,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
 	CategoriesResponse,
@@ -59,6 +60,7 @@ import type {
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
+	CreateSLAPolicyRequest,
 	CreateSSOGroupMappingRequest,
 	CreateScheduleRequest,
 	CreateSnapshotCommentRequest,
@@ -129,6 +131,11 @@ import type {
 	RotateAPIKeyResponse,
 	RunDRTestRequest,
 	RunScheduleResponse,
+	SLAPoliciesResponse,
+	SLAPolicy,
+	SLAStatus,
+	SLAStatusHistoryResponse,
+	SLAStatusSnapshot,
 	SSOGroupMapping,
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
@@ -159,6 +166,7 @@ import type {
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
 	UpdateBackupScriptRequest,
+	UpdateBrandingRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
 	UpdateExcludePatternRequest,
@@ -170,6 +178,7 @@ import type {
 	UpdatePolicyRequest,
 	UpdateReportScheduleRequest,
 	UpdateRepositoryRequest,
+	UpdateSLAPolicyRequest,
 	UpdateSSOGroupMappingRequest,
 	UpdateSSOSettingsRequest,
 	UpdateScheduleRequest,
@@ -1522,6 +1531,23 @@ export const onboardingApi = {
 		}),
 };
 
+// Branding API
+export const brandingApi = {
+	get: async (): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding'),
+
+	update: async (data: UpdateBrandingRequest): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	reset: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/branding', {
+			method: 'DELETE',
+		}),
+};
+
 // Cost Estimation API
 export const costsApi = {
 	getSummary: async (): Promise<CostSummary> =>
@@ -1600,6 +1626,47 @@ export const costAlertsApi = {
 		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
 			method: 'DELETE',
 		}),
+};
+
+// SLA Policies API
+export const slaPoliciesApi = {
+	list: async (): Promise<SLAPolicy[]> => {
+		const response = await fetchApi<SLAPoliciesResponse>('/sla/policies');
+		return response.policies ?? [];
+	},
+
+	get: async (id: string): Promise<SLAPolicy> =>
+		fetchApi<SLAPolicy>(`/sla/policies/${id}`),
+
+	create: async (data: CreateSLAPolicyRequest): Promise<SLAPolicy> =>
+		fetchApi<SLAPolicy>('/sla/policies', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateSLAPolicyRequest,
+	): Promise<SLAPolicy> =>
+		fetchApi<SLAPolicy>(`/sla/policies/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/sla/policies/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getStatus: async (id: string): Promise<SLAStatus> =>
+		fetchApi<SLAStatus>(`/sla/policies/${id}/status`),
+
+	getHistory: async (id: string, limit = 100): Promise<SLAStatusSnapshot[]> => {
+		const response = await fetchApi<SLAStatusHistoryResponse>(
+			`/sla/policies/${id}/history?limit=${limit}`,
+		);
+		return response.history ?? [];
+	},
 };
 
 // Air-Gap API

@@ -1691,6 +1691,31 @@ export interface FileHistoryParams {
 	repository_id: string;
 }
 
+// Branding types
+export interface BrandingSettings {
+	id: string;
+	org_id: string;
+	logo_url: string;
+	favicon_url: string;
+	product_name: string;
+	primary_color: string;
+	secondary_color: string;
+	support_url: string;
+	custom_css: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface UpdateBrandingRequest {
+	logo_url?: string;
+	favicon_url?: string;
+	product_name?: string;
+	primary_color?: string;
+	secondary_color?: string;
+	support_url?: string;
+	custom_css?: string;
+}
+
 // Cost Estimation types
 export interface StoragePricing {
 	id: string;
@@ -1843,6 +1868,64 @@ export interface CostHistoryResponse {
 
 export interface CostAlertsResponse {
 	alerts: CostAlert[];
+}
+
+// SLA Policy types
+export interface SLAPolicy {
+	id: string;
+	org_id: string;
+	name: string;
+	description?: string;
+	target_rpo_hours: number;
+	target_rto_hours: number;
+	target_success_rate: number;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface SLAStatus {
+	policy_id: string;
+	current_rpo_hours: number;
+	current_rto_hours: number;
+	success_rate: number;
+	compliant: boolean;
+	calculated_at: string;
+}
+
+export interface SLAStatusSnapshot {
+	id: string;
+	policy_id: string;
+	rpo_hours: number;
+	rto_hours: number;
+	success_rate: number;
+	compliant: boolean;
+	calculated_at: string;
+}
+
+export interface CreateSLAPolicyRequest {
+	name: string;
+	description?: string;
+	target_rpo_hours: number;
+	target_rto_hours: number;
+	target_success_rate: number;
+}
+
+export interface UpdateSLAPolicyRequest {
+	name?: string;
+	description?: string;
+	target_rpo_hours?: number;
+	target_rto_hours?: number;
+	target_success_rate?: number;
+	enabled?: boolean;
+}
+
+export interface SLAPoliciesResponse {
+	policies: SLAPolicy[];
+}
+
+export interface SLAStatusHistoryResponse {
+	history: SLAStatusSnapshot[];
 }
 
 // Air-Gap types
