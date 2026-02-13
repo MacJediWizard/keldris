@@ -85,6 +85,7 @@ func NewRouter(
 
 	// Global middleware
 	r.Engine.Use(gin.Recovery())
+	r.Engine.Use(middleware.BodyLimitMiddleware(10 << 20)) // 10 MB default body limit
 	r.Engine.Use(middleware.RequestLogger(logger))
 	r.Engine.Use(middleware.SecurityHeaders(cfg.Environment))
 	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins, cfg.Environment))
