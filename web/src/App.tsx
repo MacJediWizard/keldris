@@ -31,9 +31,11 @@ const OrganizationSettings = lazy(() => import('./pages/OrganizationSettings'));
 const OrganizationSSOSettings = lazy(
 	() => import('./pages/OrganizationSSOSettings'),
 );
+const Branding = lazy(() => import('./pages/Branding'));
 const Maintenance = lazy(() => import('./pages/Maintenance'));
 const NewOrganization = lazy(() => import('./pages/NewOrganization'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const SLATracking = lazy(() => import('./pages/SLATracking'));
 const AirGapLicense = lazy(() => import('./pages/AirGapLicense'));
 
 const queryClient = new QueryClient({
@@ -91,11 +93,13 @@ function App() {
 								path="organization/sso"
 								element={<OrganizationSSOSettings />}
 							/>
+							<Route path="organization/branding" element={<Branding />} />
 							<Route
 								path="organization/maintenance"
 								element={<Maintenance />}
 							/>
 							<Route path="organization/new" element={<NewOrganization />} />
+							<Route path="sla" element={<SLATracking />} />
 							<Route path="onboarding" element={<Onboarding />} />
 							<Route path="system/airgap" element={<AirGapLicense />} />
 						</Route>
