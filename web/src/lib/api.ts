@@ -11,6 +11,8 @@ import type {
 	AgentWithGroups,
 	AgentsResponse,
 	AgentsWithGroupsResponse,
+	AirGapLicenseInfo,
+	AirGapStatus,
 	Alert,
 	AlertCountResponse,
 	AlertRule,
@@ -1597,5 +1599,18 @@ export const costAlertsApi = {
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
 			method: 'DELETE',
+		}),
+};
+
+// Air-Gap API
+export const airGapApi = {
+	getStatus: async (): Promise<AirGapStatus> =>
+		fetchApi<AirGapStatus>('/system/airgap'),
+
+	uploadLicense: async (licenseData: ArrayBuffer): Promise<AirGapLicenseInfo> =>
+		fetchApi<AirGapLicenseInfo>('/system/license', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/octet-stream' },
+			body: licenseData,
 		}),
 };

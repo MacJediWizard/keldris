@@ -65,6 +65,12 @@ vi.mock('../hooks/useLocale', () => ({
 	}),
 }));
 
+vi.mock('../hooks/useAirGap', () => ({
+	useAirGapStatus: vi.fn().mockReturnValue({
+		data: { enabled: false, disabled_features: [], license: null },
+	}),
+}));
+
 vi.mock('./features/LanguageSelector', () => ({
 	LanguageSelector: () => (
 		<div data-testid="language-selector">Language Selector</div>

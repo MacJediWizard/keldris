@@ -42,6 +42,8 @@ type Config struct {
 	DRTestRunner handlers.DRTestRunner
 	// License is the current server license for feature gating (optional).
 	License *license.License
+	// AirGapPublicKey is the Ed25519 public key for validating offline licenses (optional).
+	AirGapPublicKey []byte
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -232,6 +234,11 @@ func NewRouter(
 	drTestsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDRTests, logger))
 	drTestsHandler := handlers.NewDRTestsHandler(database, cfg.DRTestRunner, logger)
 	drTestsHandler.RegisterRoutes(drTestsGroup)
+
+	// Air-gap routes (Enterprise)
+	airGapGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureAirGap, logger))
+	airGapHandler := handlers.NewAirGapHandler(database, cfg.AirGapPublicKey, logger)
+	airGapHandler.RegisterRoutes(airGapGroup)
 
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
