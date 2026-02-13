@@ -9,12 +9,20 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/rs/zerolog"
 )
+
+// newTestWebhookSender creates a webhook sender with URL validation disabled for local test servers.
+func newTestWebhookSender() *WebhookSender {
+	s := NewWebhookSender(zerolog.Nop())
+	s.validateURL = func(_ string) error { return nil }
+	return s
+}
 
 func TestWebhookSender_Send(t *testing.T) {
 	var receivedPayload WebhookPayload
@@ -48,7 +56,7 @@ func TestWebhookSender_Send(t *testing.T) {
 	}))
 	defer server.Close()
 
-	sender := NewWebhookSender(zerolog.Nop())
+	sender := newTestWebhookSender()
 	payload := WebhookPayload{
 		EventType: "backup_success",
 		Timestamp: time.Now(),
@@ -78,7 +86,7 @@ func TestWebhookSender_SendNoSecret(t *testing.T) {
 	}))
 	defer server.Close()
 
-	sender := NewWebhookSender(zerolog.Nop())
+	sender := newTestWebhookSender()
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")
@@ -100,7 +108,7 @@ func TestWebhookSender_Retry(t *testing.T) {
 	}))
 	defer server.Close()
 
-	sender := NewWebhookSender(zerolog.Nop())
+	sender := newTestWebhookSender()
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")
@@ -121,7 +129,7 @@ func TestWebhookSender_RetryExhausted(t *testing.T) {
 	}))
 	defer server.Close()
 
-	sender := NewWebhookSender(zerolog.Nop())
+	sender := newTestWebhookSender()
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")
@@ -130,6 +138,45 @@ func TestWebhookSender_RetryExhausted(t *testing.T) {
 	}
 	if got := attempts.Load(); got != 3 {
 		t.Errorf("expected 3 attempts, got %d", got)
+	}
+}
+
+func TestWebhookSender_SSRFBlocked(t *testing.T) {
+	sender := NewWebhookSender(zerolog.Nop())
+	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
+
+	err := sender.Send(context.Background(), "http://127.0.0.1:8080/hook", payload, "")
+	if err == nil {
+		t.Fatal("expected error for localhost URL")
+	}
+	if !strings.Contains(err.Error(), "blocked") {
+		t.Errorf("expected 'blocked' in error, got: %s", err)
+	}
+}
+
+func TestWebhookSender_SSRFPrivateIP(t *testing.T) {
+	sender := NewWebhookSender(zerolog.Nop())
+	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
+
+	err := sender.Send(context.Background(), "http://10.0.0.1/hook", payload, "")
+	if err == nil {
+		t.Fatal("expected error for private IP URL")
+	}
+	if !strings.Contains(err.Error(), "blocked") {
+		t.Errorf("expected 'blocked' in error, got: %s", err)
+	}
+}
+
+func TestWebhookSender_SSRFMetadata(t *testing.T) {
+	sender := NewWebhookSender(zerolog.Nop())
+	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
+
+	err := sender.Send(context.Background(), "http://169.254.169.254/latest/meta-data/", payload, "")
+	if err == nil {
+		t.Fatal("expected error for metadata endpoint")
+	}
+	if !strings.Contains(err.Error(), "blocked") {
+		t.Errorf("expected 'blocked' in error, got: %s", err)
 	}
 }
 

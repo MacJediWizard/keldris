@@ -28,10 +28,11 @@ var ErrAirGapBlocked = errors.New("external webhooks are disabled in air-gap mod
 
 // WebhookSender sends notifications via generic webhooks with HMAC signing and retry.
 type WebhookSender struct {
-	client     *http.Client
-	logger     zerolog.Logger
-	maxRetries int
-	airGapMode bool
+	client      *http.Client
+	logger      zerolog.Logger
+	maxRetries  int
+	airGapMode  bool
+	validateURL func(string) error
 }
 
 // NewWebhookSender creates a new webhook sender.
@@ -40,6 +41,9 @@ func NewWebhookSender(logger zerolog.Logger) *WebhookSender {
 		client:     &http.Client{Timeout: 30 * time.Second},
 		logger:     logger.With().Str("component", "webhook_sender").Logger(),
 		maxRetries: 3,
+		validateURL: func(u string) error {
+			return ValidateWebhookURL(u, false)
+		},
 	}
 }
 
@@ -49,10 +53,15 @@ func (w *WebhookSender) SetAirGapMode(enabled bool) {
 }
 
 // Send sends a webhook payload to the given URL with HMAC signature and retry.
+// URLs should be validated with ValidateWebhookURL before being stored.
 func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPayload, secret string) error {
 	if w.airGapMode {
 		w.logger.Warn().Str("url", url).Msg("webhook blocked: air-gap mode enabled")
 		return ErrAirGapBlocked
+	}
+
+	if err := w.validateURL(url); err != nil {
+		return fmt.Errorf("webhook URL blocked: %w", err)
 	}
 
 	body, err := json.Marshal(payload)
