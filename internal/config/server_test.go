@@ -117,3 +117,37 @@ func TestLoadServerConfig_SessionIdleTimeout(t *testing.T) {
 		}
 	})
 }
+
+func TestLoadServerConfig_AirGapMode(t *testing.T) {
+	t.Run("default is false", func(t *testing.T) {
+		t.Setenv("AIR_GAP_MODE", "")
+		cfg := LoadServerConfig()
+		if cfg.AirGapMode {
+			t.Errorf("expected AirGapMode false by default, got true")
+		}
+	})
+
+	t.Run("true", func(t *testing.T) {
+		t.Setenv("AIR_GAP_MODE", "true")
+		cfg := LoadServerConfig()
+		if !cfg.AirGapMode {
+			t.Errorf("expected AirGapMode true, got false")
+		}
+	})
+
+	t.Run("1", func(t *testing.T) {
+		t.Setenv("AIR_GAP_MODE", "1")
+		cfg := LoadServerConfig()
+		if !cfg.AirGapMode {
+			t.Errorf("expected AirGapMode true for '1', got false")
+		}
+	})
+
+	t.Run("false", func(t *testing.T) {
+		t.Setenv("AIR_GAP_MODE", "false")
+		cfg := LoadServerConfig()
+		if cfg.AirGapMode {
+			t.Errorf("expected AirGapMode false, got true")
+		}
+	})
+}
