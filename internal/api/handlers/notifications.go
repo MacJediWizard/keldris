@@ -596,7 +596,7 @@ func (h *NotificationsHandler) validateWebhookConfig(rawConfig json.RawMessage) 
 // isValidChannelType checks if a channel type is valid.
 func isValidChannelType(t models.NotificationChannelType) bool {
 	switch t {
-	case models.ChannelTypeEmail, models.ChannelTypeSlack, models.ChannelTypeWebhook, models.ChannelTypePagerDuty:
+	case models.ChannelTypeEmail, models.ChannelTypeSlack, models.ChannelTypeWebhook, models.ChannelTypePagerDuty, models.ChannelTypeTeams, models.ChannelTypeDiscord:
 		return true
 	default:
 		return false
@@ -606,7 +606,7 @@ func isValidChannelType(t models.NotificationChannelType) bool {
 // isValidEventType checks if an event type is valid.
 func isValidEventType(t models.NotificationEventType) bool {
 	switch t {
-	case models.EventBackupSuccess, models.EventBackupFailed, models.EventAgentOffline:
+	case models.EventBackupSuccess, models.EventBackupFailed, models.EventAgentOffline, models.EventMaintenanceScheduled:
 		return true
 	default:
 		return false
