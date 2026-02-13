@@ -3,11 +3,14 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
+	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -34,6 +37,7 @@ type NotificationsHandler struct {
 	store      NotificationStore
 	keyManager *crypto.KeyManager
 	logger     zerolog.Logger
+	env        config.Environment
 }
 
 // NewNotificationsHandler creates a new NotificationsHandler.
@@ -42,6 +46,17 @@ func NewNotificationsHandler(store NotificationStore, keyManager *crypto.KeyMana
 		store:      store,
 		keyManager: keyManager,
 		logger:     logger.With().Str("component", "notifications_handler").Logger(),
+		env:        config.EnvDevelopment,
+	}
+}
+
+// NewNotificationsHandlerWithEnv creates a new NotificationsHandler with an explicit environment.
+func NewNotificationsHandlerWithEnv(store NotificationStore, keyManager *crypto.KeyManager, logger zerolog.Logger, env config.Environment) *NotificationsHandler {
+	return &NotificationsHandler{
+		store:      store,
+		keyManager: keyManager,
+		logger:     logger.With().Str("component", "notifications_handler").Logger(),
+		env:        env,
 	}
 }
 
@@ -167,6 +182,14 @@ func (h *NotificationsHandler) CreateChannel(c *gin.Context) {
 		return
 	}
 
+	// Validate webhook URL for SSRF protection
+	if req.Type == models.ChannelTypeWebhook {
+		if err := h.validateWebhookConfig(req.Config); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
 	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
@@ -250,6 +273,14 @@ func (h *NotificationsHandler) UpdateChannel(c *gin.Context) {
 		channel.Name = *req.Name
 	}
 	if req.Config != nil {
+		// Validate webhook URL for SSRF protection on config updates
+		if channel.Type == models.ChannelTypeWebhook {
+			if err := h.validateWebhookConfig(req.Config); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+		}
+
 		configEncrypted, err := h.keyManager.Encrypt([]byte(req.Config))
 		if err != nil {
 			h.logger.Error().Err(err).Msg("failed to encrypt channel config")
@@ -549,6 +580,17 @@ func (h *NotificationsHandler) ListLogs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"logs": logs})
+}
+
+// validateWebhookConfig parses webhook config and validates the URL for SSRF protection.
+func (h *NotificationsHandler) validateWebhookConfig(rawConfig json.RawMessage) error {
+	var webhookConfig models.WebhookChannelConfig
+	if err := json.Unmarshal(rawConfig, &webhookConfig); err != nil {
+		return fmt.Errorf("invalid webhook config: %w", err)
+	}
+
+	requireHTTPS := h.env == config.EnvProduction || h.env == config.EnvStaging
+	return notifications.ValidateWebhookURL(webhookConfig.URL, requireHTTPS)
 }
 
 // isValidChannelType checks if a channel type is valid.

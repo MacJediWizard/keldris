@@ -24,15 +24,17 @@ type NotificationStore interface {
 
 // Service handles sending notifications for backup events.
 type Service struct {
-	store  NotificationStore
-	logger zerolog.Logger
+	store              NotificationStore
+	logger             zerolog.Logger
+	webhookSenderFunc  func(zerolog.Logger) *WebhookSender
 }
 
 // NewService creates a new notification service.
 func NewService(store NotificationStore, logger zerolog.Logger) *Service {
 	return &Service{
-		store:  store,
-		logger: logger.With().Str("component", "notification_service").Logger(),
+		store:             store,
+		logger:            logger.With().Str("component", "notification_service").Logger(),
+		webhookSenderFunc: NewWebhookSender,
 	}
 }
 
@@ -175,7 +177,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 			s.logger.Error().Err(err).Msg("failed to create notification log")
 		}
 		payload := WebhookPayload{EventType: string(pref.EventType), Timestamp: time.Now(), Data: result}
-		sendErr := NewWebhookSender(s.logger).Send(ctx, cfg.URL, payload, cfg.Secret)
+		sendErr := s.webhookSenderFunc(s.logger).Send(ctx, cfg.URL, payload, cfg.Secret)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.URL)
 
 	case models.ChannelTypePagerDuty:
@@ -348,7 +350,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 			s.logger.Error().Err(err).Msg("failed to create notification log")
 		}
 		payload := WebhookPayload{EventType: string(models.EventAgentOffline), Timestamp: time.Now(), Data: data}
-		sendErr := NewWebhookSender(s.logger).Send(ctx, cfg.URL, payload, cfg.Secret)
+		sendErr := s.webhookSenderFunc(s.logger).Send(ctx, cfg.URL, payload, cfg.Secret)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.URL)
 
 	case models.ChannelTypePagerDuty:
@@ -513,7 +515,7 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 			s.logger.Error().Err(err).Msg("failed to create notification log")
 		}
 		payload := WebhookPayload{EventType: string(pref.EventType), Timestamp: time.Now(), Data: data}
-		sendErr := NewWebhookSender(s.logger).Send(ctx, cfg.URL, payload, cfg.Secret)
+		sendErr := s.webhookSenderFunc(s.logger).Send(ctx, cfg.URL, payload, cfg.Secret)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.URL)
 
 	case models.ChannelTypePagerDuty:

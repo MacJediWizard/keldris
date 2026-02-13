@@ -128,6 +128,15 @@ func (m *mockNotificationStore) getLogs() []*models.NotificationLog {
 	return result
 }
 
+// newTestWebhookSenderFactory returns a webhook sender factory that skips URL validation for local test servers.
+func newTestWebhookSenderFactory() func(zerolog.Logger) *WebhookSender {
+	return func(logger zerolog.Logger) *WebhookSender {
+		s := NewWebhookSender(logger)
+		s.validateURL = func(_ string) error { return nil }
+		return s
+	}
+}
+
 func TestNewService(t *testing.T) {
 	store := &mockNotificationStore{}
 	svc := NewService(store, zerolog.Nop())
@@ -332,6 +341,7 @@ func TestService_NotifyBackupComplete_WebhookChannel(t *testing.T) {
 	}
 
 	svc := NewService(store, zerolog.Nop())
+	svc.webhookSenderFunc = newTestWebhookSenderFactory()
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleName: "daily",
@@ -802,6 +812,7 @@ func TestService_NotifyAgentOffline_WebhookChannel(t *testing.T) {
 	}
 
 	svc := NewService(store, zerolog.Nop())
+	svc.webhookSenderFunc = newTestWebhookSenderFactory()
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -1101,6 +1112,7 @@ func TestService_NotifyMaintenanceScheduled_WebhookChannel(t *testing.T) {
 	}
 
 	svc := NewService(store, zerolog.Nop())
+	svc.webhookSenderFunc = newTestWebhookSenderFactory()
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
