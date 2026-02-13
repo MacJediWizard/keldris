@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
+import { useBranding } from '../hooks/useBranding';
 import { useLocale } from '../hooks/useLocale';
 import { useOnboardingStatus } from '../hooks/useOnboarding';
 import {
@@ -243,13 +244,24 @@ function Sidebar() {
 	const location = useLocation();
 	const { data: user } = useMe();
 	const { t } = useLocale();
+	const { data: brandingData } = useBranding();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
+
+	const displayName = brandingData?.product_name || t('common.appName');
 
 	return (
 		<aside className="w-64 bg-gray-900 text-white flex flex-col">
 			<div className="p-6">
-				<h1 className="text-2xl font-bold">{t('common.appName')}</h1>
+				{brandingData?.logo_url ? (
+					<img
+						src={brandingData.logo_url}
+						alt={displayName}
+						className="h-8 mb-1 object-contain"
+					/>
+				) : (
+					<h1 className="text-2xl font-bold">{displayName}</h1>
+				)}
 				<p className="text-gray-400 text-sm">{t('common.tagline')}</p>
 			</div>
 			<nav className="flex-1 px-4">
@@ -363,6 +375,32 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>SSO Group Sync</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/organization/branding"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/branding'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+										/>
+									</svg>
+									<span>Branding</span>
 								</Link>
 							</li>
 						</ul>
@@ -587,6 +625,58 @@ export function Layout() {
 	const { isLoading, isError } = useMe();
 	const { data: onboardingStatus, isLoading: onboardingLoading } =
 		useOnboardingStatus();
+	const { data: brandingData } = useBranding();
+
+	// Apply branding CSS variables and custom CSS
+	useEffect(() => {
+		if (!brandingData) return;
+
+		const root = document.documentElement;
+		if (brandingData.primary_color) {
+			root.style.setProperty('--brand-primary', brandingData.primary_color);
+		} else {
+			root.style.removeProperty('--brand-primary');
+		}
+		if (brandingData.secondary_color) {
+			root.style.setProperty('--brand-secondary', brandingData.secondary_color);
+		} else {
+			root.style.removeProperty('--brand-secondary');
+		}
+
+		// Apply custom CSS
+		let styleEl = document.getElementById('keldris-custom-css');
+		if (brandingData.custom_css) {
+			if (!styleEl) {
+				styleEl = document.createElement('style');
+				styleEl.id = 'keldris-custom-css';
+				document.head.appendChild(styleEl);
+			}
+			styleEl.textContent = brandingData.custom_css;
+		} else if (styleEl) {
+			styleEl.remove();
+		}
+
+		// Apply favicon
+		if (brandingData.favicon_url) {
+			let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+			if (!link) {
+				link = document.createElement('link');
+				link.rel = 'icon';
+				document.head.appendChild(link);
+			}
+			link.href = brandingData.favicon_url;
+		}
+
+		// Apply product name to document title
+		if (brandingData.product_name) {
+			document.title = brandingData.product_name;
+		}
+
+		return () => {
+			root.style.removeProperty('--brand-primary');
+			root.style.removeProperty('--brand-secondary');
+		};
+	}, [brandingData]);
 
 	// Redirect to onboarding if needed (but not if already on onboarding page)
 	useEffect(() => {
