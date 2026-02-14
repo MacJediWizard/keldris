@@ -7,11 +7,11 @@
 
 | Layer | Technology | Version |
 |-------|------------|---------|
-| Server | Go | 1.24+ |
+| Server | Go | 1.25.7+ |
 | Server Framework | Gin | latest |
 | Database | PostgreSQL | 15+ |
 | ORM | pgx/v5 raw queries | latest |
-| Agent | Go + Cobra | 1.24+ |
+| Agent | Go + Cobra | 1.25.7+ |
 | Frontend | React | 18+ |
 | Frontend Build | Vite | 6+ |
 | Frontend Language | TypeScript (strict) | 5.6+ |
