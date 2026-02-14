@@ -90,35 +90,7 @@ CORS_ORIGINS=https://backups.example.com
 ENCRYPTION_KEY=<random-value>
 ```
 
-## Request Body Limits
-
-Keldris does not enforce a global request body size limit at the application layer. In production, you should enforce body size limits at the reverse proxy level to prevent denial-of-service via oversized payloads.
-
-### Reverse Proxy Configuration
-
-**Nginx:**
-
-```nginx
-client_max_body_size 10m;
-```
-
-**Caddy:**
-
-```caddyfile
-request_body {
-    max_size 10MB
-}
-```
-
-The server does set `ReadHeaderTimeout: 10s` on the HTTP server to protect against slow-header (Slowloris) attacks.
-
-### Recommended Limits
-
-| Endpoint Type | Recommended Limit |
-|---------------|-------------------|
-| API requests (JSON) | 1 MB |
-| File uploads (if any) | 10 MB |
-| Webhook payloads | 256 KB |
+The server also sets `ReadHeaderTimeout: 10s` on the HTTP server to protect against slow-header (Slowloris) attacks.
 
 ## Webhook URL Validation
 
@@ -144,9 +116,9 @@ X-Keldris-Signature: sha256=<hex-encoded-hmac>
 
 ## Go Runtime Requirements
 
-Keldris requires **Go 1.24 or later** for both building and running.
+Keldris requires **Go 1.25.7 or later** for both building and running.
 
-### Why Go 1.24+
+### Why Go 1.25.7+
 
 - TLS 1.3 support with modern cipher suites
 - Improved cryptographic library hardening
@@ -158,7 +130,7 @@ Keldris requires **Go 1.24 or later** for both building and running.
 The official Docker image uses:
 
 ```dockerfile
-FROM golang:1.24-alpine AS go-builder
+FROM golang:1.25.7-alpine AS go-builder
 FROM alpine:3.21
 ```
 
@@ -168,7 +140,7 @@ Alpine 3.21 is the current stable release. Keep both the Go toolchain and Alpine
 
 ```bash
 go version
-# Should output: go version go1.24.x ...
+# Should output: go version go1.25.7 ...
 ```
 
 ## Reverse Proxy Recommendations
