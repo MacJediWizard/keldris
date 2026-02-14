@@ -144,8 +144,9 @@ func NewRouter(
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 
+	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
-	orgsHandler.RegisterRoutes(apiV1)
+	orgsHandler.RegisterRoutes(orgsGroup)
 
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1)
@@ -174,8 +175,9 @@ func NewRouter(
 	fileHistoryHandler := handlers.NewFileHistoryHandler(database, logger)
 	fileHistoryHandler.RegisterRoutes(apiV1)
 
+	auditLogsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureAuditLogs, logger))
 	auditLogsHandler := handlers.NewAuditLogsHandler(database, logger)
-	auditLogsHandler.RegisterRoutes(apiV1)
+	auditLogsHandler.RegisterRoutes(auditLogsGroup)
 
 	alertsHandler := handlers.NewAlertsHandler(database, logger)
 	alertsHandler.RegisterRoutes(apiV1)
@@ -226,6 +228,11 @@ func NewRouter(
 	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
 	maintenanceHandler.RegisterRoutes(apiV1)
 
+	// Docker backup routes (Pro+)
+	dockerBackupGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDockerBackup, logger))
+	dockerBackupHandler := handlers.NewDockerBackupHandler(database, logger)
+	dockerBackupHandler.RegisterRoutes(dockerBackupGroup)
+
 	// Branding routes (Enterprise - White Label)
 	brandingGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureWhiteLabel, logger))
 	brandingHandler := handlers.NewBrandingHandler(database, logger)
@@ -256,6 +263,8 @@ func NewRouter(
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
 	agentAPI := r.Engine.Group("/api/v1/agent")
 	agentAPI.Use(middleware.APIKeyMiddleware(apiKeyValidator, logger))
+	agentAPI.Use(middleware.LicenseMiddleware(lic, logger))
+	agentAPI.Use(middleware.FeatureMiddleware(license.FeatureAPIAccess, logger))
 
 	agentAPIHandler := handlers.NewAgentAPIHandler(database, logger)
 	agentAPIHandler.RegisterRoutes(agentAPI)

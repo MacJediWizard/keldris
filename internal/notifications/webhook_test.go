@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -180,6 +181,78 @@ func TestWebhookSender_SSRFMetadata(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "blocked") {
 		t.Errorf("expected 'blocked' in error, got: %s", err)
+	}
+}
+
+func TestWebhookSender_URLNotInLogs(t *testing.T) {
+	var logBuf bytes.Buffer
+	logger := zerolog.New(&logBuf)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	sender := NewWebhookSender(logger)
+	sender.validateURL = func(_ string) error { return nil }
+	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
+
+	err := sender.Send(context.Background(), server.URL, payload, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	logOutput := logBuf.String()
+	if strings.Contains(logOutput, server.URL) {
+		t.Errorf("log output should not contain webhook URL, got: %s", logOutput)
+	}
+}
+
+func TestWebhookSender_URLNotInLogsAirGap(t *testing.T) {
+	var logBuf bytes.Buffer
+	logger := zerolog.New(&logBuf)
+
+	sender := NewWebhookSender(logger)
+	sender.SetAirGapMode(true)
+
+	webhookURL := "https://hooks.example.com/secret-token/callback"
+	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
+
+	_ = sender.Send(context.Background(), webhookURL, payload, "")
+
+	logOutput := logBuf.String()
+	if strings.Contains(logOutput, webhookURL) {
+		t.Errorf("log output should not contain webhook URL, got: %s", logOutput)
+	}
+}
+
+func TestWebhookSender_URLNotInLogsRetry(t *testing.T) {
+	var logBuf bytes.Buffer
+	logger := zerolog.New(&logBuf)
+
+	var attempts atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := attempts.Add(1)
+		if n < 3 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	sender := NewWebhookSender(logger)
+	sender.validateURL = func(_ string) error { return nil }
+	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
+
+	err := sender.Send(context.Background(), server.URL, payload, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	logOutput := logBuf.String()
+	if strings.Contains(logOutput, server.URL) {
+		t.Errorf("log output should not contain webhook URL during retries, got: %s", logOutput)
 	}
 }
 
