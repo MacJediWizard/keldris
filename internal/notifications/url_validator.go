@@ -1,10 +1,12 @@
 package notifications
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // blockedCIDRs contains private and reserved IP ranges that must not be used as webhook targets.
@@ -85,4 +87,50 @@ func ValidateWebhookURL(urlStr string, requireHTTPS bool) error {
 	}
 
 	return nil
+}
+
+// isBlockedIP returns true if the IP falls within a private or reserved range.
+func isBlockedIP(ip net.IP) bool {
+	for _, blocked := range parsedBlockedNets {
+		if blocked.Contains(ip) {
+			return true
+		}
+	}
+	return ip.IsUnspecified()
+}
+
+// ValidatingDialer returns a DialContext function that resolves hostnames and
+// checks every resolved IP against blocked ranges before connecting. This
+// prevents DNS rebinding attacks where a hostname resolves to a safe IP during
+// pre-flight validation but to a private IP at connection time.
+func ValidatingDialer() func(ctx context.Context, network, addr string) (net.Conn, error) {
+	dialer := &net.Dialer{Timeout: 10 * time.Second}
+
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid address %q: %w", addr, err)
+		}
+
+		ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve host %q: %w", host, err)
+		}
+
+		// Filter to only safe IPs
+		var safeAddrs []string
+		for _, ipAddr := range ips {
+			if isBlockedIP(ipAddr.IP) {
+				continue
+			}
+			safeAddrs = append(safeAddrs, net.JoinHostPort(ipAddr.IP.String(), port))
+		}
+
+		if len(safeAddrs) == 0 {
+			return nil, fmt.Errorf("all resolved IPs for %q are blocked (private/reserved)", host)
+		}
+
+		// Connect using the first safe IP
+		return dialer.DialContext(ctx, network, safeAddrs[0])
+	}
 }

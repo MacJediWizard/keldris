@@ -38,7 +38,12 @@ type WebhookSender struct {
 // NewWebhookSender creates a new webhook sender.
 func NewWebhookSender(logger zerolog.Logger) *WebhookSender {
 	return &WebhookSender{
-		client:     &http.Client{Timeout: 30 * time.Second},
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				DialContext: ValidatingDialer(),
+			},
+		},
 		logger:     logger.With().Str("component", "webhook_sender").Logger(),
 		maxRetries: 3,
 		validateURL: func(u string) error {

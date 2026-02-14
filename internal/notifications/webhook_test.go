@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,10 +19,12 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// newTestWebhookSender creates a webhook sender with URL validation disabled for local test servers.
+// newTestWebhookSender creates a webhook sender with URL validation and IP
+// blocking disabled so it can reach local httptest servers on 127.0.0.1.
 func newTestWebhookSender() *WebhookSender {
 	s := NewWebhookSender(zerolog.Nop())
 	s.validateURL = func(_ string) error { return nil }
+	s.client.Transport = http.DefaultTransport
 	return s
 }
 
@@ -192,6 +195,7 @@ func TestWebhookSender_URLNotInLogs(t *testing.T) {
 
 	sender := NewWebhookSender(logger)
 	sender.validateURL = func(_ string) error { return nil }
+	sender.client.Transport = http.DefaultTransport
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")
@@ -240,6 +244,7 @@ func TestWebhookSender_URLNotInLogsRetry(t *testing.T) {
 
 	sender := NewWebhookSender(logger)
 	sender.validateURL = func(_ string) error { return nil }
+	sender.client.Transport = http.DefaultTransport
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")
@@ -265,5 +270,94 @@ func TestComputeHMAC(t *testing.T) {
 
 	if result != expected {
 		t.Errorf("computeHMAC() = %q, want %q", result, expected)
+	}
+}
+
+func TestWebhookSender_DNSRebindingProtection(t *testing.T) {
+	// Simulate a DNS rebinding attack: URL validation is bypassed (as if DNS
+	// returned a public IP during the first check), but the validating dialer
+	// blocks the connection because the IP resolved at dial time is private.
+	sender := NewWebhookSender(zerolog.Nop())
+	// Bypass the pre-flight URL validation to simulate the attacker's DNS
+	// returning a safe IP during the first lookup.
+	sender.validateURL = func(_ string) error { return nil }
+
+	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
+
+	// Attempt to send to a private IP. The validating dialer in the transport
+	// must block the connection even though validateURL was bypassed.
+	err := sender.Send(context.Background(), "http://127.0.0.1:1/hook", payload, "")
+	if err == nil {
+		t.Fatal("expected error: validating dialer should block private IPs at dial time")
+	}
+	if !strings.Contains(err.Error(), "blocked") {
+		t.Errorf("expected 'blocked' in error, got: %s", err)
+	}
+
+	// Also test 10.x range
+	err = sender.Send(context.Background(), "http://10.0.0.1:1/hook", payload, "")
+	if err == nil {
+		t.Fatal("expected error: validating dialer should block 10.x.x.x at dial time")
+	}
+	if !strings.Contains(err.Error(), "blocked") {
+		t.Errorf("expected 'blocked' in error, got: %s", err)
+	}
+
+	// Also test metadata endpoint
+	err = sender.Send(context.Background(), "http://169.254.169.254:80/latest/meta-data/", payload, "")
+	if err == nil {
+		t.Fatal("expected error: validating dialer should block metadata endpoint at dial time")
+	}
+	if !strings.Contains(err.Error(), "blocked") {
+		t.Errorf("expected 'blocked' in error, got: %s", err)
+	}
+}
+
+func TestValidatingDialer_BlocksPrivateIPs(t *testing.T) {
+	dial := ValidatingDialer()
+	ctx := context.Background()
+
+	tests := []struct {
+		name string
+		addr string
+	}{
+		{"loopback", "127.0.0.1:80"},
+		{"private 10.x", "10.0.0.1:80"},
+		{"private 172.16.x", "172.16.0.1:80"},
+		{"private 192.168.x", "192.168.1.1:80"},
+		{"link-local", "169.254.1.1:80"},
+		{"metadata", "169.254.169.254:80"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conn, err := dial(ctx, "tcp", tt.addr)
+			if conn != nil {
+				conn.Close()
+			}
+			if err == nil {
+				t.Fatalf("expected error dialing %s, got nil", tt.addr)
+			}
+			if !strings.Contains(err.Error(), "blocked") {
+				t.Errorf("expected 'blocked' in error for %s, got: %s", tt.addr, err)
+			}
+		})
+	}
+}
+
+func TestValidatingDialer_AllowsPublicIPs(t *testing.T) {
+	// Start a local test server to have something to connect to.
+	// The test server binds to 127.0.0.1, so we can't test public connectivity
+	// directly. Instead, verify the dialer accepts a known public IP by mocking
+	// the resolver. We test the isBlockedIP function directly.
+	publicIPs := []string{"93.184.216.34", "8.8.8.8", "1.1.1.1"}
+	for _, ipStr := range publicIPs {
+		ip := net.ParseIP(ipStr)
+		if ip == nil {
+			t.Fatalf("failed to parse IP %s", ipStr)
+		}
+		if isBlockedIP(ip) {
+			t.Errorf("expected %s to NOT be blocked", ipStr)
+		}
 	}
 }
