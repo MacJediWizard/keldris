@@ -19,7 +19,11 @@ interface BadgeProps {
 	children: ReactNode;
 }
 
-export function Badge({ variant = 'default', size = 'sm', children }: BadgeProps) {
+export function Badge({
+	variant = 'default',
+	size = 'sm',
+	children,
+}: BadgeProps) {
 	return (
 		<span
 			className={`inline-flex items-center rounded-full font-medium ${variants[variant]} ${sizes[size]}`}
