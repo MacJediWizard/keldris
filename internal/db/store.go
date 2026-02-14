@@ -7245,3 +7245,16 @@ func (db *DB) CreateDockerBackup(ctx context.Context, orgID uuid.UUID, req *mode
 	}
 	return &result, nil
 }
+
+// CleanupAgentHealthHistory deletes health history records older than the
+// specified retention period. Returns the number of rows deleted.
+func (db *DB) CleanupAgentHealthHistory(ctx context.Context, retentionDays int) (int64, error) {
+	tag, err := db.Pool.Exec(ctx, `
+		DELETE FROM agent_health_history
+		WHERE recorded_at < NOW() - ($1 * INTERVAL '1 day')
+	`, retentionDays)
+	if err != nil {
+		return 0, fmt.Errorf("cleanup agent health history: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}

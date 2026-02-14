@@ -25,6 +25,7 @@ type ServerConfig struct {
 	SessionMaxAge      int  // session lifetime in seconds (default: 86400)
 	SessionIdleTimeout int  // idle timeout in seconds, 0 to disable (default: 1800)
 	AirGapMode         bool // air-gapped deployment mode (no internet access)
+	RetentionDays      int  // health history retention in days (default: 90)
 }
 
 // LoadServerConfig reads server configuration from environment variables.
@@ -49,11 +50,17 @@ func LoadServerConfig() ServerConfig {
 
 	airGapMode := getEnvBool("AIR_GAP_MODE", false)
 
+	retentionDays := getEnvInt("RETENTION_DAYS", 90)
+	if retentionDays < 1 {
+		retentionDays = 90
+	}
+
 	return ServerConfig{
 		Environment:        env,
 		SessionMaxAge:      sessionMaxAge,
 		SessionIdleTimeout: sessionIdleTimeout,
 		AirGapMode:         airGapMode,
+		RetentionDays:      retentionDays,
 	}
 }
 
