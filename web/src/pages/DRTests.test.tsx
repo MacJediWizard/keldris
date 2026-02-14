@@ -67,9 +67,7 @@ describe('DRTests', () => {
 		renderPage();
 		expect(screen.getByText('No DR tests')).toBeInTheDocument();
 		expect(
-			screen.getByText(
-				'Run a test from the DR Runbooks page to get started',
-			),
+			screen.getByText('Run a test from the DR Runbooks page to get started'),
 		).toBeInTheDocument();
 	});
 

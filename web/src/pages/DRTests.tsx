@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useDRTests, useCancelDRTest } from '../hooks/useDRTests';
+import { useCancelDRTest, useDRTests } from '../hooks/useDRTests';
 import type { DRTest, DRTestStatus } from '../lib/types';
 import { formatDate, formatDateTime, formatDuration } from '../lib/utils';
 
@@ -111,9 +111,7 @@ function TestRow({ test, onCancel, isCancelling }: TestRowProps) {
 					'Not started'
 				)}
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
-				{duration ?? '-'}
-			</td>
+			<td className="px-6 py-4 text-sm text-gray-500">{duration ?? '-'}</td>
 			<td className="px-6 py-4 text-sm text-gray-500">
 				{test.actual_rto_minutes != null && (
 					<span className="mr-3">RTO: {test.actual_rto_minutes}m</span>
@@ -137,10 +135,7 @@ function TestRow({ test, onCancel, isCancelling }: TestRowProps) {
 					</button>
 				)}
 				{test.notes && (
-					<span
-						title={test.notes}
-						className="ml-2 text-gray-400 cursor-help"
-					>
+					<span title={test.notes} className="ml-2 text-gray-400 cursor-help">
 						<svg
 							aria-hidden="true"
 							className="w-4 h-4 inline"
@@ -163,14 +158,14 @@ function TestRow({ test, onCancel, isCancelling }: TestRowProps) {
 }
 
 export function DRTests() {
-	const [statusFilter, setStatusFilter] = useState<DRTestStatus | 'all'>(
-		'all',
-	);
+	const [statusFilter, setStatusFilter] = useState<DRTestStatus | 'all'>('all');
 	const [dateFilter, setDateFilter] = useState<string>('all');
 
-	const { data: tests, isLoading, isError } = useDRTests(
-		statusFilter !== 'all' ? { status: statusFilter } : undefined,
-	);
+	const {
+		data: tests,
+		isLoading,
+		isError,
+	} = useDRTests(statusFilter !== 'all' ? { status: statusFilter } : undefined);
 	const cancelTest = useCancelDRTest();
 
 	const filteredTests = tests?.filter((test) => {
@@ -192,10 +187,8 @@ export function DRTests() {
 	const passedCount =
 		tests?.filter((t) => t.status === 'passed' || t.status === 'completed')
 			.length ?? 0;
-	const failedCount =
-		tests?.filter((t) => t.status === 'failed').length ?? 0;
-	const runningCount =
-		tests?.filter((t) => t.status === 'running').length ?? 0;
+	const failedCount = tests?.filter((t) => t.status === 'failed').length ?? 0;
+	const runningCount = tests?.filter((t) => t.status === 'running').length ?? 0;
 
 	const handleCancel = (id: string) => {
 		cancelTest.mutate({ id });
