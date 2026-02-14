@@ -13,7 +13,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/status-in%20development-yellow" alt="Status">
   <img src="https://img.shields.io/github/license/MacJediWizard/keldris" alt="License">
-  <img src="https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go" alt="Go">
+  <img src="https://img.shields.io/badge/Go-1.25.7+-00ADD8?logo=go" alt="Go">
   <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" alt="React">
 </p>
 
@@ -109,8 +109,8 @@ I wanted a backup solution that could:
 
 | Component | Technology |
 |-----------|------------|
-| **Server** | Go 1.24+ / Gin / PostgreSQL |
-| **Agent** | Go 1.24+ / Cobra |
+| **Server** | Go 1.25.7+ / Gin / PostgreSQL |
+| **Agent** | Go 1.25.7+ / Cobra |
 | **Frontend** | React 18 / TypeScript / Vite / Tailwind CSS |
 | **Authentication** | OIDC (coreos/go-oidc) |
 | **Backup Engine** | Restic |
