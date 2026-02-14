@@ -60,12 +60,8 @@ function getStatusColor(status: DRTestStatus) {
 }
 
 function getDurationMinutes(test: DRTest): string | null {
-	if (!test.started_at || !test.completed_at) return null;
-	const start = new Date(test.started_at).getTime();
-	const end = new Date(test.completed_at).getTime();
-	const diffMs = end - start;
-	if (diffMs < 0) return null;
-	return formatDuration(diffMs);
+	if (!test.started_at) return null;
+	return formatDuration(test.started_at, test.completed_at);
 }
 
 interface TestRowProps {
