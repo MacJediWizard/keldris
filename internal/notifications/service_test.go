@@ -128,11 +128,13 @@ func (m *mockNotificationStore) getLogs() []*models.NotificationLog {
 	return result
 }
 
-// newTestWebhookSenderFactory returns a webhook sender factory that skips URL validation for local test servers.
+// newTestWebhookSenderFactory returns a webhook sender factory that skips URL
+// validation and IP blocking so it can reach local httptest servers on 127.0.0.1.
 func newTestWebhookSenderFactory() func(zerolog.Logger) *WebhookSender {
 	return func(logger zerolog.Logger) *WebhookSender {
 		s := NewWebhookSender(logger)
 		s.validateURL = func(_ string) error { return nil }
+		s.client.Transport = http.DefaultTransport
 		return s
 	}
 }
