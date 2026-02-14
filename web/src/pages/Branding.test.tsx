@@ -51,9 +51,7 @@ describe('Branding page', () => {
 	it('renders the page description', () => {
 		renderWithProviders(<Branding />);
 		expect(
-			screen.getByText(
-				'Customize the appearance of your Keldris instance.',
-			),
+			screen.getByText('Customize the appearance of your Keldris instance.'),
 		).toBeInTheDocument();
 	});
 
