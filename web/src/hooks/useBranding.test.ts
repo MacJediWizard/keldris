@@ -1,7 +1,11 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createWrapper } from '../test/helpers';
-import { useBranding, useResetBranding, useUpdateBranding } from './useBranding';
+import {
+	useBranding,
+	useResetBranding,
+	useUpdateBranding,
+} from './useBranding';
 
 vi.mock('../lib/api', () => ({
 	brandingApi: {
@@ -79,9 +83,7 @@ describe('useUpdateBranding', () => {
 	});
 
 	it('handles update error', async () => {
-		vi.mocked(brandingApi.update).mockRejectedValue(
-			new Error('Update failed'),
-		);
+		vi.mocked(brandingApi.update).mockRejectedValue(new Error('Update failed'));
 
 		const { result } = renderHook(() => useUpdateBranding(), {
 			wrapper: createWrapper(),
