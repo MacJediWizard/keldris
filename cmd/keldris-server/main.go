@@ -68,6 +68,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/maintenance"
 	"github.com/rs/zerolog"
 )
 
@@ -216,6 +217,13 @@ func run() int {
 			logger.Fatal().Err(err).Msg("HTTP server error")
 		}
 	}()
+
+	// Start retention cleanup scheduler
+	retentionScheduler := maintenance.NewRetentionScheduler(database, cfg.RetentionDays, logger)
+	if err := retentionScheduler.Start(); err != nil {
+		logger.Error().Err(err).Msg("Failed to start retention scheduler")
+	}
+	defer retentionScheduler.Stop()
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)
