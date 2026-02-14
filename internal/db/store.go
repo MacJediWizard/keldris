@@ -7148,3 +7148,100 @@ func (db *DB) GetLatestOfflineLicense(ctx context.Context, orgID uuid.UUID) (*mo
 	}
 	return &lic, nil
 }
+
+// Docker Backup methods
+
+// GetDockerContainers returns Docker containers for the given agent.
+// This queries the agent's reported container state from the database.
+func (db *DB) GetDockerContainers(ctx context.Context, orgID uuid.UUID, agentID uuid.UUID) ([]models.DockerContainer, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT container_id, name, image, status, state, created, ports
+		FROM docker_containers
+		WHERE org_id = $1 AND agent_id = $2
+		ORDER BY name ASC
+	`, orgID, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("get docker containers: %w", err)
+	}
+	defer rows.Close()
+
+	var containers []models.DockerContainer
+	for rows.Next() {
+		var c models.DockerContainer
+		var portsJSON []byte
+		if err := rows.Scan(&c.ID, &c.Name, &c.Image, &c.Status, &c.State, &c.Created, &portsJSON); err != nil {
+			return nil, fmt.Errorf("scan docker container: %w", err)
+		}
+		if portsJSON != nil {
+			if err := json.Unmarshal(portsJSON, &c.Ports); err != nil {
+				return nil, fmt.Errorf("unmarshal ports: %w", err)
+			}
+		}
+		containers = append(containers, c)
+	}
+	return containers, nil
+}
+
+// GetDockerVolumes returns Docker volumes for the given agent.
+func (db *DB) GetDockerVolumes(ctx context.Context, orgID uuid.UUID, agentID uuid.UUID) ([]models.DockerVolume, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT name, driver, mountpoint, size_bytes, created
+		FROM docker_volumes
+		WHERE org_id = $1 AND agent_id = $2
+		ORDER BY name ASC
+	`, orgID, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("get docker volumes: %w", err)
+	}
+	defer rows.Close()
+
+	var volumes []models.DockerVolume
+	for rows.Next() {
+		var v models.DockerVolume
+		if err := rows.Scan(&v.Name, &v.Driver, &v.Mountpoint, &v.SizeBytes, &v.Created); err != nil {
+			return nil, fmt.Errorf("scan docker volume: %w", err)
+		}
+		volumes = append(volumes, v)
+	}
+	return volumes, nil
+}
+
+// GetDockerDaemonStatus returns the Docker daemon status for the given agent.
+func (db *DB) GetDockerDaemonStatus(ctx context.Context, orgID uuid.UUID, agentID uuid.UUID) (*models.DockerDaemonStatus, error) {
+	var s models.DockerDaemonStatus
+	err := db.Pool.QueryRow(ctx, `
+		SELECT available, version, container_count, volume_count, server_os, docker_root_dir, storage_driver
+		FROM docker_daemon_status
+		WHERE org_id = $1 AND agent_id = $2
+	`, orgID, agentID).Scan(&s.Available, &s.Version, &s.ContainerCount, &s.VolumeCount, &s.ServerOS, &s.DockerRootDir, &s.StorageDriver)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return &models.DockerDaemonStatus{Available: false}, nil
+		}
+		return nil, fmt.Errorf("get docker daemon status: %w", err)
+	}
+	return &s, nil
+}
+
+// CreateDockerBackup creates a new Docker backup job.
+func (db *DB) CreateDockerBackup(ctx context.Context, orgID uuid.UUID, req *models.DockerBackupParams) (*models.DockerBackupResult, error) {
+	containerIDs, err := json.Marshal(req.ContainerIDs)
+	if err != nil {
+		return nil, fmt.Errorf("marshal container ids: %w", err)
+	}
+	volumeNames, err := json.Marshal(req.VolumeNames)
+	if err != nil {
+		return nil, fmt.Errorf("marshal volume names: %w", err)
+	}
+
+	var result models.DockerBackupResult
+	err = db.Pool.QueryRow(ctx, `
+		INSERT INTO docker_backups (org_id, agent_id, repository_id, container_ids, volume_names, status, created_at)
+		VALUES ($1, $2, $3, $4, $5, 'queued', NOW())
+		RETURNING id, status, created_at
+	`, orgID, req.AgentID, req.RepositoryID, containerIDs, volumeNames).Scan(&result.ID, &result.Status, &result.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create docker backup: %w", err)
+	}
+	return &result, nil
+}
