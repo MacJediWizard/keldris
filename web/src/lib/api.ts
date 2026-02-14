@@ -79,6 +79,13 @@ import type {
 	DailyBackupStatsResponse,
 	DashboardStats,
 	DefaultPricingResponse,
+	DockerBackupRequest,
+	DockerBackupResponse,
+	DockerContainer,
+	DockerContainersResponse,
+	DockerDaemonStatus,
+	DockerVolume,
+	DockerVolumesResponse,
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
@@ -1667,6 +1674,34 @@ export const slaPoliciesApi = {
 		);
 		return response.history ?? [];
 	},
+};
+
+// Docker Backup API
+export const dockerBackupApi = {
+	listContainers: async (agentId: string): Promise<DockerContainer[]> => {
+		const response = await fetchApi<DockerContainersResponse>(
+			`/docker/containers?agent_id=${agentId}`,
+		);
+		return response.containers ?? [];
+	},
+
+	listVolumes: async (agentId: string): Promise<DockerVolume[]> => {
+		const response = await fetchApi<DockerVolumesResponse>(
+			`/docker/volumes?agent_id=${agentId}`,
+		);
+		return response.volumes ?? [];
+	},
+
+	triggerBackup: async (
+		data: DockerBackupRequest,
+	): Promise<DockerBackupResponse> =>
+		fetchApi<DockerBackupResponse>('/docker/backup', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getDaemonStatus: async (agentId: string): Promise<DockerDaemonStatus> =>
+		fetchApi<DockerDaemonStatus>(`/docker/status?agent_id=${agentId}`),
 };
 
 // Air-Gap API
