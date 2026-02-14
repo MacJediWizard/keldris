@@ -195,6 +195,7 @@ func TestWebhookSender_URLNotInLogs(t *testing.T) {
 
 	sender := NewWebhookSender(logger)
 	sender.validateURL = func(_ string) error { return nil }
+	sender.client.Transport = http.DefaultTransport
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")
@@ -243,6 +244,7 @@ func TestWebhookSender_URLNotInLogsRetry(t *testing.T) {
 
 	sender := NewWebhookSender(logger)
 	sender.validateURL = func(_ string) error { return nil }
+	sender.client.Transport = http.DefaultTransport
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")
