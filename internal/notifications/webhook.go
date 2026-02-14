@@ -61,7 +61,7 @@ func (w *WebhookSender) SetAirGapMode(enabled bool) {
 // URLs should be validated with ValidateWebhookURL before being stored.
 func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPayload, secret string) error {
 	if w.airGapMode {
-		w.logger.Warn().Str("url", url).Msg("webhook blocked: air-gap mode enabled")
+		w.logger.Warn().Msg("webhook blocked: air-gap mode enabled")
 		return ErrAirGapBlocked
 	}
 
@@ -85,7 +85,6 @@ func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPay
 			}
 			w.logger.Debug().
 				Int("attempt", attempt+1).
-				Str("url", url).
 				Msg("retrying webhook")
 		}
 
@@ -119,7 +118,6 @@ func (w *WebhookSender) doSend(ctx context.Context, url string, body []byte, sec
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		w.logger.Info().
-			Str("url", url).
 			Int("status", resp.StatusCode).
 			Msg("webhook notification sent")
 		return nil

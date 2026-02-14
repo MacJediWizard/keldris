@@ -424,5 +424,29 @@
     "uploading": "Uploading...",
     "licenseUploaded": "License uploaded successfully.",
     "failedToLoadStatus": "Failed to load air-gap status"
+  },
+  "dockerBackup": {
+    "title": "Docker Backup",
+    "subtitle": "Back up Docker containers and volumes",
+    "selectAgent": "Agent",
+    "chooseAgent": "Select an agent...",
+    "repositoryId": "Repository ID",
+    "repositoryIdPlaceholder": "Enter repository ID",
+    "containers": "Containers",
+    "volumes": "Volumes",
+    "image": "Image",
+    "driver": "Driver",
+    "size": "Size",
+    "select": "Select",
+    "triggerBackup": "Start Backup",
+    "backupQueued": "Backup queued successfully",
+    "backupError": "Failed to start backup",
+    "daemonRunning": "Docker is running",
+    "daemonStopped": "Docker is not running",
+    "statusError": "Failed to get Docker status",
+    "containersError": "Failed to load containers",
+    "volumesError": "Failed to load volumes",
+    "noContainers": "No containers found",
+    "noVolumes": "No volumes found"
   }
 }
