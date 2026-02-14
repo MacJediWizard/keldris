@@ -25,4 +25,8 @@ WORKDIR /app
 COPY --from=builder /keldris-agent /usr/local/bin/keldris-agent
 
 USER keldris
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD pgrep keldris-agent || exit 1
+
 ENTRYPOINT ["/usr/local/bin/keldris-agent"]
