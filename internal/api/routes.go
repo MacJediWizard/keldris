@@ -228,6 +228,11 @@ func NewRouter(
 	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
 	maintenanceHandler.RegisterRoutes(apiV1)
 
+	// Docker backup routes (Pro+)
+	dockerBackupGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDockerBackup, logger))
+	dockerBackupHandler := handlers.NewDockerBackupHandler(database, logger)
+	dockerBackupHandler.RegisterRoutes(dockerBackupGroup)
+
 	// Branding routes (Enterprise - White Label)
 	brandingGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureWhiteLabel, logger))
 	brandingHandler := handlers.NewBrandingHandler(database, logger)

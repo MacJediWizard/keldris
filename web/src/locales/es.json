@@ -424,5 +424,29 @@
     "uploading": "Subiendo...",
     "licenseUploaded": "Licencia subida exitosamente.",
     "failedToLoadStatus": "Error al cargar estado de air-gap"
+  },
+  "dockerBackup": {
+    "title": "Respaldo Docker",
+    "subtitle": "Respaldar contenedores y volúmenes Docker",
+    "selectAgent": "Agente",
+    "chooseAgent": "Seleccionar un agente...",
+    "repositoryId": "ID del Repositorio",
+    "repositoryIdPlaceholder": "Ingresar ID del repositorio",
+    "containers": "Contenedores",
+    "volumes": "Volúmenes",
+    "image": "Imagen",
+    "driver": "Controlador",
+    "size": "Tamaño",
+    "select": "Seleccionar",
+    "triggerBackup": "Iniciar Respaldo",
+    "backupQueued": "Respaldo en cola exitosamente",
+    "backupError": "Error al iniciar respaldo",
+    "daemonRunning": "Docker está en ejecución",
+    "daemonStopped": "Docker no está en ejecución",
+    "statusError": "Error al obtener estado de Docker",
+    "containersError": "Error al cargar contenedores",
+    "volumesError": "Error al cargar volúmenes",
+    "noContainers": "No se encontraron contenedores",
+    "noVolumes": "No se encontraron volúmenes"
   }
 }
