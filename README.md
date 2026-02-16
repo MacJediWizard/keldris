@@ -19,8 +19,6 @@
 
 ---
 
-> ⚠️ **Active development** - Core features work but still polishing. Star the repo to follow along!
-
 ## Screenshots
 
 <p align="center">
@@ -119,19 +117,64 @@ I wanted a backup solution that could:
 
 ---
 
-## Getting started
+## Getting Started
 
-Not ready for general use yet. If you want to poke around:
+### Prerequisites
+
+- Docker and Docker Compose v2+
+- An OIDC provider (Authentik, Keycloak, Okta, Auth0, Azure AD, or Google Workspace)
+
+### Quick Start (Docker)
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/MacJediWizard/keldris.git
+   cd keldris
+   ```
+
+2. Configure environment:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Generate security keys and add to `.env`:
+   ```bash
+   openssl rand -base64 32  # Use for SESSION_SECRET
+   openssl rand -base64 32  # Use for ENCRYPTION_KEY
+   ```
+
+4. Edit `.env` and configure your OIDC provider:
+   ```
+   OIDC_ISSUER=https://your-auth-server/application/o/keldris/
+   OIDC_CLIENT_ID=your-client-id
+   OIDC_CLIENT_SECRET=your-client-secret
+   OIDC_REDIRECT_URL=http://localhost:8080/auth/callback
+   ```
+
+   See [docs/oidc-setup.md](docs/oidc-setup.md) for provider-specific instructions.
+
+5. Start the services:
+   ```bash
+   cd docker
+   docker compose up -d
+   ```
+
+6. Access the UI at [http://localhost:8080](http://localhost:8080)
+
+### Using Pre-built Images
+
+Pull from GitHub Container Registry instead of building from source:
 
 ```bash
-git clone https://github.com/MacJediWizard/keldris.git
-cd keldris
-cp .env.example .env
-# Edit .env with your OIDC settings
-docker-compose up -d
+docker pull ghcr.io/macjediwizard/keldris-server:1.0.0-beta.1
+docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.1
 ```
 
-You'll need Docker, Go 1.25.7+ (for security patches), PostgreSQL 15+, and an OIDC provider.
+See [docker/docker-compose.prod.yml](docker/docker-compose.prod.yml) for production deployment with pre-built images.
+
+### Installing the Agent
+
+See [docs/agent-installation.md](docs/agent-installation.md) for Linux, macOS, and Windows installation.
 
 ---
 
