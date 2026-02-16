@@ -1,3 +1,7 @@
+# Development compose file — builds images from source.
+# Usage: docker compose up -d
+# For pre-built images, use: docker compose -f docker-compose.images.yml up -d
+
 services:
   server:
     build:
