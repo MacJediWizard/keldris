@@ -1,0 +1,42 @@
+# Production compose file — uses pre-built images from GHCR.
+# Usage: docker compose -f docker-compose.images.yml up -d
+# For building from source, use: docker compose up -d
+
+services:
+  server:
+    image: ghcr.io/macjediwizard/keldris-server:1.0.0-beta.1
+    env_file: ../.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: keldris
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-keldris}
+      POSTGRES_DB: keldris
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keldris"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  agent:
+    image: ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.1
+    profiles: ["agent"]
+    env_file: ../.env
+    volumes:
+      - /path/to/backup:/data:ro
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
