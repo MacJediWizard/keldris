@@ -7,13 +7,13 @@ This guide covers how to install and configure the Keldris backup agent on Linux
 ### Linux (Debian, Ubuntu, RHEL, etc.)
 
 ```bash
-curl -sSL https://releases.keldris.io/install-linux.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/MacJediWizard/keldris/main/scripts/install-linux.sh | sudo bash
 ```
 
 Or download and run manually:
 
 ```bash
-curl -O https://releases.keldris.io/install-linux.sh
+curl -O https://raw.githubusercontent.com/MacJediWizard/keldris/main/scripts/install-linux.sh
 chmod +x install-linux.sh
 sudo ./install-linux.sh
 ```
@@ -21,13 +21,13 @@ sudo ./install-linux.sh
 ### macOS
 
 ```bash
-curl -sSL https://releases.keldris.io/install-macos.sh | bash
+curl -sSL https://raw.githubusercontent.com/MacJediWizard/keldris/main/scripts/install-macos.sh | bash
 ```
 
 Or download and run manually:
 
 ```bash
-curl -O https://releases.keldris.io/install-macos.sh
+curl -O https://raw.githubusercontent.com/MacJediWizard/keldris/main/scripts/install-macos.sh
 chmod +x install-macos.sh
 ./install-macos.sh
 ```
@@ -35,14 +35,24 @@ chmod +x install-macos.sh
 ### Windows (PowerShell as Administrator)
 
 ```powershell
-irm https://releases.keldris.io/install-windows.ps1 | iex
+irm https://raw.githubusercontent.com/MacJediWizard/keldris/main/scripts/install-windows.ps1 | iex
 ```
 
 Or download and run manually:
 
 ```powershell
-Invoke-WebRequest -Uri https://releases.keldris.io/install-windows.ps1 -OutFile install-windows.ps1
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/MacJediWizard/keldris/main/scripts/install-windows.ps1 -OutFile install-windows.ps1
 .\install-windows.ps1 -Action Install
+```
+
+### Docker
+
+```bash
+docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.1
+docker run -d --name keldris-agent \
+  -e KELDRIS_SERVER_URL=https://your-keldris-server.com \
+  -v /etc/keldris:/etc/keldris \
+  ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.1
 ```
 
 ## Post-Installation Setup
@@ -67,15 +77,25 @@ If you prefer to install manually without the installer scripts:
 
 ### 1. Download the Binary
 
-Download the appropriate binary for your platform from the releases page:
+Download the appropriate binary for your platform from [GitHub Releases](https://github.com/MacJediWizard/keldris/releases):
 
 | Platform | Architecture | Download |
 |----------|-------------|----------|
-| Linux | x86_64 | `keldris-agent-linux-amd64` |
-| Linux | ARM64 | `keldris-agent-linux-arm64` |
-| macOS | Intel | `keldris-agent-darwin-amd64` |
-| macOS | Apple Silicon | `keldris-agent-darwin-arm64` |
-| Windows | x86_64 | `keldris-agent-windows-amd64.exe` |
+| Linux | x86_64 | [keldris-agent-linux-amd64](https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-linux-amd64) |
+| Linux | ARM64 | [keldris-agent-linux-arm64](https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-linux-arm64) |
+| macOS | Intel | [keldris-agent-darwin-amd64](https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-darwin-amd64) |
+| macOS | Apple Silicon | [keldris-agent-darwin-arm64](https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-darwin-arm64) |
+| Windows | x86_64 | [keldris-agent-windows-amd64.exe](https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-windows-amd64.exe) |
+
+Example download with curl:
+
+```bash
+# Linux x86_64
+curl -Lo keldris-agent https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-linux-amd64
+
+# macOS Apple Silicon
+curl -Lo keldris-agent https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-darwin-arm64
+```
 
 ### 2. Install the Binary
 
@@ -91,6 +111,27 @@ Move the executable to `C:\Program Files\Keldris\keldris-agent.exe` and add the 
 ### 3. Configure Auto-Start (Optional)
 
 See the platform-specific sections below for setting up automatic startup.
+
+## Build from Source
+
+Requires Go 1.25.7+ installed.
+
+```bash
+git clone https://github.com/MacJediWizard/keldris.git
+cd keldris
+go build -o keldris-agent ./cmd/keldris-agent
+sudo mv keldris-agent /usr/local/bin/
+```
+
+To cross-compile for a different platform:
+
+```bash
+# Linux ARM64
+GOOS=linux GOARCH=arm64 go build -o keldris-agent-linux-arm64 ./cmd/keldris-agent
+
+# Windows
+GOOS=windows GOARCH=amd64 go build -o keldris-agent-windows-amd64.exe ./cmd/keldris-agent
+```
 
 ## Platform-Specific Details
 
@@ -256,7 +297,17 @@ The agent supports the following environment variables:
 
 ## Uninstallation
 
+### Docker
+
+```bash
+docker stop keldris-agent
+docker rm keldris-agent
+docker rmi ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.1
+```
+
 ### Linux
+
+If you used the install script:
 
 ```bash
 sudo ./install-linux.sh uninstall
@@ -275,6 +326,8 @@ sudo rm /usr/local/bin/keldris-agent
 
 ### macOS
 
+If you used the install script:
+
 ```bash
 ./install-macos.sh uninstall
 ```
@@ -289,6 +342,8 @@ sudo rm /usr/local/bin/keldris-agent
 ```
 
 ### Windows (PowerShell as Administrator)
+
+If you used the install script:
 
 ```powershell
 .\install-windows.ps1 -Action Uninstall
