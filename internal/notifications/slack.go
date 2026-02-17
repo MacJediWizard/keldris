@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -27,7 +28,12 @@ type SlackSender struct {
 // NewSlackSender creates a new Slack sender.
 func NewSlackSender(logger zerolog.Logger) *SlackSender {
 	return &SlackSender{
-		client: &http.Client{},
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				DialContext: ValidatingDialer(),
+			},
+		},
 		logger: logger.With().Str("component", "slack_sender").Logger(),
 	}
 }

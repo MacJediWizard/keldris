@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -44,7 +45,12 @@ type PagerDutySender struct {
 // NewPagerDutySender creates a new PagerDuty sender.
 func NewPagerDutySender(logger zerolog.Logger) *PagerDutySender {
 	return &PagerDutySender{
-		client:   &http.Client{},
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				DialContext: ValidatingDialer(),
+			},
+		},
 		logger:   logger.With().Str("component", "pagerduty_sender").Logger(),
 		eventURL: pagerDutyEventsURL,
 	}

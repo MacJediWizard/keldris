@@ -35,6 +35,7 @@ func TestPagerDutySender_Send(t *testing.T) {
 	defer server.Close()
 
 	sender := NewPagerDutySender(zerolog.Nop())
+	sender.client = &http.Client{}
 	sender.eventURL = server.URL
 
 	event := PagerDutyEvent{
@@ -76,6 +77,7 @@ func TestPagerDutySender_SendError(t *testing.T) {
 	defer server.Close()
 
 	sender := NewPagerDutySender(zerolog.Nop())
+	sender.client = &http.Client{}
 	sender.eventURL = server.URL
 
 	event := PagerDutyEvent{Summary: "Test", Source: "test", Severity: "info"}
@@ -83,6 +85,30 @@ func TestPagerDutySender_SendError(t *testing.T) {
 	err := sender.Send(context.Background(), "key", event)
 	if err == nil {
 		t.Fatal("expected error for non-202 response")
+	}
+}
+
+func TestPagerDutySender_SSRFProtection(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"localhost", "http://127.0.0.1:8080/v2/enqueue"},
+		{"private 10.x", "http://10.0.0.1:8080/v2/enqueue"},
+		{"private 172.16.x", "http://172.16.0.1:8080/v2/enqueue"},
+		{"private 192.168.x", "http://192.168.1.1:8080/v2/enqueue"},
+		{"link-local", "http://169.254.1.1:8080/v2/enqueue"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sender := NewPagerDutySender(zerolog.Nop())
+			sender.eventURL = tt.url
+			event := PagerDutyEvent{Summary: "Test", Source: "test", Severity: "info"}
+			err := sender.Send(context.Background(), "key", event)
+			if err == nil {
+				t.Error("expected SSRF protection to block request to private IP")
+			}
+		})
 	}
 }
 
