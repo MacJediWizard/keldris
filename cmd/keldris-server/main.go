@@ -208,6 +208,8 @@ func run() int {
 		Addr:              listenAddr,
 		Handler:           router.Engine,
 		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
 	}
 
 	// Start server in background
