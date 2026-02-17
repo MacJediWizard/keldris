@@ -179,8 +179,8 @@ I wanted a backup solution that could:
 Pull from GitHub Container Registry instead of building from source:
 
 ```bash
-docker pull ghcr.io/macjediwizard/keldris-server:1.0.0-beta.2
-docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.2
+docker pull ghcr.io/macjediwizard/keldris-server:1.0.0-beta.3
+docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.3
 ```
 
 See [docker/docker-compose.images.yml](docker/docker-compose.images.yml) for production deployment with pre-built images.
