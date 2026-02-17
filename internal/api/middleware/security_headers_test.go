@@ -48,26 +48,54 @@ func TestSecurityHeaders_AllHeadersSet(t *testing.T) {
 	}
 }
 
-func TestSecurityHeaders_HSTSOnlyWithTLS(t *testing.T) {
-	mw := SecurityHeaders(config.EnvDevelopment)
-
-	r := gin.New()
-	r.Use(mw)
-	r.GET("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"ok": true})
-	})
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/test", nil)
-	req.TLS = &tls.ConnectionState{}
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", w.Code)
+func TestSecurityHeaders_HSTS(t *testing.T) {
+	tests := []struct {
+		name     string
+		env      config.Environment
+		tls      bool
+		proto    string // X-Forwarded-Proto header value
+		wantHSTS bool
+	}{
+		{"TLS direct connection", config.EnvDevelopment, true, "", true},
+		{"X-Forwarded-Proto https", config.EnvDevelopment, false, "https", true},
+		{"production without TLS", config.EnvProduction, false, "", true},
+		{"staging without TLS", config.EnvStaging, false, "", true},
+		{"development without TLS", config.EnvDevelopment, false, "", false},
+		{"X-Forwarded-Proto http in dev", config.EnvDevelopment, false, "http", false},
 	}
 
-	if got := w.Header().Get("Strict-Transport-Security"); got != "max-age=31536000; includeSubDomains" {
-		t.Errorf("expected HSTS header with TLS, got %q", got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mw := SecurityHeaders(tt.env)
+
+			r := gin.New()
+			r.Use(mw)
+			r.GET("/test", func(c *gin.Context) {
+				c.JSON(http.StatusOK, gin.H{"ok": true})
+			})
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", "/test", nil)
+			if tt.tls {
+				req.TLS = &tls.ConnectionState{}
+			}
+			if tt.proto != "" {
+				req.Header.Set("X-Forwarded-Proto", tt.proto)
+			}
+			r.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("expected status 200, got %d", w.Code)
+			}
+
+			got := w.Header().Get("Strict-Transport-Security")
+			if tt.wantHSTS && got != "max-age=31536000; includeSubDomains" {
+				t.Errorf("expected HSTS header, got %q", got)
+			}
+			if !tt.wantHSTS && got != "" {
+				t.Errorf("expected no HSTS header, got %q", got)
+			}
+		})
 	}
 }
 

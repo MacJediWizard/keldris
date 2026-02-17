@@ -59,8 +59,9 @@ func SecurityHeaders(env config.Environment) gin.HandlerFunc {
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
 		c.Header("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 
-		// HSTS - only in production with TLS
-		if c.Request.TLS != nil {
+		// HSTS - set when TLS is detected directly, via reverse proxy, or in production/staging
+		isHTTPS := c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https"
+		if isHTTPS || env == config.EnvProduction || env == config.EnvStaging {
 			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
 
