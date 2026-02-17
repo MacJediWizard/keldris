@@ -99,7 +99,7 @@ DATABASE_URL=postgresql://keldris:PASSWORD@db:5432/keldris?sslmode=require
 OIDC_ISSUER=https://auth.example.com
 OIDC_CLIENT_ID=keldris
 OIDC_CLIENT_SECRET=<from-oidc-provider>
-OIDC_REDIRECT_URL=https://backups.example.com/api/v1/auth/callback
+OIDC_REDIRECT_URL=https://backups.example.com/auth/callback
 CORS_ORIGINS=https://backups.example.com
 ```
 
@@ -200,7 +200,7 @@ hostssl keldris keldris 10.0.1.10/32 scram-sha-256
 OIDC_ISSUER=https://auth.example.com/realms/keldris
 OIDC_CLIENT_ID=keldris-app
 OIDC_CLIENT_SECRET=<stored-in-secrets-manager>
-OIDC_REDIRECT_URL=https://backups.example.com/api/v1/auth/callback
+OIDC_REDIRECT_URL=https://backups.example.com/auth/callback
 ```
 
 ### Token Lifetimes

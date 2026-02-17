@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-v1.0.0--beta.1-blue" alt="Status">
+  <img src="https://img.shields.io/badge/status-v1.0.0--beta.2-blue" alt="Status">
   <img src="https://img.shields.io/github/license/MacJediWizard/keldris" alt="License">
   <img src="https://img.shields.io/badge/Go-1.25.7+-00ADD8?logo=go" alt="Go">
   <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" alt="React">
@@ -146,11 +146,17 @@ I wanted a backup solution that could:
 
 3. Generate security keys and add to `.env`:
    ```bash
-   openssl rand -base64 32  # Use for SESSION_SECRET
-   openssl rand -base64 32  # Use for ENCRYPTION_KEY
+   openssl rand -base64 48  # Use for SESSION_SECRET (min 32 bytes)
+   openssl rand -hex 32     # Use for ENCRYPTION_KEY (AES-256, exactly 32 bytes)
    ```
 
-4. Edit `.env` and configure your OIDC provider:
+4. Change the default database password in `.env`:
+   ```bash
+   # Replace 'changeme' in DATABASE_URL with a strong password
+   # Also set POSTGRES_PASSWORD to the same value for docker-compose
+   ```
+
+5. Edit `.env` and configure your OIDC provider:
    ```
    OIDC_ISSUER=https://your-auth-server/application/o/keldris/
    OIDC_CLIENT_ID=your-client-id
@@ -160,21 +166,21 @@ I wanted a backup solution that could:
 
    See [docs/oidc-setup.md](docs/oidc-setup.md) for provider-specific instructions.
 
-5. Start the services:
+6. Start the services:
    ```bash
    cd docker
    docker compose up -d
    ```
 
-6. Access the UI at [http://localhost:8080](http://localhost:8080)
+7. Access the UI at [http://localhost:8080](http://localhost:8080)
 
 ### Using Pre-built Images
 
 Pull from GitHub Container Registry instead of building from source:
 
 ```bash
-docker pull ghcr.io/macjediwizard/keldris-server:1.0.0-beta.1
-docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.1
+docker pull ghcr.io/macjediwizard/keldris-server:1.0.0-beta.2
+docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.2
 ```
 
 See [docker/docker-compose.images.yml](docker/docker-compose.images.yml) for production deployment with pre-built images.
