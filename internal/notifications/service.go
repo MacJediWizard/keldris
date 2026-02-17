@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -25,17 +26,31 @@ type NotificationStore interface {
 // Service handles sending notifications for backup events.
 type Service struct {
 	store              NotificationStore
+	keyManager         *crypto.KeyManager
 	logger             zerolog.Logger
 	webhookSenderFunc  func(zerolog.Logger) *WebhookSender
 }
 
 // NewService creates a new notification service.
-func NewService(store NotificationStore, logger zerolog.Logger) *Service {
+func NewService(store NotificationStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *Service {
 	return &Service{
 		store:             store,
+		keyManager:        keyManager,
 		logger:            logger.With().Str("component", "notification_service").Logger(),
 		webhookSenderFunc: NewWebhookSender,
 	}
+}
+
+// decryptConfig decrypts an encrypted channel config and unmarshals it into dest.
+func (s *Service) decryptConfig(encrypted []byte, dest interface{}) error {
+	decrypted, err := s.keyManager.Decrypt(encrypted)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt config: %w", err)
+	}
+	if err := json.Unmarshal(decrypted, dest); err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
+	return nil
 }
 
 // BackupResult contains information about a completed backup.
@@ -145,7 +160,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 
 	case models.ChannelTypeSlack:
 		var cfg models.SlackChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse slack config")
 			return
 		}
@@ -168,7 +183,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 
 	case models.ChannelTypeWebhook:
 		var cfg models.WebhookChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse webhook config")
 			return
 		}
@@ -182,7 +197,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 
 	case models.ChannelTypePagerDuty:
 		var cfg models.PagerDutyChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse pagerduty config")
 			return
 		}
@@ -196,7 +211,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 
 	case models.ChannelTypeTeams:
 		var cfg models.TeamsChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse teams config")
 			return
 		}
@@ -219,7 +234,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 
 	case models.ChannelTypeDiscord:
 		var cfg models.DiscordChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse discord config")
 			return
 		}
@@ -250,7 +265,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 // sendBackupEmail sends a backup notification via email (extracted from original logic).
 func (s *Service) sendBackupEmail(ctx context.Context, channel *models.NotificationChannel, pref *models.NotificationPreference, result BackupResult, subject string) {
 	var emailConfig models.EmailChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
+	if err := s.decryptConfig(channel.ConfigEncrypted, &emailConfig); err != nil {
 		s.logger.Error().Err(err).
 			Str("channel_id", channel.ID.String()).
 			Msg("failed to parse email config")
@@ -326,7 +341,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 
 	case models.ChannelTypeSlack:
 		var cfg models.SlackChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse slack config")
 			return
 		}
@@ -341,7 +356,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 
 	case models.ChannelTypeWebhook:
 		var cfg models.WebhookChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse webhook config")
 			return
 		}
@@ -355,7 +370,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 
 	case models.ChannelTypePagerDuty:
 		var cfg models.PagerDutyChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse pagerduty config")
 			return
 		}
@@ -369,7 +384,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 
 	case models.ChannelTypeTeams:
 		var cfg models.TeamsChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse teams config")
 			return
 		}
@@ -384,7 +399,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 
 	case models.ChannelTypeDiscord:
 		var cfg models.DiscordChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse discord config")
 			return
 		}
@@ -407,7 +422,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 // sendAgentOfflineEmail sends an agent offline notification via email.
 func (s *Service) sendAgentOfflineEmail(ctx context.Context, channel *models.NotificationChannel, pref *models.NotificationPreference, data AgentOfflineData, orgID uuid.UUID, subject string) {
 	var emailConfig models.EmailChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
+	if err := s.decryptConfig(channel.ConfigEncrypted, &emailConfig); err != nil {
 		s.logger.Error().Err(err).
 			Str("channel_id", channel.ID.String()).
 			Msg("failed to parse email config")
@@ -490,7 +505,7 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 
 	case models.ChannelTypeSlack:
 		var cfg models.SlackChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse slack config")
 			return
 		}
@@ -506,7 +521,7 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 
 	case models.ChannelTypeWebhook:
 		var cfg models.WebhookChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse webhook config")
 			return
 		}
@@ -520,7 +535,7 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 
 	case models.ChannelTypePagerDuty:
 		var cfg models.PagerDutyChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse pagerduty config")
 			return
 		}
@@ -534,7 +549,7 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 
 	case models.ChannelTypeTeams:
 		var cfg models.TeamsChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse teams config")
 			return
 		}
@@ -550,7 +565,7 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 
 	case models.ChannelTypeDiscord:
 		var cfg models.DiscordChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &cfg); err != nil {
 			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse discord config")
 			return
 		}
@@ -574,7 +589,7 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 // sendMaintenanceEmail sends a maintenance notification via email.
 func (s *Service) sendMaintenanceEmail(ctx context.Context, channel *models.NotificationChannel, pref *models.NotificationPreference, data MaintenanceScheduledData, orgID uuid.UUID, subject string) {
 	var emailConfig models.EmailChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
+	if err := s.decryptConfig(channel.ConfigEncrypted, &emailConfig); err != nil {
 		s.logger.Error().Err(err).
 			Str("channel_id", channel.ID.String()).
 			Msg("failed to parse email config")
