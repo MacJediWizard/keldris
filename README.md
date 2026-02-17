@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-in%20development-yellow" alt="Status">
+  <img src="https://img.shields.io/badge/status-v1.0.0--beta.1-blue" alt="Status">
   <img src="https://img.shields.io/github/license/MacJediWizard/keldris" alt="License">
   <img src="https://img.shields.io/badge/Go-1.25.7+-00ADD8?logo=go" alt="Go">
   <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" alt="React">
@@ -177,7 +177,7 @@ docker pull ghcr.io/macjediwizard/keldris-server:1.0.0-beta.1
 docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.1
 ```
 
-See [docker/docker-compose.prod.yml](docker/docker-compose.prod.yml) for production deployment with pre-built images.
+See [docker/docker-compose.images.yml](docker/docker-compose.images.yml) for production deployment with pre-built images.
 
 ### Installing the Agent
 
@@ -188,6 +188,9 @@ For setup guides, see:
 - [OIDC Setup Guide](docs/oidc-setup.md) - Configure your identity provider
 - [Agent Installation](docs/agent-installation.md) - Install and configure backup agents
 - [Production Security Guide](docs/production-security.md) - Hardening for production deployments
+- [Bare Metal Restore](docs/bare-metal-restore.md) - Full system recovery procedures
+- [Network Mounts](docs/network-mounts.md) - NFS, SMB, and network storage configuration
+- [Infrastructure Requirements](docs/infrastructure-requirements.md) - Hardware and software prerequisites
 
 ---
 
