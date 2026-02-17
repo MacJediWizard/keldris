@@ -33,6 +33,10 @@ Thumbs.db
 *.dylib
 /bin/
 /keldris
+/keldris-server
+/keldris-agent
+SECURITY_AUDIT.md
+VERIFICATION.md
 
 # Test binary
 *.test
