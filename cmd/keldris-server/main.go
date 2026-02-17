@@ -59,6 +59,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -181,11 +182,22 @@ func run() int {
 		allowedOrigins = []string{}
 	}
 
+	rateLimitRequests := int64(100)
+	if v := os.Getenv("RATE_LIMIT_REQUESTS"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n > 0 {
+			rateLimitRequests = n
+		}
+	}
+	rateLimitPeriod := "1m"
+	if v := os.Getenv("RATE_LIMIT_PERIOD"); v != "" {
+		rateLimitPeriod = v
+	}
+
 	routerCfg := api.Config{
 		Environment:       cfg.Environment,
 		AllowedOrigins:    allowedOrigins,
-		RateLimitRequests: 100,
-		RateLimitPeriod:   "1m",
+		RateLimitRequests: rateLimitRequests,
+		RateLimitPeriod:   rateLimitPeriod,
 		RedisURL:          os.Getenv("REDIS_URL"),
 		Version:           Version,
 		Commit:            Commit,

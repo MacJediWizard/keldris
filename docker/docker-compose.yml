@@ -26,6 +26,10 @@ services:
       GIN_MODE: ${GIN_MODE:-release}
       REDIS_URL: ${REDIS_URL:-}
       LISTEN_ADDR: ${LISTEN_ADDR:-:8080}
+      SESSION_MAX_AGE: ${SESSION_MAX_AGE:-86400}
+      SESSION_IDLE_TIMEOUT: ${SESSION_IDLE_TIMEOUT:-1800}
+      RATE_LIMIT_REQUESTS: ${RATE_LIMIT_REQUESTS:-100}
+      RATE_LIMIT_PERIOD: ${RATE_LIMIT_PERIOD:-1m}
     depends_on:
       db:
         condition: service_healthy
