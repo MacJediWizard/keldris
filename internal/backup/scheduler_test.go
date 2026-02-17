@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/google/uuid"
@@ -1773,7 +1774,9 @@ func TestScheduler_SendBackupNotification_WithNotifier(t *testing.T) {
 	config := DefaultSchedulerConfig()
 
 	notifStore := &mockNotificationStore{}
-	notifier := notifications.NewService(notifStore, zerolog.Nop())
+	testKey := make([]byte, crypto.KeySize)
+	km, _ := crypto.NewKeyManager(testKey)
+	notifier := notifications.NewService(notifStore, km, zerolog.Nop())
 
 	scheduler := NewScheduler(store, restic, config, notifier, logger)
 
@@ -1816,7 +1819,9 @@ func TestScheduler_SendBackupNotification_WithMinimalBackup(t *testing.T) {
 	config := DefaultSchedulerConfig()
 
 	notifStore := &mockNotificationStore{}
-	notifier := notifications.NewService(notifStore, zerolog.Nop())
+	testKey := make([]byte, crypto.KeySize)
+	km, _ := crypto.NewKeyManager(testKey)
+	notifier := notifications.NewService(notifStore, km, zerolog.Nop())
 
 	scheduler := NewScheduler(store, restic, config, notifier, logger)
 
