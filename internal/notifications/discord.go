@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -19,7 +20,12 @@ type DiscordSender struct {
 // NewDiscordSender creates a new Discord sender.
 func NewDiscordSender(logger zerolog.Logger) *DiscordSender {
 	return &DiscordSender{
-		client: &http.Client{},
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				DialContext: ValidatingDialer(),
+			},
+		},
 		logger: logger.With().Str("component", "discord_sender").Logger(),
 	}
 }

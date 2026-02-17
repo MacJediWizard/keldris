@@ -35,6 +35,7 @@ func TestDiscordSender_Send(t *testing.T) {
 	defer server.Close()
 
 	sender := NewDiscordSender(zerolog.Nop())
+	sender.client = &http.Client{}
 	msg := NotificationMessage{
 		Title:     "Backup Failed: server1 - daily",
 		Body:      "**Host:** server1\n**Error:** disk full",
@@ -69,11 +70,35 @@ func TestDiscordSender_SendError(t *testing.T) {
 	defer server.Close()
 
 	sender := NewDiscordSender(zerolog.Nop())
+	sender.client = &http.Client{}
 	msg := NotificationMessage{Title: "Test", Body: "test", EventType: "test", Severity: "info"}
 
 	err := sender.Send(context.Background(), server.URL, msg)
 	if err == nil {
 		t.Fatal("expected error for non-200/204 response")
+	}
+}
+
+func TestDiscordSender_SSRFProtection(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"localhost", "http://127.0.0.1:8080/webhook"},
+		{"private 10.x", "http://10.0.0.1:8080/webhook"},
+		{"private 172.16.x", "http://172.16.0.1:8080/webhook"},
+		{"private 192.168.x", "http://192.168.1.1:8080/webhook"},
+		{"link-local", "http://169.254.1.1:8080/webhook"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sender := NewDiscordSender(zerolog.Nop())
+			msg := NotificationMessage{Title: "Test", Body: "test", EventType: "test", Severity: "info"}
+			err := sender.Send(context.Background(), tt.url, msg)
+			if err == nil {
+				t.Error("expected SSRF protection to block request to private IP")
+			}
+		})
 	}
 }
 
