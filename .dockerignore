@@ -13,5 +13,6 @@ build/
 coverage/
 tmp/
 docs/
+!docs/api/
 docker/
 .DS_Store
