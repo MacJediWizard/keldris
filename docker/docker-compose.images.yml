@@ -4,7 +4,7 @@
 
 services:
   server:
-    image: ghcr.io/macjediwizard/keldris-server:1.0.0-beta.3
+    image: ghcr.io/macjediwizard/keldris-server:1.0.0-beta.4
     env_file: ../.env
     ports:
       - "8080:8080"
@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
 
   agent:
-    image: ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.3
+    image: ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.4
     profiles: ["agent"]
     env_file: ../.env
     volumes:

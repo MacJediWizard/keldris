@@ -48,11 +48,11 @@ Invoke-WebRequest -Uri https://raw.githubusercontent.com/MacJediWizard/keldris/m
 ### Docker
 
 ```bash
-docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.3
+docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.4
 docker run -d --name keldris-agent \
   -e KELDRIS_SERVER_URL=https://your-keldris-server.com \
   -v /etc/keldris:/etc/keldris \
-  ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.3
+  ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.4
 ```
 
 ## Post-Installation Setup
@@ -302,7 +302,7 @@ The agent supports the following environment variables:
 ```bash
 docker stop keldris-agent
 docker rm keldris-agent
-docker rmi ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.3
+docker rmi ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.4
 ```
 
 ### Linux
