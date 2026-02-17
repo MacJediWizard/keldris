@@ -42,6 +42,7 @@ func CORS(allowedOrigins []string, env config.Environment) gin.HandlerFunc {
 			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			c.Header("Access-Control-Max-Age", "86400")
+			c.Header("Vary", "Origin")
 		}
 
 		// Handle preflight requests

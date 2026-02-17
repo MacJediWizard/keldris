@@ -677,7 +677,8 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		       excluded_hours, compression_level, on_mount_unavailable,
+		       docker_volumes, docker_pause_containers, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
 		ORDER BY name
@@ -713,7 +714,8 @@ func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedu
 	row := db.Pool.QueryRow(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		       excluded_hours, compression_level, on_mount_unavailable,
+		       docker_volumes, docker_pause_containers, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`, id)
@@ -772,16 +774,25 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 		mountBehavior = string(models.MountBehaviorFail)
 	}
 
+	dockerVolumesBytes, err := schedule.DockerVolumesJSON()
+	if err != nil {
+		return fmt.Errorf("marshal docker volumes: %w", err)
+	}
+
 	_, err = db.Pool.Exec(ctx, `
 		INSERT INTO schedules (id, agent_id, agent_group_id, policy_id, name, cron_expression, paths,
 		                       excludes, retention_policy, bandwidth_limit_kbps,
 		                       backup_window_start, backup_window_end, excluded_hours,
-		                       compression_level, on_mount_unavailable, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+		                       compression_level, on_mount_unavailable,
+		                       docker_volumes, docker_pause_containers,
+		                       enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 	`, schedule.ID, schedule.AgentID, schedule.AgentGroupID, schedule.PolicyID, schedule.Name,
 		schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
 		schedule.BandwidthLimitKB, windowStart, windowEnd, excludedHoursBytes,
-		schedule.CompressionLevel, mountBehavior, schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
+		schedule.CompressionLevel, mountBehavior,
+		dockerVolumesBytes, schedule.DockerPauseContainers,
+		schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create schedule: %w", err)
 	}
@@ -836,17 +847,25 @@ func (db *DB) UpdateSchedule(ctx context.Context, schedule *models.Schedule) err
 		mountBehavior = string(models.MountBehaviorFail)
 	}
 
+	dockerVolumesBytes, err := schedule.DockerVolumesJSON()
+	if err != nil {
+		return fmt.Errorf("marshal docker volumes: %w", err)
+	}
+
 	schedule.UpdatedAt = time.Now()
 	_, err = db.Pool.Exec(ctx, `
 		UPDATE schedules
 		SET policy_id = $2, name = $3, cron_expression = $4, paths = $5, excludes = $6,
 		    retention_policy = $7, bandwidth_limit_kbps = $8, backup_window_start = $9,
 		    backup_window_end = $10, excluded_hours = $11, compression_level = $12,
-		    on_mount_unavailable = $13, enabled = $14, updated_at = $15
+		    on_mount_unavailable = $13, docker_volumes = $14, docker_pause_containers = $15,
+		    enabled = $16, updated_at = $17
 		WHERE id = $1
 	`, schedule.ID, schedule.PolicyID, schedule.Name, schedule.CronExpression, pathsBytes,
 		excludesBytes, retentionBytes, schedule.BandwidthLimitKB, windowStart, windowEnd,
-		excludedHoursBytes, schedule.CompressionLevel, mountBehavior, schedule.Enabled, schedule.UpdatedAt)
+		excludedHoursBytes, schedule.CompressionLevel, mountBehavior,
+		dockerVolumesBytes, schedule.DockerPauseContainers,
+		schedule.Enabled, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update schedule: %w", err)
 	}
@@ -1003,13 +1022,14 @@ func scanSchedule(rows interface {
 	Scan(dest ...any) error
 }) (*models.Schedule, error) {
 	var s models.Schedule
-	var pathsBytes, excludesBytes, retentionBytes, excludedHoursBytes []byte
+	var pathsBytes, excludesBytes, retentionBytes, excludedHoursBytes, dockerVolumesBytes []byte
 	var agentGroupID *uuid.UUID
 	var windowStart, windowEnd, compressionLevel, mountBehavior *string
 	err := rows.Scan(
 		&s.ID, &s.AgentID, &agentGroupID, &s.PolicyID, &s.Name, &s.CronExpression,
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.BandwidthLimitKB,
 		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel, &mountBehavior,
+		&dockerVolumesBytes, &s.DockerPauseContainers,
 		&s.Enabled, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
@@ -1028,6 +1048,9 @@ func scanSchedule(rows interface {
 	}
 	if err := s.SetExcludedHours(excludedHoursBytes); err != nil {
 		return nil, fmt.Errorf("parse excluded hours: %w", err)
+	}
+	if err := s.SetDockerVolumes(dockerVolumesBytes); err != nil {
+		return nil, fmt.Errorf("parse docker volumes: %w", err)
 	}
 	s.SetBackupWindow(windowStart, windowEnd)
 	s.CompressionLevel = compressionLevel
@@ -1200,7 +1223,8 @@ func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		       excluded_hours, compression_level, on_mount_unavailable,
+		       docker_volumes, docker_pause_containers, enabled, created_at, updated_at
 		FROM schedules
 		WHERE policy_id = $1
 		ORDER BY name
@@ -2028,7 +2052,8 @@ func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression, s.paths, s.excludes,
 		       s.retention_policy, s.bandwidth_limit_kbps, s.backup_window_start, s.backup_window_end,
-		       s.excluded_hours, s.compression_level, s.on_mount_unavailable, s.enabled, s.created_at, s.updated_at
+		       s.excluded_hours, s.compression_level, s.on_mount_unavailable,
+		       s.docker_volumes, s.docker_pause_containers, s.enabled, s.created_at, s.updated_at
 		FROM schedules s
 		WHERE s.enabled = true
 		ORDER BY s.name
@@ -2055,7 +2080,8 @@ func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		       excluded_hours, compression_level, on_mount_unavailable,
+		       docker_volumes, docker_pause_containers, enabled, created_at, updated_at
 		FROM schedules
 		WHERE enabled = true
 		ORDER BY name
@@ -5873,7 +5899,8 @@ func (db *DB) GetEnabledSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) (
 		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression,
 		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps,
 		       s.backup_window_start, s.backup_window_end, s.excluded_hours,
-		       s.compression_level, s.on_mount_unavailable, s.enabled,
+		       s.compression_level, s.on_mount_unavailable,
+		       s.docker_volumes, s.docker_pause_containers, s.enabled,
 		       s.created_at, s.updated_at
 		FROM schedules s
 		JOIN agents a ON s.agent_id = a.id
@@ -6154,7 +6181,8 @@ func (db *DB) GetSchedulesByAgentGroupID(ctx context.Context, agentGroupID uuid.
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		       excluded_hours, compression_level, on_mount_unavailable,
+		       docker_volumes, docker_pause_containers, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_group_id = $1
 		ORDER BY name
@@ -7221,6 +7249,68 @@ func (db *DB) GetDockerDaemonStatus(ctx context.Context, orgID uuid.UUID, agentI
 		return nil, fmt.Errorf("get docker daemon status: %w", err)
 	}
 	return &s, nil
+}
+
+// UpsertDockerContainers replaces all Docker containers for the given agent.
+func (db *DB) UpsertDockerContainers(ctx context.Context, orgID, agentID uuid.UUID, containers []models.DockerContainer) error {
+	return db.ExecTx(ctx, func(tx pgx.Tx) error {
+		// Remove stale containers
+		if _, err := tx.Exec(ctx, `DELETE FROM docker_containers WHERE org_id = $1 AND agent_id = $2`, orgID, agentID); err != nil {
+			return fmt.Errorf("delete old containers: %w", err)
+		}
+		for _, c := range containers {
+			portsJSON, err := json.Marshal(c.Ports)
+			if err != nil {
+				return fmt.Errorf("marshal ports: %w", err)
+			}
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO docker_containers (container_id, org_id, agent_id, name, image, status, state, created, ports, updated_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+			`, c.ID, orgID, agentID, c.Name, c.Image, c.Status, c.State, c.Created, portsJSON); err != nil {
+				return fmt.Errorf("insert container: %w", err)
+			}
+		}
+		return nil
+	})
+}
+
+// UpsertDockerVolumes replaces all Docker volumes for the given agent.
+func (db *DB) UpsertDockerVolumes(ctx context.Context, orgID, agentID uuid.UUID, volumes []models.DockerVolume) error {
+	return db.ExecTx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `DELETE FROM docker_volumes WHERE org_id = $1 AND agent_id = $2`, orgID, agentID); err != nil {
+			return fmt.Errorf("delete old volumes: %w", err)
+		}
+		for _, v := range volumes {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO docker_volumes (name, org_id, agent_id, driver, mountpoint, size_bytes, created, updated_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+			`, v.Name, orgID, agentID, v.Driver, v.Mountpoint, v.SizeBytes, v.Created); err != nil {
+				return fmt.Errorf("insert volume: %w", err)
+			}
+		}
+		return nil
+	})
+}
+
+// UpsertDockerDaemonStatus creates or updates the Docker daemon status for an agent.
+func (db *DB) UpsertDockerDaemonStatus(ctx context.Context, orgID, agentID uuid.UUID, status *models.DockerDaemonStatus) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO docker_daemon_status (org_id, agent_id, available, version, container_count, volume_count, server_os, docker_root_dir, storage_driver, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+		ON CONFLICT (org_id, agent_id) DO UPDATE SET
+			available = EXCLUDED.available,
+			version = EXCLUDED.version,
+			container_count = EXCLUDED.container_count,
+			volume_count = EXCLUDED.volume_count,
+			server_os = EXCLUDED.server_os,
+			docker_root_dir = EXCLUDED.docker_root_dir,
+			storage_driver = EXCLUDED.storage_driver,
+			updated_at = NOW()
+	`, orgID, agentID, status.Available, status.Version, status.ContainerCount, status.VolumeCount, status.ServerOS, status.DockerRootDir, status.StorageDriver)
+	if err != nil {
+		return fmt.Errorf("upsert docker daemon status: %w", err)
+	}
+	return nil
 }
 
 // CreateDockerBackup creates a new Docker backup job.
