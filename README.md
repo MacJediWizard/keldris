@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-v1.0.0--beta.2-blue" alt="Status">
+  <img src="https://img.shields.io/badge/status-v1.0.0--beta.3-blue" alt="Status">
   <img src="https://img.shields.io/github/license/MacJediWizard/keldris" alt="License">
   <img src="https://img.shields.io/badge/Go-1.25.7+-00ADD8?logo=go" alt="Go">
   <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" alt="React">
