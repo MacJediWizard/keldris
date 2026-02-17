@@ -40,6 +40,7 @@ type Backup struct {
 	PostScriptOutput string       `json:"post_script_output,omitempty"`
 	PostScriptError  string       `json:"post_script_error,omitempty"`
 	CreatedAt        time.Time    `json:"created_at"`
+	DeletedAt        *time.Time   `json:"deleted_at,omitempty"`
 }
 
 // NewBackup creates a new Backup record for the given schedule, agent, and repository.

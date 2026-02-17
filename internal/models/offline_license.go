@@ -15,6 +15,6 @@ type OfflineLicense struct {
 	LicenseData []byte    `json:"-"`
 	ExpiresAt   time.Time `json:"expires_at"`
 	IssuedAt    time.Time `json:"issued_at"`
-	UploadedBy  uuid.UUID `json:"uploaded_by"`
+	UploadedBy  *uuid.UUID `json:"uploaded_by"`
 	CreatedAt   time.Time `json:"created_at"`
 }

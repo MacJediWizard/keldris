@@ -145,7 +145,7 @@ func (h *AirGapHandler) UploadLicense(c *gin.Context) {
 		LicenseData: body,
 		ExpiresAt:   lic.ExpiresAt,
 		IssuedAt:    lic.IssuedAt,
-		UploadedBy:  user.ID,
+		UploadedBy:  &user.ID,
 		CreatedAt:   time.Now(),
 	}
 

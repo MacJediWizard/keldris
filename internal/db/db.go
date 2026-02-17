@@ -174,8 +174,23 @@ func GetMigrations() ([]Migration, error) {
 
 // Migrate runs all pending database migrations.
 func (db *DB) Migrate(ctx context.Context) error {
+	// Acquire advisory lock to prevent concurrent migrations
+	const migrationLockID int64 = 7364827163 // arbitrary unique lock ID for Keldris migrations
+	conn, err := db.Pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire connection for migration lock: %w", err)
+	}
+	defer conn.Release()
+
+	if _, err := conn.Exec(ctx, "SELECT pg_advisory_lock($1)", migrationLockID); err != nil {
+		return fmt.Errorf("acquire migration advisory lock: %w", err)
+	}
+	defer func() {
+		_, _ = conn.Exec(ctx, "SELECT pg_advisory_unlock($1)", migrationLockID)
+	}()
+
 	// Create migrations tracking table if it doesn't exist
-	_, err := db.Pool.Exec(ctx, `
+	_, err = conn.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version INTEGER PRIMARY KEY,
 			name VARCHAR(255) NOT NULL,

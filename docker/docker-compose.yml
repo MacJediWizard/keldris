@@ -30,6 +30,8 @@ services:
       SESSION_IDLE_TIMEOUT: ${SESSION_IDLE_TIMEOUT:-1800}
       RATE_LIMIT_REQUESTS: ${RATE_LIMIT_REQUESTS:-100}
       RATE_LIMIT_PERIOD: ${RATE_LIMIT_PERIOD:-1m}
+      AIR_GAP_MODE: ${AIR_GAP_MODE:-false}
+      RETENTION_DAYS: ${RETENTION_DAYS:-90}
     depends_on:
       db:
         condition: service_healthy

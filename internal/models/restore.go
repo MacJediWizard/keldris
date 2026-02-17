@@ -37,6 +37,7 @@ type Restore struct {
 	ErrorMessage string        `json:"error_message,omitempty"`
 	CreatedAt    time.Time     `json:"created_at"`
 	UpdatedAt    time.Time     `json:"updated_at"`
+	DeletedAt    *time.Time    `json:"deleted_at,omitempty"`
 }
 
 // NewRestore creates a new Restore job.
