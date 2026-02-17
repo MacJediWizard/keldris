@@ -25,19 +25,27 @@ type NotificationStore interface {
 
 // Service handles sending notifications for backup events.
 type Service struct {
-	store              NotificationStore
-	keyManager         *crypto.KeyManager
-	logger             zerolog.Logger
-	webhookSenderFunc  func(zerolog.Logger) *WebhookSender
+	store                NotificationStore
+	keyManager           *crypto.KeyManager
+	logger               zerolog.Logger
+	webhookSenderFunc    func(zerolog.Logger) *WebhookSender
+	slackSenderFunc      func(zerolog.Logger) *SlackSender
+	teamsSenderFunc      func(zerolog.Logger) *TeamsSender
+	discordSenderFunc    func(zerolog.Logger) *DiscordSender
+	pagerDutySenderFunc  func(zerolog.Logger) *PagerDutySender
 }
 
 // NewService creates a new notification service.
 func NewService(store NotificationStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *Service {
 	return &Service{
-		store:             store,
-		keyManager:        keyManager,
-		logger:            logger.With().Str("component", "notification_service").Logger(),
-		webhookSenderFunc: NewWebhookSender,
+		store:               store,
+		keyManager:          keyManager,
+		logger:              logger.With().Str("component", "notification_service").Logger(),
+		webhookSenderFunc:   NewWebhookSender,
+		slackSenderFunc:     NewSlackSender,
+		teamsSenderFunc:     NewTeamsSender,
+		discordSenderFunc:   NewDiscordSender,
+		pagerDutySenderFunc: NewPagerDutySender,
 	}
 }
 
@@ -178,7 +186,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 				result.Hostname, result.ScheduleName, result.ErrorMessage)
 		}
 		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: severity}
-		sendErr := NewSlackSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		sendErr := s.slackSenderFunc(s.logger).Send(ctx, cfg.WebhookURL, msg)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
 
 	case models.ChannelTypeWebhook:
@@ -206,7 +214,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 			s.logger.Error().Err(err).Msg("failed to create notification log")
 		}
 		event := PagerDutyEvent{Summary: subject, Source: result.Hostname, Severity: severity, Group: "backup"}
-		sendErr := NewPagerDutySender(s.logger).Send(ctx, cfg.RoutingKey, event)
+		sendErr := s.pagerDutySenderFunc(s.logger).Send(ctx, cfg.RoutingKey, event)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), "pagerduty")
 
 	case models.ChannelTypeTeams:
@@ -229,7 +237,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 				result.Hostname, result.ScheduleName, result.ErrorMessage)
 		}
 		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: severity}
-		sendErr := NewTeamsSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		sendErr := s.teamsSenderFunc(s.logger).Send(ctx, cfg.WebhookURL, msg)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
 
 	case models.ChannelTypeDiscord:
@@ -252,7 +260,7 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 				result.Hostname, result.ScheduleName, result.ErrorMessage)
 		}
 		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: severity}
-		sendErr := NewDiscordSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		sendErr := s.discordSenderFunc(s.logger).Send(ctx, cfg.WebhookURL, msg)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
 
 	default:
@@ -351,7 +359,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 		}
 		body := fmt.Sprintf("*Host:* %s\n*Agent ID:* %s\n*Offline for:* %s", data.Hostname, data.AgentID, data.OfflineSince)
 		msg := NotificationMessage{Title: subject, Body: body, EventType: string(models.EventAgentOffline), Severity: "warning"}
-		sendErr := NewSlackSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		sendErr := s.slackSenderFunc(s.logger).Send(ctx, cfg.WebhookURL, msg)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
 
 	case models.ChannelTypeWebhook:
@@ -379,7 +387,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 			s.logger.Error().Err(err).Msg("failed to create notification log")
 		}
 		event := PagerDutyEvent{Summary: subject, Source: data.Hostname, Severity: "warning", Group: "agent"}
-		sendErr := NewPagerDutySender(s.logger).Send(ctx, cfg.RoutingKey, event)
+		sendErr := s.pagerDutySenderFunc(s.logger).Send(ctx, cfg.RoutingKey, event)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), "pagerduty")
 
 	case models.ChannelTypeTeams:
@@ -394,7 +402,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 		}
 		body := fmt.Sprintf("**Host:** %s\n\n**Agent ID:** %s\n\n**Offline for:** %s", data.Hostname, data.AgentID, data.OfflineSince)
 		msg := NotificationMessage{Title: subject, Body: body, EventType: string(models.EventAgentOffline), Severity: "warning"}
-		sendErr := NewTeamsSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		sendErr := s.teamsSenderFunc(s.logger).Send(ctx, cfg.WebhookURL, msg)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
 
 	case models.ChannelTypeDiscord:
@@ -409,7 +417,7 @@ func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models
 		}
 		body := fmt.Sprintf("**Host:** %s\n**Agent ID:** %s\n**Offline for:** %s", data.Hostname, data.AgentID, data.OfflineSince)
 		msg := NotificationMessage{Title: subject, Body: body, EventType: string(models.EventAgentOffline), Severity: "warning"}
-		sendErr := NewDiscordSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		sendErr := s.discordSenderFunc(s.logger).Send(ctx, cfg.WebhookURL, msg)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
 
 	default:
@@ -516,7 +524,7 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 		body := fmt.Sprintf("*%s*\n%s\n*Starts:* %s\n*Ends:* %s\n*Duration:* %s",
 			data.Title, data.Message, data.StartsAt.Format(time.RFC822), data.EndsAt.Format(time.RFC822), data.Duration)
 		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: "warning"}
-		sendErr := NewSlackSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		sendErr := s.slackSenderFunc(s.logger).Send(ctx, cfg.WebhookURL, msg)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
 
 	case models.ChannelTypeWebhook:
@@ -544,7 +552,7 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 			s.logger.Error().Err(err).Msg("failed to create notification log")
 		}
 		event := PagerDutyEvent{Summary: subject, Source: "keldris", Severity: "info", Group: "maintenance"}
-		sendErr := NewPagerDutySender(s.logger).Send(ctx, cfg.RoutingKey, event)
+		sendErr := s.pagerDutySenderFunc(s.logger).Send(ctx, cfg.RoutingKey, event)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), "pagerduty")
 
 	case models.ChannelTypeTeams:
@@ -560,7 +568,7 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 		body := fmt.Sprintf("**%s**\n\n%s\n\n**Starts:** %s\n\n**Ends:** %s\n\n**Duration:** %s",
 			data.Title, data.Message, data.StartsAt.Format(time.RFC822), data.EndsAt.Format(time.RFC822), data.Duration)
 		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: "warning"}
-		sendErr := NewTeamsSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		sendErr := s.teamsSenderFunc(s.logger).Send(ctx, cfg.WebhookURL, msg)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
 
 	case models.ChannelTypeDiscord:
@@ -576,7 +584,7 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 		body := fmt.Sprintf("**%s**\n%s\n**Starts:** %s\n**Ends:** %s\n**Duration:** %s",
 			data.Title, data.Message, data.StartsAt.Format(time.RFC822), data.EndsAt.Format(time.RFC822), data.Duration)
 		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: "warning"}
-		sendErr := NewDiscordSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		sendErr := s.discordSenderFunc(s.logger).Send(ctx, cfg.WebhookURL, msg)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
 
 	default:

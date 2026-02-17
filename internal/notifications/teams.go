@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -19,7 +20,12 @@ type TeamsSender struct {
 // NewTeamsSender creates a new Teams sender.
 func NewTeamsSender(logger zerolog.Logger) *TeamsSender {
 	return &TeamsSender{
-		client: &http.Client{},
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				DialContext: ValidatingDialer(),
+			},
+		},
 		logger: logger.With().Str("component", "teams_sender").Logger(),
 	}
 }
