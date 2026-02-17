@@ -1,7 +1,9 @@
 .git
 .github
+.claude
 node_modules
 dist
+build/
 *.log
 *.md
 !README.md
@@ -10,4 +12,6 @@ dist
 !.env.example
 coverage/
 tmp/
+docs/
+docker/
 .DS_Store

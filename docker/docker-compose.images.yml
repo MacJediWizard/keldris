@@ -12,6 +12,12 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   db:
     image: postgres:15-alpine
@@ -33,10 +39,13 @@ services:
     profiles: ["agent"]
     env_file: ../.env
     volumes:
-      - /path/to/backup:/data:ro
+      - ${BACKUP_SOURCE_PATH:-/data}:/data:ro
+      - agent_cache:/var/cache/keldris
     depends_on:
-      - server
+      server:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  agent_cache:

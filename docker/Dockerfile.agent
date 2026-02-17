@@ -18,7 +18,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
 
 # Final image - minimal with restic
 FROM alpine:3.21
-RUN apk add --no-cache ca-certificates tzdata restic
+RUN apk add --no-cache ca-certificates tzdata restic procps
 RUN adduser -D -u 1000 keldris
 WORKDIR /app
 
