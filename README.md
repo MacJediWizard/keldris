@@ -55,48 +55,56 @@ I wanted a backup solution that could:
 
 ## Features
 
-- **OIDC-first auth** - Authentik, Keycloak, whatever you use
-- **Agent-based** - Small Go binary on each machine, talks to central server
-- **Restic under the hood** - Encryption, deduplication, the good stuff
-- **Multi-tenant** - Orgs and RBAC built in
+### Backup & Recovery
+- **Restic-powered** - Encrypted, deduplicated backups you can trust
+- **Flexible scheduling** - Cron-based with configurable retention policies
+- **Full restore UI** - Browse snapshots, compare diffs, restore individual files
+- **File version history** - Track changes across snapshots
+- **Pre/post scripts** - Run custom commands before and after backups
+- **Docker backup support** - Back up Docker volumes and containers
+
+### Storage Backends
+- **Cloud** - Amazon S3, Backblaze B2, Dropbox
+- **Self-hosted** - Local disk, SFTP, REST server
+- **Network mounts** - NFS, SMB with automatic detection and handling
+
+### Authentication & Security
+- **OIDC/SSO** - Authentik, Keycloak, Okta, Auth0, Azure AD, Google Workspace
+- **SSO group sync** - Map identity provider groups to Keldris roles
+- **Role-based access control** - Fine-grained permissions per organization
+- **AES-256-GCM encryption** - Backup credentials and sensitive config encrypted at rest
+- **Session hardening** - HttpOnly/Secure/SameSite cookies with idle and absolute timeouts
+- **Security headers** - CSP, HSTS, X-Frame-Options enabled by default
+- **Rate limiting** - Per-IP with optional Redis backend for distributed deployments
+
+### Monitoring & Alerting
+- **Agent health monitoring** - Real-time status with health history
+- **Notifications** - Email, Slack, Discord, Microsoft Teams, PagerDuty
+- **SLA tracking** - Monitor backup compliance against defined targets
+- **Prometheus metrics** - `/metrics` endpoint for Grafana dashboards
+
+### Management
+- **Multi-organization** - Full multi-tenant isolation with RBAC
+- **Audit logging** - Track every administrative action for compliance
+- **Cost estimation** - Forecast storage costs across backends
+- **Backup tagging** - Organize and filter backups with custom tags
+- **Agent groups** - Logical grouping for bulk operations
+
+### Operations
+- **DR runbooks** - Auto-generated disaster recovery procedures
+- **DR test automation** - Validate your recovery plan actually works
+- **White labeling** - Custom branding for MSPs and internal deployments
+- **Air gap deployment** - Run fully offline with no internet dependency
+- **Onboarding wizard** - Guided first-run setup
+
+### Platform
+- **Cross-platform agent** - Single Go binary for Linux, macOS, and Windows
+- **Docker deployment** - Production-ready compose files with health checks
 - **Dark mode** - Because we're not animals
 
 ---
 
 ## Status
-
-### Implemented
-- Restic-powered encrypted backups with deduplication
-- Flexible cron-based scheduling with retention policies
-- OIDC authentication (tested with Authentik, Keycloak)
-- SSO group sync
-- Go agent for Linux, macOS, and Windows
-- Storage backends: S3, B2, Dropbox, local, SFTP, REST
-- Full restore UI with file browser
-- Snapshot comparison (diff between backups)
-- File version history browser
-- Agent health monitoring with history
-- Backup tagging and organization
-- Pre/post backup scripts
-- Network mount detection and handling
-- Docker backup support
-- Email notifications
-- Slack notifications
-- Discord notifications
-- Teams notifications
-- PagerDuty notifications
-- Multi-org with RBAC
-- Audit logging
-- SLA tracking
-- Cost estimation
-- Dark mode
-- White label support
-- Air gap deployment
-- First-run onboarding wizard
-- DR runbook generation
-- DR test automation
-- Prometheus metrics endpoint
-- Docker deployment
 
 ### In Progress
 - Agent CLI backup/restore commands
