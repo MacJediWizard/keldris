@@ -24,6 +24,7 @@ type ScheduleStore interface {
 	GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error)
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 	GetReplicationStatusBySchedule(ctx context.Context, scheduleID uuid.UUID) ([]*models.ReplicationStatus, error)
+	CreateBackup(ctx context.Context, backup *models.Backup) error
 }
 
 // SchedulesHandler handles schedule-related HTTP endpoints.
@@ -573,16 +574,22 @@ func (h *SchedulesHandler) Run(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual backup trigger when backup package is ready
-	// This will create a backup record and dispatch to the agent
+	backup := models.NewBackup(schedule.ID, schedule.AgentID, nil)
+	if err := h.store.CreateBackup(c.Request.Context(), backup); err != nil {
+		h.logger.Error().Err(err).Str("schedule_id", id.String()).Msg("failed to create backup record")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create backup"})
+		return
+	}
+
 	h.logger.Info().
 		Str("schedule_id", id.String()).
 		Str("agent_id", schedule.AgentID.String()).
-		Msg("manual backup run requested")
+		Str("backup_id", backup.ID.String()).
+		Msg("manual backup run triggered")
 
 	c.JSON(http.StatusAccepted, RunScheduleResponse{
-		BackupID: uuid.New(), // Placeholder - would be actual backup ID
-		Message:  "Backup run not yet implemented. Schedule exists and is accessible.",
+		BackupID: backup.ID,
+		Message:  "Backup triggered successfully",
 	})
 }
 

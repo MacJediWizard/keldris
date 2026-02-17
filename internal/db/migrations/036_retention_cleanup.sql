@@ -4,7 +4,10 @@
 -- RetentionScheduler which calls CleanupAgentHealthHistory() daily at 3:00 AM UTC
 -- with a configurable retention period (RETENTION_DAYS env var, default 90 days).
 
--- Update the cleanup function to accept a configurable retention period.
+-- Drop the old zero-parameter version from migration 016 to avoid overload ambiguity.
+DROP FUNCTION IF EXISTS cleanup_agent_health_history();
+
+-- Create the new version with configurable retention period.
 CREATE OR REPLACE FUNCTION cleanup_agent_health_history(retention_days INTEGER DEFAULT 90) RETURNS BIGINT AS $$
 DECLARE
     deleted_count BIGINT;

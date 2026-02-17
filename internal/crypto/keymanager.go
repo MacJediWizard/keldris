@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -149,6 +150,18 @@ func MasterKeyToBase64(key []byte) string {
 // MasterKeyFromBase64 decodes a base64-encoded master key.
 func MasterKeyFromBase64(encoded string) ([]byte, error) {
 	key, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode master key: %w", err)
+	}
+	if len(key) != KeySize {
+		return nil, ErrInvalidKeySize
+	}
+	return key, nil
+}
+
+// MasterKeyFromHex decodes a hex-encoded master key.
+func MasterKeyFromHex(encoded string) ([]byte, error) {
+	key, err := hex.DecodeString(encoded)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode master key: %w", err)
 	}

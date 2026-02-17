@@ -122,15 +122,15 @@ func run() int {
 	}
 
 	// Initialize crypto key manager
-	masterKeyB64 := os.Getenv("MASTER_KEY")
-	if masterKeyB64 == "" {
-		logger.Fatal().Msg("MASTER_KEY environment variable is required")
+	encryptionKeyHex := os.Getenv("ENCRYPTION_KEY")
+	if encryptionKeyHex == "" {
+		logger.Fatal().Msg("ENCRYPTION_KEY environment variable is required")
 		return 1
 	}
 
-	masterKey, err := crypto.MasterKeyFromBase64(masterKeyB64)
+	masterKey, err := crypto.MasterKeyFromHex(encryptionKeyHex)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to decode MASTER_KEY")
+		logger.Fatal().Err(err).Msg("Failed to decode ENCRYPTION_KEY")
 		return 1
 	}
 
@@ -176,8 +176,8 @@ func run() int {
 	}
 
 	// Build API router
-	allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
-	if os.Getenv("ALLOWED_ORIGINS") == "" {
+	allowedOrigins := strings.Split(os.Getenv("CORS_ORIGINS"), ",")
+	if os.Getenv("CORS_ORIGINS") == "" {
 		allowedOrigins = []string{}
 	}
 
