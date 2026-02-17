@@ -22,6 +22,10 @@ services:
       SESSION_SECRET: ${SESSION_SECRET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      ENV: ${ENV:-development}
+      GIN_MODE: ${GIN_MODE:-release}
+      REDIS_URL: ${REDIS_URL:-}
+      LISTEN_ADDR: ${LISTEN_ADDR:-:8080}
     depends_on:
       db:
         condition: service_healthy
