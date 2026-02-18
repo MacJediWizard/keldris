@@ -20,7 +20,9 @@ import (
 	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/health"
 	"github.com/MacJediWizard/keldris/internal/updater"
+	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
@@ -340,6 +342,7 @@ func newStatusCmd() *cobra.Command {
 			} else {
 				fmt.Printf("FAILED (HTTP %d)\n", resp.StatusCode)
 				fmt.Println("Connection: Error")
+				return fmt.Errorf("server returned HTTP %d", resp.StatusCode)
 			}
 
 			return nil
@@ -443,9 +446,10 @@ func runBackup(cfg *config.AgentConfig, scheduleName string) error {
 
 	// Report result to server
 	report := &agentclient.BackupReport{
-		ScheduleID:  sched.ID,
-		StartedAt:   startedAt,
-		CompletedAt: completedAt,
+		ScheduleID:   sched.ID,
+		RepositoryID: sched.RepositoryID,
+		StartedAt:    startedAt,
+		CompletedAt:  completedAt,
 	}
 
 	if err != nil {
@@ -581,9 +585,8 @@ func newStartCmd() *cobra.Command {
 
 The daemon will:
   - Send periodic heartbeats with system metrics to the server
-  - Execute scheduled backups when they are due
-  - Report backup results to the server
-  - Monitor network mount availability`,
+  - Execute scheduled backups based on cron expressions
+  - Report backup results to the server`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.LoadDefault()
 			if err != nil {
@@ -606,10 +609,19 @@ The daemon will:
 func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 	client := agentclient.NewClient(cfg.ServerURL, cfg.APIKey)
+	collector := health.NewCollector(cfg.ServerURL, "restic")
 
 	fmt.Printf("Keldris Agent %s starting...\n", Version)
 	fmt.Printf("Server: %s\n", cfg.ServerURL)
 	fmt.Printf("Heartbeat interval: %s\n", heartbeatInterval)
+
+	// Verify restic is available before starting
+	if _, err := exec.LookPath("restic"); err != nil {
+		logger.Warn().Msg("restic binary not found in PATH; backups will fail until restic is installed")
+		fmt.Println("WARNING: restic not found in PATH")
+	} else {
+		fmt.Println("Restic: available")
+	}
 	fmt.Println()
 
 	// Set up signal handling for graceful shutdown
@@ -617,17 +629,32 @@ func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	// Send initial heartbeat
-	sendHeartbeat(client, &logger)
+	sendHeartbeat(client, collector, &logger)
 
 	heartbeatTicker := time.NewTicker(heartbeatInterval)
 	defer heartbeatTicker.Stop()
+
+	// Set up cron scheduler for backups
+	cronScheduler := cron.New()
+
+	// Fetch initial schedules and register them
+	refreshSchedules(cronScheduler, client, cfg, &logger)
+
+	cronScheduler.Start()
+	defer cronScheduler.Stop()
+
+	// Refresh schedules periodically (every 5 minutes)
+	scheduleRefreshTicker := time.NewTicker(5 * time.Minute)
+	defer scheduleRefreshTicker.Stop()
 
 	fmt.Println("Agent daemon running. Press Ctrl+C to stop.")
 
 	for {
 		select {
 		case <-heartbeatTicker.C:
-			sendHeartbeat(client, &logger)
+			sendHeartbeat(client, collector, &logger)
+		case <-scheduleRefreshTicker.C:
+			refreshSchedules(cronScheduler, client, cfg, &logger)
 		case sig := <-sigChan:
 			fmt.Printf("\nReceived %s, shutting down...\n", sig)
 			return nil
@@ -635,40 +662,82 @@ func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
 	}
 }
 
-func sendHeartbeat(client *agentclient.Client, logger *zerolog.Logger) {
-	hostname, _ := os.Hostname()
-
-	// Check if restic is available
-	resticAvailable := false
-	resticVersion := ""
-	if path, err := exec.LookPath("restic"); err == nil {
-		resticAvailable = true
-		if out, err := exec.Command(path, "version").Output(); err == nil {
-			parts := strings.Fields(string(out))
-			if len(parts) >= 2 {
-				resticVersion = parts[1]
-			}
-		}
+// refreshSchedules fetches schedules from the server and updates the cron scheduler.
+func refreshSchedules(c *cron.Cron, client *agentclient.Client, cfg *config.AgentConfig, logger *zerolog.Logger) {
+	schedules, err := client.GetSchedules()
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to fetch schedules")
+		return
 	}
+
+	// Remove all existing cron entries and re-register
+	for _, entry := range c.Entries() {
+		c.Remove(entry.ID)
+	}
+
+	for _, sched := range schedules {
+		s := sched // capture loop variable
+		_, err := c.AddFunc(s.CronExpression, func() {
+			logger.Info().Str("schedule", s.Name).Msg("cron triggered backup")
+			if err := runBackup(cfg, s.Name); err != nil {
+				logger.Error().Err(err).Str("schedule", s.Name).Msg("scheduled backup failed")
+			}
+		})
+		if err != nil {
+			logger.Error().Err(err).Str("schedule", s.Name).Str("cron", s.CronExpression).Msg("invalid cron expression")
+			continue
+		}
+		logger.Info().Str("schedule", s.Name).Str("cron", s.CronExpression).Msg("registered backup schedule")
+	}
+
+	logger.Info().Int("count", len(schedules)).Msg("schedules refreshed")
+}
+
+func sendHeartbeat(client *agentclient.Client, collector *health.Collector, logger *zerolog.Logger) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	// Collect real system metrics
+	metrics, err := collector.Collect(ctx)
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to collect system metrics")
+	}
+
+	// Get OS info
+	osInfo := health.GetOSInfo()
 
 	req := &agentclient.HeartbeatRequest{
 		Status: "healthy",
 		OSInfo: &agentclient.OSInfo{
-			OS:       runtime.GOOS,
-			Arch:     runtime.GOARCH,
-			Hostname: hostname,
+			OS:       osInfo["os"],
+			Arch:     osInfo["arch"],
+			Hostname: osInfo["hostname"],
+			Version:  osInfo["version"],
 		},
-		Metrics: &agentclient.HeartbeatMetrics{
-			NetworkUp:       true,
-			ResticAvailable: resticAvailable,
-			ResticVersion:   resticVersion,
-		},
+	}
+
+	if metrics != nil {
+		req.Metrics = &agentclient.HeartbeatMetrics{
+			CPUUsage:        metrics.CPUUsage,
+			MemoryUsage:     metrics.MemoryUsage,
+			DiskUsage:       metrics.DiskUsage,
+			DiskFreeBytes:   metrics.DiskFreeBytes,
+			DiskTotalBytes:  metrics.DiskTotalBytes,
+			NetworkUp:       metrics.NetworkUp,
+			UptimeSeconds:   metrics.UptimeSeconds,
+			ResticVersion:   metrics.ResticVersion,
+			ResticAvailable: metrics.ResticAvailable,
+		}
 	}
 
 	if err := client.SendHeartbeat(req); err != nil {
 		logger.Warn().Err(err).Msg("heartbeat failed")
 	} else {
-		logger.Debug().Msg("heartbeat sent")
+		logger.Debug().
+			Float64("cpu", req.Metrics.CPUUsage).
+			Float64("mem", req.Metrics.MemoryUsage).
+			Float64("disk", req.Metrics.DiskUsage).
+			Msg("heartbeat sent")
 	}
 }
 

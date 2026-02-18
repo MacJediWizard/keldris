@@ -354,15 +354,16 @@ func (h *AgentAPIHandler) handleHealthStatusChange(ctx context.Context, agent *m
 
 // ScheduleConfigResponse is the response for agent schedule configuration.
 type ScheduleConfigResponse struct {
-	ID               uuid.UUID `json:"id"`
-	Name             string    `json:"name"`
-	CronExpression   string    `json:"cron_expression"`
-	Paths            []string  `json:"paths"`
-	Excludes         []string  `json:"excludes"`
-	Enabled          bool      `json:"enabled"`
-	Repository       string    `json:"repository"`
-	RepositoryPassword string  `json:"repository_password"`
-	RepositoryEnv    map[string]string `json:"repository_env,omitempty"`
+	ID                 uuid.UUID         `json:"id"`
+	Name               string            `json:"name"`
+	CronExpression     string            `json:"cron_expression"`
+	Paths              []string          `json:"paths"`
+	Excludes           []string          `json:"excludes"`
+	Enabled            bool              `json:"enabled"`
+	RepositoryID       uuid.UUID         `json:"repository_id"`
+	Repository         string            `json:"repository"`
+	RepositoryPassword string            `json:"repository_password"`
+	RepositoryEnv      map[string]string `json:"repository_env,omitempty"`
 }
 
 // GetSchedules returns backup schedules with decrypted repository credentials for the agent.
@@ -427,6 +428,7 @@ func (h *AgentAPIHandler) GetSchedules(c *gin.Context) {
 			Paths:              sched.Paths,
 			Excludes:           sched.Excludes,
 			Enabled:            sched.Enabled,
+			RepositoryID:       repo.ID,
 			Repository:         resticCfg.Repository,
 			RepositoryPassword: resticCfg.Password,
 			RepositoryEnv:      resticCfg.Env,

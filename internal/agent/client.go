@@ -38,6 +38,7 @@ type ScheduleConfig struct {
 	Paths              []string          `json:"paths"`
 	Excludes           []string          `json:"excludes"`
 	Enabled            bool              `json:"enabled"`
+	RepositoryID       uuid.UUID         `json:"repository_id"`
 	Repository         string            `json:"repository"`
 	RepositoryPassword string            `json:"repository_password"`
 	RepositoryEnv      map[string]string `json:"repository_env,omitempty"`
