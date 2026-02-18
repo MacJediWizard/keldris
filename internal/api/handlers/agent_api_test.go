@@ -61,6 +61,30 @@ func (m *mockAgentAPIStore) ResolveAlertsByResource(_ context.Context, _ models.
 	return m.resolveErr
 }
 
+func (m *mockAgentAPIStore) GetSchedulesByAgentID(_ context.Context, _ uuid.UUID) ([]*models.Schedule, error) {
+	return nil, nil
+}
+
+func (m *mockAgentAPIStore) GetRepositoryByID(_ context.Context, _ uuid.UUID) (*models.Repository, error) {
+	return nil, nil
+}
+
+func (m *mockAgentAPIStore) GetRepositoryKeyByRepositoryID(_ context.Context, _ uuid.UUID) (*models.RepositoryKey, error) {
+	return nil, nil
+}
+
+func (m *mockAgentAPIStore) CreateBackup(_ context.Context, _ *models.Backup) error {
+	return nil
+}
+
+func (m *mockAgentAPIStore) UpdateBackup(_ context.Context, _ *models.Backup) error {
+	return nil
+}
+
+func (m *mockAgentAPIStore) GetBackupsByAgentID(_ context.Context, _ uuid.UUID) ([]*models.Backup, error) {
+	return nil, nil
+}
+
 // InjectAgent returns gin middleware that injects an Agent into context.
 func InjectAgent(agent *models.Agent) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -75,7 +99,7 @@ func setupAgentAPITestRouter(store AgentAPIStore, agent *models.Agent) *gin.Engi
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(InjectAgent(agent))
-	handler := NewAgentAPIHandler(store, zerolog.Nop())
+	handler := NewAgentAPIHandler(store, nil, zerolog.Nop())
 	agentGroup := r.Group("/api/v1/agent")
 	handler.RegisterRoutes(agentGroup)
 	return r

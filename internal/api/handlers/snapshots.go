@@ -2,10 +2,14 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/backup"
+	"github.com/MacJediWizard/keldris/internal/backup/backends"
+	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -19,6 +23,7 @@ type SnapshotStore interface {
 	GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error)
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 	GetRepositoriesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Repository, error)
+	GetRepositoryKeyByRepositoryID(ctx context.Context, repositoryID uuid.UUID) (*models.RepositoryKey, error)
 	GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Backup, error)
 	GetBackupBySnapshotID(ctx context.Context, snapshotID string) (*models.Backup, error)
 	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error)
@@ -35,16 +40,51 @@ type SnapshotStore interface {
 
 // SnapshotsHandler handles snapshot and restore HTTP endpoints.
 type SnapshotsHandler struct {
-	store  SnapshotStore
-	logger zerolog.Logger
+	store      SnapshotStore
+	keyManager *crypto.KeyManager
+	restic     *backup.Restic
+	logger     zerolog.Logger
 }
 
 // NewSnapshotsHandler creates a new SnapshotsHandler.
-func NewSnapshotsHandler(store SnapshotStore, logger zerolog.Logger) *SnapshotsHandler {
+func NewSnapshotsHandler(store SnapshotStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *SnapshotsHandler {
 	return &SnapshotsHandler{
-		store:  store,
-		logger: logger.With().Str("component", "snapshots_handler").Logger(),
+		store:      store,
+		keyManager: keyManager,
+		restic:     backup.NewRestic(logger),
+		logger:     logger.With().Str("component", "snapshots_handler").Logger(),
 	}
+}
+
+// buildResticConfig builds a ResticConfig from a backup's repository credentials.
+func (h *SnapshotsHandler) buildResticConfig(ctx context.Context, repositoryID uuid.UUID) (*backup.ResticConfig, error) {
+	repo, err := h.store.GetRepositoryByID(ctx, repositoryID)
+	if err != nil {
+		return nil, fmt.Errorf("get repository: %w", err)
+	}
+
+	configJSON, err := h.keyManager.Decrypt(repo.ConfigEncrypted)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt config: %w", err)
+	}
+
+	backend, err := backends.ParseBackend(repo.Type, configJSON)
+	if err != nil {
+		return nil, fmt.Errorf("parse backend: %w", err)
+	}
+
+	repoKey, err := h.store.GetRepositoryKeyByRepositoryID(ctx, repo.ID)
+	if err != nil {
+		return nil, fmt.Errorf("get repository key: %w", err)
+	}
+
+	password, err := h.keyManager.Decrypt(repoKey.EncryptedKey)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt password: %w", err)
+	}
+
+	cfg := backend.ToResticConfig(string(password))
+	return &cfg, nil
 }
 
 // RegisterRoutes registers snapshot and restore routes on the given router group.
@@ -377,20 +417,46 @@ func (h *SnapshotsHandler) ListFiles(c *gin.Context) {
 	// Get the path prefix for filtering
 	pathPrefix := c.Query("path")
 
-	// Note: In a full implementation, this would call the agent to list files
-	// from the actual Restic repository. For now, we return a placeholder response
-	// indicating the functionality is available but requires agent communication.
-	h.logger.Info().
-		Str("snapshot_id", snapshotID).
-		Str("path_prefix", pathPrefix).
-		Msg("file listing requested")
+	if backup.RepositoryID == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "backup has no repository"})
+		return
+	}
 
-	// Placeholder response - in production this would query the agent
+	// Build Restic config from backup's repository
+	resticCfg, err := h.buildResticConfig(c.Request.Context(), *backup.RepositoryID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("snapshot_id", snapshotID).Msg("failed to build restic config for file listing")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to access repository"})
+		return
+	}
+
+	// List files from the actual Restic repository
+	files, err := h.restic.ListFiles(c.Request.Context(), *resticCfg, snapshotID, pathPrefix)
+	if err != nil {
+		h.logger.Error().Err(err).Str("snapshot_id", snapshotID).Msg("failed to list files in snapshot")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list files"})
+		return
+	}
+
+	// Convert to response format
+	var fileResponses []SnapshotFileResponse
+	for _, f := range files {
+		fileResponses = append(fileResponses, SnapshotFileResponse{
+			Name:    f.Name,
+			Path:    f.Path,
+			Type:    f.Type,
+			Size:    f.Size,
+			ModTime: f.ModTime.Format(time.RFC3339),
+		})
+	}
+	if fileResponses == nil {
+		fileResponses = []SnapshotFileResponse{}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"files":       []SnapshotFileResponse{},
+		"files":       fileResponses,
 		"snapshot_id": snapshotID,
 		"path":        pathPrefix,
-		"message":     "File listing requires agent communication. Files will be populated when agent connectivity is implemented.",
 	})
 }
 
@@ -966,28 +1032,57 @@ func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 		SizeBytes:    backup2.SizeBytes,
 	}
 
-	h.logger.Info().
-		Str("snapshot_id_1", snapshotID1).
-		Str("snapshot_id_2", snapshotID2).
-		Msg("snapshot comparison requested")
+	if backup1.RepositoryID == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "backup has no repository"})
+		return
+	}
 
-	// Note: In a full implementation, this would call the agent to run restic diff
-	// on the actual repository. For now, we return a placeholder response
-	// indicating the functionality is available but requires agent communication.
+	// Build Restic config from backup's repository
+	resticCfg, err := h.buildResticConfig(c.Request.Context(), *backup1.RepositoryID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to build restic config for comparison")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to access repository"})
+		return
+	}
+
+	// Run restic diff between the two snapshots
+	diffResult, err := h.restic.Diff(c.Request.Context(), *resticCfg, snapshotID1, snapshotID2)
+	if err != nil {
+		h.logger.Error().Err(err).
+			Str("snapshot_id_1", snapshotID1).
+			Str("snapshot_id_2", snapshotID2).
+			Msg("failed to compare snapshots")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to compare snapshots"})
+		return
+	}
+
+	// Convert diff entries to response format
+	var changes []SnapshotDiffEntry
+	for _, entry := range diffResult.Changes {
+		changes = append(changes, SnapshotDiffEntry{
+			Path:       entry.Path,
+			ChangeType: SnapshotDiffChangeType(entry.ChangeType),
+			Type:       entry.Type,
+		})
+	}
+	if changes == nil {
+		changes = []SnapshotDiffEntry{}
+	}
+
 	c.JSON(http.StatusOK, SnapshotCompareResponse{
 		SnapshotID1: snapshotID1,
 		SnapshotID2: snapshotID2,
 		Snapshot1:   snapshot1Info,
 		Snapshot2:   snapshot2Info,
 		Stats: SnapshotDiffStats{
-			FilesAdded:       0,
-			FilesRemoved:     0,
-			FilesModified:    0,
-			DirsAdded:        0,
-			DirsRemoved:      0,
-			TotalSizeAdded:   0,
-			TotalSizeRemoved: 0,
+			FilesAdded:       diffResult.Stats.FilesAdded,
+			FilesRemoved:     diffResult.Stats.FilesRemoved,
+			FilesModified:    diffResult.Stats.FilesModified,
+			DirsAdded:        diffResult.Stats.DirsAdded,
+			DirsRemoved:      diffResult.Stats.DirsRemoved,
+			TotalSizeAdded:   diffResult.Stats.TotalSizeAdded,
+			TotalSizeRemoved: diffResult.Stats.TotalSizeRemoved,
 		},
-		Changes: []SnapshotDiffEntry{},
+		Changes: changes,
 	})
 }

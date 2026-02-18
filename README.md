@@ -106,15 +106,10 @@ I wanted a backup solution that could:
 
 ## Status
 
-### In Progress
-- Agent CLI backup/restore commands
-- Email report delivery
-- UI polish and bug fixes
-
 ### Roadmap
 - Snapshot mounting (FUSE)
-- Import existing Restic repos
-- Mobile-friendly improvements
+- Import existing Restic repositories
+- Mobile-responsive layout
 
 ---
 

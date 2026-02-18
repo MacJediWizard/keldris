@@ -9,11 +9,16 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
+	agentclient "github.com/MacJediWizard/keldris/internal/agent"
 	"github.com/MacJediWizard/keldris/internal/backup"
+	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/updater"
 	"github.com/rs/zerolog"
@@ -82,6 +87,7 @@ Run 'keldris-agent register' to connect to a server.`,
 		newRestoreCmd(),
 		newUpdateCmd(),
 		newMountsCmd(),
+		newStartCmd(),
 	)
 
 	return rootCmd
@@ -343,6 +349,7 @@ func newStatusCmd() *cobra.Command {
 
 func newBackupCmd() *cobra.Command {
 	var now bool
+	var scheduleName string
 
 	cmd := &cobra.Command{
 		Use:   "backup",
@@ -357,28 +364,127 @@ func newBackupCmd() *cobra.Command {
 				return fmt.Errorf("agent not configured: %w", err)
 			}
 
-			if now {
-				fmt.Println("Starting backup...")
-				fmt.Printf("Server: %s\n", cfg.ServerURL)
-				fmt.Println()
-				// Placeholder - actual Restic integration will come later
-				fmt.Println("[Placeholder] Backup would run here")
-				fmt.Println("Backup functionality will be implemented with Restic integration.")
-				return nil
+			if !now {
+				return cmd.Help()
 			}
 
-			return cmd.Help()
+			return runBackup(cfg, scheduleName)
 		},
 	}
 
 	cmd.Flags().BoolVar(&now, "now", false, "Run backup immediately")
+	cmd.Flags().StringVar(&scheduleName, "schedule", "", "Schedule name to run (default: first available)")
 
 	return cmd
+}
+
+func runBackup(cfg *config.AgentConfig, scheduleName string) error {
+	client := agentclient.NewClient(cfg.ServerURL, cfg.APIKey)
+	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
+
+	fmt.Println("Fetching backup schedules from server...")
+	schedules, err := client.GetSchedules()
+	if err != nil {
+		return fmt.Errorf("fetch schedules: %w", err)
+	}
+
+	if len(schedules) == 0 {
+		fmt.Println("No backup schedules configured for this agent.")
+		return nil
+	}
+
+	// Find the schedule to run
+	var sched *agentclient.ScheduleConfig
+	if scheduleName != "" {
+		for i := range schedules {
+			if schedules[i].Name == scheduleName {
+				sched = &schedules[i]
+				break
+			}
+		}
+		if sched == nil {
+			fmt.Printf("Schedule %q not found. Available schedules:\n", scheduleName)
+			for _, s := range schedules {
+				fmt.Printf("  - %s\n", s.Name)
+			}
+			return fmt.Errorf("schedule %q not found", scheduleName)
+		}
+	} else {
+		sched = &schedules[0]
+	}
+
+	fmt.Printf("Schedule: %s\n", sched.Name)
+	fmt.Printf("Paths:    %s\n", strings.Join(sched.Paths, ", "))
+	fmt.Printf("Repo:     %s\n", sched.Repository)
+	fmt.Println()
+
+	// Build restic config
+	resticCfg := backends.ResticConfig{
+		Repository: sched.Repository,
+		Password:   sched.RepositoryPassword,
+		Env:        sched.RepositoryEnv,
+	}
+
+	// Run the backup
+	restic := backup.NewRestic(logger)
+	hostname, _ := os.Hostname()
+	tags := []string{
+		"agent:" + cfg.AgentID,
+		"schedule:" + sched.ID.String(),
+		"host:" + hostname,
+	}
+
+	fmt.Println("Starting Restic backup...")
+	startedAt := time.Now()
+
+	stats, err := restic.Backup(context.Background(), resticCfg, sched.Paths, sched.Excludes, tags)
+
+	completedAt := time.Now()
+
+	// Report result to server
+	report := &agentclient.BackupReport{
+		ScheduleID:  sched.ID,
+		StartedAt:   startedAt,
+		CompletedAt: completedAt,
+	}
+
+	if err != nil {
+		fmt.Printf("Backup failed: %v\n", err)
+		report.Status = "failed"
+		errMsg := err.Error()
+		report.ErrorMessage = &errMsg
+	} else {
+		fmt.Printf("Backup completed successfully!\n")
+		fmt.Printf("  Snapshot:     %s\n", stats.SnapshotID)
+		fmt.Printf("  Files new:    %d\n", stats.FilesNew)
+		fmt.Printf("  Files changed: %d\n", stats.FilesChanged)
+		fmt.Printf("  Size added:   %d bytes\n", stats.SizeBytes)
+		fmt.Printf("  Duration:     %s\n", stats.Duration.Round(time.Second))
+
+		report.Status = "completed"
+		report.SnapshotID = stats.SnapshotID
+		report.SizeBytes = &stats.SizeBytes
+		report.FilesNew = &stats.FilesNew
+		report.FilesChanged = &stats.FilesChanged
+	}
+
+	fmt.Print("Reporting to server... ")
+	if reportErr := client.ReportBackup(report); reportErr != nil {
+		fmt.Printf("failed: %v\n", reportErr)
+	} else {
+		fmt.Println("done")
+	}
+
+	if err != nil {
+		return fmt.Errorf("backup failed: %w", err)
+	}
+	return nil
 }
 
 func newRestoreCmd() *cobra.Command {
 	var latest bool
 	var snapshotID string
+	var targetPath string
 
 	cmd := &cobra.Command{
 		Use:   "restore",
@@ -393,34 +499,177 @@ func newRestoreCmd() *cobra.Command {
 				return fmt.Errorf("agent not configured: %w", err)
 			}
 
-			if latest {
-				fmt.Println("Restoring from latest backup...")
-				fmt.Printf("Server: %s\n", cfg.ServerURL)
-				fmt.Println()
-				// Placeholder - actual Restic integration will come later
-				fmt.Println("[Placeholder] Restore would run here")
-				fmt.Println("Restore functionality will be implemented with Restic integration.")
-				return nil
+			if !latest && snapshotID == "" {
+				return cmd.Help()
 			}
 
-			if snapshotID != "" {
-				fmt.Printf("Restoring from snapshot %s...\n", snapshotID)
-				fmt.Printf("Server: %s\n", cfg.ServerURL)
-				fmt.Println()
-				// Placeholder
-				fmt.Println("[Placeholder] Restore would run here")
-				fmt.Println("Restore functionality will be implemented with Restic integration.")
-				return nil
-			}
-
-			return cmd.Help()
+			return runRestore(cfg, latest, snapshotID, targetPath)
 		},
 	}
 
 	cmd.Flags().BoolVar(&latest, "latest", false, "Restore from the latest backup")
 	cmd.Flags().StringVar(&snapshotID, "snapshot", "", "Restore from a specific snapshot ID")
+	cmd.Flags().StringVar(&targetPath, "target", "/", "Target path for restore (default: /)")
 
 	return cmd
+}
+
+func runRestore(cfg *config.AgentConfig, latest bool, snapshotID, targetPath string) error {
+	client := agentclient.NewClient(cfg.ServerURL, cfg.APIKey)
+	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
+
+	// If --latest, look up the most recent snapshot
+	if latest {
+		fmt.Println("Looking up latest snapshot...")
+		snapshots, err := client.GetSnapshots()
+		if err != nil {
+			return fmt.Errorf("fetch snapshots: %w", err)
+		}
+		if len(snapshots) == 0 {
+			return fmt.Errorf("no snapshots found for this agent")
+		}
+		// Snapshots are ordered by created_at DESC from the server
+		snapshotID = snapshots[0].SnapshotID
+		fmt.Printf("Latest snapshot: %s\n", snapshotID)
+	}
+
+	if snapshotID == "" {
+		return fmt.Errorf("no snapshot ID specified")
+	}
+
+	// Get schedule info to find repo credentials
+	fmt.Println("Fetching repository credentials...")
+	schedules, err := client.GetSchedules()
+	if err != nil {
+		return fmt.Errorf("fetch schedules: %w", err)
+	}
+	if len(schedules) == 0 {
+		return fmt.Errorf("no schedules configured; cannot determine repository credentials")
+	}
+
+	// Use the first schedule's repo (the snapshot should be in this repo)
+	sched := schedules[0]
+
+	resticCfg := backends.ResticConfig{
+		Repository: sched.Repository,
+		Password:   sched.RepositoryPassword,
+		Env:        sched.RepositoryEnv,
+	}
+
+	restic := backup.NewRestic(logger)
+	opts := backup.RestoreOptions{
+		TargetPath: targetPath,
+	}
+
+	fmt.Printf("Restoring snapshot %s to %s...\n", snapshotID, targetPath)
+
+	if err := restic.Restore(context.Background(), resticCfg, snapshotID, opts); err != nil {
+		return fmt.Errorf("restore failed: %w", err)
+	}
+
+	fmt.Println("Restore completed successfully!")
+	return nil
+}
+
+func newStartCmd() *cobra.Command {
+	var heartbeatInterval time.Duration
+
+	cmd := &cobra.Command{
+		Use:   "start",
+		Short: "Start the agent daemon",
+		Long: `Start the Keldris agent as a long-running daemon process.
+
+The daemon will:
+  - Send periodic heartbeats with system metrics to the server
+  - Execute scheduled backups when they are due
+  - Report backup results to the server
+  - Monitor network mount availability`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			if err := cfg.Validate(); err != nil {
+				return fmt.Errorf("agent not configured: %w", err)
+			}
+
+			return runDaemon(cfg, heartbeatInterval)
+		},
+	}
+
+	cmd.Flags().DurationVar(&heartbeatInterval, "heartbeat-interval", 60*time.Second, "Heartbeat interval")
+
+	return cmd
+}
+
+func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
+	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
+	client := agentclient.NewClient(cfg.ServerURL, cfg.APIKey)
+
+	fmt.Printf("Keldris Agent %s starting...\n", Version)
+	fmt.Printf("Server: %s\n", cfg.ServerURL)
+	fmt.Printf("Heartbeat interval: %s\n", heartbeatInterval)
+	fmt.Println()
+
+	// Set up signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Send initial heartbeat
+	sendHeartbeat(client, &logger)
+
+	heartbeatTicker := time.NewTicker(heartbeatInterval)
+	defer heartbeatTicker.Stop()
+
+	fmt.Println("Agent daemon running. Press Ctrl+C to stop.")
+
+	for {
+		select {
+		case <-heartbeatTicker.C:
+			sendHeartbeat(client, &logger)
+		case sig := <-sigChan:
+			fmt.Printf("\nReceived %s, shutting down...\n", sig)
+			return nil
+		}
+	}
+}
+
+func sendHeartbeat(client *agentclient.Client, logger *zerolog.Logger) {
+	hostname, _ := os.Hostname()
+
+	// Check if restic is available
+	resticAvailable := false
+	resticVersion := ""
+	if path, err := exec.LookPath("restic"); err == nil {
+		resticAvailable = true
+		if out, err := exec.Command(path, "version").Output(); err == nil {
+			parts := strings.Fields(string(out))
+			if len(parts) >= 2 {
+				resticVersion = parts[1]
+			}
+		}
+	}
+
+	req := &agentclient.HeartbeatRequest{
+		Status: "healthy",
+		OSInfo: &agentclient.OSInfo{
+			OS:       runtime.GOOS,
+			Arch:     runtime.GOARCH,
+			Hostname: hostname,
+		},
+		Metrics: &agentclient.HeartbeatMetrics{
+			NetworkUp:       true,
+			ResticAvailable: resticAvailable,
+			ResticVersion:   resticVersion,
+		},
+	}
+
+	if err := client.SendHeartbeat(req); err != nil {
+		logger.Warn().Err(err).Msg("heartbeat failed")
+	} else {
+		logger.Debug().Msg("heartbeat sent")
+	}
 }
 
 func newUpdateCmd() *cobra.Command {

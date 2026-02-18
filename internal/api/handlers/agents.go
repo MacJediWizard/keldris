@@ -304,8 +304,8 @@ type HeartbeatRequest struct {
 //	@Security		BearerAuth
 //	@Router			/agents/{id}/heartbeat [post]
 func (h *AgentsHandler) Heartbeat(c *gin.Context) {
-	// This endpoint can be called with either session auth or API key auth
-	// For now, we support session auth. API key auth will be added later.
+	// This endpoint uses session auth for the web dashboard.
+	// Agents use the dedicated POST /api/v1/agent/health endpoint with API key auth.
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

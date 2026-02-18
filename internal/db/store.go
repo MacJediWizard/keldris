@@ -5286,6 +5286,27 @@ func (db *DB) searchRepositories(ctx context.Context, orgID uuid.UUID, query str
 
 // Metrics methods
 
+// GetBackupsByOrgID returns all non-deleted backups for an organization.
+func (db *DB) GetBackupsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at, b.completed_at,
+		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
+		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error, b.created_at
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL
+		ORDER BY b.started_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get backups by org: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackups(rows)
+}
+
 // GetBackupsByOrgIDSince returns backups for an organization since a given time.
 func (db *DB) GetBackupsByOrgIDSince(ctx context.Context, orgID uuid.UUID, since time.Time) ([]*models.Backup, error) {
 	rows, err := db.Pool.Query(ctx, `
@@ -5891,6 +5912,36 @@ func (db *DB) GetAlertsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID,
 	}
 	defer rows.Close()
 	return db.scanAlerts(rows)
+}
+
+// GetSchedulesByOrgID returns all backup schedules for an organization.
+func (db *DB) GetSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression,
+		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps,
+		       s.backup_window_start, s.backup_window_end, s.excluded_hours,
+		       s.compression_level, s.on_mount_unavailable,
+		       s.docker_volumes, s.docker_pause_containers, s.enabled,
+		       s.created_at, s.updated_at
+		FROM schedules s
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1
+		ORDER BY s.name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get schedules by org: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []*models.Schedule
+	for rows.Next() {
+		s, err := scanSchedule(rows)
+		if err != nil {
+			return nil, err
+		}
+		schedules = append(schedules, s)
+	}
+	return schedules, nil
 }
 
 // GetEnabledSchedulesByOrgID returns all enabled backup schedules for an org.

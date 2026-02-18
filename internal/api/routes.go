@@ -169,7 +169,7 @@ func NewRouter(
 	backupsHandler := handlers.NewBackupsHandler(database, logger)
 	backupsHandler.RegisterRoutes(apiV1)
 
-	snapshotsHandler := handlers.NewSnapshotsHandler(database, logger)
+	snapshotsHandler := handlers.NewSnapshotsHandler(database, keyManager, logger)
 	snapshotsHandler.RegisterRoutes(apiV1)
 
 	fileHistoryHandler := handlers.NewFileHistoryHandler(database, logger)
@@ -266,7 +266,7 @@ func NewRouter(
 	agentAPI.Use(middleware.LicenseMiddleware(lic, logger))
 	agentAPI.Use(middleware.FeatureMiddleware(license.FeatureAPIAccess, logger))
 
-	agentAPIHandler := handlers.NewAgentAPIHandler(database, logger)
+	agentAPIHandler := handlers.NewAgentAPIHandler(database, keyManager, logger)
 	agentAPIHandler.RegisterRoutes(agentAPI)
 
 	r.logger.Info().Msg("API router initialized")

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/backup/backends"
+	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	pkgmodels "github.com/MacJediWizard/keldris/pkg/models"
 	"github.com/gin-gonic/gin"
@@ -24,19 +26,27 @@ type AgentAPIStore interface {
 	CreateAlert(ctx context.Context, alert *models.Alert) error
 	GetAlertByResourceAndType(ctx context.Context, orgID uuid.UUID, resourceType models.ResourceType, resourceID uuid.UUID, alertType models.AlertType) (*models.Alert, error)
 	ResolveAlertsByResource(ctx context.Context, resourceType models.ResourceType, resourceID uuid.UUID) error
+	GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error)
+	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
+	GetRepositoryKeyByRepositoryID(ctx context.Context, repositoryID uuid.UUID) (*models.RepositoryKey, error)
+	CreateBackup(ctx context.Context, backup *models.Backup) error
+	UpdateBackup(ctx context.Context, backup *models.Backup) error
+	GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Backup, error)
 }
 
 // AgentAPIHandler handles agent-facing API endpoints (authenticated via API key).
 type AgentAPIHandler struct {
-	store  AgentAPIStore
-	logger zerolog.Logger
+	store      AgentAPIStore
+	keyManager *crypto.KeyManager
+	logger     zerolog.Logger
 }
 
 // NewAgentAPIHandler creates a new AgentAPIHandler.
-func NewAgentAPIHandler(store AgentAPIStore, logger zerolog.Logger) *AgentAPIHandler {
+func NewAgentAPIHandler(store AgentAPIStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *AgentAPIHandler {
 	return &AgentAPIHandler{
-		store:  store,
-		logger: logger.With().Str("component", "agent_api_handler").Logger(),
+		store:      store,
+		keyManager: keyManager,
+		logger:     logger.With().Str("component", "agent_api_handler").Logger(),
 	}
 }
 
@@ -44,6 +54,9 @@ func NewAgentAPIHandler(store AgentAPIStore, logger zerolog.Logger) *AgentAPIHan
 // This group should have APIKeyMiddleware applied.
 func (h *AgentAPIHandler) RegisterRoutes(r *gin.RouterGroup) {
 	r.POST("/health", h.ReportHealth)
+	r.GET("/schedules", h.GetSchedules)
+	r.POST("/backups", h.ReportBackup)
+	r.GET("/snapshots", h.GetSnapshots)
 }
 
 // ReportHealth handles agent health reports.
@@ -337,4 +350,212 @@ func (h *AgentAPIHandler) handleHealthStatusChange(ctx context.Context, agent *m
 		Str("alert_type", string(alertType)).
 		Str("severity", string(severity)).
 		Msg("health alert created")
+}
+
+// ScheduleConfigResponse is the response for agent schedule configuration.
+type ScheduleConfigResponse struct {
+	ID               uuid.UUID `json:"id"`
+	Name             string    `json:"name"`
+	CronExpression   string    `json:"cron_expression"`
+	Paths            []string  `json:"paths"`
+	Excludes         []string  `json:"excludes"`
+	Enabled          bool      `json:"enabled"`
+	Repository       string    `json:"repository"`
+	RepositoryPassword string  `json:"repository_password"`
+	RepositoryEnv    map[string]string `json:"repository_env,omitempty"`
+}
+
+// GetSchedules returns backup schedules with decrypted repository credentials for the agent.
+// GET /api/v1/agent/schedules
+func (h *AgentAPIHandler) GetSchedules(c *gin.Context) {
+	agent := middleware.RequireAgent(c)
+	if agent == nil {
+		return
+	}
+
+	schedules, err := h.store.GetSchedulesByAgentID(c.Request.Context(), agent.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", agent.ID.String()).Msg("failed to get schedules")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get schedules"})
+		return
+	}
+
+	var responses []ScheduleConfigResponse
+	for _, sched := range schedules {
+		if !sched.Enabled || len(sched.Repositories) == 0 {
+			continue
+		}
+
+		// Use the primary (highest priority) repository
+		primaryRepo := sched.Repositories[0]
+		repo, err := h.store.GetRepositoryByID(c.Request.Context(), primaryRepo.RepositoryID)
+		if err != nil {
+			h.logger.Error().Err(err).Str("schedule_id", sched.ID.String()).Msg("failed to get repository")
+			continue
+		}
+
+		configJSON, err := h.keyManager.Decrypt(repo.ConfigEncrypted)
+		if err != nil {
+			h.logger.Error().Err(err).Str("repo_id", repo.ID.String()).Msg("failed to decrypt config")
+			continue
+		}
+
+		backend, err := backends.ParseBackend(repo.Type, configJSON)
+		if err != nil {
+			h.logger.Error().Err(err).Str("repo_id", repo.ID.String()).Msg("failed to parse backend")
+			continue
+		}
+
+		repoKey, err := h.store.GetRepositoryKeyByRepositoryID(c.Request.Context(), repo.ID)
+		if err != nil {
+			h.logger.Error().Err(err).Str("repo_id", repo.ID.String()).Msg("failed to get repo key")
+			continue
+		}
+
+		password, err := h.keyManager.Decrypt(repoKey.EncryptedKey)
+		if err != nil {
+			h.logger.Error().Err(err).Str("repo_id", repo.ID.String()).Msg("failed to decrypt password")
+			continue
+		}
+
+		resticCfg := backend.ToResticConfig(string(password))
+
+		responses = append(responses, ScheduleConfigResponse{
+			ID:                 sched.ID,
+			Name:               sched.Name,
+			CronExpression:     sched.CronExpression,
+			Paths:              sched.Paths,
+			Excludes:           sched.Excludes,
+			Enabled:            sched.Enabled,
+			Repository:         resticCfg.Repository,
+			RepositoryPassword: resticCfg.Password,
+			RepositoryEnv:      resticCfg.Env,
+		})
+	}
+
+	if responses == nil {
+		responses = []ScheduleConfigResponse{}
+	}
+
+	c.JSON(http.StatusOK, responses)
+}
+
+// ReportBackupRequest is the request body for reporting a completed backup.
+type ReportBackupRequest struct {
+	ScheduleID   uuid.UUID `json:"schedule_id" binding:"required"`
+	RepositoryID uuid.UUID `json:"repository_id" binding:"required"`
+	SnapshotID   string    `json:"snapshot_id"`
+	Status       string    `json:"status" binding:"required,oneof=completed failed"`
+	SizeBytes    *int64    `json:"size_bytes,omitempty"`
+	FilesNew     *int      `json:"files_new,omitempty"`
+	FilesChanged *int      `json:"files_changed,omitempty"`
+	ErrorMessage *string   `json:"error_message,omitempty"`
+	StartedAt    time.Time `json:"started_at" binding:"required"`
+	CompletedAt  time.Time `json:"completed_at" binding:"required"`
+}
+
+// ReportBackup records a backup result from the agent.
+// POST /api/v1/agent/backups
+func (h *AgentAPIHandler) ReportBackup(c *gin.Context) {
+	agent := middleware.RequireAgent(c)
+	if agent == nil {
+		return
+	}
+
+	var req ReportBackupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	repoID := req.RepositoryID
+	var errMsg string
+	if req.ErrorMessage != nil {
+		errMsg = *req.ErrorMessage
+	}
+
+	b := &models.Backup{
+		ID:           uuid.New(),
+		ScheduleID:   req.ScheduleID,
+		AgentID:      agent.ID,
+		RepositoryID: &repoID,
+		SnapshotID:   req.SnapshotID,
+		Status:       models.BackupStatus(req.Status),
+		SizeBytes:    req.SizeBytes,
+		FilesNew:     req.FilesNew,
+		FilesChanged: req.FilesChanged,
+		ErrorMessage: errMsg,
+		StartedAt:    req.StartedAt,
+		CompletedAt:  &req.CompletedAt,
+		CreatedAt:    time.Now(),
+	}
+
+	if err := h.store.CreateBackup(c.Request.Context(), b); err != nil {
+		h.logger.Error().Err(err).Str("agent_id", agent.ID.String()).Msg("failed to create backup record")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to record backup"})
+		return
+	}
+
+	h.logger.Info().
+		Str("agent_id", agent.ID.String()).
+		Str("backup_id", b.ID.String()).
+		Str("status", req.Status).
+		Msg("backup reported by agent")
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":     b.ID,
+		"status": b.Status,
+	})
+}
+
+// GetSnapshots returns available snapshots for the agent's backups.
+// GET /api/v1/agent/snapshots
+func (h *AgentAPIHandler) GetSnapshots(c *gin.Context) {
+	agent := middleware.RequireAgent(c)
+	if agent == nil {
+		return
+	}
+
+	backups, err := h.store.GetBackupsByAgentID(c.Request.Context(), agent.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", agent.ID.String()).Msg("failed to get backups")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get snapshots"})
+		return
+	}
+
+	type SnapshotInfo struct {
+		SnapshotID   string    `json:"snapshot_id"`
+		BackupID     string    `json:"backup_id"`
+		ScheduleID   string    `json:"schedule_id"`
+		RepositoryID string    `json:"repository_id"`
+		Status       string    `json:"status"`
+		SizeBytes    *int64    `json:"size_bytes,omitempty"`
+		CreatedAt    time.Time `json:"created_at"`
+	}
+
+	var snapshots []SnapshotInfo
+	for _, b := range backups {
+		if b.SnapshotID == "" {
+			continue
+		}
+		var repoIDStr string
+		if b.RepositoryID != nil {
+			repoIDStr = b.RepositoryID.String()
+		}
+		snapshots = append(snapshots, SnapshotInfo{
+			SnapshotID:   b.SnapshotID,
+			BackupID:     b.ID.String(),
+			ScheduleID:   b.ScheduleID.String(),
+			RepositoryID: repoIDStr,
+			Status:       string(b.Status),
+			SizeBytes:    b.SizeBytes,
+			CreatedAt:    b.CreatedAt,
+		})
+	}
+
+	if snapshots == nil {
+		snapshots = []SnapshotInfo{}
+	}
+
+	c.JSON(http.StatusOK, snapshots)
 }
