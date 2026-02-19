@@ -14,6 +14,16 @@ export function useVerificationStatus(repoId: string) {
 		enabled: !!repoId,
 		staleTime: 30 * 1000, // 30 seconds
 		refetchInterval: 60 * 1000, // Refresh every minute
+		retry: (failureCount, error) => {
+			// Don't retry on 404 (verification not configured)
+			if (
+				error instanceof Error &&
+				'status' in error &&
+				(error as { status: number }).status === 404
+			)
+				return false;
+			return failureCount < 3;
+		},
 	});
 }
 
