@@ -43,21 +43,21 @@ func NewSSOGroupMappingsHandler(store SSOGroupMappingStore, rbac *auth.RBAC, log
 
 // RegisterRoutes registers SSO group mapping routes on the given router group.
 func (h *SSOGroupMappingsHandler) RegisterRoutes(r *gin.RouterGroup) {
-	mappings := r.Group("/organizations/:org_id/sso-group-mappings")
+	mappings := r.Group("/organizations/:id/sso-group-mappings")
 	{
 		mappings.GET("", h.List)
 		mappings.POST("", h.Create)
-		mappings.GET("/:id", h.Get)
-		mappings.PUT("/:id", h.Update)
-		mappings.DELETE("/:id", h.Delete)
+		mappings.GET("/:mapping_id", h.Get)
+		mappings.PUT("/:mapping_id", h.Update)
+		mappings.DELETE("/:mapping_id", h.Delete)
 	}
 
 	// SSO settings for org
-	r.GET("/organizations/:org_id/sso-settings", h.GetSSOSettings)
-	r.PUT("/organizations/:org_id/sso-settings", h.UpdateSSOSettings)
+	r.GET("/organizations/:id/sso-settings", h.GetSSOSettings)
+	r.PUT("/organizations/:id/sso-settings", h.UpdateSSOSettings)
 
 	// User SSO groups endpoint
-	r.GET("/users/:user_id/sso-groups", h.GetUserSSOGroups)
+	r.GET("/users/:id/sso-groups", h.GetUserSSOGroups)
 }
 
 // SSOGroupMappingResponse wraps the group mapping response.
@@ -83,14 +83,14 @@ type UpdateSSOSettingsRequest struct {
 }
 
 // List returns all SSO group mappings for an organization.
-// GET /api/v1/organizations/:org_id/sso-group-mappings
+// GET /api/v1/organizations/:id/sso-group-mappings
 func (h *SSOGroupMappingsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
 	}
 
-	orgID, err := uuid.Parse(c.Param("org_id"))
+	orgID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
 		return
@@ -113,14 +113,14 @@ func (h *SSOGroupMappingsHandler) List(c *gin.Context) {
 }
 
 // Create creates a new SSO group mapping.
-// POST /api/v1/organizations/:org_id/sso-group-mappings
+// POST /api/v1/organizations/:id/sso-group-mappings
 func (h *SSOGroupMappingsHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
 	}
 
-	orgID, err := uuid.Parse(c.Param("org_id"))
+	orgID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
 		return
@@ -170,20 +170,20 @@ func (h *SSOGroupMappingsHandler) Create(c *gin.Context) {
 }
 
 // Get returns a specific SSO group mapping.
-// GET /api/v1/organizations/:org_id/sso-group-mappings/:id
+// GET /api/v1/organizations/:id/sso-group-mappings/:mapping_id
 func (h *SSOGroupMappingsHandler) Get(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
 	}
 
-	orgID, err := uuid.Parse(c.Param("org_id"))
+	orgID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
 		return
 	}
 
-	mappingID, err := uuid.Parse(c.Param("id"))
+	mappingID, err := uuid.Parse(c.Param("mapping_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mapping ID"})
 		return
@@ -211,20 +211,20 @@ func (h *SSOGroupMappingsHandler) Get(c *gin.Context) {
 }
 
 // Update updates an SSO group mapping.
-// PUT /api/v1/organizations/:org_id/sso-group-mappings/:id
+// PUT /api/v1/organizations/:id/sso-group-mappings/:mapping_id
 func (h *SSOGroupMappingsHandler) Update(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
 	}
 
-	orgID, err := uuid.Parse(c.Param("org_id"))
+	orgID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
 		return
 	}
 
-	mappingID, err := uuid.Parse(c.Param("id"))
+	mappingID, err := uuid.Parse(c.Param("mapping_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mapping ID"})
 		return
@@ -284,20 +284,20 @@ func (h *SSOGroupMappingsHandler) Update(c *gin.Context) {
 }
 
 // Delete deletes an SSO group mapping.
-// DELETE /api/v1/organizations/:org_id/sso-group-mappings/:id
+// DELETE /api/v1/organizations/:id/sso-group-mappings/:mapping_id
 func (h *SSOGroupMappingsHandler) Delete(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
 	}
 
-	orgID, err := uuid.Parse(c.Param("org_id"))
+	orgID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
 		return
 	}
 
-	mappingID, err := uuid.Parse(c.Param("id"))
+	mappingID, err := uuid.Parse(c.Param("mapping_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mapping ID"})
 		return
@@ -338,14 +338,14 @@ func (h *SSOGroupMappingsHandler) Delete(c *gin.Context) {
 }
 
 // GetSSOSettings returns the SSO settings for an organization.
-// GET /api/v1/organizations/:org_id/sso-settings
+// GET /api/v1/organizations/:id/sso-settings
 func (h *SSOGroupMappingsHandler) GetSSOSettings(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
 	}
 
-	orgID, err := uuid.Parse(c.Param("org_id"))
+	orgID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
 		return
@@ -371,14 +371,14 @@ func (h *SSOGroupMappingsHandler) GetSSOSettings(c *gin.Context) {
 }
 
 // UpdateSSOSettings updates the SSO settings for an organization.
-// PUT /api/v1/organizations/:org_id/sso-settings
+// PUT /api/v1/organizations/:id/sso-settings
 func (h *SSOGroupMappingsHandler) UpdateSSOSettings(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
 	}
 
-	orgID, err := uuid.Parse(c.Param("org_id"))
+	orgID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
 		return
@@ -445,14 +445,14 @@ func (h *SSOGroupMappingsHandler) UpdateSSOSettings(c *gin.Context) {
 }
 
 // GetUserSSOGroups returns the SSO groups for a user.
-// GET /api/v1/users/:user_id/sso-groups
+// GET /api/v1/users/:id/sso-groups
 func (h *SSOGroupMappingsHandler) GetUserSSOGroups(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
 	}
 
-	targetUserID, err := uuid.Parse(c.Param("user_id"))
+	targetUserID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
 		return
