@@ -284,6 +284,7 @@ func run() int {
 			ServerURL:     cfg.LicenseServerURL,
 			ServerVersion: Version,
 			Store:         database,
+			Metrics:       database,
 			Logger:        logger,
 		})
 		if lic != nil {

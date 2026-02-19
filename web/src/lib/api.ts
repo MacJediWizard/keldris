@@ -206,6 +206,10 @@ import type {
 const API_BASE = '/api/v1';
 
 export class ApiError extends Error {
+	public resource?: string;
+	public limit?: number;
+	public tier?: string;
+
 	constructor(
 		public status: number,
 		message: string,
@@ -222,10 +226,17 @@ async function handleResponse<T>(response: Response): Promise<T> {
 	}
 
 	if (!response.ok) {
-		const errorData = (await response.json().catch(() => ({
+		const errorData = await response.json().catch(() => ({
 			error: 'Unknown error',
-		}))) as ErrorResponse;
-		throw new ApiError(response.status, errorData.error);
+		}));
+		if (response.status === 402) {
+			const err = new ApiError(402, errorData.message || errorData.error || 'Upgrade required');
+			err.resource = errorData.resource;
+			err.limit = errorData.limit;
+			err.tier = errorData.tier;
+			throw err;
+		}
+		throw new ApiError(response.status, (errorData as ErrorResponse).error);
 	}
 
 	return response.json() as Promise<T>;

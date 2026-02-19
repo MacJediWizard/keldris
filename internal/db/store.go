@@ -7451,3 +7451,23 @@ func (db *DB) SetServerSetting(ctx context.Context, key, value string) error {
 	}
 	return nil
 }
+
+// AgentCount returns the total number of agents across all organizations.
+func (db *DB) AgentCount(ctx context.Context) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM agents`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count all agents: %w", err)
+	}
+	return count, nil
+}
+
+// UserCount returns the total number of users across all organizations.
+func (db *DB) UserCount(ctx context.Context) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count all users: %w", err)
+	}
+	return count, nil
+}
