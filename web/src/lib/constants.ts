@@ -1,6 +1,10 @@
+// GitHub release base URL for agent downloads
+const GITHUB_RELEASE_BASE =
+	'https://github.com/MacJediWizard/keldris/releases/latest/download';
+
 // Agent download URLs
 export const AGENT_DOWNLOADS = {
-	baseUrl: 'https://releases.keldris.io/agent',
+	baseUrl: GITHUB_RELEASE_BASE,
 	version: 'latest',
 	platforms: [
 		{
@@ -35,15 +39,15 @@ export const AGENT_DOWNLOADS = {
 		},
 	],
 	installers: {
-		linux: 'https://releases.keldris.io/install-linux.sh',
-		macos: 'https://releases.keldris.io/install-macos.sh',
-		windows: 'https://releases.keldris.io/install-windows.ps1',
+		linux: `${GITHUB_RELEASE_BASE}/install-linux.sh`,
+		macos: `${GITHUB_RELEASE_BASE}/install-macos.sh`,
+		windows: `${GITHUB_RELEASE_BASE}/install-windows.ps1`,
 	},
 };
 
 // Quick install commands for each platform
 export const INSTALL_COMMANDS = {
-	linux: 'curl -sSL https://releases.keldris.io/install-linux.sh | sudo bash',
-	macos: 'curl -sSL https://releases.keldris.io/install-macos.sh | bash',
-	windows: 'irm https://releases.keldris.io/install-windows.ps1 | iex',
+	linux: `curl -fsSL ${GITHUB_RELEASE_BASE}/install-linux.sh | sudo bash`,
+	macos: `curl -fsSL ${GITHUB_RELEASE_BASE}/install-macos.sh | bash`,
+	windows: `irm ${GITHUB_RELEASE_BASE}/install-windows.ps1 | iex`,
 };

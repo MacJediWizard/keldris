@@ -110,7 +110,7 @@ export function AgentDownloads({
 	];
 
 	const getDownloadUrl = (filename: string) =>
-		`${AGENT_DOWNLOADS.baseUrl}/${AGENT_DOWNLOADS.version}/${filename}`;
+		`${AGENT_DOWNLOADS.baseUrl}/${filename}`;
 
 	const filteredPlatforms = AGENT_DOWNLOADS.platforms.filter((p) => {
 		if (selectedPlatform === 'linux') return p.os === 'Linux';

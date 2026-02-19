@@ -164,11 +164,20 @@ jobs:
             sha256sum "$f" > "$f.sha256"
           done
 
+      - name: Copy install scripts
+        run: |
+          cp scripts/install-linux.sh release/
+          cp scripts/install-macos.sh release/
+          cp scripts/install-windows.ps1 release/
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
             release/keldris-agent-*
+            release/install-linux.sh
+            release/install-macos.sh
+            release/install-windows.ps1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

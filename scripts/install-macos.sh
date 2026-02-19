@@ -10,7 +10,8 @@ CONFIG_DIR="$HOME/.config/keldris"
 PLIST_DIR="$HOME/Library/LaunchAgents"
 SERVICE_LABEL="io.keldris.agent"
 BINARY_NAME="keldris-agent"
-DOWNLOAD_BASE_URL="${KELDRIS_DOWNLOAD_URL:-https://releases.keldris.io/agent}"
+GITHUB_REPO="MacJediWizard/keldris"
+DOWNLOAD_BASE_URL="${KELDRIS_DOWNLOAD_URL:-https://github.com/${GITHUB_REPO}/releases/latest/download}"
 VERSION="${KELDRIS_VERSION:-latest}"
 
 # Colors for output
@@ -64,7 +65,7 @@ check_macos() {
 # Download binary
 download_binary() {
     local arch="$1"
-    local download_url="${DOWNLOAD_BASE_URL}/${VERSION}/keldris-agent-darwin-${arch}"
+    local download_url="${DOWNLOAD_BASE_URL}/keldris-agent-darwin-${arch}"
     local tmp_file="/tmp/${BINARY_NAME}"
 
     log_info "Downloading Keldris Agent (${VERSION}, darwin/${arch})..."
