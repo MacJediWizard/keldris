@@ -7399,3 +7399,55 @@ func (db *DB) CleanupAgentHealthHistory(ctx context.Context, retentionDays int) 
 	}
 	return tag.RowsAffected(), nil
 }
+
+// CountAgentsByOrgID returns the number of agents for an organization.
+func (db *DB) CountAgentsByOrgID(ctx context.Context, orgID uuid.UUID) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM agents WHERE org_id = $1`, orgID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count agents by org: %w", err)
+	}
+	return count, nil
+}
+
+// CountUsersByOrgID returns the number of users in an organization.
+func (db *DB) CountUsersByOrgID(ctx context.Context, orgID uuid.UUID) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM org_members WHERE org_id = $1`, orgID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count users by org: %w", err)
+	}
+	return count, nil
+}
+
+// CountOrganizations returns the total number of organizations.
+func (db *DB) CountOrganizations(ctx context.Context) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM organizations`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count organizations: %w", err)
+	}
+	return count, nil
+}
+
+// GetServerSetting retrieves a server setting by key.
+func (db *DB) GetServerSetting(ctx context.Context, key string) (string, error) {
+	var value string
+	err := db.Pool.QueryRow(ctx, `SELECT value FROM server_settings WHERE key = $1`, key).Scan(&value)
+	if err != nil {
+		return "", fmt.Errorf("get server setting %s: %w", key, err)
+	}
+	return value, nil
+}
+
+// SetServerSetting upserts a server setting.
+func (db *DB) SetServerSetting(ctx context.Context, key, value string) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO server_settings (key, value) VALUES ($1, $2)
+		ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()
+	`, key, value)
+	if err != nil {
+		return fmt.Errorf("set server setting %s: %w", key, err)
+	}
+	return nil
+}

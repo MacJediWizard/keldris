@@ -47,6 +47,8 @@ type Config struct {
 	DRTestRunner handlers.DRTestRunner
 	// License is the current server license for feature gating (optional).
 	License *license.License
+	// Validator is the license validator for dynamic license checks (optional).
+	Validator *license.Validator
 	// AirGapPublicKey is the Ed25519 public key for validating offline licenses (optional).
 	AirGapPublicKey []byte
 	// WebDir is the path to the built frontend files (e.g. "web/dist").
@@ -140,11 +142,17 @@ func NewRouter(
 	apiV1.Use(middleware.AuditMiddleware(database, logger))
 
 	// License middleware for feature gating
-	lic := cfg.License
-	if lic == nil {
-		lic = license.FreeLicense()
+	if cfg.Validator != nil {
+		// Dynamic: reads current license from validator (supports downgrades)
+		apiV1.Use(middleware.DynamicLicenseMiddleware(cfg.Validator, logger))
+	} else {
+		// Static: use the license provided at startup
+		lic := cfg.License
+		if lic == nil {
+			lic = license.FreeLicense()
+		}
+		apiV1.Use(middleware.LicenseMiddleware(lic, logger))
 	}
-	apiV1.Use(middleware.LicenseMiddleware(lic, logger))
 
 	// Create RBAC for permission checks
 	rbac := auth.NewRBAC(database)
@@ -152,13 +160,17 @@ func NewRouter(
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 
+	// License info endpoint
+	licenseInfoHandler := handlers.NewLicenseInfoHandler(logger)
+	licenseInfoHandler.RegisterRoutes(apiV1)
+
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
 	orgsHandler.RegisterRoutes(apiV1)
 	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
-	orgsHandler.RegisterMultiOrgRoutes(orgsGroup)
+	orgsHandler.RegisterMultiOrgRoutes(orgsGroup, middleware.LimitMiddleware(database, "organizations", logger))
 
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
-	agentsHandler.RegisterRoutes(apiV1)
+	agentsHandler.RegisterRoutes(apiV1, middleware.LimitMiddleware(database, "agents", logger))
 
 	agentGroupsHandler := handlers.NewAgentGroupsHandler(database, logger)
 	agentGroupsHandler.RegisterRoutes(apiV1)
@@ -271,7 +283,15 @@ func NewRouter(
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
 	agentAPI := r.Engine.Group("/api/v1/agent")
 	agentAPI.Use(middleware.APIKeyMiddleware(apiKeyValidator, logger))
-	agentAPI.Use(middleware.LicenseMiddleware(lic, logger))
+	if cfg.Validator != nil {
+		agentAPI.Use(middleware.DynamicLicenseMiddleware(cfg.Validator, logger))
+	} else {
+		agentLic := cfg.License
+		if agentLic == nil {
+			agentLic = license.FreeLicense()
+		}
+		agentAPI.Use(middleware.LicenseMiddleware(agentLic, logger))
+	}
 	agentAPI.Use(middleware.FeatureMiddleware(license.FeatureAPIAccess, logger))
 
 	agentAPIHandler := handlers.NewAgentAPIHandler(database, keyManager, logger)

@@ -48,11 +48,13 @@ func NewAgentsHandler(store AgentStore, logger zerolog.Logger) *AgentsHandler {
 }
 
 // RegisterRoutes registers agent routes on the given router group.
-func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup) {
+// Optional createMiddleware is applied before the Create handler.
+func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup, createMiddleware ...gin.HandlerFunc) {
 	agents := r.Group("/agents")
 	{
 		agents.GET("", h.List)
-		agents.POST("", h.Create)
+		createChain := append(createMiddleware, h.Create)
+		agents.POST("", createChain...)
 		agents.GET("/fleet-health", h.FleetHealth)
 		agents.GET("/:id", h.Get)
 		agents.DELETE("/:id", h.Delete)

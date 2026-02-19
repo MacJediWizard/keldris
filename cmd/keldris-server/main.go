@@ -65,12 +65,16 @@ import (
 	"syscall"
 	"time"
 
+	"crypto/ed25519"
+	"encoding/hex"
+
 	"github.com/MacJediWizard/keldris/internal/api"
 	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/maintenance"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -179,6 +183,58 @@ func run() int {
 		return 1
 	}
 
+	// Parse license key
+	var lic *license.License
+	if cfg.LicenseSigningKey != "" {
+		license.SetSigningKey([]byte(cfg.LicenseSigningKey))
+	}
+
+	var airGapPubKey []byte
+	if cfg.AirGapPublicKey != "" {
+		decoded, err := hex.DecodeString(cfg.AirGapPublicKey)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to decode AIRGAP_PUBLIC_KEY (expected hex-encoded Ed25519 public key)")
+			return 1
+		}
+		if len(decoded) != ed25519.PublicKeySize {
+			logger.Fatal().Int("got", len(decoded)).Int("expected", ed25519.PublicKeySize).Msg("Invalid AIRGAP_PUBLIC_KEY size")
+			return 1
+		}
+		airGapPubKey = decoded
+	}
+
+	if cfg.LicenseKey != "" {
+		// Try Ed25519 validation first (if public key is available)
+		if airGapPubKey != nil {
+			parsed, err := license.ParseLicenseKeyEd25519(cfg.LicenseKey, ed25519.PublicKey(airGapPubKey))
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Invalid LICENSE_KEY (Ed25519 validation failed)")
+				return 1
+			}
+			if err := license.ValidateLicense(parsed); err != nil {
+				logger.Fatal().Err(err).Msg("LICENSE_KEY validation failed (expired or invalid)")
+				return 1
+			}
+			lic = parsed
+			logger.Info().Str("tier", string(lic.Tier)).Time("expires_at", lic.ExpiresAt).Msg("License loaded (Ed25519)")
+		} else {
+			// Fall back to HMAC validation
+			parsed, err := license.ParseLicense(cfg.LicenseKey)
+			if err != nil {
+				logger.Fatal().Err(err).Msg("Invalid LICENSE_KEY")
+				return 1
+			}
+			if err := license.ValidateLicense(parsed); err != nil {
+				logger.Fatal().Err(err).Msg("LICENSE_KEY validation failed (expired or invalid)")
+				return 1
+			}
+			lic = parsed
+			logger.Info().Str("tier", string(lic.Tier)).Time("expires_at", lic.ExpiresAt).Msg("License loaded (HMAC)")
+		}
+	} else {
+		logger.Info().Msg("No LICENSE_KEY set, running as Free tier")
+	}
+
 	// Build API router
 	allowedOrigins := strings.Split(os.Getenv("CORS_ORIGINS"), ",")
 	if os.Getenv("CORS_ORIGINS") == "" {
@@ -220,6 +276,25 @@ func run() int {
 	}
 	verificationScheduler := backup.NewVerificationScheduler(database, resticBin, verificationConfig, logger)
 
+	// Initialize license validator (phone-home for all tiers)
+	var validator *license.Validator
+	if !cfg.AirGapMode {
+		validator = license.NewValidator(license.ValidatorConfig{
+			LicenseKey:    cfg.LicenseKey,
+			ServerURL:     cfg.LicenseServerURL,
+			ServerVersion: Version,
+			Store:         database,
+			Logger:        logger,
+		})
+		if lic != nil {
+			validator.SetLicense(lic)
+		}
+		if err := validator.Start(ctx); err != nil {
+			logger.Error().Err(err).Msg("Failed to start license validator (continuing without phone-home)")
+			validator = nil
+		}
+	}
+
 	routerCfg := api.Config{
 		Environment:         cfg.Environment,
 		AllowedOrigins:      allowedOrigins,
@@ -231,6 +306,9 @@ func run() int {
 		BuildDate:           BuildDate,
 		WebDir:              webDir,
 		VerificationTrigger: verificationScheduler,
+		License:             lic,
+		Validator:           validator,
+		AirGapPublicKey:     airGapPubKey,
 	}
 
 	router, err := api.NewRouter(routerCfg, database, oidcProvider, sessions, keyManager, logger)
@@ -284,6 +362,11 @@ func run() int {
 	sig := <-sigChan
 
 	logger.Info().Str("signal", sig.String()).Msg("Shutting down server")
+
+	// Stop license validator (deactivates license on shutdown)
+	if validator != nil {
+		validator.Stop(ctx)
+	}
 
 	// Graceful shutdown with timeout
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)

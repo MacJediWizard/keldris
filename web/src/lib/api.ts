@@ -96,6 +96,7 @@ import type {
 	InviteMemberRequest,
 	InviteResponse,
 	KeyRecoveryResponse,
+	LicenseInfo,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
 	MembersResponse,
@@ -1717,4 +1718,8 @@ export const airGapApi = {
 			headers: { 'Content-Type': 'application/octet-stream' },
 			body: licenseData,
 		}),
+};
+
+export const licenseApi = {
+	getInfo: async (): Promise<LicenseInfo> => fetchApi<LicenseInfo>('/license'),
 };

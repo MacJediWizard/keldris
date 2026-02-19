@@ -72,10 +72,11 @@ func (h *OrganizationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // RegisterMultiOrgRoutes registers organization management routes that require the multi_org feature.
 // These include creating, updating, deleting orgs, managing members, and invitations.
-func (h *OrganizationsHandler) RegisterMultiOrgRoutes(r *gin.RouterGroup) {
+func (h *OrganizationsHandler) RegisterMultiOrgRoutes(r *gin.RouterGroup, createMiddleware ...gin.HandlerFunc) {
 	orgs := r.Group("/organizations")
 	{
-		orgs.POST("", h.Create)
+		createChain := append(createMiddleware, h.Create)
+		orgs.POST("", createChain...)
 		orgs.PUT("/:id", h.Update)
 		orgs.DELETE("/:id", h.Delete)
 

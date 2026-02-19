@@ -4,12 +4,14 @@ import { useAirGapStatus } from '../hooks/useAirGap';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
 import { useBranding } from '../hooks/useBranding';
+import { useLicense } from '../hooks/useLicense';
 import { useLocale } from '../hooks/useLocale';
 import { useOnboardingStatus } from '../hooks/useOnboarding';
 import {
 	useOrganizations,
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
+import { TierBadge } from './features/TierBadge';
 import { LanguageSelector } from './features/LanguageSelector';
 
 interface NavItem {
@@ -247,6 +249,7 @@ function Sidebar() {
 	const { t } = useLocale();
 	const { data: brandingData } = useBranding();
 	const { data: onboardingStatus } = useOnboardingStatus();
+	const { data: license } = useLicense();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
@@ -435,6 +438,11 @@ function Sidebar() {
 					</div>
 				)}
 			<div className="p-4 border-t border-gray-800">
+				{license && (
+					<Link to="/license" className="mb-2 block">
+						<TierBadge tier={license.tier} />
+					</Link>
+				)}
 				<p className="text-xs text-gray-500">
 					{t('common.version', { version: '0.0.1' })}
 				</p>

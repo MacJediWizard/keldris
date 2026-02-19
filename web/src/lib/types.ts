@@ -1999,3 +1999,31 @@ export interface DockerContainersResponse {
 export interface DockerVolumesResponse {
 	volumes: DockerVolume[];
 }
+
+// License types
+export type LicenseTier = 'free' | 'pro' | 'enterprise';
+
+export interface LicenseInfo {
+	tier: LicenseTier;
+	customer_id: string;
+	expires_at: string;
+	issued_at: string;
+	features: string[];
+	limits: LicenseLimits;
+}
+
+export interface LicenseLimits {
+	max_agents: number;
+	max_users: number;
+	max_orgs: number;
+	max_storage_bytes: number;
+}
+
+export interface LimitExceededError {
+	error: 'limit_exceeded';
+	resource: string;
+	current: number;
+	limit: number;
+	tier: LicenseTier;
+	message: string;
+}

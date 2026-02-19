@@ -76,3 +76,23 @@ func GetLicense(c *gin.Context) *license.License {
 	}
 	return lic
 }
+
+// DynamicLicenseMiddleware reads the current license from the validator on each
+// request instead of using a static license. This ensures license downgrades
+// (from revocation or grace period expiry) take effect immediately.
+func DynamicLicenseMiddleware(validator *license.Validator, logger zerolog.Logger) gin.HandlerFunc {
+	log := logger.With().Str("component", "dynamic_license_middleware").Logger()
+
+	return func(c *gin.Context) {
+		lic := validator.GetLicense()
+		if lic == nil {
+			lic = license.FreeLicense()
+		}
+		c.Set(string(LicenseContextKey), lic)
+		log.Debug().
+			Str("tier", string(lic.Tier)).
+			Str("path", c.Request.URL.Path).
+			Msg("dynamic license context set")
+		c.Next()
+	}
+}

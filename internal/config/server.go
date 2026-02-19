@@ -19,6 +19,9 @@ const (
 	EnvProduction Environment = "production"
 )
 
+// DefaultLicenseServerURL is the production license server endpoint.
+const DefaultLicenseServerURL = "https://license.macjediwizard.com"
+
 // ServerConfig holds server-level configuration loaded from environment variables.
 type ServerConfig struct {
 	Environment        Environment
@@ -26,6 +29,11 @@ type ServerConfig struct {
 	SessionIdleTimeout int  // idle timeout in seconds, 0 to disable (default: 1800)
 	AirGapMode         bool // air-gapped deployment mode (no internet access)
 	RetentionDays      int  // health history retention in days (default: 90)
+
+	LicenseKey       string // Ed25519-signed license key (base64 payload.signature)
+	LicenseSigningKey string // HMAC signing key for legacy license validation
+	AirGapPublicKey  string // hex-encoded Ed25519 public key for offline validation
+	LicenseServerURL string // license server URL for phone-home (default: production)
 }
 
 // LoadServerConfig reads server configuration from environment variables.
@@ -55,12 +63,21 @@ func LoadServerConfig() ServerConfig {
 		retentionDays = 90
 	}
 
+	licenseServerURL := os.Getenv("LICENSE_SERVER_URL")
+	if licenseServerURL == "" {
+		licenseServerURL = DefaultLicenseServerURL
+	}
+
 	return ServerConfig{
 		Environment:        env,
 		SessionMaxAge:      sessionMaxAge,
 		SessionIdleTimeout: sessionIdleTimeout,
 		AirGapMode:         airGapMode,
 		RetentionDays:      retentionDays,
+		LicenseKey:         os.Getenv("LICENSE_KEY"),
+		LicenseSigningKey:  os.Getenv("LICENSE_SIGNING_KEY"),
+		AirGapPublicKey:    os.Getenv("AIRGAP_PUBLIC_KEY"),
+		LicenseServerURL:   licenseServerURL,
 	}
 }
 

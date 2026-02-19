@@ -39,6 +39,7 @@ const Onboarding = lazy(() => import('./pages/Onboarding'));
 const SLATracking = lazy(() => import('./pages/SLATracking'));
 const DockerBackup = lazy(() => import('./pages/DockerBackup'));
 const AirGapLicense = lazy(() => import('./pages/AirGapLicense'));
+const License = lazy(() => import('./pages/License'));
 const Docs = lazy(() => import('./pages/Docs'));
 
 const queryClient = new QueryClient({
@@ -107,6 +108,7 @@ function App() {
 							<Route path="sla" element={<SLATracking />} />
 							<Route path="onboarding" element={<Onboarding />} />
 							<Route path="system/airgap" element={<AirGapLicense />} />
+							<Route path="license" element={<License />} />
 							<Route path="docs/*" element={<Docs />} />
 						</Route>
 					</Routes>
