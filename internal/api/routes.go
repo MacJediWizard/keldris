@@ -2,6 +2,11 @@
 package api
 
 import (
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/MacJediWizard/keldris/internal/api/handlers"
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
@@ -44,6 +49,8 @@ type Config struct {
 	License *license.License
 	// AirGapPublicKey is the Ed25519 public key for validating offline licenses (optional).
 	AirGapPublicKey []byte
+	// WebDir is the path to the built frontend files (e.g. "web/dist").
+	WebDir string
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -268,6 +275,30 @@ func NewRouter(
 
 	agentAPIHandler := handlers.NewAgentAPIHandler(database, keyManager, logger)
 	agentAPIHandler.RegisterRoutes(agentAPI)
+
+	// Serve React SPA static files
+	if cfg.WebDir != "" {
+		indexPath := filepath.Join(cfg.WebDir, "index.html")
+		if _, err := os.Stat(indexPath); err == nil {
+			// Serve static assets (JS, CSS, images)
+			r.Engine.Static("/assets", filepath.Join(cfg.WebDir, "assets"))
+
+			// SPA fallback: serve index.html for all unmatched routes
+			r.Engine.NoRoute(func(c *gin.Context) {
+				// Don't serve SPA for API or auth routes
+				if strings.HasPrefix(c.Request.URL.Path, "/api/") ||
+					strings.HasPrefix(c.Request.URL.Path, "/auth/") ||
+					strings.HasPrefix(c.Request.URL.Path, "/health") {
+					c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+					return
+				}
+				c.File(indexPath)
+			})
+			r.logger.Info().Str("dir", cfg.WebDir).Msg("serving static frontend files")
+		} else {
+			r.logger.Warn().Str("dir", cfg.WebDir).Msg("web directory not found, SPA not served")
+		}
+	}
 
 	r.logger.Info().Msg("API router initialized")
 	return r, nil

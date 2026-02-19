@@ -193,6 +193,11 @@ func run() int {
 		rateLimitPeriod = v
 	}
 
+	webDir := os.Getenv("WEB_DIR")
+	if webDir == "" {
+		webDir = "web/dist"
+	}
+
 	routerCfg := api.Config{
 		Environment:       cfg.Environment,
 		AllowedOrigins:    allowedOrigins,
@@ -202,6 +207,7 @@ func run() int {
 		Version:           Version,
 		Commit:            Commit,
 		BuildDate:         BuildDate,
+		WebDir:            webDir,
 	}
 
 	router, err := api.NewRouter(routerCfg, database, oidcProvider, sessions, keyManager, logger)
