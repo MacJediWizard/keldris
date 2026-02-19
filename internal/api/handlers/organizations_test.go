@@ -155,6 +155,7 @@ func setupOrgTestRouter(store *mockOrgStore, user *auth.SessionUser) *gin.Engine
 	handler := NewOrganizationsHandler(store, nil, rbac, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
+	handler.RegisterMultiOrgRoutes(api)
 	return r
 }
 
@@ -1004,6 +1005,7 @@ func setupOrgTestRouterWithSessions(store *mockOrgStore, user *auth.SessionUser)
 	handler := NewOrganizationsHandler(store, sessionStore, rbac, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
+	handler.RegisterMultiOrgRoutes(api)
 	return r
 }
 

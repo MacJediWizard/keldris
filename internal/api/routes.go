@@ -151,9 +151,10 @@ func NewRouter(
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 
-	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
-	orgsHandler.RegisterRoutes(orgsGroup)
+	orgsHandler.RegisterRoutes(apiV1)
+	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
+	orgsHandler.RegisterMultiOrgRoutes(orgsGroup)
 
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1)

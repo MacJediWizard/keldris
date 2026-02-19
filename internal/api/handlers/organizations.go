@@ -57,20 +57,29 @@ func NewOrganizationsHandler(store OrganizationStore, sessions *auth.SessionStor
 	}
 }
 
-// RegisterRoutes registers organization routes on the given router group.
+// RegisterRoutes registers organization routes available on all tiers (read-only access).
+// These allow free-tier users to access their default organization.
 func (h *OrganizationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	orgs := r.Group("/organizations")
 	{
 		orgs.GET("", h.List)
-		orgs.POST("", h.Create)
 		orgs.GET("/current", h.GetCurrent)
 		orgs.POST("/switch", h.Switch)
 		orgs.GET("/:id", h.Get)
+		orgs.GET("/:id/members", h.ListMembers)
+	}
+}
+
+// RegisterMultiOrgRoutes registers organization management routes that require the multi_org feature.
+// These include creating, updating, deleting orgs, managing members, and invitations.
+func (h *OrganizationsHandler) RegisterMultiOrgRoutes(r *gin.RouterGroup) {
+	orgs := r.Group("/organizations")
+	{
+		orgs.POST("", h.Create)
 		orgs.PUT("/:id", h.Update)
 		orgs.DELETE("/:id", h.Delete)
 
-		// Member management
-		orgs.GET("/:id/members", h.ListMembers)
+		// Member management (write operations)
 		orgs.PUT("/:id/members/:user_id", h.UpdateMember)
 		orgs.DELETE("/:id/members/:user_id", h.RemoveMember)
 
@@ -80,7 +89,7 @@ func (h *OrganizationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		orgs.DELETE("/:id/invitations/:invitation_id", h.DeleteInvitation)
 	}
 
-	// Invitation acceptance (public endpoint for accepting invites)
+	// Invitation acceptance
 	r.POST("/invitations/accept", h.AcceptInvitation)
 }
 
