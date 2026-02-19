@@ -246,6 +246,7 @@ function Sidebar() {
 	const { data: user } = useMe();
 	const { t } = useLocale();
 	const { data: brandingData } = useBranding();
+	const { data: onboardingStatus } = useOnboardingStatus();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
@@ -408,6 +409,31 @@ function Sidebar() {
 					</>
 				)}
 			</nav>
+			{onboardingStatus?.needs_onboarding &&
+				location.pathname !== '/onboarding' && (
+					<div className="px-4 pb-2">
+						<Link
+							to="/onboarding"
+							className="flex items-center gap-2 px-3 py-2 bg-indigo-600 rounded-lg text-sm font-medium text-white hover:bg-indigo-500 transition-colors"
+						>
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M9 5l7 7-7 7"
+								/>
+							</svg>
+							Continue Setup
+						</Link>
+					</div>
+				)}
 			<div className="p-4 border-t border-gray-800">
 				<p className="text-xs text-gray-500">
 					{t('common.version', { version: '0.0.1' })}
