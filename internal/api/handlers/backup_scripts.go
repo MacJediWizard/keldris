@@ -39,15 +39,15 @@ func NewBackupScriptsHandler(store BackupScriptStore, logger zerolog.Logger) *Ba
 // RegisterRoutes registers backup script routes on the given router group.
 func (h *BackupScriptsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	// Scripts are managed under schedules
-	r.GET("/schedules/:schedule_id/scripts", h.List)
-	r.POST("/schedules/:schedule_id/scripts", h.Create)
-	r.GET("/schedules/:schedule_id/scripts/:id", h.Get)
-	r.PUT("/schedules/:schedule_id/scripts/:id", h.Update)
-	r.DELETE("/schedules/:schedule_id/scripts/:id", h.Delete)
+	r.GET("/schedules/:id/scripts", h.List)
+	r.POST("/schedules/:id/scripts", h.Create)
+	r.GET("/schedules/:id/scripts/:script_id", h.Get)
+	r.PUT("/schedules/:id/scripts/:script_id", h.Update)
+	r.DELETE("/schedules/:id/scripts/:script_id", h.Delete)
 }
 
 // List returns all backup scripts for a schedule.
-// GET /api/v1/schedules/:schedule_id/scripts
+// GET /api/v1/schedules/:id/scripts
 func (h *BackupScriptsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -59,7 +59,7 @@ func (h *BackupScriptsHandler) List(c *gin.Context) {
 		return
 	}
 
-	scheduleIDParam := c.Param("schedule_id")
+	scheduleIDParam := c.Param("id")
 	scheduleID, err := uuid.Parse(scheduleIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
@@ -82,7 +82,7 @@ func (h *BackupScriptsHandler) List(c *gin.Context) {
 }
 
 // Get returns a specific backup script by ID.
-// GET /api/v1/schedules/:schedule_id/scripts/:id
+// GET /api/v1/schedules/:id/scripts/:script_id
 func (h *BackupScriptsHandler) Get(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -94,15 +94,15 @@ func (h *BackupScriptsHandler) Get(c *gin.Context) {
 		return
 	}
 
-	scheduleIDParam := c.Param("schedule_id")
+	scheduleIDParam := c.Param("id")
 	scheduleID, err := uuid.Parse(scheduleIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
 		return
 	}
 
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+	scriptIDParam := c.Param("script_id")
+	id, err := uuid.Parse(scriptIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid script ID"})
 		return
@@ -129,7 +129,7 @@ func (h *BackupScriptsHandler) Get(c *gin.Context) {
 }
 
 // Create creates a new backup script.
-// POST /api/v1/schedules/:schedule_id/scripts
+// POST /api/v1/schedules/:id/scripts
 func (h *BackupScriptsHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -141,7 +141,7 @@ func (h *BackupScriptsHandler) Create(c *gin.Context) {
 		return
 	}
 
-	scheduleIDParam := c.Param("schedule_id")
+	scheduleIDParam := c.Param("id")
 	scheduleID, err := uuid.Parse(scheduleIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
@@ -199,7 +199,7 @@ func (h *BackupScriptsHandler) Create(c *gin.Context) {
 }
 
 // Update updates an existing backup script.
-// PUT /api/v1/schedules/:schedule_id/scripts/:id
+// PUT /api/v1/schedules/:id/scripts/:script_id
 func (h *BackupScriptsHandler) Update(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -211,15 +211,15 @@ func (h *BackupScriptsHandler) Update(c *gin.Context) {
 		return
 	}
 
-	scheduleIDParam := c.Param("schedule_id")
+	scheduleIDParam := c.Param("id")
 	scheduleID, err := uuid.Parse(scheduleIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
 		return
 	}
 
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+	scriptIDParam := c.Param("script_id")
+	id, err := uuid.Parse(scriptIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid script ID"})
 		return
@@ -277,7 +277,7 @@ func (h *BackupScriptsHandler) Update(c *gin.Context) {
 }
 
 // Delete removes a backup script.
-// DELETE /api/v1/schedules/:schedule_id/scripts/:id
+// DELETE /api/v1/schedules/:id/scripts/:script_id
 func (h *BackupScriptsHandler) Delete(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -289,15 +289,15 @@ func (h *BackupScriptsHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	scheduleIDParam := c.Param("schedule_id")
+	scheduleIDParam := c.Param("id")
 	scheduleID, err := uuid.Parse(scheduleIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
 		return
 	}
 
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
+	scriptIDParam := c.Param("script_id")
+	id, err := uuid.Parse(scriptIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid script ID"})
 		return
