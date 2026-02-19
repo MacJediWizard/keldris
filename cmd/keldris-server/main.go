@@ -56,6 +56,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -66,10 +67,12 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/api"
 	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/MacJediWizard/keldris/internal/maintenance"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )
 
@@ -198,16 +201,36 @@ func run() int {
 		webDir = "web/dist"
 	}
 
+	// Initialize verification scheduler
+	resticBin := backup.NewRestic(logger)
+	verificationConfig := backup.DefaultVerificationConfig()
+	verificationConfig.PasswordFunc = func(repoID uuid.UUID) (string, error) {
+		repoKey, err := database.GetRepositoryKeyByRepositoryID(ctx, repoID)
+		if err != nil {
+			return "", fmt.Errorf("get repository key: %w", err)
+		}
+		password, err := keyManager.Decrypt(repoKey.EncryptedKey)
+		if err != nil {
+			return "", fmt.Errorf("decrypt repository key: %w", err)
+		}
+		return string(password), nil
+	}
+	verificationConfig.DecryptFunc = func(encrypted []byte) ([]byte, error) {
+		return keyManager.Decrypt(encrypted)
+	}
+	verificationScheduler := backup.NewVerificationScheduler(database, resticBin, verificationConfig, logger)
+
 	routerCfg := api.Config{
-		Environment:       cfg.Environment,
-		AllowedOrigins:    allowedOrigins,
-		RateLimitRequests: rateLimitRequests,
-		RateLimitPeriod:   rateLimitPeriod,
-		RedisURL:          os.Getenv("REDIS_URL"),
-		Version:           Version,
-		Commit:            Commit,
-		BuildDate:         BuildDate,
-		WebDir:            webDir,
+		Environment:         cfg.Environment,
+		AllowedOrigins:      allowedOrigins,
+		RateLimitRequests:   rateLimitRequests,
+		RateLimitPeriod:     rateLimitPeriod,
+		RedisURL:            os.Getenv("REDIS_URL"),
+		Version:             Version,
+		Commit:              Commit,
+		BuildDate:           BuildDate,
+		WebDir:              webDir,
+		VerificationTrigger: verificationScheduler,
 	}
 
 	router, err := api.NewRouter(routerCfg, database, oidcProvider, sessions, keyManager, logger)
@@ -248,6 +271,12 @@ func run() int {
 		logger.Error().Err(err).Msg("Failed to start retention scheduler")
 	}
 	defer retentionScheduler.Stop()
+
+	// Start verification scheduler
+	if err := verificationScheduler.Start(ctx); err != nil {
+		logger.Error().Err(err).Msg("Failed to start verification scheduler")
+	}
+	defer verificationScheduler.Stop()
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)

@@ -856,8 +856,7 @@ function RepositoryCard({
 	testResult,
 }: RepositoryCardProps) {
 	const typeBadge = getRepositoryTypeBadge(repository.type);
-	const { data: verificationStatus, isError: verificationUnavailable } =
-		useVerificationStatus(repository.id);
+	const { data: verificationStatus } = useVerificationStatus(repository.id);
 
 	const lastVerification = verificationStatus?.last_verification;
 	const verificationBadge = getVerificationStatusBadge(
@@ -889,45 +888,43 @@ function RepositoryCard({
 			</div>
 
 			{/* Verification Status */}
-			{!verificationUnavailable && (
-				<div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-					<div className="flex items-center justify-between mb-2">
-						<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-							Integrity
-						</span>
-						<span
-							className={`px-2 py-0.5 rounded-full text-xs font-medium ${verificationBadge.className}`}
-						>
-							{verificationBadge.label}
-						</span>
-					</div>
-					{lastVerification && (
-						<p className="text-xs text-gray-500 dark:text-gray-400">
-							Last checked: {formatRelativeTime(lastVerification.started_at)}
-							{lastVerification.status === 'failed' &&
-								lastVerification.error_message && (
-									<span
-										className="block text-red-600 mt-1 truncate"
-										title={lastVerification.error_message}
-									>
-										{lastVerification.error_message}
-									</span>
-								)}
-						</p>
-					)}
-					{consecutiveFails > 0 && (
-						<p className="text-xs text-red-600 mt-1">
-							{consecutiveFails} consecutive failure
-							{consecutiveFails > 1 ? 's' : ''}
-						</p>
-					)}
-					{verificationStatus?.next_scheduled_at && (
-						<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-							Next: {formatRelativeTime(verificationStatus.next_scheduled_at)}
-						</p>
-					)}
+			<div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+				<div className="flex items-center justify-between mb-2">
+					<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+						Integrity
+					</span>
+					<span
+						className={`px-2 py-0.5 rounded-full text-xs font-medium ${verificationBadge.className}`}
+					>
+						{verificationBadge.label}
+					</span>
 				</div>
-			)}
+				{lastVerification && (
+					<p className="text-xs text-gray-500 dark:text-gray-400">
+						Last checked: {formatRelativeTime(lastVerification.started_at)}
+						{lastVerification.status === 'failed' &&
+							lastVerification.error_message && (
+								<span
+									className="block text-red-600 mt-1 truncate"
+									title={lastVerification.error_message}
+								>
+									{lastVerification.error_message}
+								</span>
+							)}
+					</p>
+				)}
+				{consecutiveFails > 0 && (
+					<p className="text-xs text-red-600 mt-1">
+						{consecutiveFails} consecutive failure
+						{consecutiveFails > 1 ? 's' : ''}
+					</p>
+				)}
+				{verificationStatus?.next_scheduled_at && (
+					<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+						Next: {formatRelativeTime(verificationStatus.next_scheduled_at)}
+					</p>
+				)}
+			</div>
 
 			{testResult && (
 				<div
@@ -941,19 +938,15 @@ function RepositoryCard({
 				</div>
 			)}
 			<div className="flex items-center gap-2 flex-wrap">
-				{!verificationUnavailable && (
-					<>
-						<button
-							type="button"
-							onClick={() => onVerify(repository.id, 'check')}
-							disabled={isVerifying}
-							className="text-sm text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
-						>
-							{isVerifying ? 'Verifying...' : 'Verify'}
-						</button>
-						<span className="text-gray-300 dark:text-gray-600">|</span>
-					</>
-				)}
+				<button
+					type="button"
+					onClick={() => onVerify(repository.id, 'check')}
+					disabled={isVerifying}
+					className="text-sm text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
+				>
+					{isVerifying ? 'Verifying...' : 'Verify'}
+				</button>
+				<span className="text-gray-300 dark:text-gray-600">|</span>
 				<button
 					type="button"
 					onClick={() => onTest(repository.id)}
