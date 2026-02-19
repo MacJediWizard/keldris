@@ -2,13 +2,20 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )
+
+// UserStore is the interface for verifying users exist in the database.
+type UserStore interface {
+	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
+}
 
 // ContextKey is the type for context keys used by this package.
 type ContextKey string
@@ -44,6 +51,34 @@ func AuthMiddleware(sessions *auth.SessionStore, logger zerolog.Logger) gin.Hand
 			Str("user_id", sessionUser.ID.String()).
 			Str("path", c.Request.URL.Path).
 			Msg("authenticated request")
+
+		c.Next()
+	}
+}
+
+// UserVerifyMiddleware returns a Gin middleware that verifies the session user exists in the database.
+// This catches stale sessions after a database reset. Must run after AuthMiddleware.
+func UserVerifyMiddleware(store UserStore, sessions *auth.SessionStore, logger zerolog.Logger) gin.HandlerFunc {
+	log := logger.With().Str("component", "user_verify_middleware").Logger()
+
+	return func(c *gin.Context) {
+		user := GetUser(c)
+		if user == nil {
+			c.Next()
+			return
+		}
+
+		_, err := store.GetUserByID(c.Request.Context(), user.ID)
+		if err != nil {
+			log.Warn().
+				Str("user_id", user.ID.String()).
+				Msg("session user not found in database, clearing stale session")
+			if clearErr := sessions.ClearUser(c.Request, c.Writer); clearErr != nil {
+				log.Warn().Err(clearErr).Msg("failed to clear stale session")
+			}
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "session expired, please log in again"})
+			return
+		}
 
 		c.Next()
 	}

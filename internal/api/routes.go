@@ -136,6 +136,7 @@ func NewRouter(
 	// API v1 routes (auth required)
 	apiV1 := r.Engine.Group("/api/v1")
 	apiV1.Use(middleware.AuthMiddleware(sessions, logger))
+	apiV1.Use(middleware.UserVerifyMiddleware(database, sessions, logger))
 	apiV1.Use(middleware.AuditMiddleware(database, logger))
 
 	// License middleware for feature gating
