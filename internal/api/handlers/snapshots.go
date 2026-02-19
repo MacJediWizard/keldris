@@ -96,7 +96,7 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		snapshots.GET("/:id/files", h.ListFiles)
 		snapshots.GET("/:id/comments", h.ListSnapshotComments)
 		snapshots.POST("/:id/comments", h.CreateSnapshotComment)
-		snapshots.GET("/:id1/compare/:id2", h.CompareSnapshots)
+		snapshots.GET("/compare", h.CompareSnapshots)
 	}
 
 	// Comments resource for direct access
@@ -930,11 +930,11 @@ func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 		return
 	}
 
-	snapshotID1 := c.Param("id1")
-	snapshotID2 := c.Param("id2")
+	snapshotID1 := c.Query("id1")
+	snapshotID2 := c.Query("id2")
 
 	if snapshotID1 == "" || snapshotID2 == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "both snapshot IDs are required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "both snapshot IDs are required (id1 and id2 query params)"})
 		return
 	}
 

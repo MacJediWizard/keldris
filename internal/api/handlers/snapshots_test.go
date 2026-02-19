@@ -227,7 +227,7 @@ func setupCompareRouter(store SnapshotStore, user *auth.SessionUser) *gin.Engine
 	api := r.Group("/api/v1")
 
 	snapshots := api.Group("/snapshots")
-	snapshots.GET("/:id1/compare/:id2", handler.CompareSnapshots)
+	snapshots.GET("/compare", handler.CompareSnapshots)
 
 	return r
 }
@@ -1817,7 +1817,7 @@ func TestCompareSnapshots(t *testing.T) {
 			schedule: schedule,
 		}
 		r := setupCompareRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2="+snapshotID2))
 
 		if w.Code != http.StatusInternalServerError {
 			t.Fatalf("expected 500 (repo not in mock), got %d: %s", w.Code, w.Body.String())
@@ -1832,7 +1832,7 @@ func TestCompareSnapshots(t *testing.T) {
 			},
 		}
 		r := setupCompareRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/nonexistent/compare/"+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1=nonexistent&id2="+snapshotID2))
 
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
@@ -1848,7 +1848,7 @@ func TestCompareSnapshots(t *testing.T) {
 			},
 		}
 		r := setupCompareRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/nonexistent"))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2=nonexistent"))
 
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
@@ -1860,7 +1860,7 @@ func TestCompareSnapshots(t *testing.T) {
 			getUserErr: errors.New("db error"),
 		}
 		r := setupCompareRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2="+snapshotID2))
 
 		if w.Code != http.StatusInternalServerError {
 			t.Fatalf("expected 500, got %d", w.Code)
@@ -1878,7 +1878,7 @@ func TestCompareSnapshots(t *testing.T) {
 			},
 		}
 		r := setupCompareRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2="+snapshotID2))
 
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
@@ -1920,7 +1920,7 @@ func TestCompareSnapshots(t *testing.T) {
 			schedule: schedule,
 		}
 		r := setupCompareRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2="+snapshotID2))
 
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
@@ -1940,7 +1940,7 @@ func TestCompareSnapshots(t *testing.T) {
 			getScheduleErr: errors.New("schedule db error"),
 		}
 		r := setupCompareRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2="+snapshotID2))
 
 		if w.Code != http.StatusInternalServerError {
 			t.Fatalf("expected 500 (repo not in mock), got %d: %s", w.Code, w.Body.String())
@@ -1950,7 +1950,7 @@ func TestCompareSnapshots(t *testing.T) {
 	t.Run("no auth", func(t *testing.T) {
 		store := &mockSnapshotStore{}
 		r := setupCompareRouter(store, nil)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2="+snapshotID2))
 
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("expected 401, got %d", w.Code)
@@ -2126,7 +2126,7 @@ func TestSnapshotsRegisterRoutes(t *testing.T) {
 	// Test compare route on a separate router to avoid wildcard conflict
 	t.Run("GET compare route", func(t *testing.T) {
 		rc := setupCompareRouter(store, sessionUser)
-		req := AuthenticatedRequest("GET", "/api/v1/snapshots/id1/compare/id2")
+		req := AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1=id1&id2=id2")
 		w := httptest.NewRecorder()
 		rc.ServeHTTP(w, req)
 		if w.Code == http.StatusMethodNotAllowed {

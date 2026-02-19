@@ -732,12 +732,12 @@ describe('snapshotsApi', () => {
 		);
 	});
 
-	it('compare calls /snapshots/:id1/compare/:id2', async () => {
+	it('compare calls /snapshots/compare with query params', async () => {
 		const fetchFn = mockFetch({ added: [], removed: [] });
 		const { snapshotsApi } = await import('./api');
 		await snapshotsApi.compare('sn1', 'sn2');
 		expect(fetchFn).toHaveBeenCalledWith(
-			'/api/v1/snapshots/sn1/compare/sn2',
+			'/api/v1/snapshots/compare?id1=sn1&id2=sn2',
 			expect.any(Object),
 		);
 	});

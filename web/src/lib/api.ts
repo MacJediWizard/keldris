@@ -618,7 +618,9 @@ export const snapshotsApi = {
 	},
 
 	compare: async (id1: string, id2: string): Promise<SnapshotCompareResponse> =>
-		fetchApi<SnapshotCompareResponse>(`/snapshots/${id1}/compare/${id2}`),
+		fetchApi<SnapshotCompareResponse>(
+			`/snapshots/compare?id1=${encodeURIComponent(id1)}&id2=${encodeURIComponent(id2)}`,
+		),
 };
 
 // Snapshot Comments API
