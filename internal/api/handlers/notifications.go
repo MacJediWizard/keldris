@@ -60,11 +60,12 @@ func NewNotificationsHandlerWithEnv(store NotificationStore, keyManager *crypto.
 	}
 }
 
-// RegisterRoutes registers notification routes on the given router group.
+// RegisterRoutes registers notification routes available on all tiers.
+// These allow free-tier users to manage email notification channels and preferences.
 func (h *NotificationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	notifications := r.Group("/notifications")
 	{
-		// Channels
+		// Channels (read + create/update/delete for email)
 		notifications.GET("/channels", h.ListChannels)
 		notifications.POST("/channels", h.CreateChannel)
 		notifications.GET("/channels/:id", h.GetChannel)

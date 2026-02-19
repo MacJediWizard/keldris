@@ -51,14 +51,16 @@ const ONBOARDING_STEPS = [
 	},
 ];
 
+const DOCS_BASE = 'https://github.com/MacJediWizard/keldris/blob/main/docs';
+
 const DOCS_LINKS: Record<string, string> = {
-	welcome: '/docs/getting-started',
-	organization: '/docs/organizations',
-	smtp: '/docs/notifications/email',
-	repository: '/docs/repositories',
-	agent: '/docs/agent-installation',
-	schedule: '/docs/schedules',
-	verify: '/docs/backup-verification',
+	welcome: 'https://github.com/MacJediWizard/keldris#readme',
+	organization: 'https://github.com/MacJediWizard/keldris#readme',
+	smtp: `${DOCS_BASE}/production-security.md`,
+	repository: `${DOCS_BASE}/infrastructure-requirements.md`,
+	agent: `${DOCS_BASE}/agent-installation.md`,
+	schedule: 'https://github.com/MacJediWizard/keldris#readme',
+	verify: `${DOCS_BASE}/bare-metal-restore.md`,
 };
 
 interface StepProps {
@@ -218,8 +220,9 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 						</span>
 					</div>
 					<p className="mt-1 text-sm text-green-700">
-						You're part of {organizations.length} organization(s). You can
-						continue to the next step.
+						You're part of{' '}
+						<strong>{organizations.map((o) => o.name).join(', ')}</strong>. You
+						can continue to the next step.
 					</p>
 				</div>
 			) : (

@@ -190,9 +190,8 @@ func NewRouter(
 	alertsHandler := handlers.NewAlertsHandler(database, logger)
 	alertsHandler.RegisterRoutes(apiV1)
 
-	notificationsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureNotificationSlack, logger))
 	notificationsHandler := handlers.NewNotificationsHandlerWithEnv(database, keyManager, logger, cfg.Environment)
-	notificationsHandler.RegisterRoutes(notificationsGroup)
+	notificationsHandler.RegisterRoutes(apiV1)
 
 	// Register reports handler if scheduler is available
 	if cfg.ReportScheduler != nil {
