@@ -213,7 +213,11 @@ func run() int {
 	// Start HTTP server
 	listenAddr := os.Getenv("LISTEN_ADDR")
 	if listenAddr == "" {
-		listenAddr = ":8080"
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "8080"
+		}
+		listenAddr = ":" + port
 	}
 
 	srv := &http.Server{
