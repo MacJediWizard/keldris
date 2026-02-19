@@ -710,12 +710,14 @@ export function Layout() {
 		};
 	}, [brandingData]);
 
-	// Redirect to onboarding if needed (but not if already on onboarding page)
+	// Redirect to onboarding if needed (only from dashboard)
+	// Allow access to all other pages so users can complete onboarding steps
+	// (e.g. creating repositories, configuring notifications, viewing docs)
 	useEffect(() => {
 		if (
 			!onboardingLoading &&
 			onboardingStatus?.needs_onboarding &&
-			location.pathname !== '/onboarding'
+			location.pathname === '/'
 		) {
 			navigate('/onboarding');
 		}
