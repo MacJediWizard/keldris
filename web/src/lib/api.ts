@@ -209,6 +209,7 @@ export class ApiError extends Error {
 	public resource?: string;
 	public limit?: number;
 	public tier?: string;
+	public feature?: string;
 
 	constructor(
 		public status: number,
@@ -216,6 +217,23 @@ export class ApiError extends Error {
 	) {
 		super(message);
 		this.name = 'ApiError';
+	}
+}
+
+// Global upgrade event emitter for 402 Payment Required responses.
+// The UpgradePromptProvider subscribes to this to show the upgrade modal.
+export type UpgradeEvent = { feature: string; tier: string };
+type UpgradeListener = (event: UpgradeEvent) => void;
+const upgradeListeners = new Set<UpgradeListener>();
+
+export function onUpgradeRequired(listener: UpgradeListener): () => void {
+	upgradeListeners.add(listener);
+	return () => upgradeListeners.delete(listener);
+}
+
+function emitUpgradeRequired(event: UpgradeEvent) {
+	for (const listener of upgradeListeners) {
+		listener(event);
 	}
 }
 
@@ -234,6 +252,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
 			err.resource = errorData.resource;
 			err.limit = errorData.limit;
 			err.tier = errorData.tier;
+			err.feature = errorData.feature;
+			emitUpgradeRequired({
+				feature: errorData.feature || errorData.resource || 'This feature',
+				tier: errorData.tier || 'free',
+			});
 			throw err;
 		}
 		throw new ApiError(response.status, (errorData as ErrorResponse).error);
