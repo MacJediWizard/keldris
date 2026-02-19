@@ -220,7 +220,7 @@ export function AgentDownloads({
 				{/* Documentation link */}
 				<div className="pt-2 border-t border-gray-200 dark:border-gray-700">
 					<a
-						href="https://github.com/MacJediWizard/keldris/blob/main/docs/agent-installation.md"
+						href="/docs/agent-installation"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
