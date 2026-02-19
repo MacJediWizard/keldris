@@ -2,8 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense, lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
-import { UpgradePromptProvider } from './hooks/useUpgradePrompt';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
+import { UpgradePromptProvider } from './hooks/useUpgradePrompt';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Agents = lazy(() => import('./pages/Agents'));

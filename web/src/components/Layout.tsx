@@ -11,8 +11,8 @@ import {
 	useOrganizations,
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
-import { TierBadge } from './features/TierBadge';
 import { LanguageSelector } from './features/LanguageSelector';
+import { TierBadge } from './features/TierBadge';
 
 interface NavItem {
 	path: string;

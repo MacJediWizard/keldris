@@ -1,6 +1,6 @@
-import { useLicense } from '../hooks/useLicense';
 import { TierBadge } from '../components/features/TierBadge';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { useLicense } from '../hooks/useLicense';
 
 function formatDate(dateStr: string): string {
 	if (!dateStr) return 'N/A';

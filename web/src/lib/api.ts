@@ -248,7 +248,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
 			error: 'Unknown error',
 		}));
 		if (response.status === 402) {
-			const err = new ApiError(402, errorData.message || errorData.error || 'Upgrade required');
+			const err = new ApiError(
+				402,
+				errorData.message || errorData.error || 'Upgrade required',
+			);
 			err.resource = errorData.resource;
 			err.limit = errorData.limit;
 			err.tier = errorData.tier;
