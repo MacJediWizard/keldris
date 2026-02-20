@@ -504,7 +504,7 @@ function OrgSwitcher() {
 			<button
 				type="button"
 				onClick={() => setShowDropdown(!showDropdown)}
-				className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+				className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700"
 			>
 				<svg
 					aria-hidden="true"
@@ -539,7 +539,7 @@ function OrgSwitcher() {
 				</svg>
 			</button>
 			{showDropdown && (
-				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+				<div className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
 					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
 						{t('org.organizations')}
 					</div>
@@ -548,10 +548,10 @@ function OrgSwitcher() {
 							key={org.id}
 							type="button"
 							onClick={() => handleSwitch(org.id)}
-							className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center justify-between ${
+							className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
 								org.id === user?.current_org_id
-									? 'bg-indigo-50 text-indigo-700'
-									: 'text-gray-700'
+									? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+									: 'text-gray-700 dark:text-gray-200'
 							}`}
 						>
 							<span className="truncate">{org.name}</span>
@@ -560,11 +560,11 @@ function OrgSwitcher() {
 							</span>
 						</button>
 					))}
-					<div className="border-t border-gray-100 mt-1 pt-1">
+					<div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
 						<Link
 							to="/organization/new"
 							onClick={() => setShowDropdown(false)}
-							className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-gray-100 flex items-center gap-2"
+							className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-gray-100 dark:text-indigo-400 dark:hover:bg-gray-700 flex items-center gap-2"
 						>
 							<svg
 								aria-hidden="true"
@@ -598,7 +598,7 @@ function AirGapIndicator() {
 	return (
 		<Link
 			to="/system/airgap"
-			className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors"
+			className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors dark:text-amber-300 dark:bg-amber-900/30 dark:border-amber-700 dark:hover:bg-amber-900/50"
 		>
 			<svg
 				aria-hidden="true"
@@ -642,7 +642,7 @@ function Header() {
 				<Link
 					to="/alerts"
 					aria-label={t('nav.alerts')}
-					className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+					className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
 				>
 					<svg
 						aria-hidden="true"
@@ -675,19 +675,19 @@ function Header() {
 						</div>
 					</button>
 					{showDropdown && (
-						<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+						<div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
 							{user && (
-								<div className="px-4 py-2 border-b border-gray-100">
-									<p className="text-sm font-medium text-gray-900 truncate">
+								<div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+									<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
 										{user.name}
 									</p>
-									<p className="text-xs text-gray-500 truncate">{user.email}</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
 								</div>
 							)}
 							<button
 								type="button"
 								onClick={() => logout.mutate()}
-								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
 							>
 								{t('common.signOut')}
 							</button>
@@ -705,7 +705,7 @@ function LoadingScreen() {
 		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
 			<div className="text-center">
 				<div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
-				<p className="text-gray-600">{t('common.loading')}</p>
+				<p className="text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
 			</div>
 		</div>
 	);

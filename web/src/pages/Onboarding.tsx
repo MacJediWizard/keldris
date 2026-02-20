@@ -77,7 +77,7 @@ interface StepProps {
 function WelcomeStep({ onComplete, onSkip, isLoading }: StepProps) {
 	return (
 		<div className="text-center py-8">
-			<div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+			<div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
 				<svg
 					aria-hidden="true"
 					className="w-10 h-10 text-indigo-600"
@@ -175,7 +175,7 @@ function WelcomeStep({ onComplete, onSkip, isLoading }: StepProps) {
 				<button
 					type="button"
 					onClick={onSkip}
-					className="px-4 py-2 text-gray-600 hover:text-gray-900"
+					className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
 				>
 					Skip for now
 				</button>
@@ -363,7 +363,7 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 					href={DOCS_LINKS.organization}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-sm text-indigo-600 hover:text-indigo-700"
+					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					Learn more about organizations
 				</a>
@@ -409,13 +409,13 @@ function SMTPStep({ onComplete, onSkip, isLoading }: StepProps) {
 						href={DOCS_LINKS.smtp}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="text-sm text-indigo-600 hover:text-indigo-700"
+						className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 					>
 						Learn about email setup
 					</a>
 					<Link
 						to="/notifications"
-						className="text-sm text-indigo-600 hover:text-indigo-700"
+						className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 					>
 						Configure email now
 					</Link>
@@ -424,7 +424,7 @@ function SMTPStep({ onComplete, onSkip, isLoading }: StepProps) {
 					<button
 						type="button"
 						onClick={onSkip}
-						className="px-4 py-2 text-gray-600 hover:text-gray-900"
+						className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
 					>
 						Skip for now
 					</button>
@@ -484,7 +484,7 @@ function RepositoryStep({ onComplete, isLoading }: StepProps) {
 					</p>
 					<Link
 						to="/repositories"
-						className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700"
+						className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 					>
 						<svg
 							aria-hidden="true"
@@ -510,7 +510,7 @@ function RepositoryStep({ onComplete, isLoading }: StepProps) {
 					href={DOCS_LINKS.repository}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-sm text-indigo-600 hover:text-indigo-700"
+					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					Learn about repository types
 				</a>
@@ -574,7 +574,7 @@ function AgentStep({ onComplete, isLoading }: StepProps) {
 					href={DOCS_LINKS.agent}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-sm text-indigo-600 hover:text-indigo-700"
+					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					View installation guide
 				</a>
@@ -633,7 +633,7 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 					</p>
 					<Link
 						to="/schedules"
-						className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700"
+						className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 					>
 						<svg
 							aria-hidden="true"
@@ -659,7 +659,7 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 					href={DOCS_LINKS.schedule}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-sm text-indigo-600 hover:text-indigo-700"
+					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					Learn about backup schedules
 				</a>
@@ -687,7 +687,7 @@ function VerifyStep({ onComplete, isLoading }: StepProps) {
 			</p>
 
 			<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-				<h3 className="font-medium text-blue-900 mb-2">
+				<h3 className="font-medium text-blue-900 dark:text-blue-300 mb-2">
 					To verify your backup:
 				</h3>
 				<ol className="text-sm text-blue-700 dark:text-blue-400 space-y-2 list-decimal list-inside">
@@ -701,13 +701,13 @@ function VerifyStep({ onComplete, isLoading }: StepProps) {
 			<div className="flex gap-3 mb-6">
 				<Link
 					to="/schedules"
-					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50"
+					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-400 dark:hover:bg-indigo-900/30"
 				>
 					Go to Schedules
 				</Link>
 				<Link
 					to="/backups"
-					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
 				>
 					View Backups
 				</Link>
@@ -718,7 +718,7 @@ function VerifyStep({ onComplete, isLoading }: StepProps) {
 					href={DOCS_LINKS.verify}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-sm text-indigo-600 hover:text-indigo-700"
+					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					Learn about backup verification
 				</a>
@@ -747,7 +747,7 @@ function CompleteStep() {
 		<div className="text-center py-8 relative">
 			{showConfetti && <Confetti />}
 
-			<div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+			<div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
 				<svg
 					aria-hidden="true"
 					className="w-10 h-10 text-green-600"
@@ -979,12 +979,12 @@ export function Onboarding() {
 							/>
 
 							{currentStep !== 'complete' && (
-								<div className="mt-8 pt-4 border-t border-gray-200">
+								<div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
 									<button
 										type="button"
 										onClick={handleSkip}
 										disabled={skipOnboarding.isPending}
-										className="text-sm text-gray-500 hover:text-gray-700"
+										className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
 									>
 										{skipOnboarding.isPending
 											? 'Skipping...'

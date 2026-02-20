@@ -7430,6 +7430,11 @@ func (db *DB) CountOrganizations(ctx context.Context) (int, error) {
 	return count, nil
 }
 
+// OrgCount implements the license.OrgCounter interface.
+func (db *DB) OrgCount(ctx context.Context) (int, error) {
+	return db.CountOrganizations(ctx)
+}
+
 // GetServerSetting retrieves a server setting by key.
 func (db *DB) GetServerSetting(ctx context.Context, key string) (string, error) {
 	var value string

@@ -52,25 +52,28 @@ type OrgCounter interface {
 // It handles instance registration, heartbeat, license activation/validation,
 // and grace period management.
 type Validator struct {
-	mu              sync.RWMutex
-	license         *License
-	entitlement     *Entitlement
+	mu               sync.RWMutex
+	license          *License
+	entitlement      *Entitlement
 	entitlementToken string
-	licenseKey      string
-	serverURL       string
-	instanceID      string
-	serverVersion   string
-	startedAt       time.Time
-	killed          bool
-	store           SettingsStore
-	metrics         MetricsProvider
-	orgCounter      OrgCounter
-	publicKey       ed25519.PublicKey
-	logger          zerolog.Logger
-	lastValidation  time.Time
-	graceStartedAt  *time.Time
-	featureUsage    *FeatureUsageTracker
-	stopCh          chan struct{}
+	licenseKey       string
+	licenseKeySource string // "env", "database", or "none" — cached on set
+	serverURL        string
+	instanceID       string
+	serverVersion    string
+	startedAt        time.Time
+	killed           bool
+	store            SettingsStore
+	metrics          MetricsProvider
+	orgCounter       OrgCounter
+	publicKey        ed25519.PublicKey
+	logger           zerolog.Logger
+	lastValidation   time.Time
+	graceStartedAt   *time.Time
+	featureUsage     *FeatureUsageTracker
+	stopCh           chan struct{}
+	stopOnce         sync.Once
+	validationRunning bool
 }
 
 // ValidatorConfig holds configuration for the validator.
@@ -136,13 +139,20 @@ func (v *Validator) SetLicenseKey(ctx context.Context, key string) error {
 	}
 	v.mu.Lock()
 	v.licenseKey = key
+	v.licenseKeySource = "database"
 	v.killed = false
+	shouldStartLoop := !v.validationRunning
 	v.mu.Unlock()
 
 	v.activateLicense(ctx)
 
 	// Start validation loop if not already running
-	go v.validationLoop()
+	if shouldStartLoop {
+		v.mu.Lock()
+		v.validationRunning = true
+		v.mu.Unlock()
+		go v.validationLoop()
+	}
 
 	return nil
 }
@@ -154,6 +164,7 @@ func (v *Validator) ClearLicenseKey(ctx context.Context) error {
 	}
 	v.mu.Lock()
 	v.licenseKey = ""
+	v.licenseKeySource = "none"
 	v.license = FreeLicense()
 	v.entitlement = nil
 	v.entitlementToken = ""
@@ -187,8 +198,13 @@ func (v *Validator) Start(ctx context.Context) error {
 	if v.licenseKey == "" {
 		if dbKey, err := v.store.GetServerSetting(ctx, "license_key"); err == nil && dbKey != "" {
 			v.licenseKey = dbKey
+			v.licenseKeySource = "database"
 			v.logger.Info().Msg("loaded license key from database")
+		} else {
+			v.licenseKeySource = "none"
 		}
+	} else {
+		v.licenseKeySource = "env"
 	}
 
 	// Parse license key if provided
@@ -209,6 +225,7 @@ func (v *Validator) Start(ctx context.Context) error {
 	// Start background goroutines
 	go v.heartbeatLoop()
 	if v.licenseKey != "" {
+		v.validationRunning = true
 		go v.validationLoop()
 	}
 
@@ -217,11 +234,32 @@ func (v *Validator) Start(ctx context.Context) error {
 
 // Stop shuts down the validator and deactivates the license if applicable.
 func (v *Validator) Stop(ctx context.Context) {
-	close(v.stopCh)
+	v.stopOnce.Do(func() {
+		close(v.stopCh)
+	})
 
-	if v.licenseKey != "" {
+	v.mu.RLock()
+	key := v.licenseKey
+	v.mu.RUnlock()
+	if key != "" {
 		v.deactivateLicense(ctx)
 	}
+}
+
+// Restart reinitializes the stop channel so the validator can accept new
+// background goroutines after a Stop(). Must be called before SetLicenseKey()
+// when reactivating after deactivation.
+func (v *Validator) Restart() {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.stopCh = make(chan struct{})
+	v.stopOnce = sync.Once{}
+	v.validationRunning = false
+}
+
+// GetServerURL returns the license server URL.
+func (v *Validator) GetServerURL() string {
+	return v.serverURL
 }
 
 // SetLicense updates the current license (used after successful validation or initial parse).
@@ -235,12 +273,11 @@ func (v *Validator) SetLicense(lic *License) {
 func (v *Validator) LicenseKeySource() string {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
+	if v.licenseKeySource != "" {
+		return v.licenseKeySource
+	}
 	if v.licenseKey == "" {
 		return "none"
-	}
-	// Check if it was loaded from env (set before Start) or DB
-	if dbKey, err := v.store.GetServerSetting(context.Background(), "license_key"); err == nil && dbKey == v.licenseKey {
-		return "database"
 	}
 	return "env"
 }
@@ -424,6 +461,12 @@ func (v *Validator) sendHeartbeat(ctx context.Context) {
 }
 
 func (v *Validator) validationLoop() {
+	defer func() {
+		v.mu.Lock()
+		v.validationRunning = false
+		v.mu.Unlock()
+	}()
+
 	ticker := time.NewTicker(ValidationInterval)
 	defer ticker.Stop()
 

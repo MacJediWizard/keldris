@@ -98,8 +98,10 @@ func (h *LicenseManageHandler) Deactivate(c *gin.Context) {
 	ctx := c.Request.Context()
 	key := h.validator.GetLicenseKey()
 	if key != "" {
-		// This triggers the deactivation with the license server
+		// Stop background loops and deactivate with license server
 		h.validator.Stop(ctx)
+		// Reinitialize so the validator can accept a new license later
+		h.validator.Restart()
 	}
 
 	// Clear the key from DB
@@ -123,9 +125,8 @@ func (h *LicenseManageHandler) GetPlans(c *gin.Context) {
 	}
 
 	// Proxy request to license server
-	serverURL := fmt.Sprintf("%s/api/v1/products/keldris/pricing", h.validator.GetLicenseKey())
-	// Use the server URL from the validator config instead
-	resp, err := http.Get(serverURL)
+	serverURL := fmt.Sprintf("%s/api/v1/products/keldris/pricing", h.validator.GetServerURL())
+	resp, err := http.Get(serverURL) //nolint:gosec // URL is from trusted server config
 	if err != nil {
 		// Return empty plans on error
 		c.JSON(http.StatusOK, []interface{}{})
