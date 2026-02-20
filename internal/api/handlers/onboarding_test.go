@@ -143,8 +143,8 @@ func TestOnboardingCompleteStep(t *testing.T) {
 		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 			t.Fatalf("unmarshal: %v", err)
 		}
-		if resp.CurrentStep != models.OnboardingStepOrganization {
-			t.Fatalf("expected step to advance to organization, got %q", resp.CurrentStep)
+		if resp.CurrentStep != models.OnboardingStepLicense {
+			t.Fatalf("expected step to advance to license, got %q", resp.CurrentStep)
 		}
 	})
 

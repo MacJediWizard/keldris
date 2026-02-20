@@ -808,14 +808,15 @@ func TestOnboardingProgress_CompleteStep(t *testing.T) {
 	}
 
 	p.CompleteStep(OnboardingStepWelcome)
-	if p.CurrentStep != OnboardingStepOrganization {
-		t.Errorf("expected step 'organization' after welcome, got %s", p.CurrentStep)
+	if p.CurrentStep != OnboardingStepLicense {
+		t.Errorf("expected step 'license' after welcome, got %s", p.CurrentStep)
 	}
 	if !p.HasCompletedStep(OnboardingStepWelcome) {
 		t.Error("expected welcome to be completed")
 	}
 
 	// Complete multiple steps
+	p.CompleteStep(OnboardingStepLicense)
 	p.CompleteStep(OnboardingStepOrganization)
 	p.CompleteStep(OnboardingStepSMTP)
 	p.CompleteStep(OnboardingStepRepository)
