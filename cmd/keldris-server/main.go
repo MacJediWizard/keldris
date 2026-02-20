@@ -285,6 +285,7 @@ func run() int {
 			ServerVersion: Version,
 			Store:         database,
 			Metrics:       database,
+			PublicKey:      ed25519.PublicKey(airGapPubKey),
 			Logger:        logger,
 		})
 		if lic != nil {

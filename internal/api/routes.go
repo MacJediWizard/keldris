@@ -161,8 +161,14 @@ func NewRouter(
 	versionHandler.RegisterRoutes(apiV1)
 
 	// License info endpoint
-	licenseInfoHandler := handlers.NewLicenseInfoHandler(logger)
+	licenseInfoHandler := handlers.NewLicenseInfoHandler(cfg.Validator, logger)
 	licenseInfoHandler.RegisterRoutes(apiV1)
+
+	// License management endpoints (activate/deactivate from GUI)
+	if cfg.Validator != nil {
+		licenseManageHandler := handlers.NewLicenseManageHandler(cfg.Validator, cfg.AirGapPublicKey, logger)
+		licenseManageHandler.RegisterRoutes(apiV1)
+	}
 
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
 	orgsHandler.RegisterRoutes(apiV1)

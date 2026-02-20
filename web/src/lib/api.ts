@@ -97,6 +97,8 @@ import type {
 	InviteResponse,
 	KeyRecoveryResponse,
 	LicenseInfo,
+	ActivateLicenseResponse,
+	PricingPlan,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
 	MembersResponse,
@@ -1760,6 +1762,17 @@ export const airGapApi = {
 
 export const licenseApi = {
 	getInfo: async (): Promise<LicenseInfo> => fetchApi<LicenseInfo>('/license'),
+	activate: async (licenseKey: string): Promise<ActivateLicenseResponse> =>
+		fetchApi<ActivateLicenseResponse>('/system/license/activate', {
+			method: 'POST',
+			body: JSON.stringify({ license_key: licenseKey }),
+		}),
+	deactivate: async (): Promise<{ status: string; tier: string }> =>
+		fetchApi<{ status: string; tier: string }>('/system/license/deactivate', {
+			method: 'POST',
+		}),
+	getPlans: async (): Promise<PricingPlan[]> =>
+		fetchApi<PricingPlan[]>('/system/license/plans'),
 };
 
 export const versionApi = {

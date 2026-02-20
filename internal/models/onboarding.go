@@ -11,6 +11,7 @@ type OnboardingStep string
 
 const (
 	OnboardingStepWelcome      OnboardingStep = "welcome"
+	OnboardingStepLicense      OnboardingStep = "license"
 	OnboardingStepOrganization OnboardingStep = "organization"
 	OnboardingStepSMTP         OnboardingStep = "smtp"
 	OnboardingStepRepository   OnboardingStep = "repository"
@@ -23,6 +24,7 @@ const (
 // OnboardingSteps defines the ordered list of onboarding steps.
 var OnboardingSteps = []OnboardingStep{
 	OnboardingStepWelcome,
+	OnboardingStepLicense,
 	OnboardingStepOrganization,
 	OnboardingStepSMTP,
 	OnboardingStepRepository,

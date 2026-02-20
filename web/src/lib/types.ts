@@ -1650,6 +1650,7 @@ export interface ReportPreviewResponse {
 // Onboarding types
 export type OnboardingStep =
 	| 'welcome'
+	| 'license'
 	| 'organization'
 	| 'smtp'
 	| 'repository'
@@ -2010,6 +2011,33 @@ export interface LicenseInfo {
 	issued_at: string;
 	features: string[];
 	limits: LicenseLimits;
+	license_key_source: 'env' | 'database' | 'none';
+}
+
+export interface ActivateLicenseRequest {
+	license_key: string;
+}
+
+export interface ActivateLicenseResponse {
+	status: string;
+	tier: LicenseTier;
+	expires_at: string;
+	features: string[];
+	limits: LicenseLimits;
+}
+
+export interface PricingPlan {
+	id: string;
+	product_id: string;
+	tier: string;
+	name: string;
+	base_price_cents: number;
+	agent_price_cents: number;
+	included_agents: number;
+	included_servers: number;
+	features: string[];
+	is_active: boolean;
+	stripe_price_id?: string;
 }
 
 export interface LicenseLimits {

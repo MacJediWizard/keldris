@@ -11,23 +11,26 @@ import (
 
 // LicenseInfoResponse is the JSON response for the license info endpoint.
 type LicenseInfoResponse struct {
-	Tier       string            `json:"tier"`
-	CustomerID string            `json:"customer_id"`
-	ExpiresAt  string            `json:"expires_at"`
-	IssuedAt   string            `json:"issued_at"`
-	Features   []string          `json:"features"`
-	Limits     license.TierLimits `json:"limits"`
+	Tier              string             `json:"tier"`
+	CustomerID        string             `json:"customer_id"`
+	ExpiresAt         string             `json:"expires_at"`
+	IssuedAt          string             `json:"issued_at"`
+	Features          []string           `json:"features"`
+	Limits            license.TierLimits `json:"limits"`
+	LicenseKeySource  string             `json:"license_key_source"`
 }
 
 // LicenseInfoHandler handles license information endpoints.
 type LicenseInfoHandler struct {
-	logger zerolog.Logger
+	validator *license.Validator
+	logger    zerolog.Logger
 }
 
 // NewLicenseInfoHandler creates a new LicenseInfoHandler.
-func NewLicenseInfoHandler(logger zerolog.Logger) *LicenseInfoHandler {
+func NewLicenseInfoHandler(validator *license.Validator, logger zerolog.Logger) *LicenseInfoHandler {
 	return &LicenseInfoHandler{
-		logger: logger.With().Str("component", "license_info_handler").Logger(),
+		validator: validator,
+		logger:    logger.With().Str("component", "license_info_handler").Logger(),
 	}
 }
 
@@ -43,18 +46,33 @@ func (h *LicenseInfoHandler) Get(c *gin.Context) {
 		lic = license.FreeLicense()
 	}
 
-	features := license.FeaturesForTier(lic.Tier)
-	featureStrings := make([]string, len(features))
-	for i, f := range features {
-		featureStrings[i] = string(f)
+	// Use entitlement features if available, otherwise fall back to tier features
+	var featureStrings []string
+	if ent := middleware.GetEntitlement(c); ent != nil && !ent.IsExpired() {
+		featureStrings = make([]string, len(ent.Features))
+		for i, f := range ent.Features {
+			featureStrings[i] = string(f)
+		}
+	} else {
+		features := license.FeaturesForTier(lic.Tier)
+		featureStrings = make([]string, len(features))
+		for i, f := range features {
+			featureStrings[i] = string(f)
+		}
+	}
+
+	keySource := "none"
+	if h.validator != nil {
+		keySource = h.validator.LicenseKeySource()
 	}
 
 	c.JSON(http.StatusOK, LicenseInfoResponse{
-		Tier:       string(lic.Tier),
-		CustomerID: lic.CustomerID,
-		ExpiresAt:  lic.ExpiresAt.Format("2006-01-02T15:04:05Z"),
-		IssuedAt:   lic.IssuedAt.Format("2006-01-02T15:04:05Z"),
-		Features:   featureStrings,
-		Limits:     lic.Limits,
+		Tier:             string(lic.Tier),
+		CustomerID:       lic.CustomerID,
+		ExpiresAt:        lic.ExpiresAt.Format("2006-01-02T15:04:05Z"),
+		IssuedAt:         lic.IssuedAt.Format("2006-01-02T15:04:05Z"),
+		Features:         featureStrings,
+		Limits:           lic.Limits,
+		LicenseKeySource: keySource,
 	})
 }

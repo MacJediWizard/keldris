@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import { VerticalStepper } from '../components/ui/Stepper';
 import { useAgents } from '../hooks/useAgents';
+import { useActivateLicense, useLicense } from '../hooks/useLicense';
 import {
 	useCompleteOnboardingStep,
 	useOnboardingStatus,
@@ -18,6 +19,11 @@ const ONBOARDING_STEPS = [
 		id: 'welcome',
 		label: 'Welcome',
 		description: 'Get started with Keldris',
+	},
+	{
+		id: 'license',
+		label: 'License',
+		description: 'Activate your license',
 	},
 	{
 		id: 'organization',
@@ -53,6 +59,7 @@ const ONBOARDING_STEPS = [
 
 const DOCS_LINKS: Record<string, string> = {
 	welcome: '/docs/getting-started',
+	license: '/docs/licensing',
 	organization: '/docs/organizations',
 	smtp: '/docs/notifications/email',
 	repository: '/docs/repositories',
@@ -87,20 +94,20 @@ function WelcomeStep({ onComplete, onSkip, isLoading }: StepProps) {
 				</svg>
 			</div>
 
-			<h2 className="text-2xl font-bold text-gray-900 mb-4">
+			<h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
 				Welcome to Keldris
 			</h2>
 
-			<p className="text-gray-600 max-w-md mx-auto mb-8">
+			<p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-8">
 				Keldris is your self-hosted backup solution. This wizard will guide you
 				through setting up your first backup in just a few minutes.
 			</p>
 
-			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 max-w-md mx-auto text-left">
-				<h3 className="text-sm font-semibold text-blue-900 mb-2">
+			<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8 max-w-md mx-auto text-left">
+				<h3 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
 					What you'll set up:
 				</h3>
-				<ul className="text-sm text-blue-700 space-y-1">
+				<ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
 					<li className="flex items-center gap-2">
 						<svg
 							aria-hidden="true"
@@ -185,22 +192,141 @@ function WelcomeStep({ onComplete, onSkip, isLoading }: StepProps) {
 	);
 }
 
+function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
+	const { data: license } = useLicense();
+	const activateMutation = useActivateLicense();
+	const [licenseKey, setLicenseKey] = useState('');
+	const [activateError, setActivateError] = useState('');
+
+	const isActivated = license && license.tier !== 'free';
+
+	const handleActivate = async () => {
+		setActivateError('');
+		try {
+			await activateMutation.mutateAsync(licenseKey);
+			setLicenseKey('');
+		} catch (err) {
+			setActivateError(err instanceof Error ? err.message : 'Activation failed');
+		}
+	};
+
+	return (
+		<div className="py-4">
+			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+				Activate Your License
+			</h2>
+			<p className="text-gray-600 dark:text-gray-400 mb-6">
+				Enter your license key to unlock Pro or Enterprise features. You can also
+				skip this step and use the free tier.
+			</p>
+
+			{isActivated ? (
+				<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 dark:bg-green-900/20 dark:border-green-800">
+					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="currentColor"
+							viewBox="0 0 20 20"
+						>
+							<path
+								fillRule="evenodd"
+								d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+								clipRule="evenodd"
+							/>
+						</svg>
+						<span className="font-medium">
+							License activated! ({license.tier} tier)
+						</span>
+					</div>
+				</div>
+			) : (
+				<div className="mb-6">
+					<div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
+						<div className="flex gap-3">
+							<input
+								type="text"
+								value={licenseKey}
+								onChange={(e) => setLicenseKey(e.target.value)}
+								placeholder="Enter your license key..."
+								className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+							/>
+							<button
+								type="button"
+								onClick={handleActivate}
+								disabled={!licenseKey.trim() || activateMutation.isPending}
+								className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{activateMutation.isPending ? 'Activating...' : 'Activate'}
+							</button>
+						</div>
+						{activateError && (
+							<p className="mt-2 text-sm text-red-600 dark:text-red-400">{activateError}</p>
+						)}
+					</div>
+
+					<div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
+						<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+							Available tiers:
+						</h3>
+						<ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+							<li><strong>Free</strong> — Basic backups with limited agents and storage</li>
+							<li><strong>Pro</strong> — More agents, users, and advanced features</li>
+							<li><strong>Enterprise</strong> — Unlimited resources with SSO, audit logs, and more</li>
+						</ul>
+					</div>
+				</div>
+			)}
+
+			<div className="flex justify-between items-center">
+				<a
+					href={DOCS_LINKS.license}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+				>
+					Learn about license tiers
+				</a>
+				<div className="flex gap-3">
+					{!isActivated && (
+						<button
+							type="button"
+							onClick={onSkip}
+							className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+						>
+							Skip (use free tier)
+						</button>
+					)}
+					<button
+						type="button"
+						onClick={onComplete}
+						disabled={isLoading}
+						className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+					>
+						{isLoading ? 'Saving...' : 'Continue'}
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 function OrganizationStep({ onComplete, isLoading }: StepProps) {
 	const { data: organizations } = useOrganizations();
 	const hasOrganization = organizations && organizations.length > 0;
 
 	return (
 		<div className="py-4">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
+			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
 				Create Your Organization
 			</h2>
-			<p className="text-gray-600 mb-6">
+			<p className="text-gray-600 dark:text-gray-400 mb-6">
 				Organizations help you manage backup resources and team access.
 			</p>
 
 			{hasOrganization ? (
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-					<div className="flex items-center gap-2 text-green-800">
+				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
 						<svg
 							aria-hidden="true"
 							className="w-5 h-5"
@@ -217,15 +343,15 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 							You already have an organization!
 						</span>
 					</div>
-					<p className="mt-1 text-sm text-green-700">
+					<p className="mt-1 text-sm text-green-700 dark:text-green-400">
 						You're part of{' '}
 						<strong>{organizations.map((o) => o.name).join(', ')}</strong>. You
 						can continue to the next step.
 					</p>
 				</div>
 			) : (
-				<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-					<p className="text-sm text-yellow-800">
+				<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+					<p className="text-sm text-yellow-800 dark:text-yellow-300">
 						You need to create an organization to continue. This is typically
 						done automatically when you first sign in.
 					</p>
@@ -257,19 +383,19 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 function SMTPStep({ onComplete, onSkip, isLoading }: StepProps) {
 	return (
 		<div className="py-4">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
+			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
 				Configure Email Notifications
 			</h2>
-			<p className="text-gray-600 mb-6">
+			<p className="text-gray-600 dark:text-gray-400 mb-6">
 				Set up email notifications to stay informed about your backups. This
 				step is optional and can be configured later.
 			</p>
 
-			<div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-				<h3 className="font-medium text-gray-900 mb-2">
+			<div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-6">
+				<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
 					Email notifications can alert you when:
 				</h3>
-				<ul className="text-sm text-gray-600 space-y-1">
+				<ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
 					<li>- Backups complete successfully</li>
 					<li>- Backups fail or encounter errors</li>
 					<li>- Agents go offline</li>
@@ -322,17 +448,17 @@ function RepositoryStep({ onComplete, isLoading }: StepProps) {
 
 	return (
 		<div className="py-4">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
+			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
 				Create a Backup Repository
 			</h2>
-			<p className="text-gray-600 mb-6">
+			<p className="text-gray-600 dark:text-gray-400 mb-6">
 				Repositories are where your backups are stored. Create one using local
 				storage, S3, or other supported backends.
 			</p>
 
 			{hasRepository ? (
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-					<div className="flex items-center gap-2 text-green-800">
+				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
 						<svg
 							aria-hidden="true"
 							className="w-5 h-5"
@@ -347,13 +473,13 @@ function RepositoryStep({ onComplete, isLoading }: StepProps) {
 						</svg>
 						<span className="font-medium">Repository configured!</span>
 					</div>
-					<p className="mt-1 text-sm text-green-700">
+					<p className="mt-1 text-sm text-green-700 dark:text-green-400">
 						You have {repositories.length} repository(s) set up.
 					</p>
 				</div>
 			) : (
-				<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-					<p className="text-sm text-yellow-800 mb-2">
+				<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+					<p className="text-sm text-yellow-800 dark:text-yellow-300 mb-2">
 						You need to create a repository to store your backups.
 					</p>
 					<Link
@@ -409,16 +535,16 @@ function AgentStep({ onComplete, isLoading }: StepProps) {
 
 	return (
 		<div className="py-4">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
+			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
 				Install a Backup Agent
 			</h2>
-			<p className="text-gray-600 mb-6">
+			<p className="text-gray-600 dark:text-gray-400 mb-6">
 				Install the Keldris agent on the systems you want to back up.
 			</p>
 
 			{hasActiveAgent ? (
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-					<div className="flex items-center gap-2 text-green-800">
+				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
 						<svg
 							aria-hidden="true"
 							className="w-5 h-5"
@@ -433,7 +559,7 @@ function AgentStep({ onComplete, isLoading }: StepProps) {
 						</svg>
 						<span className="font-medium">Agent installed!</span>
 					</div>
-					<p className="mt-1 text-sm text-green-700">
+					<p className="mt-1 text-sm text-green-700 dark:text-green-400">
 						You have {agents?.length} agent(s) registered.
 					</p>
 				</div>
@@ -471,17 +597,17 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 
 	return (
 		<div className="py-4">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
+			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
 				Create a Backup Schedule
 			</h2>
-			<p className="text-gray-600 mb-6">
+			<p className="text-gray-600 dark:text-gray-400 mb-6">
 				Schedules define when and what to back up. Set up automated backups to
 				protect your data.
 			</p>
 
 			{hasSchedule ? (
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-					<div className="flex items-center gap-2 text-green-800">
+				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
 						<svg
 							aria-hidden="true"
 							className="w-5 h-5"
@@ -496,13 +622,13 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 						</svg>
 						<span className="font-medium">Schedule created!</span>
 					</div>
-					<p className="mt-1 text-sm text-green-700">
+					<p className="mt-1 text-sm text-green-700 dark:text-green-400">
 						You have {schedules?.length} backup schedule(s) configured.
 					</p>
 				</div>
 			) : (
-				<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-					<p className="text-sm text-yellow-800 mb-2">
+				<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+					<p className="text-sm text-yellow-800 dark:text-yellow-300 mb-2">
 						Create a schedule to start automated backups.
 					</p>
 					<Link
@@ -553,18 +679,18 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 function VerifyStep({ onComplete, isLoading }: StepProps) {
 	return (
 		<div className="py-4">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
+			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
 				Verify Your Backup Works
 			</h2>
-			<p className="text-gray-600 mb-6">
+			<p className="text-gray-600 dark:text-gray-400 mb-6">
 				Run a test backup to make sure everything is configured correctly.
 			</p>
 
-			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+			<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
 				<h3 className="font-medium text-blue-900 mb-2">
 					To verify your backup:
 				</h3>
-				<ol className="text-sm text-blue-700 space-y-2 list-decimal list-inside">
+				<ol className="text-sm text-blue-700 dark:text-blue-400 space-y-2 list-decimal list-inside">
 					<li>Go to the Schedules page</li>
 					<li>Click "Run Now" on your schedule to trigger a manual backup</li>
 					<li>Check the Backups page to see the backup status</li>
@@ -638,18 +764,18 @@ function CompleteStep() {
 				</svg>
 			</div>
 
-			<h2 className="text-2xl font-bold text-gray-900 mb-4">Setup Complete!</h2>
+			<h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Setup Complete!</h2>
 
-			<p className="text-gray-600 max-w-md mx-auto mb-8">
+			<p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-8">
 				Congratulations! You've successfully set up Keldris. Your backups are
 				now configured and ready to protect your data.
 			</p>
 
-			<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8 max-w-md mx-auto text-left">
-				<h3 className="text-sm font-semibold text-green-900 mb-2">
+			<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-8 max-w-md mx-auto text-left">
+				<h3 className="text-sm font-semibold text-green-900 dark:text-green-300 mb-2">
 					What's next?
 				</h3>
-				<ul className="text-sm text-green-700 space-y-1">
+				<ul className="text-sm text-green-700 dark:text-green-400 space-y-1">
 					<li>- Monitor your backups on the Dashboard</li>
 					<li>- Add more agents to back up additional systems</li>
 					<li>- Configure alerts for backup failures</li>
@@ -773,6 +899,14 @@ export function Onboarding() {
 						isLoading={isLoading}
 					/>
 				);
+			case 'license':
+				return (
+					<LicenseStep
+						onComplete={() => handleCompleteStep('license')}
+						onSkip={() => handleCompleteStep('license')}
+						isLoading={isLoading}
+					/>
+				);
 			case 'organization':
 				return (
 					<OrganizationStep
@@ -828,8 +962,8 @@ export function Onboarding() {
 			<div className="max-w-4xl mx-auto">
 				{/* Header */}
 				<div className="mb-8">
-					<h1 className="text-2xl font-bold text-gray-900">Getting Started</h1>
-					<p className="text-gray-600 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Getting Started</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Complete these steps to set up your first backup
 					</p>
 				</div>
@@ -863,7 +997,7 @@ export function Onboarding() {
 
 					{/* Main Content */}
 					<div className="flex-1">
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							{renderStep()}
 						</div>
 					</div>

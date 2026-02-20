@@ -6,6 +6,7 @@ import { useLogout, useMe } from '../hooks/useAuth';
 import { useBranding } from '../hooks/useBranding';
 import { useLicense } from '../hooks/useLicense';
 import { useLocale } from '../hooks/useLocale';
+import { useTheme } from '../hooks/useTheme';
 import { useVersion } from '../hooks/useVersion';
 import { useOnboardingStatus } from '../hooks/useOnboarding';
 import {
@@ -252,6 +253,7 @@ function Sidebar() {
 	const { data: onboardingStatus } = useOnboardingStatus();
 	const { data: license } = useLicense();
 	const { data: versionInfo } = useVersion();
+	const { theme, toggleTheme } = useTheme();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
@@ -440,11 +442,33 @@ function Sidebar() {
 					</div>
 				)}
 			<div className="p-4 border-t border-gray-800">
-				{license && (
-					<Link to="/license" className="mb-2 block">
-						<TierBadge tier={license.tier} />
-					</Link>
-				)}
+				<div className="flex items-center justify-between mb-2">
+					{license && (
+						<Link to="/license">
+							<TierBadge tier={license.tier} />
+						</Link>
+					)}
+					<button
+						type="button"
+						onClick={toggleTheme}
+						title={`Theme: ${theme}`}
+						className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+					>
+						{theme === 'light' ? (
+							<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+							</svg>
+						) : theme === 'dark' ? (
+							<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+							</svg>
+						) : (
+							<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+							</svg>
+						)}
+					</button>
+				</div>
 				<p className="text-xs text-gray-500">
 					{t('common.version', { version: versionInfo?.version ?? '...' })}
 				</p>
@@ -608,7 +632,7 @@ function Header() {
 		'U';
 
 	return (
-		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+		<header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
 			<div className="flex items-center gap-4">
 				<OrgSwitcher />
 				<AirGapIndicator />
@@ -678,7 +702,7 @@ function Header() {
 function LoadingScreen() {
 	const { t } = useLocale();
 	return (
-		<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
 			<div className="text-center">
 				<div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
 				<p className="text-gray-600">{t('common.loading')}</p>
@@ -776,7 +800,7 @@ export function Layout() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-50 flex">
+		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
 			<Sidebar />
 			<div className="flex-1 flex flex-col">
 				<Header />
