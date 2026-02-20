@@ -152,6 +152,7 @@ import type {
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
+	ServerVersion,
 	Snapshot,
 	SnapshotComment,
 	SnapshotCommentsResponse,
@@ -1759,4 +1760,8 @@ export const airGapApi = {
 
 export const licenseApi = {
 	getInfo: async (): Promise<LicenseInfo> => fetchApi<LicenseInfo>('/license'),
+};
+
+export const versionApi = {
+	get: async (): Promise<ServerVersion> => fetchApi<ServerVersion>('/version'),
 };

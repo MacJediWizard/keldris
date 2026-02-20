@@ -2019,6 +2019,12 @@ export interface LicenseLimits {
 	max_storage_bytes: number;
 }
 
+export interface ServerVersion {
+	version: string;
+	commit?: string;
+	build_date?: string;
+}
+
 export interface LimitExceededError {
 	error: 'limit_exceeded';
 	resource: string;

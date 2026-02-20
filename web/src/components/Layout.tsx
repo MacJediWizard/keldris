@@ -6,6 +6,7 @@ import { useLogout, useMe } from '../hooks/useAuth';
 import { useBranding } from '../hooks/useBranding';
 import { useLicense } from '../hooks/useLicense';
 import { useLocale } from '../hooks/useLocale';
+import { useVersion } from '../hooks/useVersion';
 import { useOnboardingStatus } from '../hooks/useOnboarding';
 import {
 	useOrganizations,
@@ -250,6 +251,7 @@ function Sidebar() {
 	const { data: brandingData } = useBranding();
 	const { data: onboardingStatus } = useOnboardingStatus();
 	const { data: license } = useLicense();
+	const { data: versionInfo } = useVersion();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
@@ -444,7 +446,7 @@ function Sidebar() {
 					</Link>
 				)}
 				<p className="text-xs text-gray-500">
-					{t('common.version', { version: '0.0.1' })}
+					{t('common.version', { version: versionInfo?.version ?? '...' })}
 				</p>
 			</div>
 		</aside>
