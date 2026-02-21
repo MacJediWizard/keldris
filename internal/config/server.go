@@ -22,6 +22,10 @@ const (
 // DefaultLicenseServerURL is the production license server endpoint.
 const DefaultLicenseServerURL = "https://license.macjediwizard.com"
 
+// DefaultLicensePublicKey is the hex-encoded Ed25519 public key used to verify
+// license signatures and entitlement tokens. This is a public key (not secret).
+const DefaultLicensePublicKey = "a1d5554e0a5b15e1ec1172d1dab79bc7e9d4cc8502da4f089f1ce1bd0a19e59f"
+
 // ServerConfig holds server-level configuration loaded from environment variables.
 type ServerConfig struct {
 	Environment        Environment
@@ -76,9 +80,18 @@ func LoadServerConfig() ServerConfig {
 		RetentionDays:      retentionDays,
 		LicenseKey:         os.Getenv("LICENSE_KEY"),
 		LicenseSigningKey:  os.Getenv("LICENSE_SIGNING_KEY"),
-		AirGapPublicKey:    os.Getenv("AIRGAP_PUBLIC_KEY"),
+		AirGapPublicKey:    getEnvDefault("AIRGAP_PUBLIC_KEY", DefaultLicensePublicKey),
 		LicenseServerURL:   licenseServerURL,
 	}
+}
+
+// getEnvDefault reads a string from an environment variable, returning the default if unset or empty.
+func getEnvDefault(key, defaultVal string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		return defaultVal
+	}
+	return val
 }
 
 // getEnvBool reads a boolean from an environment variable, returning the default if unset or invalid.
