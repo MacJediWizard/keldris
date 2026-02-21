@@ -41,11 +41,12 @@ func (t LicenseTier) IsValid() bool {
 
 // License represents a Keldris license with tier, limits, and expiry.
 type License struct {
-	Tier       LicenseTier `json:"tier"`
-	CustomerID string      `json:"customer_id"`
-	ExpiresAt  time.Time   `json:"expires_at"`
-	IssuedAt   time.Time   `json:"issued_at"`
-	Limits     TierLimits  `json:"limits"`
+	Tier         LicenseTier `json:"tier"`
+	CustomerID   string      `json:"customer_id"`
+	CustomerName string      `json:"customer_name,omitempty"`
+	ExpiresAt    time.Time   `json:"expires_at"`
+	IssuedAt     time.Time   `json:"issued_at"`
+	Limits       TierLimits  `json:"limits"`
 }
 
 // licensePayload is the JSON structure encoded in a license key.

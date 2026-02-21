@@ -2007,6 +2007,7 @@ export type LicenseTier = 'free' | 'pro' | 'enterprise';
 export interface LicenseInfo {
 	tier: LicenseTier;
 	customer_id: string;
+	customer_name?: string;
 	expires_at: string;
 	issued_at: string;
 	features: string[];

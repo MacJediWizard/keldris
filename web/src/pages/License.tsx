@@ -131,9 +131,9 @@ export default function License() {
 						</dd>
 					</div>
 					<div>
-						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer ID</dt>
+						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer</dt>
 						<dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">
-							{license.customer_id || 'N/A'}
+							{license.customer_name || license.customer_id || 'N/A'}
 						</dd>
 					</div>
 					<div>
