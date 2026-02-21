@@ -46,10 +46,9 @@ func GenerateOfflineLicense(customerID string, tier LicenseTier, expiry time.Tim
 	// Build limits map for entitlement
 	tierLimits := GetLimits(tier)
 	limits := map[string]int64{
-		"max_agents":       int64(tierLimits.MaxAgents),
-		"max_users":        int64(tierLimits.MaxUsers),
-		"max_orgs":         int64(tierLimits.MaxOrgs),
-		"max_storage_bytes": tierLimits.MaxStorage,
+		"max_agents": int64(tierLimits.MaxAgents),
+		"max_users":  int64(tierLimits.MaxUsers),
+		"max_orgs":   int64(tierLimits.MaxOrgs),
 	}
 
 	payload := offlineLicensePayload{

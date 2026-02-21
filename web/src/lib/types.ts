@@ -2044,7 +2044,6 @@ export interface LicenseLimits {
 	max_agents: number;
 	max_users: number;
 	max_orgs: number;
-	max_storage_bytes: number;
 }
 
 export interface ServerVersion {

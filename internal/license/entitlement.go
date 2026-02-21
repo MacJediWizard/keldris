@@ -111,10 +111,5 @@ func limitsFromMap(m map[string]int64) TierLimits {
 	} else if v, ok := m["orgs"]; ok {
 		limits.MaxOrgs = int(v)
 	}
-	if v, ok := m["max_storage_bytes"]; ok {
-		limits.MaxStorage = v
-	} else if v, ok := m["storage_bytes"]; ok {
-		limits.MaxStorage = v
-	}
 	return limits
 }

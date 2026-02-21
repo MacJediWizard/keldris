@@ -578,7 +578,7 @@ func (v *Validator) updateLicenseFromResponse(resp map[string]interface{}) {
 	}
 
 	limits := parseLimitsFromResponse(resp)
-	if limits.MaxAgents == 0 && limits.MaxUsers == 0 && limits.MaxOrgs == 0 && limits.MaxStorage == 0 {
+	if limits.MaxAgents == 0 && limits.MaxUsers == 0 && limits.MaxOrgs == 0 {
 		// No limits in response, fall back to tier defaults
 		limits = GetLimits(tier)
 	}
@@ -626,15 +626,6 @@ func parseLimitsFromResponse(resp map[string]interface{}) TierLimits {
 	} else if v, ok := limitsMap["max_orgs"].(float64); ok {
 		limits.MaxOrgs = int(v)
 	}
-	if v, ok := limitsMap["servers"].(float64); ok {
-		_ = v // servers limit is tracked but not in TierLimits currently
-	}
-	if v, ok := limitsMap["storage_bytes"].(float64); ok {
-		limits.MaxStorage = int64(v)
-	} else if v, ok := limitsMap["max_storage_bytes"].(float64); ok {
-		limits.MaxStorage = int64(v)
-	}
-
 	return limits
 }
 

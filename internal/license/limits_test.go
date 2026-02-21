@@ -17,9 +17,6 @@ func TestGetLimits(t *testing.T) {
 		if limits.MaxOrgs != 1 {
 			t.Errorf("MaxOrgs = %d, want 1", limits.MaxOrgs)
 		}
-		if limits.MaxStorage != 10*1024*1024*1024 {
-			t.Errorf("MaxStorage = %d, want %d", limits.MaxStorage, int64(10*1024*1024*1024))
-		}
 	})
 
 	t.Run("pro tier limits", func(t *testing.T) {
@@ -34,9 +31,6 @@ func TestGetLimits(t *testing.T) {
 		if limits.MaxOrgs != 3 {
 			t.Errorf("MaxOrgs = %d, want 3", limits.MaxOrgs)
 		}
-		if limits.MaxStorage != 100*1024*1024*1024 {
-			t.Errorf("MaxStorage = %d, want %d", limits.MaxStorage, int64(100*1024*1024*1024))
-		}
 	})
 
 	t.Run("enterprise tier limits", func(t *testing.T) {
@@ -50,9 +44,6 @@ func TestGetLimits(t *testing.T) {
 		}
 		if limits.MaxOrgs != -1 {
 			t.Errorf("MaxOrgs = %d, want -1 (unlimited)", limits.MaxOrgs)
-		}
-		if limits.MaxStorage != -1 {
-			t.Errorf("MaxStorage = %d, want -1 (unlimited)", limits.MaxStorage)
 		}
 	})
 
@@ -84,27 +75,6 @@ func TestIsUnlimited(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := IsUnlimited(tt.limit); got != tt.unlimited {
 				t.Errorf("IsUnlimited(%d) = %v, want %v", tt.limit, got, tt.unlimited)
-			}
-		})
-	}
-}
-
-func TestIsStorageUnlimited(t *testing.T) {
-	tests := []struct {
-		name      string
-		limit     int64
-		unlimited bool
-	}{
-		{"negative one is unlimited", -1, true},
-		{"zero is limited", 0, false},
-		{"positive number is limited", 10 * 1024 * 1024 * 1024, false},
-		{"negative two is limited", -2, false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IsStorageUnlimited(tt.limit); got != tt.unlimited {
-				t.Errorf("IsStorageUnlimited(%d) = %v, want %v", tt.limit, got, tt.unlimited)
 			}
 		})
 	}
@@ -264,20 +234,6 @@ func TestLimits_Exceeded(t *testing.T) {
 		if exceeded {
 			t.Error("enterprise tier should never be exceeded for orgs")
 		}
-		exceeded = !IsStorageUnlimited(limits.MaxStorage) && int64(1000*1024*1024*1024) > limits.MaxStorage
-		if exceeded {
-			t.Error("enterprise tier should never be exceeded for storage")
-		}
-	})
-
-	t.Run("free tier storage limit exceeded", func(t *testing.T) {
-		limits := GetLimits(TierFree)
-		currentStorage := int64(11 * 1024 * 1024 * 1024) // 11 GB
-		if !IsStorageUnlimited(limits.MaxStorage) && currentStorage > limits.MaxStorage {
-			// Limit is exceeded - this is expected
-		} else {
-			t.Error("11 GB should exceed free tier storage limit of 10 GB")
-		}
 	})
 
 	t.Run("free tier at exact limit is not exceeded", func(t *testing.T) {
@@ -285,16 +241,6 @@ func TestLimits_Exceeded(t *testing.T) {
 		currentAgents := 3
 		if !IsUnlimited(limits.MaxAgents) && currentAgents > limits.MaxAgents {
 			t.Error("3 agents should not exceed free tier limit of 3 (at limit, not over)")
-		}
-	})
-
-	t.Run("pro tier storage limit exceeded", func(t *testing.T) {
-		limits := GetLimits(TierPro)
-		currentStorage := int64(101 * 1024 * 1024 * 1024) // 101 GB
-		if !IsStorageUnlimited(limits.MaxStorage) && currentStorage > limits.MaxStorage {
-			// Limit is exceeded - this is expected
-		} else {
-			t.Error("101 GB should exceed pro tier storage limit of 100 GB")
 		}
 	})
 }

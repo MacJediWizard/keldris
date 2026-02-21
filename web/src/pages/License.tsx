@@ -12,19 +12,6 @@ function formatDate(dateStr: string): string {
 	});
 }
 
-function formatBytes(bytes: number): string {
-	if (bytes === 0) return 'Unlimited';
-	if (bytes < 0) return 'Unlimited';
-	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-	let i = 0;
-	let val = bytes;
-	while (val >= 1024 && i < units.length - 1) {
-		val /= 1024;
-		i++;
-	}
-	return `${val.toFixed(1)} ${units[i]}`;
-}
-
 function formatLimit(value: number): string {
 	if (value <= 0) return 'Unlimited';
 	return value.toLocaleString();
@@ -178,7 +165,7 @@ export default function License() {
 				<h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
 					Resource Limits
 				</h2>
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
 					<div className="rounded-lg border border-gray-200 p-4 dark:border-dark-border">
 						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Agents</p>
 						<p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -195,12 +182,6 @@ export default function License() {
 						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Organizations</p>
 						<p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
 							{formatLimit(license.limits.max_orgs)}
-						</p>
-					</div>
-					<div className="rounded-lg border border-gray-200 p-4 dark:border-dark-border">
-						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Storage</p>
-						<p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-							{formatBytes(license.limits.max_storage_bytes)}
 						</p>
 					</div>
 				</div>
