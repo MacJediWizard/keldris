@@ -558,20 +558,42 @@ func (v *Validator) updateLicenseFromResponse(resp map[string]interface{}) {
 		tier = LicenseTier(t)
 	}
 
+	customerID := currentLic.CustomerID
+	if cid, ok := resp["customer_id"].(string); ok && cid != "" {
+		customerID = cid
+	}
+
+	expiresAt := currentLic.ExpiresAt
+	if exp, ok := resp["expires_at"].(string); ok && exp != "" {
+		if t, err := time.Parse(time.RFC3339, exp); err == nil {
+			expiresAt = t
+		}
+	}
+
+	issuedAt := currentLic.IssuedAt
+	if iss, ok := resp["issued_at"].(string); ok && iss != "" {
+		if t, err := time.Parse(time.RFC3339, iss); err == nil {
+			issuedAt = t
+		}
+	}
+
 	limits := parseLimitsFromResponse(resp)
 	if limits.MaxAgents == 0 && limits.MaxUsers == 0 {
 		// No limits in response, fall back to tier defaults
 		limits = GetLimits(tier)
 	}
 
-	if tier != currentLic.Tier || limits != currentLic.Limits {
-		v.SetLicense(&License{
-			Tier:       tier,
-			CustomerID: currentLic.CustomerID,
-			ExpiresAt:  currentLic.ExpiresAt,
-			IssuedAt:   currentLic.IssuedAt,
-			Limits:     limits,
-		})
+	newLic := &License{
+		Tier:       tier,
+		CustomerID: customerID,
+		ExpiresAt:  expiresAt,
+		IssuedAt:   issuedAt,
+		Limits:     limits,
+	}
+
+	if tier != currentLic.Tier || limits != currentLic.Limits ||
+		customerID != currentLic.CustomerID || !expiresAt.Equal(currentLic.ExpiresAt) {
+		v.SetLicense(newLic)
 		if tier != currentLic.Tier {
 			v.logger.Info().
 				Str("old_tier", string(currentLic.Tier)).
