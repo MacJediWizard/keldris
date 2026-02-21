@@ -578,7 +578,7 @@ func (v *Validator) updateLicenseFromResponse(resp map[string]interface{}) {
 	}
 
 	limits := parseLimitsFromResponse(resp)
-	if limits.MaxAgents == 0 && limits.MaxUsers == 0 {
+	if limits.MaxAgents == 0 && limits.MaxUsers == 0 && limits.MaxOrgs == 0 && limits.MaxStorage == 0 {
 		// No limits in response, fall back to tier defaults
 		limits = GetLimits(tier)
 	}
