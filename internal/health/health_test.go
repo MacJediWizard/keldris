@@ -613,6 +613,7 @@ func TestGetStatusColor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(string(tt.status), func(t *testing.T) {
 			color := getStatusColor(tt.status)
+			color := GetStatusColor(tt.status)
 			if color != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, color)
 			}
