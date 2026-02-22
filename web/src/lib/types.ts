@@ -4668,3 +4668,54 @@ export interface CreateFavoriteRequest {
 export interface FavoritesResponse {
 	favorites: Favorite[];
 }
+
+// Docker Backup types
+
+export interface DockerContainer {
+	id: string;
+	name: string;
+	image: string;
+	status: string;
+	state: string;
+	created: string;
+	ports: string[];
+}
+
+export interface DockerVolume {
+	name: string;
+	driver: string;
+	mountpoint: string;
+	size_bytes: number;
+	created: string;
+}
+
+export interface DockerDaemonStatus {
+	available: boolean;
+	version: string;
+	container_count: number;
+	volume_count: number;
+	server_os: string;
+	docker_root_dir: string;
+	storage_driver: string;
+}
+
+export interface DockerBackupRequest {
+	agent_id: string;
+	repository_id: string;
+	container_ids?: string[];
+	volume_names?: string[];
+}
+
+export interface DockerBackupResponse {
+	id: string;
+	status: string;
+	created_at: string;
+}
+
+export interface DockerContainersResponse {
+	containers: DockerContainer[];
+}
+
+export interface DockerVolumesResponse {
+	volumes: DockerVolume[];
+}

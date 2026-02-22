@@ -2354,6 +2354,38 @@ export const slaPoliciesApi = {
 export const changelogApi = {
 	list: async (): Promise<ChangelogResponse> =>
 		fetchApi<ChangelogResponse>('/changelog'),
+// Docker Backup API
+export const dockerBackupApi = {
+	listContainers: async (agentId: string): Promise<DockerContainer[]> => {
+		const response = await fetchApi<DockerContainersResponse>(
+			`/docker/containers?agent_id=${agentId}`,
+		);
+		return response.containers ?? [];
+	},
+
+	listVolumes: async (agentId: string): Promise<DockerVolume[]> => {
+		const response = await fetchApi<DockerVolumesResponse>(
+			`/docker/volumes?agent_id=${agentId}`,
+		);
+		return response.volumes ?? [];
+	},
+
+	triggerBackup: async (
+		data: DockerBackupRequest,
+	): Promise<DockerBackupResponse> =>
+		fetchApi<DockerBackupResponse>('/docker/backup', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getDaemonStatus: async (agentId: string): Promise<DockerDaemonStatus> =>
+		fetchApi<DockerDaemonStatus>(`/docker/status?agent_id=${agentId}`),
+};
+
+// Air-Gap API
+export const airGapApi = {
+	getStatus: async (): Promise<AirGapStatus> =>
+		fetchApi<AirGapStatus>('/system/airgap'),
 
 	get: async (version: string): Promise<ChangelogEntry> =>
 		fetchApi<ChangelogEntry>(`/changelog/${version}`),
