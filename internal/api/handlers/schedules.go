@@ -115,6 +115,12 @@ type CreateScheduleRequest struct {
 	BackupType         string                        `json:"backup_type,omitempty"`     // "file" (default), "docker", "pihole", "postgres", or "proxmox"
 	CronExpression     string                        `json:"cron_expression" binding:"required"`
 	Paths              []string                      `json:"paths,omitempty"`           // Required for file backups, optional for docker/postgres/proxmox
+	AgentID            uuid.UUID                     `json:"agent_id" binding:"required"`
+	Repositories       []ScheduleRepositoryRequest   `json:"repositories" binding:"required,min=1"`
+	Name               string                        `json:"name" binding:"required,min=1,max=255"`
+	BackupType         string                        `json:"backup_type,omitempty"`     // "file" (default), "docker", "pihole", or "postgres"
+	CronExpression     string                        `json:"cron_expression" binding:"required"`
+	Paths              []string                      `json:"paths,omitempty"`           // Required for file backups, optional for docker/postgres
 	Excludes           []string                      `json:"excludes,omitempty"`
 	RetentionPolicy    *models.RetentionPolicy       `json:"retention_policy,omitempty"`
 	BandwidthLimitKB   *int                          `json:"bandwidth_limit_kb,omitempty"`
@@ -143,12 +149,14 @@ type CreateScheduleRequest struct {
 	CompressionLevel   *string                     `json:"compression_level,omitempty"`
 	OnMountUnavailable string                      `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
 	Enabled            *bool                       `json:"enabled,omitempty"`
+	Enabled            *bool                         `json:"enabled,omitempty"`
 }
 
 // UpdateScheduleRequest is the request body for updating a schedule.
 type UpdateScheduleRequest struct {
 	Name               string                        `json:"name,omitempty"`
 	BackupType         string                        `json:"backup_type,omitempty"` // "file", "docker", "pihole", "postgres", or "proxmox"
+	BackupType         string                        `json:"backup_type,omitempty"` // "file", "docker", "pihole", or "postgres"
 	CronExpression     string                        `json:"cron_expression,omitempty"`
 	Paths              []string                      `json:"paths,omitempty"`
 	Excludes           []string                      `json:"excludes,omitempty"`
