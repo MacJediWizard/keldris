@@ -86,6 +86,8 @@ type Config struct {
 	EmailService *notifications.EmailService
 	// UpdateChecker for checking for new Keldris versions (optional).
 	UpdateChecker *updates.Checker
+	// AirGapPublicKey is the Ed25519 public key for validating offline licenses (optional).
+	AirGapPublicKey []byte
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -601,6 +603,10 @@ func NewRouter(
 		usageHandler := handlers.NewUsageHandler(database, cfg.MeteringService, logger)
 		usageHandler.RegisterRoutes(apiV1)
 	}
+	// Air-gap routes (Enterprise)
+	airGapGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureAirGap, logger))
+	airGapHandler := handlers.NewAirGapHandler(database, cfg.AirGapPublicKey, logger)
+	airGapHandler.RegisterRoutes(airGapGroup)
 
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server

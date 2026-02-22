@@ -92,6 +92,9 @@ func getEnvDefault(key, defaultVal string) string {
 	return val
 }
 
+	}
+}
+
 // getEnvBool reads a boolean from an environment variable, returning the default if unset or invalid.
 func getEnvBool(key string, defaultVal bool) bool {
 	val := strings.ToLower(strings.TrimSpace(os.Getenv(key)))

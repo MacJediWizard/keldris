@@ -36,6 +36,10 @@ type WebhookSender struct {
 	maxRetries  int
 	airGapMode  bool
 	validateURL func(string) error
+	client     *http.Client
+	logger     zerolog.Logger
+	maxRetries int
+	airGapMode bool
 }
 
 // NewWebhookSender creates a new webhook sender.
@@ -108,6 +112,10 @@ func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPay
 
 	if err := w.validateURL(url); err != nil {
 		return fmt.Errorf("webhook URL blocked: %w", err)
+	}
+
+		w.logger.Warn().Str("url", url).Msg("webhook blocked: air-gap mode enabled")
+		return ErrAirGapBlocked
 	}
 
 	body, err := json.Marshal(payload)

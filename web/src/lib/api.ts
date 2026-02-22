@@ -41,6 +41,7 @@ import type {
 	AgentWithGroups,
 	AgentsResponse,
 	AgentsWithGroupsResponse,
+	AirGapLicenseInfo,
 	AirGapStatus,
 	Alert,
 	AlertCountResponse,
@@ -5022,4 +5023,11 @@ export const licenseApi = {
 		const response = await fetchApi<TiersResponse>('/license/tiers');
 		return response.tiers ?? [];
 	},
+
+	uploadLicense: async (licenseData: ArrayBuffer): Promise<AirGapLicenseInfo> =>
+		fetchApi<AirGapLicenseInfo>('/system/license', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/octet-stream' },
+			body: licenseData,
+		}),
 };

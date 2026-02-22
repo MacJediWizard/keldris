@@ -179,6 +179,8 @@ const DockerRegistries = lazy(() =>
 const NotFound = lazy(() =>
 	import('./pages/NotFound').then((m) => ({ default: m.NotFound })),
 );
+const AirGapLicense = lazy(() => import('./pages/AirGapLicense'));
+
 const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
@@ -407,6 +409,53 @@ function App() {
 						<Route path="onboarding" element={<Onboarding />} />
 					</Route>
 				</Routes>
+				<Suspense fallback={<LoadingSpinner />}>
+					<Routes>
+						<Route path="/" element={<Layout />}>
+							<Route index element={<Dashboard />} />
+							<Route path="agents" element={<Agents />} />
+							<Route path="agents/:id" element={<AgentDetails />} />
+							<Route path="agent-groups" element={<AgentGroups />} />
+							<Route path="repositories" element={<Repositories />} />
+							<Route path="schedules" element={<Schedules />} />
+							<Route path="policies" element={<Policies />} />
+							<Route path="backups" element={<Backups />} />
+							<Route path="dr-runbooks" element={<DRRunbooks />} />
+							<Route path="restore" element={<Restore />} />
+							<Route path="file-history" element={<FileHistory />} />
+							<Route path="snapshots/compare" element={<SnapshotCompare />} />
+							<Route path="alerts" element={<Alerts />} />
+							<Route path="notifications" element={<Notifications />} />
+							<Route path="reports" element={<Reports />} />
+							<Route path="audit-logs" element={<AuditLogs />} />
+							<Route path="stats" element={<StorageStats />} />
+							<Route path="stats/:id" element={<RepositoryStatsDetail />} />
+							<Route path="tags" element={<Tags />} />
+							<Route path="costs" element={<CostEstimation />} />
+							<Route
+								path="organization/members"
+								element={<OrganizationMembers />}
+							/>
+							<Route
+								path="organization/settings"
+								element={<OrganizationSettings />}
+							/>
+							<Route
+								path="organization/sso"
+								element={<OrganizationSSOSettings />}
+							/>
+							<Route path="organization/branding" element={<Branding />} />
+							<Route
+								path="organization/maintenance"
+								element={<Maintenance />}
+							/>
+							<Route path="organization/new" element={<NewOrganization />} />
+							<Route path="sla" element={<SLATracking />} />
+							<Route path="onboarding" element={<Onboarding />} />
+							<Route path="system/airgap" element={<AirGapLicense />} />
+						</Route>
+					</Routes>
+				</Suspense>
 			</BrowserRouter>
 		</QueryClientProvider>
 								<Route path="admin/health" element={<SystemHealth />} />

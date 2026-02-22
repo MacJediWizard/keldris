@@ -6559,4 +6559,16 @@ export interface MigrationIDMappings {
 	users?: Record<string, string>;
 	agents?: Record<string, string>;
 	repositories?: Record<string, string>;
+export interface AirGapLicenseInfo {
+	customer_id: string;
+	tier: string;
+	expires_at: string;
+	issued_at: string;
+	valid: boolean;
+}
+
+export interface AirGapStatus {
+	enabled: boolean;
+	disabled_features: AirGapDisabledFeature[];
+	license: AirGapLicenseInfo | null;
 }
