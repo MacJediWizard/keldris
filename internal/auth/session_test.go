@@ -82,6 +82,7 @@ func newTestSessionStoreWithIdleTimeout(t *testing.T, idleTimeout int) *SessionS
 		SameSite:    http.SameSiteLaxMode,
 		CookiePath:  "/",
 	}
+	cfg := DefaultSessionConfig(secret, false)
 	store, err := NewSessionStore(cfg, logger)
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
@@ -365,18 +366,23 @@ func TestSession_Expired(t *testing.T) {
 	}
 
 	// Set user
+
+	// First set a user
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 	testUser := &SessionUser{
-		ID:          uuid.New(),
-		OIDCSubject: "sub-12345",
-		Email:       "test@example.com",
+		ID:             uuid.New(),
+		OIDCSubject:    "sub-12345",
+		Email:          "test@example.com",
+		CurrentOrgID:   uuid.New(),
+		CurrentOrgRole: "member",
 	}
 	if err := store.SetUser(req, w, testUser); err != nil {
 		t.Fatalf("failed to set user: %v", err)
 	}
 
 	// Verify cookie has the expected MaxAge
+	// Update the current org
 	resp := w.Result()
 	cookies := resp.Cookies()
 	if len(cookies) == 0 {
@@ -449,6 +455,47 @@ func TestSessionStore_IsAuthenticated(t *testing.T) {
 		}
 	})
 }
+	w2 := httptest.NewRecorder()
+
+	newOrgID := uuid.New()
+	if err := store.SetCurrentOrg(req2, w2, newOrgID, "admin"); err != nil {
+		t.Fatalf("failed to set current org: %v", err)
+	}
+
+	// Verify the updated org
+	resp2 := w2.Result()
+	req3 := httptest.NewRequest(http.MethodGet, "/", nil)
+	for _, cookie := range resp2.Cookies() {
+		req3.AddCookie(cookie)
+	}
+
+	user, err := store.GetUser(req3)
+	if err != nil {
+		t.Fatalf("failed to get user: %v", err)
+	}
+	if user.CurrentOrgID != newOrgID {
+		t.Errorf("expected org ID %s, got %s", newOrgID, user.CurrentOrgID)
+	}
+	if user.CurrentOrgRole != "admin" {
+		t.Errorf("expected org role admin, got %s", user.CurrentOrgRole)
+	}
+	// User ID should remain unchanged
+	if user.ID != testUser.ID {
+		t.Errorf("expected user ID %s to remain, got %s", testUser.ID, user.ID)
+	}
+}
+
+func TestSession_Expired(t *testing.T) {
+	logger := zerolog.Nop()
+	secret := []byte("test-secret-that-is-at-least-32-bytes-long")
+	cfg := SessionConfig{
+		Secret:     secret,
+		MaxAge:     1, // 1 second
+		Secure:     false,
+		HTTPOnly:   true,
+		SameSite:   http.SameSiteLaxMode,
+		CookiePath: "/",
+	}
 
 func TestSessionStore_Save(t *testing.T) {
 	store := newTestSessionStore(t)
@@ -647,10 +694,11 @@ func TestSessionStore_IdleTimeout_IsAuthenticated(t *testing.T) {
 		t.Fatalf("failed to set user: %v", err)
 	}
 
+	// Verify cookie has the expected MaxAge
 	resp := w.Result()
-	req2 := httptest.NewRequest(http.MethodGet, "/", nil)
-	for _, cookie := range resp.Cookies() {
-		req2.AddCookie(cookie)
+	cookies := resp.Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("expected cookie to be set")
 	}
 
 	// Should be authenticated initially
@@ -664,5 +712,94 @@ func TestSessionStore_IdleTimeout_IsAuthenticated(t *testing.T) {
 	// Should no longer be authenticated
 	if store.IsAuthenticated(req2) {
 		t.Error("expected IsAuthenticated to be false after idle timeout")
+	if cookies[0].MaxAge != 1 {
+		t.Errorf("expected MaxAge 1, got %d", cookies[0].MaxAge)
+	}
+}
+
+func TestSessionStore_IsAuthenticated(t *testing.T) {
+	store := newTestSessionStore(t)
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		if store.IsAuthenticated(req) {
+			t.Error("expected IsAuthenticated to be false for new request")
+		}
+	})
+
+	t.Run("authenticated", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
+		testUser := &SessionUser{
+			ID:          uuid.New(),
+			OIDCSubject: "sub-12345",
+			Email:       "test@example.com",
+		}
+		if err := store.SetUser(req, w, testUser); err != nil {
+			t.Fatalf("failed to set user: %v", err)
+		}
+
+		resp := w.Result()
+		req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+		for _, cookie := range resp.Cookies() {
+			req2.AddCookie(cookie)
+		}
+		if !store.IsAuthenticated(req2) {
+			t.Error("expected IsAuthenticated to be true after setting user")
+		}
+	})
+
+	t.Run("after clear", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
+		testUser := &SessionUser{
+			ID:          uuid.New(),
+			OIDCSubject: "sub-12345",
+			Email:       "test@example.com",
+		}
+		if err := store.SetUser(req, w, testUser); err != nil {
+			t.Fatalf("failed to set user: %v", err)
+		}
+
+		resp := w.Result()
+		req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+		for _, cookie := range resp.Cookies() {
+			req2.AddCookie(cookie)
+		}
+		w2 := httptest.NewRecorder()
+
+		if err := store.ClearUser(req2, w2); err != nil {
+			t.Fatalf("failed to clear user: %v", err)
+		}
+
+		// After clearing, a new request without cookies shouldn't be authenticated
+		req3 := httptest.NewRequest(http.MethodGet, "/", nil)
+		if store.IsAuthenticated(req3) {
+			t.Error("expected IsAuthenticated to be false after clear (no cookie)")
+		}
+	})
+}
+
+func TestSessionStore_Save(t *testing.T) {
+	store := newTestSessionStore(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+
+	session, err := store.Get(req)
+	if err != nil {
+		t.Fatalf("failed to get session: %v", err)
+	}
+
+	session.Values["test_key"] = "test_value"
+	if err := store.Save(req, w, session); err != nil {
+		t.Fatalf("failed to save session: %v", err)
+	}
+
+	// Verify cookie was set
+	resp := w.Result()
+	cookies := resp.Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("expected cookie to be set after save")
 	}
 }
