@@ -117,3 +117,17 @@ func (b *Backup) RecordPostScript(output string, err error) {
 		b.PostScriptError = err.Error()
 	}
 }
+
+// Cancel marks the backup as canceled.
+func (b *Backup) Cancel() {
+	now := time.Now()
+	b.CompletedAt = &now
+	b.Status = BackupStatusCanceled
+}
+
+
+// RecordExcludedLargeFiles records files that were excluded due to size limits.
+func (b *Backup) RecordExcludedLargeFiles(files []ExcludedLargeFile) {
+	b.ExcludedLargeFiles = files
+}
+

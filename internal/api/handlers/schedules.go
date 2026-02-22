@@ -76,6 +76,7 @@ type CreateScheduleRequest struct {
 	BackupWindow       *models.BackupWindow        `json:"backup_window,omitempty"`
 	ExcludedHours      []int                       `json:"excluded_hours,omitempty"`
 	CompressionLevel   *string                     `json:"compression_level,omitempty"`
+	MaxFileSizeMB      *int                        `json:"max_file_size_mb,omitempty"` // Max file size in MB (0 = disabled)
 	OnMountUnavailable string                      `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
 	Enabled            *bool                       `json:"enabled,omitempty"`
 }
@@ -92,6 +93,7 @@ type UpdateScheduleRequest struct {
 	BackupWindow       *models.BackupWindow        `json:"backup_window,omitempty"`
 	ExcludedHours      []int                       `json:"excluded_hours,omitempty"`
 	CompressionLevel   *string                     `json:"compression_level,omitempty"`
+	MaxFileSizeMB      *int                        `json:"max_file_size_mb,omitempty"` // Max file size in MB (0 = disabled)
 	OnMountUnavailable *string                     `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
 	Enabled            *bool                       `json:"enabled,omitempty"`
 }
@@ -319,6 +321,10 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		schedule.CompressionLevel = req.CompressionLevel
 	}
 
+	if req.MaxFileSizeMB != nil {
+		schedule.MaxFileSizeMB = req.MaxFileSizeMB
+	}
+
 	if req.OnMountUnavailable != "" {
 		schedule.OnMountUnavailable = models.MountBehavior(req.OnMountUnavailable)
 	}
@@ -425,6 +431,9 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 	}
 	if req.CompressionLevel != nil {
 		schedule.CompressionLevel = req.CompressionLevel
+	}
+	if req.MaxFileSizeMB != nil {
+		schedule.MaxFileSizeMB = req.MaxFileSizeMB
 	}
 	if req.OnMountUnavailable != nil {
 		schedule.OnMountUnavailable = models.MountBehavior(*req.OnMountUnavailable)
