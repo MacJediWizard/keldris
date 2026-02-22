@@ -10,6 +10,11 @@ import {
 	useAgentStats,
 	useCancelAgentCommand,
 	useCreateAgentCommand,
+import {
+	useAgent,
+	useAgentBackups,
+	useAgentSchedules,
+	useAgentStats,
 	useDeleteAgent,
 	useRevokeAgentApiKey,
 	useRotateAgentApiKey,
@@ -28,6 +33,8 @@ import type {
 	CommandType,
 	Schedule,
 } from '../lib/types';
+} from '../hooks/useAgents';
+import type { Backup, Schedule } from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
@@ -39,6 +46,8 @@ import {
 	getBackupStatusColor,
 	getHealthStatusColor,
 	getHealthStatusLabel,
+	getAgentStatusColor,
+	getBackupStatusColor,
 } from '../lib/utils';
 
 function LoadingCard() {
@@ -378,6 +387,7 @@ export function AgentDetails() {
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState<
 		'overview' | 'backups' | 'schedules' | 'health' | 'logs' | 'commands'
+		'overview' | 'backups' | 'schedules'
 	>('overview');
 
 	const { data: agent, isLoading: agentLoading } = useAgent(id ?? '');

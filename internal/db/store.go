@@ -631,6 +631,7 @@ func (db *DB) GetAgentStats(ctx context.Context, agentID uuid.UUID) (*models.Age
 			MAX(completed_at) FILTER (WHERE status = 'completed') as last_backup
 		FROM backups
 		WHERE agent_id = $1 AND deleted_at IS NULL
+		WHERE agent_id = $1
 	`, agentID).Scan(
 		&stats.TotalBackups,
 		&stats.SuccessfulBackups,

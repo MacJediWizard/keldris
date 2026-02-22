@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import { ExportImportModal } from '../components/features/ExportImportModal';
 import { ImportAgentsWizard } from '../components/features/ImportAgentsWizard';
@@ -529,6 +530,12 @@ function AgentRow({
 					/>
 					<div className="font-medium text-gray-900">{agent.hostname}</div>
 				</div>
+				<Link
+					to={`/agents/${agent.id}`}
+					className="font-medium text-indigo-600 hover:text-indigo-700"
+				>
+					{agent.hostname}
+				</Link>
 				{agent.os_info && (
 					<div className="text-sm text-gray-500">
 						{agent.os_info.os} {agent.os_info.arch}

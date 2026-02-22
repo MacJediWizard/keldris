@@ -30,6 +30,8 @@ import type {
 	AgentSchedulesResponse,
 	AgentStatsResponse,
 	AgentWithGroups,
+	AgentSchedulesResponse,
+	AgentStatsResponse,
 	AgentsResponse,
 	AgentsWithGroupsResponse,
 	AirGapStatus,
