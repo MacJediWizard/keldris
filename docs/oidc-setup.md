@@ -77,6 +77,7 @@ Add the following to your `.env` file:
 
 ```env
 OIDC_ISSUER=https://your-authentik-domain/application/o/keldris/
+OIDC_ISSUER_URL=https://your-authentik-domain/application/o/keldris/
 OIDC_CLIENT_ID=your-client-id
 OIDC_CLIENT_SECRET=your-client-secret
 OIDC_REDIRECT_URL=https://your-keldris-domain/auth/callback
@@ -126,6 +127,7 @@ Add the following to your `.env` file:
 
 ```env
 OIDC_ISSUER=https://your-keycloak-domain/realms/keldris
+OIDC_ISSUER_URL=https://your-keycloak-domain/realms/keldris
 OIDC_CLIENT_ID=keldris
 OIDC_CLIENT_SECRET=your-client-secret
 OIDC_REDIRECT_URL=https://your-keldris-domain/auth/callback
@@ -171,6 +173,7 @@ Add the following to your `.env` file:
 
 ```env
 OIDC_ISSUER=https://your-okta-domain.okta.com
+OIDC_ISSUER_URL=https://your-okta-domain.okta.com
 OIDC_CLIENT_ID=your-client-id
 OIDC_CLIENT_SECRET=your-client-secret
 OIDC_REDIRECT_URL=https://your-keldris-domain/auth/callback
@@ -230,6 +233,7 @@ Verify that `openid`, `email`, and `profile` are listed in `scopes_supported`.
 
 ```env
 OIDC_ISSUER=https://your-idp-domain
+OIDC_ISSUER_URL=https://your-idp-domain
 OIDC_CLIENT_ID=your-client-id
 OIDC_CLIENT_SECRET=your-client-secret
 OIDC_REDIRECT_URL=https://your-keldris-domain/auth/callback
@@ -286,6 +290,7 @@ Run through this checklist to confirm your setup:
 1. **Discovery endpoint** responds with valid JSON:
    ```bash
    curl -s $OIDC_ISSUER/.well-known/openid-configuration | jq .issuer
+   curl -s $OIDC_ISSUER_URL/.well-known/openid-configuration | jq .issuer
    ```
 
 2. **Redirect URI** in your IdP matches `OIDC_REDIRECT_URL` exactly.
@@ -297,6 +302,7 @@ Run through this checklist to confirm your setup:
 5. **Network connectivity** exists between the Keldris server and the IdP:
    ```bash
    curl -I $OIDC_ISSUER/.well-known/openid-configuration
+   curl -I $OIDC_ISSUER_URL/.well-known/openid-configuration
    ```
 
 6. **Clock synchronization** on the Keldris server is accurate (token validation is time-sensitive):
