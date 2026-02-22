@@ -25,6 +25,10 @@ type ScheduleStore interface {
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 	GetReplicationStatusBySchedule(ctx context.Context, scheduleID uuid.UUID) ([]*models.ReplicationStatus, error)
 	CreateBackup(ctx context.Context, backup *models.Backup) error
+	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
+	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
+	GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error)
+	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 }
 
 // SchedulesHandler handles schedule-related HTTP endpoints.
@@ -150,6 +154,19 @@ type CreateScheduleRequest struct {
 	OnMountUnavailable string                      `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
 	Enabled            *bool                       `json:"enabled,omitempty"`
 	Enabled            *bool                         `json:"enabled,omitempty"`
+	}
+}
+
+// CreateScheduleRequest is the request body for creating a schedule.
+type CreateScheduleRequest struct {
+	AgentID         uuid.UUID               `json:"agent_id" binding:"required"`
+	RepositoryID    uuid.UUID               `json:"repository_id" binding:"required"`
+	Name            string                  `json:"name" binding:"required,min=1,max=255"`
+	CronExpression  string                  `json:"cron_expression" binding:"required"`
+	Paths           []string                `json:"paths" binding:"required,min=1"`
+	Excludes        []string                `json:"excludes,omitempty"`
+	RetentionPolicy *models.RetentionPolicy `json:"retention_policy,omitempty"`
+	Enabled         *bool                   `json:"enabled,omitempty"`
 }
 
 // UpdateScheduleRequest is the request body for updating a schedule.
@@ -243,6 +260,17 @@ type BulkCloneResponse struct {
 //	@Failure		500			{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/schedules [get]
+	Name            string                  `json:"name,omitempty"`
+	CronExpression  string                  `json:"cron_expression,omitempty"`
+	Paths           []string                `json:"paths,omitempty"`
+	Excludes        []string                `json:"excludes,omitempty"`
+	RetentionPolicy *models.RetentionPolicy `json:"retention_policy,omitempty"`
+	Enabled         *bool                   `json:"enabled,omitempty"`
+}
+
+// List returns all schedules for agents in the authenticated user's organization.
+// GET /api/v1/schedules
+// Optional query param: agent_id to filter by agent
 func (h *SchedulesHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -251,6 +279,10 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
 		return
 	}
 
@@ -270,6 +302,7 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 			return
 		}
 		if agent.OrgID != user.CurrentOrgID {
+		if agent.OrgID != dbUser.OrgID {
 			c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 			return
 		}
@@ -289,6 +322,9 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list agents")
+	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), dbUser.OrgID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list agents")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list schedules"})
 		return
 	}
@@ -320,6 +356,7 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 //	@Failure		404	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/schedules/{id} [get]
+// GET /api/v1/schedules/:id
 func (h *SchedulesHandler) Get(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -347,6 +384,7 @@ func (h *SchedulesHandler) Get(c *gin.Context) {
 
 	// Verify schedule's agent belongs to user's org
 	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, schedule); err != nil {
+	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
 		return
 	}
 
@@ -367,6 +405,7 @@ func (h *SchedulesHandler) Get(c *gin.Context) {
 //	@Failure		500		{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/schedules [post]
+// POST /api/v1/schedules
 func (h *SchedulesHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -384,6 +423,13 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		return
 	}
 
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+		return
+	}
+
 	// Verify agent belongs to user's org
 	agent, err := h.store.GetAgentByID(c.Request.Context(), req.AgentID)
 	if err != nil {
@@ -391,6 +437,7 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		return
 	}
 	if agent.OrgID != user.CurrentOrgID {
+	if agent.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "agent not found"})
 		return
 	}
@@ -424,6 +471,15 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// Verify repository belongs to user's org
+	repo, err := h.store.GetRepositoryByID(c.Request.Context(), req.RepositoryID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "repository not found"})
+		return
+	}
+	if repo.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "repository not found"})
+		return
 	}
 
 	// TODO: Validate cron expression using robfig/cron parser
@@ -431,6 +487,7 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 
 	schedule := models.NewSchedule(req.AgentID, req.Name, req.CronExpression, req.Paths)
 	schedule.Repositories = scheduleRepos
+	schedule := models.NewSchedule(req.AgentID, req.RepositoryID, req.Name, req.CronExpression, req.Paths)
 
 	if req.Excludes != nil {
 		schedule.Excludes = req.Excludes
@@ -546,6 +603,7 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 //	@Failure		500		{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/schedules/{id} [put]
+// PUT /api/v1/schedules/:id
 func (h *SchedulesHandler) Update(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -577,6 +635,7 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, schedule); err != nil {
+	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
 		return
 	}
 
@@ -711,6 +770,7 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 //	@Failure		500	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/schedules/{id} [delete]
+// DELETE /api/v1/schedules/:id
 func (h *SchedulesHandler) Delete(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -736,6 +796,7 @@ func (h *SchedulesHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, schedule); err != nil {
+	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
 		return
 	}
 
@@ -801,6 +862,8 @@ type DryRunExcluded struct {
 //	@Failure		404	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/schedules/{id}/run [post]
+// Run triggers an immediate backup for this schedule.
+// POST /api/v1/schedules/:id/run
 func (h *SchedulesHandler) Run(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -936,6 +999,33 @@ func formatPaths(paths []string) string {
 // verifyScheduleAccess checks if the user has access to the schedule.
 // Returns nil if access is granted, or sends an error response and returns error.
 func (h *SchedulesHandler) verifyScheduleAccess(c *gin.Context, orgID uuid.UUID, schedule *models.Schedule) error {
+	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
+		return
+	}
+
+	// TODO: Implement actual backup trigger when backup package is ready
+	// This will create a backup record and dispatch to the agent
+	h.logger.Info().
+		Str("schedule_id", id.String()).
+		Str("agent_id", schedule.AgentID.String()).
+		Msg("manual backup run requested")
+
+	c.JSON(http.StatusAccepted, RunScheduleResponse{
+		BackupID: uuid.New(), // Placeholder - would be actual backup ID
+		Message:  "Backup run not yet implemented. Schedule exists and is accessible.",
+	})
+}
+
+// verifyScheduleAccess checks if the user has access to the schedule.
+// Returns nil if access is granted, or sends an error response and returns error.
+func (h *SchedulesHandler) verifyScheduleAccess(c *gin.Context, userID uuid.UUID, schedule *models.Schedule) error {
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", userID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return err
+	}
+
 	agent, err := h.store.GetAgentByID(c.Request.Context(), schedule.AgentID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
@@ -943,6 +1033,7 @@ func (h *SchedulesHandler) verifyScheduleAccess(c *gin.Context, orgID uuid.UUID,
 	}
 
 	if agent.OrgID != orgID {
+	if agent.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return err
 	}

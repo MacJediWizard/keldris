@@ -56,6 +56,7 @@ func RequestLogger(logger zerolog.Logger) gin.HandlerFunc {
 		start := time.Now()
 		path := c.Request.URL.Path
 		query := redactQueryString(c.Request.URL.RawQuery)
+		query := c.Request.URL.RawQuery
 
 		c.Next()
 

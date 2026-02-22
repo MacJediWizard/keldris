@@ -18,6 +18,8 @@ type scanner interface {
 	Err() error
 }
 
+)
+
 // Organization methods
 
 // GetOrCreateDefaultOrg returns the default organization, creating it if necessary.
@@ -80,11 +82,13 @@ func (db *DB) GetUserByOIDCSubject(ctx context.Context, subject string) (*models
 	var roleStr string
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, org_id, oidc_subject, email, name, role, is_superuser, created_at, updated_at
+		SELECT id, org_id, oidc_subject, email, name, role, created_at, updated_at
 		FROM users
 		WHERE oidc_subject = $1
 	`, subject).Scan(
 		&user.ID, &user.OrgID, &user.OIDCSubject, &user.Email,
 		&user.Name, &roleStr, &user.IsSuperuser, &user.CreatedAt, &user.UpdatedAt,
+		&user.Name, &roleStr, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get user by OIDC subject: %w", err)
@@ -99,11 +103,13 @@ func (db *DB) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, erro
 	var roleStr string
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, org_id, oidc_subject, email, name, role, is_superuser, created_at, updated_at
+		SELECT id, org_id, oidc_subject, email, name, role, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`, id).Scan(
 		&user.ID, &user.OrgID, &user.OIDCSubject, &user.Email,
 		&user.Name, &roleStr, &user.IsSuperuser, &user.CreatedAt, &user.UpdatedAt,
+		&user.Name, &roleStr, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get user by ID: %w", err)
@@ -118,6 +124,9 @@ func (db *DB) CreateUser(ctx context.Context, user *models.User) error {
 		INSERT INTO users (id, org_id, oidc_subject, email, name, role, is_superuser, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`, user.ID, user.OrgID, user.OIDCSubject, user.Email, user.Name, string(user.Role), user.IsSuperuser, user.CreatedAt, user.UpdatedAt)
+		INSERT INTO users (id, org_id, oidc_subject, email, name, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, user.ID, user.OrgID, user.OIDCSubject, user.Email, user.Name, string(user.Role), user.CreatedAt, user.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create user: %w", err)
 	}
@@ -224,6 +233,7 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		       metadata, created_at, updated_at
 		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
 		       health_status, health_metrics, health_checked_at, created_at, updated_at
+		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status, created_at, updated_at
 		FROM agents
 		WHERE org_id = $1
 		ORDER BY hostname
@@ -255,6 +265,10 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 			&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 			&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
+		var statusStr string
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+			&a.LastSeen, &statusStr, &a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
@@ -279,6 +293,9 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		}
 		if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
 			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
+		}
+		if err := a.SetOSInfo(osInfoBytes); err != nil {
+			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse OS info")
 		}
 		agents = append(agents, &a)
 	}
@@ -320,6 +337,14 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status, created_at, updated_at
+		FROM agents
+		WHERE id = $1
+	`, id).Scan(
+		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+		&a.LastSeen, &statusStr, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent: %w", err)
@@ -344,6 +369,9 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 	}
 	if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
+	}
+	if err := a.SetOSInfo(osInfoBytes); err != nil {
+		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse OS info")
 	}
 	return &a, nil
 }
@@ -382,6 +410,14 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status, created_at, updated_at
+		FROM agents
+		WHERE api_key_hash = $1
+	`, hash).Scan(
+		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+		&a.LastSeen, &statusStr, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent by API key: %w", err)
@@ -407,6 +443,9 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 	if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 	}
+	if err := a.SetOSInfo(osInfoBytes); err != nil {
+		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse OS info")
+	}
 	return &a, nil
 }
 
@@ -425,6 +464,11 @@ func (db *DB) CreateAgent(ctx context.Context, agent *models.Agent) error {
 		INSERT INTO agents (id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`, agent.ID, agent.OrgID, agent.Hostname, agent.APIKeyHash, osInfoBytes, networkMountsBytes,
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO agents (id, org_id, hostname, api_key_hash, os_info, last_seen, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, agent.ID, agent.OrgID, agent.Hostname, agent.APIKeyHash, osInfoBytes,
 		agent.LastSeen, string(agent.Status), agent.CreatedAt, agent.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create agent: %w", err)
@@ -465,6 +509,9 @@ func (db *DB) UpdateAgent(ctx context.Context, agent *models.Agent) error {
 		WHERE id = $1
 	`, agent.ID, agent.Hostname, osInfoBytes, networkMountsBytes, agent.LastSeen, string(agent.Status), agent.UpdatedAt,
 		string(agent.HealthStatus), healthMetricsBytes, agent.HealthCheckedAt)
+		SET hostname = $2, os_info = $3, last_seen = $4, status = $5, updated_at = $6
+		WHERE id = $1
+	`, agent.ID, agent.Hostname, osInfoBytes, agent.LastSeen, string(agent.Status), agent.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update agent: %w", err)
 	}
@@ -815,6 +862,8 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 		       docker_options, pihole_config, proxmox_options,
 		       enabled, created_at, updated_at
 		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		SELECT id, agent_id, repository_id, name, cron_expression, paths, excludes,
+		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
 		ORDER BY name
@@ -860,6 +909,8 @@ func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedu
 		       docker_options, pihole_config, proxmox_options,
 		       enabled, created_at, updated_at
 		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		SELECT id, agent_id, repository_id, name, cron_expression, paths, excludes,
+		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`, id)
@@ -877,6 +928,7 @@ func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedu
 	s.Repositories = repos
 
 	return s, nil
+	return scanScheduleRow(row)
 }
 
 // CreateSchedule creates a new schedule.
@@ -1003,6 +1055,16 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 		}
 	}
 
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO schedules (id, agent_id, repository_id, name, cron_expression, paths,
+		                       excludes, retention_policy, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`, schedule.ID, schedule.AgentID, schedule.RepositoryID, schedule.Name,
+		schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
+		schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create schedule: %w", err)
+	}
 	return nil
 }
 
@@ -1319,6 +1381,42 @@ func scanSchedule(rows interface {
 		s.BackupType = models.BackupType(*backupType)
 	} else {
 		s.BackupType = models.BackupTypeFile
+	schedule.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE schedules
+		SET name = $2, cron_expression = $3, paths = $4, excludes = $5,
+		    retention_policy = $6, enabled = $7, updated_at = $8
+		WHERE id = $1
+	`, schedule.ID, schedule.Name, schedule.CronExpression, pathsBytes,
+		excludesBytes, retentionBytes, schedule.Enabled, schedule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update schedule: %w", err)
+	}
+	return nil
+}
+
+// DeleteSchedule deletes a schedule by ID.
+func (db *DB) DeleteSchedule(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM schedules WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete schedule: %w", err)
+	}
+	return nil
+}
+
+// scanSchedule scans a schedule from a row iterator.
+func scanSchedule(rows interface {
+	Scan(dest ...any) error
+}) (*models.Schedule, error) {
+	var s models.Schedule
+	var pathsBytes, excludesBytes, retentionBytes []byte
+	err := rows.Scan(
+		&s.ID, &s.AgentID, &s.RepositoryID, &s.Name, &s.CronExpression,
+		&pathsBytes, &excludesBytes, &retentionBytes, &s.Enabled,
+		&s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("scan schedule: %w", err)
 	}
 
 	if err := s.SetPaths(pathsBytes); err != nil {
@@ -1387,6 +1485,13 @@ func (db *DB) GetPoliciesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*model
 		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
+// Backup methods
+
+// GetBackupsByScheduleID returns all backups for a schedule.
+func (db *DB) GetBackupsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		       status, size_bytes, files_new, files_changed, error_message, created_at
 		FROM backups
 		WHERE schedule_id = $1
 		ORDER BY started_at DESC
@@ -1430,6 +1535,18 @@ func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*mo
 		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
+		return nil, fmt.Errorf("list backups by schedule: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackups(rows)
+}
+
+// GetBackupsByAgentID returns all backups for an agent.
+func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		       status, size_bytes, files_new, files_changed, error_message, created_at
 		FROM backups
 		WHERE agent_id = $1
 		ORDER BY started_at DESC
@@ -1444,6 +1561,13 @@ func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*mo
 	}
 
 	retentionBytes, err := policy.RetentionPolicyJSON()
+		return nil, fmt.Errorf("list backups by agent: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackups(rows)
+}
+
 // GetBackupByID returns a backup by ID.
 func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, error) {
 	var b models.Backup
@@ -1501,6 +1625,49 @@ func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
 		excludedHoursBytes, policy.CronExpression, policy.CreatedAt, policy.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create policy: %w", err)
+		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		       status, size_bytes, files_new, files_changed, error_message, created_at
+		FROM backups
+		WHERE id = $1
+	`, id).Scan(
+		&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
+		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
+		&b.FilesChanged, &b.ErrorMessage, &b.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get backup: %w", err)
+	}
+	b.Status = models.BackupStatus(statusStr)
+	return &b, nil
+}
+
+// CreateBackup creates a new backup record.
+func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO backups (id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		                     status, size_bytes, files_new, files_changed, error_message, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, backup.ID, backup.ScheduleID, backup.AgentID, backup.SnapshotID,
+		backup.StartedAt, backup.CompletedAt, string(backup.Status),
+		backup.SizeBytes, backup.FilesNew, backup.FilesChanged,
+		backup.ErrorMessage, backup.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create backup: %w", err)
+	}
+	return nil
+}
+
+// UpdateBackup updates an existing backup record.
+func (db *DB) UpdateBackup(ctx context.Context, backup *models.Backup) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE backups
+		SET snapshot_id = $2, completed_at = $3, status = $4, size_bytes = $5,
+		    files_new = $6, files_changed = $7, error_message = $8
+		WHERE id = $1
+	`, backup.ID, backup.SnapshotID, backup.CompletedAt, string(backup.Status),
+		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage)
+	if err != nil {
+		return fmt.Errorf("update backup: %w", err)
 	}
 	return nil
 }
@@ -1515,6 +1682,19 @@ func (db *DB) UpdatePolicy(ctx context.Context, policy *models.Policy) error {
 	excludesBytes, err := policy.ExcludesJSON()
 	if err != nil {
 		return fmt.Errorf("marshal excludes: %w", err)
+// scanBackups scans multiple backup rows.
+func scanBackups(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.Backup, error) {
+	type scanner interface {
+		Next() bool
+		Scan(dest ...any) error
+		Err() error
+	}
+	r := rows.(scanner)
+
 	var backups []*models.Backup
 	for r.Next() {
 		var b models.Backup
@@ -1524,6 +1704,9 @@ func (db *DB) UpdatePolicy(ctx context.Context, policy *models.Policy) error {
 			&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
 			&b.FilesChanged, &b.ErrorMessage,
 			&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError, &b.CreatedAt,
+			&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
+			&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
+			&b.FilesChanged, &b.ErrorMessage, &b.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan backup: %w", err)
@@ -18427,4 +18610,9 @@ func (db *DB) GetRepositoryKeysWithEscrowByOrgID(ctx context.Context, orgID uuid
 	}
 
 	return keys, nil
+	if err := r.Err(); err != nil {
+		return nil, fmt.Errorf("iterate backups: %w", err)
+	}
+
+	return backups, nil
 }

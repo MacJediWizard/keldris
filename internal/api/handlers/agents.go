@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/models"
@@ -76,12 +77,21 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup, createMiddleware ...g
 		agents.GET("/:id/logs", h.Logs)
 		agents.GET("/:id/docker-health", h.DockerHealth)
 		agents.GET("/:id/logs", h.Logs)
+func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup) {
+	agents := r.Group("/agents")
+	{
+		agents.GET("", h.List)
+		agents.POST("", h.Create)
+		agents.GET("/:id", h.Get)
+		agents.DELETE("/:id", h.Delete)
+		agents.POST("/:id/heartbeat", h.Heartbeat)
 	}
 }
 
 // CreateAgentRequest is the request body for creating an agent.
 type CreateAgentRequest struct {
 	Hostname string `json:"hostname" binding:"required,min=1,max=255" example:"backup-server-01"`
+	Hostname string `json:"hostname" binding:"required,min=1,max=255"`
 }
 
 // CreateAgentResponse is the response for agent creation.
@@ -104,6 +114,13 @@ type CreateAgentResponse struct {
 //	@Failure		500	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/agents [get]
+	ID       uuid.UUID `json:"id"`
+	Hostname string    `json:"hostname"`
+	APIKey   string    `json:"api_key"` // Only returned once at creation
+}
+
+// List returns all agents for the authenticated user's organization.
+// GET /api/v1/agents
 func (h *AgentsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -119,6 +136,17 @@ func (h *AgentsHandler) List(c *gin.Context) {
 	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list agents")
+	// Get user's org ID
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+		return
+	}
+
+	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), dbUser.OrgID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list agents")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list agents"})
 		return
 	}
@@ -140,6 +168,7 @@ func (h *AgentsHandler) List(c *gin.Context) {
 //	@Failure		404	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/agents/{id} [get]
+// GET /api/v1/agents/:id
 func (h *AgentsHandler) Get(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -167,6 +196,15 @@ func (h *AgentsHandler) Get(c *gin.Context) {
 
 	// Verify agent belongs to current org
 	if agent.OrgID != user.CurrentOrgID {
+	// Verify user has access to this agent's org
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	if agent.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
@@ -188,6 +226,7 @@ func (h *AgentsHandler) Get(c *gin.Context) {
 //	@Failure		500		{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/agents [post]
+// POST /api/v1/agents
 func (h *AgentsHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -205,6 +244,14 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// Get user's org ID
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+		return
+	}
+
 	// Generate API key
 	apiKey, err := generateAPIKey()
 	if err != nil {
@@ -217,6 +264,7 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 	apiKeyHash := hashAPIKey(apiKey)
 
 	agent := models.NewAgent(user.CurrentOrgID, req.Hostname, apiKeyHash)
+	agent := models.NewAgent(dbUser.OrgID, req.Hostname, apiKeyHash)
 
 	if err := h.store.CreateAgent(c.Request.Context(), agent); err != nil {
 		h.logger.Error().Err(err).Str("hostname", req.Hostname).Msg("failed to create agent")
@@ -228,6 +276,7 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 		Str("agent_id", agent.ID.String()).
 		Str("hostname", req.Hostname).
 		Str("org_id", user.CurrentOrgID.String()).
+		Str("org_id", dbUser.OrgID.String()).
 		Msg("agent created")
 
 	c.JSON(http.StatusCreated, CreateAgentResponse{
@@ -252,6 +301,7 @@ func (h *AgentsHandler) Create(c *gin.Context) {
 //	@Failure		500	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/agents/{id} [delete]
+// DELETE /api/v1/agents/:id
 func (h *AgentsHandler) Delete(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -279,6 +329,15 @@ func (h *AgentsHandler) Delete(c *gin.Context) {
 
 	// Verify agent belongs to current org
 	if agent.OrgID != user.CurrentOrgID {
+	// Verify user has access to this agent's org
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	if agent.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
@@ -321,6 +380,14 @@ type HeartbeatRequest struct {
 func (h *AgentsHandler) Heartbeat(c *gin.Context) {
 	// This endpoint uses session auth for the web dashboard.
 	// Agents use the dedicated POST /api/v1/agent/health endpoint with API key auth.
+	OSInfo *models.OSInfo `json:"os_info,omitempty"`
+}
+
+// Heartbeat updates an agent's last seen timestamp.
+// POST /api/v1/agents/:id/heartbeat
+func (h *AgentsHandler) Heartbeat(c *gin.Context) {
+	// This endpoint can be called with either session auth or API key auth
+	// For now, we support session auth. API key auth will be added later.
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -532,6 +599,19 @@ func (h *AgentsHandler) RevokeAPIKey(c *gin.Context) {
 		Msg("API key revoked")
 
 	c.JSON(http.StatusOK, gin.H{"message": "API key revoked"})
+	// Update agent
+	agent.MarkSeen()
+	if req.OSInfo != nil {
+		agent.OSInfo = req.OSInfo
+	}
+
+	if err := h.store.UpdateAgent(c.Request.Context(), agent); err != nil {
+		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to update agent")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update agent"})
+		return
+	}
+
+	c.JSON(http.StatusOK, agent)
 }
 
 // generateAPIKey generates a secure random API key.

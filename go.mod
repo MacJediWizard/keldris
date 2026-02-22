@@ -37,6 +37,7 @@ require (
 	github.com/swaggo/swag v1.16.4
 	github.com/ulule/limiter/v3 v3.11.2
 	golang.org/x/crypto v0.46.0
+	github.com/ulule/limiter/v3 v3.11.2
 	golang.org/x/oauth2 v0.34.0
 	golang.org/x/text v0.33.0
 	golang.org/x/text v0.27.0

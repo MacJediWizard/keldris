@@ -33,6 +33,12 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "github.com/MacJediWizard/keldris/docs/api"
+	"github.com/MacJediWizard/keldris/internal/api/handlers"
+	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 )
 
 // Config holds configuration for the API router.
@@ -134,6 +140,10 @@ type Router struct {
 	sessions   *auth.SessionStore
 	db         *db.DB
 	keyManager *crypto.KeyManager
+	Engine   *gin.Engine
+	logger   zerolog.Logger
+	sessions *auth.SessionStore
+	db       *db.DB
 }
 
 // NewRouter creates a new Router with the given dependencies.
@@ -151,6 +161,13 @@ func NewRouter(
 		sessions:   sessions,
 		db:         database,
 		keyManager: keyManager,
+	logger zerolog.Logger,
+) (*Router, error) {
+	r := &Router{
+		Engine:   gin.New(),
+		logger:   logger.With().Str("component", "router").Logger(),
+		sessions: sessions,
+		db:       database,
 	}
 
 	// Global middleware
@@ -171,6 +188,11 @@ func NewRouter(
 
 	// Rate limiting
 	rateLimiter, err := middleware.NewRateLimiter(cfg.RateLimitRequests, cfg.RateLimitPeriod, cfg.RedisURL)
+	r.Engine.Use(middleware.RequestLogger(logger))
+	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins))
+
+	// Rate limiting
+	rateLimiter, err := middleware.NewRateLimiter(cfg.RateLimitRequests, cfg.RateLimitPeriod)
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +261,8 @@ func NewRouter(
 	// Update checker endpoint (no auth required for banner display)
 	updatesHandler := handlers.NewUpdatesHandler(cfg.UpdateChecker, logger)
 	updatesHandler.RegisterPublicRoutes(r.Engine)
+	// Health check endpoint (no auth required)
+	r.Engine.GET("/health", r.healthCheck)
 
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
@@ -761,4 +785,32 @@ func NewRouter(
 
 	r.logger.Info().Msg("API router initialized")
 	return r, nil
+}
+	// API v1 routes (auth required)
+	apiV1 := r.Engine.Group("/api/v1")
+	apiV1.Use(middleware.AuthMiddleware(sessions, logger))
+
+	// Register API handlers
+	agentsHandler := handlers.NewAgentsHandler(database, logger)
+	agentsHandler.RegisterRoutes(apiV1)
+
+	reposHandler := handlers.NewRepositoriesHandler(database, logger)
+	reposHandler.RegisterRoutes(apiV1)
+
+	schedulesHandler := handlers.NewSchedulesHandler(database, logger)
+	schedulesHandler.RegisterRoutes(apiV1)
+
+	backupsHandler := handlers.NewBackupsHandler(database, logger)
+	backupsHandler.RegisterRoutes(apiV1)
+
+	r.logger.Info().Msg("API router initialized")
+	return r, nil
+}
+
+// healthCheck returns basic health information.
+func (r *Router) healthCheck(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"status": "healthy",
+		"db":     r.db.Health(),
+	})
 }
