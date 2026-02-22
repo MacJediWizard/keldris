@@ -63,6 +63,7 @@ import {
 	useOrganizations,
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
+import { ToastProvider } from './ui/Toast';
 
 interface NavItem {
 	path: string;
@@ -2216,5 +2217,21 @@ export function Layout() {
 				/>
 			</div>
 		</ReadOnlyModeContext.Provider>
+					</div>
+					<ShortcutHelpModal
+						isOpen={showShortcutHelp}
+						onClose={() => setShowShortcutHelp(false)}
+						shortcuts={shortcuts}
+					/>
+					{showWhatsNew && (
+						<WhatsNewModal
+							entry={latestEntry ?? null}
+							currentVersion={currentVersion}
+							onDismiss={() => setShowWhatsNew(false)}
+						/>
+					)}
+				</div>
+			</ReadOnlyModeContext.Provider>
+		</ToastProvider>
 	);
 }

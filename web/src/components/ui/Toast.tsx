@@ -120,6 +120,10 @@ import { useEffect, useState } from 'react';
 import type { Toast as ToastType, ToastVariant } from '../../hooks/useToast';
 import { ToastContext, useToast, useToastValue } from '../../hooks/useToast';
 
+import { useEffect, useState } from 'react';
+import type { Toast as ToastType, ToastVariant } from '../../hooks/useToast';
+import { ToastContext, useToast, useToastValue } from '../../hooks/useToast';
+
 const variantStyles: Record<
 	ToastVariant,
 	{ bg: string; icon: string; border: string }
