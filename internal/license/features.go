@@ -4,6 +4,9 @@ package license
 // Package license provides feature gating based on license tiers.
 package license
 
+// Package license provides feature gating based on license tiers.
+package license
+
 import (
 	"context"
 	"sync"

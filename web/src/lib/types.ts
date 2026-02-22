@@ -6670,6 +6670,9 @@ export type ProFeature =
 	| 'unlimited_storage';
 
 // License Feature Flag types
+// License and Feature Flag types
+export type LicenseTier = 'free' | 'pro' | 'enterprise';
+
 export type LicenseFeature =
 	| 'oidc'
 	| 'audit_logs'
@@ -6720,6 +6723,7 @@ export interface TiersResponse {
 }
 
 export interface LicenseInfoResponse {
+export interface LicenseResponse {
 	license: LicenseInfo;
 }
 

@@ -338,6 +338,9 @@ import type {
 	LicenseValidateResponse,
 	LicenseWarningsResponse,
 	LicensesResponse,
+	LicenseFeature,
+	LicenseInfo,
+	LicenseResponse,
 	LifecycleDeletionEvent,
 	LifecycleDeletionEventsResponse,
 	LifecycleDryRunRequest,
@@ -5164,6 +5167,7 @@ export const licenseApi = {
 	// Get current organization's license info
 	getLicense: async (): Promise<LicenseInfo> => {
 		const response = await fetchApi<LicenseInfoResponse>('/license');
+		const response = await fetchApi<LicenseResponse>('/license');
 		return response.license;
 	},
 
