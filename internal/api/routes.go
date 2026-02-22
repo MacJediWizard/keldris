@@ -181,10 +181,12 @@ func NewRouter(
 		licenseManageHandler.RegisterRoutes(apiV1)
 	}
 
+	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
 	orgsHandler.RegisterRoutes(apiV1)
 	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
 	orgsHandler.RegisterMultiOrgRoutes(orgsGroup, middleware.LimitMiddleware(database, "organizations", logger))
+	orgsHandler.RegisterRoutes(orgsGroup)
 
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1, middleware.LimitMiddleware(database, "agents", logger))
@@ -444,6 +446,8 @@ func NewRouter(
 	}
 	agentAPI.Use(middleware.FeatureMiddleware(license.FeatureAPIAccess, logger))
 	agentAPI.Use(middleware.IPFilterAgentMiddleware(ipFilter, logger))
+	agentAPI.Use(middleware.LicenseMiddleware(lic, logger))
+	agentAPI.Use(middleware.FeatureMiddleware(license.FeatureAPIAccess, logger))
 
 	agentAPIHandler := handlers.NewAgentAPIHandler(database, keyManager, logger)
 	agentAPIHandler.RegisterRoutes(agentAPI)
