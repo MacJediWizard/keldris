@@ -1361,6 +1361,9 @@ func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, repository_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
+		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE policy_id = $1
 		ORDER BY name
@@ -1974,6 +1977,18 @@ func (db *DB) GetOrCreateReplicationStatus(ctx context.Context, scheduleID, sour
 	if err == nil {
 		rs.Status = models.ReplicationStatusType(statusStr)
 		return &rs, nil
+// GetAllSchedules returns all enabled schedules across all organizations (for monitoring).
+func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression, s.paths, s.excludes,
+		       s.retention_policy, s.bandwidth_limit_kbps, s.backup_window_start, s.backup_window_end,
+		       s.excluded_hours, s.compression_level, s.on_mount_unavailable, s.enabled, s.created_at, s.updated_at
+		FROM schedules s
+		WHERE s.enabled = true
+		ORDER BY s.name
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list all schedules: %w", err)
 	}
 
 	// Create new record
@@ -12308,6 +12323,15 @@ func (db *DB) ListSLAAssignmentsBySLA(ctx context.Context, slaID uuid.UUID) ([]*
 		SELECT id, org_id, sla_id, agent_id, repository_id, assigned_by, assigned_at
 		FROM sla_assignments WHERE sla_id = $1 ORDER BY assigned_at
 	`, slaID)
+		SELECT DISTINCT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at, b.completed_at,
+		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
+		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error, b.created_at
+		FROM backups b
+		JOIN backup_tags bt ON b.id = bt.backup_id
+		WHERE bt.tag_id = ANY($1) AND b.deleted_at IS NULL
+		ORDER BY b.started_at DESC
+	`, tagIDs)
 	if err != nil {
 		return nil, fmt.Errorf("list sla assignments: %w", err)
 	}
@@ -12711,6 +12735,21 @@ func (db *DB) GetFavoriteByUserAndEntity(ctx context.Context, userID uuid.UUID, 
 	`, userID, entityType, entityID).Scan(
 		&f.ID, &f.UserID, &f.OrgID, &f.EntityType, &f.EntityID, &f.CreatedAt,
 	)
+// Metrics methods
+
+// GetBackupsByOrgIDSince returns backups for an organization since a given time.
+func (db *DB) GetBackupsByOrgIDSince(ctx context.Context, orgID uuid.UUID, since time.Time) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at, b.completed_at,
+		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
+		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error, b.created_at
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL AND b.started_at >= $2
+		ORDER BY b.started_at DESC
+	`, orgID, since)
 	if err != nil {
 		return nil, err
 	}
@@ -13433,6 +13472,20 @@ func (db *DB) CreateOfflineLicense(ctx context.Context, license *models.OfflineL
 		INSERT INTO offline_licenses (id, org_id, customer_id, tier, license_data, expires_at, issued_at, uploaded_by, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`, license.ID, license.OrgID, license.CustomerID, license.Tier, license.LicenseData, license.ExpiresAt, license.IssuedAt, license.UploadedBy, license.CreatedAt)
+// GetBackupsByOrgIDAndDateRange returns backups for an org within a date range.
+func (db *DB) GetBackupsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at,
+		       b.completed_at, b.status, b.size_bytes, b.files_new,
+		       b.files_changed, b.error_message,
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
+		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error, b.created_at
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL AND b.started_at >= $2 AND b.started_at <= $3
+		ORDER BY b.started_at DESC
+	`, orgID, start, end)
 	if err != nil {
 		return fmt.Errorf("create offline license: %w", err)
 	}
@@ -13466,6 +13519,15 @@ func (db *DB) GetTagsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Ta
 		FROM tags
 		WHERE org_id = $1
 		ORDER BY name
+		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression,
+		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps,
+		       s.backup_window_start, s.backup_window_end, s.excluded_hours,
+		       s.compression_level, s.on_mount_unavailable, s.enabled,
+		       s.created_at, s.updated_at
+		FROM schedules s
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND s.enabled = true
+		ORDER BY s.name
 	`, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
@@ -13858,6 +13920,16 @@ func (db *DB) searchAgents(ctx context.Context, orgID uuid.UUID, query string, f
 	sqlQuery += fmt.Sprintf(" ORDER BY hostname LIMIT %d", filter.Limit)
 
 	rows, err := db.Pool.Query(ctx, sqlQuery, args...)
+// GetSchedulesByAgentGroupID returns all schedules for an agent group.
+func (db *DB) GetSchedulesByAgentGroupID(ctx context.Context, agentGroupID uuid.UUID) ([]*models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		FROM schedules
+		WHERE agent_group_id = $1
+		ORDER BY name
+	`, agentGroupID)
 	if err != nil {
 		return nil, err
 	}
