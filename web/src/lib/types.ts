@@ -2229,6 +2229,33 @@ export interface SSOGroupMapping {
 	created_at: string;
 	updated_at: string;
 }
+// Exclude Pattern types
+export type ExcludePatternCategory =
+	| 'os'
+	| 'ide'
+	| 'language'
+	| 'build'
+	| 'cache'
+	| 'temp'
+	| 'logs'
+	| 'security'
+	| 'database'
+	| 'container';
+
+export interface ExcludePattern {
+	id: string;
+	org_id?: string;
+	name: string;
+	description?: string;
+	patterns: string[];
+	category: ExcludePatternCategory;
+	is_builtin: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+// DR Runbook types
+export type DRRunbookStatus = 'active' | 'draft' | 'archived';
 
 // Maintenance Window types
 export interface MaintenanceWindow {
