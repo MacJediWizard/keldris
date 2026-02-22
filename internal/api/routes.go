@@ -284,6 +284,12 @@ func NewRouter(
 	}
 
 	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
+	// Documentation routes (authenticated)
+	if cfg.DocsFS != nil {
+		docsHandler := handlers.NewDocsHandler(cfg.DocsFS, logger)
+		docsHandler.RegisterRoutes(apiV1)
+	}
+
 	// Register air-gap protected routes (after auth middleware is applied)
 	if airGapHandler != nil {
 		airGapHandler.RegisterRoutes(apiV1, nil)
