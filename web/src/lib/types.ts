@@ -623,6 +623,7 @@ export interface CreateScheduleRequest {
 	retention_policy?: RetentionPolicy;
 	proxmox_options?: ProxmoxBackupOptions; // Proxmox-specific backup options
 	on_mount_unavailable?: MountBehavior;
+	proxmox_options?: ProxmoxBackupOptions; // Proxmox-specific backup options
 	enabled?: boolean;
 }
 
@@ -648,6 +649,7 @@ export interface UpdateScheduleRequest {
 	excluded_hours?: number[];
 	proxmox_options?: ProxmoxBackupOptions;
 	on_mount_unavailable?: MountBehavior;
+	proxmox_options?: ProxmoxBackupOptions;
 	enabled?: boolean;
 }
 

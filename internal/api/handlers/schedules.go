@@ -118,9 +118,9 @@ type CreateScheduleRequest struct {
 	AgentID            uuid.UUID                     `json:"agent_id" binding:"required"`
 	Repositories       []ScheduleRepositoryRequest   `json:"repositories" binding:"required,min=1"`
 	Name               string                        `json:"name" binding:"required,min=1,max=255"`
-	BackupType         string                        `json:"backup_type,omitempty"`     // "file" (default), "docker", "pihole", or "postgres"
+	BackupType         string                        `json:"backup_type,omitempty"`     // "file" (default), "docker", "pihole", "postgres", or "proxmox"
 	CronExpression     string                        `json:"cron_expression" binding:"required"`
-	Paths              []string                      `json:"paths,omitempty"`           // Required for file backups, optional for docker/postgres
+	Paths              []string                      `json:"paths,omitempty"`           // Required for file backups, optional for docker/postgres/proxmox
 	Excludes           []string                      `json:"excludes,omitempty"`
 	RetentionPolicy    *models.RetentionPolicy       `json:"retention_policy,omitempty"`
 	BandwidthLimitKB   *int                          `json:"bandwidth_limit_kb,omitempty"`

@@ -978,6 +978,14 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 	`, schedule.ID, schedule.AgentID, schedule.AgentGroupID, schedule.PolicyID, schedule.Name,
 		backupType, schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
 		schedule.BandwidthLimitKB, windowStart, windowEnd, excludedHoursBytes,
+		                       compression_level, max_file_size_mb, on_mount_unavailable,
+		                       priority, preemptible, classification_level, classification_data_types,
+		                       docker_options, pihole_config, proxmox_options,
+		                       enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+	`, schedule.ID, schedule.AgentID, schedule.AgentGroupID, schedule.PolicyID, schedule.Name,
+		backupType, schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
+		schedule.BandwidthLimitKB, windowStart, windowEnd, excludedHoursBytes,
 		schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior,
 		schedule.Priority, schedule.Preemptible, schedule.ClassificationLevel, classificationDataTypesBytes,
 		dockerOptionsBytes, piholeConfigBytes, proxmoxOptionsBytes,
@@ -1095,10 +1103,24 @@ func (db *DB) UpdateSchedule(ctx context.Context, schedule *models.Schedule) err
 		    retention_policy = $7, bandwidth_limit_kbps = $8, backup_window_start = $9,
 		    backup_window_end = $10, excluded_hours = $11, compression_level = $12,
 		    on_mount_unavailable = $13, enabled = $14, updated_at = $15
+	schedule.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE schedules
+		SET policy_id = $2, name = $3, backup_type = $4, cron_expression = $5, paths = $6, excludes = $7,
+		    retention_policy = $8, bandwidth_limit_kbps = $9, backup_window_start = $10,
+		    backup_window_end = $11, excluded_hours = $12, compression_level = $13,
+		    max_file_size_mb = $14, on_mount_unavailable = $15,
+		    priority = $16, preemptible = $17, classification_level = $18, classification_data_types = $19,
+		    docker_options = $20, pihole_config = $21, proxmox_options = $22,
+		    enabled = $23, updated_at = $24
 		WHERE id = $1
-	`, schedule.ID, schedule.PolicyID, schedule.Name, schedule.CronExpression, pathsBytes,
+	`, schedule.ID, schedule.PolicyID, schedule.Name, backupType, schedule.CronExpression, pathsBytes,
 		excludesBytes, retentionBytes, schedule.BandwidthLimitKB, windowStart, windowEnd,
 		excludedHoursBytes, schedule.CompressionLevel, mountBehavior, schedule.Enabled, schedule.UpdatedAt)
+		excludedHoursBytes, schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior,
+		schedule.Priority, schedule.Preemptible, schedule.ClassificationLevel, classificationDataTypesBytes,
+		dockerOptionsBytes, piholeConfigBytes, proxmoxOptionsBytes,
+		schedule.Enabled, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update schedule: %w", err)
 	}
@@ -1283,6 +1305,9 @@ func scanSchedule(rows interface {
 		&s.ID, &s.AgentID, &s.Name, &s.CronExpression,
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.Enabled,
 		&s.CreatedAt, &s.UpdatedAt,
+		&mountBehavior, &s.Priority, &s.Preemptible, &classificationLevel, &classificationDataTypesBytes,
+		&dockerOptionsBytes, &piholeConfigBytes, &proxmoxOptionsBytes,
+		&s.Enabled, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan schedule: %w", err)
@@ -2167,6 +2192,12 @@ func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
 		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
+		SELECT id, agent_id, agent_group_id, policy_id, name, backup_type, cron_expression, paths, excludes,
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable,
+		       priority, preemptible, classification_level, classification_data_types,
+		       docker_options, pihole_config, proxmox_options,
+		       enabled, created_at, updated_at
 		FROM schedules
 		WHERE policy_id = $1
 		ORDER BY name
@@ -11144,6 +11175,20 @@ func (db *DB) IsIPBanned(ctx context.Context, orgID uuid.UUID, ipAddress string)
 		SELECT COUNT(*) FROM ip_bans
 		WHERE org_id = $1 AND ip_address = $2 AND (expires_at IS NULL OR expires_at > NOW())
 	`, orgID, ipAddress).Scan(&count)
+// GetEnabledSchedulesByOrgID returns all enabled backup schedules for an org.
+func (db *DB) GetEnabledSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.backup_type, s.cron_expression,
+		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps, s.backup_window_start, s.backup_window_end,
+		       s.excluded_hours, s.compression_level, s.max_file_size_mb, s.on_mount_unavailable,
+		       s.priority, s.preemptible, s.classification_level, s.classification_data_types,
+		       s.docker_options, s.pihole_config, s.proxmox_options,
+		       s.enabled, s.created_at, s.updated_at
+		FROM schedules s
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND s.enabled = true
+		ORDER BY s.name
+	`, orgID)
 	if err != nil {
 		return false, fmt.Errorf("check ip ban: %w", err)
 	}
