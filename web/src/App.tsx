@@ -207,6 +207,7 @@ const queryClient = new QueryClient({
 const Maintenance = lazy(() => import('./pages/Maintenance'));
 const NewOrganization = lazy(() => import('./pages/NewOrganization'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const SLATracking = lazy(() => import('./pages/SLATracking'));
 
 const queryClient = new QueryClient({
 	defaultOptions: {
