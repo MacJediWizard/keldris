@@ -536,6 +536,31 @@ These are enforced by default in production (`ENV=production`):
 - **Secure** - Requires HTTPS (active when `ENV=production`)
 
 ### Session Timeouts
+## Request Body Size Limits
+
+Keldris enforces a default **10 MB** request body size limit on all endpoints. Requests exceeding this limit receive a `413 Request Entity Too Large` response.
+
+This protects against denial-of-service attacks via oversized payloads.
+
+### Reverse Proxy Configuration
+
+If you run Keldris behind a reverse proxy (nginx, Caddy, HAProxy, etc.), configure matching or lower body size limits at the proxy level as well. This rejects oversized requests before they reach the application server.
+
+**nginx:**
+
+```nginx
+client_max_body_size 10m;
+```
+
+**Caddy:**
+
+```
+request_body {
+    max_size 10MB
+}
+```
+
+## Other Production Settings
 
 ```bash
 # Production defaults
