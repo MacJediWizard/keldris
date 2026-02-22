@@ -1491,7 +1491,8 @@ func (db *DB) GetPoliciesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*model
 func (db *DB) GetBackupsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.Backup, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
-		       status, size_bytes, files_new, files_changed, error_message, created_at
+		       status, size_bytes, files_new, files_changed, error_message,
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
 		WHERE schedule_id = $1
 		ORDER BY started_at DESC
@@ -1546,7 +1547,8 @@ func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*mo
 func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Backup, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
-		       status, size_bytes, files_new, files_changed, error_message, created_at
+		       status, size_bytes, files_new, files_changed, error_message,
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
 		WHERE agent_id = $1
 		ORDER BY started_at DESC
@@ -1626,13 +1628,15 @@ func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
 	if err != nil {
 		return fmt.Errorf("create policy: %w", err)
 		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
-		       status, size_bytes, files_new, files_changed, error_message, created_at
+		       status, size_bytes, files_new, files_changed, error_message,
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
 		WHERE id = $1
 	`, id).Scan(
 		&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
 		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
-		&b.FilesChanged, &b.ErrorMessage, &b.CreatedAt,
+		&b.FilesChanged, &b.ErrorMessage,
+		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError, &b.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get backup: %w", err)
@@ -1645,12 +1649,13 @@ func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
 func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
 	_, err := db.Pool.Exec(ctx, `
 		INSERT INTO backups (id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
-		                     status, size_bytes, files_new, files_changed, error_message, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		                     status, size_bytes, files_new, files_changed, error_message,
+		                     retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	`, backup.ID, backup.ScheduleID, backup.AgentID, backup.SnapshotID,
 		backup.StartedAt, backup.CompletedAt, string(backup.Status),
-		backup.SizeBytes, backup.FilesNew, backup.FilesChanged,
-		backup.ErrorMessage, backup.CreatedAt)
+		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage,
+		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError, backup.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("create backup: %w", err)
 	}
@@ -1662,10 +1667,12 @@ func (db *DB) UpdateBackup(ctx context.Context, backup *models.Backup) error {
 	_, err := db.Pool.Exec(ctx, `
 		UPDATE backups
 		SET snapshot_id = $2, completed_at = $3, status = $4, size_bytes = $5,
-		    files_new = $6, files_changed = $7, error_message = $8
+		    files_new = $6, files_changed = $7, error_message = $8,
+		    retention_applied = $9, snapshots_removed = $10, snapshots_kept = $11, retention_error = $12
 		WHERE id = $1
 	`, backup.ID, backup.SnapshotID, backup.CompletedAt, string(backup.Status),
-		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage)
+		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage,
+		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError)
 	if err != nil {
 		return fmt.Errorf("update backup: %w", err)
 	}
@@ -1706,7 +1713,8 @@ func scanBackups(rows interface {
 			&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError, &b.CreatedAt,
 			&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
 			&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
-			&b.FilesChanged, &b.ErrorMessage, &b.CreatedAt,
+			&b.FilesChanged, &b.ErrorMessage,
+			&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError, &b.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan backup: %w", err)

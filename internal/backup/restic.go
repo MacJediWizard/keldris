@@ -593,9 +593,9 @@ func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.
 	if retention == nil {
 		return nil, errors.New("retention policy required for prune")
 // Prune removes old snapshots according to the retention policy.
-func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.RetentionPolicy) error {
+func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.RetentionPolicy) (*ForgetResult, error) {
 	if retention == nil {
-		return errors.New("retention policy required for prune")
+		return nil, errors.New("retention policy required for prune")
 	}
 
 	r.logger.Info().
@@ -616,7 +616,14 @@ func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.
 		result = &ForgetResult{}
 	_, err := r.run(ctx, cfg, forgetArgs)
 	if err != nil {
-		return fmt.Errorf("forget failed: %w", err)
+		return nil, fmt.Errorf("forget failed: %w", err)
+	}
+
+	result, err := parseForgetOutput(output)
+	if err != nil {
+		// If we can't parse the output, still return a minimal result
+		r.logger.Warn().Err(err).Msg("failed to parse forget output")
+		result = &ForgetResult{}
 	}
 
 	// Then, prune unreferenced data
@@ -783,6 +790,13 @@ func (r *Restic) CheckWithOptions(ctx context.Context, cfg ResticConfig, opts Ch
 		Msg("repository check passed")
 
 	return result, nil
+// PruneOnly runs only the prune command without forget.
+func (r *Restic) PruneOnly(ctx context.Context, cfg ResticConfig) error {
+	r.logger.Info().Msg("starting prune")
+
+	pruneArgs := []string{"prune", "--repo", cfg.Repository, "--json"}
+	_, err := r.run(ctx, cfg, pruneArgs)
+	if err != nil {
 		return fmt.Errorf("prune failed: %w", err)
 	}
 

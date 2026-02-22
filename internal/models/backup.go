@@ -212,6 +212,7 @@ func NewBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID) *Backup {
 	FilesChanged *int         `json:"files_changed,omitempty"`
 	ErrorMessage string       `json:"error_message,omitempty"`
 	CreatedAt    time.Time    `json:"created_at"`
+	CreatedAt        time.Time    `json:"created_at"`
 }
 
 // NewBackup creates a new Backup record for the given schedule and agent.
@@ -260,6 +261,16 @@ func (b *Backup) Cancel() {
 	now := time.Now()
 	b.CompletedAt = &now
 	b.Status = BackupStatusCanceled
+}
+
+// RecordRetention records the results of retention policy enforcement.
+func (b *Backup) RecordRetention(removed, kept int, err error) {
+	b.RetentionApplied = true
+	b.SnapshotsRemoved = &removed
+	b.SnapshotsKept = &kept
+	if err != nil {
+		b.RetentionError = err.Error()
+	}
 }
 
 // Duration returns the duration of the backup, or zero if not completed.

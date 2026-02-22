@@ -143,12 +143,23 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			return; // Don't submit without repositories
 		}
 		try {
+			const retentionPolicy = showRetention
+				? {
+						keep_last: keepLast > 0 ? keepLast : undefined,
+						keep_daily: keepDaily > 0 ? keepDaily : undefined,
+						keep_weekly: keepWeekly > 0 ? keepWeekly : undefined,
+						keep_monthly: keepMonthly > 0 ? keepMonthly : undefined,
+						keep_yearly: keepYearly > 0 ? keepYearly : undefined,
+					}
+				: undefined;
+
 			await createSchedule.mutateAsync({
 				name,
 				agent_id: agentId,
 				repositories: selectedRepos,
 				cron_expression: cronExpression,
 				paths: paths.split('\n').filter((p) => p.trim()),
+				retention_policy: retentionPolicy,
 				enabled: true,
 			});
 			};
@@ -297,6 +308,123 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
 								required
 							/>
+						</div>
+						<div className="border-t border-gray-200 pt-4">
+							<div className="flex items-center justify-between mb-3">
+								<span className="text-sm font-medium text-gray-700">
+									Retention Policy
+								</span>
+								<button
+									type="button"
+									onClick={() => setShowRetention(!showRetention)}
+									className="text-sm text-indigo-600 hover:text-indigo-800"
+								>
+									{showRetention ? 'Use defaults' : 'Customize'}
+								</button>
+							</div>
+							{!showRetention ? (
+								<p className="text-sm text-gray-500">
+									Using default policy: Keep last 5, 7 daily, 4 weekly, 6
+									monthly
+								</p>
+							) : (
+								<div className="grid grid-cols-2 gap-3">
+									<div>
+										<label
+											htmlFor="keep-last"
+											className="block text-xs font-medium text-gray-600 mb-1"
+										>
+											Keep Last
+										</label>
+										<input
+											type="number"
+											id="keep-last"
+											min="0"
+											value={keepLast}
+											onChange={(e) =>
+												setKeepLast(Number.parseInt(e.target.value, 10) || 0)
+											}
+											className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										/>
+									</div>
+									<div>
+										<label
+											htmlFor="keep-daily"
+											className="block text-xs font-medium text-gray-600 mb-1"
+										>
+											Keep Daily
+										</label>
+										<input
+											type="number"
+											id="keep-daily"
+											min="0"
+											value={keepDaily}
+											onChange={(e) =>
+												setKeepDaily(Number.parseInt(e.target.value, 10) || 0)
+											}
+											className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										/>
+									</div>
+									<div>
+										<label
+											htmlFor="keep-weekly"
+											className="block text-xs font-medium text-gray-600 mb-1"
+										>
+											Keep Weekly
+										</label>
+										<input
+											type="number"
+											id="keep-weekly"
+											min="0"
+											value={keepWeekly}
+											onChange={(e) =>
+												setKeepWeekly(Number.parseInt(e.target.value, 10) || 0)
+											}
+											className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										/>
+									</div>
+									<div>
+										<label
+											htmlFor="keep-monthly"
+											className="block text-xs font-medium text-gray-600 mb-1"
+										>
+											Keep Monthly
+										</label>
+										<input
+											type="number"
+											id="keep-monthly"
+											min="0"
+											value={keepMonthly}
+											onChange={(e) =>
+												setKeepMonthly(Number.parseInt(e.target.value, 10) || 0)
+											}
+											className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										/>
+									</div>
+									<div>
+										<label
+											htmlFor="keep-yearly"
+											className="block text-xs font-medium text-gray-600 mb-1"
+										>
+											Keep Yearly
+										</label>
+										<input
+											type="number"
+											id="keep-yearly"
+											min="0"
+											value={keepYearly}
+											onChange={(e) =>
+												setKeepYearly(Number.parseInt(e.target.value, 10) || 0)
+											}
+											className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										/>
+									</div>
+								</div>
+							)}
+							<p className="text-xs text-gray-500 mt-2">
+								Retention policy automatically removes old backups to save
+								storage space.
+							</p>
 						</div>
 					</div>
 					{createSchedule.isError && (
