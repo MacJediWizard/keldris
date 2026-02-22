@@ -331,6 +331,52 @@ func (s *Service) sendBackupEmail(ctx context.Context, channel *models.Notificat
 		sendErr := NewPagerDutySender(s.logger).Send(ctx, cfg.RoutingKey, event)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), "pagerduty")
 
+	case models.ChannelTypeTeams:
+		var cfg models.TeamsChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse teams config")
+			return
+		}
+		log := models.NewNotificationLog(result.OrgID, &channel.ID, string(pref.EventType), cfg.WebhookURL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		var body string
+		if result.Success {
+			duration := result.CompletedAt.Sub(result.StartedAt)
+			body = fmt.Sprintf("**Host:** %s\n\n**Schedule:** %s\n\n**Snapshot:** %s\n\n**Duration:** %s\n\n**Size:** %s",
+				result.Hostname, result.ScheduleName, result.SnapshotID, formatDuration(duration), FormatBytes(result.SizeBytes))
+		} else {
+			body = fmt.Sprintf("**Host:** %s\n\n**Schedule:** %s\n\n**Error:** %s",
+				result.Hostname, result.ScheduleName, result.ErrorMessage)
+		}
+		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: severity}
+		sendErr := NewTeamsSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
+
+	case models.ChannelTypeDiscord:
+		var cfg models.DiscordChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse discord config")
+			return
+		}
+		log := models.NewNotificationLog(result.OrgID, &channel.ID, string(pref.EventType), cfg.WebhookURL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		var body string
+		if result.Success {
+			duration := result.CompletedAt.Sub(result.StartedAt)
+			body = fmt.Sprintf("**Host:** %s\n**Schedule:** %s\n**Snapshot:** %s\n**Duration:** %s\n**Size:** %s",
+				result.Hostname, result.ScheduleName, result.SnapshotID, formatDuration(duration), FormatBytes(result.SizeBytes))
+		} else {
+			body = fmt.Sprintf("**Host:** %s\n**Schedule:** %s\n**Error:** %s",
+				result.Hostname, result.ScheduleName, result.ErrorMessage)
+		}
+		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: severity}
+		sendErr := NewDiscordSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
+
 	default:
 		s.logger.Warn().
 			Str("channel_type", string(channel.Type)).
@@ -1102,6 +1148,36 @@ func (s *Service) sendEmailTestRestoreFailed(channel *models.NotificationChannel
 		sendErr := NewPagerDutySender(s.logger).Send(ctx, cfg.RoutingKey, event)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), "pagerduty")
 
+	case models.ChannelTypeTeams:
+		var cfg models.TeamsChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse teams config")
+			return
+		}
+		log := models.NewNotificationLog(orgID, &channel.ID, string(models.EventAgentOffline), cfg.WebhookURL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		body := fmt.Sprintf("**Host:** %s\n\n**Agent ID:** %s\n\n**Offline for:** %s", data.Hostname, data.AgentID, data.OfflineSince)
+		msg := NotificationMessage{Title: subject, Body: body, EventType: string(models.EventAgentOffline), Severity: "warning"}
+		sendErr := NewTeamsSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
+
+	case models.ChannelTypeDiscord:
+		var cfg models.DiscordChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse discord config")
+			return
+		}
+		log := models.NewNotificationLog(orgID, &channel.ID, string(models.EventAgentOffline), cfg.WebhookURL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		body := fmt.Sprintf("**Host:** %s\n**Agent ID:** %s\n**Offline for:** %s", data.Hostname, data.AgentID, data.OfflineSince)
+		msg := NotificationMessage{Title: subject, Body: body, EventType: string(models.EventAgentOffline), Severity: "warning"}
+		sendErr := NewDiscordSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
+
 	default:
 		s.logger.Warn().
 			Str("channel_type", string(channel.Type)).
@@ -1522,6 +1598,38 @@ func (s *Service) sendMaintenanceNotification(ctx context.Context, pref *models.
 		event := PagerDutyEvent{Summary: subject, Source: "keldris", Severity: "info", Group: "maintenance"}
 		sendErr := NewPagerDutySender(s.logger).Send(ctx, cfg.RoutingKey, event)
 		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), "pagerduty")
+
+	case models.ChannelTypeTeams:
+		var cfg models.TeamsChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse teams config")
+			return
+		}
+		log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), cfg.WebhookURL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		body := fmt.Sprintf("**%s**\n\n%s\n\n**Starts:** %s\n\n**Ends:** %s\n\n**Duration:** %s",
+			data.Title, data.Message, data.StartsAt.Format(time.RFC822), data.EndsAt.Format(time.RFC822), data.Duration)
+		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: "warning"}
+		sendErr := NewTeamsSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
+
+	case models.ChannelTypeDiscord:
+		var cfg models.DiscordChannelConfig
+		if err := json.Unmarshal(channel.ConfigEncrypted, &cfg); err != nil {
+			s.logger.Error().Err(err).Str("channel_id", channel.ID.String()).Msg("failed to parse discord config")
+			return
+		}
+		log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), cfg.WebhookURL, subject)
+		if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+			s.logger.Error().Err(err).Msg("failed to create notification log")
+		}
+		body := fmt.Sprintf("**%s**\n%s\n**Starts:** %s\n**Ends:** %s\n**Duration:** %s",
+			data.Title, data.Message, data.StartsAt.Format(time.RFC822), data.EndsAt.Format(time.RFC822), data.Duration)
+		msg := NotificationMessage{Title: subject, Body: body, EventType: string(pref.EventType), Severity: "warning"}
+		sendErr := NewDiscordSender(s.logger).Send(ctx, cfg.WebhookURL, msg)
+		s.finalizeLog(ctx, log, sendErr, channel.ID.String(), cfg.WebhookURL)
 
 	default:
 		s.logger.Warn().

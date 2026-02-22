@@ -11,6 +11,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/models"
+
 	"github.com/rs/zerolog"
 )
 
@@ -60,6 +61,8 @@ func NewTeamsServiceWithProxy(cfg models.TeamsChannelConfig, proxyConfig *config
 func ValidateTeamsConfig(config *models.TeamsChannelConfig) error {
 	if config.WebhookURL == "" {
 		return fmt.Errorf("teams webhook URL is required")
+		client: &http.Client{},
+		logger: logger.With().Str("component", "teams_sender").Logger(),
 	}
 }
 

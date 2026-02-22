@@ -11,6 +11,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/models"
+
 	"github.com/rs/zerolog"
 )
 
@@ -60,6 +61,8 @@ func NewDiscordServiceWithProxy(cfg models.DiscordChannelConfig, proxyConfig *co
 func ValidateDiscordConfig(config *models.DiscordChannelConfig) error {
 	if config.WebhookURL == "" {
 		return fmt.Errorf("discord webhook URL is required")
+		client: &http.Client{},
+		logger: logger.With().Str("component", "discord_sender").Logger(),
 	}
 }
 

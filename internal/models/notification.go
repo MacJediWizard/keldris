@@ -16,6 +16,8 @@ const (
 	ChannelTypeDiscord   NotificationChannelType = "discord"
 	ChannelTypeWebhook   NotificationChannelType = "webhook"
 	ChannelTypePagerDuty NotificationChannelType = "pagerduty"
+	ChannelTypeTeams     NotificationChannelType = "teams"
+	ChannelTypeDiscord   NotificationChannelType = "discord"
 )
 
 // NotificationEventType represents the type of notification event
@@ -175,6 +177,16 @@ type DiscordChannelConfig struct {
 	Username   string `json:"username,omitempty"`
 	AvatarURL  string `json:"avatar_url,omitempty"`
 }
+}
+
+// TeamsChannelConfig represents Microsoft Teams webhook configuration
+type TeamsChannelConfig struct {
+	WebhookURL string `json:"webhook_url"`
+}
+
+// DiscordChannelConfig represents Discord webhook configuration
+type DiscordChannelConfig struct {
+	WebhookURL string `json:"webhook_url"`
 }
 
 // CreateNotificationChannelRequest represents a request to create a notification channel
