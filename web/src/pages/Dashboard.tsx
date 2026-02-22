@@ -77,6 +77,15 @@ export function Dashboard() {
 			schedules?.filter((s) => s.enabled && s.preemptible).length ?? 0,
 	};
 
+	// Calculate priority queue summary from schedules
+	const priorityQueueSummary = {
+		high: schedules?.filter((s) => s.enabled && s.priority === 1).length ?? 0,
+		medium: schedules?.filter((s) => s.enabled && s.priority === 2).length ?? 0,
+		low: schedules?.filter((s) => s.enabled && s.priority === 3).length ?? 0,
+		preemptible:
+			schedules?.filter((s) => s.enabled && s.preemptible).length ?? 0,
+	};
+
 	const isLoading = dashboardStatsLoading || backupsLoading;
 
 	return (
