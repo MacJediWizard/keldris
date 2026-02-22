@@ -27,6 +27,7 @@ import type {
 import { useAgents } from '../hooks/useAgents';
 import { useRepositories } from '../hooks/useRepositories';
 import { useCreateRestore, useRestores } from '../hooks/useRestore';
+import { useSnapshotComments } from '../hooks/useSnapshotComments';
 import { useSnapshotFiles, useSnapshots } from '../hooks/useSnapshots';
 import type {
 	RestoreStatus,
@@ -239,6 +240,8 @@ function SnapshotRow({
 				<code className="text-sm font-mono text-gray-900">
 					{snapshot.short_id}
 				</code>
+					<CommentIndicator snapshotId={snapshot.id} />
+				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-900">
 				{agentName ?? 'Unknown'}
@@ -2461,6 +2464,10 @@ function RestoreModal({
 									{selectedPaths.size} item(s) selected
 								</p>
 							)}
+						</div>
+
+						<div className="border-t border-gray-200 pt-6">
+							<SnapshotComments snapshotId={snapshot.id} />
 						</div>
 					</div>
 

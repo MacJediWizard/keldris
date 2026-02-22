@@ -1334,6 +1334,30 @@ export const snapshotsApi = {
 	},
 };
 
+// Snapshot Comments API
+export const snapshotCommentsApi = {
+	list: async (snapshotId: string): Promise<SnapshotComment[]> => {
+		const response = await fetchApi<SnapshotCommentsResponse>(
+			`/snapshots/${snapshotId}/comments`,
+		);
+		return response.comments ?? [];
+	},
+
+	create: async (
+		snapshotId: string,
+		data: CreateSnapshotCommentRequest,
+	): Promise<SnapshotComment> =>
+		fetchApi<SnapshotComment>(`/snapshots/${snapshotId}/comments`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (commentId: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/comments/${commentId}`, {
+			method: 'DELETE',
+		}),
+};
+
 // Restores API
 export const restoresApi = {
 	list: async (params?: {

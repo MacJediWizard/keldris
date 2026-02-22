@@ -137,6 +137,12 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		mounts.GET("", h.ListMounts)
 	}
 
+	// Comments resource for direct access
+	comments := r.Group("/comments")
+	{
+		comments.DELETE("/:id", h.DeleteSnapshotComment)
+	}
+
 	restores := r.Group("/restores")
 	{
 		restores.GET("", h.ListRestores)
@@ -1763,6 +1769,203 @@ func (h *SnapshotsHandler) DiffFile(c *gin.Context) {
 		OldContent:  "",
 		NewContent:  "",
 	})
+}
+
+// SnapshotCommentResponse represents a comment in API responses.
+type SnapshotCommentResponse struct {
+	ID         string `json:"id"`
+	SnapshotID string `json:"snapshot_id"`
+	UserID     string `json:"user_id"`
+	UserName   string `json:"user_name"`
+	UserEmail  string `json:"user_email"`
+	Content    string `json:"content"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+}
+
+func toSnapshotCommentResponse(c *models.SnapshotComment, user *models.User) SnapshotCommentResponse {
+	userName := ""
+	userEmail := ""
+	if user != nil {
+		userName = user.Name
+		userEmail = user.Email
+	}
+	return SnapshotCommentResponse{
+		ID:         c.ID.String(),
+		SnapshotID: c.SnapshotID,
+		UserID:     c.UserID.String(),
+		UserName:   userName,
+		UserEmail:  userEmail,
+		Content:    c.Content,
+		CreatedAt:  c.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:  c.UpdatedAt.Format(time.RFC3339),
+	}
+}
+
+// ListSnapshotComments returns all comments for a snapshot.
+// GET /api/v1/snapshots/:id/comments
+func (h *SnapshotsHandler) ListSnapshotComments(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	snapshotID := c.Param("id")
+	if snapshotID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "snapshot ID required"})
+		return
+	}
+
+	// Verify the snapshot exists and user has access
+	backup, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
+	if err != nil || agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	comments, err := h.store.GetSnapshotCommentsBySnapshotID(c.Request.Context(), snapshotID, dbUser.OrgID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("snapshot_id", snapshotID).Msg("failed to list comments")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list comments"})
+		return
+	}
+
+	// Build user cache for response enrichment
+	userCache := make(map[uuid.UUID]*models.User)
+	var responses []SnapshotCommentResponse
+	for _, comment := range comments {
+		var commentUser *models.User
+		if cached, ok := userCache[comment.UserID]; ok {
+			commentUser = cached
+		} else {
+			commentUser, _ = h.store.GetUserByID(c.Request.Context(), comment.UserID)
+			userCache[comment.UserID] = commentUser
+		}
+		responses = append(responses, toSnapshotCommentResponse(comment, commentUser))
+	}
+
+	c.JSON(http.StatusOK, gin.H{"comments": responses})
+}
+
+// CreateSnapshotComment creates a new comment on a snapshot.
+// POST /api/v1/snapshots/:id/comments
+func (h *SnapshotsHandler) CreateSnapshotComment(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	snapshotID := c.Param("id")
+	if snapshotID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "snapshot ID required"})
+		return
+	}
+
+	var req models.CreateSnapshotCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "content is required"})
+		return
+	}
+
+	// Verify the snapshot exists and user has access
+	backup, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
+	if err != nil || agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
+		return
+	}
+
+	comment := models.NewSnapshotComment(dbUser.OrgID, snapshotID, dbUser.ID, req.Content)
+
+	if err := h.store.CreateSnapshotComment(c.Request.Context(), comment); err != nil {
+		h.logger.Error().Err(err).Str("snapshot_id", snapshotID).Msg("failed to create comment")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create comment"})
+		return
+	}
+
+	h.logger.Info().
+		Str("comment_id", comment.ID.String()).
+		Str("snapshot_id", snapshotID).
+		Str("user_id", dbUser.ID.String()).
+		Msg("snapshot comment created")
+
+	c.JSON(http.StatusCreated, toSnapshotCommentResponse(comment, dbUser))
+}
+
+// DeleteSnapshotComment deletes a comment.
+// DELETE /api/v1/comments/:id
+func (h *SnapshotsHandler) DeleteSnapshotComment(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid comment ID"})
+		return
+	}
+
+	comment, err := h.store.GetSnapshotCommentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "comment not found"})
+		return
+	}
+
+	// Verify user has access (must be in same org and either own the comment or be admin)
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	if comment.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "comment not found"})
+		return
+	}
+
+	// Only allow deletion by the comment author or admins
+	if comment.UserID != dbUser.ID && !dbUser.IsAdmin() {
+		c.JSON(http.StatusForbidden, gin.H{"error": "you can only delete your own comments"})
+		return
+	}
+
+	if err := h.store.DeleteSnapshotComment(c.Request.Context(), id); err != nil {
+		h.logger.Error().Err(err).Str("comment_id", id.String()).Msg("failed to delete comment")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete comment"})
+		return
+	}
+
+	h.logger.Info().
+		Str("comment_id", id.String()).
+		Str("deleted_by", dbUser.ID.String()).
+		Msg("snapshot comment deleted")
+
+	c.JSON(http.StatusOK, gin.H{"message": "comment deleted"})
 }
 
 // CompareSnapshots compares two snapshots and returns their differences.

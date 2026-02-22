@@ -4380,6 +4380,77 @@ func (db *DB) GetEnabledEmailChannelsByOrgID(ctx context.Context, orgID uuid.UUI
 
 // CreateNotificationChannel creates a new notification channel.
 func (db *DB) CreateNotificationChannel(ctx context.Context, channel *models.NotificationChannel) error {
+// Snapshot Comment methods
+
+// CreateSnapshotComment creates a new snapshot comment.
+func (db *DB) CreateSnapshotComment(ctx context.Context, comment *models.SnapshotComment) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO snapshot_comments (id, org_id, snapshot_id, user_id, content, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, comment.ID, comment.OrgID, comment.SnapshotID, comment.UserID, comment.Content, comment.CreatedAt, comment.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create snapshot comment: %w", err)
+	}
+	return nil
+}
+
+// GetSnapshotCommentsBySnapshotID returns all comments for a snapshot within an organization.
+func (db *DB) GetSnapshotCommentsBySnapshotID(ctx context.Context, snapshotID string, orgID uuid.UUID) ([]*models.SnapshotComment, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, snapshot_id, user_id, content, created_at, updated_at
+		FROM snapshot_comments
+		WHERE snapshot_id = $1 AND org_id = $2
+		ORDER BY created_at DESC
+	`, snapshotID, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list snapshot comments: %w", err)
+	}
+	defer rows.Close()
+
+	var comments []*models.SnapshotComment
+	for rows.Next() {
+		var c models.SnapshotComment
+		err := rows.Scan(&c.ID, &c.OrgID, &c.SnapshotID, &c.UserID, &c.Content, &c.CreatedAt, &c.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan snapshot comment: %w", err)
+		}
+		comments = append(comments, &c)
+	}
+
+	return comments, nil
+}
+
+// GetSnapshotCommentByID returns a snapshot comment by ID.
+func (db *DB) GetSnapshotCommentByID(ctx context.Context, id uuid.UUID) (*models.SnapshotComment, error) {
+	var c models.SnapshotComment
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, snapshot_id, user_id, content, created_at, updated_at
+		FROM snapshot_comments
+		WHERE id = $1
+	`, id).Scan(&c.ID, &c.OrgID, &c.SnapshotID, &c.UserID, &c.Content, &c.CreatedAt, &c.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot comment: %w", err)
+	}
+	return &c, nil
+}
+
+// DeleteSnapshotComment deletes a snapshot comment by ID.
+func (db *DB) DeleteSnapshotComment(ctx context.Context, id uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `
+		DELETE FROM snapshot_comments
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete snapshot comment: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("snapshot comment not found")
+	}
+	return nil
+}
+
+// MarkMaintenanceNotificationSent marks a maintenance window's notification as sent.
+func (db *DB) MarkMaintenanceNotificationSent(ctx context.Context, id uuid.UUID) error {
 	_, err := db.Pool.Exec(ctx, `
 		INSERT INTO notification_channels (id, org_id, name, type, config_encrypted, enabled, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -18800,4 +18871,32 @@ func (db *DB) CleanupAgentHealthHistory(ctx context.Context, retentionDays int) 
 		return 0, fmt.Errorf("cleanup agent health history: %w", err)
 	}
 	return tag.RowsAffected(), nil
+// GetSnapshotCommentCounts returns comment counts for multiple snapshots within an organization.
+func (db *DB) GetSnapshotCommentCounts(ctx context.Context, snapshotIDs []string, orgID uuid.UUID) (map[string]int, error) {
+	if len(snapshotIDs) == 0 {
+		return make(map[string]int), nil
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT snapshot_id, COUNT(*) as count
+		FROM snapshot_comments
+		WHERE snapshot_id = ANY($1) AND org_id = $2
+		GROUP BY snapshot_id
+	`, snapshotIDs, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("count snapshot comments: %w", err)
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int)
+	for rows.Next() {
+		var snapshotID string
+		var count int
+		if err := rows.Scan(&snapshotID, &count); err != nil {
+			return nil, fmt.Errorf("scan comment count: %w", err)
+		}
+		counts[snapshotID] = count
+	}
+
+	return counts, nil
 }
