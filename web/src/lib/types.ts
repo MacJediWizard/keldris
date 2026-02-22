@@ -5541,6 +5541,95 @@ export interface SLAReportResponse {
 
 // User Management types
 export type UserStatus = 'active' | 'disabled' | 'pending' | 'locked';
+// Superuser types
+export type SuperuserAction =
+	| 'view_organizations'
+	| 'view_organization'
+	| 'impersonate_user'
+	| 'end_impersonation'
+	| 'update_system_settings'
+	| 'view_system_settings'
+	| 'grant_superuser'
+	| 'revoke_superuser'
+	| 'view_users'
+	| 'view_superuser_audit_logs';
+
+export interface SuperuserAuditLog {
+	id: string;
+	superuser_id: string;
+	action: SuperuserAction;
+	target_type: string;
+	target_id?: string;
+	target_org_id?: string;
+	impersonated_user_id?: string;
+	ip_address?: string;
+	user_agent?: string;
+	details?: Record<string, unknown>;
+	created_at: string;
+	superuser_email?: string;
+	superuser_name?: string;
+}
+
+export interface SystemSetting {
+	key: string;
+	value: unknown;
+	description?: string;
+	updated_by?: string;
+	updated_at: string;
+}
+
+export interface SuperuserOrganizationsResponse {
+	organizations: Organization[];
+}
+
+export interface SuperuserUsersResponse {
+	users: User[];
+}
+
+export interface SuperusersResponse {
+	superusers: User[];
+}
+
+export interface SuperuserAuditLogsResponse {
+	audit_logs: SuperuserAuditLog[];
+	total: number;
+	limit: number;
+	offset: number;
+}
+
+export interface SystemSettingsResponse {
+	settings: SystemSetting[];
+}
+
+export interface SystemSettingResponse {
+	setting: SystemSetting;
+}
+
+export interface UpdateSystemSettingRequest {
+	value: unknown;
+}
+
+export interface GrantSuperuserRequest {
+	reason?: string;
+}
+
+export interface ImpersonationResponse {
+	message: string;
+	impersonating?: {
+		id: string;
+		email: string;
+		name: string;
+	};
+}
+
+// Recent Items types
+export type RecentItemType =
+	| 'agent'
+	| 'repository'
+	| 'schedule'
+	| 'backup'
+	| 'policy'
+	| 'snapshot';
 
 export interface UserWithMembership {
 	id: string;

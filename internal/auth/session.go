@@ -44,6 +44,8 @@ const (
 	IsSuperuserKey = "is_superuser"
 	// ImpersonatingKey is the session key for impersonation state.
 	ImpersonatingKey = "impersonating"
+	// IsSuperuserKey is the session key for superuser status.
+	IsSuperuserKey = "is_superuser"
 	// ImpersonatingUserIDKey is the session key for the user being impersonated.
 	ImpersonatingUserIDKey = "impersonating_user_id"
 	// OriginalUserIDKey is the session key for the original superuser ID during impersonation.
@@ -192,6 +194,7 @@ func (s *SessionStore) GetOIDCState(r *http.Request, w http.ResponseWriter) (str
 // SessionUser represents the authenticated user data stored in session.
 type SessionUser struct {
 ID                 uuid.UUID
+	ID                 uuid.UUID
 	OIDCSubject        string
 	Email              string
 	Name               string
@@ -218,6 +221,8 @@ func (u *SessionUser) IsImpersonating() bool {
 	AuthenticatedAt time.Time
 	CurrentOrgID    uuid.UUID
 	CurrentOrgRole  string
+	ImpersonatingID    uuid.UUID // The user being impersonated (if any)
+	OriginalUserID     uuid.UUID // The original superuser ID (during impersonation)
 }
 
 // SetUser stores user data in the session after successful authentication.
@@ -320,6 +325,10 @@ func (s *SessionStore) TouchSession(r *http.Request, w http.ResponseWriter) erro
 		AuthenticatedAt: authenticatedAt,
 		CurrentOrgID:    currentOrgID,
 		CurrentOrgRole:  currentOrgRole,
+		SessionRecordID: sessionRecordID,
+		IsSuperuser:     isSuperuser,
+		ImpersonatingID: impersonatingID,
+		OriginalUserID:  originalUserID,
 	}, nil
 }
 
@@ -496,4 +505,82 @@ func (s *SessionStore) GetOriginalUserID(r *http.Request) uuid.UUID {
 	return id
 }
 	return ok
+}
+
+// SetSuperuserStatus updates the superuser status in the session.
+func (s *SessionStore) SetSuperuserStatus(r *http.Request, w http.ResponseWriter, isSuperuser bool) error {
+	session, err := s.Get(r)
+	if err != nil {
+		return err
+	}
+	session.Values[IsSuperuserKey] = isSuperuser
+	return s.Save(r, w, session)
+}
+
+// StartImpersonation sets up impersonation mode where a superuser acts as another user.
+func (s *SessionStore) StartImpersonation(r *http.Request, w http.ResponseWriter, originalUser *SessionUser, targetUser *SessionUser) error {
+	session, err := s.Get(r)
+	if err != nil {
+		return err
+	}
+
+	// Store original superuser ID
+	session.Values[OriginalUserIDKey] = originalUser.ID
+	session.Values[ImpersonatingUserIDKey] = targetUser.ID
+
+	// Switch to target user's identity
+	session.Values[UserIDKey] = targetUser.ID
+	session.Values[OIDCSubjectKey] = targetUser.OIDCSubject
+	session.Values[EmailKey] = targetUser.Email
+	session.Values[NameKey] = targetUser.Name
+	session.Values[CurrentOrgIDKey] = targetUser.CurrentOrgID
+	session.Values[CurrentOrgRoleKey] = targetUser.CurrentOrgRole
+
+	// Maintain superuser status but mark as impersonating
+	session.Values[IsSuperuserKey] = true
+
+	return s.Save(r, w, session)
+}
+
+// EndImpersonation restores the original superuser session.
+func (s *SessionStore) EndImpersonation(r *http.Request, w http.ResponseWriter, originalUser *SessionUser) error {
+	session, err := s.Get(r)
+	if err != nil {
+		return err
+	}
+
+	// Restore original user
+	session.Values[UserIDKey] = originalUser.ID
+	session.Values[OIDCSubjectKey] = originalUser.OIDCSubject
+	session.Values[EmailKey] = originalUser.Email
+	session.Values[NameKey] = originalUser.Name
+	session.Values[CurrentOrgIDKey] = originalUser.CurrentOrgID
+	session.Values[CurrentOrgRoleKey] = originalUser.CurrentOrgRole
+	session.Values[IsSuperuserKey] = originalUser.IsSuperuser
+
+	// Clear impersonation markers
+	delete(session.Values, ImpersonatingUserIDKey)
+	delete(session.Values, OriginalUserIDKey)
+
+	return s.Save(r, w, session)
+}
+
+// IsImpersonating checks if the current session is in impersonation mode.
+func (s *SessionStore) IsImpersonating(r *http.Request) bool {
+	session, err := s.Get(r)
+	if err != nil {
+		return false
+	}
+	_, ok := session.Values[ImpersonatingUserIDKey].(uuid.UUID)
+	return ok
+}
+
+// GetOriginalUserID returns the original superuser ID during impersonation.
+func (s *SessionStore) GetOriginalUserID(r *http.Request) uuid.UUID {
+	session, err := s.Get(r)
+	if err != nil {
+		return uuid.Nil
+	}
+	id, _ := session.Values[OriginalUserIDKey].(uuid.UUID)
+	return id
 }

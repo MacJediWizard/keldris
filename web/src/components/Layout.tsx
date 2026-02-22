@@ -1158,6 +1158,7 @@ function Sidebar() {
 				<p className="text-xs text-gray-500">
 					{t('common.version', { version: versionInfo?.version ?? '...' })}
 				</p>
+			</nav>
 			<div className="p-4 border-t border-gray-800">
 				<Link
 					to="/changelog"
@@ -1688,6 +1689,9 @@ function Header() {
 			</div>
 			<div className="flex-1 max-w-xl mx-4">
 				<GlobalSearchBar placeholder={t('common.search')} />
+		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+			<div className="flex items-center gap-4">
+				<OrgSwitcher />
 				{isImpersonating && (
 					<div className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 border border-amber-300 rounded-lg">
 						<svg
@@ -1790,6 +1794,12 @@ function Header() {
 					type="button"
 					aria-label="Notifications"
 					className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+				<LanguageSelector />
+				<RecentItemsDropdown />
+				<Link
+					to="/alerts"
+					aria-label={t('nav.alerts')}
+					className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
 				>
 					<svg
 						aria-hidden="true"
@@ -1828,7 +1838,7 @@ function Header() {
 						</div>
 					</button>
 					{showDropdown && (
-						<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+						<div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
 							{user && (
 								<div className="px-4 py-2 border-b border-gray-100">
 									<p className="text-sm font-medium text-gray-900 truncate">

@@ -61,6 +61,7 @@ type User struct {
 	Email       string    `json:"email"`
 	Name        string    `json:"name,omitempty"`
 	Role        UserRole  `json:"role"`
+	IsSuperuser bool      `json:"is_superuser"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
