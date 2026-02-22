@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 import "os"
+)
 
 // Environment represents the deployment environment.
 type Environment string
@@ -40,7 +41,9 @@ type ServerConfig struct {
 	LicenseServerURL string // license server URL for phone-home (default: production)
 // ServerConfig holds server-level configuration loaded from environment variables.
 type ServerConfig struct {
-	Environment Environment
+	Environment        Environment
+	SessionMaxAge      int // session lifetime in seconds (default: 86400)
+	SessionIdleTimeout int // idle timeout in seconds, 0 to disable (default: 1800)
 }
 
 // LoadServerConfig reads server configuration from environment variables.
@@ -279,6 +282,21 @@ func LoadServerConfigFromEnv(cfg *ServerConfig) {
 	if redirectURL := os.Getenv("KELDRIS_OIDC_REDIRECT_URL"); redirectURL != "" {
 		cfg.OIDC.RedirectURL = redirectURL
 	return ServerConfig{
-		Environment: env,
+		Environment:        env,
+		SessionMaxAge:      sessionMaxAge,
+		SessionIdleTimeout: sessionIdleTimeout,
 	}
+}
+
+// getEnvInt reads an integer from an environment variable, returning the default if unset or invalid.
+func getEnvInt(key string, defaultVal int) int {
+	val := os.Getenv(key)
+	if val == "" {
+		return defaultVal
+	}
+	n, err := strconv.Atoi(val)
+	if err != nil {
+		return defaultVal
+	}
+	return n
 }

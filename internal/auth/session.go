@@ -93,12 +93,13 @@ func DefaultSessionConfig(secret []byte, secure bool, maxAge, idleTimeout int) S
 // DefaultSessionConfig returns a SessionConfig with secure defaults.
 func DefaultSessionConfig(secret []byte, secure bool) SessionConfig {
 	return SessionConfig{
-		Secret:     secret,
-		MaxAge:     86400, // 24 hours
-		Secure:     secure,
-		HTTPOnly:   true,
-		SameSite:   http.SameSiteLaxMode,
-		CookiePath: "/",
+		Secret:      secret,
+		MaxAge:      86400, // 24 hours
+		IdleTimeout: 1800,  // 30 minutes
+		Secure:      secure,
+		HTTPOnly:    true,
+		SameSite:    http.SameSiteLaxMode,
+		CookiePath:  "/",
 	}
 }
 
@@ -320,6 +321,22 @@ func (s *SessionStore) TouchSession(r *http.Request, w http.ResponseWriter) erro
 		CurrentOrgID:    currentOrgID,
 		CurrentOrgRole:  currentOrgRole,
 	}, nil
+}
+
+// TouchSession updates the last activity timestamp to keep the session alive.
+// Call this on each authenticated request to track idle timeout.
+func (s *SessionStore) TouchSession(r *http.Request, w http.ResponseWriter) error {
+	if s.idleTimeout <= 0 {
+		return nil
+	}
+
+	session, err := s.Get(r)
+	if err != nil {
+		return err
+	}
+
+	session.Values[LastActivityKey] = time.Now()
+	return s.Save(r, w, session)
 }
 
 // SetCurrentOrg updates the current organization in the session.
