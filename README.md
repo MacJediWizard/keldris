@@ -115,6 +115,7 @@ I wanted a backup solution that could:
 - Restic-powered encrypted backups with deduplication
 - Flexible cron-based scheduling with retention policies
 - OIDC authentication (tested with Authentik, Keycloak)
+- SSO group sync
 - Go agent for Linux, macOS, and Windows
 - Storage backends: S3, B2, Dropbox, local, SFTP, REST
 - Full restore UI with file browser
@@ -124,22 +125,28 @@ I wanted a backup solution that could:
 - Backup tagging and organization
 - Pre/post backup scripts
 - Network mount detection and handling
+- Docker backup support
 - Email notifications
 - Slack notifications
 - Discord notifications
 - Teams notifications
+- PagerDuty notifications
 - Multi-org with RBAC
 - Audit logging
+- SLA tracking
+- Cost estimation
 - Dark mode
+- White label support
+- Air gap deployment
 - First-run onboarding wizard
 - DR runbook generation
+- DR test automation
 - Prometheus metrics endpoint
 - Docker deployment
 
 ### In Progress
 - Agent CLI backup/restore commands
 - Email report delivery
-- DR test automation
 - UI polish and bug fixes
 
 ### Roadmap
