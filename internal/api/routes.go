@@ -191,6 +191,13 @@ func NewRouter(
 	r.Engine.Use(middleware.RequestLogger(logger))
 	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins))
 
+	// Security headers middleware
+	securityHeadersConfig := middleware.DefaultSecurityHeadersConfig()
+	if cfg.SecurityHeaders != nil {
+		securityHeadersConfig = *cfg.SecurityHeaders
+	}
+	r.Engine.Use(middleware.SecurityHeaders(securityHeadersConfig))
+
 	// Rate limiting
 	rateLimiter, err := middleware.NewRateLimiter(cfg.RateLimitRequests, cfg.RateLimitPeriod)
 	if err != nil {
@@ -318,6 +325,7 @@ func NewRouter(
 		docsHandler := handlers.NewDocsHandler(cfg.DocsFS, logger)
 		docsHandler.RegisterRoutes(apiV1)
 	}
+	securityHandler.RegisterRoutes(apiV1)
 
 	// License info endpoint
 	licenseInfoHandler := handlers.NewLicenseInfoHandler(cfg.Validator, logger)
