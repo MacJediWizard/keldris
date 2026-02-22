@@ -236,6 +236,12 @@ For setup guides, see:
 - [Network Mounts](docs/network-mounts.md) - NFS, SMB, and network storage configuration
 - [Infrastructure Requirements](docs/infrastructure-requirements.md) - Hardware and software prerequisites
 
+For setup guides, see:
+
+- [OIDC Setup Guide](docs/oidc-setup.md) - Configure your identity provider
+- [Agent Installation](docs/agent-installation.md) - Install and configure backup agents
+- [Production Security Guide](docs/production-security.md) - Hardening for production deployments
+
 ---
 
 ## Architecture
