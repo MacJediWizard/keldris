@@ -233,6 +233,7 @@ func TestService_NotifyBackupComplete_NoPreferences(t *testing.T) {
 	}
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 
 	result := BackupResult{
 		OrgID:   uuid.New(),
@@ -254,6 +255,7 @@ func TestService_NotifyBackupComplete_PrefsError(t *testing.T) {
 	}
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 
 	result := BackupResult{
 		OrgID:   uuid.New(),
@@ -302,6 +304,7 @@ func TestService_NotifyBackupComplete_SlackSuccess(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleID:   uuid.New(),
@@ -369,6 +372,7 @@ func TestService_NotifyBackupComplete_SlackFailed(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleName: "daily",
@@ -428,6 +432,8 @@ func TestService_NotifyBackupComplete_WebhookChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
+	svc.webhookSenderFunc = newTestWebhookSenderFactory()
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleName: "daily",
@@ -485,6 +491,7 @@ func TestService_NotifyBackupComplete_PagerDutyChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 
 	// Override pagerduty sender's URL by calling sendNotification directly
 	// instead of relying on NewPagerDutySender default. We test via the
@@ -553,6 +560,7 @@ func TestService_NotifyBackupComplete_TeamsChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleName: "daily",
@@ -614,6 +622,7 @@ func TestService_NotifyBackupComplete_DiscordChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleName: "daily",
@@ -653,6 +662,7 @@ func TestService_NotifyBackupComplete_ChannelError(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:   orgID,
 		Success: true,
@@ -695,6 +705,7 @@ func TestService_NotifyBackupComplete_InvalidChannelConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:   orgID,
 		Success: true,
@@ -737,6 +748,7 @@ func TestService_NotifyBackupComplete_UnsupportedChannelType(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:   orgID,
 		Success: true,
@@ -783,6 +795,7 @@ func TestService_NotifyBackupComplete_MultipleChannels(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleName: "daily",
@@ -815,6 +828,7 @@ func TestService_NotifyAgentOffline_NoPreferences(t *testing.T) {
 	}
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 
 	agent := &models.Agent{
 		ID:       uuid.New(),
@@ -835,6 +849,7 @@ func TestService_NotifyAgentOffline_PrefsError(t *testing.T) {
 	}
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 
 	agent := &models.Agent{
 		ID:       uuid.New(),
@@ -868,6 +883,7 @@ func TestService_NotifyAgentOffline_SlackChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{
 		ID:       uuid.New(),
 		Hostname: "server1",
@@ -909,6 +925,8 @@ func TestService_NotifyAgentOffline_WebhookChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
+	svc.webhookSenderFunc = newTestWebhookSenderFactory()
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -946,6 +964,7 @@ func TestService_NotifyAgentOffline_TeamsChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -983,6 +1002,7 @@ func TestService_NotifyAgentOffline_DiscordChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -1010,6 +1030,7 @@ func TestService_NotifyAgentOffline_ChannelError(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -1035,6 +1056,7 @@ func TestService_NotifyAgentOffline_UnsupportedChannel(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -1060,6 +1082,7 @@ func TestService_NotifyAgentOffline_InvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -1094,6 +1117,7 @@ func TestService_NotifyAgentOffline_WithLastSeen(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{
 		ID:       uuid.New(),
 		Hostname: "server-with-lastseen",
@@ -1115,6 +1139,7 @@ func TestService_NotifyMaintenanceScheduled_NoPreferences(t *testing.T) {
 	}
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
@@ -1139,6 +1164,7 @@ func TestService_NotifyMaintenanceScheduled_PrefsError(t *testing.T) {
 	}
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
@@ -1174,6 +1200,7 @@ func TestService_NotifyMaintenanceScheduled_SlackChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
@@ -1218,6 +1245,8 @@ func TestService_NotifyMaintenanceScheduled_WebhookChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
+	svc.webhookSenderFunc = newTestWebhookSenderFactory()
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
@@ -1262,6 +1291,7 @@ func TestService_NotifyMaintenanceScheduled_TeamsChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
@@ -1306,6 +1336,7 @@ func TestService_NotifyMaintenanceScheduled_DiscordChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
@@ -1340,6 +1371,7 @@ func TestService_NotifyMaintenanceScheduled_ChannelError(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
@@ -1371,6 +1403,7 @@ func TestService_NotifyMaintenanceScheduled_UnsupportedChannel(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
@@ -1402,6 +1435,7 @@ func TestService_NotifyMaintenanceScheduled_InvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
@@ -1422,6 +1456,7 @@ func TestService_FinalizeLog_Success(t *testing.T) {
 	store := &mockNotificationStore{}
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 
 	orgID := uuid.New()
 	channelID := uuid.New()
@@ -1441,6 +1476,7 @@ func TestService_FinalizeLog_Error(t *testing.T) {
 	store := &mockNotificationStore{}
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 
 	orgID := uuid.New()
 	channelID := uuid.New()
@@ -1462,6 +1498,7 @@ func TestService_FinalizeLog_UpdateError(t *testing.T) {
 	}
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 
 	orgID := uuid.New()
 	channelID := uuid.New()
@@ -1518,6 +1555,7 @@ func TestService_NotifyBackupComplete_SlackWebhookError(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleName: "daily",
@@ -1555,6 +1593,7 @@ func TestService_NotifyBackupComplete_EmailChannel_InvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{OrgID: orgID, Success: true}
 
 	svc.NotifyBackupComplete(context.Background(), result)
@@ -1586,6 +1625,7 @@ func TestService_NotifyBackupComplete_EmailChannel_InvalidSMTP(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{OrgID: orgID, Success: true}
 
 	svc.NotifyBackupComplete(context.Background(), result)
@@ -1620,6 +1660,7 @@ func TestService_NotifyBackupComplete_CreateLogError(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{OrgID: orgID, ScheduleName: "daily", Hostname: "server1", Success: true}
 
 	// Should not panic even if log creation fails
@@ -1645,6 +1686,7 @@ func TestService_NotifyAgentOffline_PagerDutyChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -1675,6 +1717,7 @@ func TestService_NotifyMaintenanceScheduled_PagerDutyChannel(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
@@ -1707,6 +1750,7 @@ func TestService_NotifyAgentOffline_EmailChannel_InvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -1732,6 +1776,7 @@ func TestService_NotifyMaintenanceScheduled_EmailChannel_InvalidConfig(t *testin
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
@@ -1769,6 +1814,7 @@ func TestService_NotifyAgentOffline_EmailChannel_InvalidSMTP(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -1795,6 +1841,7 @@ func TestService_NotifyMaintenanceScheduled_EmailChannel_InvalidSMTP(t *testing.
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
@@ -1830,6 +1877,7 @@ func TestService_NotifyBackupComplete_EmailChannel_SuccessPath(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleName: "daily",
@@ -1878,6 +1926,7 @@ func TestService_NotifyBackupComplete_EmailChannel_FailurePath(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleName: "daily",
@@ -1917,6 +1966,7 @@ func TestService_NotifyAgentOffline_EmailChannel_ValidConfig(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -1950,6 +2000,7 @@ func TestService_NotifyMaintenanceScheduled_EmailChannel_ValidConfig(t *testing.
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,
@@ -1983,6 +2034,7 @@ func TestService_NotifyBackupComplete_WebhookInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{OrgID: orgID, Success: true}
 
 	svc.NotifyBackupComplete(context.Background(), result)
@@ -2004,6 +2056,7 @@ func TestService_NotifyBackupComplete_PagerDutyInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{OrgID: orgID, Success: true}
 
 	svc.NotifyBackupComplete(context.Background(), result)
@@ -2025,6 +2078,7 @@ func TestService_NotifyBackupComplete_TeamsInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{OrgID: orgID, Success: true}
 
 	svc.NotifyBackupComplete(context.Background(), result)
@@ -2046,6 +2100,7 @@ func TestService_NotifyBackupComplete_DiscordInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{OrgID: orgID, Success: true}
 
 	svc.NotifyBackupComplete(context.Background(), result)
@@ -2067,6 +2122,7 @@ func TestService_NotifyAgentOffline_WebhookInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -2088,6 +2144,7 @@ func TestService_NotifyAgentOffline_PagerDutyInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -2109,6 +2166,7 @@ func TestService_NotifyAgentOffline_TeamsInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -2130,6 +2188,7 @@ func TestService_NotifyAgentOffline_DiscordInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
 	svc.NotifyAgentOffline(context.Background(), agent, orgID, 5*time.Minute)
@@ -2151,6 +2210,7 @@ func TestService_NotifyMaintenanceScheduled_SlackInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{ID: uuid.New(), OrgID: orgID, Title: "Test", StartsAt: time.Now(), EndsAt: time.Now().Add(time.Hour)}
 
 	svc.NotifyMaintenanceScheduled(context.Background(), window)
@@ -2172,6 +2232,7 @@ func TestService_NotifyMaintenanceScheduled_PagerDutyInvalidConfig(t *testing.T)
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{ID: uuid.New(), OrgID: orgID, Title: "Test", StartsAt: time.Now(), EndsAt: time.Now().Add(time.Hour)}
 
 	svc.NotifyMaintenanceScheduled(context.Background(), window)
@@ -2193,6 +2254,7 @@ func TestService_NotifyMaintenanceScheduled_TeamsInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{ID: uuid.New(), OrgID: orgID, Title: "Test", StartsAt: time.Now(), EndsAt: time.Now().Add(time.Hour)}
 
 	svc.NotifyMaintenanceScheduled(context.Background(), window)
@@ -2214,6 +2276,7 @@ func TestService_NotifyMaintenanceScheduled_DiscordInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{ID: uuid.New(), OrgID: orgID, Title: "Test", StartsAt: time.Now(), EndsAt: time.Now().Add(time.Hour)}
 
 	svc.NotifyMaintenanceScheduled(context.Background(), window)
@@ -2235,6 +2298,7 @@ func TestService_NotifyMaintenanceScheduled_WebhookInvalidConfig(t *testing.T) {
 
 	km := testKeyManager(t)
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	window := &models.MaintenanceWindow{ID: uuid.New(), OrgID: orgID, Title: "Test", StartsAt: time.Now(), EndsAt: time.Now().Add(time.Hour)}
 
 	svc.NotifyMaintenanceScheduled(context.Background(), window)
@@ -2264,6 +2328,7 @@ func TestService_NotifyBackupComplete_EmailChannel_TLSPath(t *testing.T) {
 	}
 
 	svc := newTestService(t, store, km)
+	svc := NewService(store, km, zerolog.Nop())
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleName: "daily",

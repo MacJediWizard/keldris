@@ -65,14 +65,34 @@ func (s *Service) decryptConfig(encrypted []byte, dest interface{}) error {
 
 	store  NotificationStore
 	logger zerolog.Logger
+	store              NotificationStore
+	keyManager         *crypto.KeyManager
+	logger             zerolog.Logger
+	webhookSenderFunc  func(zerolog.Logger) *WebhookSender
 }
 
 // NewService creates a new notification service.
-func NewService(store NotificationStore, logger zerolog.Logger) *Service {
+func NewService(store NotificationStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *Service {
 	return &Service{
 		store:  store,
 		logger: logger.With().Str("component", "notification_service").Logger(),
+		store:             store,
+		keyManager:        keyManager,
+		logger:            logger.With().Str("component", "notification_service").Logger(),
+		webhookSenderFunc: NewWebhookSender,
 	}
+}
+
+// decryptConfig decrypts an encrypted channel config and unmarshals it into dest.
+func (s *Service) decryptConfig(encrypted []byte, dest interface{}) error {
+	decrypted, err := s.keyManager.Decrypt(encrypted)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt config: %w", err)
+	}
+	if err := json.Unmarshal(decrypted, dest); err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
+	return nil
 }
 
 // BackupResult contains information about a completed backup.
