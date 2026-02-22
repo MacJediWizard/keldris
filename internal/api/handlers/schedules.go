@@ -484,6 +484,8 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 
 	// TODO: Validate cron expression using robfig/cron parser
 	// For now we accept any string
+		return
+	}
 
 	schedule := models.NewSchedule(req.AgentID, req.Name, req.CronExpression, req.Paths)
 	schedule.Repositories = scheduleRepos
