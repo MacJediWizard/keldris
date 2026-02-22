@@ -7872,3 +7872,649 @@ func (db *DB) GetSnapshotHoldStatus(ctx context.Context, snapshotIDs []string, o
 
 	return result, nil
 }
+
+// Geo-Replication methods
+
+// CreateGeoReplicationConfig creates a new geo-replication configuration.
+func (db *DB) CreateGeoReplicationConfig(ctx context.Context, config *models.GeoReplicationConfig) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO geo_replication_configs (
+			id, org_id, source_repository_id, target_repository_id,
+			source_region, target_region, enabled, status,
+			last_snapshot_id, last_sync_at, last_error,
+			max_lag_snapshots, max_lag_duration_hours, alert_on_lag,
+			created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+	`, config.ID, config.OrgID, config.SourceRepositoryID, config.TargetRepositoryID,
+		config.SourceRegion, config.TargetRegion, config.Enabled, config.Status,
+		config.LastSnapshotID, config.LastSyncAt, config.LastError,
+		config.MaxLagSnapshots, config.MaxLagDurationHours, config.AlertOnLag,
+		config.CreatedAt, config.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create geo-replication config: %w", err)
+	}
+	return nil
+}
+
+// GetGeoReplicationConfig returns a geo-replication configuration by ID.
+func (db *DB) GetGeoReplicationConfig(ctx context.Context, id uuid.UUID) (*models.GeoReplicationConfig, error) {
+	var config models.GeoReplicationConfig
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, source_repository_id, target_repository_id,
+			source_region, target_region, enabled, status,
+			last_snapshot_id, last_sync_at, last_error,
+			max_lag_snapshots, max_lag_duration_hours, alert_on_lag,
+			created_at, updated_at
+		FROM geo_replication_configs
+		WHERE id = $1
+	`, id).Scan(
+		&config.ID, &config.OrgID, &config.SourceRepositoryID, &config.TargetRepositoryID,
+		&config.SourceRegion, &config.TargetRegion, &config.Enabled, &config.Status,
+		&config.LastSnapshotID, &config.LastSyncAt, &config.LastError,
+		&config.MaxLagSnapshots, &config.MaxLagDurationHours, &config.AlertOnLag,
+		&config.CreatedAt, &config.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get geo-replication config: %w", err)
+	}
+	return &config, nil
+}
+
+// GetGeoReplicationConfigByRepository returns the geo-replication config for a source repository.
+func (db *DB) GetGeoReplicationConfigByRepository(ctx context.Context, repositoryID uuid.UUID) (*models.GeoReplicationConfig, error) {
+	var config models.GeoReplicationConfig
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, source_repository_id, target_repository_id,
+			source_region, target_region, enabled, status,
+			last_snapshot_id, last_sync_at, last_error,
+			max_lag_snapshots, max_lag_duration_hours, alert_on_lag,
+			created_at, updated_at
+		FROM geo_replication_configs
+		WHERE source_repository_id = $1
+	`, repositoryID).Scan(
+		&config.ID, &config.OrgID, &config.SourceRepositoryID, &config.TargetRepositoryID,
+		&config.SourceRegion, &config.TargetRegion, &config.Enabled, &config.Status,
+		&config.LastSnapshotID, &config.LastSyncAt, &config.LastError,
+		&config.MaxLagSnapshots, &config.MaxLagDurationHours, &config.AlertOnLag,
+		&config.CreatedAt, &config.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get geo-replication config by repository: %w", err)
+	}
+	return &config, nil
+}
+
+// UpdateGeoReplicationConfig updates a geo-replication configuration.
+func (db *DB) UpdateGeoReplicationConfig(ctx context.Context, config *models.GeoReplicationConfig) error {
+	config.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE geo_replication_configs
+		SET enabled = $2, status = $3, last_snapshot_id = $4, last_sync_at = $5,
+			last_error = $6, max_lag_snapshots = $7, max_lag_duration_hours = $8,
+			alert_on_lag = $9, updated_at = $10
+		WHERE id = $1
+	`, config.ID, config.Enabled, config.Status, config.LastSnapshotID, config.LastSyncAt,
+		config.LastError, config.MaxLagSnapshots, config.MaxLagDurationHours,
+		config.AlertOnLag, config.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update geo-replication config: %w", err)
+	}
+	return nil
+}
+
+// DeleteGeoReplicationConfig deletes a geo-replication configuration.
+func (db *DB) DeleteGeoReplicationConfig(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM geo_replication_configs WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete geo-replication config: %w", err)
+	}
+	return nil
+}
+
+// ListGeoReplicationConfigsByOrg returns all geo-replication configs for an organization.
+func (db *DB) ListGeoReplicationConfigsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.GeoReplicationConfig, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, source_repository_id, target_repository_id,
+			source_region, target_region, enabled, status,
+			last_snapshot_id, last_sync_at, last_error,
+			max_lag_snapshots, max_lag_duration_hours, alert_on_lag,
+			created_at, updated_at
+		FROM geo_replication_configs
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list geo-replication configs: %w", err)
+	}
+	defer rows.Close()
+
+	return scanGeoReplicationConfigs(rows)
+}
+
+// ListPendingReplications returns all enabled configs that may need replication.
+func (db *DB) ListPendingReplications(ctx context.Context) ([]*models.GeoReplicationConfig, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, source_repository_id, target_repository_id,
+			source_region, target_region, enabled, status,
+			last_snapshot_id, last_sync_at, last_error,
+			max_lag_snapshots, max_lag_duration_hours, alert_on_lag,
+			created_at, updated_at
+		FROM geo_replication_configs
+		WHERE enabled = true AND status != 'syncing'
+		ORDER BY last_sync_at ASC NULLS FIRST
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list pending replications: %w", err)
+	}
+	defer rows.Close()
+
+	return scanGeoReplicationConfigs(rows)
+}
+
+// RecordReplicationEvent records a replication event.
+func (db *DB) RecordReplicationEvent(ctx context.Context, event *models.ReplicationEvent) error {
+	durationMs := event.Duration.Milliseconds()
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO replication_events (
+			id, config_id, snapshot_id, status,
+			started_at, completed_at, duration_ms, bytes_copied,
+			error_message, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, event.ID, event.ConfigID, event.SnapshotID, event.Status,
+		event.StartedAt, event.CompletedAt, durationMs, event.BytesCopied,
+		event.ErrorMessage, event.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("record replication event: %w", err)
+	}
+	return nil
+}
+
+// GetReplicationEvents returns recent replication events for a config.
+func (db *DB) GetReplicationEvents(ctx context.Context, configID uuid.UUID, limit int) ([]*models.ReplicationEvent, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, config_id, snapshot_id, status,
+			started_at, completed_at, duration_ms, bytes_copied,
+			error_message, created_at
+		FROM replication_events
+		WHERE config_id = $1
+		ORDER BY started_at DESC
+		LIMIT $2
+	`, configID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get replication events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []*models.ReplicationEvent
+	for rows.Next() {
+		var event models.ReplicationEvent
+		var durationMs int64
+		err := rows.Scan(
+			&event.ID, &event.ConfigID, &event.SnapshotID, &event.Status,
+			&event.StartedAt, &event.CompletedAt, &durationMs, &event.BytesCopied,
+			&event.ErrorMessage, &event.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan replication event: %w", err)
+		}
+		event.Duration = time.Duration(durationMs) * time.Millisecond
+		events = append(events, &event)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate replication events: %w", err)
+	}
+
+	return events, nil
+}
+
+// GetReplicationLagForConfig calculates the current replication lag for a config.
+func (db *DB) GetReplicationLagForConfig(ctx context.Context, configID uuid.UUID) (snapshotsBehind int, lastSyncAt *time.Time, err error) {
+	// Get the config's last sync info
+	var config models.GeoReplicationConfig
+	err = db.Pool.QueryRow(ctx, `
+		SELECT last_snapshot_id, last_sync_at
+		FROM geo_replication_configs
+		WHERE id = $1
+	`, configID).Scan(&config.LastSnapshotID, &config.LastSyncAt)
+	if err != nil {
+		return 0, nil, fmt.Errorf("get config for lag calculation: %w", err)
+	}
+
+	// Count snapshots not yet replicated (simplified - actual implementation would
+	// need to query the source repository for newer snapshots)
+	// For now, we estimate based on the last successful replication event
+	err = db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM replication_events
+		WHERE config_id = $1 AND status = 'failed'
+		AND started_at > COALESCE($2, '1970-01-01'::timestamptz)
+	`, configID, config.LastSyncAt).Scan(&snapshotsBehind)
+	if err != nil {
+		return 0, nil, fmt.Errorf("count failed replications: %w", err)
+	}
+
+	return snapshotsBehind, config.LastSyncAt, nil
+}
+
+// UpdateRepositoryRegion updates the region for a repository.
+func (db *DB) UpdateRepositoryRegion(ctx context.Context, repositoryID uuid.UUID, region string) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE repositories SET region = $2, updated_at = NOW() WHERE id = $1
+	`, repositoryID, region)
+	if err != nil {
+		return fmt.Errorf("update repository region: %w", err)
+	}
+	return nil
+}
+
+// GetRepositoryRegion returns the region for a repository.
+func (db *DB) GetRepositoryRegion(ctx context.Context, repositoryID uuid.UUID) (string, error) {
+	var region *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT region FROM repositories WHERE id = $1
+	`, repositoryID).Scan(&region)
+	if err != nil {
+		return "", fmt.Errorf("get repository region: %w", err)
+	}
+	if region == nil {
+		return "", nil
+	}
+	return *region, nil
+}
+
+// scanGeoReplicationConfigs scans rows into geo-replication configs.
+func scanGeoReplicationConfigs(rows pgx.Rows) ([]*models.GeoReplicationConfig, error) {
+	var configs []*models.GeoReplicationConfig
+	for rows.Next() {
+		var config models.GeoReplicationConfig
+		err := rows.Scan(
+			&config.ID, &config.OrgID, &config.SourceRepositoryID, &config.TargetRepositoryID,
+			&config.SourceRegion, &config.TargetRegion, &config.Enabled, &config.Status,
+			&config.LastSnapshotID, &config.LastSyncAt, &config.LastError,
+			&config.MaxLagSnapshots, &config.MaxLagDurationHours, &config.AlertOnLag,
+			&config.CreatedAt, &config.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan geo-replication config: %w", err)
+		}
+		configs = append(configs, &config)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate geo-replication configs: %w", err)
+	}
+
+	return configs, nil
+}
+
+// Agent Command methods
+
+// CreateAgentCommand creates a new agent command.
+func (db *DB) CreateAgentCommand(ctx context.Context, cmd *models.AgentCommand) error {
+	payloadBytes, err := cmd.PayloadJSON()
+	if err != nil {
+		return fmt.Errorf("marshal payload: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO agent_commands (id, agent_id, org_id, type, status, payload, created_by,
+		                            timeout_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, cmd.ID, cmd.AgentID, cmd.OrgID, string(cmd.Type), string(cmd.Status),
+		payloadBytes, cmd.CreatedBy, cmd.TimeoutAt, cmd.CreatedAt, cmd.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create agent command: %w", err)
+	}
+	return nil
+}
+
+// GetAgentCommandByID returns a command by ID.
+func (db *DB) GetAgentCommandByID(ctx context.Context, id uuid.UUID) (*models.AgentCommand, error) {
+	var cmd models.AgentCommand
+	var typeStr, statusStr string
+	var payloadBytes, resultBytes []byte
+
+	err := db.Pool.QueryRow(ctx, `
+		SELECT c.id, c.agent_id, c.org_id, c.type, c.status, c.payload, c.result,
+		       c.created_by, c.acknowledged_at, c.started_at, c.completed_at,
+		       c.timeout_at, c.created_at, c.updated_at,
+		       COALESCE(u.name, '')
+		FROM agent_commands c
+		LEFT JOIN users u ON c.created_by = u.id
+		WHERE c.id = $1
+	`, id).Scan(
+		&cmd.ID, &cmd.AgentID, &cmd.OrgID, &typeStr, &statusStr,
+		&payloadBytes, &resultBytes, &cmd.CreatedBy,
+		&cmd.AcknowledgedAt, &cmd.StartedAt, &cmd.CompletedAt,
+		&cmd.TimeoutAt, &cmd.CreatedAt, &cmd.UpdatedAt,
+		&cmd.CreatedByName,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get agent command: %w", err)
+	}
+
+	cmd.Type = models.CommandType(typeStr)
+	cmd.Status = models.CommandStatus(statusStr)
+	if err := cmd.SetPayload(payloadBytes); err != nil {
+		return nil, fmt.Errorf("parse payload: %w", err)
+	}
+	if err := cmd.SetResult(resultBytes); err != nil {
+		return nil, fmt.Errorf("parse result: %w", err)
+	}
+
+	return &cmd, nil
+}
+
+// GetPendingCommandsForAgent returns pending commands for an agent.
+func (db *DB) GetPendingCommandsForAgent(ctx context.Context, agentID uuid.UUID) ([]*models.AgentCommand, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT c.id, c.agent_id, c.org_id, c.type, c.status, c.payload, c.result,
+		       c.created_by, c.acknowledged_at, c.started_at, c.completed_at,
+		       c.timeout_at, c.created_at, c.updated_at,
+		       COALESCE(u.name, '')
+		FROM agent_commands c
+		LEFT JOIN users u ON c.created_by = u.id
+		WHERE c.agent_id = $1 AND c.status = 'pending'
+		ORDER BY c.created_at ASC
+	`, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("list pending commands: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAgentCommands(rows)
+}
+
+// GetCommandsByAgentID returns all commands for an agent with optional limit.
+func (db *DB) GetCommandsByAgentID(ctx context.Context, agentID uuid.UUID, limit int) ([]*models.AgentCommand, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT c.id, c.agent_id, c.org_id, c.type, c.status, c.payload, c.result,
+		       c.created_by, c.acknowledged_at, c.started_at, c.completed_at,
+		       c.timeout_at, c.created_at, c.updated_at,
+		       COALESCE(u.name, '')
+		FROM agent_commands c
+		LEFT JOIN users u ON c.created_by = u.id
+		WHERE c.agent_id = $1
+		ORDER BY c.created_at DESC
+		LIMIT $2
+	`, agentID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list agent commands: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAgentCommands(rows)
+}
+
+// UpdateAgentCommand updates a command's status and result.
+func (db *DB) UpdateAgentCommand(ctx context.Context, cmd *models.AgentCommand) error {
+	resultBytes, err := cmd.ResultJSON()
+	if err != nil {
+		return fmt.Errorf("marshal result: %w", err)
+	}
+
+	cmd.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE agent_commands
+		SET status = $2, result = $3, acknowledged_at = $4, started_at = $5,
+		    completed_at = $6, updated_at = $7
+		WHERE id = $1
+	`, cmd.ID, string(cmd.Status), resultBytes, cmd.AcknowledgedAt,
+		cmd.StartedAt, cmd.CompletedAt, cmd.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update agent command: %w", err)
+	}
+	return nil
+}
+
+// CancelAgentCommand cancels a pending or running command.
+func (db *DB) CancelAgentCommand(ctx context.Context, id uuid.UUID) error {
+	now := time.Now()
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agent_commands
+		SET status = 'canceled', completed_at = $2, updated_at = $2
+		WHERE id = $1 AND status IN ('pending', 'acknowledged', 'running')
+	`, id, now)
+	if err != nil {
+		return fmt.Errorf("cancel agent command: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("command not found or already completed")
+	}
+	return nil
+}
+
+// MarkTimedOutCommands marks commands as timed out if they've exceeded their timeout.
+func (db *DB) MarkTimedOutCommands(ctx context.Context) (int64, error) {
+	now := time.Now()
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agent_commands
+		SET status = 'timed_out',
+		    result = '{"error": "command timed out waiting for agent response"}'::jsonb,
+		    completed_at = $1,
+		    updated_at = $1
+		WHERE status IN ('pending', 'acknowledged', 'running')
+		  AND timeout_at < $1
+	`, now)
+	if err != nil {
+		return 0, fmt.Errorf("mark timed out commands: %w", err)
+	}
+	return result.RowsAffected(), nil
+}
+
+// scanAgentCommands scans rows into agent commands.
+func scanAgentCommands(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.AgentCommand, error) {
+	var commands []*models.AgentCommand
+	for rows.Next() {
+		var cmd models.AgentCommand
+		var typeStr, statusStr string
+		var payloadBytes, resultBytes []byte
+
+		err := rows.Scan(
+			&cmd.ID, &cmd.AgentID, &cmd.OrgID, &typeStr, &statusStr,
+			&payloadBytes, &resultBytes, &cmd.CreatedBy,
+			&cmd.AcknowledgedAt, &cmd.StartedAt, &cmd.CompletedAt,
+			&cmd.TimeoutAt, &cmd.CreatedAt, &cmd.UpdatedAt,
+			&cmd.CreatedByName,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan agent command: %w", err)
+		}
+
+		cmd.Type = models.CommandType(typeStr)
+		cmd.Status = models.CommandStatus(statusStr)
+		if err := cmd.SetPayload(payloadBytes); err != nil {
+			return nil, fmt.Errorf("parse payload: %w", err)
+		}
+		if err := cmd.SetResult(resultBytes); err != nil {
+			return nil, fmt.Errorf("parse result: %w", err)
+		}
+
+		commands = append(commands, &cmd)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate agent commands: %w", err)
+	}
+
+	return commands, nil
+}
+
+// Snapshot Mount methods
+
+// CreateSnapshotMount creates a new snapshot mount record.
+func (db *DB) CreateSnapshotMount(ctx context.Context, mount *models.SnapshotMount) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO snapshot_mounts (
+			id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+			status, mounted_at, expires_at, unmounted_at, error_message,
+			created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, mount.ID, mount.OrgID, mount.AgentID, mount.RepositoryID, mount.SnapshotID,
+		mount.MountPath, string(mount.Status), mount.MountedAt, mount.ExpiresAt,
+		mount.UnmountedAt, mount.ErrorMessage, mount.CreatedAt, mount.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create snapshot mount: %w", err)
+	}
+	return nil
+}
+
+// UpdateSnapshotMount updates a snapshot mount record.
+func (db *DB) UpdateSnapshotMount(ctx context.Context, mount *models.SnapshotMount) error {
+	mount.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE snapshot_mounts
+		SET status = $2, mount_path = $3, mounted_at = $4, expires_at = $5,
+		    unmounted_at = $6, error_message = $7, updated_at = $8
+		WHERE id = $1
+	`, mount.ID, string(mount.Status), mount.MountPath, mount.MountedAt,
+		mount.ExpiresAt, mount.UnmountedAt, mount.ErrorMessage, mount.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update snapshot mount: %w", err)
+	}
+	return nil
+}
+
+// GetSnapshotMountByID returns a snapshot mount by ID.
+func (db *DB) GetSnapshotMountByID(ctx context.Context, id uuid.UUID) (*models.SnapshotMount, error) {
+	var mount models.SnapshotMount
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+		       status, mounted_at, expires_at, unmounted_at, error_message,
+		       created_at, updated_at
+		FROM snapshot_mounts
+		WHERE id = $1
+	`, id).Scan(
+		&mount.ID, &mount.OrgID, &mount.AgentID, &mount.RepositoryID,
+		&mount.SnapshotID, &mount.MountPath, &statusStr, &mount.MountedAt,
+		&mount.ExpiresAt, &mount.UnmountedAt, &mount.ErrorMessage,
+		&mount.CreatedAt, &mount.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot mount: %w", err)
+	}
+	mount.Status = models.SnapshotMountStatus(statusStr)
+	return &mount, nil
+}
+
+// GetActiveSnapshotMountBySnapshotID returns the active mount for a snapshot if one exists.
+func (db *DB) GetActiveSnapshotMountBySnapshotID(ctx context.Context, agentID uuid.UUID, snapshotID string) (*models.SnapshotMount, error) {
+	var mount models.SnapshotMount
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+		       status, mounted_at, expires_at, unmounted_at, error_message,
+		       created_at, updated_at
+		FROM snapshot_mounts
+		WHERE agent_id = $1 AND snapshot_id = $2
+		  AND status IN ('pending', 'mounting', 'mounted')
+	`, agentID, snapshotID).Scan(
+		&mount.ID, &mount.OrgID, &mount.AgentID, &mount.RepositoryID,
+		&mount.SnapshotID, &mount.MountPath, &statusStr, &mount.MountedAt,
+		&mount.ExpiresAt, &mount.UnmountedAt, &mount.ErrorMessage,
+		&mount.CreatedAt, &mount.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get active snapshot mount: %w", err)
+	}
+	mount.Status = models.SnapshotMountStatus(statusStr)
+	return &mount, nil
+}
+
+// GetSnapshotMountsByOrgID returns all snapshot mounts for an organization.
+func (db *DB) GetSnapshotMountsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.SnapshotMount, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+		       status, mounted_at, expires_at, unmounted_at, error_message,
+		       created_at, updated_at
+		FROM snapshot_mounts
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list snapshot mounts: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotMounts(rows)
+}
+
+// GetActiveSnapshotMountsByAgentID returns active mounts for an agent.
+func (db *DB) GetActiveSnapshotMountsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.SnapshotMount, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+		       status, mounted_at, expires_at, unmounted_at, error_message,
+		       created_at, updated_at
+		FROM snapshot_mounts
+		WHERE agent_id = $1 AND status IN ('pending', 'mounting', 'mounted')
+		ORDER BY created_at DESC
+	`, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("list active snapshot mounts: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotMounts(rows)
+}
+
+// GetExpiredSnapshotMounts returns mounts that have expired but are still marked as mounted.
+func (db *DB) GetExpiredSnapshotMounts(ctx context.Context) ([]*models.SnapshotMount, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, agent_id, repository_id, snapshot_id, mount_path,
+		       status, mounted_at, expires_at, unmounted_at, error_message,
+		       created_at, updated_at
+		FROM snapshot_mounts
+		WHERE status = 'mounted' AND expires_at < NOW()
+		ORDER BY expires_at ASC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list expired snapshot mounts: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotMounts(rows)
+}
+
+// DeleteSnapshotMount deletes a snapshot mount record.
+func (db *DB) DeleteSnapshotMount(ctx context.Context, id uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `DELETE FROM snapshot_mounts WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete snapshot mount: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("snapshot mount not found")
+	}
+	return nil
+}
+
+// scanSnapshotMounts scans rows into snapshot mount structs.
+func scanSnapshotMounts(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.SnapshotMount, error) {
+	var mounts []*models.SnapshotMount
+	for rows.Next() {
+		var mount models.SnapshotMount
+		var statusStr string
+		err := rows.Scan(
+			&mount.ID, &mount.OrgID, &mount.AgentID, &mount.RepositoryID,
+			&mount.SnapshotID, &mount.MountPath, &statusStr, &mount.MountedAt,
+			&mount.ExpiresAt, &mount.UnmountedAt, &mount.ErrorMessage,
+			&mount.CreatedAt, &mount.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan snapshot mount: %w", err)
+		}
+		mount.Status = models.SnapshotMountStatus(statusStr)
+		mounts = append(mounts, &mount)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate snapshot mounts: %w", err)
+	}
+
+	return mounts, nil
+}

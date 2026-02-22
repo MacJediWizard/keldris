@@ -3,6 +3,8 @@ import type {
 	AddAgentToGroupRequest,
 	Agent,
 	AgentBackupsResponse,
+	AgentCommand,
+	AgentCommandsResponse,
 	AgentGroup,
 	AgentGroupsResponse,
 	AgentHealthHistoryResponse,
@@ -34,11 +36,16 @@ import type {
 	BuiltInPatternsResponse,
 	CategoriesResponse,
 	CategoryInfo,
+	ClassificationLevelsResponse,
+	ClassificationRulesResponse,
+	ClassificationSummary,
+	ComplianceReport,
 	CostAlert,
 	CostAlertsResponse,
 	CostForecastResponse,
 	CostHistoryResponse,
 	CostSummary,
+	CreateAgentCommandRequest,
 	CreateAgentGroupRequest,
 	CreateAgentRequest,
 	CreateAgentResponse,
@@ -54,6 +61,7 @@ import type {
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
+	CreatePathClassificationRuleRequest,
 	CreatePolicyRequest,
 	CreateRegistrationCodeRequest,
 	CreateRegistrationCodeResponse,
@@ -78,6 +86,7 @@ import type {
 	DailyBackupStats,
 	DailyBackupStatsResponse,
 	DashboardStats,
+	DataTypesResponse,
 	DefaultPricingResponse,
 	DryRunResponse,
 	ErrorResponse,
@@ -87,6 +96,16 @@ import type {
 	FileHistoryParams,
 	FileHistoryResponse,
 	FleetHealthSummary,
+	GeoRegion,
+	GeoReplicationConfig,
+	GeoReplicationConfigsResponse,
+	GeoReplicationCreateRequest,
+	GeoReplicationEvent,
+	GeoReplicationEventsResponse,
+	GeoReplicationRegionsResponse,
+	GeoReplicationSummary,
+	GeoReplicationSummaryResponse,
+	GeoReplicationUpdateRequest,
 	ImmutabilityLock,
 	ImmutabilityLocksResponse,
 	ImmutabilityStatus,
@@ -104,6 +123,7 @@ import type {
 	MaintenanceWindowsResponse,
 	MembersResponse,
 	MessageResponse,
+	MountSnapshotRequest,
 	NotificationChannel,
 	NotificationChannelWithPreferencesResponse,
 	NotificationChannelsResponse,
@@ -118,6 +138,7 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	PathClassificationRule,
 	PendingRegistration,
 	PendingRegistrationsResponse,
 	PoliciesResponse,
@@ -137,6 +158,7 @@ import type {
 	RepositoryGrowthResponse,
 	RepositoryHistoryResponse,
 	RepositoryImmutabilitySettings,
+	RepositoryReplicationStatusResponse,
 	RepositoryStatsListItem,
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
@@ -155,11 +177,14 @@ import type {
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
+	SetScheduleClassificationRequest,
 	Snapshot,
 	SnapshotComment,
 	SnapshotCommentsResponse,
 	SnapshotCompareResponse,
 	SnapshotFilesResponse,
+	SnapshotMount,
+	SnapshotMountsResponse,
 	SnapshotsResponse,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
@@ -185,6 +210,7 @@ import type {
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
+	UpdatePathClassificationRuleRequest,
 	UpdatePolicyRequest,
 	UpdateReportScheduleRequest,
 	UpdateRepositoryImmutabilitySettingsRequest,
@@ -341,6 +367,38 @@ export const agentsApi = {
 		);
 		return response.agents ?? [];
 	},
+
+	// Command methods
+	getCommands: async (
+		agentId: string,
+		limit = 50,
+	): Promise<AgentCommandsResponse> =>
+		fetchApi<AgentCommandsResponse>(
+			`/agents/${agentId}/commands?limit=${limit}`,
+		),
+
+	createCommand: async (
+		agentId: string,
+		data: CreateAgentCommandRequest,
+	): Promise<AgentCommand> =>
+		fetchApi<AgentCommand>(`/agents/${agentId}/commands`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getCommand: async (
+		agentId: string,
+		commandId: string,
+	): Promise<AgentCommand> =>
+		fetchApi<AgentCommand>(`/agents/${agentId}/commands/${commandId}`),
+
+	cancelCommand: async (
+		agentId: string,
+		commandId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agents/${agentId}/commands/${commandId}`, {
+			method: 'DELETE',
+		}),
 };
 
 // Agent Groups API
@@ -677,6 +735,43 @@ export const snapshotsApi = {
 
 	compare: async (id1: string, id2: string): Promise<SnapshotCompareResponse> =>
 		fetchApi<SnapshotCompareResponse>(`/snapshots/${id1}/compare/${id2}`),
+
+	mount: async (
+		snapshotId: string,
+		data: MountSnapshotRequest,
+	): Promise<SnapshotMount> =>
+		fetchApi<SnapshotMount>(`/snapshots/${snapshotId}/mount`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	unmount: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/snapshots/${snapshotId}/mount?agent_id=${agentId}`,
+			{
+				method: 'DELETE',
+			},
+		),
+
+	getMount: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<SnapshotMount> =>
+		fetchApi<SnapshotMount>(
+			`/snapshots/${snapshotId}/mount?agent_id=${agentId}`,
+		),
+};
+
+// Snapshot Mounts API
+export const snapshotMountsApi = {
+	list: async (agentId?: string): Promise<SnapshotMount[]> => {
+		const endpoint = agentId ? `/mounts?agent_id=${agentId}` : '/mounts';
+		const response = await fetchApi<SnapshotMountsResponse>(endpoint);
+		return response.mounts ?? [];
+	},
 };
 
 // Snapshot Comments API
@@ -1682,6 +1777,116 @@ export const costAlertsApi = {
 		}),
 };
 
+// Classification API
+export const classificationsApi = {
+	// Reference data
+	getLevels: async (): Promise<ClassificationLevelsResponse> =>
+		fetchApi<ClassificationLevelsResponse>('/classifications/levels'),
+
+	getDataTypes: async (): Promise<DataTypesResponse> =>
+		fetchApi<DataTypesResponse>('/classifications/data-types'),
+
+	getDefaultRules: async (): Promise<PathClassificationRule[]> => {
+		const response = await fetchApi<{ rules: PathClassificationRule[] }>(
+			'/classifications/default-rules',
+		);
+		return response.rules ?? [];
+	},
+
+	// Rules
+	listRules: async (): Promise<PathClassificationRule[]> => {
+		const response = await fetchApi<ClassificationRulesResponse>(
+			'/classifications/rules',
+		);
+		return response.rules ?? [];
+	},
+
+	getRule: async (id: string): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>(`/classifications/rules/${id}`),
+
+	createRule: async (
+		data: CreatePathClassificationRuleRequest,
+	): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>('/classifications/rules', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateRule: async (
+		id: string,
+		data: UpdatePathClassificationRuleRequest,
+	): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>(`/classifications/rules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteRule: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/classifications/rules/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Schedule classifications
+	listScheduleClassifications: async (level?: string): Promise<Schedule[]> => {
+		const url = level
+			? `/classifications/schedules?level=${level}`
+			: '/classifications/schedules';
+		const response = await fetchApi<{ schedules: Schedule[] }>(url);
+		return response.schedules ?? [];
+	},
+
+	getScheduleClassification: async (
+		scheduleId: string,
+	): Promise<{ schedule_id: string; level: string; data_types: string[] }> =>
+		fetchApi<{ schedule_id: string; level: string; data_types: string[] }>(
+			`/classifications/schedules/${scheduleId}`,
+		),
+
+	setScheduleClassification: async (
+		scheduleId: string,
+		data: SetScheduleClassificationRequest,
+	): Promise<{ schedule_id: string; level: string; data_types: string[] }> =>
+		fetchApi<{ schedule_id: string; level: string; data_types: string[] }>(
+			`/classifications/schedules/${scheduleId}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		),
+
+	autoClassifySchedule: async (
+		scheduleId: string,
+	): Promise<{
+		schedule_id: string;
+		level: string;
+		data_types: string[];
+		auto_classified: boolean;
+	}> =>
+		fetchApi<{
+			schedule_id: string;
+			level: string;
+			data_types: string[];
+			auto_classified: boolean;
+		}>(`/classifications/schedules/${scheduleId}/auto-classify`, {
+			method: 'POST',
+		}),
+
+	// Backup classifications
+	listBackupsByClassification: async (level: string): Promise<Backup[]> => {
+		const response = await fetchApi<{ backups: Backup[]; level: string }>(
+			`/classifications/backups?level=${level}`,
+		);
+		return response.backups ?? [];
+	},
+
+	// Summary and reports
+	getSummary: async (): Promise<ClassificationSummary> =>
+		fetchApi<ClassificationSummary>('/classifications/summary'),
+
+	getComplianceReport: async (): Promise<ComplianceReport> =>
+		fetchApi<ComplianceReport>('/classifications/compliance-report'),
+};
+
 // Immutability API
 export const immutabilityApi = {
 	listLocks: async (): Promise<ImmutabilityLock[]> => {
@@ -1769,4 +1974,80 @@ export const legalHoldsApi = {
 		fetchApi<MessageResponse>(`/snapshots/${snapshotId}/hold`, {
 			method: 'DELETE',
 		}),
+};
+
+// Geo-Replication API
+export const geoReplicationApi = {
+	listRegions: async (): Promise<{
+		regions: GeoRegion[];
+		pairs: { primary: GeoRegion; secondary: GeoRegion }[];
+	}> => fetchApi<GeoReplicationRegionsResponse>('/geo-replication/regions'),
+
+	listConfigs: async (): Promise<GeoReplicationConfig[]> => {
+		const response = await fetchApi<GeoReplicationConfigsResponse>(
+			'/geo-replication/configs',
+		);
+		return response.configs ?? [];
+	},
+
+	getConfig: async (id: string): Promise<GeoReplicationConfig> =>
+		fetchApi<GeoReplicationConfig>(`/geo-replication/configs/${id}`),
+
+	createConfig: async (
+		data: GeoReplicationCreateRequest,
+	): Promise<GeoReplicationConfig> =>
+		fetchApi<GeoReplicationConfig>('/geo-replication/configs', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateConfig: async (
+		id: string,
+		data: GeoReplicationUpdateRequest,
+	): Promise<GeoReplicationConfig> =>
+		fetchApi<GeoReplicationConfig>(`/geo-replication/configs/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteConfig: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/geo-replication/configs/${id}`, {
+			method: 'DELETE',
+		}),
+
+	triggerReplication: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/geo-replication/configs/${id}/trigger`, {
+			method: 'POST',
+		}),
+
+	getEvents: async (id: string): Promise<GeoReplicationEvent[]> => {
+		const response = await fetchApi<GeoReplicationEventsResponse>(
+			`/geo-replication/configs/${id}/events`,
+		);
+		return response.events ?? [];
+	},
+
+	getRepositoryStatus: async (
+		repoId: string,
+	): Promise<RepositoryReplicationStatusResponse> =>
+		fetchApi<RepositoryReplicationStatusResponse>(
+			`/geo-replication/repositories/${repoId}/status`,
+		),
+
+	setRepositoryRegion: async (
+		repoId: string,
+		region: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/geo-replication/repositories/${repoId}/region`,
+			{
+				method: 'PUT',
+				body: JSON.stringify({ region }),
+			},
+		),
+
+	getSummary: async (): Promise<{
+		summary: GeoReplicationSummary;
+		regions: GeoRegion[];
+	}> => fetchApi<GeoReplicationSummaryResponse>('/geo-replication/summary'),
 };

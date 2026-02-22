@@ -366,6 +366,8 @@ export interface Schedule {
 	compression_level?: CompressionLevel; // Compression level: off, auto, max
 	max_file_size_mb?: number; // Max file size in MB (0 = disabled)
 	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
+	classification_level?: string; // Data classification level
+	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -529,6 +531,8 @@ export interface Backup {
 	resumed: boolean;
 	checkpoint_id?: string;
 	original_backup_id?: string;
+	classification_level?: string;
+	classification_data_types?: string[];
 	created_at: string;
 }
 
@@ -834,6 +838,39 @@ export interface CreateSnapshotCommentRequest {
 
 export interface SnapshotCommentsResponse {
 	comments: SnapshotComment[];
+}
+
+// Snapshot Mount types
+export type SnapshotMountStatus =
+	| 'pending'
+	| 'mounting'
+	| 'mounted'
+	| 'unmounting'
+	| 'unmounted'
+	| 'failed';
+
+export interface SnapshotMount {
+	id: string;
+	agent_id: string;
+	repository_id: string;
+	snapshot_id: string;
+	mount_path: string;
+	status: SnapshotMountStatus;
+	mounted_at?: string;
+	expires_at?: string;
+	unmounted_at?: string;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface MountSnapshotRequest {
+	agent_id: string;
+	repository_id: string;
+	timeout_minutes?: number;
+}
+
+export interface SnapshotMountsResponse {
+	mounts: SnapshotMount[];
 }
 
 // Restore types
@@ -2037,6 +2074,41 @@ export interface ImportRepositoryResponse {
 	snapshots_imported: number;
 }
 
+// Classification types
+export type ClassificationLevel =
+	| 'public'
+	| 'internal'
+	| 'confidential'
+	| 'restricted';
+export type DataType = 'pii' | 'phi' | 'pci' | 'proprietary' | 'general';
+
+export interface ClassificationLevelInfo {
+	value: ClassificationLevel;
+	label: string;
+	description: string;
+	priority: number;
+}
+
+export interface DataTypeInfo {
+	value: DataType;
+	label: string;
+	description: string;
+}
+
+export interface PathClassificationRule {
+	id: string;
+	org_id: string;
+	pattern: string;
+	level: ClassificationLevel;
+	data_types: DataType[];
+	description?: string;
+	is_builtin: boolean;
+	priority: number;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
 // Snapshot Immutability types
 export interface ImmutabilityLock {
 	id: string;
@@ -2098,10 +2170,232 @@ export interface LegalHold {
 	updated_at: string;
 }
 
+export interface CreatePathClassificationRuleRequest {
+	pattern: string;
+	level: ClassificationLevel;
+	data_types?: DataType[];
+	description?: string;
+	priority?: number;
+}
+
+export interface UpdatePathClassificationRuleRequest {
+	pattern?: string;
+	level?: ClassificationLevel;
+	data_types?: DataType[];
+	description?: string;
+	priority?: number;
+	enabled?: boolean;
+}
+
+export interface SetScheduleClassificationRequest {
+	level: ClassificationLevel;
+	data_types?: DataType[];
+}
+
+export interface ClassificationSummary {
+	total_schedules: number;
+	total_backups: number;
+	by_level: Record<string, number>;
+	by_data_type: Record<string, number>;
+	restricted_count: number;
+	confidential_count: number;
+	internal_count: number;
+	public_count: number;
+}
+
+export interface ClassificationRulesResponse {
+	rules: PathClassificationRule[];
+}
+
+export interface ClassificationLevelsResponse {
+	levels: ClassificationLevelInfo[];
+}
+
+export interface DataTypesResponse {
+	data_types: DataTypeInfo[];
+}
+
+export interface ScheduleClassificationSummary {
+	id: string;
+	name: string;
+	level: ClassificationLevel;
+	data_types: DataType[];
+	paths: string[];
+	agent_id: string;
+}
+
+export interface ComplianceReport {
+	generated_at: string;
+	org_id: string;
+	summary: ClassificationSummary;
+	schedules_by_level: Record<string, ScheduleClassificationSummary[]>;
+}
+
 export interface CreateLegalHoldRequest {
 	reason: string;
 }
 
 export interface LegalHoldsResponse {
 	legal_holds: LegalHold[];
+}
+
+// Geo-Replication types
+export interface GeoRegion {
+	code: string;
+	name: string;
+	display_name: string;
+	latitude: number;
+	longitude: number;
+}
+
+export interface GeoRegionPair {
+	primary: GeoRegion;
+	secondary: GeoRegion;
+}
+
+export type GeoReplicationStatusType =
+	| 'pending'
+	| 'syncing'
+	| 'synced'
+	| 'failed'
+	| 'disabled';
+
+export interface ReplicationLag {
+	snapshots_behind: number;
+	time_behind_hours: number;
+	is_healthy: boolean;
+	last_sync_at?: string;
+}
+
+export interface GeoReplicationConfig {
+	id: string;
+	source_repository_id: string;
+	target_repository_id: string;
+	source_region: GeoRegion;
+	target_region: GeoRegion;
+	enabled: boolean;
+	status: GeoReplicationStatusType;
+	last_snapshot_id?: string;
+	last_sync_at?: string;
+	last_error?: string;
+	max_lag_snapshots: number;
+	max_lag_duration_hours: number;
+	alert_on_lag: boolean;
+	replication_lag?: ReplicationLag;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface GeoReplicationCreateRequest {
+	source_repository_id: string;
+	target_repository_id: string;
+	source_region: string;
+	target_region: string;
+	max_lag_snapshots?: number;
+	max_lag_duration_hours?: number;
+	alert_on_lag?: boolean;
+}
+
+export interface GeoReplicationUpdateRequest {
+	enabled?: boolean;
+	max_lag_snapshots?: number;
+	max_lag_duration_hours?: number;
+	alert_on_lag?: boolean;
+}
+
+export interface GeoReplicationEvent {
+	id: string;
+	config_id: string;
+	snapshot_id: string;
+	status: GeoReplicationStatusType;
+	started_at: string;
+	completed_at?: string;
+	duration_ms: number;
+	bytes_copied?: number;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface GeoReplicationSummary {
+	total_configs: number;
+	enabled_configs: number;
+	synced_count: number;
+	syncing_count: number;
+	pending_count: number;
+	failed_count: number;
+}
+
+export interface GeoReplicationRegionsResponse {
+	regions: GeoRegion[];
+	pairs: GeoRegionPair[];
+}
+
+export interface GeoReplicationConfigsResponse {
+	configs: GeoReplicationConfig[];
+}
+
+export interface GeoReplicationEventsResponse {
+	events: GeoReplicationEvent[];
+}
+
+export interface GeoReplicationSummaryResponse {
+	summary: GeoReplicationSummary;
+	regions: GeoRegion[];
+}
+
+export interface RepositoryReplicationStatusResponse {
+	configured: boolean;
+	config?: GeoReplicationConfig;
+	message?: string;
+}
+
+// Agent Command types
+export type CommandType = 'backup_now' | 'update' | 'restart' | 'diagnostics';
+export type CommandStatus =
+	| 'pending'
+	| 'acknowledged'
+	| 'running'
+	| 'completed'
+	| 'failed'
+	| 'timed_out'
+	| 'canceled';
+
+export interface CommandPayload {
+	schedule_id?: string;
+	target_version?: string;
+	diagnostic_types?: string[];
+}
+
+export interface CommandResult {
+	output?: string;
+	error?: string;
+	diagnostics?: Record<string, unknown>;
+	backup_id?: string;
+}
+
+export interface AgentCommand {
+	id: string;
+	agent_id: string;
+	org_id: string;
+	type: CommandType;
+	status: CommandStatus;
+	payload?: CommandPayload;
+	result?: CommandResult;
+	created_by?: string;
+	created_by_name?: string;
+	acknowledged_at?: string;
+	started_at?: string;
+	completed_at?: string;
+	timeout_at: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateAgentCommandRequest {
+	type: CommandType;
+	payload?: CommandPayload;
+}
+
+export interface AgentCommandsResponse {
+	commands: AgentCommand[];
 }

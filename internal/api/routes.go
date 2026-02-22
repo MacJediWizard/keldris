@@ -124,6 +124,9 @@ func NewRouter(
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1)
 
+	agentCommandsHandler := handlers.NewAgentCommandsHandler(database, logger)
+	agentCommandsHandler.RegisterRoutes(apiV1)
+
 	// Agent registration with 2FA codes
 	agentRegistrationHandler := handlers.NewAgentRegistrationHandler(database, logger)
 	agentRegistrationHandler.RegisterRoutes(apiV1)
@@ -217,6 +220,14 @@ func NewRouter(
 	// DR Test routes (runner is nil for now, will be set up when scheduler is integrated)
 	drTestsHandler := handlers.NewDRTestsHandler(database, nil, logger)
 	drTestsHandler.RegisterRoutes(apiV1)
+
+	// Geo-Replication routes
+	geoReplicationHandler := handlers.NewGeoReplicationHandler(database, logger)
+	geoReplicationHandler.RegisterRoutes(apiV1)
+
+	// Classification routes
+	classificationsHandler := handlers.NewClassificationsHandler(database, logger)
+	classificationsHandler.RegisterRoutes(apiV1)
 
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
