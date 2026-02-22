@@ -57,25 +57,40 @@ func SecurityHeaders(env config.Environment) gin.HandlerFunc {
 	"github.com/gin-gonic/gin"
 )
 
+// CSPNonceKey is the gin.Context key where the per-request CSP nonce is stored.
+// Use GetCSPNonce to retrieve it from a handler.
+const CSPNonceKey = "csp_nonce"
+
+// nonceBytes is the number of random bytes used to generate CSP nonces.
+// 16 bytes yields 22 base64 characters, providing 128 bits of entropy.
+const nonceBytes = 16
+
 // cspAPI is a strict Content-Security-Policy for API routes that return JSON.
 // No scripts, styles, or other resources should be loaded from API responses.
 const cspAPI = "default-src 'none'; frame-ancestors 'none'"
 
-// cspFrontend is the Content-Security-Policy for routes that serve HTML content
-// (e.g., Swagger docs, or a future embedded frontend).
-//
-// 'unsafe-inline' is required for script-src and style-src because:
-//   - React/Vite injects inline scripts during development (HMR client)
-//   - Vite production builds may emit inline script tags for module preloading
-//   - Swagger UI (swaggo) uses inline styles and scripts
-//   - Tailwind CSS utilities can generate inline style attributes
-//
-// TODO: Replace 'unsafe-inline' with nonce-based CSP. This requires:
-//   1. Generate a per-request nonce in this middleware
-//   2. Pass the nonce to the HTML template via context
-//   3. Add nonce attributes to all <script> and <style> tags
-//   4. Use 'strict-dynamic' with the nonce for script-src
-const cspFrontend = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'"
+// cspSwagger is the Content-Security-Policy for Swagger UI routes.
+// Swagger UI (swaggo) requires 'unsafe-inline' for its inline styles and scripts
+// which we cannot control. This policy is scoped only to /api/docs/* paths.
+const cspSwagger = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'"
+
+// GetCSPNonce retrieves the per-request CSP nonce from the gin context.
+// Returns an empty string if no nonce is set (e.g., on API routes).
+func GetCSPNonce(c *gin.Context) string {
+	if v, ok := c.Get(CSPNonceKey); ok {
+		return v.(string)
+	}
+	return ""
+}
+
+// generateNonce creates a cryptographically random base64-encoded nonce.
+func generateNonce() (string, error) {
+	b := make([]byte, nonceBytes)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("failed to generate CSP nonce: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(b), nil
+}
 
 // SecurityHeaders returns a middleware that sets security-related HTTP response headers.
 func SecurityHeaders() gin.HandlerFunc {
@@ -123,11 +138,30 @@ func SecurityHeaders() gin.HandlerFunc {
 			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
 
-		// Apply strict CSP for API routes (JSON-only), relaxed CSP for HTML-serving routes.
-		if isAPIRoute(c.Request.URL.Path) {
+		path := c.Request.URL.Path
+
+		switch {
+		case isAPIRoute(path):
+			// Strict CSP for API routes (JSON-only responses).
 			c.Header("Content-Security-Policy", cspAPI)
-		} else {
-			c.Header("Content-Security-Policy", cspFrontend)
+		case isSwaggerRoute(path):
+			// Swagger UI requires 'unsafe-inline' for its third-party inline content.
+			c.Header("Content-Security-Policy", cspSwagger)
+		default:
+			// Frontend routes use nonce-based CSP to avoid 'unsafe-inline'.
+			nonce, err := generateNonce()
+			if err != nil {
+				// Fall back to strict default-src 'self' if nonce generation fails.
+				c.Header("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'")
+				c.Next()
+				return
+			}
+			c.Set(CSPNonceKey, nonce)
+			csp := fmt.Sprintf(
+				"default-src 'self'; script-src 'self' 'nonce-%s'; style-src 'self' 'nonce-%s'; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'",
+				nonce, nonce,
+			)
+			c.Header("Content-Security-Policy", csp)
 		}
 
 		c.Next()
