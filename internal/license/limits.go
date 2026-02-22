@@ -6,6 +6,11 @@ type TierLimits struct {
 	MaxAgents int `json:"max_agents"`
 	MaxUsers  int `json:"max_users"`
 	MaxOrgs   int `json:"max_orgs"`
+type TierLimits struct {
+	MaxAgents  int   `json:"max_agents"`
+	MaxUsers   int   `json:"max_users"`
+	MaxOrgs    int   `json:"max_orgs"`
+	MaxStorage int64 `json:"max_storage_bytes"`
 }
 
 // Unlimited is a sentinel value indicating no limit on a resource.
@@ -27,6 +32,22 @@ var tierLimits = map[LicenseTier]TierLimits{
 		MaxAgents: Unlimited,
 		MaxUsers:  Unlimited,
 		MaxOrgs:   Unlimited,
+		MaxAgents:  3,
+		MaxUsers:   3,
+		MaxOrgs:    1,
+		MaxStorage: 10 * 1024 * 1024 * 1024, // 10 GB
+	},
+	TierPro: {
+		MaxAgents:  25,
+		MaxUsers:   10,
+		MaxOrgs:    3,
+		MaxStorage: 100 * 1024 * 1024 * 1024, // 100 GB
+	},
+	TierEnterprise: {
+		MaxAgents:  Unlimited,
+		MaxUsers:   Unlimited,
+		MaxOrgs:    Unlimited,
+		MaxStorage: Unlimited,
 	},
 }
 
@@ -380,4 +401,9 @@ func (e *Enforcer) GetUsageStats(ctx context.Context) (*UsageStats, error) {
 			Unlimited: limits.MaxRepositories == -1,
 		},
 	}, nil
+}
+
+// IsStorageUnlimited returns true if the storage limit is unlimited.
+func IsStorageUnlimited(limit int64) bool {
+	return limit == Unlimited
 }
