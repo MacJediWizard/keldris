@@ -206,12 +206,28 @@ I wanted a backup solution that could:
    See [docs/oidc-setup.md](docs/oidc-setup.md) for provider-specific instructions.
 
 6. Start the services:
+   openssl rand -base64 32  # Use for SESSION_SECRET
+   openssl rand -base64 32  # Use for ENCRYPTION_KEY
+   ```
+
+4. Edit `.env` and configure your OIDC provider:
+   ```
+   OIDC_ISSUER=https://your-auth-server/application/o/keldris/
+   OIDC_CLIENT_ID=your-client-id
+   OIDC_CLIENT_SECRET=your-client-secret
+   OIDC_REDIRECT_URL=http://localhost:8080/auth/callback
+   ```
+
+   See [docs/oidc-setup.md](docs/oidc-setup.md) for provider-specific instructions.
+
+5. Start the services:
    ```bash
    cd docker
    docker compose up -d
    ```
 
 7. Access the UI at [http://localhost:8080](http://localhost:8080)
+6. Access the UI at [http://localhost:8080](http://localhost:8080)
 
 ### Using Pre-built Images
 
@@ -223,6 +239,11 @@ docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.4
 ```
 
 See [docker/docker-compose.images.yml](docker/docker-compose.images.yml) for production deployment with pre-built images.
+docker pull ghcr.io/macjediwizard/keldris-server:1.0.0-beta.1
+docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.1
+```
+
+See [docker/docker-compose.prod.yml](docker/docker-compose.prod.yml) for production deployment with pre-built images.
 
 ### Installing the Agent
 
