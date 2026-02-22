@@ -2881,3 +2881,61 @@ export interface UpdateAnnouncementRequest {
 export interface AnnouncementsResponse {
 	announcements: Announcement[];
 }
+
+// Agent Import types
+export interface AgentImportPreviewEntry {
+	row_number: number;
+	hostname: string;
+	group_name?: string;
+	tags?: string[];
+	config?: Record<string, string>;
+	is_valid: boolean;
+	errors?: string[];
+}
+
+export interface AgentImportPreviewResponse {
+	total_rows: number;
+	valid_rows: number;
+	invalid_rows: number;
+	entries: AgentImportPreviewEntry[];
+	detected_groups: string[];
+	detected_tags: string[];
+}
+
+export interface AgentImportJobResult {
+	row_number: number;
+	hostname: string;
+	agent_id?: string;
+	group_id?: string;
+	group_name?: string;
+	registration_code?: string;
+	expires_at?: string;
+	success: boolean;
+	error_message?: string;
+}
+
+export interface AgentImportResponse {
+	job_id: string;
+	total_agents: number;
+	imported_count: number;
+	failed_count: number;
+	results: AgentImportJobResult[];
+	groups_created?: string[];
+}
+
+export interface AgentImportTemplateResponse {
+	headers: string[];
+	examples: string[][];
+}
+
+export interface AgentRegistrationScriptRequest {
+	hostname: string;
+	registration_code: string;
+}
+
+export interface AgentRegistrationScriptResponse {
+	script: string;
+	hostname: string;
+	registration_code: string;
+	expires_at: string;
+}
