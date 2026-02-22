@@ -3,6 +3,7 @@ import { ActivityFeedWidget } from '../components/features/ActivityFeed';
 import { MiniBackupCalendar } from '../components/features/BackupCalendar';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
 import { StarButton } from '../components/ui/StarButton';
+import { MiniBackupCalendar } from '../components/features/BackupCalendar';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useFavorites } from '../hooks/useFavorites';

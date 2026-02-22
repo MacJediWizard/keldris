@@ -979,6 +979,7 @@ export function Backups() {
 									<tr>
 										<td
 											colSpan={8}
+											colSpan={7}
 											className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
 										>
 											<svg
