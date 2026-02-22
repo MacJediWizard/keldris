@@ -547,6 +547,8 @@ function App() {
 				<BrandingProvider>
 					<BrowserRouter>
 						<Routes>
+							{/* Setup route - outside Layout, no auth required */}
+							<Route path="/setup" element={<Setup />} />
 							<Route path="/" element={<Layout />}>
 								<Route index element={<Dashboard />} />
 								<Route path="agents" element={<Agents />} />
@@ -640,6 +642,7 @@ function App() {
 									element={<RateLimits />}
 								/>
 								<Route path="admin/license" element={<LicenseManagement />} />
+								<Route path="admin/setup" element={<AdminSetup />} />
 								<Route path="account/sessions" element={<UserSessions />} />
 								<Route path="onboarding" element={<Onboarding />} />
 								<Route path="changelog" element={<Changelog />} />
