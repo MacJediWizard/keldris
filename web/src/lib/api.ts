@@ -1006,6 +1006,15 @@ export const snapshotsApi = {
 			`/snapshots/${id1}/files/diff/${id2}?path=${encodeURIComponent(path)}`,
 		),
 
+	diffFile: async (
+		id1: string,
+		id2: string,
+		path: string,
+	): Promise<FileDiffResponse> =>
+		fetchApi<FileDiffResponse>(
+			`/snapshots/${id1}/files/diff/${id2}?path=${encodeURIComponent(path)}`,
+		),
+
 	mount: async (
 		snapshotId: string,
 		data: MountSnapshotRequest,
