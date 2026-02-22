@@ -52,11 +52,18 @@ type SessionConfig struct {
 }
 
 // DefaultSessionConfig returns a SessionConfig with secure defaults.
-func DefaultSessionConfig(secret []byte, secure bool) SessionConfig {
+// maxAge in seconds (0 or negative uses default 86400). idleTimeout in seconds (0 disables idle timeout, negative uses default 1800).
+func DefaultSessionConfig(secret []byte, secure bool, maxAge, idleTimeout int) SessionConfig {
+	if maxAge <= 0 {
+		maxAge = 86400 // 24 hours
+	}
+	if idleTimeout < 0 {
+		idleTimeout = 1800 // 30 minutes
+	}
 	return SessionConfig{
 		Secret:      secret,
-		MaxAge:      86400, // 24 hours
-		IdleTimeout: 1800,  // 30 minutes
+		MaxAge:      maxAge,
+		IdleTimeout: idleTimeout,
 		Secure:      secure,
 		HTTPOnly:    true,
 		SameSite:    http.SameSiteLaxMode,

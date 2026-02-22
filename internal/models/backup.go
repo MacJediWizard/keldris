@@ -76,12 +76,6 @@ func (b *Backup) Fail(errMsg string) {
 	b.ErrorMessage = errMsg
 }
 
-// Cancel marks the backup as canceled.
-func (b *Backup) Cancel() {
-	now := time.Now()
-	b.CompletedAt = &now
-	b.Status = BackupStatusCanceled
-}
 
 // RecordRetention records the results of retention policy enforcement.
 func (b *Backup) RecordRetention(removed, kept int, err error) {

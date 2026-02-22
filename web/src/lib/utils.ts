@@ -360,20 +360,6 @@ export function formatChartDate(dateString: string): string {
 	});
 }
 
-// Format duration in milliseconds to human readable
-export function formatDurationMs(ms: number | undefined): string {
-	if (ms === undefined || ms === null) return 'N/A';
-	if (ms < 1000) return `${ms}ms`;
-
-	const seconds = Math.floor(ms / 1000);
-	const minutes = Math.floor(seconds / 60);
-	const hours = Math.floor(minutes / 60);
-
-	if (hours > 0) return `${hours}h ${minutes % 60}m`;
-	if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
-	return `${seconds}s`;
-}
-
 // Get success rate color based on percentage
 export function getSuccessRateColor(percent: number): string {
 	if (percent >= 95) return 'text-green-600';

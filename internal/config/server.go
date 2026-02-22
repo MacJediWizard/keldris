@@ -35,8 +35,7 @@ type ServerConfig struct {
 	RetentionDays      int  // health history retention in days (default: 90)
 
 	LicenseKey       string // Ed25519-signed license key (base64 payload.signature)
-	LicenseSigningKey string // HMAC signing key for legacy license validation
-	AirGapPublicKey  string // hex-encoded Ed25519 public key for offline validation
+	LicensePublicKey string // hex-encoded Ed25519 public key for license verification
 	LicenseServerURL string // license server URL for phone-home (default: production)
 }
 
@@ -78,9 +77,8 @@ func LoadServerConfig() ServerConfig {
 		SessionIdleTimeout: sessionIdleTimeout,
 		AirGapMode:         airGapMode,
 		RetentionDays:      retentionDays,
-		LicenseKey:         os.Getenv("LICENSE_KEY"),
-		LicenseSigningKey:  os.Getenv("LICENSE_SIGNING_KEY"),
-		AirGapPublicKey:    getEnvDefault("AIRGAP_PUBLIC_KEY", DefaultLicensePublicKey),
+		LicenseKey:       os.Getenv("LICENSE_KEY"),
+		LicensePublicKey: getEnvDefault("AIRGAP_PUBLIC_KEY", DefaultLicensePublicKey),
 		LicenseServerURL:   licenseServerURL,
 	}
 }

@@ -555,12 +555,12 @@ func TestKeyManager_StoreKey(t *testing.T) {
 	}
 
 	// "Store" the key as base64 (simulating config storage)
-	stored := MasterKeyToBase64(key)
+	stored := masterKeyToBase64(key)
 
 	// "Retrieve" the key from storage
-	retrieved, err := MasterKeyFromBase64(stored)
+	retrieved, err := masterKeyFromBase64(stored)
 	if err != nil {
-		t.Fatalf("MasterKeyFromBase64() error = %v", err)
+		t.Fatalf("masterKeyFromBase64() error = %v", err)
 	}
 
 	// Create a new KeyManager with the retrieved key
@@ -584,24 +584,24 @@ func TestKeyManager_RetrieveKey(t *testing.T) {
 	// Test base64 round-trip preserves key identity
 	key, _ := GenerateMasterKey()
 
-	encoded := MasterKeyToBase64(key)
+	encoded := masterKeyToBase64(key)
 
 	// Verify encoded form is valid base64
 	decoded, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
-		t.Fatalf("MasterKeyToBase64() produced invalid base64: %v", err)
+		t.Fatalf("masterKeyToBase64() produced invalid base64: %v", err)
 	}
 	if !bytes.Equal(key, decoded) {
 		t.Error("raw base64 decode doesn't match original key")
 	}
 
-	// Verify MasterKeyFromBase64 gives identical result
-	retrieved, err := MasterKeyFromBase64(encoded)
+	// Verify masterKeyFromBase64 gives identical result
+	retrieved, err := masterKeyFromBase64(encoded)
 	if err != nil {
-		t.Fatalf("MasterKeyFromBase64() error = %v", err)
+		t.Fatalf("masterKeyFromBase64() error = %v", err)
 	}
 	if !bytes.Equal(key, retrieved) {
-		t.Error("MasterKeyFromBase64() result doesn't match original key")
+		t.Error("masterKeyFromBase64() result doesn't match original key")
 	}
 }
 
@@ -723,14 +723,14 @@ func TestKeyManager_EscrowKey(t *testing.T) {
 func TestMasterKeyBase64(t *testing.T) {
 	key, _ := GenerateMasterKey()
 
-	encoded := MasterKeyToBase64(key)
-	decoded, err := MasterKeyFromBase64(encoded)
+	encoded := masterKeyToBase64(key)
+	decoded, err := masterKeyFromBase64(encoded)
 	if err != nil {
-		t.Fatalf("MasterKeyFromBase64() error = %v", err)
+		t.Fatalf("masterKeyFromBase64() error = %v", err)
 	}
 
 	if !bytes.Equal(key, decoded) {
-		t.Errorf("MasterKeyFromBase64() = %v, want %v", decoded, key)
+		t.Errorf("masterKeyFromBase64() = %v, want %v", decoded, key)
 	}
 }
 
@@ -748,9 +748,9 @@ func TestMasterKeyFromBase64_Invalid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := MasterKeyFromBase64(tt.encoded)
+			_, err := masterKeyFromBase64(tt.encoded)
 			if err == nil {
-				t.Error("MasterKeyFromBase64() expected error, got nil")
+				t.Error("masterKeyFromBase64() expected error, got nil")
 			}
 		})
 	}

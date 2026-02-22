@@ -86,19 +86,6 @@ func TestBackup_Fail(t *testing.T) {
 	}
 }
 
-func TestBackup_Cancel(t *testing.T) {
-	backup := NewBackup(uuid.New(), uuid.New(), nil)
-
-	backup.Cancel()
-
-	if backup.Status != BackupStatusCanceled {
-		t.Errorf("expected Status %s, got %s", BackupStatusCanceled, backup.Status)
-	}
-	if backup.CompletedAt == nil {
-		t.Fatal("expected CompletedAt to be set")
-	}
-}
-
 func TestBackup_RecordRetention(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		backup := NewBackup(uuid.New(), uuid.New(), nil)

@@ -53,7 +53,7 @@ func setupBrandingTestRouter(store BrandingStore, user *auth.SessionUser) *gin.E
 
 func TestBrandingGet(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 
 	t.Run("returns defaults when no settings", func(t *testing.T) {
 		store := &mockBrandingStore{}
@@ -99,7 +99,7 @@ func TestBrandingGet(t *testing.T) {
 	})
 
 	t.Run("no org selected", func(t *testing.T) {
-		noOrgUser := TestUserNoOrg()
+		noOrgUser := testUserNoOrg()
 		store := &mockBrandingStore{}
 		r := setupBrandingTestRouter(store, noOrgUser)
 
@@ -112,7 +112,7 @@ func TestBrandingGet(t *testing.T) {
 
 func TestBrandingUpdate(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 
 	t.Run("creates new settings", func(t *testing.T) {
 		store := &mockBrandingStore{}
@@ -188,7 +188,7 @@ func TestBrandingUpdate(t *testing.T) {
 
 func TestBrandingReset(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 
 	t.Run("success", func(t *testing.T) {
 		store := &mockBrandingStore{settings: &models.BrandingSettings{OrgID: orgID}}

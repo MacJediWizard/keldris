@@ -1936,18 +1936,9 @@ export interface AirGapDisabledFeature {
 	reason: string;
 }
 
-export interface AirGapLicenseInfo {
-	customer_id: string;
-	tier: string;
-	expires_at: string;
-	issued_at: string;
-	valid: boolean;
-}
-
 export interface AirGapStatus {
 	enabled: boolean;
 	disabled_features: AirGapDisabledFeature[];
-	license: AirGapLicenseInfo | null;
 }
 
 // Docker Backup types
@@ -2013,6 +2004,8 @@ export interface LicenseInfo {
 	features: string[];
 	limits: LicenseLimits;
 	license_key_source: 'env' | 'database' | 'none';
+	is_trial: boolean;
+	trial_days_left?: number;
 }
 
 export interface ActivateLicenseRequest {
@@ -2036,15 +2029,39 @@ export interface PricingPlan {
 	agent_price_cents: number;
 	included_agents: number;
 	included_servers: number;
-	features: string[];
+	features: string[] | null;
 	is_active: boolean;
 	stripe_price_id?: string;
+	created_at: string;
+	updated_at: string;
 }
 
 export interface LicenseLimits {
 	max_agents: number;
 	max_users: number;
 	max_orgs: number;
+}
+
+export interface StartTrialRequest {
+	email: string;
+	tier: string;
+}
+
+export interface StartTrialResponse {
+	status: string;
+	tier: string;
+	expires_at: string;
+	trial_duration_days: number;
+	features: string[];
+	limits: LicenseLimits;
+}
+
+export interface TrialCheckResponse {
+	has_trial: boolean;
+	is_active?: boolean;
+	expired?: boolean;
+	tier?: string;
+	expires_at?: string;
 }
 
 export interface ServerVersion {

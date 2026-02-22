@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { TierBadge } from '../components/features/TierBadge';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { useLicense, useActivateLicense, useDeactivateLicense, usePricingPlans } from '../hooks/useLicense';
+import { useLicense, useActivateLicense, useDeactivateLicense, usePricingPlans, useStartTrial } from '../hooks/useLicense';
 
 function formatDate(dateStr: string): string {
 	if (!dateStr) return 'N/A';
@@ -26,8 +26,12 @@ export default function License() {
 	const { data: plans } = usePricingPlans();
 	const activateMutation = useActivateLicense();
 	const deactivateMutation = useDeactivateLicense();
+	const startTrialMutation = useStartTrial();
 	const [licenseKey, setLicenseKey] = useState('');
 	const [activateError, setActivateError] = useState('');
+	const [trialEmail, setTrialEmail] = useState('');
+	const [trialError, setTrialError] = useState('');
+	const activateFormRef = useRef<HTMLDivElement>(null);
 
 	if (isLoading) return <LoadingSpinner />;
 
@@ -45,6 +49,18 @@ export default function License() {
 		license.expires_at && new Date(license.expires_at) < new Date();
 	const canManageFromGUI = license.license_key_source !== 'env';
 	const showActivateForm = license.license_key_source === 'none' || license.tier === 'free';
+	const showTrialStart = license.tier === 'free' && license.license_key_source === 'none' && !license.is_trial;
+	const isTrialExpired = license.is_trial && isExpired;
+
+	const handleStartTrial = async () => {
+		setTrialError('');
+		try {
+			await startTrialMutation.mutateAsync({ email: trialEmail, tier: 'pro' });
+			setTrialEmail('');
+		} catch (err) {
+			setTrialError(err instanceof Error ? err.message : 'Failed to start trial');
+		}
+	};
 
 	const handleActivate = async () => {
 		setActivateError('');
@@ -71,12 +87,97 @@ export default function License() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">License</h1>
-				<TierBadge tier={license.tier} className="text-sm px-3 py-1" />
+				<div className="flex items-center gap-2">
+					{license.is_trial && (
+						<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+							Trial
+						</span>
+					)}
+					<TierBadge tier={license.tier} className="text-sm px-3 py-1" />
+				</div>
 			</div>
+
+			{/* Active Trial Banner */}
+			{license.is_trial && !isTrialExpired && (
+				<div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="font-medium text-amber-800 dark:text-amber-300">
+								Trial &mdash; {license.trial_days_left} day{license.trial_days_left !== 1 ? 's' : ''} remaining
+							</p>
+							<p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
+								Upgrade to keep your {license.tier} features after the trial ends.
+							</p>
+						</div>
+						<button
+							type="button"
+							onClick={() => activateFormRef.current?.scrollIntoView({ behavior: 'smooth' })}
+							className="rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+						>
+							Upgrade Now
+						</button>
+					</div>
+				</div>
+			)}
+
+			{/* Expired Trial Banner */}
+			{isTrialExpired && (
+				<div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="font-medium text-red-800 dark:text-red-300">
+								Trial expired
+							</p>
+							<p className="mt-1 text-sm text-red-700 dark:text-red-400">
+								Your trial has ended. Enter a license key to continue with Pro or Enterprise features.
+							</p>
+						</div>
+						<button
+							type="button"
+							onClick={() => activateFormRef.current?.scrollIntoView({ behavior: 'smooth' })}
+							className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+						>
+							Upgrade Now
+						</button>
+					</div>
+				</div>
+			)}
+
+			{/* Start Free Trial */}
+			{showTrialStart && (
+				<div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-800 dark:bg-emerald-900/20">
+					<h2 className="text-lg font-semibold text-emerald-900 dark:text-emerald-300">
+						Start Free 14-Day Trial
+					</h2>
+					<p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
+						Try all Pro features free for 14 days. No credit card required.
+					</p>
+					<div className="mt-4 flex gap-3">
+						<input
+							type="email"
+							value={trialEmail}
+							onChange={(e) => setTrialEmail(e.target.value)}
+							placeholder="Enter your email..."
+							className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-gray-600 dark:bg-dark-card dark:text-gray-100"
+						/>
+						<button
+							type="button"
+							onClick={handleStartTrial}
+							disabled={!trialEmail.trim() || startTrialMutation.isPending}
+							className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							{startTrialMutation.isPending ? 'Starting...' : 'Start 14-Day Trial'}
+						</button>
+					</div>
+					{trialError && (
+						<p className="mt-2 text-sm text-red-600 dark:text-red-400">{trialError}</p>
+					)}
+				</div>
+			)}
 
 			{/* License Key Entry Form */}
 			{showActivateForm && (
-				<div className="rounded-lg border border-indigo-200 bg-indigo-50 p-6 dark:border-indigo-800 dark:bg-indigo-900/20">
+				<div ref={activateFormRef} className="rounded-lg border border-indigo-200 bg-indigo-50 p-6 dark:border-indigo-800 dark:bg-indigo-900/20">
 					<h2 className="text-lg font-semibold text-indigo-900 dark:text-indigo-300">
 						Activate License
 					</h2>
@@ -226,14 +327,17 @@ export default function License() {
 			{/* Upgrade Section */}
 			{license.tier === 'free' && plans && plans.length > 0 && (
 				<div className="rounded-lg border bg-white p-6 shadow-sm dark:border-dark-border dark:bg-dark-card">
-					<h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+					<h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
 						Available Plans
 					</h2>
+					<p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+						Purchase a plan to get a license key, then enter it above to activate.
+					</p>
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 						{plans.map((plan) => (
 							<div
 								key={plan.id}
-								className="rounded-lg border border-gray-200 p-4 dark:border-dark-border"
+								className="flex flex-col rounded-lg border border-gray-200 p-4 dark:border-dark-border"
 							>
 								<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 capitalize">
 									{plan.name}
@@ -249,6 +353,13 @@ export default function License() {
 										<li>{formatPrice(plan.agent_price_cents)}/extra agent</li>
 									)}
 								</ul>
+								<button
+									type="button"
+									onClick={() => activateFormRef.current?.scrollIntoView({ behavior: 'smooth' })}
+									className="mt-4 w-full rounded-md border border-indigo-300 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-600 dark:text-indigo-400 dark:hover:bg-indigo-900/20"
+								>
+									Enter License Key
+								</button>
 							</div>
 						))}
 					</div>

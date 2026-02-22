@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// TestUser creates a SessionUser for testing with a given org.
-func TestUser(orgID uuid.UUID) *auth.SessionUser {
+// testUser creates a SessionUser for testing with a given org.
+func testUser(orgID uuid.UUID) *auth.SessionUser {
 	return &auth.SessionUser{
 		ID:             uuid.New(),
 		Email:          "test@example.com",
@@ -22,8 +22,8 @@ func TestUser(orgID uuid.UUID) *auth.SessionUser {
 	}
 }
 
-// TestUserNoOrg creates a SessionUser with no organization selected.
-func TestUserNoOrg() *auth.SessionUser {
+// testUserNoOrg creates a SessionUser with no organization selected.
+func testUserNoOrg() *auth.SessionUser {
 	return &auth.SessionUser{
 		ID:    uuid.New(),
 		Email: "test@example.com",

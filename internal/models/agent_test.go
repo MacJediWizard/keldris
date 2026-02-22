@@ -184,53 +184,6 @@ func TestAgent_NetworkMounts(t *testing.T) {
 	})
 }
 
-func TestAgent_GetMountByPath(t *testing.T) {
-	agent := NewAgent(uuid.New(), "test-host", "hash123")
-	mounts := []NetworkMount{
-		{Path: "/mnt/share1", Type: MountTypeNFS, Status: MountStatusConnected},
-		{Path: "/mnt/share2", Type: MountTypeSMB, Status: MountStatusDisconnected},
-	}
-	data, _ := json.Marshal(mounts)
-	agent.SetNetworkMounts(data)
-
-	t.Run("found", func(t *testing.T) {
-		mount := agent.GetMountByPath("/mnt/share1")
-		if mount == nil {
-			t.Fatal("expected mount to be found")
-		}
-		if mount.Type != MountTypeNFS {
-			t.Errorf("expected Type %s, got %s", MountTypeNFS, mount.Type)
-		}
-	})
-
-	t.Run("not found", func(t *testing.T) {
-		if mount := agent.GetMountByPath("/nonexistent"); mount != nil {
-			t.Error("expected nil for nonexistent path")
-		}
-	})
-}
-
-func TestAgent_GetConnectedMounts(t *testing.T) {
-	agent := NewAgent(uuid.New(), "test-host", "hash123")
-	mounts := []NetworkMount{
-		{Path: "/mnt/a", Status: MountStatusConnected},
-		{Path: "/mnt/b", Status: MountStatusDisconnected},
-		{Path: "/mnt/c", Status: MountStatusConnected},
-		{Path: "/mnt/d", Status: MountStatusStale},
-	}
-	data, _ := json.Marshal(mounts)
-	agent.SetNetworkMounts(data)
-
-	connected := agent.GetConnectedMounts()
-	if len(connected) != 2 {
-		t.Errorf("expected 2 connected mounts, got %d", len(connected))
-	}
-	for _, m := range connected {
-		if m.Status != MountStatusConnected {
-			t.Errorf("expected connected status, got %s", m.Status)
-		}
-	}
-}
 
 func TestAgent_HealthMetrics(t *testing.T) {
 	agent := NewAgent(uuid.New(), "test-host", "hash123")

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { LicenseTier } from '../../lib/types';
 
 interface UpgradePromptProps {
@@ -24,12 +25,12 @@ export function UpgradePrompt({
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-			<div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+			<div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-dark-card dark:border dark:border-dark-border">
 				<div className="mb-4 flex items-center gap-3">
-					<div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+					<div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
 						<svg
 							aria-hidden="true"
-							className="h-5 w-5 text-amber-600"
+							className="h-5 w-5 text-amber-600 dark:text-amber-400"
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
@@ -42,17 +43,17 @@ export function UpgradePrompt({
 							/>
 						</svg>
 					</div>
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
 						Upgrade Required
 					</h3>
 				</div>
 
-				<p className="mb-2 text-sm text-gray-600">
-					The <span className="font-medium text-gray-900">{feature}</span>{' '}
+				<p className="mb-2 text-sm text-gray-600 dark:text-gray-400">
+					The <span className="font-medium text-gray-900 dark:text-gray-100">{feature}</span>{' '}
 					feature is not available on your current{' '}
 					<span className="font-medium capitalize">{currentTier}</span> plan.
 				</p>
-				<p className="mb-6 text-sm text-gray-500">
+				<p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
 					Upgrade your license to unlock this feature and more.
 				</p>
 
@@ -60,16 +61,17 @@ export function UpgradePrompt({
 					<button
 						type="button"
 						onClick={onClose}
-						className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+						className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
 					>
 						Close
 					</button>
-					<a
-						href="/license"
+					<Link
+						to="/license"
+						onClick={onClose}
 						className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
 					>
-						View License
-					</a>
+						Upgrade License
+					</Link>
 				</div>
 			</div>
 		</div>

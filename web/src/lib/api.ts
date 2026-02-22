@@ -11,7 +11,6 @@ import type {
 	AgentWithGroups,
 	AgentsResponse,
 	AgentsWithGroupsResponse,
-	AirGapLicenseInfo,
 	AirGapStatus,
 	Alert,
 	AlertCountResponse,
@@ -99,6 +98,9 @@ import type {
 	LicenseInfo,
 	ActivateLicenseResponse,
 	PricingPlan,
+	StartTrialRequest,
+	StartTrialResponse,
+	TrialCheckResponse,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
 	MembersResponse,
@@ -1751,13 +1753,6 @@ export const dockerBackupApi = {
 export const airGapApi = {
 	getStatus: async (): Promise<AirGapStatus> =>
 		fetchApi<AirGapStatus>('/system/airgap'),
-
-	uploadLicense: async (licenseData: ArrayBuffer): Promise<AirGapLicenseInfo> =>
-		fetchApi<AirGapLicenseInfo>('/system/license', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/octet-stream' },
-			body: licenseData,
-		}),
 };
 
 export const licenseApi = {
@@ -1773,6 +1768,13 @@ export const licenseApi = {
 		}),
 	getPlans: async (): Promise<PricingPlan[]> =>
 		fetchApi<PricingPlan[]>('/system/license/plans'),
+	startTrial: async (data: StartTrialRequest): Promise<StartTrialResponse> =>
+		fetchApi<StartTrialResponse>('/system/license/trial/start', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+	checkTrial: async (email: string): Promise<TrialCheckResponse> =>
+		fetchApi<TrialCheckResponse>(`/system/license/trial/check?email=${encodeURIComponent(email)}`),
 };
 
 export const versionApi = {

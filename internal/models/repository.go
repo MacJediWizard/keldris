@@ -61,12 +61,3 @@ func ValidRepositoryTypes() []RepositoryType {
 	}
 }
 
-// IsValidType checks if the repository type is valid.
-func (r *Repository) IsValidType() bool {
-	for _, t := range ValidRepositoryTypes() {
-		if r.Type == t {
-			return true
-		}
-	}
-	return false
-}

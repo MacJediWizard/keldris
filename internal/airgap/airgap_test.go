@@ -49,16 +49,3 @@ func TestDisabledFeatures(t *testing.T) {
 	assert.True(t, names["telemetry"])
 }
 
-func TestIsFeatureDisabled(t *testing.T) {
-	// Not in air-gap mode
-	os.Unsetenv("AIR_GAP_MODE")
-	assert.False(t, IsFeatureDisabled("auto_update"))
-
-	// In air-gap mode
-	os.Setenv("AIR_GAP_MODE", "true")
-	defer os.Unsetenv("AIR_GAP_MODE")
-
-	assert.True(t, IsFeatureDisabled("auto_update"))
-	assert.True(t, IsFeatureDisabled("external_webhooks"))
-	assert.False(t, IsFeatureDisabled("nonexistent_feature"))
-}

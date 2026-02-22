@@ -101,7 +101,7 @@ func setupAgentGroupsTestRouter(store AgentGroupStore, user *auth.SessionUser) *
 
 func TestAgentGroupsList(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 
 	t.Run("success", func(t *testing.T) {
 		g1 := models.NewAgentGroup(orgID, "Production", "Prod servers", "#FF0000")
@@ -124,7 +124,7 @@ func TestAgentGroupsList(t *testing.T) {
 
 	t.Run("no org", func(t *testing.T) {
 		store := &mockAgentGroupStore{}
-		r := setupAgentGroupsTestRouter(store, TestUserNoOrg())
+		r := setupAgentGroupsTestRouter(store, testUserNoOrg())
 		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/agent-groups"))
 		if resp.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d", resp.Code)
@@ -152,7 +152,7 @@ func TestAgentGroupsList(t *testing.T) {
 
 func TestAgentGroupsGet(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	group := models.NewAgentGroup(orgID, "Dev", "", "")
 
 	t.Run("success", func(t *testing.T) {
@@ -195,7 +195,7 @@ func TestAgentGroupsGet(t *testing.T) {
 
 func TestAgentGroupsCreate(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 
 	t.Run("success", func(t *testing.T) {
 		store := &mockAgentGroupStore{}
@@ -217,7 +217,7 @@ func TestAgentGroupsCreate(t *testing.T) {
 
 	t.Run("no org", func(t *testing.T) {
 		store := &mockAgentGroupStore{}
-		r := setupAgentGroupsTestRouter(store, TestUserNoOrg())
+		r := setupAgentGroupsTestRouter(store, testUserNoOrg())
 		resp := DoRequest(r, JSONRequest("POST", "/api/v1/agent-groups", `{"name":"Test"}`))
 		if resp.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d", resp.Code)
@@ -236,7 +236,7 @@ func TestAgentGroupsCreate(t *testing.T) {
 
 func TestAgentGroupsUpdate(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	group := models.NewAgentGroup(orgID, "Dev", "", "")
 
 	t.Run("success", func(t *testing.T) {
@@ -282,7 +282,7 @@ func TestAgentGroupsUpdate(t *testing.T) {
 
 func TestAgentGroupsDelete(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	group := models.NewAgentGroup(orgID, "Dev", "", "")
 
 	t.Run("success", func(t *testing.T) {
@@ -318,7 +318,7 @@ func TestAgentGroupsDelete(t *testing.T) {
 
 func TestAgentGroupsListMembers(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	group := models.NewAgentGroup(orgID, "Dev", "", "")
 
 	t.Run("success", func(t *testing.T) {
@@ -358,7 +358,7 @@ func TestAgentGroupsListMembers(t *testing.T) {
 
 func TestAgentGroupsAddAgent(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	group := models.NewAgentGroup(orgID, "Dev", "", "")
 	agent := &models.Agent{ID: uuid.New(), OrgID: orgID, Hostname: "host1"}
 
@@ -428,7 +428,7 @@ func TestAgentGroupsAddAgent(t *testing.T) {
 
 func TestAgentGroupsRemoveAgent(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	group := models.NewAgentGroup(orgID, "Dev", "", "")
 
 	t.Run("success", func(t *testing.T) {
@@ -474,7 +474,7 @@ func TestAgentGroupsRemoveAgent(t *testing.T) {
 
 func TestAgentGroupsListAgentsWithGroups(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 
 	t.Run("success", func(t *testing.T) {
 		store := &mockAgentGroupStore{
@@ -489,7 +489,7 @@ func TestAgentGroupsListAgentsWithGroups(t *testing.T) {
 
 	t.Run("no org", func(t *testing.T) {
 		store := &mockAgentGroupStore{}
-		r := setupAgentGroupsTestRouter(store, TestUserNoOrg())
+		r := setupAgentGroupsTestRouter(store, testUserNoOrg())
 		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/agents/with-groups"))
 		if resp.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d", resp.Code)

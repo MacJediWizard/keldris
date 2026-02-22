@@ -146,26 +146,6 @@ func (a *Agent) NetworkMountsJSON() ([]byte, error) {
 	return json.Marshal(a.NetworkMounts)
 }
 
-// GetMountByPath returns a mount by its path, or nil if not found.
-func (a *Agent) GetMountByPath(path string) *NetworkMount {
-	for i := range a.NetworkMounts {
-		if a.NetworkMounts[i].Path == path {
-			return &a.NetworkMounts[i]
-		}
-	}
-	return nil
-}
-
-// GetConnectedMounts returns only connected mounts.
-func (a *Agent) GetConnectedMounts() []NetworkMount {
-	var connected []NetworkMount
-	for _, m := range a.NetworkMounts {
-		if m.Status == MountStatusConnected {
-			connected = append(connected, m)
-		}
-	}
-	return connected
-}
 
 // AgentStats contains aggregated statistics for an agent.
 type AgentStats struct {

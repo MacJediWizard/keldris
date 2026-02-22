@@ -347,8 +347,8 @@ func parseSemver(version string) [3]int {
 	return parts
 }
 
-// ComputeSHA256 computes the SHA256 hash of a file.
-func ComputeSHA256(path string) (string, error) {
+// computeSHA256 computes the SHA256 hash of a file.
+func computeSHA256(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err

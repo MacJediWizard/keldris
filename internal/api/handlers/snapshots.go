@@ -923,7 +923,7 @@ func (h *SnapshotsHandler) DeleteSnapshotComment(c *gin.Context) {
 }
 
 // CompareSnapshots compares two snapshots and returns their differences.
-// GET /api/v1/snapshots/:id1/compare/:id2
+// GET /api/v1/snapshots/compare?id1=xxx&id2=xxx
 func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {

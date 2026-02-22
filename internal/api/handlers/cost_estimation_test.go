@@ -186,7 +186,7 @@ func setupCostEstimationTestRouter(store CostEstimationStore, user *auth.Session
 
 func TestCostEstimationGetCostSummary(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	repoID := uuid.New()
 
@@ -298,7 +298,7 @@ func TestCostEstimationGetCostSummary(t *testing.T) {
 
 func TestCostEstimationListRepositoryCosts(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	repoID := uuid.New()
 
@@ -405,7 +405,7 @@ func TestCostEstimationListRepositoryCosts(t *testing.T) {
 
 func TestCostEstimationGetRepositoryCost(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	repoID := uuid.New()
 	repo := &models.Repository{ID: repoID, OrgID: orgID, Name: "repo1", Type: models.RepositoryTypeS3}
@@ -534,7 +534,7 @@ func TestCostEstimationGetRepositoryCost(t *testing.T) {
 
 func TestCostEstimationGetCostForecast(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	repoID := uuid.New()
 
@@ -690,7 +690,7 @@ func TestCostEstimationGetCostForecast(t *testing.T) {
 
 func TestCostEstimationGetCostHistory(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -775,7 +775,7 @@ func TestCostEstimationGetCostHistory(t *testing.T) {
 
 func TestCostEstimationListPricing(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -842,7 +842,7 @@ func TestCostEstimationListPricing(t *testing.T) {
 
 func TestCostEstimationGetDefaultPricing(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 
 	t.Run("success", func(t *testing.T) {
 		store := &mockCostEstimationStore{}
@@ -883,7 +883,7 @@ func TestCostEstimationGetDefaultPricing(t *testing.T) {
 
 func TestCostEstimationCreatePricing(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -967,7 +967,7 @@ func TestCostEstimationCreatePricing(t *testing.T) {
 
 func TestCostEstimationUpdatePricing(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	pricingID := uuid.New()
 
@@ -1116,7 +1116,7 @@ func TestCostEstimationUpdatePricing(t *testing.T) {
 
 func TestCostEstimationDeletePricing(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	pricingID := uuid.New()
 
@@ -1201,7 +1201,7 @@ func TestCostEstimationDeletePricing(t *testing.T) {
 
 func TestCostEstimationListCostAlerts(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -1268,7 +1268,7 @@ func TestCostEstimationListCostAlerts(t *testing.T) {
 
 func TestCostEstimationGetCostAlert(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	alertID := uuid.New()
 
@@ -1356,7 +1356,7 @@ func TestCostEstimationGetCostAlert(t *testing.T) {
 
 func TestCostEstimationCreateCostAlert(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -1476,7 +1476,7 @@ func TestCostEstimationCreateCostAlert(t *testing.T) {
 
 func TestCostEstimationUpdateCostAlert(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	alertID := uuid.New()
 
@@ -1630,7 +1630,7 @@ func TestCostEstimationUpdateCostAlert(t *testing.T) {
 
 func TestCostEstimationDeleteCostAlert(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	alertID := uuid.New()
 

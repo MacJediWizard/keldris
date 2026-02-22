@@ -12,7 +12,7 @@ import (
 
 func TestDefaultSessionConfig(t *testing.T) {
 	secret := []byte("test-secret-that-is-at-least-32-bytes-long")
-	cfg := DefaultSessionConfig(secret, true)
+	cfg := DefaultSessionConfig(secret, true, 0, -1)
 
 	if cfg.MaxAge != 86400 {
 		t.Errorf("expected MaxAge 86400, got %d", cfg.MaxAge)
@@ -34,9 +34,21 @@ func TestDefaultSessionConfig(t *testing.T) {
 	}
 }
 
+func TestDefaultSessionConfig_CustomValues(t *testing.T) {
+	secret := []byte("test-secret-that-is-at-least-32-bytes-long")
+	cfg := DefaultSessionConfig(secret, true, 3600, 900)
+
+	if cfg.MaxAge != 3600 {
+		t.Errorf("expected MaxAge 3600, got %d", cfg.MaxAge)
+	}
+	if cfg.IdleTimeout != 900 {
+		t.Errorf("expected IdleTimeout 900, got %d", cfg.IdleTimeout)
+	}
+}
+
 func TestDefaultSessionConfig_Insecure(t *testing.T) {
 	secret := []byte("test-secret-that-is-at-least-32-bytes-long")
-	cfg := DefaultSessionConfig(secret, false)
+	cfg := DefaultSessionConfig(secret, false, 0, 0)
 
 	if cfg.Secure {
 		t.Error("expected Secure to be false for insecure config")
@@ -50,7 +62,7 @@ func newTestSessionStore(t *testing.T) *SessionStore {
 	t.Helper()
 	logger := zerolog.Nop()
 	secret := []byte("test-secret-that-is-at-least-32-bytes-long")
-	cfg := DefaultSessionConfig(secret, false)
+	cfg := DefaultSessionConfig(secret, false, 0, 0)
 	store, err := NewSessionStore(cfg, logger)
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)

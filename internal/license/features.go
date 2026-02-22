@@ -34,8 +34,6 @@ const (
 	FeatureSLATracking Feature = "sla_tracking"
 	// FeatureWhiteLabel enables white-label branding (Enterprise).
 	FeatureWhiteLabel Feature = "white_label"
-	// FeatureAirGap enables air-gapped deployment (Enterprise).
-	FeatureAirGap Feature = "air_gap"
 	// FeatureDRRunbooks enables disaster recovery runbooks (Enterprise).
 	FeatureDRRunbooks Feature = "dr_runbooks"
 	// FeatureDRTests enables disaster recovery testing (Enterprise).
@@ -75,7 +73,6 @@ var featureAccess = map[LicenseTier][]Feature{
 		FeatureMultiOrg,
 		FeatureSLATracking,
 		FeatureWhiteLabel,
-		FeatureAirGap,
 		FeatureDRRunbooks,
 		FeatureDRTests,
 	},

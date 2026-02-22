@@ -91,7 +91,7 @@ func setupDashboardMetricsTestRouter(store DashboardMetricsStore, user *auth.Ses
 
 func TestDashboardGetStats(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestDashboardGetStats(t *testing.T) {
 
 func TestDashboardGetSuccessRates(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -179,7 +179,7 @@ func TestDashboardGetSuccessRates(t *testing.T) {
 
 func TestDashboardGetStorageGrowthTrend(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -218,7 +218,7 @@ func TestDashboardGetStorageGrowthTrend(t *testing.T) {
 
 func TestDashboardGetBackupDurationTrend(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -245,7 +245,7 @@ func TestDashboardGetBackupDurationTrend(t *testing.T) {
 
 func TestDashboardGetDailyBackupStats(t *testing.T) {
 	orgID := uuid.New()
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {

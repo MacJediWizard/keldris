@@ -640,11 +640,11 @@ func TestRenderText(t *testing.T) {
 	})
 }
 
-// --- DefaultRestoreSteps ---
+// --- defaultRestoreSteps ---
 
 func TestDefaultRestoreSteps(t *testing.T) {
 	t.Run("generic local type", func(t *testing.T) {
-		steps := DefaultRestoreSteps(models.RepositoryTypeLocal)
+		steps := defaultRestoreSteps(models.RepositoryTypeLocal)
 
 		if len(steps) != 5 {
 			t.Fatalf("expected 5 steps for local type, got %d", len(steps))
@@ -684,7 +684,7 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("S3 type", func(t *testing.T) {
-		steps := DefaultRestoreSteps(models.RepositoryTypeS3)
+		steps := defaultRestoreSteps(models.RepositoryTypeS3)
 
 		if len(steps) != 6 {
 			t.Fatalf("expected 6 steps for S3 type, got %d", len(steps))
@@ -713,7 +713,7 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("B2 type", func(t *testing.T) {
-		steps := DefaultRestoreSteps(models.RepositoryTypeB2)
+		steps := defaultRestoreSteps(models.RepositoryTypeB2)
 
 		if len(steps) != 6 {
 			t.Fatalf("expected 6 steps for B2 type, got %d", len(steps))
@@ -738,7 +738,7 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("SFTP type", func(t *testing.T) {
-		steps := DefaultRestoreSteps(models.RepositoryTypeSFTP)
+		steps := defaultRestoreSteps(models.RepositoryTypeSFTP)
 
 		if len(steps) != 6 {
 			t.Fatalf("expected 6 steps for SFTP type, got %d", len(steps))
@@ -760,7 +760,7 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("rest type (no special steps)", func(t *testing.T) {
-		steps := DefaultRestoreSteps(models.RepositoryTypeRest)
+		steps := defaultRestoreSteps(models.RepositoryTypeRest)
 
 		if len(steps) != 5 {
 			t.Fatalf("expected 5 steps for rest type, got %d", len(steps))
@@ -773,7 +773,7 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("dropbox type (no special steps)", func(t *testing.T) {
-		steps := DefaultRestoreSteps(models.RepositoryTypeDropbox)
+		steps := defaultRestoreSteps(models.RepositoryTypeDropbox)
 
 		if len(steps) != 5 {
 			t.Fatalf("expected 5 steps for dropbox type, got %d", len(steps))
@@ -781,7 +781,7 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("step types are correct", func(t *testing.T) {
-		steps := DefaultRestoreSteps(models.RepositoryTypeLocal)
+		steps := defaultRestoreSteps(models.RepositoryTypeLocal)
 
 		if steps[0].Type != models.DRRunbookStepTypeVerify {
 			t.Errorf("step 1: expected verify, got %s", steps[0].Type)

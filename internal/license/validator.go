@@ -324,7 +324,8 @@ func (v *Validator) activateLicense(ctx context.Context) {
 
 	resp, err := v.postJSONWithResponse(ctx, "/api/v1/licenses/activate", body)
 	if err != nil {
-		v.logger.Warn().Err(err).Msg("failed to activate license")
+		v.logger.Warn().Err(err).Msg("license server unreachable, verifying key locally")
+		v.verifyKeyLocally()
 		return
 	}
 
@@ -497,24 +498,8 @@ func (v *Validator) validateLicense(ctx context.Context) {
 
 	resp, err := v.postJSONWithResponse(ctx, "/api/v1/licenses/validate", body)
 	if err != nil {
-		// License server unreachable - enter grace period
-		v.mu.Lock()
-		if v.graceStartedAt == nil {
-			now := time.Now()
-			v.graceStartedAt = &now
-			v.logger.Warn().Msg("license server unreachable - starting grace period")
-		}
-
-		graceRemaining := GracePeriod - time.Since(*v.graceStartedAt)
-		if graceRemaining <= 0 {
-			v.logger.Error().Msg("grace period expired - downgrading to Free")
-			v.license = FreeLicense()
-			v.entitlement = nil
-			v.entitlementToken = ""
-		} else {
-			v.logger.Warn().Dur("remaining", graceRemaining).Msg("in grace period")
-		}
-		v.mu.Unlock()
+		v.logger.Warn().Err(err).Msg("license server unreachable, verifying key locally")
+		v.verifyKeyLocally()
 		return
 	}
 
@@ -588,13 +573,32 @@ func (v *Validator) updateLicenseFromResponse(resp map[string]interface{}) {
 		limits = GetLimits(tier)
 	}
 
+	// Parse trial fields
+	isTrial := currentLic.IsTrial
+	if v, ok := resp["is_trial"].(bool); ok {
+		isTrial = v
+	}
+	trialDurationDays := currentLic.TrialDurationDays
+	if v, ok := resp["trial_duration_days"].(float64); ok {
+		trialDurationDays = int(v)
+	}
+	trialStartedAt := currentLic.TrialStartedAt
+	if v, ok := resp["trial_started_at"].(string); ok && v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			trialStartedAt = t
+		}
+	}
+
 	newLic := &License{
-		Tier:         tier,
-		CustomerID:   customerID,
-		CustomerName: customerName,
-		ExpiresAt:    expiresAt,
-		IssuedAt:     issuedAt,
-		Limits:       limits,
+		Tier:              tier,
+		CustomerID:        customerID,
+		CustomerName:      customerName,
+		ExpiresAt:         expiresAt,
+		IssuedAt:          issuedAt,
+		Limits:            limits,
+		IsTrial:           isTrial,
+		TrialDurationDays: trialDurationDays,
+		TrialStartedAt:    trialStartedAt,
 	}
 
 	if tier != currentLic.Tier || limits != currentLic.Limits ||
@@ -661,6 +665,63 @@ func (v *Validator) storeEntitlementFromResponse(resp map[string]interface{}) {
 	}
 }
 
+// verifyKeyLocally validates the license key using the hardcoded Ed25519 public key
+// when the license server is unreachable. If the key is valid but expired, a 30-day
+// grace period allows continued operation.
+func (v *Validator) verifyKeyLocally() {
+	v.mu.RLock()
+	key := v.licenseKey
+	v.mu.RUnlock()
+
+	if key == "" || len(v.publicKey) != ed25519.PublicKeySize {
+		return
+	}
+
+	lic, err := ParseLicenseKeyEd25519(key, v.publicKey)
+	if err != nil {
+		v.logger.Error().Err(err).Msg("local license key verification failed")
+		v.SetLicense(FreeLicense())
+		v.clearEntitlement()
+		return
+	}
+
+	if time.Now().Before(lic.ExpiresAt) {
+		// Key is valid and not expired — keep running on this tier
+		v.mu.Lock()
+		v.graceStartedAt = nil
+		v.mu.Unlock()
+
+		// Preserve server-provided limits if we have them, otherwise use tier defaults
+		currentLic := v.GetLicense()
+		if currentLic.Tier == lic.Tier && currentLic.Limits != (TierLimits{}) {
+			lic.Limits = currentLic.Limits
+			lic.CustomerName = currentLic.CustomerName
+		}
+		v.SetLicense(lic)
+		v.logger.Info().Str("tier", string(lic.Tier)).Msg("license verified locally")
+		return
+	}
+
+	// Key has expired — start or continue grace period
+	v.mu.Lock()
+	if v.graceStartedAt == nil {
+		now := time.Now()
+		v.graceStartedAt = &now
+		v.logger.Warn().Msg("license expired - starting 30-day grace period")
+	}
+
+	graceRemaining := GracePeriod - time.Since(*v.graceStartedAt)
+	if graceRemaining <= 0 {
+		v.logger.Error().Msg("grace period expired - downgrading to Free")
+		v.license = FreeLicense()
+		v.entitlement = nil
+		v.entitlementToken = ""
+	} else {
+		v.logger.Warn().Dur("remaining", graceRemaining).Msg("in grace period (license expired)")
+	}
+	v.mu.Unlock()
+}
+
 func (v *Validator) clearEntitlement() {
 	v.mu.Lock()
 	v.entitlement = nil
@@ -695,7 +756,11 @@ func (v *Validator) postJSONWithResponse(ctx context.Context, path string, body 
 
 	var result map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("decode response: %w", err)
+		return nil, fmt.Errorf("decode response from %s (status %d): %w", path, resp.StatusCode, err)
+	}
+
+	if resp.StatusCode >= 500 {
+		return result, fmt.Errorf("server error from %s: %d", path, resp.StatusCode)
 	}
 
 	return result, nil

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import { VerticalStepper } from '../components/ui/Stepper';
 import { useAgents } from '../hooks/useAgents';
-import { useActivateLicense, useLicense } from '../hooks/useLicense';
+import { useActivateLicense, useLicense, useStartTrial } from '../hooks/useLicense';
 import {
 	useCompleteOnboardingStep,
 	useOnboardingStatus,
@@ -195,10 +195,23 @@ function WelcomeStep({ onComplete, onSkip, isLoading }: StepProps) {
 function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 	const { data: license } = useLicense();
 	const activateMutation = useActivateLicense();
+	const startTrialMutation = useStartTrial();
 	const [licenseKey, setLicenseKey] = useState('');
 	const [activateError, setActivateError] = useState('');
+	const [trialEmail, setTrialEmail] = useState('');
+	const [trialError, setTrialError] = useState('');
 
 	const isActivated = license && license.tier !== 'free';
+
+	const handleStartTrial = async () => {
+		setTrialError('');
+		try {
+			await startTrialMutation.mutateAsync({ email: trialEmail, tier: 'pro' });
+			setTrialEmail('');
+		} catch (err) {
+			setTrialError(err instanceof Error ? err.message : 'Failed to start trial');
+		}
+	};
 
 	const handleActivate = async () => {
 		setActivateError('');
@@ -262,6 +275,33 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 						</div>
 						{activateError && (
 							<p className="mt-2 text-sm text-red-600 dark:text-red-400">{activateError}</p>
+						)}
+					</div>
+
+					{/* Trial option */}
+					<div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-900/20">
+						<p className="font-medium text-emerald-800 dark:text-emerald-300 mb-2">
+							Or start a free 14-day trial
+						</p>
+						<div className="flex gap-3">
+							<input
+								type="email"
+								value={trialEmail}
+								onChange={(e) => setTrialEmail(e.target.value)}
+								placeholder="Enter your email..."
+								className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+							/>
+							<button
+								type="button"
+								onClick={handleStartTrial}
+								disabled={!trialEmail.trim() || startTrialMutation.isPending}
+								className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{startTrialMutation.isPending ? 'Starting...' : 'Start Trial'}
+							</button>
+						</div>
+						{trialError && (
+							<p className="mt-2 text-sm text-red-600 dark:text-red-400">{trialError}</p>
 						)}
 					</div>
 

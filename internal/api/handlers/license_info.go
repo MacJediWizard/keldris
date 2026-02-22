@@ -11,14 +11,16 @@ import (
 
 // LicenseInfoResponse is the JSON response for the license info endpoint.
 type LicenseInfoResponse struct {
-	Tier              string             `json:"tier"`
-	CustomerID        string             `json:"customer_id"`
-	CustomerName      string             `json:"customer_name,omitempty"`
-	ExpiresAt         string             `json:"expires_at"`
-	IssuedAt          string             `json:"issued_at"`
-	Features          []string           `json:"features"`
-	Limits            license.TierLimits `json:"limits"`
-	LicenseKeySource  string             `json:"license_key_source"`
+	Tier             string             `json:"tier"`
+	CustomerID       string             `json:"customer_id"`
+	CustomerName     string             `json:"customer_name,omitempty"`
+	ExpiresAt        string             `json:"expires_at"`
+	IssuedAt         string             `json:"issued_at"`
+	Features         []string           `json:"features"`
+	Limits           license.TierLimits `json:"limits"`
+	LicenseKeySource string             `json:"license_key_source"`
+	IsTrial          bool               `json:"is_trial"`
+	TrialDaysLeft    int                `json:"trial_days_left,omitempty"`
 }
 
 // LicenseInfoHandler handles license information endpoints.
@@ -76,5 +78,7 @@ func (h *LicenseInfoHandler) Get(c *gin.Context) {
 		Features:         featureStrings,
 		Limits:           lic.Limits,
 		LicenseKeySource: keySource,
+		IsTrial:          lic.IsTrial,
+		TrialDaysLeft:    lic.TrialDaysLeft(),
 	})
 }

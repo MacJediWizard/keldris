@@ -310,8 +310,8 @@ func (g *RunbookGenerator) RenderText(ctx context.Context, runbook *models.DRRun
 	return buf.String(), nil
 }
 
-// DefaultRestoreSteps returns default restore steps for a given repository type.
-func DefaultRestoreSteps(repoType models.RepositoryType) []models.DRRunbookStep {
+// defaultRestoreSteps returns default restore steps for a given repository type.
+func defaultRestoreSteps(repoType models.RepositoryType) []models.DRRunbookStep {
 	steps := []models.DRRunbookStep{
 		{
 			Order:       1,

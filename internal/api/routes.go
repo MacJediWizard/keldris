@@ -49,24 +49,12 @@ type Config struct {
 	License *license.License
 	// Validator is the license validator for dynamic license checks (optional).
 	Validator *license.Validator
-	// AirGapPublicKey is the Ed25519 public key for validating offline licenses (optional).
-	AirGapPublicKey []byte
+	// LicensePublicKey is the Ed25519 public key for validating license keys (optional).
+	LicensePublicKey []byte
 	// WebDir is the path to the built frontend files (e.g. "web/dist").
 	WebDir string
 }
 
-// DefaultConfig returns a Config with sensible defaults for development.
-func DefaultConfig() Config {
-	return Config{
-		Environment:       config.EnvDevelopment,
-		AllowedOrigins:    []string{},
-		RateLimitRequests: 100,
-		RateLimitPeriod:   "1m",
-		Version:           "dev",
-		Commit:            "unknown",
-		BuildDate:         "unknown",
-	}
-}
 
 // Router wraps a Gin engine with configured middleware and routes.
 type Router struct {
@@ -166,7 +154,7 @@ func NewRouter(
 
 	// License management endpoints (activate/deactivate from GUI)
 	if cfg.Validator != nil {
-		licenseManageHandler := handlers.NewLicenseManageHandler(cfg.Validator, cfg.AirGapPublicKey, logger)
+		licenseManageHandler := handlers.NewLicenseManageHandler(cfg.Validator, cfg.LicensePublicKey, logger)
 		licenseManageHandler.RegisterRoutes(apiV1)
 	}
 
@@ -279,10 +267,9 @@ func NewRouter(
 	slaHandler := handlers.NewSLAHandler(database, logger)
 	slaHandler.RegisterRoutes(slaGroup)
 
-	// Air-gap routes (Enterprise)
-	airGapGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureAirGap, logger))
-	airGapHandler := handlers.NewAirGapHandler(database, cfg.AirGapPublicKey, logger)
-	airGapHandler.RegisterRoutes(airGapGroup)
+	// Air-gap routes (available to all tiers — air-gap is a deployment mode, not a premium feature)
+	airGapHandler := handlers.NewAirGapHandler(logger)
+	airGapHandler.RegisterRoutes(apiV1)
 
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server

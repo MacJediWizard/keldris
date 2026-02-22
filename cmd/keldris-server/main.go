@@ -176,7 +176,7 @@ func run() int {
 	}
 
 	isSecure := cfg.Environment == config.EnvProduction
-	sessionCfg := auth.DefaultSessionConfig([]byte(sessionSecret), isSecure)
+	sessionCfg := auth.DefaultSessionConfig([]byte(sessionSecret), isSecure, cfg.SessionMaxAge, cfg.SessionIdleTimeout)
 	sessions, err := auth.NewSessionStore(sessionCfg, logger)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to initialize session store")
@@ -185,13 +185,10 @@ func run() int {
 
 	// Parse license key
 	var lic *license.License
-	if cfg.LicenseSigningKey != "" {
-		license.SetSigningKey([]byte(cfg.LicenseSigningKey))
-	}
 
-	var airGapPubKey []byte
-	if cfg.AirGapPublicKey != "" {
-		decoded, err := hex.DecodeString(cfg.AirGapPublicKey)
+	var licPubKey []byte
+	if cfg.LicensePublicKey != "" {
+		decoded, err := hex.DecodeString(cfg.LicensePublicKey)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to decode AIRGAP_PUBLIC_KEY (expected hex-encoded Ed25519 public key)")
 			return 1
@@ -200,37 +197,21 @@ func run() int {
 			logger.Fatal().Int("got", len(decoded)).Int("expected", ed25519.PublicKeySize).Msg("Invalid AIRGAP_PUBLIC_KEY size")
 			return 1
 		}
-		airGapPubKey = decoded
+		licPubKey = decoded
 	}
 
 	if cfg.LicenseKey != "" {
-		// Try Ed25519 validation first (if public key is available)
-		if airGapPubKey != nil {
-			parsed, err := license.ParseLicenseKeyEd25519(cfg.LicenseKey, ed25519.PublicKey(airGapPubKey))
-			if err != nil {
-				logger.Fatal().Err(err).Msg("Invalid LICENSE_KEY (Ed25519 validation failed)")
-				return 1
-			}
-			if err := license.ValidateLicense(parsed); err != nil {
-				logger.Fatal().Err(err).Msg("LICENSE_KEY validation failed (expired or invalid)")
-				return 1
-			}
-			lic = parsed
-			logger.Info().Str("tier", string(lic.Tier)).Time("expires_at", lic.ExpiresAt).Msg("License loaded (Ed25519)")
-		} else {
-			// Fall back to HMAC validation
-			parsed, err := license.ParseLicense(cfg.LicenseKey)
-			if err != nil {
-				logger.Fatal().Err(err).Msg("Invalid LICENSE_KEY")
-				return 1
-			}
-			if err := license.ValidateLicense(parsed); err != nil {
-				logger.Fatal().Err(err).Msg("LICENSE_KEY validation failed (expired or invalid)")
-				return 1
-			}
-			lic = parsed
-			logger.Info().Str("tier", string(lic.Tier)).Time("expires_at", lic.ExpiresAt).Msg("License loaded (HMAC)")
+		parsed, err := license.ParseLicenseKeyEd25519(cfg.LicenseKey, ed25519.PublicKey(licPubKey))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Invalid LICENSE_KEY (Ed25519 validation failed)")
+			return 1
 		}
+		if err := license.ValidateLicense(parsed); err != nil {
+			logger.Fatal().Err(err).Msg("LICENSE_KEY validation failed (expired or invalid)")
+			return 1
+		}
+		lic = parsed
+		logger.Info().Str("tier", string(lic.Tier)).Time("expires_at", lic.ExpiresAt).Msg("License loaded")
 	} else {
 		logger.Info().Msg("No LICENSE_KEY set, running as Free tier")
 	}
@@ -276,6 +257,18 @@ func run() int {
 	}
 	verificationScheduler := backup.NewVerificationScheduler(database, resticBin, verificationConfig, logger)
 
+	// Initialize backup scheduler
+	backupSchedulerConfig := backup.DefaultSchedulerConfig()
+	backupSchedulerConfig.PasswordFunc = verificationConfig.PasswordFunc
+	backupSchedulerConfig.DecryptFunc = verificationConfig.DecryptFunc
+	backupScheduler := backup.NewScheduler(database, resticBin, backupSchedulerConfig, nil, logger)
+
+	// Initialize DR test scheduler
+	drTestConfig := backup.DefaultSchedulerConfig()
+	drTestConfig.PasswordFunc = verificationConfig.PasswordFunc
+	drTestConfig.DecryptFunc = verificationConfig.DecryptFunc
+	drTestScheduler := backup.NewDRTestScheduler(database, resticBin, drTestConfig, logger)
+
 	// Initialize license validator (phone-home for all tiers)
 	var validator *license.Validator
 	if !cfg.AirGapMode {
@@ -286,7 +279,7 @@ func run() int {
 			Store:         database,
 			Metrics:       database,
 			OrgCounter:    database,
-			PublicKey:      ed25519.PublicKey(airGapPubKey),
+			PublicKey:      ed25519.PublicKey(licPubKey),
 			Logger:        logger,
 		})
 		if lic != nil {
@@ -311,7 +304,7 @@ func run() int {
 		VerificationTrigger: verificationScheduler,
 		License:             lic,
 		Validator:           validator,
-		AirGapPublicKey:     airGapPubKey,
+		LicensePublicKey:    licPubKey,
 	}
 
 	router, err := api.NewRouter(routerCfg, database, oidcProvider, sessions, keyManager, logger)
@@ -358,6 +351,18 @@ func run() int {
 		logger.Error().Err(err).Msg("Failed to start verification scheduler")
 	}
 	defer verificationScheduler.Stop()
+
+	// Start backup scheduler
+	if err := backupScheduler.Start(ctx); err != nil {
+		logger.Error().Err(err).Msg("Failed to start backup scheduler")
+	}
+	defer backupScheduler.Stop()
+
+	// Start DR test scheduler
+	if err := drTestScheduler.Start(ctx); err != nil {
+		logger.Error().Err(err).Msg("Failed to start DR test scheduler")
+	}
+	defer drTestScheduler.Stop()
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)

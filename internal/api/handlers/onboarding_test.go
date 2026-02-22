@@ -43,7 +43,7 @@ func (m *mockOnboardingStore) SkipOnboarding(_ context.Context, _ uuid.UUID) err
 }
 
 func setupOnboardingTestRouter(store OnboardingStore, orgID uuid.UUID) *gin.Engine {
-	user := TestUser(orgID)
+	user := testUser(orgID)
 	r := SetupTestRouter(user)
 	handler := NewOnboardingHandler(store, zerolog.Nop())
 	api := r.Group("/api/v1")

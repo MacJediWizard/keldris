@@ -62,8 +62,8 @@ const queryClient = new QueryClient({
 function App() {
 	return (
 		<QueryClientProvider client={queryClient}>
-			<UpgradePromptProvider>
-				<BrowserRouter>
+			<BrowserRouter>
+				<UpgradePromptProvider>
 					<Suspense fallback={<LoadingSpinner />}>
 						<Routes>
 							<Route path="/" element={<Layout />}>
@@ -115,8 +115,8 @@ function App() {
 							</Route>
 						</Routes>
 					</Suspense>
-				</BrowserRouter>
-			</UpgradePromptProvider>
+				</UpgradePromptProvider>
+			</BrowserRouter>
 		</QueryClientProvider>
 	);
 }

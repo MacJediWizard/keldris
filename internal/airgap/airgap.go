@@ -1,11 +1,11 @@
-// Package airgap provides air-gapped deployment support for Keldris Enterprise.
+// Package airgap provides air-gapped deployment support for Keldris.
+// Air-gap mode disables features that require internet access (webhooks, updates, telemetry).
+// License verification in air-gap mode uses local Ed25519 key validation.
 package airgap
 
 import (
 	"os"
 	"strings"
-
-	"github.com/MacJediWizard/keldris/internal/license"
 )
 
 // DisabledFeature describes a feature that is disabled in air-gap mode.
@@ -30,21 +30,3 @@ func DisabledFeatures() []DisabledFeature {
 	}
 }
 
-// IsFeatureDisabled returns true if the given feature name is disabled in air-gap mode.
-func IsFeatureDisabled(feature string) bool {
-	if !IsAirGapMode() {
-		return false
-	}
-	for _, f := range DisabledFeatures() {
-		if f.Name == feature {
-			return true
-		}
-	}
-	return false
-}
-
-// ValidateAirGapLicense validates an offline license for air-gap deployments.
-// It delegates to the license package's offline validation using Ed25519.
-func ValidateAirGapLicense(licenseData []byte, publicKey []byte) (*license.License, error) {
-	return license.ValidateOfflineLicense(licenseData, publicKey)
-}
