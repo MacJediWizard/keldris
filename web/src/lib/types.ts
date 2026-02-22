@@ -410,6 +410,31 @@ export interface RunScheduleResponse {
 	message: string;
 }
 
+// Dry run types
+export interface DryRunFile {
+	path: string;
+	type: 'file' | 'dir';
+	size: number;
+	action: 'new' | 'changed' | 'unchanged';
+}
+
+export interface DryRunExcluded {
+	path: string;
+	reason: string;
+}
+
+export interface DryRunResponse {
+	schedule_id: string;
+	total_files: number;
+	total_size: number;
+	new_files: number;
+	changed_files: number;
+	unchanged_files: number;
+	files_to_backup: DryRunFile[];
+	excluded_files: DryRunExcluded[];
+	message: string;
+}
+
 export interface ReplicationStatusResponse {
 	replication_status: ReplicationStatus[];
 }
@@ -501,7 +526,58 @@ export interface Backup {
 	post_script_output?: string;
 	post_script_error?: string;
 	excluded_large_files?: ExcludedLargeFile[]; // Files excluded due to size limit
+	resumed: boolean;
+	checkpoint_id?: string;
+	original_backup_id?: string;
 	created_at: string;
+}
+
+// Backup Checkpoint types for resumable backups
+export type CheckpointStatus = 'active' | 'completed' | 'canceled' | 'expired';
+
+export interface BackupCheckpoint {
+	id: string;
+	schedule_id: string;
+	agent_id: string;
+	repository_id: string;
+	backup_id?: string;
+	status: CheckpointStatus;
+	files_processed: number;
+	bytes_processed: number;
+	total_files?: number;
+	total_bytes?: number;
+	last_processed_path?: string;
+	error_message?: string;
+	resume_count: number;
+	expires_at?: string;
+	started_at: string;
+	last_updated_at: string;
+	created_at: string;
+}
+
+export interface ResumeInfo {
+	checkpoint: BackupCheckpoint;
+	progress_percent?: number;
+	files_processed: number;
+	bytes_processed: number;
+	total_files?: number;
+	total_bytes?: number;
+	interrupted_at: string;
+	interrupted_error?: string;
+	resume_count: number;
+	can_resume: boolean;
+}
+
+export interface IncompleteBackupsResponse {
+	checkpoints: BackupCheckpoint[];
+}
+
+export interface ResumeBackupRequest {
+	checkpoint_id: string;
+}
+
+export interface CancelCheckpointRequest {
+	checkpoint_id: string;
 }
 
 // Backup Script types
@@ -787,6 +863,34 @@ export interface CreateRestoreRequest {
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+}
+
+export interface RestorePreviewRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	target_path: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+}
+
+export interface RestorePreviewFile {
+	path: string;
+	type: 'file' | 'dir';
+	size: number;
+	mod_time: string;
+	has_conflict: boolean;
+}
+
+export interface RestorePreview {
+	snapshot_id: string;
+	target_path: string;
+	total_files: number;
+	total_dirs: number;
+	total_size: number;
+	conflict_count: number;
+	files: RestorePreviewFile[];
+	disk_space_needed: number;
 }
 
 export interface RestoresResponse {

@@ -42,6 +42,9 @@ type ScheduleStore interface {
 
 	// GetEnabledBackupScriptsByScheduleID returns all enabled backup scripts for a schedule.
 	GetEnabledBackupScriptsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.BackupScript, error)
+
+	// Checkpoint methods for resumable backups
+	CheckpointStore
 }
 
 const (
@@ -76,31 +79,37 @@ func DefaultSchedulerConfig() SchedulerConfig {
 
 // Scheduler manages backup schedules using cron.
 type Scheduler struct {
-	store            ScheduleStore
-	restic           *Restic
-	config           SchedulerConfig
-	notifier         *notifications.Service
-	maintenance      *maintenance.Service
-	largeFileScanner *LargeFileScanner
-	cron             *cron.Cron
-	logger           zerolog.Logger
-	mu               sync.RWMutex
-	entries          map[uuid.UUID]cron.EntryID
-	running          bool
+	store             ScheduleStore
+	restic            *Restic
+	config            SchedulerConfig
+	notifier          *notifications.Service
+	maintenance       *maintenance.Service
+	checkpointManager *CheckpointManager
+	largeFileScanner  *LargeFileScanner
+	cron              *cron.Cron
+	logger            zerolog.Logger
+	mu                sync.RWMutex
+	entries           map[uuid.UUID]cron.EntryID
+	running           bool
 }
 
 // NewScheduler creates a new backup scheduler.
 // The notifier parameter is optional and can be nil if notifications are not needed.
 func NewScheduler(store ScheduleStore, restic *Restic, config SchedulerConfig, notifier *notifications.Service, logger zerolog.Logger) *Scheduler {
+	// Initialize checkpoint manager
+	checkpointConfig := DefaultCheckpointConfig()
+	checkpointManager := NewCheckpointManager(store, checkpointConfig, logger)
+
 	return &Scheduler{
-		store:            store,
-		restic:           restic,
-		config:           config,
-		notifier:         notifier,
-		largeFileScanner: NewLargeFileScanner(logger),
-		cron:             cron.New(cron.WithSeconds()),
-		logger:           logger.With().Str("component", "scheduler").Logger(),
-		entries:          make(map[uuid.UUID]cron.EntryID),
+		store:             store,
+		restic:            restic,
+		config:            config,
+		notifier:          notifier,
+		checkpointManager: checkpointManager,
+		largeFileScanner:  NewLargeFileScanner(logger),
+		cron:              cron.New(cron.WithSeconds()),
+		logger:            logger.With().Str("component", "scheduler").Logger(),
+		entries:           make(map[uuid.UUID]cron.EntryID),
 	}
 }
 
@@ -121,6 +130,11 @@ func (s *Scheduler) Start(ctx context.Context) error {
 	s.mu.Unlock()
 
 	s.logger.Info().Msg("starting backup scheduler")
+
+	// Start checkpoint manager
+	if err := s.checkpointManager.Start(ctx); err != nil {
+		s.logger.Error().Err(err).Msg("failed to start checkpoint manager")
+	}
 
 	// Load initial schedules
 	if err := s.Reload(ctx); err != nil {
@@ -150,6 +164,9 @@ func (s *Scheduler) Stop() context.Context {
 
 	s.running = false
 	s.logger.Info().Msg("stopping backup scheduler")
+
+	// Stop checkpoint manager
+	s.checkpointManager.Stop()
 
 	return s.cron.Stop()
 }
@@ -820,6 +837,236 @@ func (s *Scheduler) GetNextRun(scheduleID uuid.UUID) (time.Time, bool) {
 	}
 
 	return entry.Next, true
+}
+
+// GetIncompleteBackups returns all incomplete backups for an agent that can be resumed.
+func (s *Scheduler) GetIncompleteBackups(ctx context.Context, agentID uuid.UUID) ([]*models.BackupCheckpoint, error) {
+	return s.checkpointManager.GetIncompleteBackups(ctx, agentID)
+}
+
+// GetResumeInfo returns information about a resumable backup checkpoint.
+func (s *Scheduler) GetResumeInfo(ctx context.Context, checkpointID uuid.UUID) (*ResumeInfo, error) {
+	return s.checkpointManager.GetResumeInfo(ctx, checkpointID)
+}
+
+// CancelCheckpoint cancels a checkpoint, making it non-resumable.
+// The next backup for this schedule will start fresh.
+func (s *Scheduler) CancelCheckpoint(ctx context.Context, checkpointID uuid.UUID) error {
+	return s.checkpointManager.CancelCheckpoint(ctx, checkpointID)
+}
+
+// ResumeBackup resumes an interrupted backup from a checkpoint.
+func (s *Scheduler) ResumeBackup(ctx context.Context, checkpointID uuid.UUID) error {
+	// Get the checkpoint
+	checkpoint, err := s.store.GetCheckpointByID(ctx, checkpointID)
+	if err != nil {
+		return fmt.Errorf("get checkpoint: %w", err)
+	}
+
+	if !checkpoint.IsResumable() {
+		return errors.New("checkpoint is not resumable")
+	}
+
+	// Get the schedule
+	schedules, err := s.store.GetEnabledSchedules(ctx)
+	if err != nil {
+		return fmt.Errorf("get schedules: %w", err)
+	}
+
+	var schedule *models.Schedule
+	for i := range schedules {
+		if schedules[i].ID == checkpoint.ScheduleID {
+			schedule = &schedules[i]
+			break
+		}
+	}
+
+	if schedule == nil {
+		return fmt.Errorf("schedule not found: %s", checkpoint.ScheduleID)
+	}
+
+	// Prepare the checkpoint for resume
+	if err := s.checkpointManager.PrepareResume(ctx, checkpoint); err != nil {
+		return fmt.Errorf("prepare resume: %w", err)
+	}
+
+	// Execute the resumed backup in background
+	go s.executeResumedBackup(*schedule, checkpoint)
+
+	return nil
+}
+
+// executeResumedBackup runs a backup that is being resumed from a checkpoint.
+func (s *Scheduler) executeResumedBackup(schedule models.Schedule, checkpoint *models.BackupCheckpoint) {
+	ctx := context.Background()
+	logger := s.logger.With().
+		Str("schedule_id", schedule.ID.String()).
+		Str("schedule_name", schedule.Name).
+		Str("checkpoint_id", checkpoint.ID.String()).
+		Int("resume_count", checkpoint.ResumeCount).
+		Logger()
+
+	logger.Info().Msg("resuming backup from checkpoint")
+
+	// Get enabled repositories sorted by priority
+	enabledRepos := schedule.GetEnabledRepositories()
+	if len(enabledRepos) == 0 {
+		logger.Error().Msg("no enabled repositories for schedule")
+		return
+	}
+
+	// Find the repository that matches the checkpoint
+	var targetRepo *models.ScheduleRepository
+	for i := range enabledRepos {
+		if enabledRepos[i].RepositoryID == checkpoint.RepositoryID {
+			targetRepo = &enabledRepos[i]
+			break
+		}
+	}
+
+	if targetRepo == nil {
+		logger.Error().
+			Str("repository_id", checkpoint.RepositoryID.String()).
+			Msg("checkpoint repository not found in enabled repositories")
+		return
+	}
+
+	// Create a resumed backup record
+	backup := models.NewResumedBackup(schedule.ID, schedule.AgentID, &targetRepo.RepositoryID, checkpoint.ID, checkpoint.BackupID)
+	if err := s.store.CreateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Msg("failed to create resumed backup record")
+		return
+	}
+
+	// Associate the new backup with the checkpoint
+	if err := s.checkpointManager.AssociateBackup(ctx, checkpoint.ID, backup.ID); err != nil {
+		logger.Warn().Err(err).Msg("failed to associate backup with checkpoint")
+	}
+
+	// Track this backup with the checkpoint manager
+	s.checkpointManager.TrackBackup(backup.ID, checkpoint)
+
+	// Get repository configuration
+	repo, err := s.store.GetRepository(ctx, targetRepo.RepositoryID)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("get repository: %v", err), logger)
+		s.checkpointManager.InterruptBackup(ctx, backup.ID, err.Error())
+		return
+	}
+
+	// Decrypt repository configuration
+	if s.config.DecryptFunc == nil {
+		s.failBackup(ctx, backup, "decrypt function not configured", logger)
+		s.checkpointManager.InterruptBackup(ctx, backup.ID, "decrypt function not configured")
+		return
+	}
+
+	configJSON, err := s.config.DecryptFunc(repo.ConfigEncrypted)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("decrypt config: %v", err), logger)
+		s.checkpointManager.InterruptBackup(ctx, backup.ID, err.Error())
+		return
+	}
+
+	// Parse backend configuration
+	backend, err := ParseBackend(repo.Type, configJSON)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("parse backend: %v", err), logger)
+		s.checkpointManager.InterruptBackup(ctx, backup.ID, err.Error())
+		return
+	}
+
+	// Get repository password
+	if s.config.PasswordFunc == nil {
+		s.failBackup(ctx, backup, "password function not configured", logger)
+		s.checkpointManager.InterruptBackup(ctx, backup.ID, "password function not configured")
+		return
+	}
+
+	password, err := s.config.PasswordFunc(repo.ID)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("get password: %v", err), logger)
+		s.checkpointManager.InterruptBackup(ctx, backup.ID, err.Error())
+		return
+	}
+
+	// Build restic config
+	resticCfg := backend.ToResticConfig(password)
+
+	// Build tags for the backup
+	tags := []string{
+		fmt.Sprintf("schedule:%s", schedule.ID.String()),
+		fmt.Sprintf("agent:%s", schedule.AgentID.String()),
+		"resumed",
+	}
+
+	// Build backup options with bandwidth limit and compression level
+	var opts *BackupOptions
+	if schedule.BandwidthLimitKB != nil || schedule.CompressionLevel != nil {
+		opts = &BackupOptions{
+			BandwidthLimitKB: schedule.BandwidthLimitKB,
+			CompressionLevel: schedule.CompressionLevel,
+		}
+	}
+
+	// Run the backup with options
+	// Note: For a true resume, restic would need to use the --parent flag or other mechanisms
+	// to continue from where it left off. This implementation starts a new backup but the
+	// checkpoint tracking allows monitoring progress and resuming from failures.
+	stats, err := s.restic.BackupWithOptions(ctx, resticCfg, schedule.Paths, schedule.Excludes, tags, opts)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("backup failed: %v", err), logger)
+		s.checkpointManager.InterruptBackup(ctx, backup.ID, err.Error())
+		return
+	}
+
+	// Mark backup as completed
+	backup.Complete(stats.SnapshotID, stats.SizeBytes, stats.FilesNew, stats.FilesChanged)
+
+	// Complete the checkpoint
+	if err := s.checkpointManager.CompleteBackup(ctx, backup.ID); err != nil {
+		logger.Warn().Err(err).Msg("failed to complete checkpoint")
+	}
+
+	if err := s.store.UpdateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Msg("failed to update backup record")
+	}
+
+	logger.Info().
+		Str("snapshot_id", stats.SnapshotID).
+		Int("files_new", stats.FilesNew).
+		Int("files_changed", stats.FilesChanged).
+		Int64("size_bytes", stats.SizeBytes).
+		Dur("duration", stats.Duration).
+		Msg("resumed backup completed successfully")
+
+	// Send success notification
+	s.sendBackupNotification(ctx, schedule, backup, true, "")
+
+	// Run prune if retention policy is set
+	if schedule.RetentionPolicy != nil {
+		logger.Info().Msg("running prune with retention policy")
+		forgetResult, err := s.restic.Prune(ctx, resticCfg, schedule.RetentionPolicy)
+		if err != nil {
+			logger.Error().Err(err).Msg("prune failed")
+			backup.RecordRetention(0, 0, err)
+		} else {
+			logger.Info().
+				Int("snapshots_removed", forgetResult.SnapshotsRemoved).
+				Int("snapshots_kept", forgetResult.SnapshotsKept).
+				Msg("prune completed")
+			backup.RecordRetention(forgetResult.SnapshotsRemoved, forgetResult.SnapshotsKept, nil)
+		}
+		// Update backup record with retention results
+		if err := s.store.UpdateBackup(ctx, backup); err != nil {
+			logger.Error().Err(err).Msg("failed to update backup with retention results")
+		}
+	}
+}
+
+// GetCheckpointManager returns the checkpoint manager for external use.
+func (s *Scheduler) GetCheckpointManager() *CheckpointManager {
+	return s.checkpointManager
 }
 
 // DRTestStore defines the interface for DR test scheduling.

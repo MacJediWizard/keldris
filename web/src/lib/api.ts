@@ -77,6 +77,7 @@ import type {
 	DailyBackupStatsResponse,
 	DashboardStats,
 	DefaultPricingResponse,
+	DryRunResponse,
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
@@ -131,6 +132,8 @@ import type {
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
 	Restore,
+	RestorePreview,
+	RestorePreviewRequest,
 	RestoresResponse,
 	RotateAPIKeyResponse,
 	RunDRTestRequest,
@@ -515,6 +518,11 @@ export const schedulesApi = {
 			method: 'POST',
 		}),
 
+	dryRun: async (id: string): Promise<DryRunResponse> =>
+		fetchApi<DryRunResponse>(`/schedules/${id}/dry-run`, {
+			method: 'POST',
+		}),
+
 	getReplicationStatus: async (id: string): Promise<ReplicationStatus[]> => {
 		const response = await fetchApi<ReplicationStatusResponse>(
 			`/schedules/${id}/replication`,
@@ -706,6 +714,12 @@ export const restoresApi = {
 
 	create: async (data: CreateRestoreRequest): Promise<Restore> =>
 		fetchApi<Restore>('/restores', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	preview: async (data: RestorePreviewRequest): Promise<RestorePreview> =>
+		fetchApi<RestorePreview>('/restores/preview', {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),

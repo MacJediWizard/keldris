@@ -50,6 +50,9 @@ type Backup struct {
 	PostScriptOutput   string              `json:"post_script_output,omitempty"`
 	PostScriptError    string              `json:"post_script_error,omitempty"`
 	ExcludedLargeFiles []ExcludedLargeFile `json:"excluded_large_files,omitempty"` // Files excluded due to size limit
+	Resumed            bool                `json:"resumed"`                        // True if this backup was resumed from a checkpoint
+	CheckpointID       *uuid.UUID          `json:"checkpoint_id,omitempty"`        // Associated checkpoint if resumed
+	OriginalBackupID   *uuid.UUID          `json:"original_backup_id,omitempty"`   // Original backup that was interrupted
 	CreatedAt          time.Time           `json:"created_at"`
 }
 
@@ -63,7 +66,25 @@ func NewBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID) *Backup {
 		RepositoryID: repositoryID,
 		StartedAt:    now,
 		Status:       BackupStatusRunning,
+		Resumed:      false,
 		CreatedAt:    now,
+	}
+}
+
+// NewResumedBackup creates a new Backup record that is resuming from a checkpoint.
+func NewResumedBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID, checkpointID uuid.UUID, originalBackupID *uuid.UUID) *Backup {
+	now := time.Now()
+	return &Backup{
+		ID:               uuid.New(),
+		ScheduleID:       scheduleID,
+		AgentID:          agentID,
+		RepositoryID:     repositoryID,
+		StartedAt:        now,
+		Status:           BackupStatusRunning,
+		Resumed:          true,
+		CheckpointID:     &checkpointID,
+		OriginalBackupID: originalBackupID,
+		CreatedAt:        now,
 	}
 }
 

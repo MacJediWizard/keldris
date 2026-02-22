@@ -1184,7 +1184,7 @@ func (db *DB) GetBackupsByScheduleID(ctx context.Context, scheduleID uuid.UUID) 
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
 		       pre_script_output, pre_script_error, post_script_output, post_script_error,
-		       excluded_large_files, created_at
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
 		WHERE schedule_id = $1
 		ORDER BY started_at DESC
@@ -1204,7 +1204,7 @@ func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*mo
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
 		       pre_script_output, pre_script_error, post_script_output, post_script_error,
-		       excluded_large_files, created_at
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
 		WHERE agent_id = $1
 		ORDER BY started_at DESC
@@ -1227,7 +1227,7 @@ func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, 
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
 		       pre_script_output, pre_script_error, post_script_output, post_script_error,
-		       excluded_large_files, created_at
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
 		WHERE id = $1
 	`, id).Scan(
@@ -1236,7 +1236,7 @@ func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, 
 		&b.FilesChanged, &b.ErrorMessage,
 		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError,
 		&b.PreScriptOutput, &b.PreScriptError, &b.PostScriptOutput, &b.PostScriptError,
-		&excludedLargeFilesJSON, &b.CreatedAt,
+		&excludedLargeFilesJSON, &b.Resumed, &b.CheckpointID, &b.OriginalBackupID, &b.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get backup: %w", err)
@@ -1266,14 +1266,14 @@ func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
 		                     status, size_bytes, files_new, files_changed, error_message,
 		                     retention_applied, snapshots_removed, snapshots_kept, retention_error,
 		                     pre_script_output, pre_script_error, post_script_output, post_script_error,
-		                     excluded_large_files, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+		                     excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
 	`, backup.ID, backup.ScheduleID, backup.AgentID, backup.RepositoryID, backup.SnapshotID,
 		backup.StartedAt, backup.CompletedAt, string(backup.Status),
 		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage,
 		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError,
 		backup.PreScriptOutput, backup.PreScriptError, backup.PostScriptOutput, backup.PostScriptError,
-		excludedLargeFilesJSON, backup.CreatedAt)
+		excludedLargeFilesJSON, backup.Resumed, backup.CheckpointID, backup.OriginalBackupID, backup.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("create backup: %w", err)
 	}
@@ -1334,7 +1334,7 @@ func scanBackups(rows interface {
 			&b.FilesChanged, &b.ErrorMessage,
 			&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError,
 			&b.PreScriptOutput, &b.PreScriptError, &b.PostScriptOutput, &b.PostScriptError,
-			&excludedLargeFilesJSON, &b.CreatedAt,
+			&excludedLargeFilesJSON, &b.Resumed, &b.CheckpointID, &b.OriginalBackupID, &b.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan backup: %w", err)
@@ -1516,22 +1516,32 @@ func (db *DB) UpdateReplicationStatus(ctx context.Context, rs *models.Replicatio
 func (db *DB) GetBackupBySnapshotID(ctx context.Context, snapshotID string) (*models.Backup, error) {
 	var b models.Backup
 	var statusStr string
+	var excludedLargeFilesJSON []byte
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
-		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
+		       pre_script_output, pre_script_error, post_script_output, post_script_error,
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
 		WHERE snapshot_id = $1
 	`, snapshotID).Scan(
 		&b.ID, &b.ScheduleID, &b.AgentID, &b.RepositoryID, &b.SnapshotID, &b.StartedAt,
 		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
 		&b.FilesChanged, &b.ErrorMessage,
-		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError, &b.CreatedAt,
+		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError,
+		&b.PreScriptOutput, &b.PreScriptError, &b.PostScriptOutput, &b.PostScriptError,
+		&excludedLargeFilesJSON, &b.Resumed, &b.CheckpointID, &b.OriginalBackupID, &b.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get backup by snapshot ID: %w", err)
 	}
 	b.Status = models.BackupStatus(statusStr)
+	if excludedLargeFilesJSON != nil {
+		if err := json.Unmarshal(excludedLargeFilesJSON, &b.ExcludedLargeFiles); err != nil {
+			return nil, fmt.Errorf("unmarshal excluded large files: %w", err)
+		}
+	}
 	return &b, nil
 }
 
@@ -4833,7 +4843,7 @@ func (db *DB) GetBackupsByTagIDs(ctx context.Context, tagIDs []uuid.UUID) ([]*mo
 		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
 		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
 		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
-		       b.excluded_large_files, b.created_at
+		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
 		FROM backups b
 		JOIN backup_tags bt ON b.id = bt.backup_id
 		WHERE bt.tag_id = ANY($1)
@@ -5137,7 +5147,7 @@ func (db *DB) GetBackupsByOrgIDSince(ctx context.Context, orgID uuid.UUID, since
 		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
 		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
 		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
-		       b.excluded_large_files, b.created_at
+		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
@@ -5708,7 +5718,7 @@ func (db *DB) GetBackupsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID
 		       b.files_changed, b.error_message,
 		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
 		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
-		       b.excluded_large_files, b.created_at
+		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
@@ -6988,4 +6998,531 @@ func scanImportedSnapshots(rows interface{ Next() bool; Scan(dest ...interface{}
 	}
 
 	return snapshots, nil
+}
+
+// Backup Checkpoint methods
+
+// CreateCheckpoint creates a new backup checkpoint.
+func (db *DB) CreateCheckpoint(ctx context.Context, checkpoint *models.BackupCheckpoint) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO backup_checkpoints (id, schedule_id, agent_id, repository_id, backup_id,
+		                                status, files_processed, bytes_processed, total_files, total_bytes,
+		                                last_processed_path, restic_state, error_message, resume_count,
+		                                expires_at, started_at, last_updated_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+	`, checkpoint.ID, checkpoint.ScheduleID, checkpoint.AgentID, checkpoint.RepositoryID, checkpoint.BackupID,
+		string(checkpoint.Status), checkpoint.FilesProcessed, checkpoint.BytesProcessed,
+		checkpoint.TotalFiles, checkpoint.TotalBytes, checkpoint.LastProcessedPath,
+		checkpoint.ResticState, checkpoint.ErrorMessage, checkpoint.ResumeCount,
+		checkpoint.ExpiresAt, checkpoint.StartedAt, checkpoint.LastUpdatedAt, checkpoint.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create checkpoint: %w", err)
+	}
+	return nil
+}
+
+// UpdateCheckpoint updates an existing checkpoint.
+func (db *DB) UpdateCheckpoint(ctx context.Context, checkpoint *models.BackupCheckpoint) error {
+	checkpoint.LastUpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE backup_checkpoints
+		SET backup_id = $2, status = $3, files_processed = $4, bytes_processed = $5,
+		    total_files = $6, total_bytes = $7, last_processed_path = $8, restic_state = $9,
+		    error_message = $10, resume_count = $11, expires_at = $12, last_updated_at = $13
+		WHERE id = $1
+	`, checkpoint.ID, checkpoint.BackupID, string(checkpoint.Status),
+		checkpoint.FilesProcessed, checkpoint.BytesProcessed, checkpoint.TotalFiles,
+		checkpoint.TotalBytes, checkpoint.LastProcessedPath, checkpoint.ResticState,
+		checkpoint.ErrorMessage, checkpoint.ResumeCount, checkpoint.ExpiresAt, checkpoint.LastUpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update checkpoint: %w", err)
+	}
+	return nil
+}
+
+// GetCheckpointByID returns a checkpoint by ID.
+func (db *DB) GetCheckpointByID(ctx context.Context, id uuid.UUID) (*models.BackupCheckpoint, error) {
+	var c models.BackupCheckpoint
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, backup_id, status,
+		       files_processed, bytes_processed, total_files, total_bytes,
+		       last_processed_path, restic_state, error_message, resume_count,
+		       expires_at, started_at, last_updated_at, created_at
+		FROM backup_checkpoints
+		WHERE id = $1
+	`, id).Scan(
+		&c.ID, &c.ScheduleID, &c.AgentID, &c.RepositoryID, &c.BackupID, &statusStr,
+		&c.FilesProcessed, &c.BytesProcessed, &c.TotalFiles, &c.TotalBytes,
+		&c.LastProcessedPath, &c.ResticState, &c.ErrorMessage, &c.ResumeCount,
+		&c.ExpiresAt, &c.StartedAt, &c.LastUpdatedAt, &c.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get checkpoint: %w", err)
+	}
+	c.Status = models.CheckpointStatus(statusStr)
+	return &c, nil
+}
+
+// GetActiveCheckpointForSchedule returns the active checkpoint for a schedule if one exists.
+func (db *DB) GetActiveCheckpointForSchedule(ctx context.Context, scheduleID uuid.UUID) (*models.BackupCheckpoint, error) {
+	var c models.BackupCheckpoint
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, backup_id, status,
+		       files_processed, bytes_processed, total_files, total_bytes,
+		       last_processed_path, restic_state, error_message, resume_count,
+		       expires_at, started_at, last_updated_at, created_at
+		FROM backup_checkpoints
+		WHERE schedule_id = $1 AND status = 'active'
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, scheduleID).Scan(
+		&c.ID, &c.ScheduleID, &c.AgentID, &c.RepositoryID, &c.BackupID, &statusStr,
+		&c.FilesProcessed, &c.BytesProcessed, &c.TotalFiles, &c.TotalBytes,
+		&c.LastProcessedPath, &c.ResticState, &c.ErrorMessage, &c.ResumeCount,
+		&c.ExpiresAt, &c.StartedAt, &c.LastUpdatedAt, &c.CreatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get active checkpoint for schedule: %w", err)
+	}
+	c.Status = models.CheckpointStatus(statusStr)
+	return &c, nil
+}
+
+// GetActiveCheckpointsForAgent returns all active checkpoints for an agent.
+func (db *DB) GetActiveCheckpointsForAgent(ctx context.Context, agentID uuid.UUID) ([]*models.BackupCheckpoint, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, backup_id, status,
+		       files_processed, bytes_processed, total_files, total_bytes,
+		       last_processed_path, restic_state, error_message, resume_count,
+		       expires_at, started_at, last_updated_at, created_at
+		FROM backup_checkpoints
+		WHERE agent_id = $1 AND status = 'active'
+		ORDER BY created_at DESC
+	`, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("list active checkpoints for agent: %w", err)
+	}
+	defer rows.Close()
+
+	return scanCheckpoints(rows)
+}
+
+// GetExpiredCheckpoints returns all checkpoints that have expired.
+func (db *DB) GetExpiredCheckpoints(ctx context.Context) ([]*models.BackupCheckpoint, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, backup_id, status,
+		       files_processed, bytes_processed, total_files, total_bytes,
+		       last_processed_path, restic_state, error_message, resume_count,
+		       expires_at, started_at, last_updated_at, created_at
+		FROM backup_checkpoints
+		WHERE status = 'active' AND expires_at IS NOT NULL AND expires_at < NOW()
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list expired checkpoints: %w", err)
+	}
+	defer rows.Close()
+
+	return scanCheckpoints(rows)
+}
+
+// DeleteCheckpoint deletes a checkpoint by ID.
+func (db *DB) DeleteCheckpoint(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM backup_checkpoints WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete checkpoint: %w", err)
+	}
+	return nil
+}
+
+// GetCheckpointsByScheduleID returns all checkpoints for a schedule.
+func (db *DB) GetCheckpointsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.BackupCheckpoint, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, backup_id, status,
+		       files_processed, bytes_processed, total_files, total_bytes,
+		       last_processed_path, restic_state, error_message, resume_count,
+		       expires_at, started_at, last_updated_at, created_at
+		FROM backup_checkpoints
+		WHERE schedule_id = $1
+		ORDER BY created_at DESC
+	`, scheduleID)
+	if err != nil {
+		return nil, fmt.Errorf("list checkpoints for schedule: %w", err)
+	}
+	defer rows.Close()
+
+	return scanCheckpoints(rows)
+}
+
+// scanCheckpoints scans rows into backup checkpoints.
+func scanCheckpoints(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.BackupCheckpoint, error) {
+	var checkpoints []*models.BackupCheckpoint
+	for rows.Next() {
+		var c models.BackupCheckpoint
+		var statusStr string
+		err := rows.Scan(
+			&c.ID, &c.ScheduleID, &c.AgentID, &c.RepositoryID, &c.BackupID, &statusStr,
+			&c.FilesProcessed, &c.BytesProcessed, &c.TotalFiles, &c.TotalBytes,
+			&c.LastProcessedPath, &c.ResticState, &c.ErrorMessage, &c.ResumeCount,
+			&c.ExpiresAt, &c.StartedAt, &c.LastUpdatedAt, &c.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan checkpoint: %w", err)
+		}
+		c.Status = models.CheckpointStatus(statusStr)
+		checkpoints = append(checkpoints, &c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate checkpoints: %w", err)
+	}
+
+	return checkpoints, nil
+}
+
+// ============================================================================
+// Ransomware Detection Methods
+// ============================================================================
+
+// GetRansomwareSettingsByScheduleID returns ransomware settings for a schedule.
+func (db *DB) GetRansomwareSettingsByScheduleID(ctx context.Context, scheduleID uuid.UUID) (*models.RansomwareSettings, error) {
+	var settings models.RansomwareSettings
+	var extensionsBytes []byte
+
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, schedule_id, enabled, change_threshold_percent,
+		       extensions_to_detect, entropy_detection_enabled, entropy_threshold,
+		       auto_pause_on_alert, created_at, updated_at
+		FROM ransomware_settings
+		WHERE schedule_id = $1
+	`, scheduleID).Scan(
+		&settings.ID, &settings.ScheduleID, &settings.Enabled,
+		&settings.ChangeThresholdPercent, &extensionsBytes,
+		&settings.EntropyDetectionEnabled, &settings.EntropyThreshold,
+		&settings.AutoPauseOnAlert, &settings.CreatedAt, &settings.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get ransomware settings: %w", err)
+	}
+
+	if err := settings.SetExtensions(extensionsBytes); err != nil {
+		return nil, fmt.Errorf("unmarshal extensions: %w", err)
+	}
+
+	return &settings, nil
+}
+
+// GetRansomwareSettingsByOrgID returns all ransomware settings for an organization.
+func (db *DB) GetRansomwareSettingsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.RansomwareSettings, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT rs.id, rs.schedule_id, rs.enabled, rs.change_threshold_percent,
+		       rs.extensions_to_detect, rs.entropy_detection_enabled, rs.entropy_threshold,
+		       rs.auto_pause_on_alert, rs.created_at, rs.updated_at
+		FROM ransomware_settings rs
+		JOIN schedules s ON rs.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1
+		ORDER BY rs.created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list ransomware settings: %w", err)
+	}
+	defer rows.Close()
+
+	return db.scanRansomwareSettings(rows)
+}
+
+// CreateRansomwareSettings creates new ransomware settings for a schedule.
+func (db *DB) CreateRansomwareSettings(ctx context.Context, settings *models.RansomwareSettings) error {
+	extensionsBytes, err := settings.ExtensionsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal extensions: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO ransomware_settings (id, schedule_id, enabled, change_threshold_percent,
+		                                  extensions_to_detect, entropy_detection_enabled,
+		                                  entropy_threshold, auto_pause_on_alert,
+		                                  created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, settings.ID, settings.ScheduleID, settings.Enabled, settings.ChangeThresholdPercent,
+		extensionsBytes, settings.EntropyDetectionEnabled, settings.EntropyThreshold,
+		settings.AutoPauseOnAlert, settings.CreatedAt, settings.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create ransomware settings: %w", err)
+	}
+	return nil
+}
+
+// UpdateRansomwareSettings updates existing ransomware settings.
+func (db *DB) UpdateRansomwareSettings(ctx context.Context, settings *models.RansomwareSettings) error {
+	extensionsBytes, err := settings.ExtensionsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal extensions: %w", err)
+	}
+
+	settings.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE ransomware_settings
+		SET enabled = $2, change_threshold_percent = $3, extensions_to_detect = $4,
+		    entropy_detection_enabled = $5, entropy_threshold = $6,
+		    auto_pause_on_alert = $7, updated_at = $8
+		WHERE id = $1
+	`, settings.ID, settings.Enabled, settings.ChangeThresholdPercent,
+		extensionsBytes, settings.EntropyDetectionEnabled, settings.EntropyThreshold,
+		settings.AutoPauseOnAlert, settings.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update ransomware settings: %w", err)
+	}
+	return nil
+}
+
+// DeleteRansomwareSettings deletes ransomware settings by ID.
+func (db *DB) DeleteRansomwareSettings(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM ransomware_settings WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete ransomware settings: %w", err)
+	}
+	return nil
+}
+
+// scanRansomwareSettings scans rows into ransomware settings.
+func (db *DB) scanRansomwareSettings(rows pgx.Rows) ([]*models.RansomwareSettings, error) {
+	var settingsList []*models.RansomwareSettings
+	for rows.Next() {
+		var settings models.RansomwareSettings
+		var extensionsBytes []byte
+
+		err := rows.Scan(
+			&settings.ID, &settings.ScheduleID, &settings.Enabled,
+			&settings.ChangeThresholdPercent, &extensionsBytes,
+			&settings.EntropyDetectionEnabled, &settings.EntropyThreshold,
+			&settings.AutoPauseOnAlert, &settings.CreatedAt, &settings.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan ransomware settings: %w", err)
+		}
+
+		if err := settings.SetExtensions(extensionsBytes); err != nil {
+			return nil, fmt.Errorf("unmarshal extensions: %w", err)
+		}
+
+		settingsList = append(settingsList, &settings)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ransomware settings: %w", err)
+	}
+
+	return settingsList, nil
+}
+
+// ============================================================================
+// Ransomware Alert Methods
+// ============================================================================
+
+// CreateRansomwareAlert creates a new ransomware alert.
+func (db *DB) CreateRansomwareAlert(ctx context.Context, alert *models.RansomwareAlert) error {
+	indicatorsBytes, err := alert.IndicatorsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal indicators: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO ransomware_alerts (id, org_id, schedule_id, agent_id, backup_id,
+		                               schedule_name, agent_hostname, status, risk_score,
+		                               indicators, files_changed, files_new, total_files,
+		                               backups_paused, paused_at, resumed_at, resolved_by,
+		                               resolved_at, resolution, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+	`, alert.ID, alert.OrgID, alert.ScheduleID, alert.AgentID, alert.BackupID,
+		alert.ScheduleName, alert.AgentHostname, string(alert.Status), alert.RiskScore,
+		indicatorsBytes, alert.FilesChanged, alert.FilesNew, alert.TotalFiles,
+		alert.BackupsPaused, alert.PausedAt, alert.ResumedAt, alert.ResolvedBy,
+		alert.ResolvedAt, alert.Resolution, alert.CreatedAt, alert.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create ransomware alert: %w", err)
+	}
+	return nil
+}
+
+// GetRansomwareAlertsByOrgID returns all ransomware alerts for an organization.
+func (db *DB) GetRansomwareAlertsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.RansomwareAlert, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, schedule_id, agent_id, backup_id, schedule_name, agent_hostname,
+		       status, risk_score, indicators, files_changed, files_new, total_files,
+		       backups_paused, paused_at, resumed_at, resolved_by, resolved_at, resolution,
+		       created_at, updated_at
+		FROM ransomware_alerts
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list ransomware alerts: %w", err)
+	}
+	defer rows.Close()
+
+	return db.scanRansomwareAlerts(rows)
+}
+
+// GetActiveRansomwareAlertsByOrgID returns active ransomware alerts for an organization.
+func (db *DB) GetActiveRansomwareAlertsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.RansomwareAlert, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, schedule_id, agent_id, backup_id, schedule_name, agent_hostname,
+		       status, risk_score, indicators, files_changed, files_new, total_files,
+		       backups_paused, paused_at, resumed_at, resolved_by, resolved_at, resolution,
+		       created_at, updated_at
+		FROM ransomware_alerts
+		WHERE org_id = $1 AND status IN ('active', 'investigating')
+		ORDER BY risk_score DESC, created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list active ransomware alerts: %w", err)
+	}
+	defer rows.Close()
+
+	return db.scanRansomwareAlerts(rows)
+}
+
+// GetActiveRansomwareAlertCountByOrgID returns the count of active ransomware alerts.
+func (db *DB) GetActiveRansomwareAlertCountByOrgID(ctx context.Context, orgID uuid.UUID) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM ransomware_alerts
+		WHERE org_id = $1 AND status IN ('active', 'investigating')
+	`, orgID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count active ransomware alerts: %w", err)
+	}
+	return count, nil
+}
+
+// GetCriticalRansomwareAlertCountByOrgID returns the count of critical ransomware alerts (risk score >= 80).
+func (db *DB) GetCriticalRansomwareAlertCountByOrgID(ctx context.Context, orgID uuid.UUID) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM ransomware_alerts
+		WHERE org_id = $1 AND status IN ('active', 'investigating') AND risk_score >= 80
+	`, orgID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count critical ransomware alerts: %w", err)
+	}
+	return count, nil
+}
+
+// GetRansomwareAlertByID returns a ransomware alert by ID.
+func (db *DB) GetRansomwareAlertByID(ctx context.Context, id uuid.UUID) (*models.RansomwareAlert, error) {
+	var alert models.RansomwareAlert
+	var indicatorsBytes []byte
+	var status string
+
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, schedule_id, agent_id, backup_id, schedule_name, agent_hostname,
+		       status, risk_score, indicators, files_changed, files_new, total_files,
+		       backups_paused, paused_at, resumed_at, resolved_by, resolved_at, resolution,
+		       created_at, updated_at
+		FROM ransomware_alerts
+		WHERE id = $1
+	`, id).Scan(
+		&alert.ID, &alert.OrgID, &alert.ScheduleID, &alert.AgentID, &alert.BackupID,
+		&alert.ScheduleName, &alert.AgentHostname, &status, &alert.RiskScore,
+		&indicatorsBytes, &alert.FilesChanged, &alert.FilesNew, &alert.TotalFiles,
+		&alert.BackupsPaused, &alert.PausedAt, &alert.ResumedAt, &alert.ResolvedBy,
+		&alert.ResolvedAt, &alert.Resolution, &alert.CreatedAt, &alert.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get ransomware alert: %w", err)
+	}
+
+	alert.Status = models.RansomwareAlertStatus(status)
+	if err := alert.SetIndicatorsFromBytes(indicatorsBytes); err != nil {
+		return nil, fmt.Errorf("unmarshal indicators: %w", err)
+	}
+
+	return &alert, nil
+}
+
+// UpdateRansomwareAlert updates an existing ransomware alert.
+func (db *DB) UpdateRansomwareAlert(ctx context.Context, alert *models.RansomwareAlert) error {
+	indicatorsBytes, err := alert.IndicatorsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal indicators: %w", err)
+	}
+
+	alert.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE ransomware_alerts
+		SET status = $2, risk_score = $3, indicators = $4, files_changed = $5,
+		    files_new = $6, total_files = $7, backups_paused = $8, paused_at = $9,
+		    resumed_at = $10, resolved_by = $11, resolved_at = $12, resolution = $13,
+		    updated_at = $14
+		WHERE id = $1
+	`, alert.ID, string(alert.Status), alert.RiskScore, indicatorsBytes,
+		alert.FilesChanged, alert.FilesNew, alert.TotalFiles, alert.BackupsPaused,
+		alert.PausedAt, alert.ResumedAt, alert.ResolvedBy, alert.ResolvedAt,
+		alert.Resolution, alert.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update ransomware alert: %w", err)
+	}
+	return nil
+}
+
+// PauseSchedule pauses a schedule by setting enabled to false.
+func (db *DB) PauseSchedule(ctx context.Context, scheduleID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE schedules SET enabled = false, updated_at = NOW() WHERE id = $1
+	`, scheduleID)
+	if err != nil {
+		return fmt.Errorf("pause schedule: %w", err)
+	}
+	return nil
+}
+
+// ResumeSchedule resumes a paused schedule by setting enabled to true.
+func (db *DB) ResumeSchedule(ctx context.Context, scheduleID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE schedules SET enabled = true, updated_at = NOW() WHERE id = $1
+	`, scheduleID)
+	if err != nil {
+		return fmt.Errorf("resume schedule: %w", err)
+	}
+	return nil
+}
+
+// scanRansomwareAlerts scans rows into ransomware alerts.
+func (db *DB) scanRansomwareAlerts(rows pgx.Rows) ([]*models.RansomwareAlert, error) {
+	var alerts []*models.RansomwareAlert
+	for rows.Next() {
+		var alert models.RansomwareAlert
+		var indicatorsBytes []byte
+		var status string
+
+		err := rows.Scan(
+			&alert.ID, &alert.OrgID, &alert.ScheduleID, &alert.AgentID, &alert.BackupID,
+			&alert.ScheduleName, &alert.AgentHostname, &status, &alert.RiskScore,
+			&indicatorsBytes, &alert.FilesChanged, &alert.FilesNew, &alert.TotalFiles,
+			&alert.BackupsPaused, &alert.PausedAt, &alert.ResumedAt, &alert.ResolvedBy,
+			&alert.ResolvedAt, &alert.Resolution, &alert.CreatedAt, &alert.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan ransomware alert: %w", err)
+		}
+
+		alert.Status = models.RansomwareAlertStatus(status)
+		if err := alert.SetIndicatorsFromBytes(indicatorsBytes); err != nil {
+			return nil, fmt.Errorf("unmarshal indicators: %w", err)
+		}
+
+		alerts = append(alerts, &alert)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ransomware alerts: %w", err)
+	}
+
+	return alerts, nil
 }
