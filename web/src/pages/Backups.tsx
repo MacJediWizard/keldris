@@ -599,6 +599,11 @@ function BackupRow({
 							}
 							position="right"
 						/>
+					<span
+						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
+					>
+						<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
+						{backup.status}
 					</span>
 					{backup.classification_level &&
 						backup.classification_level !== 'public' && (
@@ -696,7 +701,9 @@ export function Backups() {
 		// Note: Tag filtering would require loading backup tags for each backup,
 		// which is expensive. For a more complete implementation, you'd want to
 		// fetch this data on the server side with proper filtering.
-		return matchesSearch && matchesAgent && matchesStatus;
+		return (
+			matchesSearch && matchesAgent && matchesStatus && matchesClassification
+		);
 	});
 
 	const backupIds = filteredBackups?.map((b) => b.id) ?? [];
@@ -870,6 +877,21 @@ export function Backups() {
 							<option value="running">Running</option>
 							<option value="failed">Failed</option>
 							<option value="canceled">Canceled</option>
+						</select>
+						<select
+							value={classificationFilter}
+							onChange={(e) =>
+								setClassificationFilter(
+									e.target.value as ClassificationLevel | 'all',
+								)
+							}
+							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						>
+							<option value="all">All Classifications</option>
+							<option value="public">Public</option>
+							<option value="internal">Internal</option>
+							<option value="confidential">Confidential</option>
+							<option value="restricted">Restricted</option>
 						</select>
 					</div>
 					{allTags && allTags.length > 0 && (

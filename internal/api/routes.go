@@ -622,6 +622,10 @@ func NewRouter(
 	airGapHandler := handlers.NewAirGapHandler(database, cfg.AirGapPublicKey, logger)
 	airGapHandler.RegisterRoutes(airGapGroup)
 
+	// Classification routes
+	classificationsHandler := handlers.NewClassificationsHandler(database, logger)
+	classificationsHandler.RegisterRoutes(apiV1)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)

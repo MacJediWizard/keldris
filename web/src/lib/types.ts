@@ -3591,6 +3591,63 @@ export interface CreateLegalHoldRequest {
 	reason: string;
 }
 
+export interface UpdatePathClassificationRuleRequest {
+	pattern?: string;
+	level?: ClassificationLevel;
+	data_types?: DataType[];
+	description?: string;
+	priority?: number;
+	enabled?: boolean;
+}
+
+export interface SetScheduleClassificationRequest {
+	level: ClassificationLevel;
+	data_types?: DataType[];
+}
+
+export interface ClassificationSummary {
+	total_schedules: number;
+	total_backups: number;
+	by_level: Record<string, number>;
+	by_data_type: Record<string, number>;
+	restricted_count: number;
+	confidential_count: number;
+	internal_count: number;
+	public_count: number;
+}
+
+export interface ClassificationRulesResponse {
+	rules: PathClassificationRule[];
+}
+
+export interface ClassificationLevelsResponse {
+	levels: ClassificationLevelInfo[];
+}
+
+export interface DataTypesResponse {
+	data_types: DataTypeInfo[];
+}
+
+export interface ScheduleClassificationSummary {
+	id: string;
+	name: string;
+	level: ClassificationLevel;
+	data_types: DataType[];
+	paths: string[];
+	agent_id: string;
+}
+
+export interface ComplianceReport {
+	generated_at: string;
+	org_id: string;
+	summary: ClassificationSummary;
+	schedules_by_level: Record<string, ScheduleClassificationSummary[]>;
+}
+
+export interface CreateLegalHoldRequest {
+	reason: string;
+}
+
 export interface LegalHoldsResponse {
 	legal_holds: LegalHold[];
 }

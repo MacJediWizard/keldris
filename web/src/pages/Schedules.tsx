@@ -1718,6 +1718,7 @@ function ScheduleRow({
 	const hasBadges =
 		hasResourceControls || policyName || hasClassification || hasPriorityBadge;
 		(schedule.excluded_hours && schedule.excluded_hours.length > 0);
+	const hasBadges = hasResourceControls || policyName || hasClassification;
 
 	return (
 		<tr

@@ -104,6 +104,9 @@ type Backup struct {
 	PostScriptError  string       `json:"post_script_error,omitempty"`
 	CreatedAt        time.Time    `json:"created_at"`
 	CreatedAt                 time.Time           `json:"created_at"`
+	ClassificationLevel     string              `json:"classification_level,omitempty"` // Data classification level
+	ClassificationDataTypes []string            `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	CreatedAt               time.Time           `json:"created_at"`
 }
 
 // NewBackup creates a new Backup record for the given schedule, agent, and repository.
