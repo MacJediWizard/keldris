@@ -9,6 +9,7 @@ import {
 	formatDateTime,
 	formatDedupRatio,
 	formatDuration,
+	formatDurationMs,
 	formatPercent,
 	formatRelativeTime,
 	formatResourceType,
@@ -497,6 +498,28 @@ describe('formatChartDate', () => {
 		const result = formatChartDate('2024-06-15T12:00:00Z');
 		expect(result).toContain('Jun');
 		expect(result).toContain('15');
+	});
+});
+
+describe('formatDurationMs', () => {
+	it('returns "N/A" for undefined', () => {
+		expect(formatDurationMs(undefined)).toBe('N/A');
+	});
+
+	it('formats milliseconds', () => {
+		expect(formatDurationMs(500)).toBe('500ms');
+	});
+
+	it('formats seconds', () => {
+		expect(formatDurationMs(5000)).toBe('5s');
+	});
+
+	it('formats minutes and seconds', () => {
+		expect(formatDurationMs(65000)).toBe('1m 5s');
+	});
+
+	it('formats hours and minutes', () => {
+		expect(formatDurationMs(3660000)).toBe('1h 1m');
 	});
 });
 
