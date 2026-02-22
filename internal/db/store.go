@@ -16501,3 +16501,96 @@ func (db *DB) GetStorageStatsSummaryGlobal(ctx context.Context) (*models.Storage
 	}
 	return &summary, nil
 }
+
+// Daily Summary methods
+
+// CreateOrUpdateDailySummary upserts a daily summary record for an organization and date.
+func (db *DB) CreateOrUpdateDailySummary(ctx context.Context, summary *models.MetricsDailySummary) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO metrics_daily_summary (
+			id, org_id, date, backups_total, backups_successful, backups_failed,
+			total_backup_size, total_duration_secs, agents_active,
+			created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		ON CONFLICT (org_id, date) DO UPDATE SET
+			backups_total = EXCLUDED.backups_total,
+			backups_successful = EXCLUDED.backups_successful,
+			backups_failed = EXCLUDED.backups_failed,
+			total_backup_size = EXCLUDED.total_backup_size,
+			total_duration_secs = EXCLUDED.total_duration_secs,
+			agents_active = EXCLUDED.agents_active,
+			updated_at = EXCLUDED.updated_at
+	`, summary.ID, summary.OrgID, summary.Date,
+		summary.TotalBackups, summary.SuccessfulBackups, summary.FailedBackups,
+		summary.TotalSizeBytes, summary.TotalDurationSecs, summary.AgentsActive,
+		summary.CreatedAt, summary.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("upsert daily summary: %w", err)
+	}
+	return nil
+}
+
+// GetDailySummary returns a daily summary for a specific organization and date.
+func (db *DB) GetDailySummary(ctx context.Context, orgID uuid.UUID, date time.Time) (*models.MetricsDailySummary, error) {
+	var s models.MetricsDailySummary
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, date, backups_total, backups_successful, backups_failed,
+		       total_backup_size, total_duration_secs, agents_active,
+		       created_at, updated_at
+		FROM metrics_daily_summary
+		WHERE org_id = $1 AND date = $2
+	`, orgID, date).Scan(
+		&s.ID, &s.OrgID, &s.Date,
+		&s.TotalBackups, &s.SuccessfulBackups, &s.FailedBackups,
+		&s.TotalSizeBytes, &s.TotalDurationSecs, &s.AgentsActive,
+		&s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get daily summary: %w", err)
+	}
+	return &s, nil
+}
+
+// GetDailySummaries returns daily summaries for an organization within a date range.
+func (db *DB) GetDailySummaries(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time) ([]models.MetricsDailySummary, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, date, backups_total, backups_successful, backups_failed,
+		       total_backup_size, total_duration_secs, agents_active,
+		       created_at, updated_at
+		FROM metrics_daily_summary
+		WHERE org_id = $1 AND date >= $2 AND date <= $3
+		ORDER BY date ASC
+	`, orgID, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("get daily summaries: %w", err)
+	}
+	defer rows.Close()
+
+	var summaries []models.MetricsDailySummary
+	for rows.Next() {
+		var s models.MetricsDailySummary
+		err := rows.Scan(
+			&s.ID, &s.OrgID, &s.Date,
+			&s.TotalBackups, &s.SuccessfulBackups, &s.FailedBackups,
+			&s.TotalSizeBytes, &s.TotalDurationSecs, &s.AgentsActive,
+			&s.CreatedAt, &s.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan daily summary: %w", err)
+		}
+		summaries = append(summaries, s)
+	}
+	return summaries, nil
+}
+
+// DeleteDailySummariesBefore deletes daily summaries older than the given date for an organization.
+func (db *DB) DeleteDailySummariesBefore(ctx context.Context, orgID uuid.UUID, before time.Time) error {
+	_, err := db.Pool.Exec(ctx, `
+		DELETE FROM metrics_daily_summary
+		WHERE org_id = $1 AND date < $2
+	`, orgID, before)
+	if err != nil {
+		return fmt.Errorf("delete daily summaries: %w", err)
+	}
+	return nil
+}
