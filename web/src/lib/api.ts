@@ -573,6 +573,7 @@ import type {
 	UpdateUserPreferencesRequest,
 	UpdateUserRequest,
 	UpdateTagRequest,
+	UpdateUserPreferencesRequest,
 	UpdateVerificationScheduleRequest,
 	UptimeBadge,
 	UptimeBadgesResponse,

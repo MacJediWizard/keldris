@@ -64,6 +64,10 @@
     "storageStats": "Estadísticas de almacenamiento",
     "classifications": "Clasificaciones",
     "costs": "Estimación de costos",
+    "alerts": "Alertas",
+    "notifications": "Notificaciones",
+    "auditLogs": "Registros de auditoría",
+    "storageStats": "Estadísticas de almacenamiento",
     "organization": "Organización",
     "members": "Miembros",
     "settings": "Configuración"

@@ -862,6 +862,20 @@ export interface BackupHookTemplateVariable {
 	default: string;
 	required: boolean;
 	sensitive?: boolean;
+// Auth types
+export type SupportedLanguage = 'en' | 'es' | 'pt';
+
+export interface User {
+	id: string;
+	email: string;
+	name: string;
+	current_org_id?: string;
+	current_org_role?: string;
+	language?: SupportedLanguage;
+}
+
+export interface UpdateUserPreferencesRequest {
+	language?: SupportedLanguage;
 }
 
 export interface BackupHookTemplateScript {

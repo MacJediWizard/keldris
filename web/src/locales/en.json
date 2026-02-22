@@ -65,6 +65,10 @@
     "storageStats": "Storage Stats",
     "classifications": "Classifications",
     "costs": "Cost Estimation",
+    "alerts": "Alerts",
+    "notifications": "Notifications",
+    "auditLogs": "Audit Logs",
+    "storageStats": "Storage Stats",
     "organization": "Organization",
     "members": "Members",
     "settings": "Settings"

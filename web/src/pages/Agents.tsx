@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import { ExportImportModal } from '../components/features/ExportImportModal';
 import { ImportAgentsWizard } from '../components/features/ImportAgentsWizard';
@@ -29,6 +28,7 @@ import {
 	useAgents,
 import { useAgentGroups, useAgentsWithGroups } from '../hooks/useAgentGroups';
 import {
+	useAgents,
 	useCreateAgent,
 	useDeleteAgent,
 	useRevokeAgentApiKey,
@@ -52,6 +52,9 @@ import {
 	getHealthStatusColor,
 	getHealthStatusLabel,
 } from '../lib/utils';
+import { useLocale } from '../hooks/useLocale';
+import type { Agent, AgentStatus } from '../lib/types';
+import { getAgentStatusColor } from '../lib/utils';
 
 function LoadingRow() {
 import { useAgents, useCreateAgent, useDeleteAgent } from '../hooks/useAgents';
@@ -352,6 +355,8 @@ export function Agents() {
 				<div className="flex gap-1">
 					<div className="h-5 w-16 bg-gray-200 rounded-full" />
 				</div>
+			</td>
+			<td className="px-6 py-4">
 				<div className="h-6 w-16 bg-gray-200 rounded-full" />
 			</td>
 			<td className="px-6 py-4">
@@ -405,6 +410,7 @@ function GenerateCodeModal({
 }: GenerateCodeModalProps) {
 	const [hostname, setHostname] = useState('');
 	const createCode = useCreateRegistrationCode();
+	const createAgent = useCreateAgent();
 	const { t } = useLocale();
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -427,6 +433,7 @@ function GenerateCodeModal({
 			<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
 				<h3 className="text-lg font-semibold text-gray-900 mb-4">
 					Generate Registration Code
+					{t('agents.registerNewAgent')}
 				</h3>
 				<p className="text-sm text-gray-600 mb-4">
 					Generate a one-time code that an agent can use to register. The code
@@ -439,6 +446,7 @@ function GenerateCodeModal({
 							className="block text-sm font-medium text-gray-700 mb-1"
 						>
 							{t('agents.hostname')} (optional)
+							{t('agents.hostname')}
 						</label>
 						<input
 							type="text"
@@ -447,6 +455,7 @@ function GenerateCodeModal({
 							onChange={(e) => setHostname(e.target.value)}
 							placeholder={t('agents.hostnamePlaceholder')}
 							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							required
 						/>
 						<p className="mt-1 text-xs text-gray-500">
 							If provided, the agent must register with this exact hostname.
@@ -455,6 +464,9 @@ function GenerateCodeModal({
 					{createCode.isError && (
 						<p className="text-sm text-red-600 mb-4">
 							Failed to generate code. Please try again.
+					{createAgent.isError && (
+						<p className="text-sm text-red-600 mb-4">
+							{t('agents.failedToCreate')}
 						</p>
 					)}
 					<div className="flex justify-end gap-3">
@@ -471,6 +483,9 @@ function GenerateCodeModal({
 							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 						>
 							{createCode.isPending ? 'Generating...' : 'Generate Code'}
+							{createAgent.isPending
+								? t('agents.creating')
+								: t('agents.register')}
 						</button>
 					</div>
 				</form>
@@ -639,6 +654,7 @@ function ApiKeyModal({ apiKey, onClose }: ApiKeyModalProps) {
 					</div>
 					<h3 className="text-lg font-semibold text-gray-900">
 						New API Key Generated
+						{t('agents.agentRegistered')}
 					</h3>
 				</div>
 				<p className="text-sm text-gray-600 mb-4">
@@ -818,7 +834,7 @@ function PendingRegistrationRow({
 }
 
 interface AgentRowProps {
-	agent: AgentWithGroups;
+	agent: Agent;
 	onDelete: (id: string) => void;
 	onRotateKey: (id: string) => void;
 	onRevokeKey: (id: string) => void;
@@ -868,6 +884,11 @@ function AgentRow({
 				>
 					{agent.hostname}
 				</Link>
+
+	return (
+		<tr className="hover:bg-gray-50">
+			<td className="px-6 py-4">
+				<div className="font-medium text-gray-900">{agent.hostname}</div>
 				{agent.os_info && (
 					<div className="text-sm text-gray-500">
 						{agent.os_info.os} {agent.os_info.arch}
@@ -1051,6 +1072,10 @@ export function Agents() {
 	const { t } = useLocale();
 
 	const bulkOperation = useBulkOperation();
+	const deleteAgent = useDeleteAgent();
+	const rotateApiKey = useRotateAgentApiKey();
+	const revokeApiKey = useRevokeAgentApiKey();
+	const { t } = useLocale();
 
 	const filteredAgents = agents?.filter((agent) => {
 		const matchesSearch = agent.hostname
@@ -1066,6 +1091,7 @@ export function Agents() {
 				? !agent.groups || agent.groups.length === 0
 				: agent.groups?.some((g) => g.id === groupFilter));
 		return matchesSearch && matchesStatus && matchesGroup;
+		return matchesSearch && matchesStatus;
 	});
 
 	const agentIds = filteredAgents?.map((a) => a.id) ?? [];
@@ -1262,6 +1288,9 @@ export function Agents() {
 							size="md"
 						/>
 					</div>
+					<h1 className="text-2xl font-bold text-gray-900">
+						{t('agents.title')}
+					</h1>
 					<p className="text-gray-600 mt-1">{t('agents.subtitle')}</p>
 				</div>
 				<div className="flex items-center gap-3">
@@ -1436,6 +1465,17 @@ export function Agents() {
 			)}
 
 			{/* Registered Agents Section */}
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M12 4v16m8-8H4"
+						/>
+					</svg>
+					{t('agents.registerAgent')}
+				</button>
+			</div>
+
 			<div className="bg-white rounded-lg border border-gray-200">
 				<div className="p-6 border-b border-gray-200">
 					<div className="flex items-center gap-4">
@@ -1502,6 +1542,13 @@ export function Agents() {
 							<option value="offline">Offline</option>
 							<option value="pending">Pending</option>
 							<option value="disabled">Disabled</option>
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						>
+							<option value="all">{t('agents.allStatus')}</option>
+							<option value="active">{t('agents.active')}</option>
+							<option value="offline">{t('agents.offline')}</option>
+							<option value="pending">{t('agents.pending')}</option>
+							<option value="disabled">{t('agents.disabled')}</option>
 						</select>
 					</div>
 				</div>
@@ -1548,6 +1595,20 @@ export function Agents() {
 								</th>
 								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Actions
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{t('agents.hostname')}
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{t('common.status')}
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{t('agents.lastSeen')}
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{t('agents.registered')}
+								</th>
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{t('common.actions')}
 								</th>
 							</tr>
 						</thead>
@@ -1600,6 +1661,12 @@ export function Agents() {
 								</th>
 								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Actions
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{t('agents.registered')}
+								</th>
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+									{t('common.actions')}
 								</th>
 							</tr>
 						</thead>
@@ -1857,6 +1924,7 @@ export function Agents() {
 								keldris-agent register --server https://your-server
 							</code>
 						</div>
+						<p className="mb-6">{t('agents.installAndRegister')}</p>
 					</div>
 				)}
 			</div>

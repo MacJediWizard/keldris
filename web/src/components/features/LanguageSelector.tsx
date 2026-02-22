@@ -51,6 +51,10 @@ export function LanguageSelector() {
 						onKeyDown={(e) => e.key === 'Escape' && setShowDropdown(false)}
 						tabIndex={0}
 						aria-label="Close dropdown"
+					<div
+						className="fixed inset-0 z-10"
+						onClick={() => setShowDropdown(false)}
+						onKeyDown={(e) => e.key === 'Escape' && setShowDropdown(false)}
 					/>
 					<div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
 						<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">

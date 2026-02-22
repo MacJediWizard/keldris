@@ -18,6 +18,11 @@ import { useLocale } from '../hooks/useLocale';
 import { useTheme } from '../hooks/useTheme';
 import { useVersion } from '../hooks/useVersion';
 import { useOnboardingStatus } from '../hooks/useOnboarding';
+import { useState } from 'react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useAlertCount } from '../hooks/useAlerts';
+import { useLogout, useMe } from '../hooks/useAuth';
+import { useLocale } from '../hooks/useLocale';
 import {
 	useOrganizations,
 	useSwitchOrganization,
@@ -46,6 +51,7 @@ import { WhatsNewModal } from './features/WhatsNewModal';
 import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useLogout, useMe } from '../hooks/useAuth';
+import { LanguageSelector } from './features/LanguageSelector';
 
 interface NavItem {
 	path: string;
@@ -98,26 +104,6 @@ const navItems: NavItem[] = [
 		),
 	},
 	{
-		path: '/agent-groups',
-		label: 'Agent Groups',
-		icon: (
-			<svg
-				aria-hidden="true"
-				className="w-5 h-5"
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-			>
-				<path
-					strokeLinecap="round"
-					strokeLinejoin="round"
-					strokeWidth={2}
-					d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-				/>
-			</svg>
-		),
-	},
-	{
 		path: '/repositories',
 		labelKey: 'nav.repositories',
 		shortcut: 'G R',
@@ -160,26 +146,6 @@ const navItems: NavItem[] = [
 		),
 	},
 	{
-		path: '/policies',
-		label: 'Policies',
-		icon: (
-			<svg
-				aria-hidden="true"
-				className="w-5 h-5"
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-			>
-				<path
-					strokeLinecap="round"
-					strokeLinejoin="round"
-					strokeWidth={2}
-					d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-				/>
-			</svg>
-		),
-	},
-	{
 		path: '/backups',
 		labelKey: 'nav.backups',
 		shortcut: 'G B',
@@ -196,26 +162,6 @@ const navItems: NavItem[] = [
 					strokeLinejoin="round"
 					strokeWidth={2}
 					d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-				/>
-			</svg>
-		),
-	},
-	{
-		path: '/dr-runbooks',
-		label: 'DR Runbooks',
-		icon: (
-			<svg
-				aria-hidden="true"
-				className="w-5 h-5"
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-			>
-				<path
-					strokeLinecap="round"
-					strokeLinejoin="round"
-					strokeWidth={2}
-					d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
 				/>
 			</svg>
 		),
@@ -326,7 +272,7 @@ const navItems: NavItem[] = [
 		path: '/notifications',
 		labelKey: 'nav.notifications',
 		path: '/notifications',
-		label: 'Notifications',
+		labelKey: 'nav.notifications',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -340,26 +286,6 @@ const navItems: NavItem[] = [
 					strokeLinejoin="round"
 					strokeWidth={2}
 					d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-				/>
-			</svg>
-		),
-	},
-	{
-		path: '/reports',
-		label: 'Reports',
-		icon: (
-			<svg
-				aria-hidden="true"
-				className="w-5 h-5"
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-			>
-				<path
-					strokeLinecap="round"
-					strokeLinejoin="round"
-					strokeWidth={2}
-					d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
 				/>
 			</svg>
 		),
@@ -485,6 +411,7 @@ function Sidebar() {
 						{branding?.enabled ? productName : t('common.appName')}
 					</h1>
 				)}
+				<h1 className="text-2xl font-bold">{t('common.appName')}</h1>
 				<p className="text-gray-400 text-sm">{t('common.tagline')}</p>
 			</div>
 			<nav className="flex-1 px-4">
@@ -961,6 +888,19 @@ function Sidebar() {
 									<span>Organizations</span>
 								</Link>
 							</li>
+									{item.icon}
+									<span>{t(item.labelKey)}</span>
+								</Link>
+							</li>
+						);
+					})}
+				</ul>
+				{isAdmin && (
+					<>
+						<div className="mt-6 mb-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+							{t('nav.organization')}
+						</div>
+						<ul className="space-y-1">
 							<li>
 								<Link
 									to="/admin/license"
@@ -985,6 +925,7 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>License</span>
+									<span>{t('nav.members')}</span>
 								</Link>
 							</li>
 							<li>
@@ -1043,6 +984,7 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Migration</span>
+									<span>{t('nav.settings')}</span>
 								</Link>
 							</li>
 						</ul>
@@ -1122,7 +1064,9 @@ function Sidebar() {
 					{t('common.version', { version: '0.0.1' })}
 				</p>
 			<div className="p-4 border-t border-gray-800">
-				<p className="text-xs text-gray-500">v0.0.1</p>
+				<p className="text-xs text-gray-500">
+					{t('common.version', { version: '0.0.1' })}
+				</p>
 			</div>
 		</aside>
 	);
@@ -1199,13 +1143,16 @@ function OrgSwitcher() {
 				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
 					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
 						Organizations
+				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+						{t('org.organizations')}
 					</div>
 					{organizations.map((org) => (
 						<button
 							key={org.id}
 							type="button"
 							onClick={() => handleSwitch(org.id)}
-							className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
+							className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center justify-between ${
 								org.id === user?.current_org_id
 									? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
 									: 'text-gray-700 dark:text-gray-200'
@@ -1221,7 +1168,7 @@ function OrgSwitcher() {
 							</span>
 						</button>
 					))}
-					<div className="border-t border-gray-100 dark:border-gray-700 mt-1 pt-1">
+					<div className="border-t border-gray-100 mt-1 pt-1">
 						<Link
 							to="/organization/new"
 							onClick={() => setShowDropdown(false)}
@@ -1696,6 +1643,15 @@ function Header() {
 				<Link
 					to="/alerts"
 					aria-label="Alerts"
+		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+			<div className="flex items-center gap-4">
+				<OrgSwitcher />
+			</div>
+			<div className="flex items-center gap-4">
+				<LanguageSelector />
+				<Link
+					to="/alerts"
+					aria-label={t('nav.alerts')}
 					className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
 				>
 					<svg
@@ -1735,10 +1691,10 @@ function Header() {
 						</div>
 					</button>
 					{showDropdown && (
-						<div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+						<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
 							{user && (
-								<div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-									<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+								<div className="px-4 py-2 border-b border-gray-100">
+									<p className="text-sm font-medium text-gray-900 truncate">
 										{user.name}
 									</p>
 									<p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
@@ -1846,9 +1802,15 @@ function Header() {
 							<button
 								type="button"
 								onClick={() => logout.mutate()}
+									<p className="text-xs text-gray-500 truncate">{user.email}</p>
+								</div>
+							)}
+							<button
+								type="button"
+								onClick={() => logout.mutate()}
 								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
 							>
-								Sign out
+								{t('common.signOut')}
 							</button>
 						</div>
 					)}
@@ -1861,7 +1823,7 @@ function Header() {
 function LoadingScreen() {
 	const { t } = useLocale();
 	return (
-		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+		<div className="min-h-screen bg-gray-50 flex items-center justify-center">
 			<div className="text-center">
 				<div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
 				<p className="text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
@@ -1870,6 +1832,7 @@ function LoadingScreen() {
 			<div className="text-center">
 				<div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
 				<p className="text-gray-600">Loading...</p>
+				<p className="text-gray-600">{t('common.loading')}</p>
 			</div>
 		</div>
 	);
