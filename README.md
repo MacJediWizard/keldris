@@ -110,6 +110,41 @@ I wanted a backup solution that could:
 - Snapshot mounting (FUSE)
 - Import existing Restic repositories
 - Mobile-responsive layout
+### Implemented
+- Restic-powered encrypted backups with deduplication
+- Flexible cron-based scheduling with retention policies
+- OIDC authentication (tested with Authentik, Keycloak)
+- Go agent for Linux, macOS, and Windows
+- Storage backends: S3, B2, Dropbox, local, SFTP, REST
+- Full restore UI with file browser
+- Snapshot comparison (diff between backups)
+- File version history browser
+- Agent health monitoring with history
+- Backup tagging and organization
+- Pre/post backup scripts
+- Network mount detection and handling
+- Email notifications
+- Slack notifications
+- Discord notifications
+- Teams notifications
+- Multi-org with RBAC
+- Audit logging
+- Dark mode
+- First-run onboarding wizard
+- DR runbook generation
+- Prometheus metrics endpoint
+- Docker deployment
+
+### In Progress
+- Agent CLI backup/restore commands
+- Email report delivery
+- DR test automation
+- UI polish and bug fixes
+
+### Roadmap
+- Snapshot mounting (FUSE)
+- Import existing Restic repos
+- Mobile-friendly improvements
 
 ---
 
