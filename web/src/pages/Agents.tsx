@@ -1305,6 +1305,19 @@ export function Agents() {
 							setShowExportModal(true);
 						}}
 						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+				<button
+					type="button"
+					onClick={() => setShowGenerateModal(true)}
+					data-action="register-agent"
+					title={`${t('agents.registerAgent')} (N)`}
+					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+				>
+					<svg
+						aria-hidden="true"
+						className="w-5 h-5"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
 					>
 						<svg
 							aria-hidden="true"

@@ -53,6 +53,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useLogout, useMe } from '../hooks/useAuth';
 import { LanguageSelector } from './features/LanguageSelector';
 import { ToastProvider } from './ui/Toast';
+import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 
 interface NavItem {
 	path: string;
@@ -1901,6 +1902,13 @@ export function Layout() {
 	const [showWhatsNew, setShowWhatsNew] = useState(true);
 	const readOnlyModeValue = useReadOnlyModeValue();
 	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+
+	const { shortcuts } = useKeyboardShortcuts({
+		onShowHelp: () => setShowShortcutHelp(true),
+		onCloseModal: () => setShowShortcutHelp(false),
+		enabled: !isLoading && !isError,
+	});
 
 	const { shortcuts } = useKeyboardShortcuts({
 		onShowHelp: () => setShowShortcutHelp(true),
@@ -2001,5 +2009,11 @@ export function Layout() {
 				</div>
 			</ReadOnlyModeContext.Provider>
 		</ToastProvider>
+			<ShortcutHelpModal
+				isOpen={showShortcutHelp}
+				onClose={() => setShowShortcutHelp(false)}
+				shortcuts={shortcuts}
+			/>
+		</div>
 	);
 }

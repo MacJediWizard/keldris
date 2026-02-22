@@ -2786,6 +2786,19 @@ export function Schedules() {
 							setShowExportModal(true);
 						}}
 						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+				<button
+					type="button"
+					onClick={() => setShowCreateModal(true)}
+					data-action="create-schedule"
+					title="Create Schedule (N)"
+					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+				>
+					<svg
+						aria-hidden="true"
+						className="w-5 h-5"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
 					>
 						<svg
 							aria-hidden="true"
