@@ -38,6 +38,15 @@ type PiholeInfo struct {
 	WebVersion      string `json:"web_version,omitempty"`
 	ConfigDir       string `json:"config_dir,omitempty"`
 	BlockingEnabled bool   `json:"blocking_enabled"`
+	CPUUsage        float64 `json:"cpu_usage"`
+	MemoryUsage     float64 `json:"memory_usage"`
+	DiskUsage       float64 `json:"disk_usage"`
+	DiskFreeBytes   int64   `json:"disk_free_bytes"`
+	DiskTotalBytes  int64   `json:"disk_total_bytes"`
+	NetworkUp       bool    `json:"network_up"`
+	UptimeSeconds   int64   `json:"uptime_seconds"`
+	ResticVersion   string  `json:"restic_version,omitempty"`
+	ResticAvailable bool    `json:"restic_available"`
 }
 
 // Collector collects system metrics.

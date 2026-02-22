@@ -139,6 +139,17 @@ func (h *AgentAPIHandler) ReportHealth(c *gin.Context) {
 		healthMetrics.Issues = issues
 	}
 
+	}
+
+	// Evaluate health status based on metrics
+	issues := h.evaluateHealth(healthMetrics, req.Status)
+	healthStatus := h.determineHealthStatus(req.Status, issues)
+
+	// Store issues in health metrics for API response
+	if healthMetrics != nil && len(issues) > 0 {
+		healthMetrics.Issues = issues
+	}
+
 	// Track if status changed for alerting
 	previousStatus := agent.HealthStatus
 

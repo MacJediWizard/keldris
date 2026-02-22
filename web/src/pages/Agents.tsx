@@ -41,6 +41,7 @@ import { statusHelp } from '../lib/help-content';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
 import { getAgentStatusColor } from '../lib/utils';
 import type { AgentGroup, AgentStatus, AgentWithGroups } from '../lib/types';
+import type { Agent, AgentStatus } from '../lib/types';
 import {
 	formatDate,
 	getAgentStatusColor,
@@ -64,6 +65,7 @@ function LoadingRow() {
 				<div className="flex gap-1">
 					<div className="h-5 w-16 bg-gray-200 rounded-full" />
 				</div>
+				<div className="h-6 w-16 bg-gray-200 rounded-full" />
 			</td>
 			<td className="px-6 py-4">
 				<div className="h-4 w-24 bg-gray-200 rounded" />
@@ -554,6 +556,7 @@ function AgentRow({
 	const [showMenu, setShowMenu] = useState(false);
 	const statusColor = getAgentStatusColor(agent.status);
 	const { t, formatRelativeTime } = useLocale();
+	const healthColor = getHealthStatusColor(agent.health_status || 'unknown');
 
 	return (
 		<tr className={`hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''}`}>
@@ -623,6 +626,17 @@ function AgentRow({
 				) : (
 					<span className="text-sm text-gray-400">-</span>
 				)}
+				<span
+					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${healthColor.bg} ${healthColor.text}`}
+					title={
+						agent.health_metrics
+							? `CPU: ${agent.health_metrics.cpu_usage?.toFixed(1)}% | Memory: ${agent.health_metrics.memory_usage?.toFixed(1)}% | Disk: ${agent.health_metrics.disk_usage?.toFixed(1)}%`
+							: 'No health data'
+					}
+				>
+					<span className={`w-1.5 h-1.5 ${healthColor.dot} rounded-full`} />
+					{getHealthStatusLabel(agent.health_status || 'unknown')}
+				</span>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500">
 				{formatRelativeTime(agent.last_seen)}
@@ -1201,6 +1215,9 @@ export function Agents() {
 									Groups
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Health
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Last Seen
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1239,6 +1256,9 @@ export function Agents() {
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									{t('agents.lastSeen')}
 									Groups
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Health
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Last Seen

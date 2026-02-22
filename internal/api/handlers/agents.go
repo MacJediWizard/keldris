@@ -60,6 +60,7 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup, createMiddleware ...g
 		agents.GET("", h.List)
 		createChain := append(createMiddleware, h.Create)
 		agents.POST("", createChain...)
+		agents.POST("", h.Create)
 		agents.GET("/fleet-health", h.FleetHealth)
 		agents.GET("/:id", h.Get)
 		agents.DELETE("/:id", h.Delete)

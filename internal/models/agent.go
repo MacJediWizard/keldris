@@ -103,6 +103,43 @@ type DockerInfo struct {
 	DetectedAt      *time.Time            `json:"detected_at,omitempty"`
 }
 
+// HealthStatus represents the overall health status of an agent.
+type HealthStatus string
+
+const (
+	// HealthStatusHealthy indicates all metrics are within acceptable ranges.
+	HealthStatusHealthy HealthStatus = "healthy"
+	// HealthStatusWarning indicates some metrics are concerning but not critical.
+	HealthStatusWarning HealthStatus = "warning"
+	// HealthStatusCritical indicates immediate attention is required.
+	HealthStatusCritical HealthStatus = "critical"
+	// HealthStatusUnknown indicates health cannot be determined.
+	HealthStatusUnknown HealthStatus = "unknown"
+)
+
+// HealthMetrics contains system metrics from an agent.
+type HealthMetrics struct {
+	CPUUsage        float64       `json:"cpu_usage"`
+	MemoryUsage     float64       `json:"memory_usage"`
+	DiskUsage       float64       `json:"disk_usage"`
+	DiskFreeBytes   int64         `json:"disk_free_bytes"`
+	DiskTotalBytes  int64         `json:"disk_total_bytes"`
+	NetworkUp       bool          `json:"network_up"`
+	UptimeSeconds   int64         `json:"uptime_seconds"`
+	ResticVersion   string        `json:"restic_version,omitempty"`
+	ResticAvailable bool          `json:"restic_available"`
+	Issues          []HealthIssue `json:"issues,omitempty"`
+}
+
+// HealthIssue represents a specific health issue detected on an agent.
+type HealthIssue struct {
+	Component string       `json:"component"` // disk, memory, cpu, network, restic, heartbeat
+	Severity  HealthStatus `json:"severity"`
+	Message   string       `json:"message"`
+	Value     float64      `json:"value,omitempty"`
+	Threshold float64      `json:"threshold,omitempty"`
+}
+
 // Agent represents a backup agent installed on a host.
 type Agent struct {
 	ID                   uuid.UUID              `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
@@ -125,6 +162,18 @@ type Agent struct {
 	Metadata             map[string]interface{} `json:"metadata,omitempty"`
 	CreatedAt            time.Time              `json:"created_at"`
 	UpdatedAt            time.Time              `json:"updated_at"`
+	ID              uuid.UUID      `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	OrgID           uuid.UUID      `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440001"`
+	Hostname        string         `json:"hostname" example:"backup-server-01"`
+	APIKeyHash      string         `json:"-"` // Never expose in JSON
+	OSInfo          *OSInfo        `json:"os_info,omitempty"`
+	LastSeen        *time.Time     `json:"last_seen,omitempty"`
+	Status          AgentStatus    `json:"status" example:"active"`
+	HealthStatus    HealthStatus   `json:"health_status" example:"healthy"`
+	HealthMetrics   *HealthMetrics `json:"health_metrics,omitempty"`
+	HealthCheckedAt *time.Time     `json:"health_checked_at,omitempty"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
 }
 
 // NewAgent creates a new Agent with the given details.
@@ -280,6 +329,21 @@ type AgentHealthHistory struct {
 	Issues          []HealthIssue `json:"issues,omitempty"`
 	RecordedAt      time.Time    `json:"recorded_at"`
 	CreatedAt       time.Time    `json:"created_at"`
+	ID              uuid.UUID      `json:"id"`
+	AgentID         uuid.UUID      `json:"agent_id"`
+	OrgID           uuid.UUID      `json:"org_id"`
+	HealthStatus    HealthStatus   `json:"health_status"`
+	CPUUsage        *float64       `json:"cpu_usage,omitempty"`
+	MemoryUsage     *float64       `json:"memory_usage,omitempty"`
+	DiskUsage       *float64       `json:"disk_usage,omitempty"`
+	DiskFreeBytes   *int64         `json:"disk_free_bytes,omitempty"`
+	DiskTotalBytes  *int64         `json:"disk_total_bytes,omitempty"`
+	NetworkUp       bool           `json:"network_up"`
+	ResticVersion   string         `json:"restic_version,omitempty"`
+	ResticAvailable bool           `json:"restic_available"`
+	Issues          []HealthIssue  `json:"issues,omitempty"`
+	RecordedAt      time.Time      `json:"recorded_at"`
+	CreatedAt       time.Time      `json:"created_at"`
 }
 
 // NewAgentHealthHistory creates a new health history record.

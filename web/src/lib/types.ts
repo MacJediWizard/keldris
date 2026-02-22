@@ -162,6 +162,35 @@ export interface AgentGroupsResponse {
 
 export interface AgentsWithGroupsResponse {
 	agents: AgentWithGroups[];
+export interface AgentHealthHistory {
+	id: string;
+	agent_id: string;
+	org_id: string;
+	health_status: HealthStatus;
+	cpu_usage?: number;
+	memory_usage?: number;
+	disk_usage?: number;
+	disk_free_bytes?: number;
+	disk_total_bytes?: number;
+	network_up: boolean;
+	restic_version?: string;
+	restic_available: boolean;
+	issues?: HealthIssue[];
+	recorded_at: string;
+	created_at: string;
+}
+
+export interface FleetHealthSummary {
+	total_agents: number;
+	healthy_count: number;
+	warning_count: number;
+	critical_count: number;
+	unknown_count: number;
+	active_count: number;
+	offline_count: number;
+	avg_cpu_usage: number;
+	avg_memory_usage: number;
+	avg_disk_usage: number;
 }
 
 export interface CreateAgentRequest {

@@ -222,6 +222,8 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		       health_status, health_metrics, health_checked_at,
 		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
 		       metadata, created_at, updated_at
+		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
+		       health_status, health_metrics, health_checked_at, created_at, updated_at
 		FROM agents
 		WHERE org_id = $1
 		ORDER BY hostname
@@ -246,6 +248,13 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 			&a.HealthCheckedAt,
 			&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
 			&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
+		var healthMetricsBytes []byte
+		var statusStr string
+		var healthStatusStr *string
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+			&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
+			&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
@@ -267,6 +276,9 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		}
 		if err := a.SetMetadata(metadataBytes); err != nil {
 			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse metadata")
+		}
+		if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
+			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 		}
 		agents = append(agents, &a)
 	}
@@ -296,6 +308,18 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 		&a.HealthCheckedAt,
 		&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
 		&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
+	var healthMetricsBytes []byte
+	var statusStr string
+	var healthStatusStr *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
+		       health_status, health_metrics, health_checked_at, created_at, updated_at
+		FROM agents
+		WHERE id = $1
+	`, id).Scan(
+		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
+		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent: %w", err)
@@ -317,6 +341,9 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 	}
 	if err := a.SetMetadata(metadataBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse metadata")
+	}
+	if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
+		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 	}
 	return &a, nil
 }
@@ -343,6 +370,18 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 		&a.HealthCheckedAt,
 		&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
 		&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
+	var healthMetricsBytes []byte
+	var statusStr string
+	var healthStatusStr *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
+		       health_status, health_metrics, health_checked_at, created_at, updated_at
+		FROM agents
+		WHERE api_key_hash = $1
+	`, hash).Scan(
+		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
+		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent by API key: %w", err)
@@ -364,6 +403,9 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 	}
 	if err := a.SetMetadata(metadataBytes); err != nil {
 		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse metadata")
+	}
+	if err := a.SetHealthMetrics(healthMetricsBytes); err != nil {
+		db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse health metrics")
 	}
 	return &a, nil
 }
@@ -406,6 +448,11 @@ func (db *DB) UpdateAgent(ctx context.Context, agent *models.Agent) error {
 		return fmt.Errorf("marshal health metrics: %w", err)
 	}
 
+	healthMetricsBytes, err := agent.HealthMetricsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal health metrics: %w", err)
+	}
+
 	agent.UpdatedAt = time.Now()
 	_, err = db.Pool.Exec(ctx, `
 		UPDATE agents
@@ -413,6 +460,10 @@ func (db *DB) UpdateAgent(ctx context.Context, agent *models.Agent) error {
 		    health_status = $8, health_metrics = $9, health_checked_at = $10
 		WHERE id = $1
 	`, agent.ID, agent.Hostname, osInfoBytes, networkMountsBytes, agent.LastSeen, string(agent.Status), agent.UpdatedAt,
+		SET hostname = $2, os_info = $3, last_seen = $4, status = $5, updated_at = $6,
+		    health_status = $7, health_metrics = $8, health_checked_at = $9
+		WHERE id = $1
+	`, agent.ID, agent.Hostname, osInfoBytes, agent.LastSeen, string(agent.Status), agent.UpdatedAt,
 		string(agent.HealthStatus), healthMetricsBytes, agent.HealthCheckedAt)
 	if err != nil {
 		return fmt.Errorf("update agent: %w", err)

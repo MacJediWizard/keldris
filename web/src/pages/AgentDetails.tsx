@@ -13,6 +13,7 @@ import {
 import {
 	useAgent,
 	useAgentBackups,
+	useAgentHealthHistory,
 	useAgentSchedules,
 	useAgentStats,
 	useDeleteAgent,
@@ -34,7 +35,7 @@ import type {
 	Schedule,
 } from '../lib/types';
 } from '../hooks/useAgents';
-import type { Backup, Schedule } from '../lib/types';
+import type { AgentHealthHistory, Backup, Schedule } from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
@@ -48,6 +49,8 @@ import {
 	getHealthStatusLabel,
 	getAgentStatusColor,
 	getBackupStatusColor,
+	getHealthStatusColor,
+	getHealthStatusLabel,
 } from '../lib/utils';
 
 function LoadingCard() {
@@ -388,6 +391,7 @@ export function AgentDetails() {
 	const [activeTab, setActiveTab] = useState<
 		'overview' | 'backups' | 'schedules' | 'health' | 'logs' | 'commands'
 		'overview' | 'backups' | 'schedules'
+		'overview' | 'backups' | 'schedules' | 'health'
 	>('overview');
 
 	const { data: agent, isLoading: agentLoading } = useAgent(id ?? '');
