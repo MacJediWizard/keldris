@@ -8,11 +8,14 @@ import (
 	"testing"
 
 	"github.com/MacJediWizard/keldris/internal/config"
+	"testing"
+
 	"github.com/gin-gonic/gin"
 )
 
 func TestSecurityHeaders_AllHeadersSet(t *testing.T) {
 	mw := SecurityHeaders(config.EnvDevelopment)
+	mw := SecurityHeaders()
 
 	r := gin.New()
 	r.Use(mw)
@@ -34,6 +37,7 @@ func TestSecurityHeaders_AllHeadersSet(t *testing.T) {
 		"X-XSS-Protection":      "1; mode=block",
 		"Referrer-Policy":        "strict-origin-when-cross-origin",
 		"Permissions-Policy":     "geolocation=(), microphone=(), camera=()",
+		"Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'",
 	}
 
 	for header, want := range expected {
@@ -127,6 +131,12 @@ func TestSecurityHeaders_AuthRouteStrictCSP(t *testing.T) {
 	r := gin.New()
 	r.Use(mw)
 	r.GET("/auth/callback", func(c *gin.Context) {
+func TestSecurityHeaders_HSTSOnlyWithTLS(t *testing.T) {
+	mw := SecurityHeaders()
+
+	r := gin.New()
+	r.Use(mw)
+	r.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	})
 
@@ -222,6 +232,8 @@ func TestSecurityHeaders_FrontendRouteNonceCSP(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/", nil)
+	req, _ := http.NewRequest("GET", "/test", nil)
+	req.TLS = &tls.ConnectionState{}
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -385,5 +397,7 @@ func TestGenerateNonce(t *testing.T) {
 	// 16 bytes base64-encoded = 24 chars (with padding) or 22 (without).
 	if len(nonce) < 20 {
 		t.Errorf("nonce seems too short: %q (len=%d)", nonce, len(nonce))
+	if got := w.Header().Get("Strict-Transport-Security"); got != "max-age=31536000; includeSubDomains" {
+		t.Errorf("expected HSTS header with TLS, got %q", got)
 	}
 }

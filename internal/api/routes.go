@@ -98,6 +98,8 @@ func NewRouter(
 	r.Engine.Use(middleware.RequestLogger(logger))
 	r.Engine.Use(middleware.SecurityHeaders(cfg.Environment))
 	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins, cfg.Environment))
+	r.Engine.Use(middleware.SecurityHeaders())
+	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins))
 
 	// Rate limiting
 	rateLimiter, err := middleware.NewRateLimiter(cfg.RateLimitRequests, cfg.RateLimitPeriod, cfg.RedisURL)
