@@ -55,15 +55,22 @@ type User struct {
 	UpdatedAt           time.Time  `json:"updated_at"`
 // User represents a user authenticated via OIDC.
 type User struct {
-	ID          uuid.UUID `json:"id"`
-	OrgID       uuid.UUID `json:"org_id"`
-	OIDCSubject string    `json:"oidc_subject"`
-	Email       string    `json:"email"`
-	Name        string    `json:"name,omitempty"`
-	Role        UserRole  `json:"role"`
-	IsSuperuser bool      `json:"is_superuser"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID                  uuid.UUID  `json:"id"`
+	OrgID               uuid.UUID  `json:"org_id"`
+	OIDCSubject         string     `json:"oidc_subject"`
+	Email               string     `json:"email"`
+	Name                string     `json:"name,omitempty"`
+	Role                UserRole   `json:"role"`
+	Status              UserStatus `json:"status"`
+	LastLoginAt         *time.Time `json:"last_login_at,omitempty"`
+	LastLoginIP         string     `json:"last_login_ip,omitempty"`
+	FailedLoginAttempts int        `json:"failed_login_attempts,omitempty"`
+	LockedUntil         *time.Time `json:"locked_until,omitempty"`
+	InvitedBy           *uuid.UUID `json:"invited_by,omitempty"`
+	InvitedAt           *time.Time `json:"invited_at,omitempty"`
+	IsSuperuser         bool       `json:"is_superuser"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
 }
 
 // NewUser creates a new User with the given details.

@@ -519,6 +519,7 @@ function App() {
 								path="organization/members"
 								element={<OrganizationMembers />}
 							/>
+							<Route path="organization/users" element={<UserManagement />} />
 							<Route
 								path="organization/settings"
 								element={<OrganizationSettings />}

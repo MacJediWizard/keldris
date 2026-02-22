@@ -46,6 +46,8 @@ const (
 	ImpersonatingKey = "impersonating"
 	// IsSuperuserKey is the session key for superuser status.
 	IsSuperuserKey = "is_superuser"
+	// ImpersonatingKey is the session key for impersonation state.
+	ImpersonatingKey = "impersonating"
 	// ImpersonatingUserIDKey is the session key for the user being impersonated.
 	ImpersonatingUserIDKey = "impersonating_user_id"
 	// OriginalUserIDKey is the session key for the original superuser ID during impersonation.
@@ -223,6 +225,13 @@ func (u *SessionUser) IsImpersonating() bool {
 	CurrentOrgRole  string
 	ImpersonatingID    uuid.UUID // The user being impersonated (if any)
 	OriginalUserID     uuid.UUID // The original superuser ID (during impersonation)
+	OriginalUserEmail  string
+	ImpersonationLogID uuid.UUID
+}
+
+// IsImpersonating returns true if the user is being impersonated.
+func (u *SessionUser) IsImpersonating() bool {
+	return u.Impersonating && u.OriginalUserID != uuid.Nil
 }
 
 // SetUser stores user data in the session after successful authentication.
@@ -318,17 +327,20 @@ func (s *SessionStore) TouchSession(r *http.Request, w http.ResponseWriter) erro
 
 
 	return &SessionUser{
-		ID:              userID,
-		OIDCSubject:     oidcSubject,
-		Email:           email,
-		Name:            name,
-		AuthenticatedAt: authenticatedAt,
-		CurrentOrgID:    currentOrgID,
-		CurrentOrgRole:  currentOrgRole,
-		SessionRecordID: sessionRecordID,
-		IsSuperuser:     isSuperuser,
-		ImpersonatingID: impersonatingID,
-		OriginalUserID:  originalUserID,
+		ID:                 userID,
+		OIDCSubject:        oidcSubject,
+		Email:              email,
+		Name:               name,
+		AuthenticatedAt:    authenticatedAt,
+		CurrentOrgID:       currentOrgID,
+		CurrentOrgRole:     currentOrgRole,
+		SessionRecordID:    sessionRecordID,
+		IsSuperuser:        isSuperuser,
+		Impersonating:      impersonating,
+		ImpersonatingID:    impersonatingID,
+		OriginalUserID:     originalUserID,
+		OriginalUserEmail:  originalUserEmail,
+		ImpersonationLogID: impersonationLogID,
 	}, nil
 }
 
@@ -518,15 +530,18 @@ func (s *SessionStore) SetSuperuserStatus(r *http.Request, w http.ResponseWriter
 }
 
 // StartImpersonation sets up impersonation mode where a superuser acts as another user.
-func (s *SessionStore) StartImpersonation(r *http.Request, w http.ResponseWriter, originalUser *SessionUser, targetUser *SessionUser) error {
+func (s *SessionStore) StartImpersonation(r *http.Request, w http.ResponseWriter, originalUser *SessionUser, targetUser *SessionUser, logID uuid.UUID) error {
 	session, err := s.Get(r)
 	if err != nil {
 		return err
 	}
 
-	// Store original superuser ID
+	// Store original superuser info
+	session.Values[ImpersonatingKey] = true
 	session.Values[OriginalUserIDKey] = originalUser.ID
+	session.Values[OriginalUserEmailKey] = originalUser.Email
 	session.Values[ImpersonatingUserIDKey] = targetUser.ID
+	session.Values[ImpersonationLogIDKey] = logID
 
 	// Switch to target user's identity
 	session.Values[UserIDKey] = targetUser.ID
@@ -558,11 +573,28 @@ func (s *SessionStore) EndImpersonation(r *http.Request, w http.ResponseWriter, 
 	session.Values[CurrentOrgRoleKey] = originalUser.CurrentOrgRole
 	session.Values[IsSuperuserKey] = originalUser.IsSuperuser
 
-	// Clear impersonation markers
+	// Clear impersonation state
+	delete(session.Values, ImpersonatingKey)
 	delete(session.Values, ImpersonatingUserIDKey)
 	delete(session.Values, OriginalUserIDKey)
+	delete(session.Values, OriginalUserEmailKey)
+	delete(session.Values, ImpersonationLogIDKey)
 
 	return s.Save(r, w, session)
+}
+
+// GetImpersonationLogID returns the current impersonation log ID if impersonating.
+func (s *SessionStore) GetImpersonationLogID(r *http.Request) (uuid.UUID, error) {
+	session, err := s.Get(r)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	logID, ok := session.Values[ImpersonationLogIDKey].(uuid.UUID)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("not impersonating")
+	}
+	return logID, nil
 }
 
 // IsImpersonating checks if the current session is in impersonation mode.

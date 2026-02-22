@@ -5541,6 +5541,102 @@ export interface SLAReportResponse {
 
 // User Management types
 export type UserStatus = 'active' | 'disabled' | 'pending' | 'locked';
+
+export interface UserWithMembership {
+	id: string;
+	org_id: string;
+	oidc_subject?: string;
+	email: string;
+	name: string;
+	role: string;
+	status: UserStatus;
+	last_login_at?: string;
+	last_login_ip?: string;
+	failed_login_attempts?: number;
+	locked_until?: string;
+	invited_by?: string;
+	invited_at?: string;
+	is_superuser?: boolean;
+	created_at: string;
+	updated_at: string;
+	org_role: OrgRole;
+}
+
+export interface UsersResponse {
+	users: UserWithMembership[];
+}
+
+export interface InviteUserRequest {
+	email: string;
+	name?: string;
+	role: OrgRole;
+}
+
+export interface InviteUserResponse {
+	message: string;
+	token: string;
+}
+
+export interface UpdateUserRequest {
+	name?: string;
+	role?: OrgRole;
+	status?: UserStatus;
+}
+
+export interface ResetPasswordRequest {
+	new_password: string;
+	require_change_on_use?: boolean;
+}
+
+export interface ImpersonateUserRequest {
+	reason: string;
+}
+
+export interface ImpersonateUserResponse {
+	message: string;
+	impersonating: string;
+	impersonated_id: string;
+}
+
+export interface UserActivityLog {
+	id: string;
+	user_id: string;
+	org_id: string;
+	action: string;
+	resource_type?: string;
+	resource_id?: string;
+	ip_address?: string;
+	user_agent?: string;
+	details?: Record<string, unknown>;
+	created_at: string;
+	user_email: string;
+	user_name: string;
+}
+
+export interface UserActivityLogsResponse {
+	activity_logs: UserActivityLog[];
+}
+
+export interface UserImpersonationLog {
+	id: string;
+	admin_user_id: string;
+	target_user_id: string;
+	org_id: string;
+	reason?: string;
+	started_at: string;
+	ended_at?: string;
+	ip_address?: string;
+	user_agent?: string;
+	admin_email: string;
+	admin_name: string;
+	target_email: string;
+	target_name: string;
+}
+
+export interface ImpersonationLogsResponse {
+	impersonation_logs: UserImpersonationLog[];
+}
+
 // Organization System Settings types (SMTP, OIDC, Storage, Security)
 export interface SMTPSettings {
 	host: string;

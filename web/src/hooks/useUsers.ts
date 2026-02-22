@@ -49,6 +49,13 @@ export function useUpdateUser() {
 	return useMutation({
 		mutationFn: ({ id, data }: { id: string; data: UpdateUserRequest }) =>
 			usersApi.update(id, data),
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: UpdateUserRequest;
+		}) => usersApi.update(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: USERS_KEY });
 			queryClient.invalidateQueries({ queryKey: USER_KEY(id) });
@@ -73,6 +80,13 @@ export function useResetUserPassword() {
 	return useMutation({
 		mutationFn: ({ id, data }: { id: string; data: ResetPasswordRequest }) =>
 			usersApi.resetPassword(id, data),
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: ResetPasswordRequest;
+		}) => usersApi.resetPassword(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: USER_KEY(id) });
 		},
@@ -126,6 +140,13 @@ export function useStartImpersonation() {
 	return useMutation({
 		mutationFn: ({ id, data }: { id: string; data: ImpersonateUserRequest }) =>
 			usersApi.startImpersonation(id, data),
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: ImpersonateUserRequest;
+		}) => usersApi.startImpersonation(id, data),
 		onSuccess: () => {
 			// Invalidate auth data as we're now acting as a different user
 			queryClient.invalidateQueries({ queryKey: ['auth'] });

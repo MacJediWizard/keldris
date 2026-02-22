@@ -610,6 +610,7 @@ func NewRouter(
 	userSessionsHandler.RegisterRoutes(apiV1)
 
 	// User management routes (admin)
+// User management routes (admin)
 	usersHandler := handlers.NewUsersHandler(database, sessions, rbac, logger)
 	usersHandler.RegisterRoutes(apiV1)
 
