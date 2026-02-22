@@ -234,6 +234,9 @@ func NewRouter(
 	notificationsHandler := handlers.NewNotificationsHandlerWithEnv(database, keyManager, logger, cfg.Environment)
 	notificationsHandler.RegisterRoutes(apiV1)
 
+	notificationRulesHandler := handlers.NewNotificationRulesHandler(database, logger)
+	notificationRulesHandler.RegisterRoutes(apiV1)
+
 	// Register reports handler if scheduler is available
 	if cfg.ReportScheduler != nil {
 		reportsHandler := handlers.NewReportsHandler(database, cfg.ReportScheduler, logger)

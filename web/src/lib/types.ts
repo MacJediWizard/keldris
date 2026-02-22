@@ -1309,6 +1309,121 @@ export interface NotificationLogsResponse {
 	logs: NotificationLog[];
 }
 
+// Notification Rule types
+export type RuleTriggerType =
+	| 'backup_failed'
+	| 'backup_success'
+	| 'agent_offline'
+	| 'agent_health_warning'
+	| 'agent_health_critical'
+	| 'storage_usage_high'
+	| 'replication_lag'
+	| 'ransomware_suspected'
+	| 'maintenance_scheduled';
+
+export type RuleActionType =
+	| 'notify_channel'
+	| 'escalate'
+	| 'suppress'
+	| 'webhook';
+
+export interface RuleConditions {
+	count?: number;
+	time_window_minutes?: number;
+	severity?: string;
+	agent_ids?: string[];
+	schedule_ids?: string[];
+	repository_ids?: string[];
+}
+
+export interface RuleAction {
+	type: RuleActionType;
+	channel_id?: string;
+	escalate_to_channel_id?: string;
+	webhook_url?: string;
+	suppress_duration_minutes?: number;
+	message?: string;
+}
+
+export interface NotificationRule {
+	id: string;
+	org_id: string;
+	name: string;
+	description?: string;
+	trigger_type: RuleTriggerType;
+	enabled: boolean;
+	priority: number;
+	conditions: RuleConditions;
+	actions: RuleAction[];
+	created_at: string;
+	updated_at: string;
+}
+
+export interface NotificationRuleEvent {
+	id: string;
+	org_id: string;
+	rule_id: string;
+	trigger_type: RuleTriggerType;
+	resource_type?: string;
+	resource_id?: string;
+	event_data?: Record<string, unknown>;
+	occurred_at: string;
+	created_at: string;
+}
+
+export interface NotificationRuleExecution {
+	id: string;
+	org_id: string;
+	rule_id: string;
+	triggered_by_event_id?: string;
+	actions_taken: RuleAction[];
+	success: boolean;
+	error_message?: string;
+	executed_at: string;
+	created_at: string;
+}
+
+export interface CreateNotificationRuleRequest {
+	name: string;
+	description?: string;
+	trigger_type: RuleTriggerType;
+	enabled: boolean;
+	priority: number;
+	conditions: RuleConditions;
+	actions: RuleAction[];
+}
+
+export interface UpdateNotificationRuleRequest {
+	name?: string;
+	description?: string;
+	enabled?: boolean;
+	priority?: number;
+	conditions?: RuleConditions;
+	actions?: RuleAction[];
+}
+
+export interface TestNotificationRuleRequest {
+	event_data?: Record<string, unknown>;
+}
+
+export interface NotificationRulesResponse {
+	rules: NotificationRule[];
+}
+
+export interface NotificationRuleEventsResponse {
+	events: NotificationRuleEvent[];
+}
+
+export interface NotificationRuleExecutionsResponse {
+	executions: NotificationRuleExecution[];
+}
+
+export interface TestNotificationRuleResponse {
+	success: boolean;
+	message?: string;
+	execution?: NotificationRuleExecution;
+}
+
 // Audit log types
 export type AuditAction =
 	| 'login'
