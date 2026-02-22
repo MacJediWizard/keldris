@@ -716,6 +716,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											helpContent={
 												advancedSettingsHelp.compressionLevel.content
 											}
+											helpContent={advancedSettingsHelp.compressionLevel.content}
 											helpTitle={advancedSettingsHelp.compressionLevel.title}
 										/>
 										<select
@@ -779,6 +780,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											helpContent={
 												advancedSettingsHelp.onMountUnavailable.content
 											}
+											helpContent={advancedSettingsHelp.onMountUnavailable.content}
 											helpTitle={advancedSettingsHelp.onMountUnavailable.title}
 										/>
 										<select
