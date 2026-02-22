@@ -51,6 +51,7 @@ func (h *SchedulesHandler) RegisterRoutes(r *gin.RouterGroup) {
 		schedules.PUT("/:id", h.Update)
 		schedules.DELETE("/:id", h.Delete)
 		schedules.POST("/:id/run", h.Run)
+		schedules.POST("/:id/dry-run", h.DryRun)
 		schedules.GET("/:id/replication", h.GetReplicationStatus)
 	}
 }
@@ -526,10 +527,42 @@ func (h *SchedulesHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "schedule deleted"})
 }
 
+// RunScheduleRequest is the request body for running a schedule.
+type RunScheduleRequest struct {
+	DryRun bool `json:"dry_run,omitempty"`
+}
+
 // RunScheduleResponse is the response for running a schedule.
 type RunScheduleResponse struct {
 	BackupID uuid.UUID `json:"backup_id"`
 	Message  string    `json:"message"`
+}
+
+// DryRunResponse is the response for a dry run operation.
+type DryRunResponse struct {
+	ScheduleID     uuid.UUID              `json:"schedule_id"`
+	TotalFiles     int                    `json:"total_files"`
+	TotalSize      int64                  `json:"total_size"`
+	NewFiles       int                    `json:"new_files"`
+	ChangedFiles   int                    `json:"changed_files"`
+	UnchangedFiles int                    `json:"unchanged_files"`
+	FilesToBackup  []DryRunFileResponse   `json:"files_to_backup"`
+	ExcludedFiles  []DryRunExcluded       `json:"excluded_files"`
+	Message        string                 `json:"message"`
+}
+
+// DryRunFileResponse represents a file in the dry run response.
+type DryRunFileResponse struct {
+	Path   string `json:"path"`
+	Type   string `json:"type"`
+	Size   int64  `json:"size"`
+	Action string `json:"action"`
+}
+
+// DryRunExcluded represents an excluded file in the dry run response.
+type DryRunExcluded struct {
+	Path   string `json:"path"`
+	Reason string `json:"reason"`
 }
 
 // Run triggers an immediate backup for this schedule.
@@ -591,6 +624,91 @@ func (h *SchedulesHandler) Run(c *gin.Context) {
 		BackupID: backup.ID,
 		Message:  "Backup triggered successfully",
 	})
+}
+
+// DryRun performs a dry run backup simulation for this schedule.
+//
+//	@Summary		Dry run schedule
+//	@Description	Performs a dry run to preview what would be backed up for the specified schedule
+//	@Tags			Schedules
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Schedule ID"
+//	@Success		200	{object}	DryRunResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/schedules/{id}/dry-run [post]
+func (h *SchedulesHandler) DryRun(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
+		return
+	}
+
+	schedule, err := h.store.GetScheduleByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
+		return
+	}
+
+	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, schedule); err != nil {
+		return
+	}
+
+	// TODO: Implement actual dry run when backup package is ready
+	// This will use the Restic.DryRun method with the schedule's paths and excludes
+	h.logger.Info().
+		Str("schedule_id", id.String()).
+		Str("agent_id", schedule.AgentID.String()).
+		Strs("paths", schedule.Paths).
+		Strs("excludes", schedule.Excludes).
+		Msg("dry run requested")
+
+	// Return placeholder response showing what would be backed up
+	excludedFiles := make([]DryRunExcluded, 0, len(schedule.Excludes))
+	for _, pattern := range schedule.Excludes {
+		excludedFiles = append(excludedFiles, DryRunExcluded{
+			Path:   pattern,
+			Reason: "matched exclude pattern",
+		})
+	}
+
+	c.JSON(http.StatusOK, DryRunResponse{
+		ScheduleID:     id,
+		TotalFiles:     0,
+		TotalSize:      0,
+		NewFiles:       0,
+		ChangedFiles:   0,
+		UnchangedFiles: 0,
+		FilesToBackup:  []DryRunFileResponse{},
+		ExcludedFiles:  excludedFiles,
+		Message:        "Dry run not yet fully implemented. Schedule paths: " + formatPaths(schedule.Paths),
+	})
+}
+
+// formatPaths formats a slice of paths as a comma-separated string.
+func formatPaths(paths []string) string {
+	if len(paths) == 0 {
+		return "(none)"
+	}
+	result := paths[0]
+	for i := 1; i < len(paths); i++ {
+		result += ", " + paths[i]
+	}
+	return result
 }
 
 // verifyScheduleAccess checks if the user has access to the schedule.
