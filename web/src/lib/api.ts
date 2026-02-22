@@ -5986,3 +5986,72 @@ export const statsApi = {
 			`/stats/repositories/${id}/history?limit=${limit}`,
 		),
 };
+
+// Audit Logs API
+export const auditLogsApi = {
+	list: async (filter?: AuditLogFilter): Promise<AuditLogsResponse> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.action) searchParams.set('action', filter.action);
+		if (filter?.resource_type)
+			searchParams.set('resource_type', filter.resource_type);
+		if (filter?.result) searchParams.set('result', filter.result);
+		if (filter?.start_date) searchParams.set('start_date', filter.start_date);
+		if (filter?.end_date) searchParams.set('end_date', filter.end_date);
+		if (filter?.search) searchParams.set('search', filter.search);
+		if (filter?.limit) searchParams.set('limit', filter.limit.toString());
+		if (filter?.offset) searchParams.set('offset', filter.offset.toString());
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/audit-logs?${query}` : '/audit-logs';
+		return fetchApi<AuditLogsResponse>(endpoint);
+	},
+
+	get: async (id: string): Promise<AuditLog> =>
+		fetchApi<AuditLog>(`/audit-logs/${id}`),
+
+	exportCsv: async (filter?: AuditLogFilter): Promise<Blob> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.action) searchParams.set('action', filter.action);
+		if (filter?.resource_type)
+			searchParams.set('resource_type', filter.resource_type);
+		if (filter?.result) searchParams.set('result', filter.result);
+		if (filter?.start_date) searchParams.set('start_date', filter.start_date);
+		if (filter?.end_date) searchParams.set('end_date', filter.end_date);
+		if (filter?.search) searchParams.set('search', filter.search);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/audit-logs/export/csv?${query}`
+			: '/audit-logs/export/csv';
+		const response = await fetch(`${API_BASE}${endpoint}`, {
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export audit logs');
+		}
+		return response.blob();
+	},
+
+	exportJson: async (filter?: AuditLogFilter): Promise<Blob> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.action) searchParams.set('action', filter.action);
+		if (filter?.resource_type)
+			searchParams.set('resource_type', filter.resource_type);
+		if (filter?.result) searchParams.set('result', filter.result);
+		if (filter?.start_date) searchParams.set('start_date', filter.start_date);
+		if (filter?.end_date) searchParams.set('end_date', filter.end_date);
+		if (filter?.search) searchParams.set('search', filter.search);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/audit-logs/export/json?${query}`
+			: '/audit-logs/export/json';
+		const response = await fetch(`${API_BASE}${endpoint}`, {
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export audit logs');
+		}
+		return response.blob();
+	},
+};

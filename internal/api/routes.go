@@ -323,6 +323,7 @@ func NewRouter(
 
 	// Create RBAC for permission checks
 	rbac := auth.NewRBAC(database)
+	apiV1.Use(middleware.AuditMiddleware(database, logger))
 
 	// Create RBAC for permission checks
 	rbac := auth.NewRBAC(database)
@@ -798,6 +799,9 @@ func NewRouter(
 	// DR Test routes
 	drTestsHandler := handlers.NewDRTestsHandler(database, cfg.DRTestRunner, logger)
 	drTestsHandler.RegisterRoutes(apiV1)
+	auditLogsHandler := handlers.NewAuditLogsHandler(database, logger)
+	auditLogsHandler.RegisterRoutes(apiV1)
+
 	alertsHandler := handlers.NewAlertsHandler(database, logger)
 	alertsHandler.RegisterRoutes(apiV1)
 

@@ -1,4 +1,5 @@
 -- 006_add_audit_logs.sql
+-- 002_add_audit_logs.sql
 -- Add audit log tracking for compliance
 
 CREATE TABLE audit_logs (

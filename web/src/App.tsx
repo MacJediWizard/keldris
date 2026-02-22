@@ -19,6 +19,7 @@ import { Alerts } from './pages/Alerts';
 import { Announcements } from './pages/Announcements';
 import { AuditLogs } from './pages/AuditLogs';
 import { BackupHookTemplates } from './pages/BackupHookTemplates';
+import { AuditLogs } from './pages/AuditLogs';
 import { Backups } from './pages/Backups';
 import { BrandingSettings } from './pages/BrandingSettings';
 import { Changelog } from './pages/Changelog';
@@ -693,6 +694,7 @@ function App() {
 						<Route path="repositories" element={<Repositories />} />
 						<Route path="schedules" element={<Schedules />} />
 						<Route path="backups" element={<Backups />} />
+						<Route path="audit-logs" element={<AuditLogs />} />
 						<Route
 							path="organization/members"
 							element={<OrganizationMembers />}

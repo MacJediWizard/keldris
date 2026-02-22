@@ -321,6 +321,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/audit-logs',
 		labelKey: 'nav.auditLogs',
+		label: 'Audit Logs',
 		icon: (
 			<svg
 				aria-hidden="true"

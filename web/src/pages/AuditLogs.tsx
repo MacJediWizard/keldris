@@ -35,6 +35,22 @@ function LoadingRow() {
 			</td>
 			<td className="px-6 py-4">
 				<div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded" />
+				<div className="h-4 w-24 bg-gray-200 rounded" />
+			</td>
+			<td className="px-6 py-4">
+				<div className="h-6 w-16 bg-gray-200 rounded-full" />
+			</td>
+			<td className="px-6 py-4">
+				<div className="h-4 w-20 bg-gray-200 rounded" />
+			</td>
+			<td className="px-6 py-4">
+				<div className="h-4 w-32 bg-gray-200 rounded" />
+			</td>
+			<td className="px-6 py-4">
+				<div className="h-6 w-16 bg-gray-200 rounded-full" />
+			</td>
+			<td className="px-6 py-4">
+				<div className="h-4 w-28 bg-gray-200 rounded" />
 			</td>
 		</tr>
 	);
@@ -129,6 +145,8 @@ export function AuditLogs() {
 						Audit Logs
 					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
+					<p className="text-gray-600 mt-1">
 						Track all user and system actions for compliance
 					</p>
 				</div>
@@ -182,6 +200,8 @@ export function AuditLogs() {
 
 			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
+			<div className="bg-white rounded-lg border border-gray-200">
+				<div className="p-6 border-b border-gray-200">
 					<div className="flex flex-wrap items-center gap-4">
 						<div className="flex-1 min-w-64">
 							<input
@@ -191,12 +211,14 @@ export function AuditLogs() {
 								onChange={(e) => setSearchInput(e.target.value)}
 								onKeyDown={handleKeyDown}
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							/>
 						</div>
 						<select
 							value={filter.action || ''}
 							onChange={(e) => handleFilterChange('action', e.target.value)}
 							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="">All Actions</option>
 							<option value="login">Login</option>
@@ -214,6 +236,7 @@ export function AuditLogs() {
 								handleFilterChange('resource_type', e.target.value)
 							}
 							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="">All Resources</option>
 							<option value="agent">Agent</option>
@@ -226,6 +249,7 @@ export function AuditLogs() {
 							value={filter.result || ''}
 							onChange={(e) => handleFilterChange('result', e.target.value)}
 							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="">All Results</option>
 							<option value="success">Success</option>
@@ -239,6 +263,7 @@ export function AuditLogs() {
 								handleFilterChange('start_date', e.target.value || undefined)
 							}
 							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 						<input
 							type="date"
@@ -247,6 +272,7 @@ export function AuditLogs() {
 								handleFilterChange('end_date', e.target.value || undefined)
 							}
 							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 						<button
 							type="button"
@@ -260,6 +286,7 @@ export function AuditLogs() {
 
 				{isError ? (
 					<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
+					<div className="p-12 text-center text-red-500">
 						<p className="font-medium">Failed to load audit logs</p>
 						<p className="text-sm">Please try refreshing the page</p>
 					</div>
@@ -283,11 +310,30 @@ export function AuditLogs() {
 									Result
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+						<thead className="bg-gray-50 border-b border-gray-200">
+							<tr>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Timestamp
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Action
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Resource
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									IP Address
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Result
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Details
 								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+						<tbody className="divide-y divide-gray-200">
 							<LoadingRow />
 							<LoadingRow />
 							<LoadingRow />
@@ -317,11 +363,30 @@ export function AuditLogs() {
 											Result
 										</th>
 										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+								<thead className="bg-gray-50 border-b border-gray-200">
+									<tr>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Timestamp
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Action
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Resource
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											IP Address
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Result
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 											Details
 										</th>
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+								<tbody className="divide-y divide-gray-200">
 									{data.audit_logs.map((log) => {
 										const actionColor = getAuditActionColor(log.action);
 										const resultColor = getAuditResultColor(log.result);
@@ -330,6 +395,7 @@ export function AuditLogs() {
 												key={log.id}
 												className="hover:bg-gray-50 dark:hover:bg-gray-700"
 											>
+											<tr key={log.id} className="hover:bg-gray-50">
 												<td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
 													{formatDateTime(log.created_at)}
 												</td>
@@ -344,11 +410,13 @@ export function AuditLogs() {
 													<div>{formatResourceType(log.resource_type)}</div>
 													{log.resource_id && (
 														<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+														<div className="text-xs text-gray-500 font-mono">
 															{log.resource_id.substring(0, 8)}...
 														</div>
 													)}
 												</td>
 												<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono">
+												<td className="px-6 py-4 text-sm text-gray-500 font-mono">
 													{log.ip_address || '-'}
 												</td>
 												<td className="px-6 py-4">
@@ -362,6 +430,7 @@ export function AuditLogs() {
 													</span>
 												</td>
 												<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+												<td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
 													{log.details || '-'}
 												</td>
 											</tr>
@@ -373,6 +442,8 @@ export function AuditLogs() {
 
 						<div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
 							<div className="text-sm text-gray-500 dark:text-gray-400">
+						<div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+							<div className="text-sm text-gray-500">
 								Showing {(filter.offset || 0) + 1} to{' '}
 								{Math.min(
 									(filter.offset || 0) + (filter.limit || 50),
@@ -394,6 +465,7 @@ export function AuditLogs() {
 									Previous
 								</button>
 								<span className="text-sm text-gray-700 dark:text-gray-300 dark:text-gray-600">
+								<span className="text-sm text-gray-700">
 									Page {currentPage} of {totalPages}
 								</span>
 								<button
@@ -413,6 +485,7 @@ export function AuditLogs() {
 					</>
 				) : (
 					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
+					<div className="p-12 text-center text-gray-500">
 						<svg
 							aria-hidden="true"
 							className="w-16 h-16 mx-auto mb-4 text-gray-300"
@@ -428,6 +501,7 @@ export function AuditLogs() {
 							/>
 						</svg>
 						<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+						<h3 className="text-lg font-medium text-gray-900 mb-2">
 							No audit logs found
 						</h3>
 						<p>
