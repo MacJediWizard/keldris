@@ -158,6 +158,7 @@ func TestFeatureMiddleware_ProTier(t *testing.T) {
 		{"multi-org blocked", license.FeatureMultiOrg, false},
 		{"SLA tracking blocked", license.FeatureSLATracking, false},
 		{"white label blocked", license.FeatureWhiteLabel, false},
+		{"air gap blocked", license.FeatureAirGap, false},
 		{"DR runbooks blocked", license.FeatureDRRunbooks, false},
 		{"DR tests blocked", license.FeatureDRTests, false},
 	}
@@ -207,6 +208,7 @@ func TestFeatureMiddleware_EnterpriseTier(t *testing.T) {
 		{"multi-org", license.FeatureMultiOrg},
 		{"SLA tracking", license.FeatureSLATracking},
 		{"white label", license.FeatureWhiteLabel},
+		{"air gap", license.FeatureAirGap},
 		{"DR runbooks", license.FeatureDRRunbooks},
 		{"DR tests", license.FeatureDRTests},
 	}

@@ -35,6 +35,7 @@ func TestHasFeature(t *testing.T) {
 		{"pro tier has no multi-org", TierPro, FeatureMultiOrg, false},
 		{"pro tier has no SLA tracking", TierPro, FeatureSLATracking, false},
 		{"pro tier has no white label", TierPro, FeatureWhiteLabel, false},
+		{"pro tier has no air gap", TierPro, FeatureAirGap, false},
 		{"pro tier has no DR runbooks", TierPro, FeatureDRRunbooks, false},
 		{"pro tier has no DR tests", TierPro, FeatureDRTests, false},
 
@@ -54,6 +55,7 @@ func TestHasFeature(t *testing.T) {
 		{"enterprise tier has multi-org", TierEnterprise, FeatureMultiOrg, true},
 		{"enterprise tier has SLA tracking", TierEnterprise, FeatureSLATracking, true},
 		{"enterprise tier has white label", TierEnterprise, FeatureWhiteLabel, true},
+		{"enterprise tier has air gap", TierEnterprise, FeatureAirGap, true},
 		{"enterprise tier has DR runbooks", TierEnterprise, FeatureDRRunbooks, true},
 		{"enterprise tier has DR tests", TierEnterprise, FeatureDRTests, true},
 
@@ -90,6 +92,8 @@ func TestFeaturesForTier(t *testing.T) {
 		features := FeaturesForTier(TierEnterprise)
 		if len(features) != 17 {
 			t.Errorf("FeaturesForTier(TierEnterprise) returned %d features, want 17", len(features))
+		if len(features) != 18 {
+			t.Errorf("FeaturesForTier(TierEnterprise) returned %d features, want 18", len(features))
 		}
 	})
 
@@ -119,6 +123,7 @@ func TestFeatures_HasFeature_AllTiers(t *testing.T) {
 		FeatureSLATracking,
 		FeatureWhiteLabel,
 
+		FeatureAirGap,
 		FeatureDRRunbooks,
 		FeatureDRTests,
 	}
@@ -200,6 +205,7 @@ func TestFeatures_FreeTierLimits(t *testing.T) {
 		{FeatureSLATracking, "SLA tracking"},
 		{FeatureWhiteLabel, "white label"},
 
+		{FeatureAirGap, "air gap"},
 		{FeatureDRRunbooks, "DR runbooks"},
 		{FeatureDRTests, "DR tests"},
 	}
@@ -248,6 +254,7 @@ func TestFeatures_ProTierLimits(t *testing.T) {
 		FeatureMultiOrg,
 		FeatureSLATracking,
 		FeatureWhiteLabel,
+		FeatureAirGap,
 		FeatureDRRunbooks,
 		FeatureDRTests,
 	}
@@ -262,6 +269,8 @@ func TestFeatures_EnterpriseTierLimits(t *testing.T) {
 	features := FeaturesForTier(TierEnterprise)
 	if len(features) != 17 {
 		t.Fatalf("enterprise tier should have 17 features, got %d", len(features))
+	if len(features) != 18 {
+		t.Fatalf("enterprise tier should have 18 features, got %d", len(features))
 	}
 
 	// Verify all features are present
@@ -287,6 +296,7 @@ func TestFeatures_EnterpriseTierLimits(t *testing.T) {
 		FeatureSLATracking,
 		FeatureWhiteLabel,
 
+		FeatureAirGap,
 		FeatureDRRunbooks,
 		FeatureDRTests,
 	}

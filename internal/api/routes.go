@@ -158,6 +158,11 @@ func NewRouter(
 	// Create IP filter for IP-based access control
 	ipFilter := middleware.NewIPFilter(database, logger)
 	apiV1.Use(middleware.IPFilterMiddleware(ipFilter, logger))
+	lic := cfg.License
+	if lic == nil {
+		lic = license.FreeLicense()
+	}
+	apiV1.Use(middleware.LicenseMiddleware(lic, logger))
 
 	// Create RBAC for permission checks
 	rbac := auth.NewRBAC(database)
@@ -241,6 +246,9 @@ func NewRouter(
 
 	notificationsHandler := handlers.NewNotificationsHandlerWithEnv(database, keyManager, logger, cfg.Environment)
 	notificationsHandler.RegisterRoutes(apiV1)
+	notificationsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureNotificationSlack, logger))
+	notificationsHandler := handlers.NewNotificationsHandler(database, keyManager, logger)
+	notificationsHandler.RegisterRoutes(notificationsGroup)
 
 	notificationRulesHandler := handlers.NewNotificationRulesHandler(database, logger)
 	notificationRulesHandler.RegisterRoutes(apiV1)
@@ -331,6 +339,8 @@ func NewRouter(
 	dockerRestoreHandler.RegisterRoutes(apiV1)
 
 	// DR Runbook routes
+	// DR Runbook routes (Enterprise)
+	drRunbooksGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDRRunbooks, logger))
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
 	drRunbooksHandler.RegisterRoutes(drRunbooksGroup)
 
