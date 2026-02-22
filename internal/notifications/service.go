@@ -80,6 +80,14 @@ func NewService(store NotificationStore, keyManager *crypto.KeyManager, logger z
 		keyManager:        keyManager,
 		logger:            logger.With().Str("component", "notification_service").Logger(),
 		webhookSenderFunc: NewWebhookSender,
+		store:               store,
+		keyManager:          keyManager,
+		logger:              logger.With().Str("component", "notification_service").Logger(),
+		webhookSenderFunc:   NewWebhookSender,
+		slackSenderFunc:     NewSlackSender,
+		teamsSenderFunc:     NewTeamsSender,
+		discordSenderFunc:   NewDiscordSender,
+		pagerDutySenderFunc: NewPagerDutySender,
 	}
 }
 
