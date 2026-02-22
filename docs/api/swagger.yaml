@@ -601,6 +601,8 @@ info:
   license:
     name: AGPL-3.0
     url: https://www.gnu.org/licenses/agpl-3.0.html
+    name: MIT
+    url: https://opensource.org/licenses/MIT
   termsOfService: https://keldris.io/terms
   title: Keldris API
   version: "1.0"

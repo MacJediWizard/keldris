@@ -200,6 +200,12 @@ func NewRouter(
 		r.logger.Info().Msg("Swagger UI disabled in production for security")
 	}
 
+	// Swagger API documentation (no auth required)
+	r.Engine.GET("/api/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler,
+		ginSwagger.URL("/api/docs/doc.json"),
+		ginSwagger.DefaultModelsExpandDepth(-1),
+	))
+
 	// Version endpoint (no auth required)
 	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)
 	versionHandler.RegisterPublicRoutes(r.Engine)

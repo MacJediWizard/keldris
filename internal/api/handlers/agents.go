@@ -303,12 +303,14 @@ type HeartbeatRequest struct {
 //
 //	@Summary		Agent heartbeat
 //	@Description	Updates an agent's last seen timestamp and optionally updates OS information. Returns debug configuration if debug mode is enabled.
+//	@Description	Updates an agent's last seen timestamp and optionally updates OS information
 //	@Tags			Agents
 //	@Accept			json
 //	@Produce		json
 //	@Param			id		path		string				true	"Agent ID"
 //	@Param			request	body		HeartbeatRequest	false	"Heartbeat data"
 //	@Success		200		{object}	models.HeartbeatResponse
+//	@Success		200		{object}	models.Agent
 //	@Failure		400		{object}	map[string]string
 //	@Failure		401		{object}	map[string]string
 //	@Failure		404		{object}	map[string]string

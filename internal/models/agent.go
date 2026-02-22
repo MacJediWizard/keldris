@@ -162,6 +162,12 @@ type ProxmoxInfo struct {
 	ConnectionID string          `json:"connection_id,omitempty"`
 	Error        string          `json:"error,omitempty"`
 	DetectedAt   *time.Time      `json:"detected_at,omitempty"`
+// OSInfo contains operating system information from the agent.
+type OSInfo struct {
+	OS       string `json:"os" example:"linux"`
+	Arch     string `json:"arch" example:"amd64"`
+	Hostname string `json:"hostname" example:"backup-server-01"`
+	Version  string `json:"version,omitempty" example:"Ubuntu 22.04"`
 }
 
 // Agent represents a backup agent installed on a host.
@@ -200,6 +206,15 @@ type Agent struct {
 	HealthCheckedAt *time.Time     `json:"health_checked_at,omitempty"`
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`
+	ID         uuid.UUID   `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	OrgID      uuid.UUID   `json:"org_id" example:"550e8400-e29b-41d4-a716-446655440001"`
+	Hostname   string      `json:"hostname" example:"backup-server-01"`
+	APIKeyHash string      `json:"-"` // Never expose in JSON
+	OSInfo     *OSInfo     `json:"os_info,omitempty"`
+	LastSeen   *time.Time  `json:"last_seen,omitempty"`
+	Status     AgentStatus `json:"status" example:"active"`
+	CreatedAt  time.Time   `json:"created_at"`
+	UpdatedAt  time.Time   `json:"updated_at"`
 }
 
 // NewAgent creates a new Agent with the given details.

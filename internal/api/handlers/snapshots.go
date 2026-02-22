@@ -694,6 +694,7 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 //
 //	@Summary		Create restore
 //	@Description	Creates a new restore job to restore files from a snapshot. Supports cross-agent restores by specifying source_agent_id.
+//	@Description	Creates a new restore job to restore files from a snapshot
 //	@Tags			Restores
 //	@Accept			json
 //	@Produce		json
@@ -840,6 +841,22 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 //	@Security		SessionAuth
 //	@Router			/restores/preview [post]
 func (h *SnapshotsHandler) PreviewRestore(c *gin.Context) {
+// ListRestores returns all restore jobs for the authenticated user's organization.
+//
+//	@Summary		List restores
+//	@Description	Returns all restore jobs for the current organization
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			agent_id	query		string	false	"Filter by agent ID"
+//	@Param			status		query		string	false	"Filter by status"
+//	@Success		200			{object}	map[string][]RestoreResponse
+//	@Failure		400			{object}	map[string]string
+//	@Failure		401			{object}	map[string]string
+//	@Failure		500			{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores [get]
+func (h *SnapshotsHandler) ListRestores(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -934,6 +951,22 @@ func (h *SnapshotsHandler) PreviewRestore(c *gin.Context) {
 //	@Security		SessionAuth
 //	@Router			/restores/cloud [post]
 func (h *SnapshotsHandler) CreateCloudRestore(c *gin.Context) {
+
+// GetRestore returns a specific restore job by ID.
+//
+//	@Summary		Get restore
+//	@Description	Returns a specific restore job by ID
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Restore ID"
+//	@Success		200	{object}	RestoreResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/restores/{id} [get]
+func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

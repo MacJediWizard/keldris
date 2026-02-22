@@ -85,7 +85,14 @@ func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
 }
 
 // Login initiates the OIDC authentication flow.
-// GET /auth/login
+//
+//	@Summary		Initiate login
+//	@Description	Redirects to the OIDC provider for authentication. After successful authentication, user is redirected to /auth/callback.
+//	@Tags			Auth
+//	@Produce		html
+//	@Success		307	"Redirect to OIDC provider"
+//	@Failure		500	{object}	map[string]string
+//	@Router			/auth/login [get]
 func (h *AuthHandler) Login(c *gin.Context) {
 	state, err := auth.GenerateState()
 	if err != nil {
@@ -378,6 +385,11 @@ type MeResponse struct {
 	Name           string    `json:"name"`
 	CurrentOrgID   uuid.UUID `json:"current_org_id,omitempty"`
 	CurrentOrgRole string    `json:"current_org_role,omitempty"`
+	ID             uuid.UUID `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Email          string    `json:"email" example:"user@example.com"`
+	Name           string    `json:"name" example:"John Doe"`
+	CurrentOrgID   uuid.UUID `json:"current_org_id,omitempty" example:"550e8400-e29b-41d4-a716-446655440001"`
+	CurrentOrgRole string    `json:"current_org_role,omitempty" example:"admin"`
 }
 
 // Me returns the current authenticated user.
