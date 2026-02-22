@@ -338,6 +338,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/stats',
 		labelKey: 'nav.storageStats',
+		label: 'Storage Stats',
 		icon: (
 			<svg
 				aria-hidden="true"

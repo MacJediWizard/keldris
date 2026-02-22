@@ -7744,3 +7744,63 @@ export interface TestWebhookResponse {
 	error_message?: string;
 	duration_ms: number;
 }
+
+// Storage Stats types
+export interface StorageStats {
+	id: string;
+	repository_id: string;
+	total_size: number;
+	total_file_count: number;
+	raw_data_size: number;
+	restore_size: number;
+	dedup_ratio: number;
+	space_saved: number;
+	space_saved_pct: number;
+	snapshot_count: number;
+	collected_at: string;
+	created_at: string;
+}
+
+export interface StorageStatsSummary {
+	total_raw_size: number;
+	total_restore_size: number;
+	total_space_saved: number;
+	avg_dedup_ratio: number;
+	repository_count: number;
+	total_snapshots: number;
+}
+
+export interface StorageGrowthPoint {
+	date: string;
+	raw_data_size: number;
+	restore_size: number;
+}
+
+export interface RepositoryStatsResponse {
+	stats: StorageStats;
+	repository_name: string;
+}
+
+export interface RepositoryStatsListItem extends StorageStats {
+	repository_name: string;
+}
+
+export interface RepositoryStatsListResponse {
+	stats: RepositoryStatsListItem[];
+}
+
+export interface StorageGrowthResponse {
+	growth: StorageGrowthPoint[];
+}
+
+export interface RepositoryGrowthResponse {
+	repository_id: string;
+	repository_name: string;
+	growth: StorageGrowthPoint[];
+}
+
+export interface RepositoryHistoryResponse {
+	repository_id: string;
+	repository_name: string;
+	history: StorageStats[];
+}

@@ -462,6 +462,11 @@ import type {
 	RestorePreviewRequest,
 	Restore,
 	RestoresResponse,
+	RepositoryGrowthResponse,
+	RepositoryHistoryResponse,
+	RepositoryStatsListItem,
+	RepositoryStatsListResponse,
+	RepositoryStatsResponse,
 	RotateAPIKeyResponse,
 	RotateCredentialsRequest,
 	RunDRTestRequest,
@@ -536,6 +541,9 @@ import type {
 	SystemHealthResponse,
 	Tag,
 	TagsResponse,
+	StorageGrowthPoint,
+	StorageGrowthResponse,
+	StorageStatsSummary,
 	SwitchOrgRequest,
 	TestConnectionRequest,
 	TestNotificationRuleRequest,
@@ -5838,4 +5846,43 @@ export const costAlertsApi = {
 		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
 			method: 'DELETE',
 		}),
+};
+
+// Storage Stats API
+export const statsApi = {
+	getSummary: async (): Promise<StorageStatsSummary> =>
+		fetchApi<StorageStatsSummary>('/stats/summary'),
+
+	getGrowth: async (days = 30): Promise<StorageGrowthPoint[]> => {
+		const response = await fetchApi<StorageGrowthResponse>(
+			`/stats/growth?days=${days}`,
+		);
+		return response.growth ?? [];
+	},
+
+	listRepositoryStats: async (): Promise<RepositoryStatsListItem[]> => {
+		const response = await fetchApi<RepositoryStatsListResponse>(
+			'/stats/repositories',
+		);
+		return response.stats ?? [];
+	},
+
+	getRepositoryStats: async (id: string): Promise<RepositoryStatsResponse> =>
+		fetchApi<RepositoryStatsResponse>(`/stats/repositories/${id}`),
+
+	getRepositoryGrowth: async (
+		id: string,
+		days = 30,
+	): Promise<RepositoryGrowthResponse> =>
+		fetchApi<RepositoryGrowthResponse>(
+			`/stats/repositories/${id}/growth?days=${days}`,
+		),
+
+	getRepositoryHistory: async (
+		id: string,
+		limit = 30,
+	): Promise<RepositoryHistoryResponse> =>
+		fetchApi<RepositoryHistoryResponse>(
+			`/stats/repositories/${id}/history?limit=${limit}`,
+		),
 };

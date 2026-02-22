@@ -215,6 +215,8 @@ const NewOrganization = lazy(() => import('./pages/NewOrganization'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const SLATracking = lazy(() => import('./pages/SLATracking'));
 import { LicenseManagement } from './pages/admin/LicenseManagement';
+import { Schedules } from './pages/Schedules';
+import { StorageStats } from './pages/StorageStats';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -428,6 +430,8 @@ function App() {
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
 						<Route path="costs" element={<CostEstimation />} />
+						<Route path="stats" element={<StorageStats />} />
+						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
 						<Route
 							path="organization/members"
 							element={<OrganizationMembers />}

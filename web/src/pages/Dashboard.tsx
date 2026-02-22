@@ -49,14 +49,19 @@ import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
+import { useStorageStatsSummary } from '../hooks/useStorageStats';
 import {
 	formatBytes,
 	formatDate,
+	formatDedupRatio,
+	formatPercent,
 	getBackupStatusColor,
 	getBackupStatusColor,
 	getDedupRatioColor,
 	getSpaceSavedColor,
 	getSuccessRateColor,
+	getDedupRatioColor,
+	getSpaceSavedColor,
 	truncateSnapshotId,
 } from '../lib/utils';
 
@@ -987,6 +992,8 @@ export function Dashboard() {
 		useStorageGrowthTrend(30);
 	const { data: durationTrend, isLoading: durationTrendLoading } =
 		useBackupDurationTrend(30);
+	const { data: storageStats, isLoading: statsLoading } =
+		useStorageStatsSummary();
 
 	const recentBackups = backups?.slice(0, 5) ?? [];
 
@@ -2185,6 +2192,107 @@ export function Dashboard() {
 						</div>
 					</div>
 				</div>
+			</div>
+
+			<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="flex items-center justify-between mb-4">
+					<h2 className="text-lg font-semibold text-gray-900">
+						Storage Efficiency
+					</h2>
+					<Link
+						to="/stats"
+						className="text-sm text-indigo-600 hover:text-indigo-800"
+					>
+						View Details
+					</Link>
+				</div>
+				{statsLoading ? (
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+						{[1, 2, 3, 4].map((i) => (
+							<div key={i} className="animate-pulse">
+								<div className="h-4 w-24 bg-gray-200 rounded mb-2" />
+								<div className="h-8 w-20 bg-gray-200 rounded" />
+							</div>
+						))}
+					</div>
+				) : storageStats ? (
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+						<div>
+							<p className="text-sm font-medium text-gray-600">
+								Avg Dedup Ratio
+							</p>
+							<p
+								className={`text-2xl font-bold mt-1 ${getDedupRatioColor(storageStats.avg_dedup_ratio)}`}
+							>
+								{formatDedupRatio(storageStats.avg_dedup_ratio)}
+							</p>
+							<p className="text-sm text-gray-500 mt-1">
+								{storageStats.repository_count} repositories
+							</p>
+						</div>
+						<div>
+							<p className="text-sm font-medium text-gray-600">Space Saved</p>
+							<p
+								className={`text-2xl font-bold mt-1 ${getSpaceSavedColor(storageStats.total_restore_size > 0 ? (storageStats.total_space_saved / storageStats.total_restore_size) * 100 : 0)}`}
+							>
+								{formatBytes(storageStats.total_space_saved)}
+							</p>
+							<p className="text-sm text-gray-500 mt-1">
+								{formatPercent(
+									storageStats.total_restore_size > 0
+										? (storageStats.total_space_saved /
+												storageStats.total_restore_size) *
+												100
+										: 0,
+								)}{' '}
+								of original
+							</p>
+						</div>
+						<div>
+							<p className="text-sm font-medium text-gray-600">
+								Actual Storage
+							</p>
+							<p className="text-2xl font-bold text-gray-900 mt-1">
+								{formatBytes(storageStats.total_raw_size)}
+							</p>
+							<p className="text-sm text-gray-500 mt-1">
+								From {formatBytes(storageStats.total_restore_size)} original
+							</p>
+						</div>
+						<div>
+							<p className="text-sm font-medium text-gray-600">
+								Total Snapshots
+							</p>
+							<p className="text-2xl font-bold text-gray-900 mt-1">
+								{storageStats.total_snapshots}
+							</p>
+							<p className="text-sm text-gray-500 mt-1">
+								Across all repositories
+							</p>
+						</div>
+					</div>
+				) : (
+					<div className="text-center py-8 text-gray-500">
+						<svg
+							aria-hidden="true"
+							className="w-12 h-12 mx-auto mb-3 text-gray-300"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+							/>
+						</svg>
+						<p>No storage stats yet</p>
+						<p className="text-sm">
+							Stats will be collected automatically once backups run
+						</p>
+					</div>
+				)}
 			</div>
 		</div>
 	);
