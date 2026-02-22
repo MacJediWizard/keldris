@@ -127,4 +127,90 @@ func (t *TeamsSender) Send(ctx context.Context, webhookURL string, msg Notificat
 		Msg("teams notification sent")
 
 	return nil
+// SendMaintenanceScheduled sends a maintenance scheduled notification to Teams.
+func (s *TeamsService) SendMaintenanceScheduled(data MaintenanceScheduledData) error {
+	msg := NewTeamsMessage()
+	msg.AddHeader(fmt.Sprintf("Scheduled Maintenance: %s", data.Title), "Accent")
+	msg.AddText(data.Message, true)
+	msg.AddFactSet([]TeamsCardFact{
+		{Title: "Starts At", Value: data.StartsAt.Format(time.RFC822)},
+		{Title: "Ends At", Value: data.EndsAt.Format(time.RFC822)},
+		{Title: "Duration", Value: data.Duration},
+	})
+
+	s.logger.Debug().
+		Str("title", data.Title).
+		Time("starts_at", data.StartsAt).
+		Msg("sending maintenance scheduled notification to Teams")
+
+	return s.Send(msg)
+}
+
+// SendTestRestoreFailed sends a test restore failed notification to Teams.
+func (s *TeamsService) SendTestRestoreFailed(data TestRestoreFailedData) error {
+	msg := NewTeamsMessage()
+	msg.AddHeader(fmt.Sprintf("Test Restore Failed: %s", data.RepositoryName), "Attention")
+
+	facts := []TeamsCardFact{
+		{Title: "Repository", Value: data.RepositoryName},
+		{Title: "Snapshot ID", Value: data.SnapshotID},
+		{Title: "Sample Size", Value: fmt.Sprintf("%d%%", data.SamplePercentage)},
+		{Title: "Files Restored", Value: fmt.Sprintf("%d", data.FilesRestored)},
+		{Title: "Files Verified", Value: fmt.Sprintf("%d", data.FilesVerified)},
+		{Title: "Failed At", Value: data.FailedAt.Format(time.RFC822)},
+	}
+
+	if data.ConsecutiveFails > 1 {
+		facts = append([]TeamsCardFact{
+			{Title: "Consecutive Failures", Value: fmt.Sprintf("%d", data.ConsecutiveFails)},
+		}, facts...)
+	}
+
+	msg.AddFactSet(facts)
+	msg.AddText(fmt.Sprintf("**Error:** %s", data.ErrorMessage), true)
+
+	s.logger.Debug().
+		Str("repository", data.RepositoryName).
+		Str("error", data.ErrorMessage).
+		Int("consecutive_fails", data.ConsecutiveFails).
+		Msg("sending test restore failed notification to Teams")
+
+	return s.Send(msg)
+}
+
+// SendValidationFailed sends a backup validation failed notification to Teams.
+func (s *TeamsService) SendValidationFailed(data ValidationFailedData) error {
+	msg := NewTeamsMessage()
+	msg.AddHeader(fmt.Sprintf("Backup Validation Failed: %s", data.Hostname), "Attention")
+
+	facts := []TeamsCardFact{
+		{Title: "Host", Value: data.Hostname},
+		{Title: "Schedule", Value: data.ScheduleName},
+		{Title: "Snapshot ID", Value: data.SnapshotID},
+		{Title: "Backup Completed", Value: data.BackupCompletedAt.Format(time.RFC822)},
+		{Title: "Validation Failed", Value: data.ValidationFailedAt.Format(time.RFC822)},
+	}
+
+	msg.AddFactSet(facts)
+	msg.AddText(fmt.Sprintf("**Error:** %s", data.ErrorMessage), true)
+
+	if data.ValidationSummary != "" {
+		msg.AddText(fmt.Sprintf("**Summary:** %s", data.ValidationSummary), true)
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending validation failed notification to Teams")
+
+	return s.Send(msg)
+}
+
+// TestConnection sends a test message to verify the Teams webhook is working.
+func (s *TeamsService) TestConnection() error {
+	msg := NewTeamsMessage()
+	msg.AddHeader("Keldris Backup - Test Notification", "Good")
+	msg.AddText("Your Microsoft Teams integration is working correctly!", true)
+	return s.Send(msg)
 }

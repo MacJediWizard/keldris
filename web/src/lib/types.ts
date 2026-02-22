@@ -798,6 +798,86 @@ export interface BackupScriptsResponse {
 	scripts: BackupScript[];
 }
 
+// Backup Hook Template types
+export type BackupHookTemplateVisibility =
+	| 'built_in'
+	| 'private'
+	| 'organization';
+
+export interface BackupHookTemplateVariable {
+	name: string;
+	description: string;
+	default: string;
+	required: boolean;
+	sensitive?: boolean;
+}
+
+export interface BackupHookTemplateScript {
+	script: string;
+	timeout_seconds: number;
+	fail_on_error: boolean;
+}
+
+export interface BackupHookTemplateScripts {
+	pre_backup?: BackupHookTemplateScript;
+	post_success?: BackupHookTemplateScript;
+	post_failure?: BackupHookTemplateScript;
+	post_always?: BackupHookTemplateScript;
+}
+
+export interface BackupHookTemplate {
+	id: string;
+	org_id?: string;
+	created_by_id?: string;
+	name: string;
+	description?: string;
+	service_type: string;
+	icon?: string;
+	tags?: string[];
+	variables?: BackupHookTemplateVariable[];
+	scripts: BackupHookTemplateScripts;
+	visibility: BackupHookTemplateVisibility;
+	usage_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateBackupHookTemplateRequest {
+	name: string;
+	description?: string;
+	service_type: string;
+	icon?: string;
+	tags?: string[];
+	variables?: BackupHookTemplateVariable[];
+	scripts: BackupHookTemplateScripts;
+	visibility?: BackupHookTemplateVisibility;
+}
+
+export interface UpdateBackupHookTemplateRequest {
+	name?: string;
+	description?: string;
+	service_type?: string;
+	icon?: string;
+	tags?: string[];
+	variables?: BackupHookTemplateVariable[];
+	scripts?: BackupHookTemplateScripts;
+	visibility?: BackupHookTemplateVisibility;
+}
+
+export interface ApplyBackupHookTemplateRequest {
+	schedule_id: string;
+	variable_values?: Record<string, string>;
+}
+
+export interface ApplyBackupHookTemplateResponse {
+	scripts: BackupScript[];
+	message: string;
+}
+
+export interface BackupHookTemplatesResponse {
+	templates: BackupHookTemplate[];
+}
+
 // Container Backup Hook types
 export type ContainerHookType = 'pre_backup' | 'post_backup';
 
@@ -902,6 +982,10 @@ export interface User {
 	sso_groups?: string[];
 	sso_groups_synced_at?: string;
 	language?: SupportedLanguage;
+	is_superuser?: boolean;
+	is_impersonating?: boolean;
+	impersonating_user_id?: string;
+	impersonating_id?: string;
 }
 
 export interface UpdateUserPreferencesRequest {
@@ -996,6 +1080,188 @@ export interface InviteResponse {
 	message: string;
 	token: string;
 }
+
+// Admin Organization types (superuser only)
+export interface AdminOrganization {
+	id: string;
+	name: string;
+	slug: string;
+	logo_url?: string;
+	storage_quota_bytes?: number;
+	storage_used_bytes?: number;
+	agent_limit?: number;
+	agent_count?: number;
+	feature_flags: OrgFeatureFlags;
+	member_count: number;
+	owner_email?: string;
+	owner_id?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface OrgFeatureFlags {
+	sso_enabled?: boolean;
+	api_access?: boolean;
+	advanced_reporting?: boolean;
+	custom_branding?: boolean;
+	priority_support?: boolean;
+}
+
+// Branding Settings (Enterprise)
+export interface BrandingSettings {
+	enabled: boolean;
+	product_name: string;
+	company_name: string;
+	logo_url: string;
+	logo_dark_url: string;
+	favicon_url: string;
+	primary_color: string;
+	secondary_color: string;
+	accent_color: string;
+	support_url: string;
+	support_email: string;
+	privacy_url: string;
+	terms_url: string;
+	footer_text: string;
+	login_title: string;
+	login_subtitle: string;
+	login_bg_url: string;
+	hide_powered_by: boolean;
+	custom_css: string;
+}
+
+export interface PublicBrandingSettings {
+	enabled: boolean;
+	product_name: string;
+	logo_url: string;
+	logo_dark_url: string;
+	favicon_url: string;
+	primary_color: string;
+	secondary_color: string;
+	accent_color: string;
+	support_url: string;
+	privacy_url: string;
+	terms_url: string;
+	login_title: string;
+	login_subtitle: string;
+	login_bg_url: string;
+	hide_powered_by: boolean;
+}
+
+export interface UpdateBrandingSettingsRequest {
+	enabled?: boolean;
+	product_name?: string;
+	company_name?: string;
+	logo_url?: string;
+	logo_dark_url?: string;
+	favicon_url?: string;
+	primary_color?: string;
+	secondary_color?: string;
+	accent_color?: string;
+	support_url?: string;
+	support_email?: string;
+	privacy_url?: string;
+	terms_url?: string;
+	footer_text?: string;
+	login_title?: string;
+	login_subtitle?: string;
+	login_bg_url?: string;
+	hide_powered_by?: boolean;
+	custom_css?: string;
+}
+
+export interface AdminOrgSettings {
+	name?: string;
+	slug?: string;
+	logo_url?: string;
+	storage_quota_bytes?: number;
+	agent_limit?: number;
+	feature_flags?: Partial<OrgFeatureFlags>;
+}
+
+export interface AdminCreateOrgRequest {
+	name: string;
+	slug: string;
+	owner_email: string;
+	logo_url?: string;
+	storage_quota_bytes?: number;
+	agent_limit?: number;
+	feature_flags?: Partial<OrgFeatureFlags>;
+}
+
+export interface AdminOrganizationsResponse {
+	organizations: AdminOrganization[];
+	total_count: number;
+}
+
+export interface AdminOrgUsageStats {
+	org_id: string;
+	storage_used_bytes: number;
+	storage_quota_bytes?: number;
+	agent_count: number;
+	agent_limit?: number;
+	backup_count: number;
+	total_backup_size_bytes: number;
+	member_count: number;
+	last_backup_at?: string;
+	created_at: string;
+}
+
+export interface TransferOwnershipRequest {
+	new_owner_user_id: string;
+}
+
+export type PlanType = 'free' | 'starter' | 'professional' | 'enterprise';
+
+export interface BillingSettings {
+	plan_type: PlanType;
+	billing_email?: string;
+	billing_cycle?: 'monthly' | 'annual';
+	next_billing_date?: string;
+	payment_method_last4?: string;
+}
+
+export interface PlanLimits {
+	agent_limit?: number;
+	storage_quota_bytes?: number;
+	backup_retention_days?: number;
+	concurrent_backups?: number;
+}
+
+export interface PlanFeatures {
+	sso_enabled: boolean;
+	api_access: boolean;
+	advanced_reporting: boolean;
+	audit_logs: boolean;
+	custom_branding: boolean;
+	priority_support: boolean;
+	geo_replication: boolean;
+	lifecycle_policies: boolean;
+	legal_holds: boolean;
+}
+
+export interface OrganizationPlanInfo {
+	plan_type: PlanType;
+	limits: PlanLimits;
+	features: PlanFeatures;
+	usage: {
+		agent_count: number;
+		storage_used_bytes: number;
+	};
+}
+
+export type UpgradeFeature =
+	| 'agents'
+	| 'storage'
+	| 'sso'
+	| 'api_access'
+	| 'advanced_reporting'
+	| 'audit_logs'
+	| 'custom_branding'
+	| 'priority_support'
+	| 'geo_replication'
+	| 'lifecycle_policies'
+	| 'legal_holds';
 
 // API response wrappers
 export interface AgentsResponse {
@@ -4750,6 +5016,339 @@ export interface SLAReportResponse {
 	report: SLAReport;
 }
 
+// User Management types
+export type UserStatus = 'active' | 'disabled' | 'pending' | 'locked';
+
+export interface UserWithMembership {
+	id: string;
+	org_id: string;
+	oidc_subject?: string;
+	email: string;
+	name: string;
+	role: string;
+	status: UserStatus;
+	last_login_at?: string;
+	last_login_ip?: string;
+	failed_login_attempts?: number;
+	locked_until?: string;
+	invited_by?: string;
+	invited_at?: string;
+	is_superuser?: boolean;
+	created_at: string;
+	updated_at: string;
+	org_role: OrgRole;
+}
+
+export interface UsersResponse {
+	users: UserWithMembership[];
+}
+
+export interface InviteUserRequest {
+	email: string;
+	name?: string;
+	role: OrgRole;
+}
+
+export interface InviteUserResponse {
+	message: string;
+	token: string;
+}
+
+export interface UpdateUserRequest {
+	name?: string;
+	role?: OrgRole;
+	status?: UserStatus;
+}
+
+export interface ResetPasswordRequest {
+	new_password: string;
+	require_change_on_use?: boolean;
+}
+
+export interface ImpersonateUserRequest {
+	reason: string;
+}
+
+export interface ImpersonateUserResponse {
+	message: string;
+	impersonating: string;
+	impersonated_id: string;
+}
+
+export interface UserActivityLog {
+	id: string;
+	user_id: string;
+	org_id: string;
+	action: string;
+	resource_type?: string;
+	resource_id?: string;
+	ip_address?: string;
+	user_agent?: string;
+	details?: Record<string, unknown>;
+	created_at: string;
+	user_email: string;
+	user_name: string;
+}
+
+export interface UserActivityLogsResponse {
+	activity_logs: UserActivityLog[];
+}
+
+export interface UserImpersonationLog {
+	id: string;
+	admin_user_id: string;
+	target_user_id: string;
+	org_id: string;
+	reason?: string;
+	started_at: string;
+	ended_at?: string;
+	ip_address?: string;
+	user_agent?: string;
+	admin_email: string;
+	admin_name: string;
+	target_email: string;
+	target_name: string;
+}
+
+export interface ImpersonationLogsResponse {
+	impersonation_logs: UserImpersonationLog[];
+}
+
+// Organization System Settings types (SMTP, OIDC, Storage, Security)
+export interface SMTPSettings {
+	host: string;
+	port: number;
+	username?: string;
+	password?: string;
+	from_email: string;
+	from_name?: string;
+	encryption: 'none' | 'tls' | 'starttls';
+	enabled: boolean;
+	skip_tls_verify: boolean;
+	connection_timeout_seconds: number;
+}
+
+export interface OIDCSettings {
+	enabled: boolean;
+	issuer: string;
+	client_id: string;
+	client_secret?: string;
+	redirect_url: string;
+	scopes: string[];
+	auto_create_users: boolean;
+	default_role: 'member' | 'readonly';
+	allowed_domains?: string[];
+	require_email_verification: boolean;
+}
+
+export interface StorageDefaultSettings {
+	default_retention_days: number;
+	max_retention_days: number;
+	default_storage_backend: 'local' | 's3' | 'b2' | 'sftp' | 'rest' | 'dropbox';
+	max_backup_size_gb: number;
+	enable_compression: boolean;
+	compression_level: number;
+	default_encryption_method: 'aes256' | 'none';
+	prune_schedule: string;
+	auto_prune_enabled: boolean;
+}
+
+export interface SecuritySettings {
+	session_timeout_minutes: number;
+	max_concurrent_sessions: number;
+	require_mfa: boolean;
+	mfa_grace_period_days: number;
+	allowed_ip_ranges?: string[];
+	blocked_ip_ranges?: string[];
+	failed_login_lockout_attempts: number;
+	failed_login_lockout_minutes: number;
+	api_key_expiration_days: number;
+	enable_audit_logging: boolean;
+	audit_log_retention_days: number;
+	force_https: boolean;
+	allow_password_login: boolean;
+}
+
+export interface OrgSettingsResponse {
+	smtp: SMTPSettings;
+	oidc: OIDCSettings;
+	storage_defaults: StorageDefaultSettings;
+	security: SecuritySettings;
+	updated_at: string;
+}
+
+export interface UpdateSMTPSettingsRequest {
+	host?: string;
+	port?: number;
+	username?: string;
+	password?: string;
+	from_email?: string;
+	from_name?: string;
+	encryption?: 'none' | 'tls' | 'starttls';
+	enabled?: boolean;
+	skip_tls_verify?: boolean;
+	connection_timeout_seconds?: number;
+}
+
+export interface UpdateOIDCSettingsRequest {
+	enabled?: boolean;
+	issuer?: string;
+	client_id?: string;
+	client_secret?: string;
+	redirect_url?: string;
+	scopes?: string[];
+	auto_create_users?: boolean;
+	default_role?: 'member' | 'readonly';
+	allowed_domains?: string[];
+	require_email_verification?: boolean;
+}
+
+export interface UpdateStorageDefaultsRequest {
+	default_retention_days?: number;
+	max_retention_days?: number;
+	default_storage_backend?: 'local' | 's3' | 'b2' | 'sftp' | 'rest' | 'dropbox';
+	max_backup_size_gb?: number;
+	enable_compression?: boolean;
+	compression_level?: number;
+	default_encryption_method?: 'aes256' | 'none';
+	prune_schedule?: string;
+	auto_prune_enabled?: boolean;
+}
+
+export interface UpdateSecuritySettingsRequest {
+	session_timeout_minutes?: number;
+	max_concurrent_sessions?: number;
+	require_mfa?: boolean;
+	mfa_grace_period_days?: number;
+	allowed_ip_ranges?: string[];
+	blocked_ip_ranges?: string[];
+	failed_login_lockout_attempts?: number;
+	failed_login_lockout_minutes?: number;
+	api_key_expiration_days?: number;
+	enable_audit_logging?: boolean;
+	audit_log_retention_days?: number;
+	force_https?: boolean;
+	allow_password_login?: boolean;
+}
+
+export interface TestSMTPRequest {
+	recipient_email: string;
+}
+
+export interface TestSMTPResponse {
+	success: boolean;
+	message: string;
+}
+
+export interface TestOIDCResponse {
+	success: boolean;
+	message: string;
+	provider_name?: string;
+	auth_url?: string;
+	supported_flow?: string;
+}
+
+export type SettingKey = 'smtp' | 'oidc' | 'storage_defaults' | 'security';
+
+export interface SettingsAuditLog {
+	id: string;
+	org_id: string;
+	setting_key: SettingKey;
+	old_value?: object;
+	new_value: object;
+	changed_by: string;
+	changed_by_email?: string;
+	changed_at: string;
+	ip_address?: string;
+}
+
+export interface SettingsAuditLogsResponse {
+	logs: SettingsAuditLog[];
+	limit: number;
+	offset: number;
+}
+
+// Superuser types
+export type SuperuserAction =
+	| 'view_organizations'
+	| 'view_organization'
+	| 'impersonate_user'
+	| 'end_impersonation'
+	| 'update_system_settings'
+	| 'view_system_settings'
+	| 'grant_superuser'
+	| 'revoke_superuser'
+	| 'view_users'
+	| 'view_superuser_audit_logs';
+
+export interface SuperuserAuditLog {
+	id: string;
+	superuser_id: string;
+	action: SuperuserAction;
+	target_type: string;
+	target_id?: string;
+	target_org_id?: string;
+	impersonated_user_id?: string;
+	ip_address?: string;
+	user_agent?: string;
+	details?: Record<string, unknown>;
+	created_at: string;
+	superuser_email?: string;
+	superuser_name?: string;
+}
+
+export interface SystemSetting {
+	key: string;
+	value: unknown;
+	description?: string;
+	updated_by?: string;
+	updated_at: string;
+}
+
+export interface SuperuserOrganizationsResponse {
+	organizations: Organization[];
+}
+
+export interface SuperuserUsersResponse {
+	users: User[];
+}
+
+export interface SuperusersResponse {
+	superusers: User[];
+}
+
+export interface SuperuserAuditLogsResponse {
+	audit_logs: SuperuserAuditLog[];
+	total: number;
+	limit: number;
+	offset: number;
+}
+
+export interface SystemSettingsResponse {
+	settings: SystemSetting[];
+}
+
+export interface SystemSettingResponse {
+	setting: SystemSetting;
+}
+
+export interface UpdateSystemSettingRequest {
+	value: unknown;
+}
+
+export interface GrantSuperuserRequest {
+	reason?: string;
+}
+
+export interface ImpersonationResponse {
+	message: string;
+	impersonating?: {
+		id: string;
+		email: string;
+		name: string;
+	};
+}
+
 // Recent Items types
 export type RecentItemType =
 	| 'agent'
@@ -5436,4 +6035,427 @@ export interface KomodoSyncResponse {
 export interface KomodoConnectionTestResponse {
 	message: string;
 	status: KomodoIntegrationStatus;
+}
+
+// System Health types (Admin)
+export type SystemHealthStatus = 'healthy' | 'warning' | 'critical';
+
+export interface ServerStatus {
+	status: SystemHealthStatus;
+	cpu_usage: number;
+	memory_usage: number;
+	memory_alloc_mb: number;
+	memory_total_alloc_mb: number;
+	memory_sys_mb: number;
+	goroutine_count: number;
+	num_cpu: number;
+	go_version: string;
+	uptime_seconds: number;
+}
+
+export interface DatabaseStatus {
+	status: SystemHealthStatus;
+	connected: boolean;
+	latency: string;
+	active_connections: number;
+	max_connections: number;
+	size_bytes: number;
+	size_formatted: string;
+}
+
+export interface QueueStatus {
+	status: SystemHealthStatus;
+	pending_backups: number;
+	running_backups: number;
+	total_queued: number;
+}
+
+export interface BackgroundJobStatus {
+	status: SystemHealthStatus;
+	goroutine_count: number;
+	active_jobs: number;
+}
+
+export interface ServerError {
+	id: string;
+	level: string;
+	message: string;
+	component?: string;
+	timestamp: string;
+}
+
+export interface SystemHealthResponse {
+	status: SystemHealthStatus;
+	timestamp: string;
+	server: ServerStatus;
+	database: DatabaseStatus;
+	queue: QueueStatus;
+	background_jobs: BackgroundJobStatus;
+	recent_errors: ServerError[];
+	issues?: string[];
+}
+
+export interface HealthHistoryRecord {
+	id: string;
+	timestamp: string;
+	status: string;
+	cpu_usage: number;
+	memory_usage: number;
+	memory_alloc_mb: number;
+	memory_total_alloc_mb: number;
+	goroutine_count: number;
+	database_connections: number;
+	database_size_bytes: number;
+	pending_backups: number;
+	running_backups: number;
+	error_count: number;
+}
+
+export interface SystemHealthHistoryResponse {
+	records: HealthHistoryRecord[];
+	since: string;
+	until: string;
+}
+
+// Server Setup types
+export type ServerSetupStep =
+	| 'database'
+	| 'superuser'
+	| 'smtp'
+	| 'oidc'
+	| 'license'
+	| 'organization'
+	| 'complete';
+
+export interface ServerSetupStatus {
+	needs_setup: boolean;
+	setup_completed: boolean;
+	current_step: ServerSetupStep;
+	completed_steps: ServerSetupStep[];
+	database_ok: boolean;
+	has_superuser: boolean;
+}
+
+export interface CreateSuperuserRequest {
+	email: string;
+	password: string;
+	name: string;
+}
+
+export interface CreateSuperuserResponse {
+	user_id: string;
+	org_id: string;
+	message: string;
+}
+
+export interface DatabaseTestResponse {
+	ok: boolean;
+	message: string;
+}
+
+export interface ActivateLicenseRequest {
+	license_key: string;
+}
+
+export interface ActivateLicenseResponse {
+	license_type: string;
+	expires_at?: string;
+	message: string;
+}
+
+export interface SetupStartTrialRequest {
+	company_name?: string;
+	contact_email: string;
+}
+
+export interface SetupStartTrialResponse {
+	license_type: string;
+	expires_at: string;
+	message: string;
+}
+
+export interface CreateFirstOrgRequest {
+	name: string;
+}
+
+export interface SetupCompleteResponse {
+	message: string;
+	redirect: string;
+}
+
+export interface SetupLicenseInfo {
+	license_type: 'trial' | 'standard' | 'professional' | 'enterprise';
+	status: string;
+	max_agents?: number;
+	max_repositories?: number;
+	max_storage_gb?: number;
+	expires_at?: string;
+	company_name?: string;
+}
+
+export interface RerunStatusResponse {
+	setup_completed: boolean;
+	can_configure: string[];
+	license?: SetupLicenseInfo;
+}
+
+// License types
+export type LicenseTier = 'free' | 'pro' | 'professional' | 'enterprise';
+export type LicenseStatus =
+	| 'active'
+	| 'expiring_soon'
+	| 'expired'
+	| 'grace_period';
+
+export interface LicenseFeatures {
+	max_agents: number;
+	max_repositories: number;
+	max_storage_bytes: number;
+	sso_enabled: boolean;
+	api_access: boolean;
+	advanced_reporting: boolean;
+	custom_branding: boolean;
+	priority_support: boolean;
+	backup_hooks: boolean;
+	multi_destination: boolean;
+}
+
+export interface LicenseUsage {
+	agents_used: number;
+	agents_limit: number;
+	repositories_used: number;
+	repositories_limit: number;
+	storage_used_bytes: number;
+	storage_limit_bytes: number;
+}
+
+export interface License {
+	id: string;
+	org_id: string;
+	license_key: string;
+	tier: LicenseTier;
+	status: LicenseStatus;
+	valid_from: string;
+	valid_until: string;
+	grace_period_days: number;
+	features: LicenseFeatures;
+	usage: LicenseUsage;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface LicenseHistory {
+	id: string;
+	license_id: string;
+	org_id: string;
+	action:
+		| 'created'
+		| 'renewed'
+		| 'upgraded'
+		| 'downgraded'
+		| 'expired'
+		| 'activated';
+	previous_tier?: LicenseTier;
+	new_tier?: LicenseTier;
+	previous_expiry?: string;
+	new_expiry?: string;
+	notes?: string;
+	created_at: string;
+}
+
+export interface LicenseExpirationInfo {
+	license_id: string;
+	is_expired: boolean;
+	is_in_grace_period: boolean;
+	days_until_expiry: number;
+	grace_period_ends_at?: string;
+}
+
+export interface LicenseLimitsWarning {
+	type: 'agents' | 'repositories' | 'storage';
+	current: number;
+	limit: number;
+	percentage: number;
+}
+
+export interface LicenseWarnings {
+	expiration?: LicenseExpirationInfo;
+	limits: LicenseLimitsWarning[];
+}
+
+export interface CreateLicenseKeyRequest {
+	license_key: string;
+}
+
+export interface UpdateLicenseRequest {
+	tier?: LicenseTier;
+	valid_until?: string;
+	features?: Partial<LicenseFeatures>;
+}
+
+export interface LicenseResponse {
+	license: License;
+}
+
+export interface LicensesResponse {
+	licenses: License[];
+	total_count: number;
+}
+
+export interface LicenseHistoryResponse {
+	history: LicenseHistory[];
+	total_count: number;
+}
+
+export interface LicenseValidateResponse {
+	valid: boolean;
+	tier?: LicenseTier;
+	valid_until?: string;
+	features?: LicenseFeatures;
+	error?: string;
+}
+
+export interface LicenseWarningsResponse {
+	warnings: LicenseWarnings;
+}
+
+export type ProFeature =
+	| 'sso'
+	| 'api_access'
+	| 'advanced_reporting'
+	| 'custom_branding'
+	| 'priority_support'
+	| 'backup_hooks'
+	| 'multi_destination'
+	| 'unlimited_agents'
+	| 'unlimited_repositories'
+	| 'unlimited_storage';
+
+// License Feature Flag types
+export type LicenseFeature =
+	| 'oidc'
+	| 'audit_logs'
+	| 'multi_org'
+	| 'sla_tracking'
+	| 'white_label';
+
+export interface FeatureInfo {
+	name: LicenseFeature;
+	display_name: string;
+	description: string;
+	required_tier: LicenseTier;
+}
+
+export interface TierInfo {
+	name: LicenseTier;
+	display_name: string;
+	description: string;
+	features: LicenseFeature[];
+}
+
+export interface UpgradeInfo {
+	required_tier: LicenseTier;
+	display_name: string;
+	message: string;
+}
+
+export interface FeatureCheckResult {
+	feature: LicenseFeature;
+	enabled: boolean;
+	current_tier: LicenseTier;
+	required_tier: LicenseTier;
+	upgrade_info?: UpgradeInfo;
+}
+
+export interface LicenseInfo {
+	org_id: string;
+	tier: LicenseTier;
+	features: LicenseFeature[];
+}
+
+export interface FeaturesResponse {
+	features: FeatureInfo[];
+}
+
+export interface TiersResponse {
+	tiers: TierInfo[];
+}
+
+export interface LicenseInfoResponse {
+	license: LicenseInfo;
+}
+
+export interface FeatureCheckResponse {
+	result: FeatureCheckResult;
+}
+
+// Trial types
+export type PlanTier = 'free' | 'pro' | 'enterprise';
+export type TrialStatus = 'none' | 'active' | 'expired' | 'converted';
+
+export interface TrialInfo {
+	org_id: string;
+	plan_tier: PlanTier;
+	trial_status: TrialStatus;
+	trial_started_at?: string;
+	trial_ends_at?: string;
+	trial_email?: string;
+	trial_converted_at?: string;
+	days_remaining: number;
+	is_trial_active: boolean;
+	has_pro_features: boolean;
+}
+
+export interface TrialExtension {
+	id: string;
+	org_id: string;
+	extended_by: string;
+	extended_by_name?: string;
+	extension_days: number;
+	reason?: string;
+	previous_ends_at: string;
+	new_ends_at: string;
+	created_at: string;
+}
+
+export interface TrialActivity {
+	id: string;
+	org_id: string;
+	user_id?: string;
+	feature_name: string;
+	action: string;
+	details?: Record<string, unknown>;
+	created_at: string;
+}
+
+export interface TrialProFeature {
+	name: string;
+	description: string;
+	available: boolean;
+	limit?: number;
+}
+
+export interface StartTrialRequest {
+	email: string;
+}
+
+export interface ExtendTrialRequest {
+	extension_days: number;
+	reason: string;
+}
+
+export interface ConvertTrialRequest {
+	plan_tier: PlanTier;
+}
+
+export interface TrialFeaturesResponse {
+	features: TrialProFeature[];
+}
+
+export interface TrialActivityResponse {
+	activities: TrialActivity[];
+}
+
+export interface TrialExtensionsResponse {
+	extensions: TrialExtension[];
 }

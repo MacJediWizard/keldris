@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { SaveFilterButton } from '../components/features/SaveFilterButton';
 import { SavedFiltersDropdown } from '../components/features/SavedFiltersDropdown';
 import {
@@ -188,22 +188,22 @@ export function Alerts() {
 	const resolveAlert = useResolveAlert();
 	const { data: savedFilters } = useSavedFilters('alerts');
 
-	// Apply default filter on initial load
-	useEffect(() => {
-		const defaultFilter = savedFilters?.find((f) => f.is_default);
-		if (defaultFilter) {
-			handleApplyFilter(defaultFilter.filters);
-		}
-	}, [savedFilters]);
-
-	const handleApplyFilter = (filters: Record<string, unknown>) => {
+	const handleApplyFilter = useCallback((filters: Record<string, unknown>) => {
 		if (filters.status !== undefined) {
 			setStatusFilter(filters.status as AlertStatus | 'all');
 		}
 		if (filters.severity !== undefined) {
 			setSeverityFilter(filters.severity as string);
 		}
-	};
+	}, []);
+
+	// Apply default filter on initial load
+	useEffect(() => {
+		const defaultFilter = savedFilters?.find((f) => f.is_default);
+		if (defaultFilter) {
+			handleApplyFilter(defaultFilter.filters);
+		}
+	}, [savedFilters, handleApplyFilter]);
 
 	const currentFilters: Record<string, unknown> = {
 		status: statusFilter,

@@ -44,7 +44,10 @@ const tierConfig: Record<
 function TierIcon({
 	tier,
 	className,
-}: { tier: StorageTierType; className?: string }) {
+}: {
+	tier: StorageTierType;
+	className?: string;
+}) {
 	switch (tier) {
 		case 'hot':
 			return (

@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { UpgradePrompt } from '../components/features/UpgradePrompt';
 import {
 	useAuditLogs,
 	useExportAuditLogsCsv,
 	useExportAuditLogsJson,
 } from '../hooks/useAuditLogs';
+import { usePlanLimits } from '../hooks/usePlanLimits';
 import type { AuditLogFilter } from '../lib/types';
 import {
 	formatAuditAction,
@@ -48,6 +50,8 @@ export function AuditLogs() {
 	const { data, isLoading, isError } = useAuditLogs(filter);
 	const exportCsv = useExportAuditLogsCsv();
 	const exportJson = useExportAuditLogsJson();
+	const { hasFeature } = usePlanLimits();
+	const hasAuditLogs = hasFeature('audit_logs');
 
 	const handleSearch = () => {
 		setFilter((prev) => ({
@@ -95,6 +99,27 @@ export function AuditLogs() {
 	const currentPage = data
 		? Math.floor((filter.offset || 0) / (filter.limit || 50)) + 1
 		: 1;
+
+	if (!hasAuditLogs) {
+		return (
+			<div className="space-y-6">
+				<div>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Audit Logs
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						Track all user and system actions for compliance
+					</p>
+				</div>
+				<UpgradePrompt
+					feature="audit_logs"
+					variant="card"
+					source="audit-logs-page"
+					showBenefits={true}
+				/>
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-6">

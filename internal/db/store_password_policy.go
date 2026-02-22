@@ -150,12 +150,12 @@ func (db *DB) GetUserByEmail(ctx context.Context, email string) (*models.User, e
 	var roleStr string
 	var oidcSubject *string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, oidc_subject, email, name, role, created_at, updated_at
+		SELECT id, org_id, oidc_subject, email, name, role, is_superuser, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`, email).Scan(
 		&user.ID, &user.OrgID, &oidcSubject, &user.Email,
-		&user.Name, &roleStr, &user.CreatedAt, &user.UpdatedAt,
+		&user.Name, &roleStr, &user.IsSuperuser, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get user by email: %w", err)

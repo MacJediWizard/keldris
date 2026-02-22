@@ -116,4 +116,178 @@ func (s *SlackSender) Send(ctx context.Context, webhookURL string, msg Notificat
 		Msg("slack notification sent")
 
 	return nil
+	return s.Send(msg)
+}
+
+// SendBackupFailed sends a backup failed notification to Slack.
+func (s *SlackService) SendBackupFailed(data BackupFailedData) error {
+	msg := &SlackMessage{
+		Attachments: []SlackAttachment{
+			{
+				Color:    "#dc3545", // Red
+				Title:    fmt.Sprintf("Backup Failed: %s", data.Hostname),
+				Fallback: fmt.Sprintf("Backup failed for %s - %s: %s", data.Hostname, data.ScheduleName, data.ErrorMessage),
+				Fields: []SlackField{
+					{Title: "Host", Value: data.Hostname, Short: true},
+					{Title: "Schedule", Value: data.ScheduleName, Short: true},
+					{Title: "Started At", Value: data.StartedAt.Format(time.RFC822), Short: true},
+					{Title: "Failed At", Value: data.FailedAt.Format(time.RFC822), Short: true},
+					{Title: "Error", Value: data.ErrorMessage, Short: false},
+				},
+				Footer:    "Keldris Backup",
+				Timestamp: time.Now().Unix(),
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending backup failed notification to Slack")
+
+	return s.Send(msg)
+}
+
+// SendAgentOffline sends an agent offline notification to Slack.
+func (s *SlackService) SendAgentOffline(data AgentOfflineData) error {
+	msg := &SlackMessage{
+		Attachments: []SlackAttachment{
+			{
+				Color:    "#ffc107", // Yellow/Warning
+				Title:    fmt.Sprintf("Agent Offline: %s", data.Hostname),
+				Fallback: fmt.Sprintf("Agent %s has been offline for %s", data.Hostname, data.OfflineSince),
+				Fields: []SlackField{
+					{Title: "Host", Value: data.Hostname, Short: true},
+					{Title: "Agent ID", Value: data.AgentID, Short: true},
+					{Title: "Last Seen", Value: data.LastSeen.Format(time.RFC822), Short: true},
+					{Title: "Offline Duration", Value: data.OfflineSince, Short: true},
+				},
+				Footer:    "Keldris Backup",
+				Timestamp: time.Now().Unix(),
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("agent_id", data.AgentID).
+		Msg("sending agent offline notification to Slack")
+
+	return s.Send(msg)
+}
+
+// SendMaintenanceScheduled sends a maintenance scheduled notification to Slack.
+func (s *SlackService) SendMaintenanceScheduled(data MaintenanceScheduledData) error {
+	msg := &SlackMessage{
+		Attachments: []SlackAttachment{
+			{
+				Color:    "#17a2b8", // Blue/Info
+				Title:    fmt.Sprintf("Scheduled Maintenance: %s", data.Title),
+				Fallback: fmt.Sprintf("Scheduled maintenance: %s from %s to %s", data.Title, data.StartsAt.Format(time.RFC822), data.EndsAt.Format(time.RFC822)),
+				Text:     data.Message,
+				Fields: []SlackField{
+					{Title: "Starts At", Value: data.StartsAt.Format(time.RFC822), Short: true},
+					{Title: "Ends At", Value: data.EndsAt.Format(time.RFC822), Short: true},
+					{Title: "Duration", Value: data.Duration, Short: true},
+				},
+				Footer:    "Keldris Backup",
+				Timestamp: time.Now().Unix(),
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("title", data.Title).
+		Time("starts_at", data.StartsAt).
+		Msg("sending maintenance scheduled notification to Slack")
+
+	return s.Send(msg)
+}
+
+// SendTestRestoreFailed sends a test restore failed notification to Slack.
+func (s *SlackService) SendTestRestoreFailed(data TestRestoreFailedData) error {
+	fields := []SlackField{
+		{Title: "Repository", Value: data.RepositoryName, Short: true},
+		{Title: "Snapshot ID", Value: data.SnapshotID, Short: true},
+		{Title: "Sample Size", Value: fmt.Sprintf("%d%%", data.SamplePercentage), Short: true},
+		{Title: "Files Restored", Value: fmt.Sprintf("%d", data.FilesRestored), Short: true},
+		{Title: "Files Verified", Value: fmt.Sprintf("%d", data.FilesVerified), Short: true},
+		{Title: "Failed At", Value: data.FailedAt.Format(time.RFC822), Short: true},
+		{Title: "Error", Value: data.ErrorMessage, Short: false},
+	}
+
+	if data.ConsecutiveFails > 1 {
+		fields = append([]SlackField{
+			{Title: "Consecutive Failures", Value: fmt.Sprintf("%d", data.ConsecutiveFails), Short: true},
+		}, fields...)
+	}
+
+	msg := &SlackMessage{
+		Attachments: []SlackAttachment{
+			{
+				Color:    "#dc2626", // Red
+				Title:    fmt.Sprintf("Test Restore Failed: %s", data.RepositoryName),
+				Fallback: fmt.Sprintf("Test restore failed for repository %s: %s", data.RepositoryName, data.ErrorMessage),
+				Fields:   fields,
+				Footer:   "Keldris Backup",
+				Timestamp: time.Now().Unix(),
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("repository", data.RepositoryName).
+		Str("error", data.ErrorMessage).
+		Int("consecutive_fails", data.ConsecutiveFails).
+		Msg("sending test restore failed notification to Slack")
+
+	return s.Send(msg)
+}
+
+// SendValidationFailed sends a backup validation failed notification to Slack.
+func (s *SlackService) SendValidationFailed(data ValidationFailedData) error {
+	msg := &SlackMessage{
+		Attachments: []SlackAttachment{
+			{
+				Color:    "#dc3545", // Red
+				Title:    fmt.Sprintf("Backup Validation Failed: %s", data.Hostname),
+				Fallback: fmt.Sprintf("Backup validation failed for %s - %s: %s", data.Hostname, data.ScheduleName, data.ErrorMessage),
+				Fields: []SlackField{
+					{Title: "Host", Value: data.Hostname, Short: true},
+					{Title: "Schedule", Value: data.ScheduleName, Short: true},
+					{Title: "Snapshot ID", Value: data.SnapshotID, Short: true},
+					{Title: "Backup Completed", Value: data.BackupCompletedAt.Format(time.RFC822), Short: true},
+					{Title: "Validation Failed", Value: data.ValidationFailedAt.Format(time.RFC822), Short: true},
+					{Title: "Error", Value: data.ErrorMessage, Short: false},
+				},
+				Footer:    "Keldris Backup",
+				Timestamp: time.Now().Unix(),
+			},
+		},
+	}
+
+	if data.ValidationSummary != "" {
+		msg.Attachments[0].Fields = append(msg.Attachments[0].Fields, SlackField{
+			Title: "Validation Summary",
+			Value: data.ValidationSummary,
+			Short: false,
+		})
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Str("error", data.ErrorMessage).
+		Msg("sending validation failed notification to Slack")
+
+	return s.Send(msg)
+}
+
+// TestConnection sends a test message to verify the Slack webhook is working.
+func (s *SlackService) TestConnection() error {
+	msg := &SlackMessage{
+		Text: "Test notification from Keldris Backup - your Slack integration is working!",
+	}
+	return s.Send(msg)
 }

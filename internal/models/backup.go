@@ -61,6 +61,47 @@ type ExcludedLargeFile struct {
 	SizeMB    int64  `json:"size_mb"`
 }
 
+// Backup represents a single backup execution record.
+type Backup struct {
+	ID                      uuid.UUID           `json:"id"`
+	ScheduleID              uuid.UUID           `json:"schedule_id"`
+	AgentID                 uuid.UUID           `json:"agent_id"`
+	RepositoryID            *uuid.UUID          `json:"repository_id,omitempty"`
+	SnapshotID              string              `json:"snapshot_id,omitempty"`
+	StartedAt               time.Time           `json:"started_at"`
+	CompletedAt             *time.Time          `json:"completed_at,omitempty"`
+	Status                  BackupStatus        `json:"status"`
+	BackupType              BackupType          `json:"backup_type"`                    // Type of backup: files, pihole
+	SizeBytes               *int64              `json:"size_bytes,omitempty"`
+	FilesNew                *int                `json:"files_new,omitempty"`
+	FilesChanged            *int                `json:"files_changed,omitempty"`
+	ErrorMessage            string              `json:"error_message,omitempty"`
+	RetentionApplied        bool                `json:"retention_applied"`
+	SnapshotsRemoved        *int                `json:"snapshots_removed,omitempty"`
+	SnapshotsKept           *int                `json:"snapshots_kept,omitempty"`
+	RetentionError          string              `json:"retention_error,omitempty"`
+	PreScriptOutput         string              `json:"pre_script_output,omitempty"`
+	PreScriptError          string              `json:"pre_script_error,omitempty"`
+	PostScriptOutput        string              `json:"post_script_output,omitempty"`
+	PostScriptError         string              `json:"post_script_error,omitempty"`
+	ExcludedLargeFiles      []ExcludedLargeFile `json:"excluded_large_files,omitempty"` // Files excluded due to size limit
+	Resumed                 bool                `json:"resumed"`                        // True if this backup was resumed from a checkpoint
+	CheckpointID            *uuid.UUID          `json:"checkpoint_id,omitempty"`        // Associated checkpoint if resumed
+	OriginalBackupID        *uuid.UUID          `json:"original_backup_id,omitempty"`   // Original backup that was interrupted
+	ClassificationLevel       string              `json:"classification_level,omitempty"` // Data classification level
+	ClassificationDataTypes   []string            `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	ContainerPreHookOutput    string              `json:"container_pre_hook_output,omitempty"`
+	ContainerPreHookError     string              `json:"container_pre_hook_error,omitempty"`
+	ContainerPostHookOutput   string              `json:"container_post_hook_output,omitempty"`
+	ContainerPostHookError    string              `json:"container_post_hook_error,omitempty"`
+	// Validation fields
+	ValidationID              *uuid.UUID          `json:"validation_id,omitempty"`     // ID of the associated validation record
+	ValidationStatus          string              `json:"validation_status,omitempty"` // Status: passed, failed, skipped, pending
+	ValidationError           string              `json:"validation_error,omitempty"`  // Error message if validation failed
+	PiholeVersion             string              `json:"pihole_version,omitempty"`    // Pi-hole version at time of backup
+	CreatedAt                 time.Time           `json:"created_at"`
+}
+
 // NewBackup creates a new Backup record for the given schedule, agent, and repository.
 func NewBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID) *Backup {
 	now := time.Now()
@@ -71,6 +112,25 @@ func NewBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID) *Backup {
 		RepositoryID: repositoryID,
 		StartedAt:    now,
 		Status:       BackupStatusRunning,
+		BackupType:   BackupTypeFiles,
+		Resumed:      false,
+		CreatedAt:    now,
+	}
+}
+
+// NewPiholeBackup creates a new Backup record for a Pi-hole backup.
+func NewPiholeBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID, piholeVersion string) *Backup {
+	now := time.Now()
+	return &Backup{
+		ID:            uuid.New(),
+		ScheduleID:   scheduleID,
+		AgentID:      agentID,
+		RepositoryID: repositoryID,
+		StartedAt:    now,
+		Status:       BackupStatusRunning,
+		BackupType:   BackupTypePihole,
+		PiholeVersion: piholeVersion,
+		Resumed:      false,
 		CreatedAt:    now,
 	}
 }
@@ -118,6 +178,20 @@ func (b *Backup) IsComplete() bool {
 	return b.Status == BackupStatusCompleted ||
 		b.Status == BackupStatusFailed ||
 		b.Status == BackupStatusCanceled
+}
+
+// SetPiholeBackup marks this backup as a Pi-hole backup.
+func (b *Backup) SetPiholeBackup(isPihole bool) {
+	if isPihole {
+		b.BackupType = BackupTypePihole
+	} else {
+		b.BackupType = BackupTypeFiles
+	}
+}
+
+// IsPiholeBackup returns true if this is a Pi-hole backup.
+func (b *Backup) IsPiholeBackup() bool {
+	return b.BackupType == BackupTypePihole
 }
 
 // RecordPreScript records the results of running a pre-backup script.
@@ -198,4 +272,21 @@ func (b *Backup) RecordContainerPostHook(output string, err error) {
 	if err != nil {
 		b.ContainerPostHookError = err.Error()
 	}
+}
+
+// RecordValidation records the results of backup validation.
+func (b *Backup) RecordValidation(validationID uuid.UUID, status string, errMsg string) {
+	b.ValidationID = &validationID
+	b.ValidationStatus = status
+	b.ValidationError = errMsg
+}
+
+// IsValidated returns true if the backup has been validated.
+func (b *Backup) IsValidated() bool {
+	return b.ValidationID != nil
+}
+
+// ValidationPassed returns true if the backup validation passed.
+func (b *Backup) ValidationPassed() bool {
+	return b.ValidationStatus == "passed"
 }

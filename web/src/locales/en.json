@@ -518,5 +518,28 @@
     "volumesError": "Failed to load volumes",
     "noContainers": "No containers found",
     "noVolumes": "No volumes found"
+  "trial": {
+    "promoMessage": "Try Pro features free for 30 days",
+    "startFreeTrial": "Start Free Trial",
+    "startTrial": "Start Trial",
+    "enterEmail": "Enter your email to start your 30-day Pro trial:",
+    "startError": "Failed to start trial. Please try again.",
+    "activeMessage": "Pro trial: {{days}} days remaining",
+    "expiringMessage": "Your Pro trial expires in {{days}} days. Upgrade to keep Pro features.",
+    "lastDayMessage": "Your Pro trial expires tomorrow. Upgrade now to keep Pro features.",
+    "expiredMessage": "Your Pro trial has expired. Upgrade to continue using Pro features.",
+    "expiredTitle": "Pro Trial Expired",
+    "expiredDescription": "Some features are now limited. Upgrade to restore full access.",
+    "upgradeNow": "Upgrade Now",
+    "upgradeToPro": "Upgrade to Pro",
+    "daysRemaining": "{{days}} days remaining",
+    "features": "Pro Features",
+    "featureAvailable": "Available",
+    "featureUnavailable": "Upgrade Required",
+    "extendTrial": "Extend Trial",
+    "extensionDays": "Extension Days",
+    "extensionReason": "Reason for Extension",
+    "extensionSuccess": "Trial extended successfully",
+    "extensionError": "Failed to extend trial"
   }
 }

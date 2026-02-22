@@ -4,14 +4,20 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { UpgradePromptProvider } from './hooks/useUpgradePrompt';
+import { BrandingProvider } from './contexts/BrandingContext';
+import { Activity } from './pages/Activity';
 import { AdminLogs } from './pages/AdminLogs';
+import { AdminSetup } from './pages/AdminSetup';
 import { AgentDetails } from './pages/AgentDetails';
 import { AgentGroups } from './pages/AgentGroups';
 import { Agents } from './pages/Agents';
 import { Alerts } from './pages/Alerts';
 import { Announcements } from './pages/Announcements';
 import { AuditLogs } from './pages/AuditLogs';
+import { BackupHookTemplates } from './pages/BackupHookTemplates';
 import { Backups } from './pages/Backups';
+import { BrandingSettings } from './pages/BrandingSettings';
+import { Changelog } from './pages/Changelog';
 import { Classifications } from './pages/Classifications';
 import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
@@ -20,10 +26,13 @@ import { FileDiff } from './pages/FileDiff';
 import { FileHistory } from './pages/FileHistory';
 import { FileSearch } from './pages/FileSearch';
 import { LegalHolds } from './pages/LegalHolds';
+import { License } from './pages/License';
+import { LifecyclePolicies } from './pages/LifecyclePolicies';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
 import { Notifications } from './pages/Notifications';
 import { Onboarding } from './pages/Onboarding';
+import { OrgManagement } from './pages/OrgManagement';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
@@ -33,10 +42,15 @@ import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
 import { Restore } from './pages/Restore';
 import { Schedules } from './pages/Schedules';
+import { Setup } from './pages/Setup';
 import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
+import { SystemHealth } from './pages/SystemHealth';
 import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
+import { UserManagement } from './pages/UserManagement';
+import { UserSessions } from './pages/UserSessions';
+import { LicenseManagement } from './pages/admin/LicenseManagement';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Agents = lazy(() => import('./pages/Agents'));
@@ -179,6 +193,13 @@ function App() {
 				<UpgradePromptProvider>
 					<Suspense fallback={<LoadingSpinner />}>
 						<Routes>
+		<ErrorBoundary>
+			<QueryClientProvider client={queryClient}>
+				<BrandingProvider>
+					<BrowserRouter>
+						<Routes>
+							{/* Setup route - outside Layout, no auth required */}
+							<Route path="/setup" element={<Setup />} />
 							<Route path="/" element={<Layout />}>
 								<Route index element={<Dashboard />} />
 								<Route path="agents" element={<Agents />} />
@@ -198,6 +219,16 @@ function App() {
 									path="snapshots/compare"
 									element={<SnapshotCompare />}
 								/>
+								<Route
+									path="backup-hook-templates"
+									element={<BackupHookTemplates />}
+								/>
+								<Route path="backups" element={<Backups />} />
+								<Route path="dr-runbooks" element={<DRRunbooks />} />
+								<Route path="restore" element={<Restore />} />
+								<Route path="file-history" element={<FileHistory />} />
+								<Route path="file-search" element={<FileSearch />} />
+								<Route path="snapshots/compare" element={<SnapshotCompare />} />
 								<Route path="snapshots/file-diff" element={<FileDiff />} />
 								<Route path="activity" element={<Activity />} />
 								<Route path="alerts" element={<Alerts />} />
@@ -225,10 +256,20 @@ function App() {
 									element={<Classifications />}
 								/>
 								<Route path="costs" element={<CostEstimation />} />
+								<Route path="stats/:id" element={<RepositoryStatsDetail />} />
+								<Route path="tags" element={<Tags />} />
+								<Route path="classifications" element={<Classifications />} />
+								<Route path="costs" element={<CostEstimation />} />
+								<Route path="sla" element={<SLA />} />
+								<Route
+									path="organization/docker-registries"
+									element={<DockerRegistries />}
+								/>
 								<Route
 									path="organization/members"
 									element={<OrganizationMembers />}
 								/>
+								<Route path="organization/users" element={<UserManagement />} />
 								<Route
 									path="organization/settings"
 									element={<OrganizationSettings />}
@@ -262,6 +303,15 @@ function App() {
 									element={<NewOrganization />}
 								/>
 								<Route path="admin/logs" element={<AdminLogs />} />
+								<Route path="organization/license" element={<License />} />
+								<Route
+									path="organization/branding"
+									element={<BrandingSettings />}
+								/>
+								<Route path="organization/new" element={<NewOrganization />} />
+								<Route path="admin/logs" element={<AdminLogs />} />
+								<Route path="admin/docker-logs" element={<DockerLogs />} />
+								<Route path="admin/organizations" element={<OrgManagement />} />
 								<Route
 									path="admin/rate-limits"
 									element={<RateLimitDashboard />}
@@ -349,6 +399,19 @@ function App() {
 				</Routes>
 			</BrowserRouter>
 		</QueryClientProvider>
+								<Route path="admin/health" element={<SystemHealth />} />
+								<Route path="admin/license" element={<LicenseManagement />} />
+								<Route path="admin/setup" element={<AdminSetup />} />
+								<Route path="account/sessions" element={<UserSessions />} />
+								<Route path="onboarding" element={<Onboarding />} />
+								<Route path="changelog" element={<Changelog />} />
+								<Route path="*" element={<NotFound />} />
+							</Route>
+						</Routes>
+					</BrowserRouter>
+				</BrandingProvider>
+			</QueryClientProvider>
+		</ErrorBoundary>
 	);
 }
 

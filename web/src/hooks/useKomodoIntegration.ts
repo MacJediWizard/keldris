@@ -57,6 +57,10 @@ export function useUpdateKomodoIntegration() {
 			data,
 		}: { id: string; data: UpdateKomodoIntegrationRequest }) =>
 			komodoApi.updateIntegration(id, data),
+		}: {
+			id: string;
+			data: UpdateKomodoIntegrationRequest;
+		}) => komodoApi.updateIntegration(id, data),
 		onSuccess: (_, variables) => {
 			queryClient.invalidateQueries({ queryKey: komodoKeys.integrations() });
 			queryClient.invalidateQueries({
@@ -137,6 +141,10 @@ export function useUpdateKomodoContainer() {
 			data,
 		}: { id: string; data: UpdateKomodoContainerRequest }) =>
 			komodoApi.updateContainer(id, data),
+		}: {
+			id: string;
+			data: UpdateKomodoContainerRequest;
+		}) => komodoApi.updateContainer(id, data),
 		onSuccess: (_, variables) => {
 			queryClient.invalidateQueries({ queryKey: komodoKeys.containers() });
 			queryClient.invalidateQueries({

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAirGapStatus } from '../hooks/useAirGap';
+import { useBranding } from '../contexts/BrandingContext';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
 import { useBranding } from '../hooks/useBranding';
@@ -23,14 +24,17 @@ import {
 	useReadOnlyModeValue,
 } from '../hooks/useReadOnlyMode';
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
+import { AirGapIndicator } from './features/AirGapIndicator';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { LanguageSelector } from './features/LanguageSelector';
 import { TierBadge } from './features/TierBadge';
+import { LicenseBanner } from './features/LicenseBanner';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { RecentItemsDropdown } from './features/RecentItems';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
+import { TrialBanner } from './features/TrialBanner';
 import { WhatsNewModal } from './features/WhatsNewModal';
 import { Breadcrumbs } from './ui/Breadcrumbs';
 
@@ -361,6 +365,7 @@ function Sidebar() {
 	const { data: versionInfo } = useVersion();
 	const { theme, toggleTheme } = useTheme();
 	const { hasNewVersion, latestVersion } = useNewVersionAvailable();
+	const { productName, logoUrl, branding } = useBranding();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
@@ -377,6 +382,12 @@ function Sidebar() {
 					/>
 				) : (
 					<h1 className="text-2xl font-bold">{displayName}</h1>
+				{logoUrl && branding?.enabled ? (
+					<img src={logoUrl} alt={productName} className="h-8 mb-2" />
+				) : (
+					<h1 className="text-2xl font-bold">
+						{branding?.enabled ? productName : t('common.appName')}
+					</h1>
 				)}
 				<p className="text-gray-400 text-sm">{t('common.tagline')}</p>
 			</div>
@@ -479,6 +490,32 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>{t('nav.settings')}</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/organization/license"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/license'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+										/>
+									</svg>
+									<span>License</span>
 								</Link>
 							</li>
 							<li>
@@ -609,6 +646,32 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Password Policy</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/organization/branding"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/branding'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+										/>
+									</svg>
+									<span>Branding</span>
 								</Link>
 							</li>
 							<li>
@@ -765,6 +828,99 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Rate Limits</span>
+								</Link>
+							</li>
+						</ul>
+					</>
+				)}
+				{user?.is_superuser && (
+					<>
+						<div className="mt-6 mb-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+							Superuser
+						</div>
+						<ul className="space-y-1">
+							<li>
+								<Link
+									to="/admin/organizations"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/admin/organizations'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+										/>
+									</svg>
+									<span>Organizations</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/admin/license"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/admin/license'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+										/>
+									</svg>
+									<span>License</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/admin/setup"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/admin/setup'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+										/>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+										/>
+									</svg>
+									<span>Server Setup</span>
 								</Link>
 							</li>
 						</ul>
@@ -997,6 +1153,9 @@ function Header() {
 		user?.email?.charAt(0).toUpperCase() ??
 		'U';
 
+	const isSuperuser = user?.is_superuser;
+	const isImpersonating = user?.is_impersonating;
+
 	return (
 		<header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
 			<div className="flex items-center gap-4">
@@ -1005,11 +1164,63 @@ function Header() {
 			</div>
 			<div className="flex-1 max-w-xl mx-4">
 				<GlobalSearchBar placeholder={t('common.search')} />
+				{isImpersonating && (
+					<div className="flex items-center gap-2 px-3 py-1.5 bg-amber-100 border border-amber-300 rounded-lg">
+						<svg
+							aria-hidden="true"
+							className="w-4 h-4 text-amber-600"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+							/>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+							/>
+						</svg>
+						<span className="text-sm font-medium text-amber-800">
+							Impersonating
+						</span>
+					</div>
+				)}
 			</div>
 			<div className="flex-1 max-w-xl mx-4">
 				<GlobalSearchBar placeholder={t('common.search')} />
 			</div>
 			<div className="flex items-center gap-4">
+				{isSuperuser && (
+					<div
+						className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-100 border border-purple-200 rounded-full"
+						title="Superuser"
+					>
+						<svg
+							aria-hidden="true"
+							className="w-4 h-4 text-purple-600"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+							/>
+						</svg>
+						<span className="text-xs font-semibold text-purple-700">
+							Superuser
+						</span>
+					</div>
+				)}
+				<AirGapIndicator showDetails />
 				<LanguageSelector />
 				<RecentItemsDropdown />
 				<Link
@@ -1043,7 +1254,11 @@ function Header() {
 						onClick={() => setShowDropdown(!showDropdown)}
 						className="flex items-center gap-2"
 					>
-						<div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+						<div
+							className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
+								isSuperuser ? 'bg-purple-600' : 'bg-indigo-600'
+							}`}
+						>
 							{userInitial}
 						</div>
 					</button>
@@ -1055,7 +1270,47 @@ function Header() {
 										{user.name}
 									</p>
 									<p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+						<div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+							{user && (
+								<div className="px-4 py-2 border-b border-gray-100">
+									<div className="flex items-center gap-2">
+										<p className="text-sm font-medium text-gray-900 truncate">
+											{user.name}
+										</p>
+										{isSuperuser && (
+											<span className="px-1.5 py-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 rounded">
+												Superuser
+											</span>
+										)}
+									</div>
+									<p className="text-xs text-gray-500 truncate">{user.email}</p>
 								</div>
+							)}
+							{isSuperuser && (
+								<>
+									<Link
+										to="/superuser"
+										onClick={() => setShowDropdown(false)}
+										className="w-full text-left px-4 py-2 text-sm text-purple-700 hover:bg-purple-50 flex items-center gap-2"
+									>
+										<svg
+											aria-hidden="true"
+											className="w-4 h-4"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+											/>
+										</svg>
+										Superuser Console
+									</Link>
+									<div className="border-t border-gray-100 my-1" />
+								</>
 							)}
 							<Link
 								to="/account/sessions"
@@ -1078,6 +1333,29 @@ function Header() {
 								</svg>
 								Active Sessions
 							</Link>
+							<a
+								href="/portal"
+								target="_blank"
+								rel="noopener noreferrer"
+								onClick={() => setShowDropdown(false)}
+								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+							>
+								<svg
+									aria-hidden="true"
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+									/>
+								</svg>
+								Manage License
+							</a>
 							<button
 								type="button"
 								onClick={() => logout.mutate()}
@@ -1208,7 +1486,9 @@ export function Layout() {
 			<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
 				<MaintenanceCountdown />
 				<AnnouncementBanner />
+				<LicenseBanner />
 				<PasswordExpirationBanner />
+				<TrialBanner />
 				<div className="flex flex-1">
 					<Sidebar />
 					<div className="flex-1 flex flex-col">

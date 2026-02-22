@@ -1,5 +1,7 @@
 import type {
 	AcknowledgeBreachRequest,
+	ActivateLicenseRequest,
+	ActivateLicenseResponse,
 	ActiveMaintenanceResponse,
 	ActivityCategoriesResponse,
 	ActivityEvent,
@@ -7,6 +9,11 @@ import type {
 	ActivityEventFilter,
 	ActivityEventsResponse,
 	AddAgentToGroupRequest,
+	AdminCreateOrgRequest,
+	AdminOrgSettings,
+	AdminOrgUsageStats,
+	AdminOrganization,
+	AdminOrganizationsResponse,
 	Agent,
 	AgentBackupsResponse,
 	AgentCommand,
@@ -33,6 +40,8 @@ import type {
 	AlertsResponse,
 	Announcement,
 	AnnouncementsResponse,
+	ApplyBackupHookTemplateRequest,
+	ApplyBackupHookTemplateResponse,
 	ApplyPolicyRequest,
 	ApplyPolicyResponse,
 	AssignSLARequest,
@@ -44,6 +53,8 @@ import type {
 	BackupCalendarResponse,
 	BackupDurationTrend,
 	BackupDurationTrendResponse,
+	BackupHookTemplate,
+	BackupHookTemplatesResponse,
 	BackupQueueResponse,
 	BackupQueueSummary,
 	BackupScript,
@@ -53,6 +64,7 @@ import type {
 	BackupsResponse,
 	BrandingSettings,
 	BlockedRequestsResponse,
+	BrandingSettings,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
 	BulkCloneResponse,
@@ -79,6 +91,7 @@ import type {
 	ContainerHookExecutionsResponse,
 	ContainerHookTemplateInfo,
 	ContainerHookTemplatesResponse,
+	ConvertTrialRequest,
 	CostAlert,
 	CostAlertsResponse,
 	CostForecastResponse,
@@ -90,6 +103,7 @@ import type {
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
 	CreateAnnouncementRequest,
+	CreateBackupHookTemplateRequest,
 	CreateBackupScriptRequest,
 	CreateCloudRestoreRequest,
 	CreateContainerBackupHookRequest,
@@ -103,11 +117,13 @@ import type {
 	CreateDowntimeEventRequest,
 	CreateExcludePatternRequest,
 	CreateFavoriteRequest,
+	CreateFirstOrgRequest,
 	CreateIPAllowlistRequest,
 	CreateIPBanRequest,
 	CreateImmutabilityLockRequest,
 	CreateKomodoIntegrationRequest,
 	CreateLegalHoldRequest,
+	CreateLicenseKeyRequest,
 	CreateLifecyclePolicyRequest,
 	CreateMaintenanceWindowRequest,
 	CreateMetadataSchemaRequest,
@@ -131,6 +147,8 @@ import type {
 	CreateScheduleRequest,
 	CreateSnapshotCommentRequest,
 	CreateStoragePricingRequest,
+	CreateSuperuserRequest,
+	CreateSuperuserResponse,
 	CreateTagRequest,
 	CreateTemplateRequest,
 	CreateVerificationScheduleRequest,
@@ -147,6 +165,7 @@ import type {
 	DailyBackupStatsResponse,
 	DashboardStats,
 	DataTypesResponse,
+	DatabaseTestResponse,
 	DefaultPricingResponse,
 	DockerBackupRequest,
 	DockerBackupResponse,
@@ -197,9 +216,14 @@ import type {
 	ExportBundleRequest,
 	ExportFormat,
 	ExtendImmutabilityLockRequest,
+	ExtendTrialRequest,
 	Favorite,
 	FavoriteEntityType,
 	FavoritesResponse,
+	FeatureCheckResponse,
+	FeatureCheckResult,
+	FeatureInfo,
+	FeaturesResponse,
 	FileDiffResponse,
 	FileHistoryParams,
 	FileHistoryResponse,
@@ -226,6 +250,9 @@ import type {
 	ImmutabilityLock,
 	ImmutabilityLocksResponse,
 	ImmutabilityStatus,
+	ImpersonateUserRequest,
+	ImpersonateUserResponse,
+	ImpersonationLogsResponse,
 	ImportConfigRequest,
 	ImportPreviewRequest,
 	ImportPreviewResponse,
@@ -235,6 +262,8 @@ import type {
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
+	InviteUserRequest,
+	InviteUserResponse,
 	KeyRecoveryResponse,
 	LicenseInfo,
 	ActivateLicenseResponse,
@@ -256,6 +285,15 @@ import type {
 	KomodoWebhookEventsResponse,
 	LegalHold,
 	LegalHoldsResponse,
+	License,
+	LicenseFeature,
+	LicenseHistoryResponse,
+	LicenseInfo,
+	LicenseInfoResponse,
+	LicenseResponse,
+	LicenseValidateResponse,
+	LicenseWarningsResponse,
+	LicensesResponse,
 	LifecycleDeletionEvent,
 	LifecycleDeletionEventsResponse,
 	LifecycleDryRunRequest,
@@ -287,11 +325,13 @@ import type {
 	NotificationRuleExecution,
 	NotificationRuleExecutionsResponse,
 	NotificationRulesResponse,
+	OIDCSettings,
 	OnboardingStatus,
 	OnboardingStep,
 	OrgInvitation,
 	OrgMember,
 	OrgResponse,
+	OrgSettingsResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
 	PasswordExpirationInfo,
@@ -303,6 +343,7 @@ import type {
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	PublicBrandingSettings,
 	RateLimitConfig,
 	RateLimitConfigsResponse,
 	RateLimitDashboardStats,
@@ -329,6 +370,8 @@ import type {
 	RepositoryStatsListItem,
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
+	RerunStatusResponse,
+	ResetPasswordRequest,
 	ResolveDowntimeEventRequest,
 	Restore,
 	RestoreDockerStackRequest,
@@ -356,6 +399,7 @@ import type {
 	SLAReport,
 	SLAReportResponse,
 	SLAWithAssignments,
+	SMTPSettings,
 	SSOGroupMapping,
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
@@ -369,12 +413,18 @@ import type {
 	SearchResponse,
 	ServerVersion,
 	SearchSuggestionsResponse,
+	SecuritySettings,
 	ServerLogComponentsResponse,
 	ServerLogFilter,
 	ServerLogsResponse,
+	ServerSetupStatus,
 	SetDebugModeRequest,
 	SetDebugModeResponse,
 	SetScheduleClassificationRequest,
+	SettingsAuditLogsResponse,
+	SetupCompleteResponse,
+	SetupStartTrialRequest,
+	SetupStartTrialResponse,
 	Snapshot,
 	SnapshotComment,
 	SnapshotCommentsResponse,
@@ -383,6 +433,8 @@ import type {
 	SnapshotMount,
 	SnapshotMountsResponse,
 	SnapshotsResponse,
+	StartTrialRequest,
+	StorageDefaultSettings,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
 	StorageGrowthTrend,
@@ -391,20 +443,35 @@ import type {
 	StoragePricingResponse,
 	StorageStatsSummary,
 	SwitchOrgRequest,
+	SystemHealthHistoryResponse,
+	SystemHealthResponse,
 	Tag,
 	TagsResponse,
 	TestConnectionRequest,
 	TestNotificationRuleRequest,
 	TestNotificationRuleResponse,
+	TestOIDCResponse,
 	TestRepositoryResponse,
+	TestSMTPRequest,
+	TestSMTPResponse,
+	TierInfo,
+	TiersResponse,
 	TrackRecentItemRequest,
+	TransferOwnershipRequest,
+	TrialActivityResponse,
+	TrialExtension,
+	TrialExtensionsResponse,
+	TrialFeaturesResponse,
+	TrialInfo,
 	TriggerDockerStackBackupRequest,
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
 	UpdateAnnouncementRequest,
+	UpdateBackupHookTemplateRequest,
 	UpdateBackupScriptRequest,
 	UpdateBrandingRequest,
+	UpdateBrandingSettingsRequest,
 	UpdateConcurrencyRequest,
 	UpdateContainerBackupHookRequest,
 	UpdateCostAlertRequest,
@@ -419,6 +486,7 @@ import type {
 	UpdateIPAllowlistSettingsRequest,
 	UpdateKomodoContainerRequest,
 	UpdateKomodoIntegrationRequest,
+	UpdateLicenseRequest,
 	UpdateLifecyclePolicyRequest,
 	UpdateMaintenanceWindowRequest,
 	UpdateMemberRequest,
@@ -426,6 +494,7 @@ import type {
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateNotificationRuleRequest,
+	UpdateOIDCSettingsRequest,
 	UpdateOrgRequest,
 	UpdatePasswordPolicyRequest,
 	UpdatePathClassificationRuleRequest,
@@ -436,23 +505,32 @@ import type {
 	UpdateRepositoryRequest,
 	UpdateSLAPolicyRequest,
 	UpdateSLADefinitionRequest,
+	UpdateSMTPSettingsRequest,
 	UpdateSSOGroupMappingRequest,
 	UpdateSSOSettingsRequest,
 	UpdateSavedFilterRequest,
 	UpdateScheduleRequest,
+	UpdateSecuritySettingsRequest,
+	UpdateStorageDefaultsRequest,
 	UpdateStoragePricingRequest,
 	UpdateTagRequest,
 	UpdateTemplateRequest,
 	UpdateUserPreferencesRequest,
+	UpdateUserRequest,
 	UpdateVerificationScheduleRequest,
 	UptimeBadge,
 	UptimeBadgesResponse,
 	UptimeSummary,
 	UseTemplateRequest,
 	User,
+	UserActivityLog,
+	UserActivityLogsResponse,
+	UserImpersonationLog,
 	UserSSOGroups,
 	UserSession,
 	UserSessionsResponse,
+	UserWithMembership,
+	UsersResponse,
 	ValidateImportRequest,
 	ValidationResult,
 	Verification,
@@ -1022,6 +1100,72 @@ export const backupScriptsApi = {
 		}),
 };
 
+// Backup Hook Templates API
+export const backupHookTemplatesApi = {
+	list: async (params?: {
+		service_type?: string;
+		visibility?: string;
+		tag?: string;
+	}): Promise<BackupHookTemplate[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.service_type)
+			searchParams.set('service_type', params.service_type);
+		if (params?.visibility) searchParams.set('visibility', params.visibility);
+		if (params?.tag) searchParams.set('tag', params.tag);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/backup-hook-templates?${query}`
+			: '/backup-hook-templates';
+		const response = await fetchApi<BackupHookTemplatesResponse>(endpoint);
+		return response.templates ?? [];
+	},
+
+	listBuiltIn: async (): Promise<BackupHookTemplate[]> => {
+		const response = await fetchApi<BackupHookTemplatesResponse>(
+			'/backup-hook-templates/built-in',
+		);
+		return response.templates ?? [];
+	},
+
+	get: async (id: string): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>(`/backup-hook-templates/${id}`),
+
+	create: async (
+		data: CreateBackupHookTemplateRequest,
+	): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>('/backup-hook-templates', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateBackupHookTemplateRequest,
+	): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>(`/backup-hook-templates/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/backup-hook-templates/${id}`, {
+			method: 'DELETE',
+		}),
+
+	apply: async (
+		id: string,
+		data: ApplyBackupHookTemplateRequest,
+	): Promise<ApplyBackupHookTemplateResponse> =>
+		fetchApi<ApplyBackupHookTemplateResponse>(
+			`/backup-hook-templates/${id}/apply`,
+			{
+				method: 'POST',
+				body: JSON.stringify(data),
+			},
+		),
+};
+
 // Container Backup Hooks API
 export const containerHooksApi = {
 	list: async (scheduleId: string): Promise<ContainerBackupHook[]> => {
@@ -1502,6 +1646,59 @@ export const organizationsApi = {
 		fetchApi<OrgResponse>('/invitations/accept', {
 			method: 'POST',
 			body: JSON.stringify({ token }),
+		}),
+};
+
+// Admin Organizations API (superuser only)
+export const adminOrganizationsApi = {
+	list: async (params?: {
+		search?: string;
+		limit?: number;
+		offset?: number;
+	}): Promise<AdminOrganizationsResponse> => {
+		const query = new URLSearchParams();
+		if (params?.search) query.set('search', params.search);
+		if (params?.limit) query.set('limit', params.limit.toString());
+		if (params?.offset) query.set('offset', params.offset.toString());
+		const queryStr = query.toString();
+		return fetchApi<AdminOrganizationsResponse>(
+			`/admin/organizations${queryStr ? `?${queryStr}` : ''}`,
+		);
+	},
+
+	get: async (id: string): Promise<AdminOrganization> =>
+		fetchApi<AdminOrganization>(`/admin/organizations/${id}`),
+
+	create: async (data: AdminCreateOrgRequest): Promise<AdminOrganization> =>
+		fetchApi<AdminOrganization>('/admin/organizations', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: AdminOrgSettings,
+	): Promise<AdminOrganization> =>
+		fetchApi<AdminOrganization>(`/admin/organizations/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/organizations/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getUsageStats: async (id: string): Promise<AdminOrgUsageStats> =>
+		fetchApi<AdminOrgUsageStats>(`/admin/organizations/${id}/usage`),
+
+	transferOwnership: async (
+		id: string,
+		data: TransferOwnershipRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/organizations/${id}/transfer-ownership`, {
+			method: 'POST',
+			body: JSON.stringify(data),
 		}),
 };
 
@@ -3812,6 +4009,161 @@ export const slaApi = {
 	},
 };
 
+// Organization System Settings API (SMTP, OIDC, Storage, Security)
+export const orgSettingsApi = {
+	// Get all settings
+	getAll: async (): Promise<OrgSettingsResponse> =>
+		fetchApi<OrgSettingsResponse>('/system-settings'),
+
+	// SMTP settings
+	getSMTP: async (): Promise<SMTPSettings> =>
+		fetchApi<SMTPSettings>('/system-settings/smtp'),
+
+	updateSMTP: async (data: UpdateSMTPSettingsRequest): Promise<SMTPSettings> =>
+		fetchApi<SMTPSettings>('/system-settings/smtp', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	testSMTP: async (data: TestSMTPRequest): Promise<TestSMTPResponse> =>
+		fetchApi<TestSMTPResponse>('/system-settings/smtp/test', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// OIDC settings
+	getOIDC: async (): Promise<OIDCSettings> =>
+		fetchApi<OIDCSettings>('/system-settings/oidc'),
+
+	updateOIDC: async (data: UpdateOIDCSettingsRequest): Promise<OIDCSettings> =>
+		fetchApi<OIDCSettings>('/system-settings/oidc', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	testOIDC: async (): Promise<TestOIDCResponse> =>
+		fetchApi<TestOIDCResponse>('/system-settings/oidc/test', {
+			method: 'POST',
+		}),
+
+	// Storage settings
+	getStorageDefaults: async (): Promise<StorageDefaultSettings> =>
+		fetchApi<StorageDefaultSettings>('/system-settings/storage'),
+
+	updateStorageDefaults: async (
+		data: UpdateStorageDefaultsRequest,
+	): Promise<StorageDefaultSettings> =>
+		fetchApi<StorageDefaultSettings>('/system-settings/storage', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// Security settings
+	getSecurity: async (): Promise<SecuritySettings> =>
+		fetchApi<SecuritySettings>('/system-settings/security'),
+
+	updateSecurity: async (
+		data: UpdateSecuritySettingsRequest,
+	): Promise<SecuritySettings> =>
+		fetchApi<SecuritySettings>('/system-settings/security', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// Audit log
+	getAuditLog: async (
+		limit = 50,
+		offset = 0,
+	): Promise<SettingsAuditLogsResponse> =>
+		fetchApi<SettingsAuditLogsResponse>(
+			`/system-settings/audit-log?limit=${limit}&offset=${offset}`,
+		),
+};
+
+// Trial API
+export const trialApi = {
+	// Get current trial status
+	getStatus: async (): Promise<TrialInfo> =>
+		fetchApi<TrialInfo>('/trial/status'),
+
+	// Start a new trial
+	startTrial: async (data: StartTrialRequest): Promise<TrialInfo> =>
+		fetchApi<TrialInfo>('/trial/start', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// Get available Pro features
+	getFeatures: async (): Promise<TrialFeaturesResponse> =>
+		fetchApi<TrialFeaturesResponse>('/trial/features'),
+
+	// Get trial activity log
+	getActivity: async (limit = 50, offset = 0): Promise<TrialActivityResponse> =>
+		fetchApi<TrialActivityResponse>(
+			`/trial/activity?limit=${limit}&offset=${offset}`,
+		),
+
+	// Extend trial (admin/superuser only)
+	extendTrial: async (data: ExtendTrialRequest): Promise<TrialExtension> =>
+		fetchApi<TrialExtension>('/trial/extend', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// Convert trial to paid
+	convertTrial: async (data: ConvertTrialRequest): Promise<TrialInfo> =>
+		fetchApi<TrialInfo>('/trial/convert', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	// Get extension history
+	getExtensions: async (): Promise<TrialExtensionsResponse> =>
+		fetchApi<TrialExtensionsResponse>('/trial/extensions'),
+};
+
+// Branding Settings API (Enterprise)
+export const brandingApi = {
+	// Get branding settings
+	get: async (): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding'),
+
+	// Update branding settings
+	update: async (
+		data: UpdateBrandingSettingsRequest,
+	): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// Get public branding settings (no auth required, for login page)
+	getPublic: async (orgSlug: string): Promise<PublicBrandingSettings> =>
+		fetch(`/api/public/branding/${orgSlug}`).then((res) => {
+			if (!res.ok) {
+				// Return default branding on error
+				return {
+					enabled: false,
+					product_name: 'Keldris',
+					logo_url: '',
+					logo_dark_url: '',
+					favicon_url: '',
+					primary_color: '#4f46e5',
+					secondary_color: '#64748b',
+					accent_color: '#06b6d4',
+					support_url: '',
+					privacy_url: '',
+					terms_url: '',
+					login_title: '',
+					login_subtitle: '',
+					login_bg_url: '',
+					hide_powered_by: false,
+				};
+			}
+			return res.json();
+		}),
+};
+
 // Docker Container Logs API
 export const dockerLogsApi = {
 	// List all backups
@@ -4277,5 +4629,298 @@ export const komodoApi = {
 			'/integrations/komodo/events',
 		);
 		return response.events ?? [];
+	},
+};
+
+// Users API (Admin user management)
+export const usersApi = {
+	list: async (): Promise<UserWithMembership[]> => {
+		const response = await fetchApi<UsersResponse>('/users');
+		return response.users ?? [];
+	},
+
+	get: async (id: string): Promise<UserWithMembership> =>
+		fetchApi<UserWithMembership>(`/users/${id}`),
+
+	invite: async (data: InviteUserRequest): Promise<InviteUserResponse> =>
+		fetchApi<InviteUserResponse>('/users/invite', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateUserRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/users/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/users/${id}`, {
+			method: 'DELETE',
+		}),
+
+	resetPassword: async (
+		id: string,
+		data: ResetPasswordRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/users/${id}/reset-password`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	disable: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/users/${id}/disable`, {
+			method: 'POST',
+		}),
+
+	enable: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/users/${id}/enable`, {
+			method: 'POST',
+		}),
+
+	getActivity: async (
+		id: string,
+		limit = 50,
+		offset = 0,
+	): Promise<UserActivityLog[]> => {
+		const response = await fetchApi<UserActivityLogsResponse>(
+			`/users/${id}/activity?limit=${limit}&offset=${offset}`,
+		);
+		return response.activity_logs ?? [];
+	},
+
+	getOrgActivityLogs: async (
+		limit = 50,
+		offset = 0,
+	): Promise<UserActivityLog[]> => {
+		const response = await fetchApi<UserActivityLogsResponse>(
+			`/users/activity?limit=${limit}&offset=${offset}`,
+		);
+		return response.activity_logs ?? [];
+	},
+
+	startImpersonation: async (
+		id: string,
+		data: ImpersonateUserRequest,
+	): Promise<ImpersonateUserResponse> =>
+		fetchApi<ImpersonateUserResponse>(`/users/${id}/impersonate`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	endImpersonation: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/users/end-impersonation', {
+			method: 'POST',
+		}),
+
+	getImpersonationLogs: async (
+		limit = 50,
+		offset = 0,
+	): Promise<UserImpersonationLog[]> => {
+		const response = await fetchApi<ImpersonationLogsResponse>(
+			`/users/impersonation-logs?limit=${limit}&offset=${offset}`,
+		);
+		return response.impersonation_logs ?? [];
+	},
+};
+
+// System health API (admin only)
+export const systemHealthApi = {
+	getHealth: async (): Promise<SystemHealthResponse> =>
+		fetchApi<SystemHealthResponse>('/admin/health'),
+
+	getHistory: async (): Promise<SystemHealthHistoryResponse> =>
+		fetchApi<SystemHealthHistoryResponse>('/admin/health/history'),
+};
+// Server Setup API
+export const setupApi = {
+	getStatus: async (): Promise<ServerSetupStatus> =>
+		fetchApi<ServerSetupStatus>('/setup/status'),
+
+	testDatabase: async (): Promise<DatabaseTestResponse> =>
+		fetchApi<DatabaseTestResponse>('/setup/database/test', { method: 'POST' }),
+
+	createSuperuser: async (
+		data: CreateSuperuserRequest,
+	): Promise<CreateSuperuserResponse> =>
+		fetchApi<CreateSuperuserResponse>('/setup/superuser', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	configureSMTP: async (data: SMTPSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/smtp', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	skipSMTP: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/smtp/skip', { method: 'POST' }),
+
+	configureOIDC: async (data: OIDCSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/oidc', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	skipOIDC: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/oidc/skip', { method: 'POST' }),
+
+	activateLicense: async (
+		data: ActivateLicenseRequest,
+	): Promise<ActivateLicenseResponse> =>
+		fetchApi<ActivateLicenseResponse>('/setup/license/activate', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	startTrial: async (
+		data: SetupStartTrialRequest,
+	): Promise<SetupStartTrialResponse> =>
+		fetchApi<SetupStartTrialResponse>('/setup/license/trial', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	createOrganization: async (
+		data: CreateFirstOrgRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/organization', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	completeSetup: async (): Promise<SetupCompleteResponse> =>
+		fetchApi<SetupCompleteResponse>('/setup/complete', { method: 'POST' }),
+
+	// Superuser re-run endpoints
+	getRerunStatus: async (): Promise<RerunStatusResponse> =>
+		fetchApi<RerunStatusResponse>('/setup/rerun'),
+
+	rerunConfigureSMTP: async (data: SMTPSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/rerun/smtp', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	rerunConfigureOIDC: async (data: OIDCSettings): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/setup/rerun/oidc', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	rerunUpdateLicense: async (
+		data: ActivateLicenseRequest,
+	): Promise<ActivateLicenseResponse> =>
+		fetchApi<ActivateLicenseResponse>('/setup/rerun/license', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+};
+
+export const licensesApi = {
+	getCurrent: async (): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>('/licenses/current');
+		return response.license;
+	},
+
+	getWarnings: async (): Promise<LicenseWarningsResponse> =>
+		fetchApi<LicenseWarningsResponse>('/licenses/warnings'),
+
+	getHistory: async (limit = 50, offset = 0): Promise<LicenseHistoryResponse> =>
+		fetchApi<LicenseHistoryResponse>(
+			`/licenses/history?limit=${limit}&offset=${offset}`,
+		),
+
+	validate: async (key: string): Promise<LicenseValidateResponse> =>
+		fetchApi<LicenseValidateResponse>('/licenses/validate', {
+			method: 'POST',
+			body: JSON.stringify({ license_key: key }),
+		}),
+
+	activate: async (data: CreateLicenseKeyRequest): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>('/licenses/activate', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		});
+		return response.license;
+	},
+
+	// Admin endpoints
+	adminList: async (params?: {
+		org_id?: string;
+		tier?: string;
+		status?: string;
+		limit?: number;
+		offset?: number;
+	}): Promise<LicensesResponse> => {
+		const query = new URLSearchParams();
+		if (params?.org_id) query.set('org_id', params.org_id);
+		if (params?.tier) query.set('tier', params.tier);
+		if (params?.status) query.set('status', params.status);
+		if (params?.limit) query.set('limit', params.limit.toString());
+		if (params?.offset) query.set('offset', params.offset.toString());
+		const queryStr = query.toString();
+		return fetchApi<LicensesResponse>(
+			`/admin/licenses${queryStr ? `?${queryStr}` : ''}`,
+		);
+	},
+
+	adminGet: async (id: string): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>(`/admin/licenses/${id}`);
+		return response.license;
+	},
+
+	adminUpdate: async (
+		id: string,
+		data: UpdateLicenseRequest,
+	): Promise<License> => {
+		const response = await fetchApi<LicenseResponse>(`/admin/licenses/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		});
+		return response.license;
+	},
+
+	adminRevoke: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/licenses/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getPurchaseUrl: async (): Promise<{ url: string }> =>
+		fetchApi<{ url: string }>('/licenses/purchase-url'),
+};
+
+// License and Feature Flags API
+export const licenseApi = {
+	// Get current organization's license info
+	getLicense: async (): Promise<LicenseInfo> => {
+		const response = await fetchApi<LicenseInfoResponse>('/license');
+		return response.license;
+	},
+
+	// Check if a specific feature is enabled
+	checkFeature: async (
+		feature: LicenseFeature,
+	): Promise<FeatureCheckResult> => {
+		const response = await fetchApi<FeatureCheckResponse>(
+			`/license/features/${feature}/check`,
+		);
+		return response.result;
+	},
+
+	// Get all available features with their tier requirements
+	getFeatures: async (): Promise<FeatureInfo[]> => {
+		const response = await fetchApi<FeaturesResponse>('/license/features');
+		return response.features ?? [];
+	},
+
+	// Get all tier information
+	getTiers: async (): Promise<TierInfo[]> => {
+		const response = await fetchApi<TiersResponse>('/license/tiers');
+		return response.tiers ?? [];
 	},
 };

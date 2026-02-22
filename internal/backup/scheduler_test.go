@@ -191,6 +191,32 @@ func (m *mockStore) DeleteCheckpoint(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// ValidationStore interface implementations for testing
+
+func (m *mockStore) CreateBackupValidation(ctx context.Context, v *models.BackupValidation) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil
+}
+
+func (m *mockStore) UpdateBackupValidation(ctx context.Context, v *models.BackupValidation) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil
+}
+
+func (m *mockStore) GetBackupValidationByBackupID(ctx context.Context, backupID uuid.UUID) (*models.BackupValidation, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil, nil
+}
+
+func (m *mockStore) GetLatestBackupValidationByRepoID(ctx context.Context, repoID uuid.UUID) (*models.BackupValidation, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil, nil
+}
+
 func (m *mockStore) addSchedule(s models.Schedule) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

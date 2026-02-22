@@ -1,0 +1,116 @@
+# MongoDB Backup Hook Template
+# Uses mongodump to create a database dump before backup
+name: MongoDB
+description: Creates a MongoDB database dump using mongodump before backing up
+service_type: mongodb
+icon: database
+tags:
+  - database
+  - mongodb
+  - nosql
+
+# Variables that users can customize
+variables:
+  - name: MONGO_HOST
+    description: MongoDB host
+    default: localhost
+    required: true
+  - name: MONGO_PORT
+    description: MongoDB port
+    default: "27017"
+    required: true
+  - name: MONGO_USER
+    description: MongoDB username (leave empty if no auth)
+    default: ""
+    required: false
+  - name: MONGO_PASSWORD
+    description: MongoDB password
+    default: ""
+    required: false
+    sensitive: true
+  - name: MONGO_AUTH_DB
+    description: Authentication database
+    default: admin
+    required: false
+  - name: MONGO_DATABASE
+    description: Database name to backup (leave empty for all databases)
+    default: ""
+    required: false
+  - name: DUMP_DIR
+    description: Directory to store the dump
+    default: /var/backups/mongodb
+    required: true
+  - name: MONGO_URI
+    description: Full MongoDB URI (overrides individual connection settings)
+    default: ""
+    required: false
+    sensitive: true
+
+scripts:
+  pre_backup:
+    script: |
+      #!/bin/bash
+      set -e
+
+      # MongoDB backup script
+      TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/mongodb}"
+      BACKUP_DIR="$DUMP_DIR/backup_${TIMESTAMP}"
+
+      # Create dump directory if it doesn't exist
+      mkdir -p "$BACKUP_DIR"
+
+      # Build connection options
+      if [ -n "${MONGO_URI}" ]; then
+        CONN_OPTS="--uri=\"${MONGO_URI}\""
+      else
+        CONN_OPTS="--host=${MONGO_HOST:-localhost} --port=${MONGO_PORT:-27017}"
+        if [ -n "${MONGO_USER}" ]; then
+          CONN_OPTS="$CONN_OPTS --username=${MONGO_USER}"
+          if [ -n "${MONGO_PASSWORD}" ]; then
+            CONN_OPTS="$CONN_OPTS --password=${MONGO_PASSWORD}"
+          fi
+          CONN_OPTS="$CONN_OPTS --authenticationDatabase=${MONGO_AUTH_DB:-admin}"
+        fi
+      fi
+
+      if [ -n "${MONGO_DATABASE}" ]; then
+        # Backup single database
+        echo "Backing up database: ${MONGO_DATABASE}"
+        eval mongodump $CONN_OPTS --db="${MONGO_DATABASE}" --out="$BACKUP_DIR"
+      else
+        # Backup all databases
+        echo "Backing up all databases"
+        eval mongodump $CONN_OPTS --out="$BACKUP_DIR"
+      fi
+
+      # Create compressed archive
+      ARCHIVE_FILE="$DUMP_DIR/mongodb_${TIMESTAMP}.tar.gz"
+      tar -czf "$ARCHIVE_FILE" -C "$DUMP_DIR" "backup_${TIMESTAMP}"
+      rm -rf "$BACKUP_DIR"
+
+      echo "MongoDB backup created: $ARCHIVE_FILE"
+      echo "MongoDB backup completed successfully"
+    timeout_seconds: 3600
+    fail_on_error: true
+
+  post_success:
+    script: |
+      #!/bin/bash
+      # Cleanup old dumps (keep last 7 days)
+      DUMP_DIR="${DUMP_DIR:-/var/backups/mongodb}"
+      RETENTION_DAYS=7
+
+      echo "Cleaning up dumps older than $RETENTION_DAYS days"
+      find "$DUMP_DIR" -type f -name "mongodb_*.tar.gz" -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
+      echo "Cleanup completed"
+    timeout_seconds: 300
+    fail_on_error: false
+
+  post_failure:
+    script: |
+      #!/bin/bash
+      echo "MongoDB backup failed - manual intervention may be required"
+      echo "Check MongoDB connectivity and credentials"
+    timeout_seconds: 60
+    fail_on_error: false
