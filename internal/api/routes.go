@@ -104,6 +104,8 @@ type Config struct {
 	WebhookDispatcher *webhooks.Dispatcher
 	// MeteringService for usage tracking and billing (optional).
 	MeteringService *metering.Service
+	// DRTestRunner for triggering DR test execution (optional).
+	DRTestRunner handlers.DRTestRunner
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -782,8 +784,8 @@ func NewRouter(
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
 	drRunbooksHandler.RegisterRoutes(apiV1)
 
-	// DR Test routes (runner is nil for now, will be set up when scheduler is integrated)
-	drTestsHandler := handlers.NewDRTestsHandler(database, nil, logger)
+	// DR Test routes
+	drTestsHandler := handlers.NewDRTestsHandler(database, cfg.DRTestRunner, logger)
 	drTestsHandler.RegisterRoutes(apiV1)
 	alertsHandler := handlers.NewAlertsHandler(database, logger)
 	alertsHandler.RegisterRoutes(apiV1)
