@@ -78,6 +78,10 @@ func (t *Trial) Convert(tier LicenseTier) (*License, error) {
 package license
 
 import (
+// Package license provides trial and subscription management for Keldris.
+package license
+
+import (
 	"context"
 	"errors"
 	"time"
