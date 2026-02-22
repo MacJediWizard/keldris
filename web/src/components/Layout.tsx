@@ -23,6 +23,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
 import { useLocale } from '../hooks/useLocale';
+import { useOnboardingStatus } from '../hooks/useOnboarding';
 import {
 	useOrganizations,
 	useSwitchOrganization,
@@ -2001,9 +2002,27 @@ export function Layout() {
 	// Show loading state while checking auth
 	if (isLoading || onboardingLoading) {
 	const { isLoading, isError } = useMe();
+	const { data: onboardingStatus, isLoading: onboardingLoading } =
+		useOnboardingStatus();
+
+	// Redirect to onboarding if needed (but not if already on onboarding page)
+	useEffect(() => {
+		if (
+			!onboardingLoading &&
+			onboardingStatus?.needs_onboarding &&
+			location.pathname !== '/onboarding'
+		) {
+			navigate('/onboarding');
+		}
+	}, [
+		onboardingLoading,
+		onboardingStatus?.needs_onboarding,
+		location.pathname,
+		navigate,
+	]);
 
 	// Show loading state while checking auth
-	if (isLoading) {
+	if (isLoading || onboardingLoading) {
 		return <LoadingScreen />;
 	}
 

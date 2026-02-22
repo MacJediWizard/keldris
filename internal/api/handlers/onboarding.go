@@ -50,6 +50,11 @@ type OnboardingStatusResponse struct {
 	CompletedSteps  []models.OnboardingStep `json:"completed_steps"`
 	Skipped         bool                    `json:"skipped"`
 	IsComplete      bool                    `json:"is_complete"`
+	NeedsOnboarding bool                     `json:"needs_onboarding"`
+	CurrentStep     models.OnboardingStep    `json:"current_step"`
+	CompletedSteps  []models.OnboardingStep  `json:"completed_steps"`
+	Skipped         bool                     `json:"skipped"`
+	IsComplete      bool                     `json:"is_complete"`
 }
 
 // GetStatus returns the onboarding status for the current organization.

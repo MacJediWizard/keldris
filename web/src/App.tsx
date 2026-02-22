@@ -46,6 +46,7 @@ import { Notifications } from './pages/Notifications';
 import { Onboarding } from './pages/Onboarding';
 import { OrgManagement } from './pages/OrgManagement';
 import { Notifications } from './pages/Notifications';
+import { Onboarding } from './pages/Onboarding';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
@@ -686,6 +687,7 @@ function App() {
 							element={<OrganizationSettings />}
 						/>
 						<Route path="organization/new" element={<NewOrganization />} />
+						<Route path="onboarding" element={<Onboarding />} />
 					</Route>
 				</Routes>
 							<Route path="onboarding" element={<Onboarding />} />
