@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/MacJediWizard/keldris/internal/models"
@@ -178,7 +180,7 @@ func TestSFTPBackend_KeyAuth(t *testing.T) {
 			PrivateKey: "not-a-valid-key",
 		}
 
-		err := b.TestConnection()
+		err = b.TestConnection()
 		if err == nil {
 			t.Error("TestConnection() expected error with invalid private key, got nil")
 		}
@@ -317,7 +319,7 @@ func TestSFTPBackend_TestConnection_PasswordSuccess(t *testing.T) {
 }
 
 func TestSFTPBackend_TestConnection_PasswordSuccess(t *testing.T) {
-	addr, cleanup := startTestSSHServer(t, "testuser", "testpass")
+	addr, hostKey, cleanup := startTestSSHServer(t, "testuser", "testpass")
 	defer cleanup()
 
 	host, port, err := net.SplitHostPort(addr)
