@@ -44,6 +44,7 @@ type Schedule struct {
 	OnMountUnavailable   MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
 	DockerVolumes        []string             `json:"docker_volumes,omitempty"`        // Docker volume names to back up
 	DockerPauseContainers bool                `json:"docker_pause_containers,omitempty"` // Pause containers during volume backup
+	MaxFileSizeMB      *int                 `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
 	Enabled              bool                 `json:"enabled"`
 	Repositories         []ScheduleRepository `json:"repositories,omitempty"`
 	CreatedAt          time.Time            `json:"created_at"`

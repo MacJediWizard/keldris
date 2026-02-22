@@ -503,6 +503,9 @@ export interface Backup {
 	post_script_output?: string;
 	post_script_error?: string;
 	excluded_large_files?: ExcludedLargeFile[]; // Files excluded due to size limit
+	resumed: boolean;
+	checkpoint_id?: string;
+	original_backup_id?: string;
 	created_at: string;
 }
 

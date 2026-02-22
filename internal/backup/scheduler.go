@@ -42,6 +42,9 @@ type ScheduleStore interface {
 
 	// GetEnabledBackupScriptsByScheduleID returns all enabled backup scripts for a schedule.
 	GetEnabledBackupScriptsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.BackupScript, error)
+
+	// Checkpoint methods for resumable backups
+	CheckpointStore
 }
 
 const (
@@ -76,17 +79,18 @@ func DefaultSchedulerConfig() SchedulerConfig {
 
 // Scheduler manages backup schedules using cron.
 type Scheduler struct {
-	store            ScheduleStore
-	restic           *Restic
-	config           SchedulerConfig
-	notifier         *notifications.Service
-	maintenance      *maintenance.Service
-	largeFileScanner *LargeFileScanner
-	cron             *cron.Cron
-	logger           zerolog.Logger
-	mu               sync.RWMutex
-	entries          map[uuid.UUID]cron.EntryID
-	running          bool
+	store             ScheduleStore
+	restic            *Restic
+	config            SchedulerConfig
+	notifier          *notifications.Service
+	maintenance       *maintenance.Service
+	checkpointManager *CheckpointManager
+	largeFileScanner  *LargeFileScanner
+	cron              *cron.Cron
+	logger            zerolog.Logger
+	mu                sync.RWMutex
+	entries           map[uuid.UUID]cron.EntryID
+	running           bool
 }
 
 // NewScheduler creates a new backup scheduler.
