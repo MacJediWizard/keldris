@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/crypto"
+	"time"
+
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -59,6 +61,18 @@ func (s *Service) decryptConfig(encrypted []byte, dest interface{}) error {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
 	return nil
+}
+
+	store  NotificationStore
+	logger zerolog.Logger
+}
+
+// NewService creates a new notification service.
+func NewService(store NotificationStore, logger zerolog.Logger) *Service {
+	return &Service{
+		store:  store,
+		logger: logger.With().Str("component", "notification_service").Logger(),
+	}
 }
 
 // BackupResult contains information about a completed backup.
@@ -274,12 +288,24 @@ func (s *Service) sendNotification(ctx context.Context, pref *models.Notificatio
 func (s *Service) sendBackupEmail(ctx context.Context, channel *models.NotificationChannel, pref *models.NotificationPreference, result BackupResult, subject string) {
 	var emailConfig models.EmailChannelConfig
 	if err := s.decryptConfig(channel.ConfigEncrypted, &emailConfig); err != nil {
+	// Only handle email channels for now
+	if channel.Type != models.ChannelTypeEmail {
+		s.logger.Debug().
+			Str("channel_type", string(channel.Type)).
+			Msg("skipping non-email channel")
+		return
+	}
+
+	// Parse email config
+	var emailConfig models.EmailChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
 		s.logger.Error().Err(err).
 			Str("channel_id", channel.ID.String()).
 			Msg("failed to parse email config")
 		return
 	}
 
+	// Create email service
 	smtpConfig := SMTPConfig{
 		Host:     emailConfig.Host,
 		Port:     emailConfig.Port,
@@ -456,6 +482,18 @@ func (s *Service) sendAgentOfflineEmail(ctx context.Context, channel *models.Not
 	recipients := []string{emailConfig.From}
 
 	log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), recipients[0], subject)
+	// Get recipient from config (use the from address as default recipient)
+	recipients := []string{emailConfig.From}
+
+	// Create log entry
+	var subject string
+	if result.Success {
+		subject = fmt.Sprintf("Backup Successful: %s - %s", result.Hostname, result.ScheduleName)
+	} else {
+		subject = fmt.Sprintf("Backup Failed: %s - %s", result.Hostname, result.ScheduleName)
+	}
+
+	log := models.NewNotificationLog(result.OrgID, &channel.ID, string(pref.EventType), recipients[0], subject)
 	if err := s.store.CreateNotificationLog(ctx, log); err != nil {
 		s.logger.Error().Err(err).Msg("failed to create notification log")
 	}
@@ -763,6 +801,47 @@ func (s *Service) finalizeLog(ctx context.Context, log *models.NotificationLog, 
 			Str("recipient", logRecipient).
 			Str("event_type", log.EventType).
 			Msg("notification sent")
+	// Send the email
+	var sendErr error
+	if result.Success {
+		duration := result.CompletedAt.Sub(result.StartedAt)
+		data := BackupSuccessData{
+			Hostname:     result.Hostname,
+			ScheduleName: result.ScheduleName,
+			SnapshotID:   result.SnapshotID,
+			StartedAt:    result.StartedAt,
+			CompletedAt:  result.CompletedAt,
+			Duration:     formatDuration(duration),
+			SizeBytes:    result.SizeBytes,
+			FilesNew:     result.FilesNew,
+			FilesChanged: result.FilesChanged,
+		}
+		sendErr = emailService.SendBackupSuccess(recipients, data)
+	} else {
+		data := BackupFailedData{
+			Hostname:     result.Hostname,
+			ScheduleName: result.ScheduleName,
+			StartedAt:    result.StartedAt,
+			FailedAt:     result.CompletedAt,
+			ErrorMessage: result.ErrorMessage,
+		}
+		sendErr = emailService.SendBackupFailed(recipients, data)
+	}
+
+	// Update log with result
+	if sendErr != nil {
+		log.MarkFailed(sendErr.Error())
+		s.logger.Error().Err(sendErr).
+			Str("channel_id", channel.ID.String()).
+			Str("recipient", recipients[0]).
+			Msg("failed to send email notification")
+	} else {
+		log.MarkSent()
+		s.logger.Info().
+			Str("channel_id", channel.ID.String()).
+			Str("recipient", recipients[0]).
+			Str("event_type", string(pref.EventType)).
+			Msg("email notification sent")
 	}
 
 	if err := s.store.UpdateNotificationLog(ctx, log); err != nil {
@@ -889,6 +968,8 @@ func (s *Service) NotifyTestRestoreFailed(ctx context.Context, result *models.Te
 
 // sendTestRestoreFailedNotification sends a test restore failed notification.
 func (s *Service) sendTestRestoreFailedNotification(ctx context.Context, pref *models.NotificationPreference, data TestRestoreFailedData, orgID uuid.UUID) {
+// sendAgentOfflineNotification sends an agent offline notification.
+func (s *Service) sendAgentOfflineNotification(ctx context.Context, pref *models.NotificationPreference, data AgentOfflineData, orgID uuid.UUID) {
 	channel, err := s.store.GetNotificationChannelByID(ctx, pref.ChannelID)
 	if err != nil {
 		s.logger.Error().Err(err).
@@ -953,6 +1034,24 @@ func (s *Service) sendEmailTestRestoreFailed(channel *models.NotificationChannel
 		return fmt.Errorf("parse email config: %w", err)
 	}
 
+	// Only handle email channels for now
+	if channel.Type != models.ChannelTypeEmail {
+		s.logger.Debug().
+			Str("channel_type", string(channel.Type)).
+			Msg("skipping non-email channel")
+		return
+	}
+
+	// Parse email config
+	var emailConfig models.EmailChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
+		s.logger.Error().Err(err).
+			Str("channel_id", channel.ID.String()).
+			Msg("failed to parse email config")
+		return
+	}
+
+	// Create email service
 	smtpConfig := SMTPConfig{
 		Host:     emailConfig.Host,
 		Port:     emailConfig.Port,
@@ -1109,6 +1208,14 @@ func (s *Service) sendValidationFailedNotification(ctx context.Context, pref *mo
 	recipient := s.getChannelRecipient(channel)
 
 	log := models.NewNotificationLog(orgID, &channel.ID, string(models.EventValidationFailed), recipient, subject)
+		s.logger.Error().Err(err).Msg("failed to create email service")
+		return
+	}
+
+	recipients := []string{emailConfig.From}
+	subject := fmt.Sprintf("Agent Offline: %s", data.Hostname)
+
+	log := models.NewNotificationLog(orgID, &channel.ID, string(models.EventAgentOffline), recipients[0], subject)
 	if err := s.store.CreateNotificationLog(ctx, log); err != nil {
 		s.logger.Error().Err(err).Msg("failed to create notification log")
 	}
@@ -1133,6 +1240,7 @@ func (s *Service) sendValidationFailedNotification(ctx context.Context, pref *mo
 			Msg("unsupported notification channel type for validation failed")
 		return
 	}
+	sendErr := emailService.SendAgentOffline(recipients, data)
 
 	if sendErr != nil {
 		log.MarkFailed(sendErr.Error())
@@ -1140,6 +1248,8 @@ func (s *Service) sendValidationFailedNotification(ctx context.Context, pref *mo
 			Str("channel_id", channel.ID.String()).
 			Str("channel_type", string(channel.Type)).
 			Msg("failed to send validation failed notification")
+			Str("recipient", recipients[0]).
+			Msg("failed to send agent offline notification")
 	} else {
 		log.MarkSent()
 		s.logger.Info().
@@ -1147,6 +1257,9 @@ func (s *Service) sendValidationFailedNotification(ctx context.Context, pref *mo
 			Str("channel_type", string(channel.Type)).
 			Str("hostname", data.Hostname).
 			Msg("validation failed notification sent")
+			Str("recipient", recipients[0]).
+			Str("agent_id", data.AgentID).
+			Msg("agent offline notification sent")
 	}
 
 	if err := s.store.UpdateNotificationLog(ctx, log); err != nil {

@@ -28,6 +28,9 @@ const (
 	EventMaintenanceScheduled NotificationEventType = "maintenance_scheduled"
 	EventTestRestoreFailed    NotificationEventType = "test_restore_failed"
 	EventValidationFailed     NotificationEventType = "validation_failed"
+	EventBackupSuccess NotificationEventType = "backup_success"
+	EventBackupFailed  NotificationEventType = "backup_failed"
+	EventAgentOffline  NotificationEventType = "agent_offline"
 )
 
 // NotificationStatus represents the status of a notification

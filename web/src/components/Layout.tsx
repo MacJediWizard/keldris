@@ -321,6 +321,8 @@ const navItems: NavItem[] = [
 	{
 		path: '/notifications',
 		labelKey: 'nav.notifications',
+		path: '/notifications',
+		label: 'Notifications',
 		icon: (
 			<svg
 				aria-hidden="true"

@@ -128,6 +128,9 @@ func (m *mockStore) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Age
 	if agent, ok := m.agents[id]; ok {
 		return agent, nil
 	}
+func (m *mockStore) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	return &models.Agent{
 		ID:       id,
 		OrgID:    uuid.New(),

@@ -50,6 +50,8 @@ type ScheduleStore interface {
 
 	// Validation methods for backup validation
 	ValidationStore
+	// GetAgentByID returns an agent by ID.
+	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
 }
 
 const (
@@ -99,6 +101,15 @@ type Scheduler struct {
 	mu                 sync.RWMutex
 	entries            map[uuid.UUID]cron.EntryID
 	running            bool
+	store    ScheduleStore
+	restic   *Restic
+	config   SchedulerConfig
+	notifier *notifications.Service
+	cron     *cron.Cron
+	logger   zerolog.Logger
+	mu       sync.RWMutex
+	entries  map[uuid.UUID]cron.EntryID
+	running  bool
 }
 
 // NewScheduler creates a new backup scheduler.
@@ -118,6 +129,14 @@ func NewScheduler(store ScheduleStore, restic *Restic, config SchedulerConfig, n
 		cron:              cron.New(cron.WithSeconds()),
 		logger:            logger.With().Str("component", "scheduler").Logger(),
 		entries:           make(map[uuid.UUID]cron.EntryID),
+	return &Scheduler{
+		store:    store,
+		restic:   restic,
+		config:   config,
+		notifier: notifier,
+		cron:     cron.New(cron.WithSeconds()),
+		logger:   logger.With().Str("component", "scheduler").Logger(),
+		entries:  make(map[uuid.UUID]cron.EntryID),
 	}
 }
 
@@ -564,18 +583,24 @@ func (s *Scheduler) runBackupToRepo(
 	if err != nil {
 		s.failBackup(ctx, backup, fmt.Sprintf("get repository: %v", err), logger)
 		return nil, nil, ResticConfig{}, fmt.Errorf("get repository: %w", err)
+		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("get repository: %v", err), logger)
+		return
 	}
 
 	// Decrypt repository configuration
 	if s.config.DecryptFunc == nil {
 		s.failBackup(ctx, backup, "decrypt function not configured", logger)
 		return nil, nil, ResticConfig{}, errors.New("decrypt function not configured")
+		s.failBackupWithSchedule(ctx, backup, schedule, "decrypt function not configured", logger)
+		return
 	}
 
 	configJSON, err := s.config.DecryptFunc(repo.ConfigEncrypted)
 	if err != nil {
 		s.failBackup(ctx, backup, fmt.Sprintf("decrypt config: %v", err), logger)
 		return nil, nil, ResticConfig{}, fmt.Errorf("decrypt config: %w", err)
+		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("decrypt config: %v", err), logger)
+		return
 	}
 
 	// Parse backend configuration
@@ -583,18 +608,24 @@ func (s *Scheduler) runBackupToRepo(
 	if err != nil {
 		s.failBackup(ctx, backup, fmt.Sprintf("parse backend: %v", err), logger)
 		return nil, nil, ResticConfig{}, fmt.Errorf("parse backend: %w", err)
+		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("parse backend: %v", err), logger)
+		return
 	}
 
 	// Get repository password
 	if s.config.PasswordFunc == nil {
 		s.failBackup(ctx, backup, "password function not configured", logger)
 		return nil, nil, ResticConfig{}, errors.New("password function not configured")
+		s.failBackupWithSchedule(ctx, backup, schedule, "password function not configured", logger)
+		return
 	}
 
 	password, err := s.config.PasswordFunc(repo.ID)
 	if err != nil {
 		s.failBackup(ctx, backup, fmt.Sprintf("get password: %v", err), logger)
 		return nil, nil, ResticConfig{}, fmt.Errorf("get password: %w", err)
+		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("get password: %v", err), logger)
+		return
 	}
 
 	// Build restic config
@@ -660,6 +691,8 @@ func (s *Scheduler) runBackupToRepo(
 	if err != nil {
 		s.failBackup(ctx, backup, fmt.Sprintf("backup failed (attempt %d): %v", attempt, err), logger)
 		return nil, nil, ResticConfig{}, fmt.Errorf("backup failed: %w", err)
+		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("backup failed: %v", err), logger)
+		return
 	}
 
 	// Mark backup as completed
@@ -691,6 +724,16 @@ func (s *Scheduler) replicateToOtherRepos(
 		// Skip the source repository
 		if targetRepo.RepositoryID == sourceRepo.RepositoryID {
 			continue
+	// Send success notification
+	s.sendBackupNotification(ctx, schedule, backup, true, "")
+
+	// Run prune if retention policy is set
+	if schedule.RetentionPolicy != nil {
+		logger.Info().Msg("running prune with retention policy")
+		if err := s.restic.Prune(ctx, resticCfg, schedule.RetentionPolicy); err != nil {
+			logger.Error().Err(err).Msg("prune failed")
+		} else {
+			logger.Info().Msg("prune completed")
 		}
 
 		replicateLogger := logger.With().
@@ -758,6 +801,59 @@ func (s *DRTestScheduler) Start(ctx context.Context) error {
 	}
 	s.running = true
 	s.mu.Unlock()
+// failBackupWithSchedule marks a backup as failed and sends a notification.
+func (s *Scheduler) failBackupWithSchedule(ctx context.Context, backup *models.Backup, schedule models.Schedule, errMsg string, logger zerolog.Logger) {
+	s.failBackup(ctx, backup, errMsg, logger)
+	s.sendBackupNotification(ctx, schedule, backup, false, errMsg)
+}
+
+// sendBackupNotification sends a notification for a backup result.
+func (s *Scheduler) sendBackupNotification(ctx context.Context, schedule models.Schedule, backup *models.Backup, success bool, errMsg string) {
+	if s.notifier == nil {
+		return
+	}
+
+	// Get agent info for hostname
+	agent, err := s.store.GetAgentByID(ctx, schedule.AgentID)
+	if err != nil {
+		s.logger.Error().Err(err).
+			Str("agent_id", schedule.AgentID.String()).
+			Msg("failed to get agent for notification")
+		return
+	}
+
+	result := notifications.BackupResult{
+		OrgID:        agent.OrgID,
+		ScheduleID:   schedule.ID,
+		ScheduleName: schedule.Name,
+		AgentID:      agent.ID,
+		Hostname:     agent.Hostname,
+		SnapshotID:   backup.SnapshotID,
+		StartedAt:    backup.StartedAt,
+		Success:      success,
+		ErrorMessage: errMsg,
+	}
+
+	if backup.CompletedAt != nil {
+		result.CompletedAt = *backup.CompletedAt
+	}
+	if backup.SizeBytes != nil {
+		result.SizeBytes = *backup.SizeBytes
+	}
+	if backup.FilesNew != nil {
+		result.FilesNew = *backup.FilesNew
+	}
+	if backup.FilesChanged != nil {
+		result.FilesChanged = *backup.FilesChanged
+	}
+
+	s.notifier.NotifyBackupComplete(ctx, result)
+}
+
+// refreshLoop periodically reloads schedules from the database.
+func (s *Scheduler) refreshLoop(ctx context.Context) {
+	ticker := time.NewTicker(s.config.RefreshInterval)
+	defer ticker.Stop()
 
 	s.logger.Info().Msg("starting DR test scheduler")
 

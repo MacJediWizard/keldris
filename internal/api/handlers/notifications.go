@@ -11,6 +11,10 @@ import (
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/notifications"
+	"net/http"
+
+	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -73,11 +77,24 @@ type NotificationService interface {
 	TestChannel(channel *models.NotificationChannel) error
 }
 
+	store  NotificationStore
+	logger zerolog.Logger
+}
+
+// NewNotificationsHandler creates a new NotificationsHandler.
+func NewNotificationsHandler(store NotificationStore, logger zerolog.Logger) *NotificationsHandler {
+	return &NotificationsHandler{
+		store:  store,
+		logger: logger.With().Str("component", "notifications_handler").Logger(),
+	}
+}
+
 // RegisterRoutes registers notification routes on the given router group.
 func (h *NotificationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	notifications := r.Group("/notifications")
 	{
 		// Channels (read + create/update/delete for email)
+		// Channels
 		notifications.GET("/channels", h.ListChannels)
 		notifications.POST("/channels", h.CreateChannel)
 		notifications.GET("/channels/:id", h.GetChannel)
@@ -222,6 +239,9 @@ func (h *NotificationsHandler) CreateChannel(c *gin.Context) {
 	}
 
 	channel := models.NewNotificationChannel(dbUser.OrgID, req.Name, req.Type, configEncrypted)
+	// TODO: Encrypt config before storing
+	// For now, store as-is (should use crypto/aes.go when implemented)
+	channel := models.NewNotificationChannel(dbUser.OrgID, req.Name, req.Type, req.Config)
 
 	if err := h.store.CreateNotificationChannel(c.Request.Context(), channel); err != nil {
 		h.logger.Error().Err(err).Str("name", req.Name).Msg("failed to create notification channel")
@@ -305,6 +325,7 @@ func (h *NotificationsHandler) UpdateChannel(c *gin.Context) {
 			return
 		}
 		channel.ConfigEncrypted = configEncrypted
+		channel.ConfigEncrypted = req.Config
 	}
 	if req.Enabled != nil {
 		channel.Enabled = *req.Enabled
@@ -770,6 +791,10 @@ func (h *NotificationsHandler) ListChannelTypes(c *gin.Context) {
 func isValidChannelType(t models.NotificationChannelType) bool {
 	switch t {
 	case models.ChannelTypeEmail, models.ChannelTypeSlack, models.ChannelTypeWebhook, models.ChannelTypePagerDuty, models.ChannelTypeTeams, models.ChannelTypeDiscord:
+// isValidChannelType checks if a channel type is valid.
+func isValidChannelType(t models.NotificationChannelType) bool {
+	switch t {
+	case models.ChannelTypeEmail, models.ChannelTypeSlack, models.ChannelTypeWebhook, models.ChannelTypePagerDuty:
 		return true
 	default:
 		return false
@@ -780,6 +805,7 @@ func isValidChannelType(t models.NotificationChannelType) bool {
 func isValidEventType(t models.NotificationEventType) bool {
 	switch t {
 	case models.EventBackupSuccess, models.EventBackupFailed, models.EventAgentOffline, models.EventMaintenanceScheduled:
+	case models.EventBackupSuccess, models.EventBackupFailed, models.EventAgentOffline:
 		return true
 	default:
 		return false

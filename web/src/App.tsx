@@ -43,6 +43,7 @@ import { NotificationRules } from './pages/NotificationRules';
 import { Notifications } from './pages/Notifications';
 import { Onboarding } from './pages/Onboarding';
 import { OrgManagement } from './pages/OrgManagement';
+import { Notifications } from './pages/Notifications';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
@@ -392,6 +393,7 @@ function App() {
 						<Route path="tags" element={<Tags />} />
 						<Route path="classifications" element={<Classifications />} />
 						<Route path="costs" element={<CostEstimation />} />
+						<Route path="notifications" element={<Notifications />} />
 						<Route
 							path="organization/members"
 							element={<OrganizationMembers />}
