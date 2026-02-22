@@ -1158,58 +1158,6 @@ func (s *DRTestScheduler) TriggerDRTest(ctx context.Context, runbookID uuid.UUID
 	return nil
 }
 
-// GetActiveDRSchedules returns the number of active DR test schedules.
-func (s *DRTestScheduler) GetActiveDRSchedules() int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return len(s.drEntries)
-}
-
-// GetNextAllowedRun returns the next time a backup can actually run for a schedule,
-// accounting for both the cron schedule and backup window constraints.
-func (s *Scheduler) GetNextAllowedRun(ctx context.Context, scheduleID uuid.UUID) (time.Time, bool) {
-	s.mu.RLock()
-	entryID, exists := s.entries[scheduleID]
-	s.mu.RUnlock()
-
-	if !exists {
-		return time.Time{}, false
-	}
-
-	entry := s.cron.Entry(entryID)
-	if !entry.Valid() {
-		return time.Time{}, false
-	}
-
-	// Get the schedule to check time window constraints
-	schedules, err := s.store.GetEnabledSchedules(ctx)
-	if err != nil {
-		return entry.Next, true // Fall back to cron time if we can't get schedule
-	}
-
-	var schedule *models.Schedule
-	for _, sched := range schedules {
-		if sched.ID == scheduleID {
-			schedule = &sched
-			break
-		}
-	}
-
-	if schedule == nil {
-		return entry.Next, true // Fall back to cron time if schedule not found
-	}
-
-	// Check if the cron time is within the allowed window
-	nextCronTime := entry.Next
-	if schedule.CanRunAt(nextCronTime) {
-		return nextCronTime, true
-	}
-
-	// Find the next allowed time after the cron time
-	nextAllowed := schedule.NextAllowedTime(nextCronTime)
-	return nextAllowed, true
-}
-
 // runScript executes a backup script with the given timeout.
 func (s *Scheduler) runScript(ctx context.Context, script *models.BackupScript, logger zerolog.Logger) (string, error) {
 	logger.Info().

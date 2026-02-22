@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom';
-import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useLocale } from '../hooks/useLocale';
-import { useRepositories } from '../hooks/useRepositories';
-import { useSchedules } from '../hooks/useSchedules';
+import { useDashboardStats } from '../hooks/useMetrics';
 import { useStorageStatsSummary } from '../hooks/useStorageStats';
 import {
 	formatDedupRatio,
@@ -57,20 +55,18 @@ function LoadingRow() {
 }
 
 export function Dashboard() {
-	const { data: agents, isLoading: agentsLoading } = useAgents();
-	const { data: repositories, isLoading: reposLoading } = useRepositories();
-	const { data: schedules, isLoading: schedulesLoading } = useSchedules();
+	const { data: dashboardStats, isLoading: dashboardStatsLoading } =
+		useDashboardStats();
 	const { data: backups, isLoading: backupsLoading } = useBackups();
 	const { data: storageStats, isLoading: statsLoading } =
 		useStorageStatsSummary();
 	const { t, formatRelativeTime, formatBytes, formatPercent } = useLocale();
 
-	const activeAgents = agents?.filter((a) => a.status === 'active').length ?? 0;
-	const enabledSchedules = schedules?.filter((s) => s.enabled).length ?? 0;
+	const activeAgents = dashboardStats?.agent_online ?? 0;
+	const enabledSchedules = dashboardStats?.schedule_enabled ?? 0;
 	const recentBackups = backups?.slice(0, 5) ?? [];
 
-	const isLoading =
-		agentsLoading || reposLoading || schedulesLoading || backupsLoading;
+	const isLoading = dashboardStatsLoading || backupsLoading;
 
 	return (
 		<div className="space-y-6">
@@ -86,7 +82,7 @@ export function Dashboard() {
 					title={t('dashboard.activeAgents')}
 					value={String(activeAgents)}
 					subtitle={t('dashboard.connectedAgents')}
-					isLoading={agentsLoading}
+					isLoading={dashboardStatsLoading}
 					icon={
 						<svg
 							aria-hidden="true"
@@ -106,9 +102,9 @@ export function Dashboard() {
 				/>
 				<StatCard
 					title={t('dashboard.repositories')}
-					value={String(repositories?.length ?? 0)}
+					value={String(dashboardStats?.repository_count ?? 0)}
 					subtitle={t('dashboard.backupDestinations')}
-					isLoading={reposLoading}
+					isLoading={dashboardStatsLoading}
 					icon={
 						<svg
 							aria-hidden="true"
@@ -130,7 +126,7 @@ export function Dashboard() {
 					title={t('dashboard.scheduledJobs')}
 					value={String(enabledSchedules)}
 					subtitle={t('dashboard.activeSchedules')}
-					isLoading={schedulesLoading}
+					isLoading={dashboardStatsLoading}
 					icon={
 						<svg
 							aria-hidden="true"
@@ -150,9 +146,9 @@ export function Dashboard() {
 				/>
 				<StatCard
 					title={t('dashboard.totalBackups')}
-					value={String(backups?.length ?? 0)}
+					value={String(dashboardStats?.backup_total ?? 0)}
 					subtitle={t('dashboard.allTime')}
-					isLoading={backupsLoading}
+					isLoading={dashboardStatsLoading}
 					icon={
 						<svg
 							aria-hidden="true"

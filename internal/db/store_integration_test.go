@@ -3989,25 +3989,6 @@ func TestStore_DashboardAndMetrics(t *testing.T) {
 		assert.GreaterOrEqual(t, len(summaries), 1)
 	})
 
-	t.Run("DailySummary_Delete", func(t *testing.T) {
-		now := time.Now()
-		oldDate := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
-
-		summary := &models.MetricsDailySummary{
-			ID:        uuid.New(),
-			OrgID:     org.ID,
-			Date:      oldDate,
-			CreatedAt: now,
-			UpdatedAt: now,
-		}
-		require.NoError(t, db.CreateOrUpdateDailySummary(ctx, summary))
-
-		err := db.DeleteDailySummariesBefore(ctx, org.ID, time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC))
-		require.NoError(t, err)
-
-		_, err = db.GetDailySummary(ctx, org.ID, oldDate)
-		assert.Error(t, err)
-	})
 }
 
 func TestStore_SearchBackupsAdvanced(t *testing.T) {

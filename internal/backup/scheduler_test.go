@@ -666,11 +666,6 @@ func TestDRTestScheduler_ReloadSchedules(t *testing.T) {
 	}
 	defer scheduler.Stop()
 
-	// Initially no schedules
-	if scheduler.GetActiveDRSchedules() != 0 {
-		t.Errorf("GetActiveDRSchedules() = %d, want 0", scheduler.GetActiveDRSchedules())
-	}
-
 	// Add a schedule
 	drSchedule := &models.DRTestSchedule{
 		ID:             uuid.New(),
@@ -685,9 +680,6 @@ func TestDRTestScheduler_ReloadSchedules(t *testing.T) {
 	if err := scheduler.ReloadDRSchedules(ctx); err != nil {
 		t.Fatalf("ReloadDRSchedules() error = %v", err)
 	}
-	if scheduler.GetActiveDRSchedules() != 1 {
-		t.Errorf("GetActiveDRSchedules() = %d, want 1", scheduler.GetActiveDRSchedules())
-	}
 
 	// Remove schedule
 	store.mu.Lock()
@@ -696,9 +688,6 @@ func TestDRTestScheduler_ReloadSchedules(t *testing.T) {
 
 	if err := scheduler.ReloadDRSchedules(ctx); err != nil {
 		t.Fatalf("ReloadDRSchedules() error = %v", err)
-	}
-	if scheduler.GetActiveDRSchedules() != 0 {
-		t.Errorf("GetActiveDRSchedules() = %d, want 0", scheduler.GetActiveDRSchedules())
 	}
 }
 
@@ -746,9 +735,6 @@ func TestDRTestScheduler_InvalidCron(t *testing.T) {
 
 	if err := scheduler.ReloadDRSchedules(ctx); err != nil {
 		t.Fatalf("ReloadDRSchedules() error = %v", err)
-	}
-	if scheduler.GetActiveDRSchedules() != 0 {
-		t.Errorf("GetActiveDRSchedules() = %d, want 0", scheduler.GetActiveDRSchedules())
 	}
 }
 
@@ -805,58 +791,6 @@ func TestScheduler_SetMaintenanceService(t *testing.T) {
 	if scheduler.maintenance != nil {
 		t.Error("maintenance should be nil")
 	}
-}
-
-func TestScheduler_GetNextAllowedRun(t *testing.T) {
-	store := newMockStore()
-	logger := zerolog.Nop()
-	restic := NewRestic(logger)
-	config := DefaultSchedulerConfig()
-	config.RefreshInterval = time.Hour
-
-	scheduler := NewScheduler(store, restic, config, nil, logger)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := scheduler.Start(ctx); err != nil {
-		t.Fatalf("Start() error = %v", err)
-	}
-	defer scheduler.Stop()
-
-	t.Run("non-existent schedule", func(t *testing.T) {
-		_, ok := scheduler.GetNextAllowedRun(ctx, uuid.New())
-		if ok {
-			t.Error("GetNextAllowedRun() should return false for non-existent schedule")
-		}
-	})
-
-	t.Run("schedule without window", func(t *testing.T) {
-		scheduleID := uuid.New()
-		store.addSchedule(models.Schedule{
-			ID:             scheduleID,
-			AgentID:        uuid.New(),
-			Name:           "No Window",
-			CronExpression: "0 0 * * * *",
-			Paths:          []string{"/data"},
-			Enabled:        true,
-			Repositories: []models.ScheduleRepository{
-				{ID: uuid.New(), RepositoryID: uuid.New(), Priority: 0, Enabled: true},
-			},
-		})
-
-		if err := scheduler.Reload(ctx); err != nil {
-			t.Fatalf("Reload() error = %v", err)
-		}
-
-		nextAllowed, ok := scheduler.GetNextAllowedRun(ctx, scheduleID)
-		if !ok {
-			t.Fatal("GetNextAllowedRun() should return true")
-		}
-		if nextAllowed.IsZero() {
-			t.Error("GetNextAllowedRun() should return non-zero time")
-		}
-	})
 }
 
 func TestScheduler_RunScript(t *testing.T) {

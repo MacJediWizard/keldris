@@ -466,107 +466,6 @@ func TestGetActiveWindow_MultipleActive_ReturnsFirst(t *testing.T) {
 	}
 }
 
-func TestGetActiveWindowFromDB_Found(t *testing.T) {
-	store := newMockStore()
-	orgID := uuid.New()
-
-	window := makeWindow(orgID, "DB Window", -1*time.Hour, 1*time.Hour)
-	store.activeWindows[orgID] = []*models.MaintenanceWindow{window}
-
-	svc := newTestService(store)
-
-	result, err := svc.GetActiveWindowFromDB(context.Background(), orgID)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result == nil {
-		t.Fatal("expected non-nil window")
-	}
-	if result.Title != "DB Window" {
-		t.Errorf("expected 'DB Window', got %q", result.Title)
-	}
-}
-
-func TestGetActiveWindowFromDB_NotFound(t *testing.T) {
-	store := newMockStore()
-	orgID := uuid.New()
-
-	svc := newTestService(store)
-
-	result, err := svc.GetActiveWindowFromDB(context.Background(), orgID)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result != nil {
-		t.Error("expected nil when no active window in DB")
-	}
-}
-
-func TestGetActiveWindowFromDB_Error(t *testing.T) {
-	store := newMockStore()
-	store.activeErr = errors.New("db timeout")
-
-	svc := newTestService(store)
-
-	result, err := svc.GetActiveWindowFromDB(context.Background(), uuid.New())
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if result != nil {
-		t.Error("expected nil result on error")
-	}
-}
-
-func TestGetUpcomingWindowFromDB_Found(t *testing.T) {
-	store := newMockStore()
-	orgID := uuid.New()
-
-	window := makeWindow(orgID, "Upcoming", 30*time.Minute, 2*time.Hour)
-	store.upcomingWindows[orgID] = []*models.MaintenanceWindow{window}
-
-	svc := newTestService(store)
-
-	result, err := svc.GetUpcomingWindowFromDB(context.Background(), orgID, 60)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result == nil {
-		t.Fatal("expected non-nil window")
-	}
-	if result.Title != "Upcoming" {
-		t.Errorf("expected 'Upcoming', got %q", result.Title)
-	}
-}
-
-func TestGetUpcomingWindowFromDB_NotFound(t *testing.T) {
-	store := newMockStore()
-	orgID := uuid.New()
-
-	svc := newTestService(store)
-
-	result, err := svc.GetUpcomingWindowFromDB(context.Background(), orgID, 60)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result != nil {
-		t.Error("expected nil when no upcoming window")
-	}
-}
-
-func TestGetUpcomingWindowFromDB_Error(t *testing.T) {
-	store := newMockStore()
-	store.upcomingErr = errors.New("query failed")
-
-	svc := newTestService(store)
-
-	result, err := svc.GetUpcomingWindowFromDB(context.Background(), uuid.New(), 60)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if result != nil {
-		t.Error("expected nil result on error")
-	}
-}
 
 func TestCheckAndSendNotifications_Success(t *testing.T) {
 	store := newMockStore()
@@ -650,35 +549,6 @@ func TestCheckAndSendNotifications_NilNotifier(t *testing.T) {
 	}
 }
 
-func TestLastRefresh_InitiallyZero(t *testing.T) {
-	store := newMockStore()
-	svc := newTestService(store)
-
-	if !svc.LastRefresh().IsZero() {
-		t.Error("expected LastRefresh to be zero initially")
-	}
-}
-
-func TestLastRefresh_UpdatedAfterRefresh(t *testing.T) {
-	store := newMockStore()
-	store.organizations = []*models.Organization{}
-
-	svc := newTestService(store)
-
-	before := time.Now()
-	if err := svc.RefreshCache(context.Background()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	lastRefresh := svc.LastRefresh()
-	if lastRefresh.Before(before) {
-		t.Error("expected LastRefresh to be at or after the refresh call")
-	}
-	if lastRefresh.After(time.Now()) {
-		t.Error("expected LastRefresh to be at or before now")
-	}
-}
-
 func TestConcurrentAccess(t *testing.T) {
 	store := newMockStore()
 	orgID := uuid.New()
@@ -712,7 +582,6 @@ func TestConcurrentAccess(t *testing.T) {
 			defer wg.Done()
 			svc.IsMaintenanceActive(orgID)
 			svc.GetActiveWindow(orgID)
-			svc.LastRefresh()
 		}()
 	}
 
@@ -840,52 +709,6 @@ func TestRecurringMaintenanceSchedule(t *testing.T) {
 	}
 	if active.Title != "Weekly Maintenance - Week 2" {
 		t.Errorf("expected 'Weekly Maintenance - Week 2', got %q", active.Title)
-	}
-}
-
-func TestGetActiveWindowFromDB_MultipleWindows(t *testing.T) {
-	store := newMockStore()
-	orgID := uuid.New()
-
-	w1 := makeWindow(orgID, "First", -2*time.Hour, 1*time.Hour)
-	w2 := makeWindow(orgID, "Second", -1*time.Hour, 2*time.Hour)
-	store.activeWindows[orgID] = []*models.MaintenanceWindow{w1, w2}
-
-	svc := newTestService(store)
-
-	result, err := svc.GetActiveWindowFromDB(context.Background(), orgID)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result == nil {
-		t.Fatal("expected non-nil window")
-	}
-	// Should return the first one (ordered by ends_at ASC in real DB)
-	if result.Title != "First" {
-		t.Errorf("expected 'First', got %q", result.Title)
-	}
-}
-
-func TestGetUpcomingWindowFromDB_MultipleWindows(t *testing.T) {
-	store := newMockStore()
-	orgID := uuid.New()
-
-	w1 := makeWindow(orgID, "Soon", 10*time.Minute, 1*time.Hour)
-	w2 := makeWindow(orgID, "Later", 30*time.Minute, 2*time.Hour)
-	store.upcomingWindows[orgID] = []*models.MaintenanceWindow{w1, w2}
-
-	svc := newTestService(store)
-
-	result, err := svc.GetUpcomingWindowFromDB(context.Background(), orgID, 60)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result == nil {
-		t.Fatal("expected non-nil window")
-	}
-	// Should return the soonest (first in ordered results)
-	if result.Title != "Soon" {
-		t.Errorf("expected 'Soon', got %q", result.Title)
 	}
 }
 

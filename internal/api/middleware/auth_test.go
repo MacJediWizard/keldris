@@ -22,7 +22,7 @@ func init() {
 
 func newTestSessionStore(t *testing.T) *auth.SessionStore {
 	t.Helper()
-	cfg := auth.DefaultSessionConfig([]byte("test-secret-that-is-at-least-32-bytes-long!"), false)
+	cfg := auth.DefaultSessionConfig([]byte("test-secret-that-is-at-least-32-bytes-long!"), false, 0, 0)
 	store, err := auth.NewSessionStore(cfg, zerolog.Nop())
 	if err != nil {
 		t.Fatalf("failed to create session store: %v", err)
@@ -125,7 +125,7 @@ func TestAuthMiddleware_ExpiredSession(t *testing.T) {
 	cookies := setSessionCookies(t, oldStore, sessionUser)
 
 	// Create a new session store with a different secret (simulates secret rotation)
-	cfg := auth.DefaultSessionConfig([]byte("different-secret-that-is-at-least-32-bytes!!"), false)
+	cfg := auth.DefaultSessionConfig([]byte("different-secret-that-is-at-least-32-bytes!!"), false, 0, 0)
 	newStore, err := auth.NewSessionStore(cfg, zerolog.Nop())
 	if err != nil {
 		t.Fatalf("failed to create new session store: %v", err)
@@ -259,61 +259,6 @@ func TestAuthMiddleware_RefreshSession(t *testing.T) {
 	if resp["email"] != sessionUser.Email {
 		t.Fatalf("expected email %s, got %s", sessionUser.Email, resp["email"])
 	}
-}
-
-func TestOptionalAuthMiddleware(t *testing.T) {
-	sessions := newTestSessionStore(t)
-	mw := OptionalAuthMiddleware(sessions, zerolog.Nop())
-
-	r := gin.New()
-	r.Use(mw)
-	r.GET("/test", func(c *gin.Context) {
-		user := GetUser(c)
-		if user != nil {
-			c.JSON(http.StatusOK, gin.H{"authenticated": true})
-		} else {
-			c.JSON(http.StatusOK, gin.H{"authenticated": false})
-		}
-	})
-
-	t.Run("no session proceeds", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/test", nil)
-		r.ServeHTTP(w, req)
-
-		if w.Code != http.StatusOK {
-			t.Fatalf("expected status 200, got %d", w.Code)
-		}
-	})
-
-	t.Run("with valid session loads user", func(t *testing.T) {
-		sessionUser := &auth.SessionUser{
-			ID:              uuid.New(),
-			Email:           "optional@example.com",
-			AuthenticatedAt: time.Now(),
-			CurrentOrgID:    uuid.New(),
-		}
-		cookies := setSessionCookies(t, sessions, sessionUser)
-
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/test", nil)
-		for _, cookie := range cookies {
-			req.AddCookie(cookie)
-		}
-		r.ServeHTTP(w, req)
-
-		if w.Code != http.StatusOK {
-			t.Fatalf("expected status 200, got %d", w.Code)
-		}
-
-		var resp map[string]bool
-		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-			t.Fatalf("failed to unmarshal response: %v", err)
-		}
-		if !resp["authenticated"] {
-			t.Fatal("expected authenticated to be true")
-		}
-	})
 }
 
 func TestGetUser_NoUser(t *testing.T) {
@@ -477,91 +422,3 @@ func TestRequireAgent(t *testing.T) {
 	})
 }
 
-func TestSessionOrAPIKeyMiddleware_SessionAuth(t *testing.T) {
-	sessions := newTestSessionStore(t)
-	agent := newTestAgent()
-	keyHash := auth.HashAPIKey(testAPIKey)
-	validator := newTestValidator(map[string]*models.Agent{keyHash: agent})
-
-	mw := SessionOrAPIKeyMiddleware(sessions, validator, zerolog.Nop())
-
-	sessionUser := &auth.SessionUser{
-		ID:              uuid.New(),
-		Email:           "dual@example.com",
-		AuthenticatedAt: time.Now(),
-		CurrentOrgID:    uuid.New(),
-	}
-	cookies := setSessionCookies(t, sessions, sessionUser)
-
-	r := gin.New()
-	r.Use(mw)
-	r.GET("/test", func(c *gin.Context) {
-		user := GetUser(c)
-		if user == nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "no auth"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"auth": "session", "user_id": user.ID.String()})
-	})
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/test", nil)
-	for _, cookie := range cookies {
-		req.AddCookie(cookie)
-	}
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
-	}
-}
-
-func TestSessionOrAPIKeyMiddleware_APIKeyAuth(t *testing.T) {
-	sessions := newTestSessionStore(t)
-	agent := newTestAgent()
-	keyHash := auth.HashAPIKey(testAPIKey)
-	validator := newTestValidator(map[string]*models.Agent{keyHash: agent})
-
-	mw := SessionOrAPIKeyMiddleware(sessions, validator, zerolog.Nop())
-
-	r := gin.New()
-	r.Use(mw)
-	r.GET("/test", func(c *gin.Context) {
-		a := GetAgent(c)
-		if a == nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "no auth"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"auth": "apikey", "agent_id": a.ID.String()})
-	})
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/test", nil)
-	req.Header.Set("Authorization", "Bearer "+testAPIKey)
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
-	}
-}
-
-func TestSessionOrAPIKeyMiddleware_NoAuth(t *testing.T) {
-	sessions := newTestSessionStore(t)
-	validator := newTestValidator(map[string]*models.Agent{})
-
-	mw := SessionOrAPIKeyMiddleware(sessions, validator, zerolog.Nop())
-
-	r := gin.New()
-	r.Use(mw)
-	r.GET("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"ok": true})
-	})
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/test", nil)
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected status 401, got %d", w.Code)
-	}
-}

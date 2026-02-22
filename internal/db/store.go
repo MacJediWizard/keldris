@@ -6947,18 +6947,6 @@ func (db *DB) GetDailySummaries(ctx context.Context, orgID uuid.UUID, startDate,
 	return summaries, nil
 }
 
-// DeleteDailySummariesBefore deletes daily summaries older than the given date for an organization.
-func (db *DB) DeleteDailySummariesBefore(ctx context.Context, orgID uuid.UUID, before time.Time) error {
-	_, err := db.Pool.Exec(ctx, `
-		DELETE FROM metrics_daily_summary
-		WHERE org_id = $1 AND date < $2
-	`, orgID, before)
-	if err != nil {
-		return fmt.Errorf("delete daily summaries: %w", err)
-	}
-	return nil
-}
-
 // SLA Policy methods
 
 // CreateSLAPolicy inserts a new SLA policy.
@@ -7193,39 +7181,6 @@ func (db *DB) DeleteBrandingSettings(ctx context.Context, orgID uuid.UUID) error
 		return fmt.Errorf("delete branding settings: %w", err)
 	}
 	return nil
-}
-
-// Offline License methods
-
-// CreateOfflineLicense stores an offline license in the database.
-func (db *DB) CreateOfflineLicense(ctx context.Context, license *models.OfflineLicense) error {
-	_, err := db.Pool.Exec(ctx, `
-		INSERT INTO offline_licenses (id, org_id, customer_id, tier, license_data, expires_at, issued_at, uploaded_by, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, license.ID, license.OrgID, license.CustomerID, license.Tier, license.LicenseData, license.ExpiresAt, license.IssuedAt, license.UploadedBy, license.CreatedAt)
-	if err != nil {
-		return fmt.Errorf("create offline license: %w", err)
-	}
-	return nil
-}
-
-// GetLatestOfflineLicense returns the most recently uploaded license for an organization.
-func (db *DB) GetLatestOfflineLicense(ctx context.Context, orgID uuid.UUID) (*models.OfflineLicense, error) {
-	var lic models.OfflineLicense
-	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, customer_id, tier, license_data, expires_at, issued_at, uploaded_by, created_at
-		FROM offline_licenses
-		WHERE org_id = $1
-		ORDER BY created_at DESC
-		LIMIT 1
-	`, orgID).Scan(&lic.ID, &lic.OrgID, &lic.CustomerID, &lic.Tier, &lic.LicenseData, &lic.ExpiresAt, &lic.IssuedAt, &lic.UploadedBy, &lic.CreatedAt)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("get latest offline license: %w", err)
-	}
-	return &lic, nil
 }
 
 // Docker Backup methods

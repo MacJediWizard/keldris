@@ -362,20 +362,6 @@ func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.
 	return result, nil
 }
 
-// PruneOnly runs only the prune command without forget.
-func (r *Restic) PruneOnly(ctx context.Context, cfg ResticConfig) error {
-	r.logger.Info().Msg("starting prune")
-
-	pruneArgs := []string{"prune", "--repo", cfg.Repository, "--json"}
-	_, err := r.run(ctx, cfg, pruneArgs)
-	if err != nil {
-		return fmt.Errorf("prune failed: %w", err)
-	}
-
-	r.logger.Info().Msg("prune completed successfully")
-	return nil
-}
-
 // Copy copies a snapshot from one repository to another.
 // This is used for replicating backups to secondary repositories.
 func (r *Restic) Copy(ctx context.Context, sourceCfg, targetCfg ResticConfig, snapshotID string) error {

@@ -106,33 +106,6 @@ func (s *Service) GetActiveWindow(orgID uuid.UUID) *models.MaintenanceWindow {
 	return nil
 }
 
-// GetActiveWindowFromDB returns the current active maintenance window from the database.
-// This is used for API requests where fresh data is needed.
-func (s *Service) GetActiveWindowFromDB(ctx context.Context, orgID uuid.UUID) (*models.MaintenanceWindow, error) {
-	now := time.Now()
-	windows, err := s.store.ListActiveMaintenanceWindows(ctx, orgID, now)
-	if err != nil {
-		return nil, err
-	}
-	if len(windows) > 0 {
-		return windows[0], nil
-	}
-	return nil, nil
-}
-
-// GetUpcomingWindowFromDB returns the soonest upcoming maintenance window from the database.
-func (s *Service) GetUpcomingWindowFromDB(ctx context.Context, orgID uuid.UUID, withinMinutes int) (*models.MaintenanceWindow, error) {
-	now := time.Now()
-	windows, err := s.store.ListUpcomingMaintenanceWindows(ctx, orgID, now, withinMinutes)
-	if err != nil {
-		return nil, err
-	}
-	if len(windows) > 0 {
-		return windows[0], nil
-	}
-	return nil, nil
-}
-
 // CheckAndSendNotifications checks for upcoming maintenance and sends notifications.
 // This should be called periodically (e.g., every refresh cycle).
 func (s *Service) CheckAndSendNotifications(ctx context.Context) {
@@ -163,9 +136,3 @@ func (s *Service) CheckAndSendNotifications(ctx context.Context) {
 	}
 }
 
-// LastRefresh returns the time of the last cache refresh.
-func (s *Service) LastRefresh() time.Time {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.lastRefresh
-}
