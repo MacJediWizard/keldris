@@ -299,6 +299,8 @@ import type {
 	ImportRepositoryRequest,
 	ImportRepositoryResponse,
 	ImportResult,
+	FileHistoryParams,
+	FileHistoryResponse,
 	FleetHealthSummary,
 	InvitationsResponse,
 	InviteMemberRequest,

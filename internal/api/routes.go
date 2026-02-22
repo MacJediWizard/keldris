@@ -363,6 +363,9 @@ func NewRouter(
 	fileSearchHandler := handlers.NewFileSearchHandler(database, keyManager, logger)
 	fileSearchHandler.RegisterRoutes(apiV1)
 
+	fileHistoryHandler := handlers.NewFileHistoryHandler(database, logger)
+	fileHistoryHandler.RegisterRoutes(apiV1)
+
 	auditLogsHandler := handlers.NewAuditLogsHandler(database, logger)
 	auditLogsHandler.RegisterRoutes(auditLogsGroup)
 

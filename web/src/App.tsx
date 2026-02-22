@@ -35,6 +35,7 @@ import { FileSearch } from './pages/FileSearch';
 import { LegalHolds } from './pages/LegalHolds';
 import { License } from './pages/License';
 import { LifecyclePolicies } from './pages/LifecyclePolicies';
+import { FileHistory } from './pages/FileHistory';
 import { Maintenance } from './pages/Maintenance';
 import { MigrationSettings } from './pages/MigrationSettings';
 import { NewOrganization } from './pages/NewOrganization';
