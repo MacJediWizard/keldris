@@ -101,6 +101,10 @@ func FreeLicense() *License {
 package license
 
 import (
+// Package license provides license key generation and validation for Keldris.
+package license
+
+import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"

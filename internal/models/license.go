@@ -183,6 +183,22 @@ type License struct {
 	Notes         string          `json:"notes,omitempty"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
+	ID             uuid.UUID       `json:"id"`
+	LicenseKey     string          `json:"license_key"`
+	CustomerID     string          `json:"customer_id"`
+	CustomerName   string          `json:"customer_name,omitempty"`
+	CustomerEmail  string          `json:"customer_email,omitempty"`
+	Tier           LicenseTier     `json:"tier"`
+	Limits         LicenseLimits   `json:"limits"`
+	Features       LicenseFeatures `json:"features"`
+	IssuedAt       time.Time       `json:"issued_at"`
+	ExpiresAt      time.Time       `json:"expires_at"`
+	ActivatedAt    *time.Time      `json:"activated_at,omitempty"`
+	LastValidated  *time.Time      `json:"last_validated,omitempty"`
+	IsActive       bool            `json:"is_active"`
+	Notes          string          `json:"notes,omitempty"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
 }
 
 // GracePeriodDays is the number of days after expiry before license becomes invalid.
@@ -299,6 +315,14 @@ type LicenseValidationResult struct {
 	ExpiresAt     time.Time       `json:"expires_at"`
 	DaysRemaining int             `json:"days_remaining"`
 	Message       string          `json:"message,omitempty"`
+	Valid         bool          `json:"valid"`
+	Status        LicenseStatus `json:"status"`
+	Tier          LicenseTier   `json:"tier"`
+	Limits        LicenseLimits `json:"limits"`
+	Features      LicenseFeatures `json:"features"`
+	ExpiresAt     time.Time     `json:"expires_at"`
+	DaysRemaining int           `json:"days_remaining"`
+	Message       string        `json:"message,omitempty"`
 }
 
 // CreateLicenseRequest is the request body for creating a license.
@@ -473,4 +497,8 @@ func (l *PortalLicense) ToDownloadResponse() PortalLicenseDownloadResponse {
 		MaxStorage:  l.MaxStorage,
 		Features:    l.Features,
 	}
+}
+	License *License              `json:"license"`
+	Status  LicenseStatus         `json:"status"`
+	Result  *LicenseValidationResult `json:"validation,omitempty"`
 }
