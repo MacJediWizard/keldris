@@ -186,6 +186,7 @@ const NotFound = lazy(() =>
 );
 const AirGapLicense = lazy(() => import('./pages/AirGapLicense'));
 import { Tags } from './pages/Tags';
+import { Templates } from './pages/Templates';
 
 const queryClient = new QueryClient({
 	defaultOptions: {

@@ -1324,6 +1324,7 @@ interface ScheduleRowProps {
 	onDelete: (id: string) => void;
 	onRun: (id: string) => void;
 	onEditScripts: (id: string) => void;
+	onExport: (schedule: Schedule) => void;
 	isUpdating: boolean;
 	isDeleting: boolean;
 	isRunning: boolean;
@@ -1394,6 +1395,9 @@ function CloneScheduleModal({
 	onDelete,
 	onRun,
 	onEditScripts,
+	onDryRun,
+	onEditScripts,
+	onExport,
 	isUpdating,
 	isDeleting,
 	isRunning,
@@ -2099,7 +2103,7 @@ function ScheduleRow({
 					<button
 						type="button"
 						onClick={() => onEditScripts(schedule.id)}
-						className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+						className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm font-medium"
 					>
 						Scripts
 					</button>
