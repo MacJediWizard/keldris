@@ -61,6 +61,9 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"net/http"
+	"os"
+	"os/signal"
 	"strings"
 	"syscall"
 	"time"
@@ -82,6 +85,11 @@ import (
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/shutdown"
 	"github.com/MacJediWizard/keldris/internal/maintenance"
+	"github.com/MacJediWizard/keldris/internal/api"
+	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/crypto"
+	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/rs/zerolog"
 )
 
@@ -474,4 +482,118 @@ func run() int {
 		Str("state", string(status.State)).
 		Int("checkpointed", status.CheckpointedCount).
 		Msg("Keldris server shutdown complete")
+	masterKeyB64 := os.Getenv("MASTER_KEY")
+	if masterKeyB64 == "" {
+		logger.Fatal().Msg("MASTER_KEY environment variable is required")
+		return 1
+	}
+
+	masterKey, err := crypto.MasterKeyFromBase64(masterKeyB64)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to decode MASTER_KEY")
+		return 1
+	}
+
+	keyManager, err := crypto.NewKeyManager(masterKey)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to initialize key manager")
+		return 1
+	}
+
+	// Initialize OIDC provider (optional - nil if not configured)
+	var oidcProvider *auth.OIDC
+	oidcIssuer := os.Getenv("OIDC_ISSUER")
+	if oidcIssuer != "" {
+		oidcCfg := auth.DefaultOIDCConfig(
+			oidcIssuer,
+			os.Getenv("OIDC_CLIENT_ID"),
+			os.Getenv("OIDC_CLIENT_SECRET"),
+			os.Getenv("OIDC_REDIRECT_URL"),
+		)
+		oidcProvider, err = auth.NewOIDC(ctx, oidcCfg, logger)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to initialize OIDC provider")
+			return 1
+		}
+		logger.Info().Str("issuer", oidcIssuer).Msg("OIDC provider initialized")
+	} else {
+		logger.Warn().Msg("OIDC not configured - authentication will be unavailable")
+	}
+
+	// Initialize session store
+	sessionSecret := os.Getenv("SESSION_SECRET")
+	if sessionSecret == "" {
+		logger.Fatal().Msg("SESSION_SECRET environment variable is required")
+		return 1
+	}
+
+	isSecure := cfg.Environment == config.EnvProduction
+	sessionCfg := auth.DefaultSessionConfig([]byte(sessionSecret), isSecure)
+	sessions, err := auth.NewSessionStore(sessionCfg, logger)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to initialize session store")
+		return 1
+	}
+
+	// Build API router
+	allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
+	if os.Getenv("ALLOWED_ORIGINS") == "" {
+		allowedOrigins = []string{}
+	}
+
+	routerCfg := api.Config{
+		Environment:       cfg.Environment,
+		AllowedOrigins:    allowedOrigins,
+		RateLimitRequests: 100,
+		RateLimitPeriod:   "1m",
+		RedisURL:          os.Getenv("REDIS_URL"),
+		Version:           Version,
+		Commit:            Commit,
+		BuildDate:         BuildDate,
+	}
+
+	router, err := api.NewRouter(routerCfg, database, oidcProvider, sessions, keyManager, logger)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to initialize router")
+		return 1
+	}
+
+	// Start HTTP server
+	listenAddr := os.Getenv("LISTEN_ADDR")
+	if listenAddr == "" {
+		listenAddr = ":8080"
+	}
+
+	srv := &http.Server{
+		Addr:              listenAddr,
+		Handler:           router.Engine,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	// Start server in background
+	go func() {
+		logger.Info().Str("addr", listenAddr).Msg("HTTP server listening")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal().Err(err).Msg("HTTP server error")
+		}
+	}()
+
+	// Wait for shutdown signal
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-sigChan
+
+	logger.Info().Str("signal", sig.String()).Msg("Shutting down server")
+
+	// Graceful shutdown with timeout
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Error().Err(err).Msg("Server shutdown error")
+		return 1
+	}
+
+	logger.Info().Msg("Server stopped gracefully")
+	return 0
 }
