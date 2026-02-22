@@ -227,6 +227,7 @@ type Schedule struct {
 	PolicyID                *uuid.UUID             `json:"policy_id,omitempty"`      // Policy this schedule was created from
 	Name                    string                 `json:"name"`
 	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker, pihole, mysql
+	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker, pihole
 	CronExpression          string                 `json:"cron_expression"`
 	Paths                   []string               `json:"paths"`
 	Excludes                []string               `json:"excludes,omitempty"`
