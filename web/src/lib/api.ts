@@ -82,6 +82,8 @@ import type {
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
+	CreateDowntimeAlertRequest,
+	CreateDowntimeEventRequest,
 	CreateExcludePatternRequest,
 	CreateIPAllowlistRequest,
 	CreateIPBanRequest,
@@ -133,6 +135,11 @@ import type {
 	DockerDaemonStatus,
 	DockerVolume,
 	DockerVolumesResponse,
+	DowntimeAlert,
+	DowntimeAlertsResponse,
+	DowntimeEvent,
+	DowntimeEventsResponse,
+	DryRunResponse,
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
@@ -198,6 +205,7 @@ import type {
 	MetadataSchema,
 	MetadataSchemasResponse,
 	MetadataSearchResponse,
+	MonthlyUptimeReport,
 	MountSnapshotRequest,
 	NotificationChannel,
 	NotificationChannelWithPreferencesResponse,
@@ -253,6 +261,7 @@ import type {
 	RepositoryStatsListItem,
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
+	ResolveDowntimeEventRequest,
 	Restore,
 	RestorePreview,
 	RestorePreviewRequest,
@@ -313,6 +322,8 @@ import type {
 	UpdateConcurrencyRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
+	UpdateDowntimeAlertRequest,
+	UpdateDowntimeEventRequest,
 	UpdateEntityMetadataRequest,
 	UpdateExcludePatternRequest,
 	UpdateIPAllowlistRequest,
@@ -342,6 +353,9 @@ import type {
 	UpdateTemplateRequest,
 	UpdateUserPreferencesRequest,
 	UpdateVerificationScheduleRequest,
+	UptimeBadge,
+	UptimeBadgesResponse,
+	UptimeSummary,
 	UseTemplateRequest,
 	User,
 	UserSSOGroups,
@@ -3684,6 +3698,140 @@ export const userSessionsApi = {
 
 	revokeAll: async (): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>('/user-sessions', {
+			method: 'DELETE',
+		}),
+};
+
+// Saved Filters API
+export const savedFiltersApi = {
+	list: async (entityType?: string): Promise<SavedFilter[]> => {
+		const endpoint = entityType
+			? `/filters?entity_type=${entityType}`
+			: '/filters';
+		const response = await fetchApi<SavedFiltersResponse>(endpoint);
+		return response.filters ?? [];
+	},
+
+	get: async (id: string): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>(`/filters/${id}`),
+
+	create: async (data: CreateSavedFilterRequest): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>('/filters', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateSavedFilterRequest,
+	): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>(`/filters/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/filters/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Downtime API
+export const downtimeApi = {
+	list: async (limit = 100, offset = 0): Promise<DowntimeEvent[]> => {
+		const response = await fetchApi<DowntimeEventsResponse>(
+			`/downtime?limit=${limit}&offset=${offset}`,
+		);
+		return response.events ?? [];
+	},
+
+	listActive: async (): Promise<DowntimeEvent[]> => {
+		const response = await fetchApi<DowntimeEventsResponse>('/downtime/active');
+		return response.events ?? [];
+	},
+
+	getSummary: async (): Promise<UptimeSummary> =>
+		fetchApi<UptimeSummary>('/downtime/summary'),
+
+	get: async (id: string): Promise<DowntimeEvent> =>
+		fetchApi<DowntimeEvent>(`/downtime/${id}`),
+
+	create: async (data: CreateDowntimeEventRequest): Promise<DowntimeEvent> =>
+		fetchApi<DowntimeEvent>('/downtime', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateDowntimeEventRequest,
+	): Promise<DowntimeEvent> =>
+		fetchApi<DowntimeEvent>(`/downtime/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	resolve: async (
+		id: string,
+		data: ResolveDowntimeEventRequest = {},
+	): Promise<DowntimeEvent> =>
+		fetchApi<DowntimeEvent>(`/downtime/${id}/resolve`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/downtime/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Uptime API
+export const uptimeApi = {
+	getBadges: async (): Promise<UptimeBadge[]> => {
+		const response = await fetchApi<UptimeBadgesResponse>('/uptime/badges');
+		return response.badges ?? [];
+	},
+
+	refreshBadges: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/uptime/badges/refresh', {
+			method: 'POST',
+		}),
+
+	getMonthlyReport: async (
+		year: number,
+		month: number,
+	): Promise<MonthlyUptimeReport> =>
+		fetchApi<MonthlyUptimeReport>(`/uptime/report/${year}/${month}`),
+};
+
+// Downtime Alerts API
+export const downtimeAlertsApi = {
+	list: async (): Promise<DowntimeAlert[]> => {
+		const response = await fetchApi<DowntimeAlertsResponse>('/downtime-alerts');
+		return response.alerts ?? [];
+	},
+
+	get: async (id: string): Promise<DowntimeAlert> =>
+		fetchApi<DowntimeAlert>(`/downtime-alerts/${id}`),
+
+	create: async (data: CreateDowntimeAlertRequest): Promise<DowntimeAlert> =>
+		fetchApi<DowntimeAlert>('/downtime-alerts', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateDowntimeAlertRequest,
+	): Promise<DowntimeAlert> =>
+		fetchApi<DowntimeAlert>(`/downtime-alerts/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/downtime-alerts/${id}`, {
 			method: 'DELETE',
 		}),
 };

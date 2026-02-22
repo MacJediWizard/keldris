@@ -319,6 +319,27 @@ func (s *Service) sendBackupEmail(ctx context.Context, channel *models.Notificat
 		ErrorMessage: result.ErrorMessage,
 	}
 
+	// Build notification data
+	duration := result.CompletedAt.Sub(result.StartedAt)
+	successData := BackupSuccessData{
+		Hostname:     result.Hostname,
+		ScheduleName: result.ScheduleName,
+		SnapshotID:   result.SnapshotID,
+		StartedAt:    result.StartedAt,
+		CompletedAt:  result.CompletedAt,
+		Duration:     formatDuration(duration),
+		SizeBytes:    result.SizeBytes,
+		FilesNew:     result.FilesNew,
+		FilesChanged: result.FilesChanged,
+	}
+	failedData := BackupFailedData{
+		Hostname:     result.Hostname,
+		ScheduleName: result.ScheduleName,
+		StartedAt:    result.StartedAt,
+		FailedAt:     result.CompletedAt,
+		ErrorMessage: result.ErrorMessage,
+	}
+
 	// Create log entry
 	var subject string
 	var recipient string
@@ -389,6 +410,22 @@ func (s *Service) sendBackupEmail(ctx context.Context, channel *models.Notificat
 			Str("channel_type", string(channel.Type)).
 			Msg("unsupported notification channel type")
 		return
+	}
+
+	// Update log with result
+	if sendErr != nil {
+		log.MarkFailed(sendErr.Error())
+		s.logger.Error().Err(sendErr).
+			Str("channel_id", channel.ID.String()).
+			Str("channel_type", string(channel.Type)).
+			Msg("failed to send notification")
+	} else {
+		log.MarkSent()
+		s.logger.Info().
+			Str("channel_id", channel.ID.String()).
+			Str("channel_type", string(channel.Type)).
+			Str("event_type", string(pref.EventType)).
+			Msg("notification sent")
 	}
 
 	s.finalizeLog(ctx, log, sendErr, channel.ID.String(), recipients[0])
@@ -519,6 +556,9 @@ func (s *Service) sendAgentOfflineEmail(ctx context.Context, channel *models.Not
 	}
 }
 
+// sendEmailBackup sends a backup notification via email.
+func (s *Service) sendEmailBackup(channel *models.NotificationChannel, success bool, successData BackupSuccessData, failedData BackupFailedData) error {
+	var emailConfig models.EmailChannelConfig
 // sendEmailBackup sends a backup notification via email.
 func (s *Service) sendEmailBackup(channel *models.NotificationChannel, success bool, successData BackupSuccessData, failedData BackupFailedData) error {
 	var emailConfig models.EmailChannelConfig
@@ -1016,6 +1056,29 @@ func (s *Service) sendMaintenanceEmail(ctx context.Context, channel *models.Noti
 // sendEmailMaintenance sends a maintenance notification via email.
 func (s *Service) sendEmailMaintenance(channel *models.NotificationChannel, data MaintenanceScheduledData) error {
 	var emailConfig models.EmailChannelConfig
+	if sendErr != nil {
+		log.MarkFailed(sendErr.Error())
+		s.logger.Error().Err(sendErr).
+			Str("channel_id", channel.ID.String()).
+			Str("channel_type", string(channel.Type)).
+			Msg("failed to send maintenance notification")
+	} else {
+		log.MarkSent()
+		s.logger.Info().
+			Str("channel_id", channel.ID.String()).
+			Str("channel_type", string(channel.Type)).
+			Str("title", data.Title).
+			Msg("maintenance notification sent")
+	}
+
+	if err := s.store.UpdateNotificationLog(ctx, log); err != nil {
+		s.logger.Error().Err(err).Msg("failed to update notification log")
+	}
+}
+
+// sendEmailMaintenance sends a maintenance notification via email.
+func (s *Service) sendEmailMaintenance(channel *models.NotificationChannel, data MaintenanceScheduledData) error {
+	var emailConfig models.EmailChannelConfig
 	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
 		return fmt.Errorf("parse email config: %w", err)
 	}
@@ -1066,6 +1129,31 @@ func (s *Service) finalizeLog(ctx context.Context, log *models.NotificationLog, 
 			Str("recipient", logRecipient).
 			Str("event_type", log.EventType).
 			Msg("notification sent")
+	return emailService.SendMaintenanceScheduled([]string{emailConfig.From}, data)
+}
+
+// sendSlackMaintenance sends a maintenance notification via Slack.
+func (s *Service) sendSlackMaintenance(channel *models.NotificationChannel, data MaintenanceScheduledData) error {
+	var config models.SlackChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse slack config: %w", err)
+	}
+
+	slackService, err := NewSlackService(config, s.logger)
+	if err != nil {
+		return fmt.Errorf("create slack service: %w", err)
+	}
+
+	return slackService.SendMaintenanceScheduled(data)
+}
+
+// sendTeamsMaintenance sends a maintenance notification via Microsoft Teams.
+func (s *Service) sendTeamsMaintenance(channel *models.NotificationChannel, data MaintenanceScheduledData) error {
+	var config models.TeamsChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse teams config: %w", err)
+	}
+
 	return emailService.SendMaintenanceScheduled([]string{emailConfig.From}, data)
 }
 

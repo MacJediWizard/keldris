@@ -15,6 +15,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/logs"
+	"github.com/MacJediWizard/keldris/internal/monitoring"
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -346,6 +347,11 @@ func NewRouter(
 	// Support bundle routes
 	supportHandler := handlers.NewSupportHandler(cfg.Version, cfg.Commit, cfg.BuildDate, "", logger)
 	supportHandler.RegisterRoutes(apiV1)
+
+	// Downtime tracking routes
+	downtimeService := monitoring.NewDowntimeServiceWithDB(database, monitoring.DefaultDowntimeServiceConfig(), logger)
+	downtimeHandler := handlers.NewDowntimeHandler(downtimeService, database, logger)
+	downtimeHandler.RegisterRoutes(apiV1)
 
 	// IP allowlists routes
 	ipAllowlistsHandler := handlers.NewIPAllowlistsHandler(database, ipFilter, logger)

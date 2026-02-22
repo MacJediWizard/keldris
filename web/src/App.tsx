@@ -104,6 +104,7 @@ import { Classifications } from './pages/Classifications';
 import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
+import { DowntimeHistory } from './pages/DowntimeHistory';
 import { FileDiff } from './pages/FileDiff';
 import { FileHistory } from './pages/FileHistory';
 import { FileSearch } from './pages/FileSearch';
@@ -273,6 +274,7 @@ function App() {
 						<Route path="snapshots/compare" element={<SnapshotCompare />} />
 						<Route path="snapshots/file-diff" element={<FileDiff />} />
 						<Route path="alerts" element={<Alerts />} />
+						<Route path="downtime" element={<DowntimeHistory />} />
 						<Route path="notifications" element={<Notifications />} />
 						<Route path="notification-rules" element={<NotificationRules />} />
 						<Route path="reports" element={<Reports />} />
