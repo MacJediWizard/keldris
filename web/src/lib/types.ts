@@ -54,6 +54,10 @@ export interface Agent {
 	health_status: HealthStatus;
 	health_metrics?: HealthMetrics;
 	health_checked_at?: string;
+	debug_mode: boolean;
+	debug_mode_expires_at?: string;
+	debug_mode_enabled_at?: string;
+	debug_mode_enabled_by?: string;
 	created_at: string;
 	updated_at: string;
 }
@@ -198,6 +202,54 @@ export interface AgentSchedulesResponse {
 
 export interface AgentHealthHistoryResponse {
 	history: AgentHealthHistory[];
+}
+
+// Debug mode types
+export interface SetDebugModeRequest {
+	enabled: boolean;
+	duration_hours?: number; // 0 means no auto-disable, default is 4
+}
+
+export interface SetDebugModeResponse {
+	debug_mode: boolean;
+	debug_mode_expires_at?: string;
+	message: string;
+}
+
+export interface DebugConfig {
+	enabled: boolean;
+	log_level: string;
+	include_restic_output: boolean;
+	log_file_operations: boolean;
+}
+
+// Agent Log types
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export interface AgentLog {
+	id: string;
+	agent_id: string;
+	org_id: string;
+	level: LogLevel;
+	message: string;
+	component?: string;
+	metadata?: Record<string, unknown>;
+	timestamp: string;
+	created_at: string;
+}
+
+export interface AgentLogsResponse {
+	logs: AgentLog[];
+	total_count: number;
+	has_more: boolean;
+}
+
+export interface AgentLogFilter {
+	level?: LogLevel;
+	component?: string;
+	search?: string;
+	limit?: number;
+	offset?: number;
 }
 
 // Repository types
@@ -584,6 +636,29 @@ export interface CancelCheckpointRequest {
 	checkpoint_id: string;
 }
 
+// Backup Calendar types
+export interface BackupCalendarDay {
+	date: string;
+	completed: number;
+	failed: number;
+	running: number;
+	scheduled: number;
+	backups?: Backup[];
+}
+
+export interface ScheduledBackup {
+	schedule_id: string;
+	schedule_name: string;
+	agent_id: string;
+	agent_name: string;
+	scheduled_at: string;
+}
+
+export interface BackupCalendarResponse {
+	days: BackupCalendarDay[];
+	scheduled: ScheduledBackup[];
+}
+
 // Backup Script types
 export type BackupScriptType =
 	| 'pre_backup'
@@ -820,6 +895,22 @@ export interface SnapshotCompareResponse {
 	changes: SnapshotDiffEntry[];
 }
 
+// File diff types for comparing file content between snapshots
+export interface FileDiffResponse {
+	path: string;
+	is_binary: boolean;
+	change_type: 'added' | 'removed' | 'modified';
+	old_size?: number;
+	new_size?: number;
+	old_hash?: string;
+	new_hash?: string;
+	unified_diff?: string;
+	old_content?: string;
+	new_content?: string;
+	snapshot_id_1: string;
+	snapshot_id_2: string;
+}
+
 // Snapshot comment types
 export interface SnapshotComment {
 	id: string;
@@ -879,39 +970,109 @@ export type RestoreStatus =
 	| 'running'
 	| 'completed'
 	| 'failed'
-	| 'canceled';
+	| 'canceled'
+	| 'uploading'
+	| 'verifying';
+
+// Cloud restore target types
+export type CloudRestoreTargetType = 's3' | 'b2' | 'restic';
+
+export interface CloudRestoreTarget {
+	type: CloudRestoreTargetType;
+	// S3/B2 configuration
+	bucket?: string;
+	prefix?: string;
+	region?: string;
+	endpoint?: string;
+	access_key_id?: string;
+	secret_access_key?: string;
+	use_ssl?: boolean;
+	// B2 specific
+	account_id?: string;
+	application_key?: string;
+	// Restic repository configuration
+	repository?: string;
+	repository_password?: string;
+}
+
+export interface CloudRestoreProgress {
+	total_files: number;
+	total_bytes: number;
+	uploaded_files: number;
+	uploaded_bytes: number;
+	current_file?: string;
+	percent_complete: number;
+	verified_checksum: boolean;
+}
+
+export interface PathMapping {
+	source_path: string;
+	target_path: string;
+}
+
+export interface RestoreProgress {
+	files_restored: number;
+	bytes_restored: number;
+	total_files?: number;
+	total_bytes?: number;
+	current_file?: string;
+}
 
 export interface Restore {
 	id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	snapshot_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
 	status: RestoreStatus;
+	progress?: RestoreProgress; // Real-time progress tracking
+	is_cross_agent: boolean;
 	started_at?: string;
 	completed_at?: string;
 	error_message?: string;
 	created_at: string;
+	// Cloud restore fields
+	is_cloud_restore?: boolean;
+	cloud_target?: CloudRestoreTarget;
+	cloud_progress?: CloudRestoreProgress;
+	cloud_target_location?: string;
+	verify_upload?: boolean;
 }
 
 export interface CreateRestoreRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent (where restore executes)
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[]; // Path remapping for cross-agent restores
+}
+
+export interface CreateCloudRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+	cloud_target: CloudRestoreTarget;
+	verify_upload?: boolean;
 }
 
 export interface RestorePreviewRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	target_path: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
+	path_mappings?: PathMapping[];
 }
 
 export interface RestorePreviewFile {
@@ -931,6 +1092,8 @@ export interface RestorePreview {
 	conflict_count: number;
 	files: RestorePreviewFile[];
 	disk_space_needed: number;
+	selected_paths?: string[];
+	selected_size?: number;
 }
 
 export interface RestoresResponse {
@@ -1300,6 +1463,11 @@ export interface MaintenanceWindow {
 	ends_at: string;
 	notify_before_minutes: number;
 	notification_sent: boolean;
+	read_only: boolean;
+	countdown_start_minutes: number;
+	emergency_override: boolean;
+	overridden_by?: string;
+	overridden_at?: string;
 	created_by?: string;
 	created_at: string;
 	updated_at: string;
@@ -1371,6 +1539,8 @@ export interface CreateMaintenanceWindowRequest {
 	starts_at: string;
 	ends_at: string;
 	notify_before_minutes?: number;
+	read_only?: boolean;
+	countdown_start_minutes?: number;
 }
 
 export interface UpdateMaintenanceWindowRequest {
@@ -1379,6 +1549,12 @@ export interface UpdateMaintenanceWindowRequest {
 	starts_at?: string;
 	ends_at?: string;
 	notify_before_minutes?: number;
+	read_only?: boolean;
+	countdown_start_minutes?: number;
+}
+
+export interface EmergencyOverrideRequest {
+	override: boolean;
 }
 
 export interface MaintenanceWindowsResponse {
@@ -1388,6 +1564,9 @@ export interface MaintenanceWindowsResponse {
 export interface ActiveMaintenanceResponse {
 	active: MaintenanceWindow | null;
 	upcoming: MaintenanceWindow | null;
+	read_only_mode: boolean;
+	show_countdown: boolean;
+	countdown_to?: string;
 }
 
 // DR Runbook types
@@ -1868,6 +2047,49 @@ export interface FileHistoryParams {
 	repository_id: string;
 }
 
+// File Search types
+export interface FileSearchResult {
+	snapshot_id: string;
+	snapshot_time: string;
+	hostname: string;
+	file_name: string;
+	file_path: string;
+	file_size: number;
+	file_type: string;
+	mod_time: string;
+}
+
+export interface SnapshotFileGroup {
+	snapshot_id: string;
+	snapshot_time: string;
+	hostname: string;
+	file_count: number;
+	files: FileSearchResult[];
+}
+
+export interface FileSearchResponse {
+	query: string;
+	agent_id: string;
+	repository_id: string;
+	total_count: number;
+	snapshot_count: number;
+	snapshots: SnapshotFileGroup[];
+	message?: string;
+}
+
+export interface FileSearchParams {
+	q: string;
+	agent_id: string;
+	repository_id: string;
+	path?: string;
+	snapshot_ids?: string;
+	date_from?: string;
+	date_to?: string;
+	size_min?: number;
+	size_max?: number;
+	limit?: number;
+}
+
 // Cost Estimation types
 export interface StoragePricing {
 	id: string;
@@ -2072,6 +2294,56 @@ export interface ImportRepositoryRequest {
 export interface ImportRepositoryResponse {
 	repository: Repository;
 	snapshots_imported: number;
+}
+
+// Changelog types
+export interface ChangelogEntry {
+	version: string;
+	date: string;
+	added?: string[];
+	changed?: string[];
+	deprecated?: string[];
+	removed?: string[];
+	fixed?: string[];
+	security?: string[];
+	is_unreleased?: boolean;
+}
+
+export interface ChangelogResponse {
+	entries: ChangelogEntry[];
+	current_version: string;
+}
+
+// Server Log types
+export type ServerLogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+
+export interface ServerLogEntry {
+	timestamp: string;
+	level: ServerLogLevel;
+	message: string;
+	component?: string;
+	fields?: Record<string, unknown>;
+}
+
+export interface ServerLogFilter {
+	level?: ServerLogLevel;
+	component?: string;
+	search?: string;
+	start_time?: string;
+	end_time?: string;
+	limit?: number;
+	offset?: number;
+}
+
+export interface ServerLogsResponse {
+	logs: ServerLogEntry[];
+	total_count: number;
+	limit: number;
+	offset: number;
+}
+
+export interface ServerLogComponentsResponse {
+	components: string[];
 }
 
 // Classification types
@@ -2398,4 +2670,174 @@ export interface CreateAgentCommandRequest {
 
 export interface AgentCommandsResponse {
 	commands: AgentCommand[];
+}
+
+// Config Export/Import types
+export type ConfigType = 'agent' | 'schedule' | 'repository' | 'bundle';
+export type ExportFormat = 'json' | 'yaml';
+export type ConflictResolution = 'skip' | 'replace' | 'rename' | 'fail';
+export type TemplateType = 'schedule' | 'agent' | 'repository' | 'bundle';
+export type TemplateVisibility = 'private' | 'organization' | 'public';
+
+export interface ExportMetadata {
+	version: string;
+	type: ConfigType;
+	exported_at: string;
+	exported_by?: string;
+	description?: string;
+}
+
+export interface ExportBundleRequest {
+	agent_ids?: string[];
+	schedule_ids?: string[];
+	repository_ids?: string[];
+	format?: ExportFormat;
+	description?: string;
+}
+
+export interface ImportConfigRequest {
+	config: string;
+	format?: ExportFormat;
+	target_agent_id?: string;
+	repository_mappings?: Record<string, string>;
+	conflict_resolution?: ConflictResolution;
+}
+
+export interface ValidateImportRequest {
+	config: string;
+	format?: ExportFormat;
+}
+
+export interface ImportedItems {
+	agent_count: number;
+	agent_ids?: string[];
+	schedule_count: number;
+	schedule_ids?: string[];
+	repository_count: number;
+	repository_ids?: string[];
+}
+
+export interface SkippedItem {
+	type: ConfigType;
+	name: string;
+	reason: string;
+}
+
+export interface ImportError {
+	type: ConfigType;
+	name: string;
+	message: string;
+}
+
+export interface ImportResult {
+	success: boolean;
+	message: string;
+	imported: ImportedItems;
+	skipped?: SkippedItem[];
+	errors?: ImportError[];
+	warnings?: string[];
+}
+
+export interface ValidationError {
+	field: string;
+	message: string;
+}
+
+export interface Conflict {
+	type: ConfigType;
+	name: string;
+	existing_id: string;
+	existing_name: string;
+	message: string;
+}
+
+export interface ValidationResult {
+	valid: boolean;
+	errors?: ValidationError[];
+	warnings?: string[];
+	conflicts?: Conflict[];
+	suggestions?: string[];
+}
+
+// Config Template types
+export interface ConfigTemplate {
+	id: string;
+	org_id: string;
+	created_by_id: string;
+	name: string;
+	description?: string;
+	type: TemplateType;
+	visibility: TemplateVisibility;
+	tags?: string[];
+	config: Record<string, unknown>;
+	usage_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateTemplateRequest {
+	name: string;
+	description?: string;
+	config: string;
+	visibility?: TemplateVisibility;
+	tags?: string[];
+}
+
+export interface UpdateTemplateRequest {
+	name?: string;
+	description?: string;
+	visibility?: TemplateVisibility;
+	tags?: string[];
+}
+
+export interface UseTemplateRequest {
+	target_agent_id?: string;
+	repository_mappings?: Record<string, string>;
+	conflict_resolution?: ConflictResolution;
+}
+
+export interface ConfigTemplatesResponse {
+	templates: ConfigTemplate[];
+}
+
+// Announcement types
+export type AnnouncementType = 'info' | 'warning' | 'critical';
+
+export interface Announcement {
+	id: string;
+	org_id: string;
+	title: string;
+	message?: string;
+	type: AnnouncementType;
+	dismissible: boolean;
+	starts_at?: string;
+	ends_at?: string;
+	active: boolean;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateAnnouncementRequest {
+	title: string;
+	message?: string;
+	type: AnnouncementType;
+	dismissible?: boolean;
+	starts_at?: string;
+	ends_at?: string;
+	active?: boolean;
+}
+
+export interface UpdateAnnouncementRequest {
+	title?: string;
+	message?: string;
+	type?: AnnouncementType;
+	dismissible?: boolean;
+	starts_at?: string;
+	ends_at?: string;
+	active?: boolean;
+}
+
+export interface AnnouncementsResponse {
+	announcements: Announcement[];
 }

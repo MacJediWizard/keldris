@@ -8,6 +8,8 @@ import type {
 	AgentGroup,
 	AgentGroupsResponse,
 	AgentHealthHistoryResponse,
+	AgentLogFilter,
+	AgentLogsResponse,
 	AgentSchedulesResponse,
 	AgentStatsResponse,
 	AgentWithGroups,
@@ -18,6 +20,8 @@ import type {
 	AlertRule,
 	AlertRulesResponse,
 	AlertsResponse,
+	Announcement,
+	AnnouncementsResponse,
 	ApplyPolicyRequest,
 	ApplyPolicyResponse,
 	AssignTagsRequest,
@@ -25,6 +29,7 @@ import type {
 	AuditLogFilter,
 	AuditLogsResponse,
 	Backup,
+	BackupCalendarResponse,
 	BackupDurationTrend,
 	BackupDurationTrendResponse,
 	BackupScript,
@@ -36,10 +41,15 @@ import type {
 	BuiltInPatternsResponse,
 	CategoriesResponse,
 	CategoryInfo,
+	ChangelogEntry,
+	ChangelogResponse,
 	ClassificationLevelsResponse,
 	ClassificationRulesResponse,
 	ClassificationSummary,
+	CloudRestoreProgress,
 	ComplianceReport,
+	ConfigTemplate,
+	ConfigTemplatesResponse,
 	CostAlert,
 	CostAlertsResponse,
 	CostForecastResponse,
@@ -50,7 +60,9 @@ import type {
 	CreateAgentRequest,
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
+	CreateAnnouncementRequest,
 	CreateBackupScriptRequest,
+	CreateCloudRestoreRequest,
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
@@ -74,6 +86,7 @@ import type {
 	CreateSnapshotCommentRequest,
 	CreateStoragePricingRequest,
 	CreateTagRequest,
+	CreateTemplateRequest,
 	CreateVerificationScheduleRequest,
 	DRRunbook,
 	DRRunbookRenderResponse,
@@ -92,9 +105,14 @@ import type {
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
+	ExportBundleRequest,
+	ExportFormat,
 	ExtendImmutabilityLockRequest,
+	FileDiffResponse,
 	FileHistoryParams,
 	FileHistoryResponse,
+	FileSearchParams,
+	FileSearchResponse,
 	FleetHealthSummary,
 	GeoRegion,
 	GeoReplicationConfig,
@@ -109,10 +127,12 @@ import type {
 	ImmutabilityLock,
 	ImmutabilityLocksResponse,
 	ImmutabilityStatus,
+	ImportConfigRequest,
 	ImportPreviewRequest,
 	ImportPreviewResponse,
 	ImportRepositoryRequest,
 	ImportRepositoryResponse,
+	ImportResult,
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
@@ -177,6 +197,11 @@ import type {
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
+	ServerLogComponentsResponse,
+	ServerLogFilter,
+	ServerLogsResponse,
+	SetDebugModeRequest,
+	SetDebugModeResponse,
 	SetScheduleClassificationRequest,
 	Snapshot,
 	SnapshotComment,
@@ -201,6 +226,7 @@ import type {
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
+	UpdateAnnouncementRequest,
 	UpdateBackupScriptRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
@@ -220,10 +246,14 @@ import type {
 	UpdateScheduleRequest,
 	UpdateStoragePricingRequest,
 	UpdateTagRequest,
+	UpdateTemplateRequest,
 	UpdateUserPreferencesRequest,
 	UpdateVerificationScheduleRequest,
+	UseTemplateRequest,
 	User,
 	UserSSOGroups,
+	ValidateImportRequest,
+	ValidationResult,
 	Verification,
 	VerificationSchedule,
 	VerificationSchedulesResponse,
@@ -361,11 +391,36 @@ export const agentsApi = {
 	getFleetHealth: async (): Promise<FleetHealthSummary> =>
 		fetchApi<FleetHealthSummary>('/agents/fleet-health'),
 
+	setDebugMode: async (
+		id: string,
+		data: SetDebugModeRequest,
+	): Promise<SetDebugModeResponse> =>
+		fetchApi<SetDebugModeResponse>(`/agents/${id}/debug`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
 	listWithGroups: async (): Promise<AgentWithGroups[]> => {
 		const response = await fetchApi<AgentsWithGroupsResponse>(
 			'/agents/with-groups',
 		);
 		return response.agents ?? [];
+	},
+
+	getLogs: async (
+		id: string,
+		filter?: AgentLogFilter,
+	): Promise<AgentLogsResponse> => {
+		const params = new URLSearchParams();
+		if (filter?.level) params.set('level', filter.level);
+		if (filter?.component) params.set('component', filter.component);
+		if (filter?.search) params.set('search', filter.search);
+		if (filter?.limit) params.set('limit', filter.limit.toString());
+		if (filter?.offset) params.set('offset', filter.offset.toString());
+		const queryString = params.toString();
+		return fetchApi<AgentLogsResponse>(
+			`/agents/${id}/logs${queryString ? `?${queryString}` : ''}`,
+		);
 	},
 
 	// Command methods
@@ -664,6 +719,9 @@ export const backupsApi = {
 
 	get: async (id: string): Promise<Backup> =>
 		fetchApi<Backup>(`/backups/${id}`),
+
+	getCalendar: async (month: string): Promise<BackupCalendarResponse> =>
+		fetchApi<BackupCalendarResponse>(`/backups/calendar?month=${month}`),
 };
 
 // Backup Scripts API
@@ -735,6 +793,15 @@ export const snapshotsApi = {
 
 	compare: async (id1: string, id2: string): Promise<SnapshotCompareResponse> =>
 		fetchApi<SnapshotCompareResponse>(`/snapshots/${id1}/compare/${id2}`),
+
+	diffFile: async (
+		id1: string,
+		id2: string,
+		path: string,
+	): Promise<FileDiffResponse> =>
+		fetchApi<FileDiffResponse>(
+			`/snapshots/${id1}/files/diff/${id2}?path=${encodeURIComponent(path)}`,
+		),
 
 	mount: async (
 		snapshotId: string,
@@ -828,6 +895,15 @@ export const restoresApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+
+	createCloud: async (data: CreateCloudRestoreRequest): Promise<Restore> =>
+		fetchApi<Restore>('/restores/cloud', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getProgress: async (id: string): Promise<CloudRestoreProgress> =>
+		fetchApi<CloudRestoreProgress>(`/restores/${id}/progress`),
 };
 
 // File History API
@@ -841,6 +917,42 @@ export const fileHistoryApi = {
 		searchParams.set('repository_id', params.repository_id);
 		return fetchApi<FileHistoryResponse>(
 			`/files/history?${searchParams.toString()}`,
+		);
+	},
+};
+
+// File Search API
+export const fileSearchApi = {
+	search: async (params: FileSearchParams): Promise<FileSearchResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', params.q);
+		searchParams.set('agent_id', params.agent_id);
+		searchParams.set('repository_id', params.repository_id);
+
+		if (params.path) {
+			searchParams.set('path', params.path);
+		}
+		if (params.snapshot_ids) {
+			searchParams.set('snapshot_ids', params.snapshot_ids);
+		}
+		if (params.date_from) {
+			searchParams.set('date_from', params.date_from);
+		}
+		if (params.date_to) {
+			searchParams.set('date_to', params.date_to);
+		}
+		if (params.size_min !== undefined) {
+			searchParams.set('size_min', params.size_min.toString());
+		}
+		if (params.size_max !== undefined) {
+			searchParams.set('size_max', params.size_max.toString());
+		}
+		if (params.limit !== undefined) {
+			searchParams.set('limit', params.limit.toString());
+		}
+
+		return fetchApi<FileSearchResponse>(
+			`/search/files?${searchParams.toString()}`,
 		);
 	},
 };
@@ -1323,6 +1435,49 @@ export const ssoGroupMappingsApi = {
 		fetchApi<UserSSOGroups>(`/users/${userId}/sso-groups`),
 };
 
+// Announcements API
+export const announcementsApi = {
+	list: async (): Promise<Announcement[]> => {
+		const response = await fetchApi<AnnouncementsResponse>('/announcements');
+		return response.announcements ?? [];
+	},
+
+	getActive: async (): Promise<Announcement[]> => {
+		const response = await fetchApi<AnnouncementsResponse>(
+			'/announcements/active',
+		);
+		return response.announcements ?? [];
+	},
+
+	get: async (id: string): Promise<Announcement> =>
+		fetchApi<Announcement>(`/announcements/${id}`),
+
+	create: async (data: CreateAnnouncementRequest): Promise<Announcement> =>
+		fetchApi<Announcement>('/announcements', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateAnnouncementRequest,
+	): Promise<Announcement> =>
+		fetchApi<Announcement>(`/announcements/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/announcements/${id}`, {
+			method: 'DELETE',
+		}),
+
+	dismiss: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/announcements/${id}/dismiss`, {
+			method: 'POST',
+		}),
+};
+
 // Maintenance Windows API
 export const maintenanceApi = {
 	list: async (): Promise<MaintenanceWindow[]> => {
@@ -1351,6 +1506,7 @@ export const maintenanceApi = {
 			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
+
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/maintenance-windows/${id}`, {
 			method: 'DELETE',
@@ -1358,6 +1514,18 @@ export const maintenanceApi = {
 
 	getActive: async (): Promise<ActiveMaintenanceResponse> =>
 		fetchApi<ActiveMaintenanceResponse>('/maintenance/active'),
+
+	emergencyOverride: async (
+		id: string,
+		override: boolean,
+	): Promise<MaintenanceWindow> =>
+		fetchApi<MaintenanceWindow>(
+			`/maintenance-windows/${id}/emergency-override`,
+			{
+				method: 'POST',
+				body: JSON.stringify({ override }),
+			},
+		),
 };
 
 // Exclude Patterns API
@@ -1746,6 +1914,20 @@ export const pricingApi = {
 		}),
 };
 
+// Support API
+export const supportApi = {
+	generateBundle: async (): Promise<Blob> => {
+		const response = await fetch(`${API_BASE}/support/bundle`, {
+			method: 'POST',
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to generate support bundle');
+		}
+		return response.blob();
+	},
+};
+
 // Cost Alerts API
 export const costAlertsApi = {
 	list: async (): Promise<CostAlert[]> => {
@@ -1773,6 +1955,87 @@ export const costAlertsApi = {
 
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Changelog API
+export const changelogApi = {
+	list: async (): Promise<ChangelogResponse> =>
+		fetchApi<ChangelogResponse>('/changelog'),
+
+	get: async (version: string): Promise<ChangelogEntry> =>
+		fetchApi<ChangelogEntry>(`/changelog/${version}`),
+};
+
+// Server Logs API (Admin only)
+export const serverLogsApi = {
+	list: async (filter?: ServerLogFilter): Promise<ServerLogsResponse> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.level) searchParams.set('level', filter.level);
+		if (filter?.component) searchParams.set('component', filter.component);
+		if (filter?.search) searchParams.set('search', filter.search);
+		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
+		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
+		if (filter?.limit) searchParams.set('limit', filter.limit.toString());
+		if (filter?.offset) searchParams.set('offset', filter.offset.toString());
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/admin/logs?${query}` : '/admin/logs';
+		return fetchApi<ServerLogsResponse>(endpoint);
+	},
+
+	getComponents: async (): Promise<string[]> => {
+		const response = await fetchApi<ServerLogComponentsResponse>(
+			'/admin/logs/components',
+		);
+		return response.components ?? [];
+	},
+
+	exportCsv: async (filter?: ServerLogFilter): Promise<Blob> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.level) searchParams.set('level', filter.level);
+		if (filter?.component) searchParams.set('component', filter.component);
+		if (filter?.search) searchParams.set('search', filter.search);
+		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
+		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/admin/logs/export/csv?${query}`
+			: '/admin/logs/export/csv';
+		const response = await fetch(`${API_BASE}${endpoint}`, {
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export server logs');
+		}
+		return response.blob();
+	},
+
+	exportJson: async (filter?: ServerLogFilter): Promise<Blob> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.level) searchParams.set('level', filter.level);
+		if (filter?.component) searchParams.set('component', filter.component);
+		if (filter?.search) searchParams.set('search', filter.search);
+		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
+		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/admin/logs/export/json?${query}`
+			: '/admin/logs/export/json';
+		const response = await fetch(`${API_BASE}${endpoint}`, {
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export server logs');
+		}
+		return response.blob();
+	},
+
+	clear: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/admin/logs', {
 			method: 'DELETE',
 		}),
 };
@@ -2050,4 +2313,138 @@ export const geoReplicationApi = {
 		summary: GeoReplicationSummary;
 		regions: GeoRegion[];
 	}> => fetchApi<GeoReplicationSummaryResponse>('/geo-replication/summary'),
+};
+
+// Config Export/Import API
+export const configExportApi = {
+	// Export endpoints
+	exportAgent: async (
+		id: string,
+		format: ExportFormat = 'json',
+	): Promise<string> => {
+		const response = await fetch(
+			`${API_BASE}/export/agents/${id}?format=${format}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
+			throw new ApiError(response.status, errorData.error);
+		}
+		return response.text();
+	},
+
+	exportSchedule: async (
+		id: string,
+		format: ExportFormat = 'json',
+	): Promise<string> => {
+		const response = await fetch(
+			`${API_BASE}/export/schedules/${id}?format=${format}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
+			throw new ApiError(response.status, errorData.error);
+		}
+		return response.text();
+	},
+
+	exportRepository: async (
+		id: string,
+		format: ExportFormat = 'json',
+	): Promise<string> => {
+		const response = await fetch(
+			`${API_BASE}/export/repositories/${id}?format=${format}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
+			throw new ApiError(response.status, errorData.error);
+		}
+		return response.text();
+	},
+
+	exportBundle: async (data: ExportBundleRequest): Promise<string> => {
+		const response = await fetch(`${API_BASE}/export/bundle`, {
+			method: 'POST',
+			credentials: 'include',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(data),
+		});
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
+			throw new ApiError(response.status, errorData.error);
+		}
+		return response.text();
+	},
+
+	// Import endpoints
+	importConfig: async (data: ImportConfigRequest): Promise<ImportResult> =>
+		fetchApi<ImportResult>('/import', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	validateImport: async (
+		data: ValidateImportRequest,
+	): Promise<ValidationResult> =>
+		fetchApi<ValidationResult>('/import/validate', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+};
+
+// Config Templates API
+export const templatesApi = {
+	list: async (): Promise<ConfigTemplate[]> => {
+		const response = await fetchApi<ConfigTemplatesResponse>('/templates');
+		return response.templates ?? [];
+	},
+
+	get: async (id: string): Promise<ConfigTemplate> =>
+		fetchApi<ConfigTemplate>(`/templates/${id}`),
+
+	create: async (data: CreateTemplateRequest): Promise<ConfigTemplate> =>
+		fetchApi<ConfigTemplate>('/templates', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateTemplateRequest,
+	): Promise<ConfigTemplate> =>
+		fetchApi<ConfigTemplate>(`/templates/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/templates/${id}`, {
+			method: 'DELETE',
+		}),
+
+	use: async (
+		id: string,
+		data: UseTemplateRequest = {},
+	): Promise<ImportResult> =>
+		fetchApi<ImportResult>(`/templates/${id}/use`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };

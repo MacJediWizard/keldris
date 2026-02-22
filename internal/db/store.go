@@ -123,7 +123,9 @@ func (db *DB) CreateUser(ctx context.Context, user *models.User) error {
 func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
-		       health_status, health_metrics, health_checked_at, created_at, updated_at
+		       health_status, health_metrics, health_checked_at,
+		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
+		       created_at, updated_at
 		FROM agents
 		WHERE org_id = $1
 		ORDER BY hostname
@@ -144,7 +146,9 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		err := rows.Scan(
 			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 			&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
-			&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
+			&a.HealthCheckedAt,
+			&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
+			&a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
@@ -180,13 +184,17 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
-		       health_status, health_metrics, health_checked_at, created_at, updated_at
+		       health_status, health_metrics, health_checked_at,
+		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
+		       created_at, updated_at
 		FROM agents
 		WHERE id = $1
 	`, id).Scan(
 		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
-		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
+		&a.HealthCheckedAt,
+		&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
+		&a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent: %w", err)
@@ -219,13 +227,17 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
-		       health_status, health_metrics, health_checked_at, created_at, updated_at
+		       health_status, health_metrics, health_checked_at,
+		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
+		       created_at, updated_at
 		FROM agents
 		WHERE api_key_hash = $1
 	`, hash).Scan(
 		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
-		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
+		&a.HealthCheckedAt,
+		&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
+		&a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent by API key: %w", err)
@@ -339,6 +351,51 @@ func (db *DB) RevokeAgentAPIKey(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("agent not found")
 	}
 	return nil
+}
+
+// SetAgentDebugMode enables or disables debug mode on an agent.
+func (db *DB) SetAgentDebugMode(ctx context.Context, id uuid.UUID, enabled bool, expiresAt *time.Time, enabledBy *uuid.UUID) error {
+	now := time.Now()
+	var enabledAt *time.Time
+	if enabled {
+		enabledAt = &now
+	}
+
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agents
+		SET debug_mode = $2,
+		    debug_mode_expires_at = $3,
+		    debug_mode_enabled_at = $4,
+		    debug_mode_enabled_by = $5,
+		    updated_at = $6
+		WHERE id = $1
+	`, id, enabled, expiresAt, enabledAt, enabledBy, now)
+	if err != nil {
+		return fmt.Errorf("set agent debug mode: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("agent not found")
+	}
+	return nil
+}
+
+// DisableExpiredDebugModes disables debug mode on agents where the expiration has passed.
+func (db *DB) DisableExpiredDebugModes(ctx context.Context) (int64, error) {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE agents
+		SET debug_mode = false,
+		    debug_mode_expires_at = NULL,
+		    debug_mode_enabled_at = NULL,
+		    debug_mode_enabled_by = NULL,
+		    updated_at = $1
+		WHERE debug_mode = true
+		  AND debug_mode_expires_at IS NOT NULL
+		  AND debug_mode_expires_at < $1
+	`, time.Now())
+	if err != nil {
+		return 0, fmt.Errorf("disable expired debug modes: %w", err)
+	}
+	return result.RowsAffected(), nil
 }
 
 // CreateAgentHealthHistory creates a new health history record.
@@ -2048,13 +2105,14 @@ func (db *DB) GetLatestBackupByScheduleID(ctx context.Context, scheduleID uuid.U
 
 // Restore methods
 
-// GetRestoresByAgentID returns all restores for an agent.
+// GetRestoresByAgentID returns all restores for an agent (as either source or target).
 func (db *DB) GetRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Restore, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
-		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
+		SELECT id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
+		       exclude_paths, path_mappings, status, files_restored, bytes_restored, total_files,
+		       total_bytes, current_file, started_at, completed_at, error_message, created_at, updated_at
 		FROM restores
-		WHERE agent_id = $1
+		WHERE agent_id = $1 OR source_agent_id = $1
 		ORDER BY created_at DESC
 	`, agentID)
 	if err != nil {
@@ -2069,16 +2127,21 @@ func (db *DB) GetRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*m
 func (db *DB) GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore, error) {
 	var r models.Restore
 	var statusStr string
-	var includePathsBytes, excludePathsBytes []byte
+	var includePathsBytes, excludePathsBytes, pathMappingsBytes []byte
+	var filesRestored, bytesRestored int64
+	var totalFiles, totalBytes *int64
+	var currentFile *string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
-		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
+		SELECT id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
+		       exclude_paths, path_mappings, status, files_restored, bytes_restored, total_files,
+		       total_bytes, current_file, started_at, completed_at, error_message, created_at, updated_at
 		FROM restores
 		WHERE id = $1
 	`, id).Scan(
-		&r.ID, &r.AgentID, &r.RepositoryID, &r.SnapshotID, &r.TargetPath,
-		&includePathsBytes, &excludePathsBytes, &statusStr, &r.StartedAt,
-		&r.CompletedAt, &r.ErrorMessage, &r.CreatedAt, &r.UpdatedAt,
+		&r.ID, &r.AgentID, &r.SourceAgentID, &r.RepositoryID, &r.SnapshotID, &r.TargetPath,
+		&includePathsBytes, &excludePathsBytes, &pathMappingsBytes, &statusStr,
+		&filesRestored, &bytesRestored, &totalFiles, &totalBytes, &currentFile,
+		&r.StartedAt, &r.CompletedAt, &r.ErrorMessage, &r.CreatedAt, &r.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get restore: %w", err)
@@ -2089,6 +2152,21 @@ func (db *DB) GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore
 	}
 	if err := parseStringSlice(excludePathsBytes, &r.ExcludePaths); err != nil {
 		return nil, fmt.Errorf("parse exclude paths: %w", err)
+	}
+	if err := parsePathMappings(pathMappingsBytes, &r.PathMappings); err != nil {
+		return nil, fmt.Errorf("parse path mappings: %w", err)
+	}
+	// Build progress if there's any progress data
+	if filesRestored > 0 || bytesRestored > 0 || totalFiles != nil || totalBytes != nil {
+		r.Progress = &models.RestoreProgress{
+			FilesRestored: filesRestored,
+			BytesRestored: bytesRestored,
+			TotalFiles:    totalFiles,
+			TotalBytes:    totalBytes,
+		}
+		if currentFile != nil {
+			r.Progress.CurrentFile = *currentFile
+		}
 	}
 	return &r, nil
 }
@@ -2105,12 +2183,17 @@ func (db *DB) CreateRestore(ctx context.Context, restore *models.Restore) error 
 		return fmt.Errorf("marshal exclude paths: %w", err)
 	}
 
+	pathMappingsBytes, err := toPathMappingsJSONBytes(restore.PathMappings)
+	if err != nil {
+		return fmt.Errorf("marshal path mappings: %w", err)
+	}
+
 	_, err = db.Pool.Exec(ctx, `
-		INSERT INTO restores (id, agent_id, repository_id, snapshot_id, target_path, include_paths,
-		                      exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-	`, restore.ID, restore.AgentID, restore.RepositoryID, restore.SnapshotID,
-		restore.TargetPath, includePathsBytes, excludePathsBytes,
+		INSERT INTO restores (id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
+		                      exclude_paths, path_mappings, status, started_at, completed_at, error_message, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+	`, restore.ID, restore.AgentID, restore.SourceAgentID, restore.RepositoryID, restore.SnapshotID,
+		restore.TargetPath, includePathsBytes, excludePathsBytes, pathMappingsBytes,
 		string(restore.Status), restore.StartedAt, restore.CompletedAt,
 		restore.ErrorMessage, restore.CreatedAt, restore.UpdatedAt)
 	if err != nil {
@@ -2122,12 +2205,29 @@ func (db *DB) CreateRestore(ctx context.Context, restore *models.Restore) error 
 // UpdateRestore updates an existing restore record.
 func (db *DB) UpdateRestore(ctx context.Context, restore *models.Restore) error {
 	restore.UpdatedAt = time.Now()
+
+	var filesRestored, bytesRestored int64
+	var totalFiles, totalBytes *int64
+	var currentFile *string
+	if restore.Progress != nil {
+		filesRestored = restore.Progress.FilesRestored
+		bytesRestored = restore.Progress.BytesRestored
+		totalFiles = restore.Progress.TotalFiles
+		totalBytes = restore.Progress.TotalBytes
+		if restore.Progress.CurrentFile != "" {
+			currentFile = &restore.Progress.CurrentFile
+		}
+	}
+
 	_, err := db.Pool.Exec(ctx, `
 		UPDATE restores
-		SET status = $2, started_at = $3, completed_at = $4, error_message = $5, updated_at = $6
+		SET status = $2, started_at = $3, completed_at = $4, error_message = $5,
+		    files_restored = $6, bytes_restored = $7, total_files = $8, total_bytes = $9,
+		    current_file = $10, updated_at = $11
 		WHERE id = $1
 	`, restore.ID, string(restore.Status), restore.StartedAt, restore.CompletedAt,
-		restore.ErrorMessage, restore.UpdatedAt)
+		restore.ErrorMessage, filesRestored, bytesRestored, totalFiles, totalBytes,
+		currentFile, restore.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update restore: %w", err)
 	}
@@ -2587,10 +2687,14 @@ func scanRestores(rows interface {
 	for r.Next() {
 		var restore models.Restore
 		var statusStr string
-		var includePathsBytes, excludePathsBytes []byte
+		var includePathsBytes, excludePathsBytes, pathMappingsBytes []byte
+		var filesRestored, bytesRestored int64
+		var totalFiles, totalBytes *int64
+		var currentFile *string
 		if err := r.Scan(
-			&restore.ID, &restore.AgentID, &restore.RepositoryID, &restore.SnapshotID,
-			&restore.TargetPath, &includePathsBytes, &excludePathsBytes, &statusStr,
+			&restore.ID, &restore.AgentID, &restore.SourceAgentID, &restore.RepositoryID, &restore.SnapshotID,
+			&restore.TargetPath, &includePathsBytes, &excludePathsBytes, &pathMappingsBytes, &statusStr,
+			&filesRestored, &bytesRestored, &totalFiles, &totalBytes, &currentFile,
 			&restore.StartedAt, &restore.CompletedAt, &restore.ErrorMessage,
 			&restore.CreatedAt, &restore.UpdatedAt,
 		); err != nil {
@@ -2602,6 +2706,21 @@ func scanRestores(rows interface {
 		}
 		if err := parseStringSlice(excludePathsBytes, &restore.ExcludePaths); err != nil {
 			return nil, fmt.Errorf("parse exclude paths: %w", err)
+		}
+		if err := parsePathMappings(pathMappingsBytes, &restore.PathMappings); err != nil {
+			return nil, fmt.Errorf("parse path mappings: %w", err)
+		}
+		// Build progress if there's any progress data
+		if filesRestored > 0 || bytesRestored > 0 || totalFiles != nil || totalBytes != nil {
+			restore.Progress = &models.RestoreProgress{
+				FilesRestored: filesRestored,
+				BytesRestored: bytesRestored,
+				TotalFiles:    totalFiles,
+				TotalBytes:    totalBytes,
+			}
+			if currentFile != nil {
+				restore.Progress.CurrentFile = *currentFile
+			}
 		}
 		restores = append(restores, &restore)
 	}
@@ -2621,6 +2740,22 @@ func toJSONBytes(slice []string) ([]byte, error) {
 
 // parseStringSlice parses JSON bytes into a string slice.
 func parseStringSlice(data []byte, dest *[]string) error {
+	if len(data) == 0 {
+		return nil
+	}
+	return json.Unmarshal(data, dest)
+}
+
+// toPathMappingsJSONBytes converts path mappings to JSON bytes for database storage.
+func toPathMappingsJSONBytes(mappings []models.PathMapping) ([]byte, error) {
+	if len(mappings) == 0 {
+		return nil, nil
+	}
+	return json.Marshal(mappings)
+}
+
+// parsePathMappings parses JSON bytes into path mappings.
+func parsePathMappings(data []byte, dest *[]models.PathMapping) error {
 	if len(data) == 0 {
 		return nil
 	}
@@ -3680,12 +3815,14 @@ func (db *DB) GetMaintenanceWindowByID(ctx context.Context, id uuid.UUID) (*mode
 	var m models.MaintenanceWindow
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
-		       notification_sent, created_by, created_at, updated_at
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
 		FROM maintenance_windows
 		WHERE id = $1
 	`, id).Scan(
 		&m.ID, &m.OrgID, &m.Title, &m.Message, &m.StartsAt, &m.EndsAt,
-		&m.NotifyBeforeMinutes, &m.NotificationSent, &m.CreatedBy,
+		&m.NotifyBeforeMinutes, &m.NotificationSent, &m.ReadOnly, &m.CountdownStartMinutes,
+		&m.EmergencyOverride, &m.OverriddenBy, &m.OverriddenAt, &m.CreatedBy,
 		&m.CreatedAt, &m.UpdatedAt,
 	)
 	if err != nil {
@@ -3698,7 +3835,8 @@ func (db *DB) GetMaintenanceWindowByID(ctx context.Context, id uuid.UUID) (*mode
 func (db *DB) ListMaintenanceWindowsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.MaintenanceWindow, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
-		       notification_sent, created_by, created_at, updated_at
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
 		FROM maintenance_windows
 		WHERE org_id = $1
 		ORDER BY starts_at DESC
@@ -3715,7 +3853,8 @@ func (db *DB) ListMaintenanceWindowsByOrg(ctx context.Context, orgID uuid.UUID) 
 func (db *DB) ListActiveMaintenanceWindows(ctx context.Context, orgID uuid.UUID, now time.Time) ([]*models.MaintenanceWindow, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
-		       notification_sent, created_by, created_at, updated_at
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
 		FROM maintenance_windows
 		WHERE org_id = $1
 		  AND starts_at <= $2
@@ -3735,7 +3874,8 @@ func (db *DB) ListUpcomingMaintenanceWindows(ctx context.Context, orgID uuid.UUI
 	notifyTime := now.Add(time.Duration(withinMinutes) * time.Minute)
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
-		       notification_sent, created_by, created_at, updated_at
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
 		FROM maintenance_windows
 		WHERE org_id = $1
 		  AND starts_at > $2
@@ -3754,7 +3894,8 @@ func (db *DB) ListUpcomingMaintenanceWindows(ctx context.Context, orgID uuid.UUI
 func (db *DB) ListPendingMaintenanceNotifications(ctx context.Context) ([]*models.MaintenanceWindow, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
-		       notification_sent, created_by, created_at, updated_at
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
 		FROM maintenance_windows
 		WHERE notification_sent = false
 		  AND starts_at > NOW()
@@ -3773,10 +3914,12 @@ func (db *DB) ListPendingMaintenanceNotifications(ctx context.Context) ([]*model
 func (db *DB) CreateMaintenanceWindow(ctx context.Context, m *models.MaintenanceWindow) error {
 	_, err := db.Pool.Exec(ctx, `
 		INSERT INTO maintenance_windows (id, org_id, title, message, starts_at, ends_at,
-		            notify_before_minutes, notification_sent, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		            notify_before_minutes, notification_sent, read_only, countdown_start_minutes,
+		            emergency_override, overridden_by, overridden_at, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	`, m.ID, m.OrgID, m.Title, m.Message, m.StartsAt, m.EndsAt,
-		m.NotifyBeforeMinutes, m.NotificationSent, m.CreatedBy, m.CreatedAt, m.UpdatedAt)
+		m.NotifyBeforeMinutes, m.NotificationSent, m.ReadOnly, m.CountdownStartMinutes,
+		m.EmergencyOverride, m.OverriddenBy, m.OverriddenAt, m.CreatedBy, m.CreatedAt, m.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create maintenance window: %w", err)
 	}
@@ -3877,10 +4020,13 @@ func (db *DB) UpdateMaintenanceWindow(ctx context.Context, m *models.Maintenance
 	_, err := db.Pool.Exec(ctx, `
 		UPDATE maintenance_windows
 		SET title = $2, message = $3, starts_at = $4, ends_at = $5,
-		    notify_before_minutes = $6, notification_sent = $7, updated_at = $8
+		    notify_before_minutes = $6, notification_sent = $7, read_only = $8,
+		    countdown_start_minutes = $9, emergency_override = $10,
+		    overridden_by = $11, overridden_at = $12, updated_at = $13
 		WHERE id = $1
 	`, m.ID, m.Title, m.Message, m.StartsAt, m.EndsAt,
-		m.NotifyBeforeMinutes, m.NotificationSent, m.UpdatedAt)
+		m.NotifyBeforeMinutes, m.NotificationSent, m.ReadOnly, m.CountdownStartMinutes,
+		m.EmergencyOverride, m.OverriddenBy, m.OverriddenAt, m.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update maintenance window: %w", err)
 	}
@@ -4015,6 +4161,57 @@ func (db *DB) MarkMaintenanceNotificationSent(ctx context.Context, id uuid.UUID)
 	return nil
 }
 
+// SetMaintenanceEmergencyOverride sets or clears the emergency override for a maintenance window.
+func (db *DB) SetMaintenanceEmergencyOverride(ctx context.Context, id uuid.UUID, override bool, userID uuid.UUID) error {
+	now := time.Now()
+	var overriddenBy *uuid.UUID
+	var overriddenAt *time.Time
+	if override {
+		overriddenBy = &userID
+		overriddenAt = &now
+	}
+
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE maintenance_windows
+		SET emergency_override = $2, overridden_by = $3, overridden_at = $4, updated_at = $5
+		WHERE id = $1
+	`, id, override, overriddenBy, overriddenAt, now)
+	if err != nil {
+		return fmt.Errorf("set maintenance emergency override: %w", err)
+	}
+	return nil
+}
+
+// GetActiveReadOnlyWindow returns the currently active read-only maintenance window for an org.
+func (db *DB) GetActiveReadOnlyWindow(ctx context.Context, orgID uuid.UUID, now time.Time) (*models.MaintenanceWindow, error) {
+	var m models.MaintenanceWindow
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, title, message, starts_at, ends_at, notify_before_minutes,
+		       notification_sent, read_only, countdown_start_minutes, emergency_override,
+		       overridden_by, overridden_at, created_by, created_at, updated_at
+		FROM maintenance_windows
+		WHERE org_id = $1
+		  AND read_only = true
+		  AND emergency_override = false
+		  AND starts_at <= $2
+		  AND ends_at > $2
+		ORDER BY ends_at ASC
+		LIMIT 1
+	`, orgID, now).Scan(
+		&m.ID, &m.OrgID, &m.Title, &m.Message, &m.StartsAt, &m.EndsAt,
+		&m.NotifyBeforeMinutes, &m.NotificationSent, &m.ReadOnly, &m.CountdownStartMinutes,
+		&m.EmergencyOverride, &m.OverriddenBy, &m.OverriddenAt, &m.CreatedBy,
+		&m.CreatedAt, &m.UpdatedAt,
+	)
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get active read-only maintenance window: %w", err)
+	}
+	return &m, nil
+}
+
 // SeedBuiltinExcludePatterns inserts or updates the built-in exclude patterns from the library.
 func (db *DB) SeedBuiltinExcludePatterns(ctx context.Context, patterns []*models.ExcludePattern) error {
 	for _, ep := range patterns {
@@ -4054,7 +4251,8 @@ func scanMaintenanceWindows(rows interface {
 		var m models.MaintenanceWindow
 		err := r.Scan(
 			&m.ID, &m.OrgID, &m.Title, &m.Message, &m.StartsAt, &m.EndsAt,
-			&m.NotifyBeforeMinutes, &m.NotificationSent, &m.CreatedBy,
+			&m.NotifyBeforeMinutes, &m.NotificationSent, &m.ReadOnly, &m.CountdownStartMinutes,
+			&m.EmergencyOverride, &m.OverriddenBy, &m.OverriddenAt, &m.CreatedBy,
 			&m.CreatedAt, &m.UpdatedAt,
 		)
 		if err != nil {
@@ -7000,6 +7198,148 @@ func scanImportedSnapshots(rows interface{ Next() bool; Scan(dest ...interface{}
 	return snapshots, nil
 }
 
+// CreateAgentLogs inserts multiple log entries for an agent.
+func (db *DB) CreateAgentLogs(ctx context.Context, logs []*models.AgentLog) error {
+	if len(logs) == 0 {
+		return nil
+	}
+
+	batch := &pgx.Batch{}
+	for _, log := range logs {
+		metadataBytes, err := log.MetadataJSON()
+		if err != nil {
+			return fmt.Errorf("marshal metadata: %w", err)
+		}
+		batch.Queue(`
+			INSERT INTO agent_logs (id, agent_id, org_id, level, message, component, metadata, timestamp, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		`, log.ID, log.AgentID, log.OrgID, string(log.Level), log.Message, log.Component, metadataBytes, log.Timestamp, log.CreatedAt)
+	}
+
+	results := db.Pool.SendBatch(ctx, batch)
+	defer results.Close()
+
+	for range logs {
+		if _, err := results.Exec(); err != nil {
+			return fmt.Errorf("create agent log: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// GetAgentLogs returns logs for an agent with optional filtering.
+func (db *DB) GetAgentLogs(ctx context.Context, agentID uuid.UUID, filter *models.AgentLogFilter) ([]*models.AgentLog, int, error) {
+	if filter == nil {
+		filter = &models.AgentLogFilter{}
+	}
+	if filter.Limit <= 0 {
+		filter.Limit = 100
+	}
+	if filter.Limit > 1000 {
+		filter.Limit = 1000
+	}
+
+	// Build the query with optional filters
+	var args []interface{}
+	args = append(args, agentID)
+	argIndex := 2
+
+	whereClause := "WHERE agent_id = $1"
+
+	if filter.Level != "" {
+		whereClause += fmt.Sprintf(" AND level = $%d", argIndex)
+		args = append(args, string(filter.Level))
+		argIndex++
+	}
+
+	if filter.Component != "" {
+		whereClause += fmt.Sprintf(" AND component = $%d", argIndex)
+		args = append(args, filter.Component)
+		argIndex++
+	}
+
+	if filter.Search != "" {
+		whereClause += fmt.Sprintf(" AND to_tsvector('english', message) @@ plainto_tsquery('english', $%d)", argIndex)
+		args = append(args, filter.Search)
+		argIndex++
+	}
+
+	if !filter.Since.IsZero() {
+		whereClause += fmt.Sprintf(" AND timestamp >= $%d", argIndex)
+		args = append(args, filter.Since)
+		argIndex++
+	}
+
+	if !filter.Until.IsZero() {
+		whereClause += fmt.Sprintf(" AND timestamp <= $%d", argIndex)
+		args = append(args, filter.Until)
+		argIndex++
+	}
+
+	// Count total matching logs
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM agent_logs %s", whereClause)
+	var totalCount int
+	if err := db.Pool.QueryRow(ctx, countQuery, args...).Scan(&totalCount); err != nil {
+		return nil, 0, fmt.Errorf("count agent logs: %w", err)
+	}
+
+	// Fetch logs with pagination
+	args = append(args, filter.Limit, filter.Offset)
+	query := fmt.Sprintf(`
+		SELECT id, agent_id, org_id, level, message, component, metadata, timestamp, created_at
+		FROM agent_logs
+		%s
+		ORDER BY timestamp DESC
+		LIMIT $%d OFFSET $%d
+	`, whereClause, argIndex, argIndex+1)
+
+	rows, err := db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get agent logs: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []*models.AgentLog
+	for rows.Next() {
+		var log models.AgentLog
+		var levelStr string
+		var metadataBytes []byte
+		err := rows.Scan(
+			&log.ID, &log.AgentID, &log.OrgID, &levelStr,
+			&log.Message, &log.Component, &metadataBytes,
+			&log.Timestamp, &log.CreatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("scan agent log: %w", err)
+		}
+		log.Level = models.LogLevel(levelStr)
+		if len(metadataBytes) > 0 {
+			if err := log.SetMetadata(metadataBytes); err != nil {
+				db.logger.Warn().Err(err).Str("log_id", log.ID.String()).Msg("failed to parse log metadata")
+			}
+		}
+		logs = append(logs, &log)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate agent logs: %w", err)
+	}
+
+	return logs, totalCount, nil
+}
+
+// DeleteAgentLogsBefore deletes agent logs older than the given timestamp.
+func (db *DB) DeleteAgentLogsBefore(ctx context.Context, before time.Time) (int64, error) {
+	result, err := db.Pool.Exec(ctx, `
+		DELETE FROM agent_logs WHERE timestamp < $1
+	`, before)
+	if err != nil {
+		return 0, fmt.Errorf("delete agent logs: %w", err)
+	}
+	return result.RowsAffected(), nil
+}
+
 // Backup Checkpoint methods
 
 // CreateCheckpoint creates a new backup checkpoint.
@@ -8517,4 +8857,323 @@ func scanSnapshotMounts(rows interface {
 	}
 
 	return mounts, nil
+}
+
+// Config Template methods
+
+// CreateConfigTemplate creates a new config template.
+func (db *DB) CreateConfigTemplate(ctx context.Context, template *models.ConfigTemplate) error {
+	tagsJSON, err := template.TagsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal tags: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO config_templates (
+			id, org_id, created_by_id, name, description, type, visibility,
+			tags, config, usage_count, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`,
+		template.ID, template.OrgID, template.CreatedByID, template.Name,
+		template.Description, template.Type, template.Visibility,
+		tagsJSON, template.Config, template.UsageCount, template.CreatedAt, template.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("create config template: %w", err)
+	}
+	return nil
+}
+
+// GetConfigTemplateByID returns a config template by ID.
+func (db *DB) GetConfigTemplateByID(ctx context.Context, id uuid.UUID) (*models.ConfigTemplate, error) {
+	var template models.ConfigTemplate
+	var tagsBytes []byte
+	var typeStr, visibilityStr string
+
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, created_by_id, name, description, type, visibility,
+		       tags, config, usage_count, created_at, updated_at
+		FROM config_templates
+		WHERE id = $1
+	`, id).Scan(
+		&template.ID, &template.OrgID, &template.CreatedByID, &template.Name,
+		&template.Description, &typeStr, &visibilityStr,
+		&tagsBytes, &template.Config, &template.UsageCount, &template.CreatedAt, &template.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get config template: %w", err)
+	}
+
+	template.Type = models.TemplateType(typeStr)
+	template.Visibility = models.TemplateVisibility(visibilityStr)
+
+	if err := template.SetTags(tagsBytes); err != nil {
+		return nil, fmt.Errorf("unmarshal tags: %w", err)
+	}
+
+	return &template, nil
+}
+
+// GetConfigTemplatesByOrgID returns all config templates for an organization.
+func (db *DB) GetConfigTemplatesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.ConfigTemplate, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, created_by_id, name, description, type, visibility,
+		       tags, config, usage_count, created_at, updated_at
+		FROM config_templates
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list config templates: %w", err)
+	}
+	defer rows.Close()
+
+	return scanConfigTemplates(rows)
+}
+
+// GetPublicConfigTemplates returns all public config templates.
+func (db *DB) GetPublicConfigTemplates(ctx context.Context) ([]*models.ConfigTemplate, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, created_by_id, name, description, type, visibility,
+		       tags, config, usage_count, created_at, updated_at
+		FROM config_templates
+		WHERE visibility = 'public'
+		ORDER BY usage_count DESC, created_at DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list public config templates: %w", err)
+	}
+	defer rows.Close()
+
+	return scanConfigTemplates(rows)
+}
+
+// GetConfigTemplatesByType returns config templates filtered by type.
+func (db *DB) GetConfigTemplatesByType(ctx context.Context, orgID uuid.UUID, templateType models.TemplateType) ([]*models.ConfigTemplate, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, created_by_id, name, description, type, visibility,
+		       tags, config, usage_count, created_at, updated_at
+		FROM config_templates
+		WHERE (org_id = $1 OR visibility = 'public') AND type = $2
+		ORDER BY usage_count DESC, created_at DESC
+	`, orgID, templateType)
+	if err != nil {
+		return nil, fmt.Errorf("list config templates by type: %w", err)
+	}
+	defer rows.Close()
+
+	return scanConfigTemplates(rows)
+}
+
+// UpdateConfigTemplate updates a config template.
+func (db *DB) UpdateConfigTemplate(ctx context.Context, template *models.ConfigTemplate) error {
+	tagsJSON, err := template.TagsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal tags: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE config_templates
+		SET name = $2, description = $3, visibility = $4, tags = $5, updated_at = $6
+		WHERE id = $1
+	`, template.ID, template.Name, template.Description, template.Visibility, tagsJSON, template.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update config template: %w", err)
+	}
+	return nil
+}
+
+// DeleteConfigTemplate deletes a config template.
+func (db *DB) DeleteConfigTemplate(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM config_templates WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete config template: %w", err)
+	}
+	return nil
+}
+
+// IncrementTemplateUsageCount increments the usage count for a template.
+func (db *DB) IncrementTemplateUsageCount(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE config_templates
+		SET usage_count = usage_count + 1, updated_at = NOW()
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("increment template usage count: %w", err)
+	}
+	return nil
+}
+
+// scanConfigTemplates scans rows into config templates.
+func scanConfigTemplates(rows pgx.Rows) ([]*models.ConfigTemplate, error) {
+	var templates []*models.ConfigTemplate
+	for rows.Next() {
+		var template models.ConfigTemplate
+		var tagsBytes []byte
+		var typeStr, visibilityStr string
+
+		err := rows.Scan(
+			&template.ID, &template.OrgID, &template.CreatedByID, &template.Name,
+			&template.Description, &typeStr, &visibilityStr,
+			&tagsBytes, &template.Config, &template.UsageCount, &template.CreatedAt, &template.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan config template: %w", err)
+		}
+
+		template.Type = models.TemplateType(typeStr)
+		template.Visibility = models.TemplateVisibility(visibilityStr)
+
+		if err := template.SetTags(tagsBytes); err != nil {
+			return nil, fmt.Errorf("unmarshal tags: %w", err)
+		}
+
+		templates = append(templates, &template)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate config templates: %w", err)
+	}
+
+	return templates, nil
+}
+
+// Announcement methods
+
+// GetAnnouncementByID returns an announcement by ID.
+func (db *DB) GetAnnouncementByID(ctx context.Context, id uuid.UUID) (*models.Announcement, error) {
+	var a models.Announcement
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, title, message, type, dismissible, starts_at, ends_at,
+		       active, created_by, created_at, updated_at
+		FROM announcements
+		WHERE id = $1
+	`, id).Scan(
+		&a.ID, &a.OrgID, &a.Title, &a.Message, &a.Type, &a.Dismissible,
+		&a.StartsAt, &a.EndsAt, &a.Active, &a.CreatedBy, &a.CreatedAt, &a.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get announcement: %w", err)
+	}
+	return &a, nil
+}
+
+// ListAnnouncementsByOrg returns all announcements for an organization.
+func (db *DB) ListAnnouncementsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.Announcement, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, title, message, type, dismissible, starts_at, ends_at,
+		       active, created_by, created_at, updated_at
+		FROM announcements
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list announcements: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAnnouncements(rows)
+}
+
+// ListActiveAnnouncements returns active announcements for an organization that the user hasn't dismissed.
+// It respects scheduled start/end times.
+func (db *DB) ListActiveAnnouncements(ctx context.Context, orgID uuid.UUID, userID uuid.UUID, now time.Time) ([]*models.Announcement, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT a.id, a.org_id, a.title, a.message, a.type, a.dismissible, a.starts_at, a.ends_at,
+		       a.active, a.created_by, a.created_at, a.updated_at
+		FROM announcements a
+		LEFT JOIN announcement_dismissals d ON a.id = d.announcement_id AND d.user_id = $3
+		WHERE a.org_id = $1
+		  AND a.active = true
+		  AND d.id IS NULL
+		  AND (a.starts_at IS NULL OR a.starts_at <= $2)
+		  AND (a.ends_at IS NULL OR a.ends_at > $2)
+		ORDER BY
+		  CASE a.type
+		    WHEN 'critical' THEN 1
+		    WHEN 'warning' THEN 2
+		    ELSE 3
+		  END,
+		  a.created_at DESC
+	`, orgID, now, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list active announcements: %w", err)
+	}
+	defer rows.Close()
+
+	return scanAnnouncements(rows)
+}
+
+// CreateAnnouncement creates a new announcement.
+func (db *DB) CreateAnnouncement(ctx context.Context, a *models.Announcement) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO announcements (id, org_id, title, message, type, dismissible, starts_at, ends_at,
+		            active, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, a.ID, a.OrgID, a.Title, a.Message, a.Type, a.Dismissible, a.StartsAt, a.EndsAt,
+		a.Active, a.CreatedBy, a.CreatedAt, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create announcement: %w", err)
+	}
+	return nil
+}
+
+// UpdateAnnouncement updates an existing announcement.
+func (db *DB) UpdateAnnouncement(ctx context.Context, a *models.Announcement) error {
+	a.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE announcements
+		SET title = $2, message = $3, type = $4, dismissible = $5, starts_at = $6, ends_at = $7,
+		    active = $8, updated_at = $9
+		WHERE id = $1
+	`, a.ID, a.Title, a.Message, a.Type, a.Dismissible, a.StartsAt, a.EndsAt, a.Active, a.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update announcement: %w", err)
+	}
+	return nil
+}
+
+// DeleteAnnouncement deletes an announcement and its dismissals.
+func (db *DB) DeleteAnnouncement(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM announcements WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete announcement: %w", err)
+	}
+	return nil
+}
+
+// CreateAnnouncementDismissal records a user's dismissal of an announcement.
+func (db *DB) CreateAnnouncementDismissal(ctx context.Context, d *models.AnnouncementDismissal) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO announcement_dismissals (id, org_id, announcement_id, user_id, dismissed_at)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (announcement_id, user_id) DO NOTHING
+	`, d.ID, d.OrgID, d.AnnouncementID, d.UserID, d.DismissedAt)
+	if err != nil {
+		return fmt.Errorf("create announcement dismissal: %w", err)
+	}
+	return nil
+}
+
+// scanAnnouncements scans rows into announcements.
+func scanAnnouncements(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.Announcement, error) {
+	var announcements []*models.Announcement
+	for rows.Next() {
+		var a models.Announcement
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.Title, &a.Message, &a.Type, &a.Dismissible,
+			&a.StartsAt, &a.EndsAt, &a.Active, &a.CreatedBy, &a.CreatedAt, &a.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan announcement: %w", err)
+		}
+		announcements = append(announcements, &a)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate announcements: %w", err)
+	}
+
+	return announcements, nil
 }

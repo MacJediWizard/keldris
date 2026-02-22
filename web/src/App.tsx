@@ -1,17 +1,22 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { AdminLogs } from './pages/AdminLogs';
 import { AgentDetails } from './pages/AgentDetails';
 import { AgentGroups } from './pages/AgentGroups';
 import { Agents } from './pages/Agents';
 import { Alerts } from './pages/Alerts';
+import { Announcements } from './pages/Announcements';
 import { AuditLogs } from './pages/AuditLogs';
 import { Backups } from './pages/Backups';
+import { Changelog } from './pages/Changelog';
 import { Classifications } from './pages/Classifications';
 import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
+import { FileDiff } from './pages/FileDiff';
 import { FileHistory } from './pages/FileHistory';
+import { FileSearch } from './pages/FileSearch';
 import { LegalHolds } from './pages/LegalHolds';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
@@ -29,6 +34,7 @@ import { Schedules } from './pages/Schedules';
 import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
 import { Tags } from './pages/Tags';
+import { Templates } from './pages/Templates';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -59,11 +65,14 @@ function App() {
 						<Route path="repositories" element={<Repositories />} />
 						<Route path="schedules" element={<Schedules />} />
 						<Route path="policies" element={<Policies />} />
+						<Route path="templates" element={<Templates />} />
 						<Route path="backups" element={<Backups />} />
 						<Route path="dr-runbooks" element={<DRRunbooks />} />
 						<Route path="restore" element={<Restore />} />
 						<Route path="file-history" element={<FileHistory />} />
+						<Route path="file-search" element={<FileSearch />} />
 						<Route path="snapshots/compare" element={<SnapshotCompare />} />
+						<Route path="snapshots/file-diff" element={<FileDiff />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
 						<Route path="reports" element={<Reports />} />
@@ -87,8 +96,14 @@ function App() {
 							element={<OrganizationSSOSettings />}
 						/>
 						<Route path="organization/maintenance" element={<Maintenance />} />
+						<Route
+							path="organization/announcements"
+							element={<Announcements />}
+						/>
 						<Route path="organization/new" element={<NewOrganization />} />
+						<Route path="admin/logs" element={<AdminLogs />} />
 						<Route path="onboarding" element={<Onboarding />} />
+						<Route path="changelog" element={<Changelog />} />
 					</Route>
 				</Routes>
 			</BrowserRouter>

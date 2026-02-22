@@ -55,6 +55,8 @@
     "schedules": "Schedules",
     "backups": "Backups",
     "restore": "Restore",
+    "fileSearch": "File Search",
+    "fileHistory": "File History",
     "alerts": "Alerts",
     "notifications": "Notifications",
     "auditLogs": "Audit Logs",
@@ -403,5 +405,30 @@
     "downloadFor": "Download for {{platform}}",
     "installCommands": "Installation Commands",
     "copyCommand": "Copy command"
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "navigation": "Navigation",
+    "actions": "Actions",
+    "general": "General",
+    "hint": "Press ? anywhere to show this help",
+    "customizeTitle": "Customize Shortcuts",
+    "customizeDescription": "Click on a shortcut to customize it",
+    "resetToDefault": "Reset to Default",
+    "resetAll": "Reset All",
+    "pressKey": "Press a key...",
+    "actions": {
+      "goToDashboard": "Go to Dashboard",
+      "goToAgents": "Go to Agents",
+      "goToBackups": "Go to Backups",
+      "goToSchedules": "Go to Schedules",
+      "goToRepositories": "Go to Repositories",
+      "goToAlerts": "Go to Alerts",
+      "goToRestore": "Go to Restore",
+      "focusSearch": "Focus search",
+      "showHelp": "Show keyboard shortcuts",
+      "newItem": "New item (context-aware)",
+      "closeModal": "Close modal"
+    }
   }
 }

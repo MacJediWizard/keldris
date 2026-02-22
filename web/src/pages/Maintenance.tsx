@@ -3,6 +3,7 @@ import { useMe } from '../hooks/useAuth';
 import {
 	useCreateMaintenanceWindow,
 	useDeleteMaintenanceWindow,
+	useEmergencyOverride,
 	useMaintenanceWindows,
 	useUpdateMaintenanceWindow,
 } from '../hooks/useMaintenance';
@@ -57,6 +58,7 @@ export function Maintenance() {
 	const updateMaintenance = useUpdateMaintenanceWindow();
 	const deleteMaintenance = useDeleteMaintenanceWindow();
 
+	const emergencyOverride = useEmergencyOverride();
 	const [showForm, setShowForm] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [formData, setFormData] = useState<CreateMaintenanceWindowRequest>({
@@ -65,6 +67,8 @@ export function Maintenance() {
 		starts_at: '',
 		ends_at: '',
 		notify_before_minutes: 60,
+		read_only: false,
+		countdown_start_minutes: 30,
 	});
 
 	const currentUserRole = (user?.current_org_role ?? 'member') as OrgRole;
@@ -119,6 +123,8 @@ export function Maintenance() {
 			starts_at: w.starts_at.slice(0, 16), // Format for datetime-local
 			ends_at: w.ends_at.slice(0, 16),
 			notify_before_minutes: w.notify_before_minutes,
+			read_only: w.read_only,
+			countdown_start_minutes: w.countdown_start_minutes,
 		});
 		setShowForm(false);
 	};
@@ -130,7 +136,13 @@ export function Maintenance() {
 			starts_at: '',
 			ends_at: '',
 			notify_before_minutes: 60,
+			read_only: false,
+			countdown_start_minutes: 30,
 		});
+	};
+
+	const handleEmergencyOverride = (id: string, currentOverride: boolean) => {
+		emergencyOverride.mutate({ id, override: !currentOverride });
 	};
 
 	const cancelEdit = () => {
@@ -314,32 +326,87 @@ export function Maintenance() {
 								</div>
 							</div>
 
-							<div>
-								<label
-									htmlFor="notify_before"
-									className="block text-sm font-medium text-gray-700"
-								>
-									Notify Before (minutes)
-								</label>
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<label
+										htmlFor="notify_before"
+										className="block text-sm font-medium text-gray-700"
+									>
+										Notify Before (minutes)
+									</label>
+									<input
+										type="number"
+										id="notify_before"
+										value={formData.notify_before_minutes}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												notify_before_minutes: Number.parseInt(
+													e.target.value,
+													10,
+												),
+											})
+										}
+										min={0}
+										max={1440}
+										className="mt-1 block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+									/>
+									<p className="mt-1 text-xs text-gray-500">
+										Send notification before maintenance
+									</p>
+								</div>
+
+								<div>
+									<label
+										htmlFor="countdown_start"
+										className="block text-sm font-medium text-gray-700"
+									>
+										Countdown Start (minutes)
+									</label>
+									<input
+										type="number"
+										id="countdown_start"
+										value={formData.countdown_start_minutes}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												countdown_start_minutes: Number.parseInt(
+													e.target.value,
+													10,
+												),
+											})
+										}
+										min={0}
+										max={1440}
+										className="mt-1 block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+									/>
+									<p className="mt-1 text-xs text-gray-500">
+										Show countdown timer before maintenance
+									</p>
+								</div>
+							</div>
+
+							<div className="flex items-center">
 								<input
-									type="number"
-									id="notify_before"
-									value={formData.notify_before_minutes}
+									type="checkbox"
+									id="read_only"
+									checked={formData.read_only}
 									onChange={(e) =>
 										setFormData({
 											...formData,
-											notify_before_minutes: Number.parseInt(
-												e.target.value,
-												10,
-											),
+											read_only: e.target.checked,
 										})
 									}
-									min={0}
-									max={1440}
-									className="mt-1 block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
 								/>
-								<p className="mt-1 text-xs text-gray-500">
-									Send notification this many minutes before maintenance starts
+								<label
+									htmlFor="read_only"
+									className="ml-2 block text-sm text-gray-900"
+								>
+									Enable read-only mode
+								</label>
+								<p className="ml-6 text-xs text-gray-500">
+									Block write operations during this maintenance window
 								</p>
 							</div>
 
@@ -404,15 +471,27 @@ export function Maintenance() {
 					<ul className="divide-y divide-gray-200">
 						{sortedWindows.map((w) => {
 							const status = getWindowStatus(w);
+							const isActiveReadOnly =
+								status === 'active' && w.read_only && !w.emergency_override;
 							return (
 								<li key={w.id} className="p-4 hover:bg-gray-50">
 									<div className="flex items-center justify-between">
 										<div className="flex-1 min-w-0">
-											<div className="flex items-center gap-2">
+											<div className="flex items-center gap-2 flex-wrap">
 												<h3 className="text-sm font-medium text-gray-900 truncate">
 													{w.title}
 												</h3>
 												<StatusBadge status={status} />
+												{w.read_only && (
+													<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+														Read-only
+													</span>
+												)}
+												{w.emergency_override && (
+													<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+														Override Active
+													</span>
+												)}
 											</div>
 											{w.message && (
 												<p className="mt-1 text-sm text-gray-500 truncate">
@@ -423,9 +502,43 @@ export function Maintenance() {
 												<span>{formatDateTime(w.starts_at)}</span>
 												<span className="mx-2">-</span>
 												<span>{formatDateTime(w.ends_at)}</span>
+												{w.countdown_start_minutes > 0 && (
+													<span className="ml-2 text-gray-400">
+														(Countdown: {w.countdown_start_minutes}m before)
+													</span>
+												)}
 											</div>
 										</div>
 										<div className="flex items-center gap-2 ml-4">
+											{isActiveReadOnly && (
+												<button
+													type="button"
+													onClick={() =>
+														handleEmergencyOverride(w.id, w.emergency_override)
+													}
+													disabled={emergencyOverride.isPending}
+													className="text-amber-600 hover:text-amber-900 text-sm font-medium disabled:opacity-50"
+												>
+													Emergency Override
+												</button>
+											)}
+											{status === 'active' &&
+												w.read_only &&
+												w.emergency_override && (
+													<button
+														type="button"
+														onClick={() =>
+															handleEmergencyOverride(
+																w.id,
+																w.emergency_override,
+															)
+														}
+														disabled={emergencyOverride.isPending}
+														className="text-green-600 hover:text-green-900 text-sm font-medium disabled:opacity-50"
+													>
+														Re-enable Read-only
+													</button>
+												)}
 											<button
 												type="button"
 												onClick={() => startEdit(w)}
