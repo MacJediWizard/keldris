@@ -11,6 +11,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/models"
+
 	"github.com/rs/zerolog"
 )
 
@@ -68,6 +69,8 @@ func NewSlackServiceWithProxy(cfg models.SlackChannelConfig, proxyConfig *config
 func ValidateSlackConfig(config *models.SlackChannelConfig) error {
 	if config.WebhookURL == "" {
 		return fmt.Errorf("slack webhook URL is required")
+		client: &http.Client{},
+		logger: logger.With().Str("component", "slack_sender").Logger(),
 	}
 }
 

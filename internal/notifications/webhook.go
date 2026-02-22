@@ -40,6 +40,11 @@ type WebhookSender struct {
 	logger     zerolog.Logger
 	maxRetries int
 	airGapMode bool
+// WebhookSender sends notifications via generic webhooks with HMAC signing and retry.
+type WebhookSender struct {
+	client     *http.Client
+	logger     zerolog.Logger
+	maxRetries int
 }
 
 // NewWebhookSender creates a new webhook sender.
@@ -118,6 +123,14 @@ func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPay
 		return ErrAirGapBlocked
 	}
 
+		client:     &http.Client{Timeout: 30 * time.Second},
+		logger:     logger.With().Str("component", "webhook_sender").Logger(),
+		maxRetries: 3,
+	}
+}
+
+// Send sends a webhook payload to the given URL with HMAC signature and retry.
+func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPayload, secret string) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshal webhook payload: %w", err)
@@ -134,6 +147,7 @@ func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPay
 			}
 			w.logger.Debug().
 				Int("attempt", attempt+1).
+				Str("url", url).
 				Msg("retrying webhook")
 		}
 
@@ -167,6 +181,7 @@ func (w *WebhookSender) doSend(ctx context.Context, url string, body []byte, sec
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		w.logger.Info().
+			Str("url", url).
 			Int("status", resp.StatusCode).
 			Msg("webhook notification sent")
 		return nil

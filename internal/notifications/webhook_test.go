@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"net/http"
+	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -61,6 +63,7 @@ func TestWebhookSender_Send(t *testing.T) {
 	defer server.Close()
 
 	sender := newTestWebhookSender()
+	sender := NewWebhookSender(zerolog.Nop())
 	payload := WebhookPayload{
 		EventType: "backup_success",
 		Timestamp: time.Now(),
@@ -91,6 +94,7 @@ func TestWebhookSender_SendNoSecret(t *testing.T) {
 	defer server.Close()
 
 	sender := newTestWebhookSender()
+	sender := NewWebhookSender(zerolog.Nop())
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")
@@ -113,6 +117,7 @@ func TestWebhookSender_Retry(t *testing.T) {
 	defer server.Close()
 
 	sender := newTestWebhookSender()
+	sender := NewWebhookSender(zerolog.Nop())
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")
@@ -134,6 +139,7 @@ func TestWebhookSender_RetryExhausted(t *testing.T) {
 	defer server.Close()
 
 	sender := newTestWebhookSender()
+	sender := NewWebhookSender(zerolog.Nop())
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")

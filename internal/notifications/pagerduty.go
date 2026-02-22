@@ -119,6 +119,7 @@ func NewPagerDutySender(logger zerolog.Logger) *PagerDutySender {
 				DialContext: ValidatingDialer(),
 			},
 		},
+		client:   &http.Client{},
 		logger:   logger.With().Str("component", "pagerduty_sender").Logger(),
 		eventURL: pagerDutyEventsURL,
 	}

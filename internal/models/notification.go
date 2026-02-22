@@ -175,6 +175,8 @@ type DiscordChannelConfig struct {
 	Username   string `json:"username,omitempty"`
 	AvatarURL  string `json:"avatar_url,omitempty"`
 }
+}
+
 // CreateNotificationChannelRequest represents a request to create a notification channel
 type CreateNotificationChannelRequest struct {
 	Name   string                  `json:"name" binding:"required"`
