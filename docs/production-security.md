@@ -396,6 +396,7 @@ Without Redis, each instance tracks rate limits independently, which means the e
 | Medium org (10-100 users) | 300 req/min | Increase for dashboard-heavy usage |
 | API-heavy / CI integration | 500-1000 req/min | Monitor 429 rates and adjust |
 | Behind CDN | Consider CDN-level limiting | Supplement with application limits |
+The server also sets `ReadHeaderTimeout: 10s` on the HTTP server to protect against slow-header (Slowloris) attacks.
 
 ### Proxy-Level Rate Limiting
 
@@ -475,6 +476,9 @@ Configure log retention based on your compliance requirements:
 | HIPAA | 6 years |
 | GDPR | As needed (minimize) |
 | PCI DSS | 1 year (3 months immediately available) |
+Keldris requires **Go 1.25.7 or later** for both building and running.
+
+### Why Go 1.25.7+
 
 Set retention at the SIEM/log aggregator level. Keldris stores audit logs in PostgreSQL; use scheduled cleanup or archival for database-level retention.
 
@@ -495,6 +499,9 @@ The `ENCRYPTION_KEY` is a 32-byte hex-encoded key used as the AES-256-GCM master
 ```bash
 # Generate a new encryption key
 openssl rand -hex 32
+```dockerfile
+FROM golang:1.25.7-alpine AS go-builder
+FROM alpine:3.21
 ```
 
 ### Backing Up the Master Key
@@ -514,6 +521,8 @@ For organizations with compliance requirements, implement key escrow:
 echo "<ENCRYPTION_KEY>" | ssss-split -t 3 -n 5
 # Requires 3 of 5 shares to reconstruct the key
 # Distribute shares to different custodians
+go version
+# Should output: go version go1.25.7 ...
 ```
 
 Store shares with separate custodians who cannot independently access backup data. Document the recovery procedure and test it periodically.
