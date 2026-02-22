@@ -288,6 +288,7 @@ func TestAuthWorkflow(t *testing.T) {
 	// Create session store
 	secret := []byte("test-secret-that-is-at-least-32-bytes-long!")
 	sessionCfg := auth.DefaultSessionConfig(secret, false, 0, 0)
+	sessionCfg := auth.DefaultSessionConfig(secret, false)
 	sessions, err := auth.NewSessionStore(sessionCfg, logger)
 	require.NoError(t, err)
 
@@ -717,6 +718,7 @@ func TestMultiOrgIsolation(t *testing.T) {
 		// Create session store
 		secret := []byte("test-secret-that-is-at-least-32-bytes-long!")
 		sessionCfg := auth.DefaultSessionConfig(secret, false, 0, 0)
+		sessionCfg := auth.DefaultSessionConfig(secret, false)
 		sessions, err := auth.NewSessionStore(sessionCfg, logger)
 		require.NoError(t, err)
 
