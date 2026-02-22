@@ -25,6 +25,7 @@ import type {
 	ClassificationLevel,
 	Tag,
 } from '../lib/types';
+import type { Backup, BackupStatus, Tag } from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
@@ -692,6 +693,10 @@ export function Backups() {
 		return (
 			matchesSearch && matchesAgent && matchesStatus && matchesClassification
 		);
+		// Note: Tag filtering would require loading backup tags for each backup,
+		// which is expensive. For a more complete implementation, you'd want to
+		// fetch this data on the server side with proper filtering.
+		return matchesSearch && matchesAgent && matchesStatus;
 	});
 
 	const backupIds = filteredBackups?.map((b) => b.id) ?? [];
@@ -831,6 +836,65 @@ export function Backups() {
 					/>
 				</BulkSelectToolbar>
 			)}
+			<div className="bg-white rounded-lg border border-gray-200">
+				<div className="p-6 border-b border-gray-200">
+					<div className="flex items-center gap-4 mb-4">
+						<input
+							type="text"
+							placeholder="Search by snapshot ID..."
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						/>
+						<select
+							value={agentFilter}
+							onChange={(e) => setAgentFilter(e.target.value)}
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						>
+							<option value="all">All Agents</option>
+							{agents?.map((agent) => (
+								<option key={agent.id} value={agent.id}>
+									{agent.hostname}
+								</option>
+							))}
+						</select>
+						<select
+							value={statusFilter}
+							onChange={(e) =>
+								setStatusFilter(e.target.value as BackupStatus | 'all')
+							}
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						>
+							<option value="all">All Status</option>
+							<option value="completed">Completed</option>
+							<option value="running">Running</option>
+							<option value="failed">Failed</option>
+							<option value="canceled">Canceled</option>
+						</select>
+					</div>
+					{allTags && allTags.length > 0 && (
+						<div className="flex items-center gap-2 flex-wrap">
+							<span className="text-sm text-gray-500">Filter by tags:</span>
+							{allTags.map((tag) => (
+								<TagChip
+									key={tag.id}
+									tag={tag}
+									selected={selectedTagFilters.has(tag.id)}
+									onClick={() => toggleTagFilter(tag.id)}
+								/>
+							))}
+							{selectedTagFilters.size > 0 && (
+								<button
+									type="button"
+									onClick={() => setSelectedTagFilters(new Set())}
+									className="text-sm text-gray-500 hover:text-gray-700"
+								>
+									Clear all
+								</button>
+							)}
+						</div>
+					)}
+				</div>
 
 			{viewMode === 'calendar' ? (
 				<BackupCalendar onSelectBackup={setSelectedBackup} />

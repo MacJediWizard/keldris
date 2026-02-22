@@ -180,6 +180,7 @@ const NotFound = lazy(() =>
 	import('./pages/NotFound').then((m) => ({ default: m.NotFound })),
 );
 const AirGapLicense = lazy(() => import('./pages/AirGapLicense'));
+import { Tags } from './pages/Tags';
 
 const queryClient = new QueryClient({
 	defaultOptions: {

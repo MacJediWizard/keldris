@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAirGapStatus } from '../hooks/useAirGap';
 import { useBranding } from '../contexts/BrandingContext';
+import { useEffect, useRef, useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
 import { useBranding } from '../hooks/useBranding';
@@ -37,6 +39,8 @@ import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { TrialBanner } from './features/TrialBanner';
 import { WhatsNewModal } from './features/WhatsNewModal';
 import { Breadcrumbs } from './ui/Breadcrumbs';
+import { useSearch } from '../hooks/useSearch';
+import type { SearchResult, SearchResultType } from '../lib/types';
 
 interface NavItem {
 	path: string;
@@ -356,6 +360,8 @@ const navItems: NavItem[] = [
 	{
 		path: '/classifications',
 		labelKey: 'nav.classifications',
+		path: '/tags',
+		label: 'Tags',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -389,6 +395,7 @@ const navItems: NavItem[] = [
 					strokeLinejoin="round"
 					strokeWidth={2}
 					d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+					d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
 				/>
 			</svg>
 		),
@@ -1064,6 +1071,8 @@ function Sidebar() {
 				<p className="text-xs text-gray-500">
 					{t('common.version', { version: '0.0.1' })}
 				</p>
+			<div className="p-4 border-t border-gray-800">
+				<p className="text-xs text-gray-500">v0.0.1</p>
 			</div>
 		</aside>
 	);
@@ -1115,6 +1124,7 @@ function OrgSwitcher() {
 				</svg>
 				<span className="max-w-32 truncate">
 					{currentOrg?.name ?? t('common.selectOrg')}
+					{currentOrg?.name ?? 'Select org'}
 				</span>
 				<svg
 					aria-hidden="true"
@@ -1136,6 +1146,9 @@ function OrgSwitcher() {
 				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
 					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
 						{t('org.organizations')}
+				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+						Organizations
 					</div>
 					{organizations.map((org) => (
 						<button
@@ -1184,6 +1197,7 @@ function OrgSwitcher() {
 								/>
 							</svg>
 							{t('org.createOrganization')}
+							Create organization
 						</Link>
 					</div>
 				</div>
@@ -1247,6 +1261,163 @@ function HelpMenu({ onShowShortcuts }: { onShowShortcuts: () => void }) {
 				<svg
 					aria-hidden="true"
 					className="w-5 h-5"
+function getSearchResultIcon(type: SearchResultType) {
+	switch (type) {
+		case 'agent':
+			return (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+					/>
+				</svg>
+			);
+		case 'backup':
+			return (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+					/>
+				</svg>
+			);
+		case 'schedule':
+			return (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+					/>
+				</svg>
+			);
+		case 'repository':
+			return (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+					/>
+				</svg>
+			);
+		default:
+			return (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+					/>
+				</svg>
+			);
+	}
+}
+
+function getSearchResultPath(result: SearchResult): string {
+	switch (result.type) {
+		case 'agent':
+			return '/agents';
+		case 'backup':
+			return '/backups';
+		case 'schedule':
+			return '/schedules';
+		case 'repository':
+			return '/repositories';
+		default:
+			return '/';
+	}
+}
+
+function GlobalSearch() {
+	const [query, setQuery] = useState('');
+	const [isOpen, setIsOpen] = useState(false);
+	const inputRef = useRef<HTMLInputElement>(null);
+	const dropdownRef = useRef<HTMLDivElement>(null);
+	const navigate = useNavigate();
+
+	const { data: searchData, isLoading } = useSearch(
+		query.length >= 2 ? { q: query, limit: 5 } : null,
+	);
+
+	useEffect(() => {
+		function handleClickOutside(event: MouseEvent) {
+			if (
+				dropdownRef.current &&
+				!dropdownRef.current.contains(event.target as Node)
+			) {
+				setIsOpen(false);
+			}
+		}
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => document.removeEventListener('mousedown', handleClickOutside);
+	}, []);
+
+	useEffect(() => {
+		function handleKeyDown(event: KeyboardEvent) {
+			if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+				event.preventDefault();
+				inputRef.current?.focus();
+				setIsOpen(true);
+			}
+			if (event.key === 'Escape') {
+				setIsOpen(false);
+				inputRef.current?.blur();
+			}
+		}
+		document.addEventListener('keydown', handleKeyDown);
+		return () => document.removeEventListener('keydown', handleKeyDown);
+	}, []);
+
+	const handleResultClick = (result: SearchResult) => {
+		setIsOpen(false);
+		setQuery('');
+		navigate(getSearchResultPath(result));
+	};
+
+	return (
+		<div className="relative" ref={dropdownRef}>
+			<div className="relative">
+				<svg
+					aria-hidden="true"
+					className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -1314,6 +1485,59 @@ function HelpMenu({ onShowShortcuts }: { onShowShortcuts: () => void }) {
 							</svg>
 						</a>
 					</div>
+						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+					/>
+				</svg>
+				<input
+					ref={inputRef}
+					type="text"
+					value={query}
+					onChange={(e) => {
+						setQuery(e.target.value);
+						setIsOpen(true);
+					}}
+					onFocus={() => setIsOpen(true)}
+					placeholder="Search... (Cmd+K)"
+					className="w-64 pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+				/>
+			</div>
+
+			{isOpen && query.length >= 2 && (
+				<div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+					{isLoading ? (
+						<div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+					) : searchData?.results && searchData.results.length > 0 ? (
+						<>
+							<div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">
+								{searchData.total} result{searchData.total !== 1 ? 's' : ''}
+							</div>
+							{searchData.results.map((result, index) => (
+								<button
+									key={`${result.type}-${result.id}-${index}`}
+									type="button"
+									onClick={() => handleResultClick(result)}
+									className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3"
+								>
+									<span className="text-gray-400">
+										{getSearchResultIcon(result.type)}
+									</span>
+									<div className="flex-1 min-w-0">
+										<p className="text-sm font-medium text-gray-900 truncate">
+											{result.name}
+										</p>
+										<p className="text-xs text-gray-500 truncate">
+											{result.type}
+											{result.status && ` - ${result.status}`}
+										</p>
+									</div>
+								</button>
+							))}
+						</>
+					) : (
+						<div className="px-4 py-3 text-sm text-gray-500">
+							No results found for "{query}"
+						</div>
+					)}
 				</div>
 			)}
 		</div>
@@ -1321,6 +1545,7 @@ function HelpMenu({ onShowShortcuts }: { onShowShortcuts: () => void }) {
 }
 
 function Header({ onShowShortcuts }: { onShowShortcuts: () => void }) {
+function Header() {
 	const [showDropdown, setShowDropdown] = useState(false);
 	const { data: user } = useMe();
 	const { data: alertCount } = useAlertCount();
@@ -1414,6 +1639,12 @@ function Header({ onShowShortcuts }: { onShowShortcuts: () => void }) {
 				<Link
 					to="/alerts"
 					aria-label={t('nav.alerts')}
+				<GlobalSearch />
+			</div>
+			<div className="flex items-center gap-4">
+				<Link
+					to="/alerts"
+					aria-label="Alerts"
 					className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
 				>
 					<svg

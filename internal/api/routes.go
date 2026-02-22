@@ -399,6 +399,12 @@ func NewRouter(
 	costHandler := handlers.NewCostEstimationHandler(database, logger)
 	costHandler.RegisterRoutes(apiV1)
 
+	tagsHandler := handlers.NewTagsHandler(database, logger)
+	tagsHandler.RegisterRoutes(apiV1)
+
+	searchHandler := handlers.NewSearchHandler(database, logger)
+	searchHandler.RegisterRoutes(apiV1)
+
 	// Register verification handler if trigger is available
 	if cfg.VerificationTrigger != nil {
 		verificationsHandler := handlers.NewVerificationsHandler(database, cfg.VerificationTrigger, logger)

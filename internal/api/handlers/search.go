@@ -25,6 +25,8 @@ type SearchHandler struct {
 	store    SearchStore
 	searcher *search.GlobalSearcher
 	logger   zerolog.Logger
+	store  SearchStore
+	logger zerolog.Logger
 }
 
 // NewSearchHandler creates a new SearchHandler.
@@ -49,6 +51,9 @@ func (h *SearchHandler) RegisterRoutes(r *gin.RouterGroup) {
 	r.POST("/search/recent", h.SaveRecentSearch)
 	r.DELETE("/search/recent/:id", h.DeleteRecentSearch)
 	r.DELETE("/search/recent", h.ClearRecentSearches)
+// RegisterRoutes registers search routes on the given router group.
+func (h *SearchHandler) RegisterRoutes(r *gin.RouterGroup) {
+	r.GET("/search", h.Search)
 }
 
 // Search performs a global search across resources.
@@ -56,6 +61,7 @@ func (h *SearchHandler) RegisterRoutes(r *gin.RouterGroup) {
 // Query params:
 //   - q: search query (required)
 //   - types: comma-separated list of types to search (agent, backup, snapshot, schedule, repository)
+//   - types: comma-separated list of types to search (agent, backup, schedule, repository)
 //   - status: filter by status
 //   - tag_ids: comma-separated list of tag IDs to filter by
 //   - date_from: filter by date range start (RFC3339)
