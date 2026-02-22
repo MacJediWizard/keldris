@@ -26,6 +26,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/health"
 	"github.com/MacJediWizard/keldris/internal/diagnostics"
 	"github.com/MacJediWizard/keldris/internal/httpclient"
+	"github.com/MacJediWizard/keldris/internal/diagnostics"
 	"github.com/MacJediWizard/keldris/internal/support"
 	"github.com/MacJediWizard/keldris/internal/updater"
 	"github.com/robfig/cron/v3"
