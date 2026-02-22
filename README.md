@@ -242,6 +242,7 @@ For setup guides, see:
 - [OIDC Setup Guide](docs/oidc-setup.md) - Configure your identity provider
 - [Agent Installation](docs/agent-installation.md) - Install and configure backup agents
 - [Production Security Guide](docs/production-security.md) - Hardening for production deployments
+You'll need Docker, Go 1.25.7+ (for security patches), PostgreSQL 15+, and an OIDC provider.
 
 ---
 
