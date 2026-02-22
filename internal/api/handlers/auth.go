@@ -82,6 +82,10 @@ func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
 //	@Success		307	"Redirect to OIDC provider"
 //	@Failure		500	{object}	map[string]string
 //	@Router			/auth/login [get]
+}
+
+// Login initiates the OIDC authentication flow.
+// GET /auth/login
 func (h *AuthHandler) Login(c *gin.Context) {
 	state, err := auth.GenerateState()
 	if err != nil {
@@ -112,6 +116,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 //	@Failure		400		{object}	map[string]string
 //	@Failure		500		{object}	map[string]string
 //	@Router			/auth/callback [get]
+// GET /auth/callback
 func (h *AuthHandler) Callback(c *gin.Context) {
 	// Check for errors from the OIDC provider
 	if errParam := c.Query("error"); errParam != "" {
@@ -304,6 +309,10 @@ func (h *AuthHandler) findOrCreateUser(ctx context.Context, claims *auth.IDToken
 		Str("email", user.Email).
 		Str("org_id", org.ID.String()).
 		Msg("created new user with org membership")
+	h.logger.Info().
+		Str("user_id", user.ID.String()).
+		Str("email", user.Email).
+		Msg("created new user")
 
 	return user, nil
 }
@@ -319,6 +328,7 @@ func (h *AuthHandler) findOrCreateUser(ctx context.Context, claims *auth.IDToken
 //	@Failure		500	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/auth/logout [post]
+// POST /auth/logout
 func (h *AuthHandler) Logout(c *gin.Context) {
 	sessionUser, err := h.sessions.GetUser(c.Request)
 	if err == nil {
@@ -381,6 +391,15 @@ type MeResponse struct {
 //	@Failure		401	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/auth/me [get]
+// MeResponse is the response for the /auth/me endpoint.
+type MeResponse struct {
+	ID    uuid.UUID `json:"id"`
+	Email string    `json:"email"`
+	Name  string    `json:"name"`
+}
+
+// Me returns the current authenticated user.
+// GET /auth/me
 func (h *AuthHandler) Me(c *gin.Context) {
 	sessionUser, err := h.sessions.GetUser(c.Request)
 	if err != nil {
@@ -548,5 +567,9 @@ func (h *AuthHandler) PasswordLogin(c *gin.Context) {
 		PasswordExpired:    passwordExpired,
 		MustChangePassword: passwordInfo.MustChangePassword,
 		ExpiresAt:          passwordInfo.PasswordExpiresAt,
+	c.JSON(http.StatusOK, MeResponse{
+		ID:    sessionUser.ID,
+		Email: sessionUser.Email,
+		Name:  sessionUser.Name,
 	})
 }

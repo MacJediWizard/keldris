@@ -207,6 +207,10 @@ func newTestOIDCProvider(t *testing.T, serverURL string) *OIDC {
 	return oidcProvider
 }
 
+	"strings"
+	"testing"
+)
+
 func TestDefaultOIDCConfig(t *testing.T) {
 	cfg := DefaultOIDCConfig(
 		"https://auth.example.com",
@@ -228,6 +232,7 @@ func TestDefaultOIDCConfig(t *testing.T) {
 		t.Errorf("expected redirect URL https://app.example.com/auth/callback, got %s", cfg.RedirectURL)
 	}
 
+	// Check default scopes
 	if len(cfg.Scopes) != 3 {
 		t.Errorf("expected 3 scopes, got %d", len(cfg.Scopes))
 	}
@@ -268,6 +273,7 @@ func TestGenerateState(t *testing.T) {
 	}
 
 	// State should be base64 URL-safe encoded
+	// State should be base64 encoded (no special characters that break URLs)
 	if strings.Contains(state1, "+") || strings.Contains(state1, "/") {
 		t.Error("state should use URL-safe base64 encoding")
 	}

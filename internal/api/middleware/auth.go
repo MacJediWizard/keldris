@@ -17,6 +17,13 @@ type UserStore interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
+	"net/http"
+
+	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
+)
+
 // ContextKey is the type for context keys used by this package.
 type ContextKey string
 
@@ -54,6 +61,9 @@ func AuthMiddleware(sessions *auth.SessionStore, logger zerolog.Logger) gin.Hand
 			c.Set(string(SessionIDContextKey), sessionUser.SessionRecordID)
 		}
 
+		// Store user in Gin context for handlers to access
+		c.Set(string(UserContextKey), sessionUser)
+
 		log.Debug().
 			Str("user_id", sessionUser.ID.String()).
 			Str("path", c.Request.URL.Path).
@@ -87,6 +97,19 @@ func UserVerifyMiddleware(store UserStore, sessions *auth.SessionStore, logger z
 			return
 		}
 
+// OptionalAuthMiddleware returns a Gin middleware that loads user if present but doesn't require it.
+func OptionalAuthMiddleware(sessions *auth.SessionStore, logger zerolog.Logger) gin.HandlerFunc {
+	log := logger.With().Str("component", "auth_middleware").Logger()
+
+	return func(c *gin.Context) {
+		sessionUser, err := sessions.GetUser(c.Request)
+		if err == nil {
+			c.Set(string(UserContextKey), sessionUser)
+			log.Debug().
+				Str("user_id", sessionUser.ID.String()).
+				Str("path", c.Request.URL.Path).
+				Msg("authenticated request (optional)")
+		}
 		c.Next()
 	}
 }

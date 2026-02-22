@@ -82,6 +82,23 @@ func DefaultSessionConfig(secret []byte, secure bool, maxAge, idleTimeout int) S
 		HTTPOnly:    true,
 		SameSite:    http.SameSiteLaxMode,
 		CookiePath:  "/",
+	Secret     []byte
+	MaxAge     int  // seconds
+	Secure     bool // require HTTPS
+	HTTPOnly   bool // prevent JavaScript access
+	SameSite   http.SameSite
+	CookiePath string
+}
+
+// DefaultSessionConfig returns a SessionConfig with secure defaults.
+func DefaultSessionConfig(secret []byte, secure bool) SessionConfig {
+	return SessionConfig{
+		Secret:     secret,
+		MaxAge:     86400, // 24 hours
+		Secure:     secure,
+		HTTPOnly:   true,
+		SameSite:   http.SameSiteLaxMode,
+		CookiePath: "/",
 	}
 }
 
@@ -90,6 +107,8 @@ type SessionStore struct {
 	store       *sessions.CookieStore
 	idleTimeout time.Duration
 	logger      zerolog.Logger
+	store  *sessions.CookieStore
+	logger zerolog.Logger
 }
 
 // NewSessionStore creates a new session store.
@@ -111,6 +130,8 @@ func NewSessionStore(cfg SessionConfig, logger zerolog.Logger) (*SessionStore, e
 		store:       store,
 		idleTimeout: time.Duration(cfg.IdleTimeout) * time.Second,
 		logger:      logger.With().Str("component", "session").Logger(),
+		store:  store,
+		logger: logger.With().Str("component", "session").Logger(),
 	}
 
 	s.logger.Info().
@@ -312,6 +333,9 @@ func (s *SessionStore) SetCurrentOrg(r *http.Request, w http.ResponseWriter, org
 	return s.Save(r, w, session)
 }
 
+	}, nil
+}
+
 // ClearUser removes user data from the session (logout).
 func (s *SessionStore) ClearUser(r *http.Request, w http.ResponseWriter) error {
 	session, err := s.Get(r)
@@ -453,4 +477,6 @@ func (s *SessionStore) GetOriginalUserID(r *http.Request) uuid.UUID {
 	}
 	id, _ := session.Values[OriginalUserIDKey].(uuid.UUID)
 	return id
+}
+	return ok
 }
