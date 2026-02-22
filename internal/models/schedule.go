@@ -147,6 +147,22 @@ type Schedule struct {
 	DockerOptions           *DockerBackupOptions   `json:"docker_options,omitempty"`       // Docker-specific backup options
 	PiholeConfig            *PiholeBackupConfig    `json:"pihole_config,omitempty"`        // Pi-hole specific backup configuration
 	Metadata                map[string]interface{} `json:"metadata,omitempty"`
+	ID               uuid.UUID            `json:"id"`
+	AgentID          uuid.UUID            `json:"agent_id"`
+	AgentGroupID     *uuid.UUID           `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
+	PolicyID         *uuid.UUID           `json:"policy_id,omitempty"`      // Policy this schedule was created from
+	Name             string               `json:"name"`
+	CronExpression   string               `json:"cron_expression"`
+	Paths            []string             `json:"paths"`
+	Excludes         []string             `json:"excludes,omitempty"`
+	RetentionPolicy  *RetentionPolicy     `json:"retention_policy,omitempty"`
+	BandwidthLimitKB *int                 `json:"bandwidth_limit_kb,omitempty"` // Upload limit in KB/s
+	BackupWindow     *BackupWindow        `json:"backup_window,omitempty"`      // Allowed backup time window
+	ExcludedHours    []int                `json:"excluded_hours,omitempty"`     // Hours (0-23) when backups should not run
+	Enabled          bool                 `json:"enabled"`
+	Repositories     []ScheduleRepository `json:"repositories,omitempty"`
+	CreatedAt        time.Time            `json:"created_at"`
+	UpdatedAt        time.Time            `json:"updated_at"`
 }
 
 // NewSchedule creates a new Schedule with the given details.

@@ -39,6 +39,13 @@ export function useUpdateAgentGroup() {
 	return useMutation({
 		mutationFn: ({ id, data }: { id: string; data: UpdateAgentGroupRequest }) =>
 			agentGroupsApi.update(id, data),
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: UpdateAgentGroupRequest;
+		}) => agentGroupsApi.update(id, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['agentGroups'] });
 		},

@@ -755,6 +755,7 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
 		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
+		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
 		ORDER BY name
@@ -791,6 +792,7 @@ func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedu
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
 		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
+		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`, id)
@@ -855,6 +857,8 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 		                       backup_window_start, backup_window_end, excluded_hours,
 		                       compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+		                       excludes, retention_policy, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`, schedule.ID, schedule.AgentID, schedule.AgentGroupID, schedule.PolicyID, schedule.Name,
 		schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
 		schedule.BandwidthLimitKB, windowStart, windowEnd, excludedHoursBytes,
@@ -1088,6 +1092,12 @@ func scanSchedule(rows interface {
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.BandwidthLimitKB,
 		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel, &s.MaxFileSizeMB,
 		&mountBehavior, &s.Enabled, &s.CreatedAt, &s.UpdatedAt,
+	var pathsBytes, excludesBytes, retentionBytes []byte
+	var agentGroupID *uuid.UUID
+	err := rows.Scan(
+		&s.ID, &s.AgentID, &agentGroupID, &s.PolicyID, &s.Name, &s.CronExpression,
+		&pathsBytes, &excludesBytes, &retentionBytes, &s.Enabled,
+		&s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan schedule: %w", err)
@@ -1278,6 +1288,7 @@ func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
 		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
+		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE policy_id = $1
 		ORDER BY name
@@ -2150,6 +2161,7 @@ func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
 		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression, s.paths, s.excludes,
 		       s.retention_policy, s.bandwidth_limit_kbps, s.backup_window_start, s.backup_window_end,
 		       s.excluded_hours, s.compression_level, s.max_file_size_mb, s.on_mount_unavailable, s.enabled, s.created_at, s.updated_at
+		       s.retention_policy, s.enabled, s.created_at, s.updated_at
 		FROM schedules s
 		WHERE s.enabled = true
 		ORDER BY s.name
@@ -2177,6 +2189,7 @@ func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
 		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
+		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE enabled = true
 		ORDER BY name
@@ -6017,6 +6030,7 @@ func (db *DB) GetEnabledSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) (
 		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression,
 		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps, s.backup_window_start, s.backup_window_end,
 		       s.excluded_hours, s.compression_level, s.max_file_size_mb, s.on_mount_unavailable, s.enabled,
+		       s.paths, s.excludes, s.retention_policy, s.enabled,
 		       s.created_at, s.updated_at
 		FROM schedules s
 		JOIN agents a ON s.agent_id = a.id
@@ -6298,6 +6312,7 @@ func (db *DB) GetSchedulesByAgentGroupID(ctx context.Context, agentGroupID uuid.
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
 		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
+		       retention_policy, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_group_id = $1
 		ORDER BY name

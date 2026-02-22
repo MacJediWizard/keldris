@@ -25,6 +25,9 @@ import {
 } from '../hooks/useAgentRegistration';
 import {
 	useAgents,
+import { useAgentGroups, useAgentsWithGroups } from '../hooks/useAgentGroups';
+import {
+	useCreateAgent,
 	useDeleteAgent,
 	useRevokeAgentApiKey,
 	useRotateAgentApiKey,
@@ -37,6 +40,13 @@ import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
 import { statusHelp } from '../lib/help-content';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
 import { getAgentStatusColor } from '../lib/utils';
+import type { AgentGroup, AgentStatus, AgentWithGroups } from '../lib/types';
+import {
+	formatDate,
+	getAgentStatusColor,
+	getHealthStatusColor,
+	getHealthStatusLabel,
+} from '../lib/utils';
 
 function LoadingRow() {
 	return (
@@ -49,6 +59,11 @@ function LoadingRow() {
 			</td>
 			<td className="px-6 py-4">
 				<div className="h-6 w-16 bg-gray-200 rounded-full" />
+			</td>
+			<td className="px-6 py-4">
+				<div className="flex gap-1">
+					<div className="h-5 w-16 bg-gray-200 rounded-full" />
+				</div>
 			</td>
 			<td className="px-6 py-4">
 				<div className="h-4 w-24 bg-gray-200 rounded" />
@@ -64,6 +79,31 @@ function LoadingRow() {
 }
 
 interface GenerateCodeModalProps {
+interface GroupBadgeProps {
+	group: AgentGroup;
+}
+
+function GroupBadge({ group }: GroupBadgeProps) {
+	const bgColor = group.color ? `${group.color}20` : 'rgba(99, 102, 241, 0.1)';
+	const textColor = group.color || '#6366f1';
+
+	return (
+		<span
+			className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+			style={{ backgroundColor: bgColor, color: textColor }}
+		>
+			{group.color && (
+				<span
+					className="w-1.5 h-1.5 rounded-full"
+					style={{ backgroundColor: textColor }}
+				/>
+			)}
+			{group.name}
+		</span>
+	);
+}
+
+interface RegisterModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	onSuccess: (code: string, expiresAt: string) => void;
@@ -487,7 +527,7 @@ function PendingRegistrationRow({
 }
 
 interface AgentRowProps {
-	agent: Agent;
+	agent: AgentWithGroups;
 	onDelete: (id: string) => void;
 	onRotateKey: (id: string) => void;
 	onRevokeKey: (id: string) => void;
@@ -572,6 +612,17 @@ function AgentRow({
 						position="right"
 					/>
 				</span>
+			</td>
+			<td className="px-6 py-4">
+				{agent.groups && agent.groups.length > 0 ? (
+					<div className="flex flex-wrap gap-1">
+						{agent.groups.map((group) => (
+							<GroupBadge key={group.id} group={group} />
+						))}
+					</div>
+				) : (
+					<span className="text-sm text-gray-400">-</span>
+				)}
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500">
 				{formatRelativeTime(agent.last_seen)}
@@ -665,6 +716,8 @@ export function Agents() {
 		code: string;
 		expiresAt: string;
 	} | null>(null);
+	const [groupFilter, setGroupFilter] = useState<string>('all');
+	const [showRegisterModal, setShowRegisterModal] = useState(false);
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [showAddToGroupModal, setShowAddToGroupModal] = useState(false);
@@ -684,6 +737,8 @@ export function Agents() {
 	const { data: schedules } = useSchedules();
 	const favoriteIds = useFavoriteIds('agent');
 	const { limits, usage } = usePlanLimits();
+	const { data: agents, isLoading, isError } = useAgentsWithGroups();
+	const { data: groups } = useAgentGroups();
 	const deleteAgent = useDeleteAgent();
 	const rotateApiKey = useRotateAgentApiKey();
 	const revokeApiKey = useRevokeAgentApiKey();
@@ -702,6 +757,12 @@ export function Agents() {
 			statusFilter === 'all' || agent.status === statusFilter;
 		const matchesFavorites = !showFavoritesOnly || favoriteIds.has(agent.id);
 		return matchesSearch && matchesStatus && matchesFavorites;
+		const matchesGroup =
+			groupFilter === 'all' ||
+			(groupFilter === 'none'
+				? !agent.groups || agent.groups.length === 0
+				: agent.groups?.some((g) => g.id === groupFilter));
+		return matchesSearch && matchesStatus && matchesGroup;
 	});
 
 	const agentIds = filteredAgents?.map((a) => a.id) ?? [];
@@ -1103,6 +1164,19 @@ export function Agents() {
 							</svg>
 							Favorites
 						</button>
+						<select
+							value={groupFilter}
+							onChange={(e) => setGroupFilter(e.target.value)}
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						>
+							<option value="all">All Groups</option>
+							<option value="none">No Group</option>
+							{groups?.map((group) => (
+								<option key={group.id} value={group.id}>
+									{group.name}
+								</option>
+							))}
+						</select>
 					</div>
 				</div>
 
@@ -1124,6 +1198,10 @@ export function Agents() {
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									{t('agents.lastSeen')}
+									Groups
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Last Seen
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									{t('agents.registered')}
@@ -1160,6 +1238,10 @@ export function Agents() {
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									{t('agents.lastSeen')}
+									Groups
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Last Seen
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									{t('agents.registered')}

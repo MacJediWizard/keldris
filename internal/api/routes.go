@@ -226,6 +226,9 @@ func NewRouter(
 	agentImportHandler := handlers.NewAgentImportHandler(database, cfg.ServerURL, logger)
 	agentImportHandler.RegisterRoutes(apiV1)
 
+	agentGroupsHandler := handlers.NewAgentGroupsHandler(database, logger)
+	agentGroupsHandler.RegisterRoutes(apiV1)
+
 	reposHandler := handlers.NewRepositoriesHandler(database, keyManager, logger)
 	reposHandler.RegisterRoutes(apiV1)
 

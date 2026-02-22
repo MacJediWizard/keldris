@@ -521,6 +521,10 @@ function GroupRow({
 								onKeyDown={(e) => e.key === 'Escape' && setShowMenu(false)}
 								tabIndex={0}
 								aria-label="Close menu"
+							<div
+								className="fixed inset-0 z-10"
+								onClick={() => setShowMenu(false)}
+								onKeyDown={(e) => e.key === 'Escape' && setShowMenu(false)}
 							/>
 							<div className="absolute right-0 z-20 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
 								<button

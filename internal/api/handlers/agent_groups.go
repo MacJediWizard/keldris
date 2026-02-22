@@ -51,6 +51,7 @@ func (h *AgentGroupsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		groups.GET("/:id/agents", h.ListMembers)
 		groups.POST("/:id/agents", h.AddAgent)
 		groups.DELETE("/:id/agents/:agent_id", h.RemoveAgent)
+		groups.DELETE("/:id/agents/:agentId", h.RemoveAgent)
 	}
 
 	// Also add endpoint for listing agents with their groups
@@ -406,6 +407,7 @@ func (h *AgentGroupsHandler) RemoveAgent(c *gin.Context) {
 	}
 
 	agentIDParam := c.Param("agent_id")
+	agentIDParam := c.Param("agentId")
 	agentID, err := uuid.Parse(agentIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
