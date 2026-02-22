@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { SaveFilterButton } from '../components/features/SaveFilterButton';
+import { SavedFiltersDropdown } from '../components/features/SavedFiltersDropdown';
 import {
 	useAcknowledgeAlert,
 	useAlerts,
 	useResolveAlert,
 } from '../hooks/useAlerts';
+import { useSavedFilters } from '../hooks/useSavedFilters';
 import type { Alert, AlertStatus } from '../lib/types';
 import {
 	formatDate,
@@ -183,6 +186,29 @@ export function Alerts() {
 	const { data: alerts, isLoading, isError } = useAlerts();
 	const acknowledgeAlert = useAcknowledgeAlert();
 	const resolveAlert = useResolveAlert();
+	const { data: savedFilters } = useSavedFilters('alerts');
+
+	// Apply default filter on initial load
+	useEffect(() => {
+		const defaultFilter = savedFilters?.find((f) => f.is_default);
+		if (defaultFilter) {
+			handleApplyFilter(defaultFilter.filters);
+		}
+	}, [savedFilters]);
+
+	const handleApplyFilter = (filters: Record<string, unknown>) => {
+		if (filters.status !== undefined) {
+			setStatusFilter(filters.status as AlertStatus | 'all');
+		}
+		if (filters.severity !== undefined) {
+			setSeverityFilter(filters.severity as string);
+		}
+	};
+
+	const currentFilters: Record<string, unknown> = {
+		status: statusFilter,
+		severity: severityFilter,
+	};
 
 	const filteredAlerts = alerts?.filter((alert) => {
 		const matchesStatus =
@@ -348,29 +374,39 @@ export function Alerts() {
 
 			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				<div className="p-4 border-b border-gray-200 dark:border-gray-700">
-					<div className="flex items-center gap-4">
-						<select
-							value={statusFilter}
-							onChange={(e) =>
-								setStatusFilter(e.target.value as AlertStatus | 'all')
-							}
-							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Status</option>
-							<option value="active">Active</option>
-							<option value="acknowledged">Acknowledged</option>
-							<option value="resolved">Resolved</option>
-						</select>
-						<select
-							value={severityFilter}
-							onChange={(e) => setSeverityFilter(e.target.value)}
-							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Severity</option>
-							<option value="critical">Critical</option>
-							<option value="warning">Warning</option>
-							<option value="info">Info</option>
-						</select>
+					<div className="flex items-center justify-between gap-4">
+						<div className="flex items-center gap-4">
+							<select
+								value={statusFilter}
+								onChange={(e) =>
+									setStatusFilter(e.target.value as AlertStatus | 'all')
+								}
+								className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="all">All Status</option>
+								<option value="active">Active</option>
+								<option value="acknowledged">Acknowledged</option>
+								<option value="resolved">Resolved</option>
+							</select>
+							<select
+								value={severityFilter}
+								onChange={(e) => setSeverityFilter(e.target.value)}
+								className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="all">All Severity</option>
+								<option value="critical">Critical</option>
+								<option value="warning">Warning</option>
+								<option value="info">Info</option>
+							</select>
+						</div>
+						<div className="flex items-center gap-2">
+							<SavedFiltersDropdown
+								entityType="alerts"
+								onApplyFilter={handleApplyFilter}
+								currentFilters={currentFilters}
+							/>
+							<SaveFilterButton entityType="alerts" filters={currentFilters} />
+						</div>
 					</div>
 				</div>
 

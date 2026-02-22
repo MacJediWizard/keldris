@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -26,13 +27,14 @@ const (
 
 // Repository represents a backup storage destination.
 type Repository struct {
-	ID              uuid.UUID      `json:"id"`
-	OrgID           uuid.UUID      `json:"org_id"`
-	Name            string         `json:"name"`
-	Type            RepositoryType `json:"type"`
-	ConfigEncrypted []byte         `json:"-"` // Encrypted, never expose in JSON
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
+	ID              uuid.UUID              `json:"id"`
+	OrgID           uuid.UUID              `json:"org_id"`
+	Name            string                 `json:"name"`
+	Type            RepositoryType         `json:"type"`
+	ConfigEncrypted []byte                 `json:"-"` // Encrypted, never expose in JSON
+	Metadata        map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt       time.Time              `json:"created_at"`
+	UpdatedAt       time.Time              `json:"updated_at"`
 }
 
 // NewRepository creates a new Repository with the given details.
@@ -61,3 +63,29 @@ func ValidRepositoryTypes() []RepositoryType {
 	}
 }
 
+// IsValidType checks if the repository type is valid.
+func (r *Repository) IsValidType() bool {
+	for _, t := range ValidRepositoryTypes() {
+		if r.Type == t {
+			return true
+		}
+	}
+	return false
+}
+
+// SetMetadata sets the metadata from JSON bytes.
+func (r *Repository) SetMetadata(data []byte) error {
+	if len(data) == 0 {
+		r.Metadata = make(map[string]interface{})
+		return nil
+	}
+	return json.Unmarshal(data, &r.Metadata)
+}
+
+// MetadataJSON returns the metadata as JSON bytes for database storage.
+func (r *Repository) MetadataJSON() ([]byte, error) {
+	if r.Metadata == nil {
+		return []byte("{}"), nil
+	}
+	return json.Marshal(r.Metadata)
+}
