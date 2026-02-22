@@ -205,6 +205,16 @@ func updateStats(stats *DiffStats, entry *DiffEntry) {
 	}
 }
 
+// DiffCompact returns a summary diff without all individual file changes.
+// This is useful for large diffs where listing all changes would be impractical.
+func (r *Restic) DiffCompact(ctx context.Context, cfg ResticConfig, snapshotID1, snapshotID2 string) (*DiffStats, error) {
+	result, err := r.Diff(ctx, cfg, snapshotID1, snapshotID2)
+	if err != nil {
+		return nil, err
+	}
+	return &result.Stats, nil
+}
+
 // ParseDiffFromText parses restic diff output from text format (non-JSON).
 // This is a fallback for when JSON output is not available.
 func ParseDiffFromText(output string, snapshotID1, snapshotID2 string) (*DiffResult, error) {

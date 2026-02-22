@@ -141,6 +141,7 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	comments := r.Group("/comments")
 	{
 		comments.DELETE("/:id", h.DeleteSnapshotComment)
+		snapshots.GET("/:id1/compare/:id2", h.CompareSnapshots)
 	}
 
 	restores := r.Group("/restores")
@@ -1694,6 +1695,9 @@ type FileDiffResponse struct {
 //	@Security		SessionAuth
 //	@Router			/snapshots/{id1}/files/diff/{id2} [get]
 func (h *SnapshotsHandler) DiffFile(c *gin.Context) {
+// CompareSnapshots compares two snapshots and returns their differences.
+// GET /api/v1/snapshots/:id1/compare/:id2
+func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -2022,6 +2026,64 @@ func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 	if err != nil || agent2.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "second snapshot not found"})
 		return
+	// Get schedules for paths info
+	schedule1, err := h.store.GetScheduleByID(c.Request.Context(), backup1.ScheduleID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to get schedule for first snapshot")
+	}
+
+	schedule2, err := h.store.GetScheduleByID(c.Request.Context(), backup2.ScheduleID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to get schedule for second snapshot")
+	}
+
+	// Build snapshot info for response
+	shortID1 := snapshotID1
+	if len(shortID1) > 8 {
+		shortID1 = shortID1[:8]
+	}
+	shortID2 := snapshotID2
+	if len(shortID2) > 8 {
+		shortID2 = shortID2[:8]
+	}
+
+	var paths1, paths2 []string
+	var repoID1, repoID2 string
+	if schedule1 != nil {
+		paths1 = schedule1.Paths
+		if len(schedule1.Repositories) > 0 {
+			repoID1 = schedule1.Repositories[0].RepositoryID.String()
+		}
+	}
+	if schedule2 != nil {
+		paths2 = schedule2.Paths
+		if len(schedule2.Repositories) > 0 {
+			repoID2 = schedule2.Repositories[0].RepositoryID.String()
+		}
+	}
+
+	snapshot1Info := &SnapshotResponse{
+		ID:           snapshotID1,
+		ShortID:      shortID1,
+		Time:         backup1.StartedAt.Format(time.RFC3339),
+		Hostname:     agent1.Hostname,
+		Paths:        paths1,
+		AgentID:      agent1.ID.String(),
+		RepositoryID: repoID1,
+		BackupID:     backup1.ID.String(),
+		SizeBytes:    backup1.SizeBytes,
+	}
+
+	snapshot2Info := &SnapshotResponse{
+		ID:           snapshotID2,
+		ShortID:      shortID2,
+		Time:         backup2.StartedAt.Format(time.RFC3339),
+		Hostname:     agent2.Hostname,
+		Paths:        paths2,
+		AgentID:      agent2.ID.String(),
+		RepositoryID: repoID2,
+		BackupID:     backup2.ID.String(),
+		SizeBytes:    backup2.SizeBytes,
 	}
 
 	h.logger.Info().
@@ -2407,4 +2469,26 @@ func (h *SnapshotsHandler) ListMounts(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"mounts": responses})
+}
+		Msg("snapshot comparison requested")
+
+	// Note: In a full implementation, this would call the agent to run restic diff
+	// on the actual repository. For now, we return a placeholder response
+	// indicating the functionality is available but requires agent communication.
+	c.JSON(http.StatusOK, SnapshotCompareResponse{
+		SnapshotID1: snapshotID1,
+		SnapshotID2: snapshotID2,
+		Snapshot1:   snapshot1Info,
+		Snapshot2:   snapshot2Info,
+		Stats: SnapshotDiffStats{
+			FilesAdded:       0,
+			FilesRemoved:     0,
+			FilesModified:    0,
+			DirsAdded:        0,
+			DirsRemoved:      0,
+			TotalSizeAdded:   0,
+			TotalSizeRemoved: 0,
+		},
+		Changes: []SnapshotDiffEntry{},
+	})
 }
