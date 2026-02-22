@@ -127,6 +127,7 @@ func setupNotificationTestRouter(store NotificationStore, user *auth.SessionUser
 	})
 	km, _ := crypto.NewKeyManager(make([]byte, 32))
 	handler := NewNotificationsHandler(store, km, zerolog.Nop())
+	handler := NewNotificationsHandler(store, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

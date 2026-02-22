@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"testing"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
@@ -33,6 +34,9 @@ func (m *mockAuditLogStore) GetAuditLogsByOrgID(_ context.Context, orgID uuid.UU
 	if m.listErr != nil {
 		return nil, m.listErr
 	}
+}
+
+func (m *mockAuditLogStore) GetAuditLogsByOrgID(_ context.Context, orgID uuid.UUID, _ db.AuditLogFilter) ([]*models.AuditLog, error) {
 	var result []*models.AuditLog
 	for _, l := range m.logs {
 		if l.OrgID == orgID {

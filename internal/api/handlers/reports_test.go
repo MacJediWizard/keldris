@@ -30,6 +30,10 @@ type mockReportStore struct {
 	deleteErr        error
 	listSchedulesErr error
 	listHistoryErr   error
+	user         *models.User
+	createErr    error
+	updateErr    error
+	deleteErr    error
 }
 
 func (m *mockReportStore) GetUserByID(_ context.Context, id uuid.UUID) (*models.User, error) {

@@ -35,6 +35,9 @@ func (m *mockPolicyStore) GetPoliciesByOrgID(_ context.Context, orgID uuid.UUID)
 	if m.listErr != nil {
 		return nil, m.listErr
 	}
+}
+
+func (m *mockPolicyStore) GetPoliciesByOrgID(_ context.Context, orgID uuid.UUID) ([]*models.Policy, error) {
 	var result []*models.Policy
 	for _, p := range m.policies {
 		if p.OrgID == orgID {
