@@ -38,6 +38,9 @@ type NotificationsHandler struct {
 	keyManager *crypto.KeyManager
 	logger     zerolog.Logger
 	env        config.Environment
+	store   NotificationStore
+	service NotificationService
+	logger  zerolog.Logger
 }
 
 // NewNotificationsHandler creates a new NotificationsHandler.
@@ -62,6 +65,17 @@ func NewNotificationsHandlerWithEnv(store NotificationStore, keyManager *crypto.
 
 // RegisterRoutes registers notification routes available on all tiers.
 // These allow free-tier users to manage email notification channels and preferences.
+// SetNotificationService sets the notification service for testing channels.
+func (h *NotificationsHandler) SetNotificationService(service NotificationService) {
+	h.service = service
+}
+
+// NotificationService defines the interface for testing notification channels.
+type NotificationService interface {
+	TestChannel(channel *models.NotificationChannel) error
+}
+
+// RegisterRoutes registers notification routes on the given router group.
 func (h *NotificationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	notifications := r.Group("/notifications")
 	{
@@ -71,6 +85,10 @@ func (h *NotificationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		notifications.GET("/channels/:id", h.GetChannel)
 		notifications.PUT("/channels/:id", h.UpdateChannel)
 		notifications.DELETE("/channels/:id", h.DeleteChannel)
+		notifications.POST("/channels/:id/test", h.TestChannel)
+
+		// Channel types info
+		notifications.GET("/channel-types", h.ListChannelTypes)
 
 		// Preferences
 		notifications.GET("/preferences", h.ListPreferences)
@@ -592,12 +610,167 @@ func (h *NotificationsHandler) validateWebhookConfig(rawConfig json.RawMessage) 
 
 	requireHTTPS := h.env == config.EnvProduction || h.env == config.EnvStaging
 	return notifications.ValidateWebhookURL(webhookConfig.URL, requireHTTPS)
+// TestChannel sends a test notification to verify the channel configuration.
+// POST /api/v1/notifications/channels/:id/test
+func (h *NotificationsHandler) TestChannel(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid channel ID"})
+		return
+	}
+
+	channel, err := h.store.GetNotificationChannelByID(c.Request.Context(), id)
+	if err != nil {
+		h.logger.Error().Err(err).Str("channel_id", id.String()).Msg("failed to get notification channel")
+		c.JSON(http.StatusNotFound, gin.H{"error": "notification channel not found"})
+		return
+	}
+
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+		return
+	}
+
+	if channel.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "notification channel not found"})
+		return
+	}
+
+	if h.service == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "notification service not configured"})
+		return
+	}
+
+	if err := h.service.TestChannel(channel); err != nil {
+		h.logger.Error().Err(err).
+			Str("channel_id", id.String()).
+			Str("channel_type", string(channel.Type)).
+			Msg("test notification failed")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "test notification failed",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	h.logger.Info().
+		Str("channel_id", id.String()).
+		Str("channel_type", string(channel.Type)).
+		Msg("test notification sent successfully")
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "test notification sent successfully",
+	})
+}
+
+// ChannelTypeInfo represents information about a notification channel type.
+type ChannelTypeInfo struct {
+	Type        models.NotificationChannelType `json:"type"`
+	Name        string                         `json:"name"`
+	Description string                         `json:"description"`
+	ConfigFields []ChannelConfigField          `json:"config_fields"`
+}
+
+// ChannelConfigField represents a configuration field for a channel type.
+type ChannelConfigField struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Required    bool   `json:"required"`
+	Description string `json:"description"`
+	Placeholder string `json:"placeholder,omitempty"`
+}
+
+// ListChannelTypes returns information about available notification channel types.
+// GET /api/v1/notifications/channel-types
+func (h *NotificationsHandler) ListChannelTypes(c *gin.Context) {
+	channelTypes := []ChannelTypeInfo{
+		{
+			Type:        models.ChannelTypeEmail,
+			Name:        "Email (SMTP)",
+			Description: "Send notifications via email using SMTP",
+			ConfigFields: []ChannelConfigField{
+				{Name: "host", Type: "string", Required: true, Description: "SMTP server hostname", Placeholder: "smtp.example.com"},
+				{Name: "port", Type: "number", Required: true, Description: "SMTP server port", Placeholder: "587"},
+				{Name: "username", Type: "string", Required: false, Description: "SMTP username for authentication"},
+				{Name: "password", Type: "password", Required: false, Description: "SMTP password for authentication"},
+				{Name: "from", Type: "email", Required: true, Description: "From email address", Placeholder: "alerts@example.com"},
+				{Name: "tls", Type: "boolean", Required: false, Description: "Enable TLS encryption"},
+			},
+		},
+		{
+			Type:        models.ChannelTypeSlack,
+			Name:        "Slack",
+			Description: "Send notifications to Slack channels via webhooks",
+			ConfigFields: []ChannelConfigField{
+				{Name: "webhook_url", Type: "url", Required: true, Description: "Slack Incoming Webhook URL", Placeholder: "https://hooks.slack.com/services/..."},
+				{Name: "channel", Type: "string", Required: false, Description: "Override default channel (e.g., #alerts)"},
+				{Name: "username", Type: "string", Required: false, Description: "Bot username displayed in Slack", Placeholder: "Keldris Backup"},
+				{Name: "icon_emoji", Type: "string", Required: false, Description: "Emoji to use as icon (e.g., :shield:)"},
+			},
+		},
+		{
+			Type:        models.ChannelTypeTeams,
+			Name:        "Microsoft Teams",
+			Description: "Send notifications to Microsoft Teams channels via webhooks",
+			ConfigFields: []ChannelConfigField{
+				{Name: "webhook_url", Type: "url", Required: true, Description: "Teams Incoming Webhook URL", Placeholder: "https://outlook.office.com/webhook/..."},
+			},
+		},
+		{
+			Type:        models.ChannelTypeDiscord,
+			Name:        "Discord",
+			Description: "Send notifications to Discord channels via webhooks",
+			ConfigFields: []ChannelConfigField{
+				{Name: "webhook_url", Type: "url", Required: true, Description: "Discord Webhook URL", Placeholder: "https://discord.com/api/webhooks/..."},
+				{Name: "username", Type: "string", Required: false, Description: "Bot username displayed in Discord", Placeholder: "Keldris Backup"},
+				{Name: "avatar_url", Type: "url", Required: false, Description: "Avatar image URL for the bot"},
+			},
+		},
+		{
+			Type:        models.ChannelTypePagerDuty,
+			Name:        "PagerDuty",
+			Description: "Send alerts to PagerDuty for incident management",
+			ConfigFields: []ChannelConfigField{
+				{Name: "routing_key", Type: "string", Required: true, Description: "PagerDuty Events API v2 routing key (integration key)"},
+				{Name: "severity", Type: "select", Required: false, Description: "Default severity level (critical, error, warning, info)"},
+				{Name: "component", Type: "string", Required: false, Description: "Component name for the alert"},
+				{Name: "group", Type: "string", Required: false, Description: "Logical grouping of alerts"},
+				{Name: "class", Type: "string", Required: false, Description: "Class/type of alert"},
+			},
+		},
+		{
+			Type:        models.ChannelTypeWebhook,
+			Name:        "Generic Webhook",
+			Description: "Send notifications to any HTTP endpoint",
+			ConfigFields: []ChannelConfigField{
+				{Name: "url", Type: "url", Required: true, Description: "Webhook URL endpoint", Placeholder: "https://api.example.com/webhooks/..."},
+				{Name: "method", Type: "select", Required: false, Description: "HTTP method (default: POST)"},
+				{Name: "auth_type", Type: "select", Required: false, Description: "Authentication type (none, bearer, basic)"},
+				{Name: "auth_token", Type: "password", Required: false, Description: "Bearer token for authentication"},
+				{Name: "basic_user", Type: "string", Required: false, Description: "Username for basic authentication"},
+				{Name: "basic_pass", Type: "password", Required: false, Description: "Password for basic authentication"},
+				{Name: "content_type", Type: "string", Required: false, Description: "Content-Type header (default: application/json)"},
+				{Name: "template", Type: "textarea", Required: false, Description: "Custom payload template (Go template syntax)"},
+			},
+		},
+	}
+
+	c.JSON(http.StatusOK, gin.H{"channel_types": channelTypes})
 }
 
 // isValidChannelType checks if a channel type is valid.
 func isValidChannelType(t models.NotificationChannelType) bool {
 	switch t {
 	case models.ChannelTypeEmail, models.ChannelTypeSlack, models.ChannelTypeWebhook, models.ChannelTypePagerDuty, models.ChannelTypeTeams, models.ChannelTypeDiscord:
+	case models.ChannelTypeEmail, models.ChannelTypeSlack, models.ChannelTypeTeams, models.ChannelTypeDiscord, models.ChannelTypeWebhook, models.ChannelTypePagerDuty:
 		return true
 	default:
 		return false
