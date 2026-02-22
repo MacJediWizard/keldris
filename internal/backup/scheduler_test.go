@@ -147,6 +147,50 @@ func (m *mockStore) GetEnabledBackupScriptsByScheduleID(ctx context.Context, sch
 	return nil, nil
 }
 
+// CheckpointStore interface implementations for testing
+
+func (m *mockStore) CreateCheckpoint(ctx context.Context, checkpoint *models.BackupCheckpoint) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil
+}
+
+func (m *mockStore) UpdateCheckpoint(ctx context.Context, checkpoint *models.BackupCheckpoint) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil
+}
+
+func (m *mockStore) GetCheckpointByID(ctx context.Context, id uuid.UUID) (*models.BackupCheckpoint, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil, nil
+}
+
+func (m *mockStore) GetActiveCheckpointForSchedule(ctx context.Context, scheduleID uuid.UUID) (*models.BackupCheckpoint, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil, nil
+}
+
+func (m *mockStore) GetActiveCheckpointsForAgent(ctx context.Context, agentID uuid.UUID) ([]*models.BackupCheckpoint, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil, nil
+}
+
+func (m *mockStore) GetExpiredCheckpoints(ctx context.Context) ([]*models.BackupCheckpoint, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil, nil
+}
+
+func (m *mockStore) DeleteCheckpoint(ctx context.Context, id uuid.UUID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return nil
+}
+
 func (m *mockStore) addSchedule(s models.Schedule) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -2216,3 +2216,50 @@ export interface UpdateDRTestRequest {
 	actual_rpo_minutes?: number;
 	notes?: string;
 }
+
+export type CheckpointStatus = 'active' | 'completed' | 'canceled' | 'expired';
+
+export interface BackupCheckpoint {
+	id: string;
+	schedule_id: string;
+	agent_id: string;
+	repository_id: string;
+	backup_id?: string;
+	status: CheckpointStatus;
+	files_processed: number;
+	bytes_processed: number;
+	total_files?: number;
+	total_bytes?: number;
+	last_processed_path?: string;
+	error_message?: string;
+	resume_count: number;
+	expires_at?: string;
+	started_at: string;
+	last_updated_at: string;
+	created_at: string;
+}
+
+export interface ResumeInfo {
+	checkpoint: BackupCheckpoint;
+	progress_percent?: number;
+	files_processed: number;
+	bytes_processed: number;
+	total_files?: number;
+	total_bytes?: number;
+	interrupted_at: string;
+	interrupted_error?: string;
+	resume_count: number;
+	can_resume: boolean;
+}
+
+export interface IncompleteBackupsResponse {
+	checkpoints: BackupCheckpoint[];
+}
+
+export interface ResumeBackupRequest {
+	checkpoint_id: string;
+}
+
+export interface CancelCheckpointRequest {
+	checkpoint_id: string;
+}

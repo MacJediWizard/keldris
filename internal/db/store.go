@@ -7772,3 +7772,194 @@ func scanImportedSnapshots(rows interface{ Next() bool; Scan(dest ...interface{}
 	return snapshots, nil
 }
 
+
+// CreateCheckpoint creates a new backup checkpoint.
+func (db *DB) CreateCheckpoint(ctx context.Context, checkpoint *models.BackupCheckpoint) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO backup_checkpoints (id, schedule_id, agent_id, repository_id, backup_id,
+		                                status, files_processed, bytes_processed, total_files, total_bytes,
+		                                last_processed_path, restic_state, error_message, resume_count,
+		                                expires_at, started_at, last_updated_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+	`, checkpoint.ID, checkpoint.ScheduleID, checkpoint.AgentID, checkpoint.RepositoryID, checkpoint.BackupID,
+		string(checkpoint.Status), checkpoint.FilesProcessed, checkpoint.BytesProcessed,
+		checkpoint.TotalFiles, checkpoint.TotalBytes, checkpoint.LastProcessedPath,
+		checkpoint.ResticState, checkpoint.ErrorMessage, checkpoint.ResumeCount,
+		checkpoint.ExpiresAt, checkpoint.StartedAt, checkpoint.LastUpdatedAt, checkpoint.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create checkpoint: %w", err)
+	}
+	return nil
+}
+
+
+// UpdateCheckpoint updates an existing checkpoint.
+func (db *DB) UpdateCheckpoint(ctx context.Context, checkpoint *models.BackupCheckpoint) error {
+	checkpoint.LastUpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE backup_checkpoints
+		SET backup_id = $2, status = $3, files_processed = $4, bytes_processed = $5,
+		    total_files = $6, total_bytes = $7, last_processed_path = $8, restic_state = $9,
+		    error_message = $10, resume_count = $11, expires_at = $12, last_updated_at = $13
+		WHERE id = $1
+	`, checkpoint.ID, checkpoint.BackupID, string(checkpoint.Status),
+		checkpoint.FilesProcessed, checkpoint.BytesProcessed, checkpoint.TotalFiles,
+		checkpoint.TotalBytes, checkpoint.LastProcessedPath, checkpoint.ResticState,
+		checkpoint.ErrorMessage, checkpoint.ResumeCount, checkpoint.ExpiresAt, checkpoint.LastUpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update checkpoint: %w", err)
+	}
+	return nil
+}
+
+
+// GetCheckpointByID returns a checkpoint by ID.
+func (db *DB) GetCheckpointByID(ctx context.Context, id uuid.UUID) (*models.BackupCheckpoint, error) {
+	var c models.BackupCheckpoint
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, backup_id, status,
+		       files_processed, bytes_processed, total_files, total_bytes,
+		       last_processed_path, restic_state, error_message, resume_count,
+		       expires_at, started_at, last_updated_at, created_at
+		FROM backup_checkpoints
+		WHERE id = $1
+	`, id).Scan(
+		&c.ID, &c.ScheduleID, &c.AgentID, &c.RepositoryID, &c.BackupID, &statusStr,
+		&c.FilesProcessed, &c.BytesProcessed, &c.TotalFiles, &c.TotalBytes,
+		&c.LastProcessedPath, &c.ResticState, &c.ErrorMessage, &c.ResumeCount,
+		&c.ExpiresAt, &c.StartedAt, &c.LastUpdatedAt, &c.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get checkpoint: %w", err)
+	}
+	c.Status = models.CheckpointStatus(statusStr)
+	return &c, nil
+}
+
+
+// GetActiveCheckpointForSchedule returns the active checkpoint for a schedule if one exists.
+func (db *DB) GetActiveCheckpointForSchedule(ctx context.Context, scheduleID uuid.UUID) (*models.BackupCheckpoint, error) {
+	var c models.BackupCheckpoint
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, backup_id, status,
+		       files_processed, bytes_processed, total_files, total_bytes,
+		       last_processed_path, restic_state, error_message, resume_count,
+		       expires_at, started_at, last_updated_at, created_at
+		FROM backup_checkpoints
+		WHERE schedule_id = $1 AND status = 'active'
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, scheduleID).Scan(
+		&c.ID, &c.ScheduleID, &c.AgentID, &c.RepositoryID, &c.BackupID, &statusStr,
+		&c.FilesProcessed, &c.BytesProcessed, &c.TotalFiles, &c.TotalBytes,
+		&c.LastProcessedPath, &c.ResticState, &c.ErrorMessage, &c.ResumeCount,
+		&c.ExpiresAt, &c.StartedAt, &c.LastUpdatedAt, &c.CreatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get active checkpoint for schedule: %w", err)
+	}
+	c.Status = models.CheckpointStatus(statusStr)
+	return &c, nil
+}
+
+
+// GetActiveCheckpointsForAgent returns all active checkpoints for an agent.
+func (db *DB) GetActiveCheckpointsForAgent(ctx context.Context, agentID uuid.UUID) ([]*models.BackupCheckpoint, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, backup_id, status,
+		       files_processed, bytes_processed, total_files, total_bytes,
+		       last_processed_path, restic_state, error_message, resume_count,
+		       expires_at, started_at, last_updated_at, created_at
+		FROM backup_checkpoints
+		WHERE agent_id = $1 AND status = 'active'
+		ORDER BY created_at DESC
+	`, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("list active checkpoints for agent: %w", err)
+	}
+	defer rows.Close()
+
+	return scanCheckpoints(rows)
+}
+
+
+// GetExpiredCheckpoints returns all checkpoints that have expired.
+func (db *DB) GetExpiredCheckpoints(ctx context.Context) ([]*models.BackupCheckpoint, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, backup_id, status,
+		       files_processed, bytes_processed, total_files, total_bytes,
+		       last_processed_path, restic_state, error_message, resume_count,
+		       expires_at, started_at, last_updated_at, created_at
+		FROM backup_checkpoints
+		WHERE status = 'active' AND expires_at IS NOT NULL AND expires_at < NOW()
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list expired checkpoints: %w", err)
+	}
+	defer rows.Close()
+
+	return scanCheckpoints(rows)
+}
+
+
+// DeleteCheckpoint deletes a checkpoint by ID.
+func (db *DB) DeleteCheckpoint(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM backup_checkpoints WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete checkpoint: %w", err)
+	}
+	return nil
+}
+
+
+// GetCheckpointsByScheduleID returns all checkpoints for a schedule.
+func (db *DB) GetCheckpointsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.BackupCheckpoint, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, backup_id, status,
+		       files_processed, bytes_processed, total_files, total_bytes,
+		       last_processed_path, restic_state, error_message, resume_count,
+		       expires_at, started_at, last_updated_at, created_at
+		FROM backup_checkpoints
+		WHERE schedule_id = $1
+		ORDER BY created_at DESC
+	`, scheduleID)
+	if err != nil {
+		return nil, fmt.Errorf("list checkpoints for schedule: %w", err)
+	}
+	defer rows.Close()
+
+	return scanCheckpoints(rows)
+}
+
+
+// scanCheckpoints scans rows into backup checkpoints.
+func scanCheckpoints(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.BackupCheckpoint, error) {
+	var checkpoints []*models.BackupCheckpoint
+	for rows.Next() {
+		var c models.BackupCheckpoint
+		var statusStr string
+		err := rows.Scan(
+			&c.ID, &c.ScheduleID, &c.AgentID, &c.RepositoryID, &c.BackupID, &statusStr,
+			&c.FilesProcessed, &c.BytesProcessed, &c.TotalFiles, &c.TotalBytes,
+			&c.LastProcessedPath, &c.ResticState, &c.ErrorMessage, &c.ResumeCount,
+			&c.ExpiresAt, &c.StartedAt, &c.LastUpdatedAt, &c.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan checkpoint: %w", err)
+		}
+		c.Status = models.CheckpointStatus(statusStr)
+		checkpoints = append(checkpoints, &c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate checkpoints: %w", err)
+	}
+
+	return checkpoints, nil
+}
+
