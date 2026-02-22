@@ -163,6 +163,9 @@ func TestFeatureMiddleware_ProTier(t *testing.T) {
 		{"air gap blocked", license.FeatureAirGap, false},
 		{"DR runbooks blocked", license.FeatureDRRunbooks, false},
 		{"DR tests blocked", license.FeatureDRTests, false},
+		{"multi-org blocked", license.FeatureMultiOrg, false},
+		{"SLA tracking blocked", license.FeatureSLATracking, false},
+		{"white label blocked", license.FeatureWhiteLabel, false},
 	}
 
 	for _, tt := range features {
@@ -294,10 +297,13 @@ func TestFeatureMiddleware_EnterpriseFeature(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/test", nil)
 		r.ServeHTTP(w, req)
 
-		if w.Code != http.StatusPaymentRequired {
-			t.Fatalf("expected status 402, got %d", w.Code)
-		}
-	})
+	var resp map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if resp["error"] != "license required" {
+		t.Fatalf("expected error 'license required', got %q", resp["error"])
+	}
 }
 
 func TestGetLicense_NoLicense(t *testing.T) {

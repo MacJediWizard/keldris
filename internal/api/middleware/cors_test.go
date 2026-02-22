@@ -11,6 +11,7 @@ import (
 
 func TestCORS_AllowedOrigin(t *testing.T) {
 	mw := CORS([]string{"https://app.keldris.io", "https://admin.keldris.io"}, config.EnvDevelopment)
+	mw := CORS([]string{"https://app.keldris.io", "https://admin.keldris.io"})
 
 	r := gin.New()
 	r.Use(mw)
@@ -36,6 +37,7 @@ func TestCORS_AllowedOrigin(t *testing.T) {
 
 func TestCORS_DisallowedOrigin(t *testing.T) {
 	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
+	mw := CORS([]string{"https://app.keldris.io"})
 
 	r := gin.New()
 	r.Use(mw)
@@ -60,6 +62,7 @@ func TestCORS_DisallowedOrigin(t *testing.T) {
 
 func TestCORS_Preflight(t *testing.T) {
 	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
+	mw := CORS([]string{"https://app.keldris.io"})
 
 	r := gin.New()
 	r.Use(mw)
@@ -97,6 +100,7 @@ func TestCORS_Preflight(t *testing.T) {
 
 func TestCORS_Credentials(t *testing.T) {
 	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
+	mw := CORS([]string{"https://app.keldris.io"})
 
 	r := gin.New()
 	r.Use(mw)
@@ -117,6 +121,7 @@ func TestCORS_Credentials(t *testing.T) {
 func TestCORS_AllowAllOrigins(t *testing.T) {
 	// Empty allowed origins = allow all (dev mode)
 	mw := CORS([]string{}, config.EnvDevelopment)
+	mw := CORS([]string{})
 
 	r := gin.New()
 	r.Use(mw)
@@ -139,6 +144,7 @@ func TestCORS_AllowAllOrigins(t *testing.T) {
 
 func TestCORS_CaseInsensitive(t *testing.T) {
 	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
+	mw := CORS([]string{"https://app.keldris.io"})
 
 	r := gin.New()
 	r.Use(mw)
@@ -158,6 +164,7 @@ func TestCORS_CaseInsensitive(t *testing.T) {
 
 func TestCORS_NoOriginHeader(t *testing.T) {
 	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
+	mw := CORS([]string{"https://app.keldris.io"})
 
 	r := gin.New()
 	r.Use(mw)
@@ -181,6 +188,7 @@ func TestCORS_NoOriginHeader(t *testing.T) {
 
 func TestCORS_PreflightDisallowedOrigin(t *testing.T) {
 	mw := CORS([]string{"https://app.keldris.io"}, config.EnvDevelopment)
+	mw := CORS([]string{"https://app.keldris.io"})
 
 	r := gin.New()
 	r.Use(mw)
