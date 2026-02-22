@@ -47,6 +47,12 @@ const (
 	BackupTypeDocker BackupType = "docker"
 	// BackupTypePihole is a Pi-hole specific backup using teleporter.
 	BackupTypePihole BackupType = "pihole"
+	// BackupTypeMySQL is a MySQL/MariaDB database backup using mysqldump.
+	BackupTypeMySQL BackupType = "mysql"
+	// BackupTypePostgres is a PostgreSQL database backup using pg_dump.
+	BackupTypePostgres BackupType = "postgres"
+	// BackupTypeProxmox backs up Proxmox VMs and containers via vzdump.
+	BackupTypeProxmox BackupType = "proxmox"
 )
 
 // ValidBackupTypes returns all valid backup types.
@@ -56,6 +62,9 @@ func ValidBackupTypes() []BackupType {
 		BackupTypeFiles,
 		BackupTypeDocker,
 		BackupTypePihole,
+		BackupTypeMySQL,
+		BackupTypePostgres,
+		BackupTypeProxmox,
 	}
 }
 
@@ -91,6 +100,94 @@ type PiholeBackupConfig struct {
 	ConfigDir string `json:"config_dir,omitempty"`
 	// DNSMasqDir overrides the default /etc/dnsmasq.d directory.
 	DNSMasqDir string `json:"dnsmasq_dir,omitempty"`
+}
+
+// MySQLBackupConfig contains MySQL/MariaDB specific backup configuration.
+type MySQLBackupConfig struct {
+	// DatabaseConnectionID is the ID of the database connection to use.
+	DatabaseConnectionID *uuid.UUID `json:"database_connection_id,omitempty"`
+	// Database is a specific database to backup. Empty means all databases.
+	Database string `json:"database,omitempty"`
+	// Databases is a list of specific databases to backup.
+	Databases []string `json:"databases,omitempty"`
+	// ExcludeDatabases are databases to exclude from "all databases" backup.
+	ExcludeDatabases []string `json:"exclude_databases,omitempty"`
+	// Compress enables gzip compression of the backup output.
+	Compress bool `json:"compress"`
+	// ExtraArgs are additional arguments to pass to mysqldump.
+	ExtraArgs []string `json:"extra_args,omitempty"`
+}
+
+// PostgresOutputFormat represents the output format for pg_dump.
+type PostgresOutputFormat string
+
+const (
+	// PostgresFormatPlain outputs plain SQL text (default).
+	PostgresFormatPlain PostgresOutputFormat = "plain"
+	// PostgresFormatCustom outputs custom archive format (recommended for restore flexibility).
+	PostgresFormatCustom PostgresOutputFormat = "custom"
+	// PostgresFormatDirectory outputs directory format (parallel restore).
+	PostgresFormatDirectory PostgresOutputFormat = "directory"
+	// PostgresFormatTar outputs tar archive format.
+	PostgresFormatTar PostgresOutputFormat = "tar"
+)
+
+// PostgresBackupConfig contains PostgreSQL specific backup configuration.
+type PostgresBackupConfig struct {
+	// Host is the PostgreSQL server hostname or IP address.
+	Host string `json:"host"`
+	// Port is the PostgreSQL server port (default: 5432).
+	Port int `json:"port,omitempty"`
+	// Username is the database user for authentication.
+	Username string `json:"username"`
+	// PasswordEncrypted is the encrypted database password (never exposed in JSON responses).
+	PasswordEncrypted string `json:"-"`
+	// Database is the specific database to backup. Empty means all databases (pg_dumpall).
+	Database string `json:"database,omitempty"`
+	// Databases is a list of specific databases to backup (used when multiple but not all).
+	Databases []string `json:"databases,omitempty"`
+	// OutputFormat specifies the pg_dump output format.
+	OutputFormat PostgresOutputFormat `json:"output_format,omitempty"`
+	// CompressionLevel is the gzip compression level (0-9, 0=no compression).
+	CompressionLevel int `json:"compression_level,omitempty"`
+	// IncludeSchemaOnly backs up only schema definitions, not data.
+	IncludeSchemaOnly bool `json:"include_schema_only,omitempty"`
+	// IncludeDataOnly backs up only data, not schema definitions.
+	IncludeDataOnly bool `json:"include_data_only,omitempty"`
+	// ExcludeTables is a list of table patterns to exclude from backup.
+	ExcludeTables []string `json:"exclude_tables,omitempty"`
+	// IncludeTables is a list of specific tables to include (if set, only these tables are backed up).
+	IncludeTables []string `json:"include_tables,omitempty"`
+	// NoOwner omits owner information from the dump.
+	NoOwner bool `json:"no_owner,omitempty"`
+	// NoPrivileges omits privilege information from the dump.
+	NoPrivileges bool `json:"no_privileges,omitempty"`
+	// SSLMode specifies the SSL connection mode (disable, allow, prefer, require, verify-ca, verify-full).
+	SSLMode string `json:"ssl_mode,omitempty"`
+	// PgDumpPath overrides the default pg_dump binary path.
+	PgDumpPath string `json:"pg_dump_path,omitempty"`
+}
+
+// ProxmoxBackupOptions contains Proxmox-specific backup configuration.
+type ProxmoxBackupOptions struct {
+	// ConnectionID is the ID of the Proxmox connection to use.
+	ConnectionID string `json:"connection_id,omitempty"`
+	// VMIDs specifies which VMs to backup (empty means all).
+	VMIDs []int `json:"vm_ids,omitempty"`
+	// ContainerIDs specifies which LXC containers to backup (empty means all).
+	ContainerIDs []int `json:"container_ids,omitempty"`
+	// Mode is the backup mode: snapshot, suspend, or stop.
+	Mode string `json:"mode"`
+	// Compress is the compression algorithm: 0 (none), gzip, lzo, or zstd.
+	Compress string `json:"compress"`
+	// Storage is the Proxmox storage for temporary backup files.
+	Storage string `json:"storage,omitempty"`
+	// MaxWait is the maximum wait time in minutes for backup task completion.
+	MaxWait int `json:"max_wait,omitempty"`
+	// IncludeRAM includes RAM state in VM backups (requires snapshot mode).
+	IncludeRAM bool `json:"include_ram"`
+	// RemoveAfter removes the backup from Proxmox after storing in Restic.
+	RemoveAfter bool `json:"remove_after"`
 }
 
 // Schedule represents a backup schedule configuration.
@@ -129,7 +226,7 @@ type Schedule struct {
 	AgentGroupID            *uuid.UUID             `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
 	PolicyID                *uuid.UUID             `json:"policy_id,omitempty"`      // Policy this schedule was created from
 	Name                    string                 `json:"name"`
-	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker, pihole
+	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker, pihole, mysql
 	CronExpression          string                 `json:"cron_expression"`
 	Paths                   []string               `json:"paths"`
 	Excludes                []string               `json:"excludes,omitempty"`
@@ -146,6 +243,9 @@ type Schedule struct {
 	Preemptible             bool                   `json:"preemptible"`                    // Can be preempted by higher priority backups
 	DockerOptions           *DockerBackupOptions   `json:"docker_options,omitempty"`       // Docker-specific backup options
 	PiholeConfig            *PiholeBackupConfig    `json:"pihole_config,omitempty"`        // Pi-hole specific backup configuration
+	MySQLConfig             *MySQLBackupConfig     `json:"mysql_config,omitempty"`         // MySQL/MariaDB specific backup configuration
+	PostgresConfig          *PostgresBackupConfig  `json:"postgres_config,omitempty"`      // PostgreSQL specific backup configuration
+	ProxmoxOptions          *ProxmoxBackupOptions  `json:"proxmox_options,omitempty"`      // Proxmox-specific backup options
 	Metadata                map[string]interface{} `json:"metadata,omitempty"`
 	ID               uuid.UUID            `json:"id"`
 	AgentID          uuid.UUID            `json:"agent_id"`
@@ -264,6 +364,46 @@ func NewPiholeSchedule(agentID uuid.UUID, name, cronExpr string) *Schedule {
 	}
 }
 
+// NewPostgresSchedule creates a new Schedule for PostgreSQL backups.
+func NewPostgresSchedule(agentID uuid.UUID, name, cronExpr string, config *PostgresBackupConfig) *Schedule {
+	now := time.Now()
+	return &Schedule{
+		ID:                 uuid.New(),
+		AgentID:            agentID,
+		Name:               name,
+		CronExpression:     cronExpr,
+		BackupType:         BackupTypePostgres,
+		Paths:              []string{}, // PostgreSQL backups don't use filesystem paths
+		OnMountUnavailable: MountBehaviorFail,
+		Priority:           PriorityMedium,
+		Preemptible:        false,
+		PostgresConfig:     config,
+		Enabled:            true,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+}
+
+// NewProxmoxSchedule creates a new Schedule for Proxmox VM/container backups.
+func NewProxmoxSchedule(agentID uuid.UUID, name, cronExpr string, opts *ProxmoxBackupOptions) *Schedule {
+	now := time.Now()
+	return &Schedule{
+		ID:                 uuid.New(),
+		AgentID:            agentID,
+		Name:               name,
+		CronExpression:     cronExpr,
+		BackupType:         BackupTypeProxmox,
+		Paths:              []string{}, // Proxmox backups don't use paths
+		ProxmoxOptions:     opts,
+		OnMountUnavailable: MountBehaviorFail,
+		Priority:           PriorityMedium,
+		Preemptible:        false,
+		Enabled:            true,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+}
+
 // IsDockerBackup returns true if this is a Docker backup schedule.
 func (s *Schedule) IsDockerBackup() bool {
 	return s.BackupType == BackupTypeDocker
@@ -272,6 +412,16 @@ func (s *Schedule) IsDockerBackup() bool {
 // IsPiholeBackup returns true if this is a Pi-hole backup schedule.
 func (s *Schedule) IsPiholeBackup() bool {
 	return s.BackupType == BackupTypePihole
+}
+
+// IsPostgresBackup returns true if this is a PostgreSQL backup schedule.
+func (s *Schedule) IsPostgresBackup() bool {
+	return s.BackupType == BackupTypePostgres
+}
+
+// IsProxmoxBackup returns true if this is a Proxmox backup schedule.
+func (s *Schedule) IsProxmoxBackup() bool {
+	return s.BackupType == BackupTypeProxmox
 }
 
 // SetDockerOptions sets the Docker backup options from JSON bytes.
@@ -571,6 +721,132 @@ func DefaultPiholeConfig() *PiholeBackupConfig {
 		IncludeQueryLogs: true,
 		ConfigDir:        "/etc/pihole",
 		DNSMasqDir:       "/etc/dnsmasq.d",
+	}
+}
+
+// SetMySQLConfig sets the MySQL config from JSON bytes.
+func (s *Schedule) SetMySQLConfig(data []byte) error {
+	if len(data) == 0 {
+		s.MySQLConfig = nil
+		return nil
+	}
+	var config MySQLBackupConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return err
+	}
+	s.MySQLConfig = &config
+	return nil
+}
+
+// MySQLConfigJSON returns the MySQL config as JSON bytes for database storage.
+func (s *Schedule) MySQLConfigJSON() ([]byte, error) {
+	if s.MySQLConfig == nil {
+		return nil, nil
+	}
+	return json.Marshal(s.MySQLConfig)
+}
+
+// DefaultMySQLConfig returns a sensible default MySQL backup configuration.
+func DefaultMySQLConfig() *MySQLBackupConfig {
+	return &MySQLBackupConfig{
+		Compress:         true,
+		ExcludeDatabases: []string{"information_schema", "performance_schema", "sys"},
+	}
+}
+
+// IsMySQLBackup returns true if this is a MySQL backup schedule.
+func (s *Schedule) IsMySQLBackup() bool {
+	return s.BackupType == BackupTypeMySQL
+}
+
+// NewMySQLSchedule creates a new Schedule for MySQL backups.
+func NewMySQLSchedule(agentID uuid.UUID, name, cronExpr string, databaseConnectionID *uuid.UUID) *Schedule {
+	now := time.Now()
+	return &Schedule{
+		ID:                 uuid.New(),
+		AgentID:            agentID,
+		Name:               name,
+		CronExpression:     cronExpr,
+		BackupType:         BackupTypeMySQL,
+		Paths:              []string{},
+		OnMountUnavailable: MountBehaviorFail,
+		Priority:           PriorityMedium,
+		Preemptible:        false,
+		MySQLConfig: &MySQLBackupConfig{
+			DatabaseConnectionID: databaseConnectionID,
+			Compress:             true,
+			ExcludeDatabases:     []string{"information_schema", "performance_schema", "sys"},
+		},
+		Enabled:   true,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+}
+
+// SetPostgresConfig sets the PostgreSQL config from JSON bytes.
+func (s *Schedule) SetPostgresConfig(data []byte) error {
+	if len(data) == 0 {
+		s.PostgresConfig = nil
+		return nil
+	}
+	var config PostgresBackupConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return err
+	}
+	s.PostgresConfig = &config
+	return nil
+}
+
+// PostgresConfigJSON returns the PostgreSQL config as JSON bytes for database storage.
+func (s *Schedule) PostgresConfigJSON() ([]byte, error) {
+	if s.PostgresConfig == nil {
+		return nil, nil
+	}
+	return json.Marshal(s.PostgresConfig)
+}
+
+// DefaultPostgresConfig returns a sensible default PostgreSQL backup configuration.
+func DefaultPostgresConfig() *PostgresBackupConfig {
+	return &PostgresBackupConfig{
+		Host:             "localhost",
+		Port:             5432,
+		Username:         "postgres",
+		OutputFormat:     PostgresFormatCustom,
+		CompressionLevel: 6,
+		SSLMode:          "prefer",
+	}
+}
+
+// SetProxmoxOptions sets the Proxmox options from JSON bytes.
+func (s *Schedule) SetProxmoxOptions(data []byte) error {
+	if len(data) == 0 {
+		s.ProxmoxOptions = nil
+		return nil
+	}
+	var opts ProxmoxBackupOptions
+	if err := json.Unmarshal(data, &opts); err != nil {
+		return err
+	}
+	s.ProxmoxOptions = &opts
+	return nil
+}
+
+// ProxmoxOptionsJSON returns the Proxmox options as JSON bytes for database storage.
+func (s *Schedule) ProxmoxOptionsJSON() ([]byte, error) {
+	if s.ProxmoxOptions == nil {
+		return nil, nil
+	}
+	return json.Marshal(s.ProxmoxOptions)
+}
+
+// DefaultProxmoxOptions returns a sensible default Proxmox backup configuration.
+func DefaultProxmoxOptions() *ProxmoxBackupOptions {
+	return &ProxmoxBackupOptions{
+		Mode:        "snapshot",
+		Compress:    "zstd",
+		MaxWait:     60, // 60 minutes
+		IncludeRAM:  false,
+		RemoveAfter: true,
 	}
 }
 

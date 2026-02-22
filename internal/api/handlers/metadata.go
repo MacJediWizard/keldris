@@ -67,29 +67,29 @@ func (h *MetadataHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // CreateSchemaRequest is the request body for creating a metadata schema.
 type CreateSchemaRequest struct {
-	EntityType   string                   `json:"entity_type" binding:"required"`
-	Name         string                   `json:"name" binding:"required"`
-	FieldKey     string                   `json:"field_key" binding:"required"`
-	FieldType    string                   `json:"field_type" binding:"required"`
-	Description  string                   `json:"description,omitempty"`
-	Required     bool                     `json:"required"`
-	DefaultValue interface{}              `json:"default_value,omitempty"`
-	Options      []metadata.SelectOption  `json:"options,omitempty"`
+	EntityType   string                    `json:"entity_type" binding:"required"`
+	Name         string                    `json:"name" binding:"required"`
+	FieldKey     string                    `json:"field_key" binding:"required"`
+	FieldType    string                    `json:"field_type" binding:"required"`
+	Description  string                    `json:"description,omitempty"`
+	Required     bool                      `json:"required"`
+	DefaultValue interface{}               `json:"default_value,omitempty"`
+	Options      []metadata.SelectOption   `json:"options,omitempty"`
 	Validation   *metadata.ValidationRules `json:"validation,omitempty"`
-	DisplayOrder int                      `json:"display_order"`
+	DisplayOrder int                       `json:"display_order"`
 }
 
 // UpdateSchemaRequest is the request body for updating a metadata schema.
 type UpdateSchemaRequest struct {
-	Name         *string                  `json:"name,omitempty"`
-	FieldKey     *string                  `json:"field_key,omitempty"`
-	FieldType    *string                  `json:"field_type,omitempty"`
-	Description  *string                  `json:"description,omitempty"`
-	Required     *bool                    `json:"required,omitempty"`
-	DefaultValue interface{}              `json:"default_value,omitempty"`
-	Options      []metadata.SelectOption  `json:"options,omitempty"`
+	Name         *string                   `json:"name,omitempty"`
+	FieldKey     *string                   `json:"field_key,omitempty"`
+	FieldType    *string                   `json:"field_type,omitempty"`
+	Description  *string                   `json:"description,omitempty"`
+	Required     *bool                     `json:"required,omitempty"`
+	DefaultValue interface{}               `json:"default_value,omitempty"`
+	Options      []metadata.SelectOption   `json:"options,omitempty"`
 	Validation   *metadata.ValidationRules `json:"validation,omitempty"`
-	DisplayOrder *int                     `json:"display_order,omitempty"`
+	DisplayOrder *int                      `json:"display_order,omitempty"`
 }
 
 // UpdateMetadataRequest is the request body for updating entity metadata.

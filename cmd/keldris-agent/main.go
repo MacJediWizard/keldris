@@ -18,6 +18,7 @@ import (
 	"time"
 
 	agentclient "github.com/MacJediWizard/keldris/internal/agent"
+	"github.com/MacJediWizard/keldris/internal/agent"
 	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/config"
@@ -99,6 +100,7 @@ Run 'keldris-agent register' to connect to a server.`,
 		newSnapshotMountCmd(),
 		newSupportBundleCmd(),
 		newDiagnosticsCmd(),
+		newQueueCmd(),
 	)
 
 	return rootCmd
@@ -204,6 +206,7 @@ func newConfigCmd() *cobra.Command {
 		newConfigSetProxyCmd(),
 		newConfigClearProxyCmd(),
 		newConfigTestProxyCmd(),
+		newConfigSetMaxQueueSizeCmd(),
 	)
 
 	return cmd
@@ -386,7 +389,45 @@ func newConfigShowCmd() *cobra.Command {
 			}
 			fmt.Printf("Auto-check update: %v\n", cfg.AutoCheckUpdate)
 			fmt.Printf("Proxy:             %s\n", httpclient.ProxyInfo(cfg.GetProxyConfig()))
+			fmt.Printf("Max queue size:    %d\n", cfg.GetMaxQueueSize())
 
+			return nil
+		},
+	}
+}
+
+func newConfigSetMaxQueueSizeCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "set-max-queue-size <size>",
+		Short: "Set the maximum offline backup queue size",
+		Long: `Set the maximum number of backups that can be queued locally when offline.
+
+When this limit is reached, new scheduled backups will be skipped until
+connectivity is restored and the queue is synced.
+
+Default: 100`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var size int
+			if _, err := fmt.Sscanf(args[0], "%d", &size); err != nil {
+				return fmt.Errorf("invalid size: must be a number")
+			}
+			if size < 1 || size > 10000 {
+				return fmt.Errorf("size must be between 1 and 10000")
+			}
+
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			cfg.MaxQueueSize = size
+
+			if err := cfg.SaveDefault(); err != nil {
+				return fmt.Errorf("save config: %w", err)
+			}
+
+			fmt.Printf("Max queue size set to: %d\n", size)
 			return nil
 		},
 	}
@@ -1290,6 +1331,27 @@ Use --json for machine-readable output suitable for automation.`,
 	return cmd
 }
 
+func newQueueCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "queue",
+		Short: "Manage offline backup queue",
+		Long: `Manage backups that were queued while the server was unreachable.
+
+When the agent cannot reach the server, scheduled backups are queued locally.
+Once connectivity is restored, queued backups are automatically synced to
+the server.`,
+	}
+
+	cmd.AddCommand(
+		newQueueStatusCmd(),
+		newQueueListCmd(),
+		newQueueSyncCmd(),
+		newQueueClearCmd(),
+	)
+
+	return cmd
+}
+
 func runDiagnostics(jsonOutput bool) error {
 	cfg, err := config.LoadDefault()
 	if err != nil {
@@ -1376,6 +1438,253 @@ func formatCheckName(name string) string {
 		}
 	}
 	return strings.Join(words, " ")
+}
+
+func newQueueStatusCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "status",
+		Short: "Show offline backup queue status",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			configDir, err := config.DefaultConfigDir()
+			if err != nil {
+				return fmt.Errorf("get config dir: %w", err)
+			}
+
+			logger := zerolog.New(os.Stderr).Level(zerolog.Disabled)
+			store, err := agent.NewSQLiteStore(configDir, logger)
+			if err != nil {
+				return fmt.Errorf("open queue database: %w", err)
+			}
+			defer store.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			status, err := store.GetQueueStatus(ctx)
+			if err != nil {
+				return fmt.Errorf("get queue status: %w", err)
+			}
+
+			maxQueueSize := cfg.GetMaxQueueSize()
+
+			fmt.Println("Offline Backup Queue Status")
+			fmt.Println(strings.Repeat("-", 40))
+			fmt.Printf("Pending:        %d\n", status.PendingCount)
+			fmt.Printf("Synced:         %d\n", status.SyncedCount)
+			fmt.Printf("Failed:         %d\n", status.FailedCount)
+			fmt.Printf("Total entries:  %d\n", status.TotalQueued)
+			fmt.Printf("Max queue size: %d\n", maxQueueSize)
+			fmt.Println()
+
+			if status.OldestQueuedAt != nil {
+				fmt.Printf("Oldest pending: %s\n", status.OldestQueuedAt.Format(time.RFC3339))
+			}
+
+			// Check server connectivity
+			if cfg.IsConfigured() {
+				fmt.Print("\nServer status:  ")
+				client := &http.Client{Timeout: 5 * time.Second}
+				resp, checkErr := client.Get(cfg.ServerURL + "/health")
+				if checkErr != nil {
+					fmt.Println("OFFLINE")
+				} else {
+					resp.Body.Close()
+					if resp.StatusCode == http.StatusOK {
+						fmt.Println("ONLINE")
+					} else {
+						fmt.Printf("ERROR (HTTP %d)\n", resp.StatusCode)
+					}
+				}
+			}
+
+			return nil
+		},
+	}
+}
+
+func newQueueListCmd() *cobra.Command {
+	var showAll bool
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List queued backups",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			configDir, err := config.DefaultConfigDir()
+			if err != nil {
+				return fmt.Errorf("get config dir: %w", err)
+			}
+
+			logger := zerolog.New(os.Stderr).Level(zerolog.Disabled)
+			store, err := agent.NewSQLiteStore(configDir, logger)
+			if err != nil {
+				return fmt.Errorf("open queue database: %w", err)
+			}
+			defer store.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			var backups []*agent.QueuedBackup
+			if showAll {
+				backups, err = store.ListAllBackups(ctx)
+			} else {
+				backups, err = store.ListPendingBackups(ctx)
+			}
+			if err != nil {
+				return fmt.Errorf("list backups: %w", err)
+			}
+
+			if len(backups) == 0 {
+				if showAll {
+					fmt.Println("No backups in queue")
+				} else {
+					fmt.Println("No pending backups in queue")
+				}
+				return nil
+			}
+
+			fmt.Printf("%-36s %-20s %-10s %-8s %-25s\n", "ID", "SCHEDULE", "STATUS", "RETRIES", "QUEUED AT")
+			fmt.Println(strings.Repeat("-", 105))
+			for _, b := range backups {
+				name := b.ScheduleName
+				if len(name) > 18 {
+					name = name[:17] + "..."
+				}
+				fmt.Printf("%-36s %-20s %-10s %-8d %-25s\n",
+					b.ID.String(),
+					name,
+					b.Status,
+					b.RetryCount,
+					b.QueuedAt.Format(time.RFC3339))
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all backups (including synced/failed)")
+
+	return cmd
+}
+
+func newQueueSyncCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "sync",
+		Short: "Force sync queued backups to server",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.LoadDefault()
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+
+			if !cfg.IsConfigured() {
+				return fmt.Errorf("agent not configured, run 'keldris-agent register' first")
+			}
+
+			configDir, err := config.DefaultConfigDir()
+			if err != nil {
+				return fmt.Errorf("get config dir: %w", err)
+			}
+
+			logger := zerolog.New(os.Stderr).Level(zerolog.InfoLevel).With().Timestamp().Logger()
+
+			store, err := agent.NewSQLiteStore(configDir, logger)
+			if err != nil {
+				return fmt.Errorf("open queue database: %w", err)
+			}
+			defer store.Close()
+
+			client := agent.NewHTTPServerClient(cfg.ServerURL, cfg.APIKey, logger)
+			queueCfg := agent.DefaultQueueConfig()
+			queue := agent.NewQueue(store, client, queueCfg, logger)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+
+			fmt.Println("Syncing queued backups...")
+			if err := queue.SyncNow(ctx); err != nil {
+				if errors.Is(err, agent.ErrServerUnreachable) {
+					fmt.Println("Server is unreachable. Backups remain queued.")
+					return nil
+				}
+				return fmt.Errorf("sync: %w", err)
+			}
+
+			fmt.Println("Sync completed successfully.")
+			return nil
+		},
+	}
+}
+
+func newQueueClearCmd() *cobra.Command {
+	var force bool
+	var status string
+
+	cmd := &cobra.Command{
+		Use:   "clear",
+		Short: "Clear queued backups",
+		Long: `Clear backups from the offline queue.
+
+By default, only synced entries are cleared. Use --status to clear
+entries with a specific status (pending, synced, failed), or --force
+to clear all entries regardless of status.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			configDir, err := config.DefaultConfigDir()
+			if err != nil {
+				return fmt.Errorf("get config dir: %w", err)
+			}
+
+			logger := zerolog.New(os.Stderr).Level(zerolog.Disabled)
+			store, err := agent.NewSQLiteStore(configDir, logger)
+			if err != nil {
+				return fmt.Errorf("open queue database: %w", err)
+			}
+			defer store.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			if force {
+				// Clear all entries
+				backups, err := store.ListAllBackups(ctx)
+				if err != nil {
+					return fmt.Errorf("list backups: %w", err)
+				}
+
+				for _, b := range backups {
+					if err := store.DeleteQueuedBackup(ctx, b.ID); err != nil {
+						fmt.Printf("Failed to delete %s: %v\n", b.ID, err)
+					}
+				}
+				fmt.Printf("Cleared %d queue entries\n", len(backups))
+				return nil
+			}
+
+			// Clear by status
+			if status == "" {
+				status = "synced"
+			}
+
+			// Prune old synced/failed entries
+			pruned, err := store.PruneOldEntries(ctx, 0)
+			if err != nil {
+				return fmt.Errorf("prune entries: %w", err)
+			}
+
+			fmt.Printf("Cleared %d queue entries\n", pruned)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "Clear all entries regardless of status")
+	cmd.Flags().StringVar(&status, "status", "synced", "Status of entries to clear (pending, synced, failed)")
+
+	return cmd
 }
 
 func runSupportBundle(outputPath string) error {

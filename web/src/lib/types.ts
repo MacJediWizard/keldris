@@ -79,6 +79,7 @@ export interface Agent {
 	hostname: string;
 	os_info?: OSInfo;
 	docker_info?: DockerInfo;
+	proxmox_info?: ProxmoxInfo;
 	network_mounts?: NetworkMount[];
 	last_seen?: string;
 	status: AgentStatus;
@@ -484,7 +485,7 @@ export type CompressionLevel = 'off' | 'auto' | 'max';
 export type SchedulePriority = 1 | 2 | 3; // 1=high, 2=medium, 3=low
 
 // Backup type determines what kind of backup to perform
-export type BackupType = 'file' | 'docker';
+export type BackupType = 'file' | 'docker' | 'proxmox';
 
 // Docker backup options
 export interface DockerBackupOptions {
@@ -500,6 +501,63 @@ export interface DockerStackScheduleConfig {
 	export_images: boolean;
 	include_env_files: boolean;
 	stop_for_backup: boolean;
+}
+
+// Proxmox backup options
+export interface ProxmoxBackupOptions {
+	connection_id?: string; // Proxmox connection ID
+	vm_ids?: number[]; // Specific VMs to backup (empty = all)
+	container_ids?: number[]; // Specific LXC containers to backup (empty = all)
+	mode: 'snapshot' | 'suspend' | 'stop'; // Backup mode
+	compress: '0' | 'gzip' | 'lzo' | 'zstd'; // Compression algorithm
+	storage?: string; // Proxmox storage for temp backup
+	max_wait?: number; // Max wait time in minutes
+	include_ram: boolean; // Include RAM state (VMs only, requires snapshot mode)
+	remove_after: boolean; // Remove from Proxmox after Restic backup
+}
+
+// Proxmox VM/container info
+export interface ProxmoxVMInfo {
+	vmid: number;
+	name: string;
+	type: 'qemu' | 'lxc';
+	status: string;
+	node: string;
+	cpus: number;
+	maxmem: number;
+	maxdisk: number;
+}
+
+// Proxmox connection info on agent
+export interface ProxmoxInfo {
+	available: boolean;
+	host?: string;
+	node?: string;
+	version?: string;
+	vm_count: number;
+	lxc_count: number;
+	vms?: ProxmoxVMInfo[];
+	connection_id?: string;
+	error?: string;
+	detected_at?: string;
+}
+
+// Proxmox connection configuration
+export interface ProxmoxConnection {
+	id: string;
+	org_id: string;
+	name: string;
+	host: string;
+	port: number;
+	node: string;
+	username: string;
+	token_id?: string;
+	has_token: boolean;
+	verify_ssl: boolean;
+	enabled: boolean;
+	last_connected_at?: string;
+	created_at: string;
+	updated_at: string;
 }
 
 export interface Schedule {
@@ -529,6 +587,7 @@ export interface Schedule {
 	preemptible: boolean; // Can be preempted by higher priority backups
 	docker_options?: DockerBackupOptions; // Docker-specific backup options
 	docker_stack_config?: DockerStackScheduleConfig; // Docker stack backup configuration
+	proxmox_options?: ProxmoxBackupOptions; // Proxmox-specific backup options
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	enabled: boolean;
@@ -561,6 +620,7 @@ export interface CreateScheduleRequest {
 	paths: string[];
 	excludes?: string[];
 	retention_policy?: RetentionPolicy;
+	proxmox_options?: ProxmoxBackupOptions; // Proxmox-specific backup options
 	enabled?: boolean;
 }
 
@@ -584,6 +644,7 @@ export interface UpdateScheduleRequest {
 	bandwidth_limit_kb?: number;
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
+	proxmox_options?: ProxmoxBackupOptions;
 	enabled?: boolean;
 }
 
@@ -6488,6 +6549,39 @@ export interface License {
 	updated_at: string;
 }
 
+// Webhook types
+export type WebhookEventType =
+	| 'backup.started'
+	| 'backup.completed'
+	| 'backup.failed'
+	| 'agent.online'
+	| 'agent.offline'
+	| 'restore.started'
+	| 'restore.completed'
+	| 'restore.failed'
+	| 'alert.triggered'
+	| 'alert.resolved';
+
+export type WebhookDeliveryStatus =
+	| 'pending'
+	| 'delivered'
+	| 'failed'
+	| 'retrying';
+
+export interface WebhookEndpoint {
+	id: string;
+	org_id: string;
+	name: string;
+	url: string;
+	enabled: boolean;
+	event_types: WebhookEventType[];
+	headers?: Record<string, string>;
+	retry_count: number;
+	timeout_seconds: number;
+	created_at: string;
+	updated_at: string;
+}
+
 export interface LicenseHistory {
 	id: string;
 	license_id: string;
@@ -6854,4 +6948,70 @@ export interface VerificationsResponse {
 
 export interface VerificationSchedulesResponse {
 	schedules: VerificationSchedule[];
+}
+
+export interface WebhookDelivery {
+	id: string;
+	org_id: string;
+	endpoint_id: string;
+	event_type: WebhookEventType;
+	event_id?: string;
+	payload: Record<string, unknown>;
+	request_headers?: Record<string, string>;
+	response_status?: number;
+	response_body?: string;
+	response_headers?: Record<string, string>;
+	attempt_number: number;
+	max_attempts: number;
+	status: WebhookDeliveryStatus;
+	error_message?: string;
+	delivered_at?: string;
+	next_retry_at?: string;
+	created_at: string;
+}
+
+export interface CreateWebhookEndpointRequest {
+	name: string;
+	url: string;
+	secret: string;
+	event_types: WebhookEventType[];
+	headers?: Record<string, string>;
+	retry_count?: number;
+	timeout_seconds?: number;
+}
+
+export interface UpdateWebhookEndpointRequest {
+	name?: string;
+	url?: string;
+	secret?: string;
+	enabled?: boolean;
+	event_types?: WebhookEventType[];
+	headers?: Record<string, string>;
+	retry_count?: number;
+	timeout_seconds?: number;
+}
+
+export interface WebhookEndpointsResponse {
+	endpoints: WebhookEndpoint[];
+}
+
+export interface WebhookDeliveriesResponse {
+	deliveries: WebhookDelivery[];
+	total: number;
+}
+
+export interface WebhookEventTypesResponse {
+	event_types: WebhookEventType[];
+}
+
+export interface TestWebhookRequest {
+	event_type?: WebhookEventType;
+}
+
+export interface TestWebhookResponse {
+	success: boolean;
+	response_status?: number;
+	response_body?: string;
+	error_message?: string;
+	duration_ms: number;
 }

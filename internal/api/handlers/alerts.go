@@ -343,10 +343,10 @@ func (h *AlertsHandler) ListRules(c *gin.Context) {
 
 // CreateRuleRequest is the request body for creating an alert rule.
 type CreateRuleRequest struct {
-	Name    string                  `json:"name" binding:"required,min=1,max=255"`
-	Type    models.AlertType        `json:"type" binding:"required"`
-	Enabled bool                    `json:"enabled"`
-	Config  models.AlertRuleConfig  `json:"config" binding:"required"`
+	Name    string                 `json:"name" binding:"required,min=1,max=255"`
+	Type    models.AlertType       `json:"type" binding:"required"`
+	Enabled bool                   `json:"enabled"`
+	Config  models.AlertRuleConfig `json:"config" binding:"required"`
 }
 
 // CreateRule creates a new alert rule.

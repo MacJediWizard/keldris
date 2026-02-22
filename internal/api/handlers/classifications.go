@@ -444,9 +444,9 @@ func (h *ClassificationsHandler) GetScheduleClassification(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"schedule_id":      schedule.ID,
-		"level":            schedule.ClassificationLevel,
-		"data_types":       schedule.ClassificationDataTypes,
+		"schedule_id": schedule.ID,
+		"level":       schedule.ClassificationLevel,
+		"data_types":  schedule.ClassificationDataTypes,
 	})
 }
 
@@ -599,9 +599,9 @@ func (h *ClassificationsHandler) AutoClassifySchedule(c *gin.Context) {
 
 	h.logger.Info().Str("schedule_id", id.String()).Str("level", string(result.Level)).Msg("schedule auto-classified")
 	c.JSON(http.StatusOK, gin.H{
-		"schedule_id":    id,
-		"level":          result.Level,
-		"data_types":     dataTypes,
+		"schedule_id":     id,
+		"level":           result.Level,
+		"data_types":      dataTypes,
 		"auto_classified": true,
 	})
 }

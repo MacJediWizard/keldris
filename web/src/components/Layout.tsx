@@ -52,6 +52,7 @@ import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useLogout, useMe } from '../hooks/useAuth';
 import { LanguageSelector } from './features/LanguageSelector';
+import { ToastProvider } from './ui/Toast';
 
 interface NavItem {
 	path: string;
@@ -1956,18 +1957,28 @@ export function Layout() {
 							<Breadcrumbs />
 							<Outlet />
 						</main>
+		<ToastProvider>
+			<ReadOnlyModeContext.Provider value={readOnlyModeValue}>
+				<div className="min-h-screen bg-gray-50 flex flex-col">
+					<MaintenanceCountdown />
+					<AnnouncementBanner />
+					<LicenseBanner />
+					<PasswordExpirationBanner />
+					<TrialBanner />
+					<div className="flex flex-1">
+						<Sidebar />
+						<div className="flex-1 flex flex-col">
+							<Header onShowShortcuts={() => setShowShortcutHelp(true)} />
+							<main className="flex-1 p-6">
+								<Breadcrumbs />
+								<Outlet />
+							</main>
+						</div>
 					</div>
-				</div>
-				<ShortcutHelpModal
-					isOpen={showShortcutHelp}
-					onClose={() => setShowShortcutHelp(false)}
-					shortcuts={shortcuts}
-				/>
-				{showWhatsNew && (
-					<WhatsNewModal
-						entry={latestEntry ?? null}
-						currentVersion={currentVersion}
-						onDismiss={() => setShowWhatsNew(false)}
+					<ShortcutHelpModal
+						isOpen={showShortcutHelp}
+						onClose={() => setShowShortcutHelp(false)}
+						shortcuts={shortcuts}
 					/>
 				)}
 		<div className="min-h-screen bg-gray-50 flex">
@@ -1980,5 +1991,15 @@ export function Layout() {
 				</main>
 			</div>
 		</ReadOnlyModeContext.Provider>
+					{showWhatsNew && (
+						<WhatsNewModal
+							entry={latestEntry ?? null}
+							currentVersion={currentVersion}
+							onDismiss={() => setShowWhatsNew(false)}
+						/>
+					)}
+				</div>
+			</ReadOnlyModeContext.Provider>
+		</ToastProvider>
 	);
 }

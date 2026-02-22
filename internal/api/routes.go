@@ -26,6 +26,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/telemetry"
 	"github.com/MacJediWizard/keldris/internal/updates"
 	"github.com/MacJediWizard/keldris/internal/reports"
+	"github.com/MacJediWizard/keldris/internal/webhooks"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	swaggerFiles "github.com/swaggo/files"
@@ -93,6 +94,8 @@ type Config struct {
 	VerificationTrigger handlers.VerificationTrigger
 	// ReportScheduler for report generation and sending (optional).
 	ReportScheduler *reports.Scheduler
+	// WebhookDispatcher for outbound webhook delivery (optional).
+	WebhookDispatcher *webhooks.Dispatcher
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -545,7 +548,7 @@ func NewRouter(
 	userSessionsHandler := handlers.NewUserSessionsHandler(database, logger)
 	userSessionsHandler.RegisterRoutes(apiV1)
 
-// User management routes (admin)
+	// User management routes (admin)
 	usersHandler := handlers.NewUsersHandler(database, sessions, rbac, logger)
 	usersHandler.RegisterRoutes(apiV1)
 
@@ -612,6 +615,14 @@ func NewRouter(
 	dockerRegistriesHandler := handlers.NewDockerRegistriesHandler(database, keyManager, logger)
 	dockerRegistriesHandler.RegisterRoutes(apiV1)
 
+	// Database connections routes (MySQL/MariaDB backup)
+	databaseConnectionsHandler := handlers.NewDatabaseConnectionsHandler(database, keyManager, logger)
+	databaseConnectionsHandler.RegisterRoutes(apiV1)
+
+	// Proxmox VM backup routes
+	proxmoxHandler := handlers.NewProxmoxHandler(database, keyManager, logger)
+	proxmoxHandler.RegisterRoutes(apiV1)
+
 	// Activity feed routes
 	if cfg.ActivityFeed != nil {
 		activityHandler := handlers.NewActivityHandler(database, cfg.ActivityFeed, logger)
@@ -641,6 +652,12 @@ func NewRouter(
 	// Classification routes
 	classificationsHandler := handlers.NewClassificationsHandler(database, logger)
 	classificationsHandler.RegisterRoutes(apiV1)
+
+	// Outbound webhooks routes
+	if cfg.WebhookDispatcher != nil {
+		webhooksHandler := handlers.NewWebhooksHandler(database, keyManager, cfg.WebhookDispatcher, logger)
+		webhooksHandler.RegisterRoutes(apiV1)
+	}
 
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
@@ -709,4 +726,3 @@ func NewRouter(
 	r.logger.Info().Msg("API router initialized")
 	return r, nil
 }
-

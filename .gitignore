@@ -37,6 +37,7 @@ Thumbs.db
 /keldris-agent
 SECURITY_AUDIT.md
 VERIFICATION.md
+/keldris-agent
 
 # Test binary
 *.test

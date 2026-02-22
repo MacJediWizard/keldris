@@ -803,12 +803,16 @@ func (db *DB) DeleteRepository(ctx context.Context, id uuid.UUID) error {
 // GetSchedulesByAgentID returns all schedules for an agent.
 func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, agent_group_id, policy_id, name, backup_type, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
 		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
 		SELECT id, agent_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		       excluded_hours, compression_level, enabled, created_at, updated_at
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable,
+		       priority, preemptible, classification_level, classification_data_types,
+		       docker_options, pihole_config, proxmox_options,
+		       enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
 		ORDER BY name
@@ -842,12 +846,16 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 // GetScheduleByID returns a schedule by ID.
 func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error) {
 	row := db.Pool.QueryRow(ctx, `
-		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, agent_group_id, policy_id, name, backup_type, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
 		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
 		SELECT id, agent_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
 		       excluded_hours, compression_level, enabled, created_at, updated_at
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable,
+		       priority, preemptible, classification_level, classification_data_types,
+		       docker_options, pihole_config, proxmox_options,
+		       enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`, id)
@@ -906,8 +914,35 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 		mountBehavior = string(models.MountBehaviorFail)
 	}
 
+	// Serialize backup type specific options
+	dockerOptionsBytes, err := schedule.DockerOptionsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal docker options: %w", err)
+	}
+
+	piholeConfigBytes, err := schedule.PiholeConfigJSON()
+	if err != nil {
+		return fmt.Errorf("marshal pihole config: %w", err)
+	}
+
+	proxmoxOptionsBytes, err := schedule.ProxmoxOptionsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal proxmox options: %w", err)
+	}
+
+	classificationDataTypesBytes, err := schedule.ClassificationDataTypesJSON()
+	if err != nil {
+		return fmt.Errorf("marshal classification data types: %w", err)
+	}
+
+	// Default backup type to file if not set
+	backupType := string(schedule.BackupType)
+	if backupType == "" {
+		backupType = string(models.BackupTypeFile)
+	}
+
 	_, err = db.Pool.Exec(ctx, `
-		INSERT INTO schedules (id, agent_id, agent_group_id, policy_id, name, cron_expression, paths,
+		INSERT INTO schedules (id, agent_id, agent_group_id, policy_id, name, backup_type, cron_expression, paths,
 		                       excludes, retention_policy, bandwidth_limit_kbps,
 		                       backup_window_start, backup_window_end, excluded_hours,
 		                       compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at)
@@ -925,6 +960,18 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 		schedule.BandwidthLimitKB, windowStart, windowEnd, excludedHoursBytes,
 		schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior, schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 		schedule.CompressionLevel, schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
+		                       compression_level, max_file_size_mb, on_mount_unavailable,
+		                       priority, preemptible, classification_level, classification_data_types,
+		                       docker_options, pihole_config, proxmox_options,
+		                       enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+	`, schedule.ID, schedule.AgentID, schedule.AgentGroupID, schedule.PolicyID, schedule.Name,
+		backupType, schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
+		schedule.BandwidthLimitKB, windowStart, windowEnd, excludedHoursBytes,
+		schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior,
+		schedule.Priority, schedule.Preemptible, schedule.ClassificationLevel, classificationDataTypesBytes,
+		dockerOptionsBytes, piholeConfigBytes, proxmoxOptionsBytes,
+		schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create schedule: %w", err)
 	}
@@ -979,15 +1026,45 @@ func (db *DB) UpdateSchedule(ctx context.Context, schedule *models.Schedule) err
 		mountBehavior = string(models.MountBehaviorFail)
 	}
 
+	// Serialize backup type specific options
+	dockerOptionsBytes, err := schedule.DockerOptionsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal docker options: %w", err)
+	}
+
+	piholeConfigBytes, err := schedule.PiholeConfigJSON()
+	if err != nil {
+		return fmt.Errorf("marshal pihole config: %w", err)
+	}
+
+	proxmoxOptionsBytes, err := schedule.ProxmoxOptionsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal proxmox options: %w", err)
+	}
+
+	classificationDataTypesBytes, err := schedule.ClassificationDataTypesJSON()
+	if err != nil {
+		return fmt.Errorf("marshal classification data types: %w", err)
+	}
+
+	// Default backup type to file if not set
+	backupType := string(schedule.BackupType)
+	if backupType == "" {
+		backupType = string(models.BackupTypeFile)
+	}
+
 	schedule.UpdatedAt = time.Now()
 	_, err = db.Pool.Exec(ctx, `
 		UPDATE schedules
-		SET policy_id = $2, name = $3, cron_expression = $4, paths = $5, excludes = $6,
-		    retention_policy = $7, bandwidth_limit_kbps = $8, backup_window_start = $9,
-		    backup_window_end = $10, excluded_hours = $11, compression_level = $12,
-		    max_file_size_mb = $13, on_mount_unavailable = $14, enabled = $15, updated_at = $16
+		SET policy_id = $2, name = $3, backup_type = $4, cron_expression = $5, paths = $6, excludes = $7,
+		    retention_policy = $8, bandwidth_limit_kbps = $9, backup_window_start = $10,
+		    backup_window_end = $11, excluded_hours = $12, compression_level = $13,
+		    max_file_size_mb = $14, on_mount_unavailable = $15,
+		    priority = $16, preemptible = $17, classification_level = $18, classification_data_types = $19,
+		    docker_options = $20, pihole_config = $21, proxmox_options = $22,
+		    enabled = $23, updated_at = $24
 		WHERE id = $1
-	`, schedule.ID, schedule.PolicyID, schedule.Name, schedule.CronExpression, pathsBytes,
+	`, schedule.ID, schedule.PolicyID, schedule.Name, backupType, schedule.CronExpression, pathsBytes,
 		excludesBytes, retentionBytes, schedule.BandwidthLimitKB, windowStart, windowEnd,
 		excludedHoursBytes, schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior, schedule.Enabled, schedule.UpdatedAt)
 		    retention_policy = $7, enabled = $8, updated_at = $9
@@ -996,6 +1073,9 @@ func (db *DB) UpdateSchedule(ctx context.Context, schedule *models.Schedule) err
 	`, schedule.ID, schedule.PolicyID, schedule.Name, schedule.CronExpression, pathsBytes,
 		excludesBytes, retentionBytes, schedule.BandwidthLimitKB, windowStart,
 		windowEnd, excludedHoursBytes, schedule.CompressionLevel,
+		excludedHoursBytes, schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior,
+		schedule.Priority, schedule.Preemptible, schedule.ClassificationLevel, classificationDataTypesBytes,
+		dockerOptionsBytes, piholeConfigBytes, proxmoxOptionsBytes,
 		schedule.Enabled, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update schedule: %w", err)
@@ -1154,10 +1234,11 @@ func scanSchedule(rows interface {
 }) (*models.Schedule, error) {
 	var s models.Schedule
 	var pathsBytes, excludesBytes, retentionBytes, excludedHoursBytes []byte
+	var classificationDataTypesBytes, dockerOptionsBytes, piholeConfigBytes, proxmoxOptionsBytes []byte
 	var agentGroupID *uuid.UUID
-	var windowStart, windowEnd, compressionLevel, mountBehavior *string
+	var backupType, windowStart, windowEnd, compressionLevel, mountBehavior, classificationLevel *string
 	err := rows.Scan(
-		&s.ID, &s.AgentID, &agentGroupID, &s.PolicyID, &s.Name, &s.CronExpression,
+		&s.ID, &s.AgentID, &agentGroupID, &s.PolicyID, &s.Name, &backupType, &s.CronExpression,
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.BandwidthLimitKB,
 		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel, &s.MaxFileSizeMB,
 		&mountBehavior, &s.Enabled, &s.CreatedAt, &s.UpdatedAt,
@@ -1171,12 +1252,21 @@ func scanSchedule(rows interface {
 		&s.CreatedAt, &s.UpdatedAt,
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.BandwidthLimitKB,
 		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel,
+		&mountBehavior, &s.Priority, &s.Preemptible, &classificationLevel, &classificationDataTypesBytes,
+		&dockerOptionsBytes, &piholeConfigBytes, &proxmoxOptionsBytes,
 		&s.Enabled, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan schedule: %w", err)
 	}
 	s.AgentGroupID = agentGroupID
+
+	// Set backup type with default
+	if backupType != nil && *backupType != "" {
+		s.BackupType = models.BackupType(*backupType)
+	} else {
+		s.BackupType = models.BackupTypeFile
+	}
 
 	if err := s.SetPaths(pathsBytes); err != nil {
 		return nil, fmt.Errorf("parse paths: %w", err)
@@ -1192,6 +1282,25 @@ func scanSchedule(rows interface {
 	}
 	s.SetBackupWindow(windowStart, windowEnd)
 	s.CompressionLevel = compressionLevel
+
+	// Set classification
+	if classificationLevel != nil {
+		s.ClassificationLevel = *classificationLevel
+	}
+	if err := s.SetClassificationDataTypes(classificationDataTypesBytes); err != nil {
+		return nil, fmt.Errorf("parse classification data types: %w", err)
+	}
+
+	// Set backup type specific options
+	if err := s.SetDockerOptions(dockerOptionsBytes); err != nil {
+		return nil, fmt.Errorf("parse docker options: %w", err)
+	}
+	if err := s.SetPiholeConfig(piholeConfigBytes); err != nil {
+		return nil, fmt.Errorf("parse pihole config: %w", err)
+	}
+	if err := s.SetProxmoxOptions(proxmoxOptionsBytes); err != nil {
+		return nil, fmt.Errorf("parse proxmox options: %w", err)
+	}
 
 	// Set mount behavior with default
 	if mountBehavior != nil && *mountBehavior != "" {
@@ -2014,6 +2123,19 @@ func (db *DB) UpdateReplicationStatus(ctx context.Context, rs *models.Replicatio
 		SET last_snapshot_id = $2, last_sync_at = $3, status = $4, error_message = $5, updated_at = $6
 		WHERE id = $1
 	`, rs.ID, rs.LastSnapshotID, rs.LastSyncAt, string(rs.Status), rs.ErrorMessage, rs.UpdatedAt)
+// GetEnabledSchedules returns all enabled schedules.
+func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, agent_id, agent_group_id, policy_id, name, backup_type, cron_expression, paths, excludes,
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable,
+		       priority, preemptible, classification_level, classification_data_types,
+		       docker_options, pihole_config, proxmox_options,
+		       enabled, created_at, updated_at
+		FROM schedules
+		WHERE enabled = true
+		ORDER BY name
+	`)
 	if err != nil {
 		return fmt.Errorf("update replication status: %w", err)
 	}
@@ -5898,6 +6020,15 @@ func (db *DB) GetDashboardStats(ctx context.Context, orgID uuid.UUID) (*models.D
 		SELECT
 			COUNT(*) AS total,
 			COUNT(*) FILTER (WHERE enabled = true) AS enabled
+// GetEnabledSchedulesByOrgID returns all enabled backup schedules for an org.
+func (db *DB) GetEnabledSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.backup_type, s.cron_expression,
+		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps, s.backup_window_start, s.backup_window_end,
+		       s.excluded_hours, s.compression_level, s.max_file_size_mb, s.on_mount_unavailable,
+		       s.priority, s.preemptible, s.classification_level, s.classification_data_types,
+		       s.docker_options, s.pihole_config, s.proxmox_options,
+		       s.enabled, s.created_at, s.updated_at
 		FROM schedules s
 		JOIN agents a ON s.agent_id = a.id
 		WHERE a.org_id = $1
@@ -16113,4 +16244,75 @@ func (db *DB) GetMaxRPOHoursForOrg(ctx context.Context, orgID uuid.UUID) (float6
 		return 0, fmt.Errorf("get max RPO hours: %w", err)
 	}
 	return maxHours, nil
+}
+
+// =============================================================================
+// Prometheus Metrics Methods
+// =============================================================================
+
+// GetAllBackups returns all backups across all organizations (for Prometheus metrics).
+func (db *DB) GetAllBackups(ctx context.Context) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
+		       status, size_bytes, files_new, files_changed, error_message,
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
+		       pre_script_output, pre_script_error, post_script_output, post_script_error,
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
+		FROM backups
+		ORDER BY started_at DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("get all backups: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackups(rows)
+}
+
+// GetBackupsByStatus returns all backups with the specified status (for Prometheus metrics).
+func (db *DB) GetBackupsByStatus(ctx context.Context, status models.BackupStatus) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
+		       status, size_bytes, files_new, files_changed, error_message,
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
+		       pre_script_output, pre_script_error, post_script_output, post_script_error,
+		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
+		FROM backups
+		WHERE status = $1
+		ORDER BY started_at DESC
+	`, status)
+	if err != nil {
+		return nil, fmt.Errorf("get backups by status: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackups(rows)
+}
+
+// GetStorageStatsSummaryGlobal returns aggregated storage statistics across all organizations.
+func (db *DB) GetStorageStatsSummaryGlobal(ctx context.Context) (*models.StorageStatsSummary, error) {
+	var summary models.StorageStatsSummary
+	err := db.Pool.QueryRow(ctx, `
+		SELECT
+			COALESCE(SUM(latest.raw_data_size), 0) as total_raw_size,
+			COALESCE(SUM(latest.restore_size), 0) as total_restore_size,
+			COALESCE(SUM(latest.space_saved), 0) as total_space_saved,
+			COALESCE(AVG(latest.dedup_ratio), 0) as avg_dedup_ratio,
+			COUNT(DISTINCT latest.repository_id) as repository_count,
+			COALESCE(SUM(latest.snapshot_count), 0) as total_snapshots
+		FROM (
+			SELECT DISTINCT ON (s.repository_id)
+				s.repository_id, s.raw_data_size, s.restore_size, s.space_saved,
+				s.dedup_ratio, s.snapshot_count
+			FROM storage_stats s
+			ORDER BY s.repository_id, s.collected_at DESC
+		) as latest
+	`).Scan(
+		&summary.TotalRawSize, &summary.TotalRestoreSize, &summary.TotalSpaceSaved,
+		&summary.AvgDedupRatio, &summary.RepositoryCount, &summary.TotalSnapshots,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get storage stats summary global: %w", err)
+	}
+	return &summary, nil
 }

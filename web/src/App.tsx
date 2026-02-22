@@ -64,6 +64,7 @@ import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
 import { UserManagement } from './pages/UserManagement';
 import { UserSessions } from './pages/UserSessions';
+import Webhooks from './pages/Webhooks';
 import { LicenseManagement } from './pages/admin/LicenseManagement';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -564,6 +565,7 @@ function App() {
 									path="notification-rules"
 									element={<NotificationRules />}
 								/>
+								<Route path="webhooks" element={<Webhooks />} />
 								<Route path="reports" element={<Reports />} />
 								<Route path="audit-logs" element={<AuditLogs />} />
 								<Route path="legal-holds" element={<LegalHolds />} />

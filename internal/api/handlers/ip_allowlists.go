@@ -32,9 +32,9 @@ type IPFilterInvalidator interface {
 
 // IPAllowlistsHandler handles IP allowlist HTTP endpoints.
 type IPAllowlistsHandler struct {
-	store       IPAllowlistStore
-	ipFilter    IPFilterInvalidator
-	logger      zerolog.Logger
+	store    IPAllowlistStore
+	ipFilter IPFilterInvalidator
+	logger   zerolog.Logger
 }
 
 // NewIPAllowlistsHandler creates a new IPAllowlistsHandler.

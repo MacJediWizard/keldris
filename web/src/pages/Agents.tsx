@@ -16,6 +16,7 @@ import {
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { EmptyStateNoAgents } from '../components/ui/EmptyState';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
+import { AgentRowSkeleton } from '../components/ui/PageSkeletons';
 import { StarButton } from '../components/ui/StarButton';
 import { useAddAgentToGroup, useAgentGroups } from '../hooks/useAgentGroups';
 import {
@@ -1613,9 +1614,9 @@ export function Agents() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<AgentRowSkeleton />
+							<AgentRowSkeleton />
+							<AgentRowSkeleton />
 						</tbody>
 					</table>
 				) : filteredAgents && filteredAgents.length > 0 ? (

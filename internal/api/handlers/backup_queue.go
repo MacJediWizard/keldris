@@ -83,12 +83,12 @@ type QueueEntryResponse struct {
 
 // QueueSummaryResponse is the response for queue summary.
 type QueueSummaryResponse struct {
-	TotalQueued     int                   `json:"total_queued"`
-	TotalRunning    int                   `json:"total_running"`
-	AvgWaitMinutes  float64               `json:"avg_wait_minutes"`
-	OldestQueuedAt  *string               `json:"oldest_queued_at,omitempty"`
-	QueuedByAgent   map[string]int        `json:"queued_by_agent,omitempty"`
-	Entries         []QueueEntryResponse  `json:"entries,omitempty"`
+	TotalQueued    int                  `json:"total_queued"`
+	TotalRunning   int                  `json:"total_running"`
+	AvgWaitMinutes float64              `json:"avg_wait_minutes"`
+	OldestQueuedAt *string              `json:"oldest_queued_at,omitempty"`
+	QueuedByAgent  map[string]int       `json:"queued_by_agent,omitempty"`
+	Entries        []QueueEntryResponse `json:"entries,omitempty"`
 }
 
 // ListQueue returns all queued backups for the current organization.
@@ -310,7 +310,7 @@ func (h *BackupQueueHandler) UpdateOrgConcurrency(c *gin.Context) {
 		Msg("organization concurrency limit updated")
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":              "concurrency limit updated",
+		"message":                "concurrency limit updated",
 		"max_concurrent_backups": req.MaxConcurrentBackups,
 	})
 }
@@ -403,7 +403,7 @@ func (h *BackupQueueHandler) UpdateAgentConcurrency(c *gin.Context) {
 		Msg("agent concurrency limit updated")
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":              "concurrency limit updated",
+		"message":                "concurrency limit updated",
 		"max_concurrent_backups": req.MaxConcurrentBackups,
 	})
 }

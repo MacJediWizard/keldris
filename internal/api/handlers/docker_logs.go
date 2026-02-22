@@ -452,17 +452,17 @@ func (h *DockerLogsHandler) GetSettings(c *gin.Context) {
 
 // DockerLogSettingsRequest is the request body for updating docker log settings.
 type DockerLogSettingsRequest struct {
-	Enabled           *bool                             `json:"enabled,omitempty"`
-	CronExpression    string                            `json:"cron_expression,omitempty"`
-	RetentionPolicy   *models.DockerLogRetentionPolicy  `json:"retention_policy,omitempty"`
-	IncludeContainers []string                          `json:"include_containers,omitempty"`
-	ExcludeContainers []string                          `json:"exclude_containers,omitempty"`
-	IncludeLabels     map[string]string                 `json:"include_labels,omitempty"`
-	ExcludeLabels     map[string]string                 `json:"exclude_labels,omitempty"`
-	Timestamps        *bool                             `json:"timestamps,omitempty"`
-	Tail              *int                              `json:"tail,omitempty"`
-	Since             string                            `json:"since,omitempty"`
-	Until             string                            `json:"until,omitempty"`
+	Enabled           *bool                            `json:"enabled,omitempty"`
+	CronExpression    string                           `json:"cron_expression,omitempty"`
+	RetentionPolicy   *models.DockerLogRetentionPolicy `json:"retention_policy,omitempty"`
+	IncludeContainers []string                         `json:"include_containers,omitempty"`
+	ExcludeContainers []string                         `json:"exclude_containers,omitempty"`
+	IncludeLabels     map[string]string                `json:"include_labels,omitempty"`
+	ExcludeLabels     map[string]string                `json:"exclude_labels,omitempty"`
+	Timestamps        *bool                            `json:"timestamps,omitempty"`
+	Tail              *int                             `json:"tail,omitempty"`
+	Since             string                           `json:"since,omitempty"`
+	Until             string                           `json:"until,omitempty"`
 }
 
 // UpdateSettings updates docker log settings for an agent.

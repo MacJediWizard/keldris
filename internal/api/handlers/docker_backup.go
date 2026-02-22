@@ -282,12 +282,12 @@ type ContainerDiscoveryRequest struct {
 
 // ContainerInfoRequest represents container info in a discovery request.
 type ContainerInfoRequest struct {
-	ID     string            `json:"id" binding:"required"`
-	Name   string            `json:"name" binding:"required"`
-	Image  string            `json:"image" binding:"required"`
-	Labels map[string]string `json:"labels"`
+	ID     string             `json:"id" binding:"required"`
+	Name   string             `json:"name" binding:"required"`
+	Image  string             `json:"image" binding:"required"`
+	Labels map[string]string  `json:"labels"`
 	Mounts []MountInfoRequest `json:"mounts,omitempty"`
-	Status string            `json:"status,omitempty"`
+	Status string             `json:"status,omitempty"`
 }
 
 // MountInfoRequest represents mount info in a discovery request.

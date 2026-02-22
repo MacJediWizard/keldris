@@ -108,39 +108,61 @@ type CreateScheduleRequest struct {
 	ExcludedHours    []int                       `json:"excluded_hours,omitempty"`
 	CompressionLevel *string                     `json:"compression_level,omitempty"`
 	Enabled          *bool                       `json:"enabled,omitempty"`
+	AgentID            uuid.UUID                     `json:"agent_id" binding:"required"`
+	Repositories       []ScheduleRepositoryRequest   `json:"repositories" binding:"required,min=1"`
+	Name               string                        `json:"name" binding:"required,min=1,max=255"`
+	BackupType         string                        `json:"backup_type,omitempty"`     // "file" (default), "docker", "pihole", "postgres", or "proxmox"
+	CronExpression     string                        `json:"cron_expression" binding:"required"`
+	Paths              []string                      `json:"paths,omitempty"`           // Required for file backups, optional for docker/postgres/proxmox
+	Excludes           []string                      `json:"excludes,omitempty"`
+	RetentionPolicy    *models.RetentionPolicy       `json:"retention_policy,omitempty"`
+	BandwidthLimitKB   *int                          `json:"bandwidth_limit_kb,omitempty"`
+	BackupWindow       *models.BackupWindow          `json:"backup_window,omitempty"`
+	ExcludedHours      []int                         `json:"excluded_hours,omitempty"`
+	CompressionLevel   *string                       `json:"compression_level,omitempty"`
+	MaxFileSizeMB      *int                          `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
+	OnMountUnavailable string                        `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
+	Priority           *int                          `json:"priority,omitempty"`             // 1=high, 2=medium, 3=low
+	Preemptible        *bool                         `json:"preemptible,omitempty"`          // Can be preempted by higher priority
+	DockerOptions      *models.DockerBackupOptions   `json:"docker_options,omitempty"`       // Docker-specific backup options
+	PostgresOptions    *models.PostgresBackupConfig  `json:"postgres_options,omitempty"`     // PostgreSQL-specific backup options
+	ProxmoxOptions     *models.ProxmoxBackupOptions  `json:"proxmox_options,omitempty"`      // Proxmox-specific backup options
+	Enabled            *bool                         `json:"enabled,omitempty"`
 }
 
 // UpdateScheduleRequest is the request body for updating a schedule.
 type UpdateScheduleRequest struct {
-	Name               string                       `json:"name,omitempty"`
-	BackupType         string                       `json:"backup_type,omitempty"` // "file" or "docker"
-	CronExpression     string                       `json:"cron_expression,omitempty"`
-	Paths              []string                     `json:"paths,omitempty"`
-	Excludes           []string                     `json:"excludes,omitempty"`
-	RetentionPolicy    *models.RetentionPolicy      `json:"retention_policy,omitempty"`
-	Repositories       []ScheduleRepositoryRequest  `json:"repositories,omitempty"`
-	BandwidthLimitKB   *int                         `json:"bandwidth_limit_kb,omitempty"`
-	BackupWindow       *models.BackupWindow         `json:"backup_window,omitempty"`
-	ExcludedHours      []int                        `json:"excluded_hours,omitempty"`
-	CompressionLevel   *string                      `json:"compression_level,omitempty"`
-	MaxFileSizeMB      *int                         `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
-	OnMountUnavailable *string                      `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
-	Priority           *int                         `json:"priority,omitempty"`             // 1=high, 2=medium, 3=low
-	Preemptible        *bool                        `json:"preemptible,omitempty"`          // Can be preempted by higher priority
-	DockerOptions      *models.DockerBackupOptions  `json:"docker_options,omitempty"`       // Docker-specific backup options
-	Enabled            *bool                        `json:"enabled,omitempty"`
+	Name               string                        `json:"name,omitempty"`
+	BackupType         string                        `json:"backup_type,omitempty"` // "file", "docker", "pihole", "postgres", or "proxmox"
+	CronExpression     string                        `json:"cron_expression,omitempty"`
+	Paths              []string                      `json:"paths,omitempty"`
+	Excludes           []string                      `json:"excludes,omitempty"`
+	RetentionPolicy    *models.RetentionPolicy       `json:"retention_policy,omitempty"`
+	Repositories       []ScheduleRepositoryRequest   `json:"repositories,omitempty"`
+	BandwidthLimitKB   *int                          `json:"bandwidth_limit_kb,omitempty"`
+	BackupWindow       *models.BackupWindow          `json:"backup_window,omitempty"`
+	ExcludedHours      []int                         `json:"excluded_hours,omitempty"`
+	CompressionLevel   *string                       `json:"compression_level,omitempty"`
+	MaxFileSizeMB      *int                          `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
+	OnMountUnavailable *string                       `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
+	Priority           *int                          `json:"priority,omitempty"`             // 1=high, 2=medium, 3=low
+	Preemptible        *bool                         `json:"preemptible,omitempty"`          // Can be preempted by higher priority
+	DockerOptions      *models.DockerBackupOptions   `json:"docker_options,omitempty"`       // Docker-specific backup options
+	PostgresOptions    *models.PostgresBackupConfig  `json:"postgres_options,omitempty"`     // PostgreSQL-specific backup options
+	ProxmoxOptions     *models.ProxmoxBackupOptions  `json:"proxmox_options,omitempty"`      // Proxmox-specific backup options
+	Enabled            *bool                         `json:"enabled,omitempty"`
 }
 
 // CloneScheduleRequest is the request body for cloning a schedule.
 type CloneScheduleRequest struct {
-	Name              string      `json:"name,omitempty"`               // Optional new name (default: "Copy of X")
-	TargetAgentID     *uuid.UUID  `json:"target_agent_id,omitempty"`    // Optional target agent (default: same agent)
-	TargetRepoIDs     []uuid.UUID `json:"target_repo_ids,omitempty"`    // Optional target repositories (default: same repos)
+	Name          string      `json:"name,omitempty"`            // Optional new name (default: "Copy of X")
+	TargetAgentID *uuid.UUID  `json:"target_agent_id,omitempty"` // Optional target agent (default: same agent)
+	TargetRepoIDs []uuid.UUID `json:"target_repo_ids,omitempty"` // Optional target repositories (default: same repos)
 }
 
 // BulkCloneScheduleRequest is the request body for cloning a schedule to multiple agents.
 type BulkCloneScheduleRequest struct {
-	ScheduleID    uuid.UUID   `json:"schedule_id" binding:"required"`
+	ScheduleID     uuid.UUID   `json:"schedule_id" binding:"required"`
 	TargetAgentIDs []uuid.UUID `json:"target_agent_ids" binding:"required,min=1"`
 	NamePrefix     string      `json:"name_prefix,omitempty"` // Optional prefix for cloned schedule names
 }
@@ -424,9 +446,25 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		schedule.DockerOptions = req.DockerOptions
 	}
 
+	// Handle PostgreSQL-specific options
+	if req.PostgresOptions != nil {
+		schedule.PostgresConfig = req.PostgresOptions
+	}
+
+	// Handle Proxmox-specific options
+	if req.ProxmoxOptions != nil {
+		schedule.ProxmoxOptions = req.ProxmoxOptions
+	}
+
 	// Validate paths for file backups
 	if schedule.BackupType == models.BackupTypeFile && len(schedule.Paths) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "paths are required for file backups"})
+		return
+	}
+
+	// Validate PostgreSQL backups have config
+	if schedule.BackupType == models.BackupTypePostgres && schedule.PostgresConfig == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "postgres_options are required for PostgreSQL backups"})
 		return
 	}
 
@@ -558,6 +596,16 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 		schedule.DockerOptions = req.DockerOptions
 	}
 
+	// Handle PostgreSQL-specific options
+	if req.PostgresOptions != nil {
+		schedule.PostgresConfig = req.PostgresOptions
+	}
+
+	// Handle Proxmox-specific options
+	if req.ProxmoxOptions != nil {
+		schedule.ProxmoxOptions = req.ProxmoxOptions
+	}
+
 	if req.Enabled != nil {
 		schedule.Enabled = *req.Enabled
 	}
@@ -669,15 +717,15 @@ type RunScheduleResponse struct {
 
 // DryRunResponse is the response for a dry run operation.
 type DryRunResponse struct {
-	ScheduleID     uuid.UUID              `json:"schedule_id"`
-	TotalFiles     int                    `json:"total_files"`
-	TotalSize      int64                  `json:"total_size"`
-	NewFiles       int                    `json:"new_files"`
-	ChangedFiles   int                    `json:"changed_files"`
-	UnchangedFiles int                    `json:"unchanged_files"`
-	FilesToBackup  []DryRunFileResponse   `json:"files_to_backup"`
-	ExcludedFiles  []DryRunExcluded       `json:"excluded_files"`
-	Message        string                 `json:"message"`
+	ScheduleID     uuid.UUID            `json:"schedule_id"`
+	TotalFiles     int                  `json:"total_files"`
+	TotalSize      int64                `json:"total_size"`
+	NewFiles       int                  `json:"new_files"`
+	ChangedFiles   int                  `json:"changed_files"`
+	UnchangedFiles int                  `json:"unchanged_files"`
+	FilesToBackup  []DryRunFileResponse `json:"files_to_backup"`
+	ExcludedFiles  []DryRunExcluded     `json:"excluded_files"`
+	Message        string               `json:"message"`
 }
 
 // DryRunFileResponse represents a file in the dry run response.
@@ -984,6 +1032,8 @@ func (h *SchedulesHandler) Clone(c *gin.Context) {
 	cloned.ClassificationLevel = source.ClassificationLevel
 	cloned.ClassificationDataTypes = source.ClassificationDataTypes
 	cloned.DockerOptions = source.DockerOptions
+	cloned.PostgresConfig = source.PostgresConfig
+	cloned.ProxmoxOptions = source.ProxmoxOptions
 	cloned.Enabled = source.Enabled
 
 	// Handle repositories
@@ -1116,6 +1166,8 @@ func (h *SchedulesHandler) BulkClone(c *gin.Context) {
 		cloned.ClassificationLevel = source.ClassificationLevel
 		cloned.ClassificationDataTypes = source.ClassificationDataTypes
 		cloned.DockerOptions = source.DockerOptions
+		cloned.PostgresConfig = source.PostgresConfig
+		cloned.ProxmoxOptions = source.ProxmoxOptions
 		cloned.Enabled = source.Enabled
 
 		// Copy repositories from source

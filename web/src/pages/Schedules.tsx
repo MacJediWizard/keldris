@@ -23,6 +23,7 @@ import {
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { EmptyStateNoSchedules } from '../components/ui/EmptyState';
 import { FormLabelWithHelp, HelpTooltip } from '../components/ui/HelpTooltip';
+import { ScheduleRowSkeleton } from '../components/ui/PageSkeletons';
 import { StarButton } from '../components/ui/StarButton';
 import { useAgents } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
@@ -2944,6 +2945,9 @@ export function Schedules() {
 							<LoadingRow />
 							<LoadingRow />
 							<LoadingRow />
+							<ScheduleRowSkeleton />
+							<ScheduleRowSkeleton />
+							<ScheduleRowSkeleton />
 						</tbody>
 					</table>
 				) : filteredSchedules && filteredSchedules.length > 0 ? (
