@@ -9,6 +9,7 @@ import { useBackups } from '../hooks/useBackups';
 import { useFavorites } from '../hooks/useFavorites';
 import { useLocale } from '../hooks/useLocale';
 import { useDashboardStats } from '../hooks/useMetrics';
+import { useDRStatus } from '../hooks/useDRRunbooks';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
 import { useStorageStatsSummary } from '../hooks/useStorageStats';
@@ -25,6 +26,8 @@ import {
 	formatBytes,
 	formatDate,
 	formatDedupRatio,
+	formatPercent,
+	formatRelativeTime,
 	getBackupStatusColor,
 	getDedupRatioColor,
 	getSpaceSavedColor,
@@ -614,6 +617,7 @@ export function Dashboard() {
 	const { data: backups, isLoading: backupsLoading } = useBackups();
 	const { data: schedules, isLoading: schedulesLoading } = useSchedules();
 	const { data: repositories, isLoading: reposLoading } = useRepositories();
+	const { data: drStatus, isLoading: drStatusLoading } = useDRStatus();
 	const { data: storageStats, isLoading: statsLoading } =
 		useStorageStatsSummary();
 	const { data: favorites, isLoading: favoritesLoading } = useFavorites();
@@ -674,7 +678,7 @@ export function Dashboard() {
 				<p className="text-gray-600 mt-1">{t('dashboard.subtitle')}</p>
 			</div>
 
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
 				<StatCard
 					title={t('dashboard.activeAgents')}
 					value={String(activeAgents)}
@@ -769,6 +773,28 @@ export function Dashboard() {
 								strokeLinejoin="round"
 								strokeWidth={2}
 								d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+							/>
+						</svg>
+					}
+				/>
+				<StatCard
+					title="DR Pass Rate"
+					value={drStatus ? `${Math.round(drStatus.pass_rate)}%` : '0%'}
+					subtitle={`${drStatus?.tests_last_30_days ?? 0} tests (30 days)`}
+					isLoading={drStatusLoading}
+					icon={
+						<svg
+							aria-hidden="true"
+							className="w-6 h-6"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
 							/>
 						</svg>
 					}
@@ -1255,6 +1281,48 @@ export function Dashboard() {
 									{t('dashboard.idle')}
 								</span>
 							)}
+						</div>
+					</div>
+
+					<div className="border-t border-gray-200 mt-4 pt-4">
+						<h3 className="text-sm font-medium text-gray-900 mb-3">
+							DR Testing
+						</h3>
+						<div className="space-y-3">
+							<div className="flex items-center justify-between">
+								<span className="text-gray-600 text-sm">Active Runbooks</span>
+								<span className="text-sm font-medium text-gray-900">
+									{drStatusLoading ? (
+										<span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
+									) : (
+										`${drStatus?.active_runbooks ?? 0} / ${drStatus?.total_runbooks ?? 0}`
+									)}
+								</span>
+							</div>
+							<div className="flex items-center justify-between">
+								<span className="text-gray-600 text-sm">Last Test</span>
+								<span className="text-sm text-gray-900">
+									{drStatusLoading ? (
+										<span className="inline-block w-16 h-4 bg-gray-200 rounded animate-pulse" />
+									) : drStatus?.last_test_at ? (
+										formatRelativeTime(drStatus.last_test_at)
+									) : (
+										<span className="text-gray-400">Never</span>
+									)}
+								</span>
+							</div>
+							<div className="flex items-center justify-between">
+								<span className="text-gray-600 text-sm">Next Test</span>
+								<span className="text-sm text-gray-900">
+									{drStatusLoading ? (
+										<span className="inline-block w-16 h-4 bg-gray-200 rounded animate-pulse" />
+									) : drStatus?.next_test_at ? (
+										formatRelativeTime(drStatus.next_test_at)
+									) : (
+										<span className="text-gray-400">Not scheduled</span>
+									)}
+								</span>
+							</div>
 						</div>
 					</div>
 				</div>

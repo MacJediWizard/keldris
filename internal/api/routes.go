@@ -671,6 +671,13 @@ func NewRouter(
 			r.logger.Warn().Str("dir", cfg.WebDir).Msg("web directory not found, SPA not served")
 		}
 	}
+	// DR Runbook routes
+	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
+	drRunbooksHandler.RegisterRoutes(apiV1)
+
+	// DR Test routes (runner is nil for now, will be set up when scheduler is integrated)
+	drTestsHandler := handlers.NewDRTestsHandler(database, nil, logger)
+	drTestsHandler.RegisterRoutes(apiV1)
 
 	r.logger.Info().Msg("API router initialized")
 	return r, nil

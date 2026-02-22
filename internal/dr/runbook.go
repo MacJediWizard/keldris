@@ -45,6 +45,7 @@ func (g *RunbookGenerator) GenerateForSchedule(ctx context.Context, schedule *mo
 	}
 
 	repo, err := g.store.GetRepositoryByID(ctx, primaryRepo.RepositoryID)
+	repo, err := g.store.GetRepositoryByID(ctx, schedule.RepositoryID)
 	if err != nil {
 		return nil, fmt.Errorf("get repository: %w", err)
 	}
@@ -278,6 +279,9 @@ func (g *RunbookGenerator) RenderText(ctx context.Context, runbook *models.DRRun
 				if err == nil {
 					data.Repository = repo
 				}
+			repo, err := g.store.GetRepositoryByID(ctx, schedule.RepositoryID)
+			if err == nil {
+				data.Repository = repo
 			}
 		}
 	}
@@ -312,6 +316,8 @@ func (g *RunbookGenerator) RenderText(ctx context.Context, runbook *models.DRRun
 
 // defaultRestoreSteps returns default restore steps for a given repository type.
 func defaultRestoreSteps(repoType models.RepositoryType) []models.DRRunbookStep {
+// DefaultRestoreSteps returns default restore steps for a given repository type.
+func DefaultRestoreSteps(repoType models.RepositoryType) []models.DRRunbookStep {
 	steps := []models.DRRunbookStep{
 		{
 			Order:       1,
