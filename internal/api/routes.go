@@ -348,6 +348,10 @@ func NewRouter(
 	supportHandler := handlers.NewSupportHandler(cfg.Version, cfg.Commit, cfg.BuildDate, "", logger)
 	supportHandler.RegisterRoutes(apiV1)
 
+	// SLA routes
+	slaHandler := handlers.NewSLAHandler(database, logger)
+	slaHandler.RegisterRoutes(apiV1)
+
 	// Downtime tracking routes
 	downtimeService := monitoring.NewDowntimeServiceWithDB(database, monitoring.DefaultDowntimeServiceConfig(), logger)
 	downtimeHandler := handlers.NewDowntimeHandler(downtimeService, database, logger)

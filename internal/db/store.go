@@ -11665,3 +11665,521 @@ func (db *DB) GetBackupsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models
 
 	return scanBackups(rows)
 }
+// ============================================================================
+// SLA Definitions
+// ============================================================================
+
+// GetSLADefinitionByID returns an SLA definition by ID.
+func (db *DB) GetSLADefinitionByID(ctx context.Context, id uuid.UUID) (*models.SLADefinition, error) {
+	var s models.SLADefinition
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, description, rpo_minutes, rto_minutes, uptime_percentage,
+		       scope, active, created_by, created_at, updated_at
+		FROM sla_definitions WHERE id = $1
+	`, id).Scan(
+		&s.ID, &s.OrgID, &s.Name, &s.Description, &s.RPOMinutes, &s.RTOMinutes, &s.UptimePercentage,
+		&s.Scope, &s.Active, &s.CreatedBy, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get sla definition: %w", err)
+	}
+	return &s, nil
+}
+
+// ListSLADefinitionsByOrg returns all SLA definitions for an organization.
+func (db *DB) ListSLADefinitionsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.SLADefinition, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, description, rpo_minutes, rto_minutes, uptime_percentage,
+		       scope, active, created_by, created_at, updated_at
+		FROM sla_definitions WHERE org_id = $1 ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list sla definitions: %w", err)
+	}
+	defer rows.Close()
+	return scanSLADefinitions(rows)
+}
+
+// ListActiveSLADefinitionsByOrg returns active SLA definitions for an organization.
+func (db *DB) ListActiveSLADefinitionsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.SLADefinition, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, description, rpo_minutes, rto_minutes, uptime_percentage,
+		       scope, active, created_by, created_at, updated_at
+		FROM sla_definitions WHERE org_id = $1 AND active = true ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list active sla definitions: %w", err)
+	}
+	defer rows.Close()
+	return scanSLADefinitions(rows)
+}
+
+// ListSLADefinitionsWithAssignments returns SLA definitions with assignment counts.
+func (db *DB) ListSLADefinitionsWithAssignments(ctx context.Context, orgID uuid.UUID) ([]*models.SLAWithAssignments, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT s.id, s.org_id, s.name, s.description, s.rpo_minutes, s.rto_minutes, s.uptime_percentage,
+		       s.scope, s.active, s.created_by, s.created_at, s.updated_at,
+		       COALESCE((SELECT COUNT(*) FROM sla_assignments WHERE sla_id = s.id AND agent_id IS NOT NULL), 0) as agent_count,
+		       COALESCE((SELECT COUNT(*) FROM sla_assignments WHERE sla_id = s.id AND repository_id IS NOT NULL), 0) as repo_count
+		FROM sla_definitions s WHERE s.org_id = $1 ORDER BY s.name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list sla definitions with assignments: %w", err)
+	}
+	defer rows.Close()
+
+	var slas []*models.SLAWithAssignments
+	for rows.Next() {
+		var s models.SLAWithAssignments
+		err := rows.Scan(
+			&s.ID, &s.OrgID, &s.Name, &s.Description, &s.RPOMinutes, &s.RTOMinutes, &s.UptimePercentage,
+			&s.Scope, &s.Active, &s.CreatedBy, &s.CreatedAt, &s.UpdatedAt,
+			&s.AgentCount, &s.RepositoryCount,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan sla with assignments: %w", err)
+		}
+		slas = append(slas, &s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate sla definitions: %w", err)
+	}
+	return slas, nil
+}
+
+// CreateSLADefinition creates a new SLA definition.
+func (db *DB) CreateSLADefinition(ctx context.Context, s *models.SLADefinition) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO sla_definitions (id, org_id, name, description, rpo_minutes, rto_minutes, uptime_percentage,
+		            scope, active, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, s.ID, s.OrgID, s.Name, s.Description, s.RPOMinutes, s.RTOMinutes, s.UptimePercentage,
+		s.Scope, s.Active, s.CreatedBy, s.CreatedAt, s.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create sla definition: %w", err)
+	}
+	return nil
+}
+
+// UpdateSLADefinition updates an existing SLA definition.
+func (db *DB) UpdateSLADefinition(ctx context.Context, s *models.SLADefinition) error {
+	s.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE sla_definitions
+		SET name = $2, description = $3, rpo_minutes = $4, rto_minutes = $5, uptime_percentage = $6,
+		    scope = $7, active = $8, updated_at = $9
+		WHERE id = $1
+	`, s.ID, s.Name, s.Description, s.RPOMinutes, s.RTOMinutes, s.UptimePercentage, s.Scope, s.Active, s.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update sla definition: %w", err)
+	}
+	return nil
+}
+
+// DeleteSLADefinition deletes an SLA definition and its assignments.
+func (db *DB) DeleteSLADefinition(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM sla_definitions WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete sla definition: %w", err)
+	}
+	return nil
+}
+
+// scanSLADefinitions scans rows into SLA definitions.
+func scanSLADefinitions(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.SLADefinition, error) {
+	var slas []*models.SLADefinition
+	for rows.Next() {
+		var s models.SLADefinition
+		err := rows.Scan(
+			&s.ID, &s.OrgID, &s.Name, &s.Description, &s.RPOMinutes, &s.RTOMinutes, &s.UptimePercentage,
+			&s.Scope, &s.Active, &s.CreatedBy, &s.CreatedAt, &s.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan sla definition: %w", err)
+		}
+		slas = append(slas, &s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate sla definitions: %w", err)
+	}
+	return slas, nil
+}
+
+// ============================================================================
+// SLA Assignments
+// ============================================================================
+
+// GetSLAAssignmentByID returns an SLA assignment by ID.
+func (db *DB) GetSLAAssignmentByID(ctx context.Context, id uuid.UUID) (*models.SLAAssignment, error) {
+	var a models.SLAAssignment
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, sla_id, agent_id, repository_id, assigned_by, assigned_at
+		FROM sla_assignments WHERE id = $1
+	`, id).Scan(
+		&a.ID, &a.OrgID, &a.SLAID, &a.AgentID, &a.RepositoryID, &a.AssignedBy, &a.AssignedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get sla assignment: %w", err)
+	}
+	return &a, nil
+}
+
+// ListSLAAssignmentsBySLA returns all assignments for an SLA.
+func (db *DB) ListSLAAssignmentsBySLA(ctx context.Context, slaID uuid.UUID) ([]*models.SLAAssignment, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, sla_id, agent_id, repository_id, assigned_by, assigned_at
+		FROM sla_assignments WHERE sla_id = $1 ORDER BY assigned_at
+	`, slaID)
+	if err != nil {
+		return nil, fmt.Errorf("list sla assignments: %w", err)
+	}
+	defer rows.Close()
+	return scanSLAAssignments(rows)
+}
+
+// ListSLAAssignmentsByAgent returns all SLA assignments for an agent.
+func (db *DB) ListSLAAssignmentsByAgent(ctx context.Context, agentID uuid.UUID) ([]*models.SLAAssignment, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, sla_id, agent_id, repository_id, assigned_by, assigned_at
+		FROM sla_assignments WHERE agent_id = $1 ORDER BY assigned_at
+	`, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("list sla assignments by agent: %w", err)
+	}
+	defer rows.Close()
+	return scanSLAAssignments(rows)
+}
+
+// ListSLAAssignmentsByRepository returns all SLA assignments for a repository.
+func (db *DB) ListSLAAssignmentsByRepository(ctx context.Context, repoID uuid.UUID) ([]*models.SLAAssignment, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, sla_id, agent_id, repository_id, assigned_by, assigned_at
+		FROM sla_assignments WHERE repository_id = $1 ORDER BY assigned_at
+	`, repoID)
+	if err != nil {
+		return nil, fmt.Errorf("list sla assignments by repository: %w", err)
+	}
+	defer rows.Close()
+	return scanSLAAssignments(rows)
+}
+
+// CreateSLAAssignment creates a new SLA assignment.
+func (db *DB) CreateSLAAssignment(ctx context.Context, a *models.SLAAssignment) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO sla_assignments (id, org_id, sla_id, agent_id, repository_id, assigned_by, assigned_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, a.ID, a.OrgID, a.SLAID, a.AgentID, a.RepositoryID, a.AssignedBy, a.AssignedAt)
+	if err != nil {
+		return fmt.Errorf("create sla assignment: %w", err)
+	}
+	return nil
+}
+
+// DeleteSLAAssignment deletes an SLA assignment.
+func (db *DB) DeleteSLAAssignment(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM sla_assignments WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete sla assignment: %w", err)
+	}
+	return nil
+}
+
+// DeleteSLAAssignmentByAgentAndSLA removes an SLA assignment for an agent.
+func (db *DB) DeleteSLAAssignmentByAgentAndSLA(ctx context.Context, agentID, slaID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM sla_assignments WHERE agent_id = $1 AND sla_id = $2`, agentID, slaID)
+	if err != nil {
+		return fmt.Errorf("delete sla assignment by agent and sla: %w", err)
+	}
+	return nil
+}
+
+// DeleteSLAAssignmentByRepoAndSLA removes an SLA assignment for a repository.
+func (db *DB) DeleteSLAAssignmentByRepoAndSLA(ctx context.Context, repoID, slaID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM sla_assignments WHERE repository_id = $1 AND sla_id = $2`, repoID, slaID)
+	if err != nil {
+		return fmt.Errorf("delete sla assignment by repo and sla: %w", err)
+	}
+	return nil
+}
+
+// scanSLAAssignments scans rows into SLA assignments.
+func scanSLAAssignments(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.SLAAssignment, error) {
+	var assignments []*models.SLAAssignment
+	for rows.Next() {
+		var a models.SLAAssignment
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.SLAID, &a.AgentID, &a.RepositoryID, &a.AssignedBy, &a.AssignedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan sla assignment: %w", err)
+		}
+		assignments = append(assignments, &a)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate sla assignments: %w", err)
+	}
+	return assignments, nil
+}
+
+// ============================================================================
+// SLA Compliance
+// ============================================================================
+
+// GetSLAComplianceByID returns a compliance record by ID.
+func (db *DB) GetSLAComplianceByID(ctx context.Context, id uuid.UUID) (*models.SLACompliance, error) {
+	var c models.SLACompliance
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, sla_id, agent_id, repository_id, period_start, period_end,
+		       rpo_compliant, rpo_actual_minutes, rpo_breaches, rto_compliant, rto_actual_minutes, rto_breaches,
+		       uptime_compliant, uptime_actual_percentage, uptime_downtime_minutes, is_compliant, notes, calculated_at
+		FROM sla_compliance WHERE id = $1
+	`, id).Scan(
+		&c.ID, &c.OrgID, &c.SLAID, &c.AgentID, &c.RepositoryID, &c.PeriodStart, &c.PeriodEnd,
+		&c.RPOCompliant, &c.RPOActualMinutes, &c.RPOBreaches, &c.RTOCompliant, &c.RTOActualMinutes, &c.RTOBreaches,
+		&c.UptimeCompliant, &c.UptimeActualPercentage, &c.UptimeDowntimeMinutes, &c.IsCompliant, &c.Notes, &c.CalculatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get sla compliance: %w", err)
+	}
+	return &c, nil
+}
+
+// ListSLAComplianceBySLA returns compliance records for an SLA.
+func (db *DB) ListSLAComplianceBySLA(ctx context.Context, slaID uuid.UUID, limit int) ([]*models.SLACompliance, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, sla_id, agent_id, repository_id, period_start, period_end,
+		       rpo_compliant, rpo_actual_minutes, rpo_breaches, rto_compliant, rto_actual_minutes, rto_breaches,
+		       uptime_compliant, uptime_actual_percentage, uptime_downtime_minutes, is_compliant, notes, calculated_at
+		FROM sla_compliance WHERE sla_id = $1 ORDER BY period_end DESC LIMIT $2
+	`, slaID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list sla compliance: %w", err)
+	}
+	defer rows.Close()
+	return scanSLACompliance(rows)
+}
+
+// ListSLAComplianceByOrg returns compliance records for an organization in a period.
+func (db *DB) ListSLAComplianceByOrg(ctx context.Context, orgID uuid.UUID, periodStart, periodEnd time.Time) ([]*models.SLACompliance, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, sla_id, agent_id, repository_id, period_start, period_end,
+		       rpo_compliant, rpo_actual_minutes, rpo_breaches, rto_compliant, rto_actual_minutes, rto_breaches,
+		       uptime_compliant, uptime_actual_percentage, uptime_downtime_minutes, is_compliant, notes, calculated_at
+		FROM sla_compliance WHERE org_id = $1 AND period_start >= $2 AND period_end <= $3 ORDER BY period_end DESC
+	`, orgID, periodStart, periodEnd)
+	if err != nil {
+		return nil, fmt.Errorf("list sla compliance by org: %w", err)
+	}
+	defer rows.Close()
+	return scanSLACompliance(rows)
+}
+
+// CreateSLACompliance creates a new compliance record.
+func (db *DB) CreateSLACompliance(ctx context.Context, c *models.SLACompliance) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO sla_compliance (id, org_id, sla_id, agent_id, repository_id, period_start, period_end,
+		            rpo_compliant, rpo_actual_minutes, rpo_breaches, rto_compliant, rto_actual_minutes, rto_breaches,
+		            uptime_compliant, uptime_actual_percentage, uptime_downtime_minutes, is_compliant, notes, calculated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+	`, c.ID, c.OrgID, c.SLAID, c.AgentID, c.RepositoryID, c.PeriodStart, c.PeriodEnd,
+		c.RPOCompliant, c.RPOActualMinutes, c.RPOBreaches, c.RTOCompliant, c.RTOActualMinutes, c.RTOBreaches,
+		c.UptimeCompliant, c.UptimeActualPercentage, c.UptimeDowntimeMinutes, c.IsCompliant, c.Notes, c.CalculatedAt)
+	if err != nil {
+		return fmt.Errorf("create sla compliance: %w", err)
+	}
+	return nil
+}
+
+// scanSLACompliance scans rows into SLA compliance records.
+func scanSLACompliance(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.SLACompliance, error) {
+	var records []*models.SLACompliance
+	for rows.Next() {
+		var c models.SLACompliance
+		err := rows.Scan(
+			&c.ID, &c.OrgID, &c.SLAID, &c.AgentID, &c.RepositoryID, &c.PeriodStart, &c.PeriodEnd,
+			&c.RPOCompliant, &c.RPOActualMinutes, &c.RPOBreaches, &c.RTOCompliant, &c.RTOActualMinutes, &c.RTOBreaches,
+			&c.UptimeCompliant, &c.UptimeActualPercentage, &c.UptimeDowntimeMinutes, &c.IsCompliant, &c.Notes, &c.CalculatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan sla compliance: %w", err)
+		}
+		records = append(records, &c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate sla compliance: %w", err)
+	}
+	return records, nil
+}
+
+// ============================================================================
+// SLA Breaches
+// ============================================================================
+
+// GetSLABreachByID returns a breach record by ID.
+func (db *DB) GetSLABreachByID(ctx context.Context, id uuid.UUID) (*models.SLABreach, error) {
+	var b models.SLABreach
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, sla_id, agent_id, repository_id, breach_type, expected_value, actual_value,
+		       breach_start, breach_end, duration_minutes, acknowledged, acknowledged_by, acknowledged_at,
+		       resolved, resolved_at, description, created_at
+		FROM sla_breaches WHERE id = $1
+	`, id).Scan(
+		&b.ID, &b.OrgID, &b.SLAID, &b.AgentID, &b.RepositoryID, &b.BreachType, &b.ExpectedValue, &b.ActualValue,
+		&b.BreachStart, &b.BreachEnd, &b.DurationMinutes, &b.Acknowledged, &b.AcknowledgedBy, &b.AcknowledgedAt,
+		&b.Resolved, &b.ResolvedAt, &b.Description, &b.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get sla breach: %w", err)
+	}
+	return &b, nil
+}
+
+// ListSLABreachesByOrg returns breaches for an organization.
+func (db *DB) ListSLABreachesByOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.SLABreach, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, sla_id, agent_id, repository_id, breach_type, expected_value, actual_value,
+		       breach_start, breach_end, duration_minutes, acknowledged, acknowledged_by, acknowledged_at,
+		       resolved, resolved_at, description, created_at
+		FROM sla_breaches WHERE org_id = $1 ORDER BY breach_start DESC LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list sla breaches: %w", err)
+	}
+	defer rows.Close()
+	return scanSLABreaches(rows)
+}
+
+// ListActiveSLABreachesByOrg returns unresolved breaches for an organization.
+func (db *DB) ListActiveSLABreachesByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.SLABreach, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, sla_id, agent_id, repository_id, breach_type, expected_value, actual_value,
+		       breach_start, breach_end, duration_minutes, acknowledged, acknowledged_by, acknowledged_at,
+		       resolved, resolved_at, description, created_at
+		FROM sla_breaches WHERE org_id = $1 AND resolved = false ORDER BY breach_start DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list active sla breaches: %w", err)
+	}
+	defer rows.Close()
+	return scanSLABreaches(rows)
+}
+
+// ListSLABreachesBySLA returns breaches for a specific SLA.
+func (db *DB) ListSLABreachesBySLA(ctx context.Context, slaID uuid.UUID, limit int) ([]*models.SLABreach, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, sla_id, agent_id, repository_id, breach_type, expected_value, actual_value,
+		       breach_start, breach_end, duration_minutes, acknowledged, acknowledged_by, acknowledged_at,
+		       resolved, resolved_at, description, created_at
+		FROM sla_breaches WHERE sla_id = $1 ORDER BY breach_start DESC LIMIT $2
+	`, slaID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list sla breaches by sla: %w", err)
+	}
+	defer rows.Close()
+	return scanSLABreaches(rows)
+}
+
+// CountUnacknowledgedBreachesByOrg returns the count of unacknowledged breaches.
+func (db *DB) CountUnacknowledgedBreachesByOrg(ctx context.Context, orgID uuid.UUID) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM sla_breaches WHERE org_id = $1 AND acknowledged = false
+	`, orgID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count unacknowledged breaches: %w", err)
+	}
+	return count, nil
+}
+
+// CreateSLABreach creates a new breach record.
+func (db *DB) CreateSLABreach(ctx context.Context, b *models.SLABreach) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO sla_breaches (id, org_id, sla_id, agent_id, repository_id, breach_type, expected_value, actual_value,
+		            breach_start, breach_end, duration_minutes, acknowledged, acknowledged_by, acknowledged_at,
+		            resolved, resolved_at, description, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+	`, b.ID, b.OrgID, b.SLAID, b.AgentID, b.RepositoryID, b.BreachType, b.ExpectedValue, b.ActualValue,
+		b.BreachStart, b.BreachEnd, b.DurationMinutes, b.Acknowledged, b.AcknowledgedBy, b.AcknowledgedAt,
+		b.Resolved, b.ResolvedAt, b.Description, b.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create sla breach: %w", err)
+	}
+	return nil
+}
+
+// UpdateSLABreach updates a breach record (for acknowledge/resolve).
+func (db *DB) UpdateSLABreach(ctx context.Context, b *models.SLABreach) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE sla_breaches
+		SET breach_end = $2, duration_minutes = $3, acknowledged = $4, acknowledged_by = $5, acknowledged_at = $6,
+		    resolved = $7, resolved_at = $8, description = $9
+		WHERE id = $1
+	`, b.ID, b.BreachEnd, b.DurationMinutes, b.Acknowledged, b.AcknowledgedBy, b.AcknowledgedAt,
+		b.Resolved, b.ResolvedAt, b.Description)
+	if err != nil {
+		return fmt.Errorf("update sla breach: %w", err)
+	}
+	return nil
+}
+
+// scanSLABreaches scans rows into SLA breaches.
+func scanSLABreaches(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.SLABreach, error) {
+	var breaches []*models.SLABreach
+	for rows.Next() {
+		var b models.SLABreach
+		err := rows.Scan(
+			&b.ID, &b.OrgID, &b.SLAID, &b.AgentID, &b.RepositoryID, &b.BreachType, &b.ExpectedValue, &b.ActualValue,
+			&b.BreachStart, &b.BreachEnd, &b.DurationMinutes, &b.Acknowledged, &b.AcknowledgedBy, &b.AcknowledgedAt,
+			&b.Resolved, &b.ResolvedAt, &b.Description, &b.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan sla breach: %w", err)
+		}
+		breaches = append(breaches, &b)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate sla breaches: %w", err)
+	}
+	return breaches, nil
+}
+
+// GetSLADashboardStats returns dashboard statistics for SLAs.
+func (db *DB) GetSLADashboardStats(ctx context.Context, orgID uuid.UUID) (*models.SLADashboardStats, error) {
+	stats := &models.SLADashboardStats{}
+
+	// Count total and active SLAs
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*), COUNT(*) FILTER (WHERE active = true)
+		FROM sla_definitions WHERE org_id = $1
+	`, orgID).Scan(&stats.TotalSLAs, &stats.ActiveSLAs)
+	if err != nil {
+		return nil, fmt.Errorf("get sla counts: %w", err)
+	}
+
+	// Count active breaches and unacknowledged
+	err = db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*), COUNT(*) FILTER (WHERE acknowledged = false)
+		FROM sla_breaches WHERE org_id = $1 AND resolved = false
+	`, orgID).Scan(&stats.ActiveBreaches, &stats.UnacknowledgedCount)
+	if err != nil {
+		return nil, fmt.Errorf("get breach counts: %w", err)
+	}
+
+	// Calculate overall compliance from last 30 days
+	now := time.Now()
+	thirtyDaysAgo := now.AddDate(0, 0, -30)
+	var compliant, total int
+	err = db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FILTER (WHERE is_compliant = true), COUNT(*)
+		FROM sla_compliance WHERE org_id = $1 AND period_end >= $2
+	`, orgID, thirtyDaysAgo).Scan(&compliant, &total)
+	if err != nil {
+		return nil, fmt.Errorf("get compliance stats: %w", err)
+	}
+
+	if total > 0 {
+		stats.OverallCompliance = float64(compliant) / float64(total) * 100
+	}
+
+	return stats, nil
+}

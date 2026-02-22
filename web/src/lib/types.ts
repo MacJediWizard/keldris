@@ -4277,3 +4277,164 @@ export interface UptimeBadgesResponse {
 export interface DowntimeAlertsResponse {
 	alerts: DowntimeAlert[];
 }
+
+// SLA types
+export type SLAScope = 'agent' | 'repository' | 'organization';
+export type BreachType = 'rpo' | 'rto' | 'uptime';
+
+export interface SLADefinition {
+	id: string;
+	org_id: string;
+	name: string;
+	description?: string;
+	rpo_minutes?: number;
+	rto_minutes?: number;
+	uptime_percentage?: number;
+	scope: SLAScope;
+	active: boolean;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface SLAWithAssignments extends SLADefinition {
+	agent_count: number;
+	repository_count: number;
+}
+
+export interface SLAAssignment {
+	id: string;
+	org_id: string;
+	sla_id: string;
+	agent_id?: string;
+	repository_id?: string;
+	assigned_by?: string;
+	assigned_at: string;
+}
+
+export interface SLACompliance {
+	id: string;
+	org_id: string;
+	sla_id: string;
+	agent_id?: string;
+	repository_id?: string;
+	period_start: string;
+	period_end: string;
+	rpo_compliant?: boolean;
+	rpo_actual_minutes?: number;
+	rpo_breaches: number;
+	rto_compliant?: boolean;
+	rto_actual_minutes?: number;
+	rto_breaches: number;
+	uptime_compliant?: boolean;
+	uptime_actual_percentage?: number;
+	uptime_downtime_minutes: number;
+	is_compliant: boolean;
+	notes?: string;
+	calculated_at: string;
+}
+
+export interface SLABreach {
+	id: string;
+	org_id: string;
+	sla_id: string;
+	agent_id?: string;
+	repository_id?: string;
+	breach_type: BreachType;
+	expected_value?: number;
+	actual_value?: number;
+	breach_start: string;
+	breach_end?: string;
+	duration_minutes?: number;
+	acknowledged: boolean;
+	acknowledged_by?: string;
+	acknowledged_at?: string;
+	resolved: boolean;
+	resolved_at?: string;
+	description?: string;
+	created_at: string;
+}
+
+export interface SLAComplianceSummary {
+	sla_id: string;
+	sla_name: string;
+	total_targets: number;
+	compliant_targets: number;
+	compliance_rate: number;
+	active_breaches: number;
+	total_breaches: number;
+	period_start: string;
+	period_end: string;
+}
+
+export interface SLADashboardStats {
+	total_slas: number;
+	active_slas: number;
+	overall_compliance: number;
+	active_breaches: number;
+	unacknowledged_count: number;
+	compliance_trend?: SLAComplianceSummary[];
+}
+
+export interface SLAReport {
+	org_id: string;
+	report_month: string;
+	generated_at: string;
+	sla_summaries: SLAComplianceSummary[];
+	total_breaches: number;
+	resolved_breaches: number;
+	mean_time_to_resolve_minutes?: number;
+}
+
+export interface CreateSLADefinitionRequest {
+	name: string;
+	description?: string;
+	rpo_minutes?: number;
+	rto_minutes?: number;
+	uptime_percentage?: number;
+	scope: SLAScope;
+	active?: boolean;
+}
+
+export interface UpdateSLADefinitionRequest {
+	name?: string;
+	description?: string;
+	rpo_minutes?: number;
+	rto_minutes?: number;
+	uptime_percentage?: number;
+	scope?: SLAScope;
+	active?: boolean;
+}
+
+export interface AssignSLARequest {
+	agent_id?: string;
+	repository_id?: string;
+}
+
+export interface AcknowledgeBreachRequest {
+	notes?: string;
+}
+
+export interface SLADefinitionsResponse {
+	slas: SLAWithAssignments[];
+}
+
+export interface SLAAssignmentsResponse {
+	assignments: SLAAssignment[];
+}
+
+export interface SLAComplianceResponse {
+	compliance: SLACompliance[];
+}
+
+export interface SLABreachesResponse {
+	breaches: SLABreach[];
+}
+
+export interface SLADashboardResponse {
+	stats: SLADashboardStats;
+}
+
+export interface SLAReportResponse {
+	report: SLAReport;
+}

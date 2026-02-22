@@ -1,4 +1,5 @@
 import type {
+	AcknowledgeBreachRequest,
 	ActiveMaintenanceResponse,
 	AddAgentToGroupRequest,
 	Agent,
@@ -29,6 +30,7 @@ import type {
 	AnnouncementsResponse,
 	ApplyPolicyRequest,
 	ApplyPolicyResponse,
+	AssignSLARequest,
 	AssignTagsRequest,
 	AuditLog,
 	AuditLogFilter,
@@ -106,6 +108,7 @@ import type {
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
 	CreateSLAPolicyRequest,
+	CreateSLADefinitionRequest,
 	CreateSSOGroupMappingRequest,
 	CreateSavedFilterRequest,
 	CreateScheduleRequest,
@@ -274,6 +277,18 @@ import type {
 	SLAStatus,
 	SLAStatusHistoryResponse,
 	SLAStatusSnapshot,
+	SLAAssignment,
+	SLAAssignmentsResponse,
+	SLABreach,
+	SLABreachesResponse,
+	SLACompliance,
+	SLAComplianceResponse,
+	SLADashboardResponse,
+	SLADashboardStats,
+	SLADefinitionsResponse,
+	SLAReport,
+	SLAReportResponse,
+	SLAWithAssignments,
 	SSOGroupMapping,
 	SSOGroupMappingResponse,
 	SSOGroupMappingsResponse,
@@ -344,6 +359,7 @@ import type {
 	UpdateRepositoryImmutabilitySettingsRequest,
 	UpdateRepositoryRequest,
 	UpdateSLAPolicyRequest,
+	UpdateSLADefinitionRequest,
 	UpdateSSOGroupMappingRequest,
 	UpdateSSOSettingsRequest,
 	UpdateSavedFilterRequest,
@@ -3834,4 +3850,226 @@ export const downtimeAlertsApi = {
 		fetchApi<MessageResponse>(`/downtime-alerts/${id}`, {
 			method: 'DELETE',
 		}),
+};
+
+// Downtime API
+export const downtimeApi = {
+	list: async (limit = 100, offset = 0): Promise<DowntimeEvent[]> => {
+		const response = await fetchApi<DowntimeEventsResponse>(
+			`/downtime?limit=${limit}&offset=${offset}`,
+		);
+		return response.events ?? [];
+	},
+
+	listActive: async (): Promise<DowntimeEvent[]> => {
+		const response = await fetchApi<DowntimeEventsResponse>('/downtime/active');
+		return response.events ?? [];
+	},
+
+	getSummary: async (): Promise<UptimeSummary> =>
+		fetchApi<UptimeSummary>('/downtime/summary'),
+
+	get: async (id: string): Promise<DowntimeEvent> =>
+		fetchApi<DowntimeEvent>(`/downtime/${id}`),
+
+	create: async (data: CreateDowntimeEventRequest): Promise<DowntimeEvent> =>
+		fetchApi<DowntimeEvent>('/downtime', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateDowntimeEventRequest,
+	): Promise<DowntimeEvent> =>
+		fetchApi<DowntimeEvent>(`/downtime/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	resolve: async (
+		id: string,
+		data: ResolveDowntimeEventRequest = {},
+	): Promise<DowntimeEvent> =>
+		fetchApi<DowntimeEvent>(`/downtime/${id}/resolve`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/downtime/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Uptime API
+export const uptimeApi = {
+	getBadges: async (): Promise<UptimeBadge[]> => {
+		const response = await fetchApi<UptimeBadgesResponse>('/uptime/badges');
+		return response.badges ?? [];
+	},
+
+	refreshBadges: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/uptime/badges/refresh', {
+			method: 'POST',
+		}),
+
+	getMonthlyReport: async (
+		year: number,
+		month: number,
+	): Promise<MonthlyUptimeReport> =>
+		fetchApi<MonthlyUptimeReport>(`/uptime/report/${year}/${month}`),
+};
+
+// Downtime Alerts API
+export const downtimeAlertsApi = {
+	list: async (): Promise<DowntimeAlert[]> => {
+		const response = await fetchApi<DowntimeAlertsResponse>('/downtime-alerts');
+		return response.alerts ?? [];
+	},
+
+	get: async (id: string): Promise<DowntimeAlert> =>
+		fetchApi<DowntimeAlert>(`/downtime-alerts/${id}`),
+
+	create: async (data: CreateDowntimeAlertRequest): Promise<DowntimeAlert> =>
+		fetchApi<DowntimeAlert>('/downtime-alerts', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateDowntimeAlertRequest,
+	): Promise<DowntimeAlert> =>
+		fetchApi<DowntimeAlert>(`/downtime-alerts/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/downtime-alerts/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// SLA API
+export const slaApi = {
+	// SLA Definitions
+	list: async (): Promise<SLAWithAssignments[]> => {
+		const response = await fetchApi<SLADefinitionsResponse>('/slas');
+		return response.slas ?? [];
+	},
+
+	get: async (id: string): Promise<SLAWithAssignments> =>
+		fetchApi<SLAWithAssignments>(`/slas/${id}`),
+
+	create: async (
+		data: CreateSLADefinitionRequest,
+	): Promise<SLAWithAssignments> =>
+		fetchApi<SLAWithAssignments>('/slas', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateSLADefinitionRequest,
+	): Promise<SLAWithAssignments> =>
+		fetchApi<SLAWithAssignments>(`/slas/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/slas/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// SLA Assignments
+	listAssignments: async (slaId: string): Promise<SLAAssignment[]> => {
+		const response = await fetchApi<SLAAssignmentsResponse>(
+			`/slas/${slaId}/assignments`,
+		);
+		return response.assignments ?? [];
+	},
+
+	createAssignment: async (
+		slaId: string,
+		data: AssignSLARequest,
+	): Promise<SLAAssignment> =>
+		fetchApi<SLAAssignment>(`/slas/${slaId}/assignments`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	deleteAssignment: async (
+		slaId: string,
+		assignmentId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/slas/${slaId}/assignments/${assignmentId}`, {
+			method: 'DELETE',
+		}),
+
+	// SLA Compliance
+	getCompliance: async (slaId: string): Promise<SLACompliance[]> => {
+		const response = await fetchApi<SLAComplianceResponse>(
+			`/slas/${slaId}/compliance`,
+		);
+		return response.compliance ?? [];
+	},
+
+	listOrgCompliance: async (): Promise<SLACompliance[]> => {
+		const response = await fetchApi<SLAComplianceResponse>('/sla-compliance');
+		return response.compliance ?? [];
+	},
+
+	// SLA Breaches
+	listBreaches: async (): Promise<SLABreach[]> => {
+		const response = await fetchApi<SLABreachesResponse>('/sla-breaches');
+		return response.breaches ?? [];
+	},
+
+	listActiveBreaches: async (): Promise<SLABreach[]> => {
+		const response = await fetchApi<SLABreachesResponse>(
+			'/sla-breaches/active',
+		);
+		return response.breaches ?? [];
+	},
+
+	listBreachesBySLA: async (slaId: string): Promise<SLABreach[]> => {
+		const response = await fetchApi<SLABreachesResponse>(
+			`/slas/${slaId}/breaches`,
+		);
+		return response.breaches ?? [];
+	},
+
+	getBreach: async (id: string): Promise<SLABreach> =>
+		fetchApi<SLABreach>(`/sla-breaches/${id}`),
+
+	acknowledgeBreach: async (
+		id: string,
+		data?: AcknowledgeBreachRequest,
+	): Promise<SLABreach> =>
+		fetchApi<SLABreach>(`/sla-breaches/${id}/acknowledge`, {
+			method: 'POST',
+			body: JSON.stringify(data ?? {}),
+		}),
+
+	resolveBreach: async (id: string): Promise<SLABreach> =>
+		fetchApi<SLABreach>(`/sla-breaches/${id}/resolve`, {
+			method: 'POST',
+		}),
+
+	// SLA Dashboard
+	getDashboard: async (): Promise<SLADashboardStats> => {
+		const response = await fetchApi<SLADashboardResponse>('/sla-dashboard');
+		return response.stats;
+	},
+
+	// SLA Report
+	getReport: async (month?: string): Promise<SLAReport> => {
+		const url = month ? `/sla-report?month=${month}` : '/sla-report';
+		const response = await fetchApi<SLAReportResponse>(url);
+		return response.report;
+	},
 };
