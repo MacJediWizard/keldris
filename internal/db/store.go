@@ -14027,3 +14027,349 @@ func (db *DB) searchRepositories(ctx context.Context, orgID uuid.UUID, query str
 	}
 	return results, rows.Err()
 }
+// Verification Schedule methods
+
+// GetEnabledVerificationSchedules returns all enabled verification schedules.
+func (db *DB) GetEnabledVerificationSchedules(ctx context.Context) ([]*models.VerificationSchedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, repository_id, type, cron_expression, enabled, read_data_subset, created_at, updated_at
+		FROM verification_schedules
+		WHERE enabled = true
+		ORDER BY repository_id
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled verification schedules: %w", err)
+	}
+	defer rows.Close()
+
+	return scanVerificationSchedules(rows)
+}
+
+// GetVerificationSchedulesByRepoID returns verification schedules for a repository.
+func (db *DB) GetVerificationSchedulesByRepoID(ctx context.Context, repoID uuid.UUID) ([]*models.VerificationSchedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, repository_id, type, cron_expression, enabled, read_data_subset, created_at, updated_at
+		FROM verification_schedules
+		WHERE repository_id = $1
+		ORDER BY type
+	`, repoID)
+	if err != nil {
+		return nil, fmt.Errorf("list verification schedules by repo: %w", err)
+	}
+	defer rows.Close()
+
+	return scanVerificationSchedules(rows)
+}
+
+// GetVerificationScheduleByID returns a verification schedule by ID.
+func (db *DB) GetVerificationScheduleByID(ctx context.Context, id uuid.UUID) (*models.VerificationSchedule, error) {
+	var vs models.VerificationSchedule
+	var typeStr string
+	var readDataSubset *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, repository_id, type, cron_expression, enabled, read_data_subset, created_at, updated_at
+		FROM verification_schedules
+		WHERE id = $1
+	`, id).Scan(
+		&vs.ID, &vs.RepositoryID, &typeStr, &vs.CronExpression,
+		&vs.Enabled, &readDataSubset, &vs.CreatedAt, &vs.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get verification schedule: %w", err)
+	}
+	vs.Type = models.VerificationType(typeStr)
+	if readDataSubset != nil {
+		vs.ReadDataSubset = *readDataSubset
+	}
+	return &vs, nil
+}
+
+// CreateVerificationSchedule creates a new verification schedule.
+func (db *DB) CreateVerificationSchedule(ctx context.Context, vs *models.VerificationSchedule) error {
+	var readDataSubset *string
+	if vs.ReadDataSubset != "" {
+		readDataSubset = &vs.ReadDataSubset
+	}
+
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO verification_schedules (id, repository_id, type, cron_expression, enabled, read_data_subset, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, vs.ID, vs.RepositoryID, string(vs.Type), vs.CronExpression,
+		vs.Enabled, readDataSubset, vs.CreatedAt, vs.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create verification schedule: %w", err)
+	}
+	return nil
+}
+
+// UpdateVerificationSchedule updates an existing verification schedule.
+func (db *DB) UpdateVerificationSchedule(ctx context.Context, vs *models.VerificationSchedule) error {
+	var readDataSubset *string
+	if vs.ReadDataSubset != "" {
+		readDataSubset = &vs.ReadDataSubset
+	}
+
+	vs.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE verification_schedules
+		SET cron_expression = $2, enabled = $3, read_data_subset = $4, updated_at = $5
+		WHERE id = $1
+	`, vs.ID, vs.CronExpression, vs.Enabled, readDataSubset, vs.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update verification schedule: %w", err)
+	}
+	return nil
+}
+
+// DeleteVerificationSchedule deletes a verification schedule by ID.
+func (db *DB) DeleteVerificationSchedule(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM verification_schedules WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete verification schedule: %w", err)
+	}
+	return nil
+}
+
+// scanVerificationSchedules scans multiple verification schedule rows.
+func scanVerificationSchedules(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.VerificationSchedule, error) {
+	type scanner interface {
+		Next() bool
+		Scan(dest ...any) error
+		Err() error
+	}
+	r := rows.(scanner)
+
+	var schedules []*models.VerificationSchedule
+	for r.Next() {
+		var vs models.VerificationSchedule
+		var typeStr string
+		var readDataSubset *string
+		err := r.Scan(
+			&vs.ID, &vs.RepositoryID, &typeStr, &vs.CronExpression,
+			&vs.Enabled, &readDataSubset, &vs.CreatedAt, &vs.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan verification schedule: %w", err)
+		}
+		vs.Type = models.VerificationType(typeStr)
+		if readDataSubset != nil {
+			vs.ReadDataSubset = *readDataSubset
+		}
+		schedules = append(schedules, &vs)
+	}
+
+	if err := r.Err(); err != nil {
+		return nil, fmt.Errorf("iterate verification schedules: %w", err)
+	}
+
+	return schedules, nil
+}
+
+// Verification methods
+
+// GetVerificationsByRepoID returns all verifications for a repository.
+func (db *DB) GetVerificationsByRepoID(ctx context.Context, repoID uuid.UUID) ([]*models.Verification, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, repository_id, type, snapshot_id, started_at, completed_at,
+		       status, duration_ms, error_message, details, created_at
+		FROM verifications
+		WHERE repository_id = $1
+		ORDER BY started_at DESC
+	`, repoID)
+	if err != nil {
+		return nil, fmt.Errorf("list verifications by repo: %w", err)
+	}
+	defer rows.Close()
+
+	return scanVerifications(rows)
+}
+
+// GetLatestVerificationByRepoID returns the most recent verification for a repository.
+func (db *DB) GetLatestVerificationByRepoID(ctx context.Context, repoID uuid.UUID) (*models.Verification, error) {
+	var v models.Verification
+	var typeStr, statusStr string
+	var snapshotID *string
+	var detailsBytes []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, repository_id, type, snapshot_id, started_at, completed_at,
+		       status, duration_ms, error_message, details, created_at
+		FROM verifications
+		WHERE repository_id = $1
+		ORDER BY started_at DESC
+		LIMIT 1
+	`, repoID).Scan(
+		&v.ID, &v.RepositoryID, &typeStr, &snapshotID, &v.StartedAt,
+		&v.CompletedAt, &statusStr, &v.DurationMs, &v.ErrorMessage,
+		&detailsBytes, &v.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get latest verification: %w", err)
+	}
+	v.Type = models.VerificationType(typeStr)
+	v.Status = models.VerificationStatus(statusStr)
+	if snapshotID != nil {
+		v.SnapshotID = *snapshotID
+	}
+	if err := v.SetDetails(detailsBytes); err != nil {
+		db.logger.Warn().Err(err).Str("verification_id", v.ID.String()).Msg("failed to parse verification details")
+	}
+	return &v, nil
+}
+
+// GetVerificationByID returns a verification by ID.
+func (db *DB) GetVerificationByID(ctx context.Context, id uuid.UUID) (*models.Verification, error) {
+	var v models.Verification
+	var typeStr, statusStr string
+	var snapshotID *string
+	var detailsBytes []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, repository_id, type, snapshot_id, started_at, completed_at,
+		       status, duration_ms, error_message, details, created_at
+		FROM verifications
+		WHERE id = $1
+	`, id).Scan(
+		&v.ID, &v.RepositoryID, &typeStr, &snapshotID, &v.StartedAt,
+		&v.CompletedAt, &statusStr, &v.DurationMs, &v.ErrorMessage,
+		&detailsBytes, &v.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get verification: %w", err)
+	}
+	v.Type = models.VerificationType(typeStr)
+	v.Status = models.VerificationStatus(statusStr)
+	if snapshotID != nil {
+		v.SnapshotID = *snapshotID
+	}
+	if err := v.SetDetails(detailsBytes); err != nil {
+		db.logger.Warn().Err(err).Str("verification_id", v.ID.String()).Msg("failed to parse verification details")
+	}
+	return &v, nil
+}
+
+// CreateVerification creates a new verification record.
+func (db *DB) CreateVerification(ctx context.Context, v *models.Verification) error {
+	detailsBytes, err := v.DetailsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal verification details: %w", err)
+	}
+
+	var snapshotID *string
+	if v.SnapshotID != "" {
+		snapshotID = &v.SnapshotID
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO verifications (id, repository_id, type, snapshot_id, started_at, completed_at,
+		                           status, duration_ms, error_message, details, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`, v.ID, v.RepositoryID, string(v.Type), snapshotID, v.StartedAt,
+		v.CompletedAt, string(v.Status), v.DurationMs, v.ErrorMessage,
+		detailsBytes, v.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create verification: %w", err)
+	}
+	return nil
+}
+
+// UpdateVerification updates an existing verification record.
+func (db *DB) UpdateVerification(ctx context.Context, v *models.Verification) error {
+	detailsBytes, err := v.DetailsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal verification details: %w", err)
+	}
+
+	var snapshotID *string
+	if v.SnapshotID != "" {
+		snapshotID = &v.SnapshotID
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE verifications
+		SET snapshot_id = $2, completed_at = $3, status = $4, duration_ms = $5,
+		    error_message = $6, details = $7
+		WHERE id = $1
+	`, v.ID, snapshotID, v.CompletedAt, string(v.Status), v.DurationMs,
+		v.ErrorMessage, detailsBytes)
+	if err != nil {
+		return fmt.Errorf("update verification: %w", err)
+	}
+	return nil
+}
+
+// GetConsecutiveFailedVerifications returns the count of consecutive failed verifications for a repository.
+func (db *DB) GetConsecutiveFailedVerifications(ctx context.Context, repoID uuid.UUID) (int, error) {
+	// Count consecutive failures from the most recent verification backwards
+	rows, err := db.Pool.Query(ctx, `
+		SELECT status
+		FROM verifications
+		WHERE repository_id = $1
+		ORDER BY started_at DESC
+		LIMIT 10
+	`, repoID)
+	if err != nil {
+		return 0, fmt.Errorf("get recent verifications: %w", err)
+	}
+	defer rows.Close()
+
+	var consecutiveFails int
+	for rows.Next() {
+		var statusStr string
+		if err := rows.Scan(&statusStr); err != nil {
+			return 0, fmt.Errorf("scan verification status: %w", err)
+		}
+		if models.VerificationStatus(statusStr) == models.VerificationStatusFailed {
+			consecutiveFails++
+		} else {
+			break
+		}
+	}
+
+	return consecutiveFails, nil
+}
+
+// scanVerifications scans multiple verification rows.
+func scanVerifications(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.Verification, error) {
+	type scanner interface {
+		Next() bool
+		Scan(dest ...any) error
+		Err() error
+	}
+	r := rows.(scanner)
+
+	var verifications []*models.Verification
+	for r.Next() {
+		var v models.Verification
+		var typeStr, statusStr string
+		var snapshotID *string
+		var detailsBytes []byte
+		err := r.Scan(
+			&v.ID, &v.RepositoryID, &typeStr, &snapshotID, &v.StartedAt,
+			&v.CompletedAt, &statusStr, &v.DurationMs, &v.ErrorMessage,
+			&detailsBytes, &v.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan verification: %w", err)
+		}
+		v.Type = models.VerificationType(typeStr)
+		v.Status = models.VerificationStatus(statusStr)
+		if snapshotID != nil {
+			v.SnapshotID = *snapshotID
+		}
+		// Skip setting details to avoid warning spam
+		verifications = append(verifications, &v)
+	}
+
+	if err := r.Err(); err != nil {
+		return nil, fmt.Errorf("iterate verifications: %w", err)
+	}
+
+	return verifications, nil
+}

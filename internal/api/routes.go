@@ -88,6 +88,8 @@ type Config struct {
 	UpdateChecker *updates.Checker
 	// AirGapPublicKey is the Ed25519 public key for validating offline licenses (optional).
 	AirGapPublicKey []byte
+	// VerificationTrigger for manually triggering verifications (optional).
+	VerificationTrigger handlers.VerificationTrigger
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.

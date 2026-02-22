@@ -913,6 +913,9 @@ function RepositoryCard({
 					<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 						Integrity
 					</span>
+			<div className="mb-4 p-3 bg-gray-50 rounded-lg">
+				<div className="flex items-center justify-between mb-2">
+					<span className="text-sm font-medium text-gray-700">Integrity</span>
 					<span
 						className={`px-2 py-0.5 rounded-full text-xs font-medium ${verificationBadge.className}`}
 					>
@@ -921,6 +924,7 @@ function RepositoryCard({
 				</div>
 				{lastVerification && (
 					<p className="text-xs text-gray-500 dark:text-gray-400">
+					<p className="text-xs text-gray-500">
 						Last checked: {formatRelativeTime(lastVerification.started_at)}
 						{lastVerification.status === 'failed' &&
 							lastVerification.error_message && (
@@ -941,6 +945,7 @@ function RepositoryCard({
 				)}
 				{verificationStatus?.next_scheduled_at && (
 					<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+					<p className="text-xs text-gray-500 mt-1">
 						Next: {formatRelativeTime(verificationStatus.next_scheduled_at)}
 					</p>
 				)}
@@ -967,6 +972,7 @@ function RepositoryCard({
 					{isVerifying ? 'Verifying...' : 'Verify'}
 				</button>
 				<span className="text-gray-300 dark:text-gray-600">|</span>
+				<span className="text-gray-300">|</span>
 				<button
 					type="button"
 					onClick={() => onTest(repository.id)}
