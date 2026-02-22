@@ -93,6 +93,20 @@ type TestRestoreResultResponse struct {
 	ErrorMessage     string                     `json:"error_message,omitempty"`
 	Details          *models.TestRestoreDetails `json:"details,omitempty"`
 	CreatedAt        string                     `json:"created_at"`
+	ID               string                      `json:"id"`
+	RepositoryID     string                      `json:"repository_id"`
+	SnapshotID       string                      `json:"snapshot_id,omitempty"`
+	SamplePercentage int                         `json:"sample_percentage"`
+	StartedAt        string                      `json:"started_at"`
+	CompletedAt      string                      `json:"completed_at,omitempty"`
+	Status           string                      `json:"status"`
+	DurationMs       *int64                      `json:"duration_ms,omitempty"`
+	FilesRestored    int                         `json:"files_restored"`
+	FilesVerified    int                         `json:"files_verified"`
+	BytesRestored    int64                       `json:"bytes_restored"`
+	ErrorMessage     string                      `json:"error_message,omitempty"`
+	Details          *models.TestRestoreDetails  `json:"details,omitempty"`
+	CreatedAt        string                      `json:"created_at"`
 }
 
 func toTestRestoreResultResponse(r *models.TestRestoreResult) TestRestoreResultResponse {

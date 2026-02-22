@@ -240,6 +240,38 @@ func (s *TeamsService) SendValidationFailed(data ValidationFailedData) error {
 	return s.Send(msg)
 }
 
+// SendTestRestoreFailed sends a test restore failed notification to Teams.
+func (s *TeamsService) SendTestRestoreFailed(data TestRestoreFailedData) error {
+	msg := NewTeamsMessage()
+	msg.AddHeader(fmt.Sprintf("Test Restore Failed: %s", data.RepositoryName), "Attention")
+
+	facts := []TeamsCardFact{
+		{Title: "Repository", Value: data.RepositoryName},
+		{Title: "Snapshot ID", Value: data.SnapshotID},
+		{Title: "Sample Size", Value: fmt.Sprintf("%d%%", data.SamplePercentage)},
+		{Title: "Files Restored", Value: fmt.Sprintf("%d", data.FilesRestored)},
+		{Title: "Files Verified", Value: fmt.Sprintf("%d", data.FilesVerified)},
+		{Title: "Failed At", Value: data.FailedAt.Format(time.RFC822)},
+	}
+
+	if data.ConsecutiveFails > 1 {
+		facts = append([]TeamsCardFact{
+			{Title: "Consecutive Failures", Value: fmt.Sprintf("%d", data.ConsecutiveFails)},
+		}, facts...)
+	}
+
+	msg.AddFactSet(facts)
+	msg.AddText(fmt.Sprintf("**Error:** %s", data.ErrorMessage), true)
+
+	s.logger.Debug().
+		Str("repository", data.RepositoryName).
+		Str("error", data.ErrorMessage).
+		Int("consecutive_fails", data.ConsecutiveFails).
+		Msg("sending test restore failed notification to Teams")
+
+	return s.Send(msg)
+}
+
 // TestConnection sends a test message to verify the Teams webhook is working.
 func (s *TeamsService) TestConnection() error {
 	msg := NewTeamsMessage()

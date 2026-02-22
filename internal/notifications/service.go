@@ -1576,6 +1576,203 @@ func (s *Service) finalizeLog(ctx context.Context, log *models.NotificationLog, 
 	}
 }
 
+// NotifyTestRestoreFailed sends notifications when a test restore fails.
+func (s *Service) NotifyTestRestoreFailed(ctx context.Context, result *models.TestRestoreResult, repo *models.Repository, consecutiveFails int) {
+	prefs, err := s.store.GetEnabledPreferencesForEvent(ctx, repo.OrgID, models.EventTestRestoreFailed)
+	if err != nil {
+		s.logger.Error().Err(err).
+			Str("org_id", repo.OrgID.String()).
+			Str("repo_id", repo.ID.String()).
+			Msg("failed to get notification preferences for test restore failed")
+		return
+	}
+
+	if len(prefs) == 0 {
+		s.logger.Debug().
+			Str("org_id", repo.OrgID.String()).
+			Str("event_type", string(models.EventTestRestoreFailed)).
+			Msg("no notification preferences enabled for test restore failed event")
+		return
+	}
+
+	data := TestRestoreFailedData{
+		RepositoryName:   repo.Name,
+		RepositoryID:     repo.ID.String(),
+		SnapshotID:       result.SnapshotID,
+		SamplePercentage: result.SamplePercentage,
+		StartedAt:        result.StartedAt,
+		FilesRestored:    result.FilesRestored,
+		FilesVerified:    result.FilesVerified,
+		ErrorMessage:     result.ErrorMessage,
+		ConsecutiveFails: consecutiveFails,
+	}
+	if result.CompletedAt != nil {
+		data.FailedAt = *result.CompletedAt
+	}
+
+	for _, pref := range prefs {
+		go s.sendTestRestoreFailedNotification(ctx, pref, data, repo.OrgID)
+	}
+}
+
+// sendTestRestoreFailedNotification sends a test restore failed notification.
+func (s *Service) sendTestRestoreFailedNotification(ctx context.Context, pref *models.NotificationPreference, data TestRestoreFailedData, orgID uuid.UUID) {
+	channel, err := s.store.GetNotificationChannelByID(ctx, pref.ChannelID)
+	if err != nil {
+		s.logger.Error().Err(err).
+			Str("channel_id", pref.ChannelID.String()).
+			Msg("failed to get notification channel")
+		return
+	}
+
+	subject := fmt.Sprintf("Test Restore Failed: %s", data.RepositoryName)
+	recipient := s.getChannelRecipient(channel)
+
+	log := models.NewNotificationLog(orgID, &channel.ID, string(models.EventTestRestoreFailed), recipient, subject)
+	if err := s.store.CreateNotificationLog(ctx, log); err != nil {
+		s.logger.Error().Err(err).Msg("failed to create notification log")
+	}
+
+	var sendErr error
+	switch channel.Type {
+	case models.ChannelTypeEmail:
+		sendErr = s.sendEmailTestRestoreFailed(channel, data)
+	case models.ChannelTypeSlack:
+		sendErr = s.sendSlackTestRestoreFailed(channel, data)
+	case models.ChannelTypeTeams:
+		sendErr = s.sendTeamsTestRestoreFailed(channel, data)
+	case models.ChannelTypeDiscord:
+		sendErr = s.sendDiscordTestRestoreFailed(channel, data)
+	case models.ChannelTypePagerDuty:
+		sendErr = s.sendPagerDutyTestRestoreFailed(channel, data)
+	case models.ChannelTypeWebhook:
+		sendErr = s.sendWebhookTestRestoreFailed(channel, data)
+	default:
+		s.logger.Warn().
+			Str("channel_type", string(channel.Type)).
+			Msg("unsupported notification channel type for test restore failed")
+		return
+	}
+
+	if sendErr != nil {
+		log.MarkFailed(sendErr.Error())
+		s.logger.Error().Err(sendErr).
+			Str("channel_id", channel.ID.String()).
+			Str("channel_type", string(channel.Type)).
+			Msg("failed to send test restore failed notification")
+	} else {
+		log.MarkSent()
+		s.logger.Info().
+			Str("channel_id", channel.ID.String()).
+			Str("channel_type", string(channel.Type)).
+			Str("repository", data.RepositoryName).
+			Msg("test restore failed notification sent")
+	}
+
+	if err := s.store.UpdateNotificationLog(ctx, log); err != nil {
+		s.logger.Error().Err(err).Msg("failed to update notification log")
+	}
+}
+
+// sendEmailTestRestoreFailed sends a test restore failed notification via email.
+func (s *Service) sendEmailTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
+	var emailConfig models.EmailChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
+		return fmt.Errorf("parse email config: %w", err)
+	}
+
+	smtpConfig := SMTPConfig{
+		Host:     emailConfig.Host,
+		Port:     emailConfig.Port,
+		Username: emailConfig.Username,
+		Password: emailConfig.Password,
+		From:     emailConfig.From,
+		TLS:      emailConfig.TLS,
+	}
+
+	emailService, err := NewEmailService(smtpConfig, s.logger)
+	if err != nil {
+		return fmt.Errorf("create email service: %w", err)
+	}
+
+	return emailService.SendTestRestoreFailed([]string{emailConfig.From}, data)
+}
+
+// sendSlackTestRestoreFailed sends a test restore failed notification via Slack.
+func (s *Service) sendSlackTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
+	var config models.SlackChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse slack config: %w", err)
+	}
+
+	slackService, err := NewSlackService(config, s.logger)
+	if err != nil {
+		return fmt.Errorf("create slack service: %w", err)
+	}
+
+	return slackService.SendTestRestoreFailed(data)
+}
+
+// sendTeamsTestRestoreFailed sends a test restore failed notification via Microsoft Teams.
+func (s *Service) sendTeamsTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
+	var config models.TeamsChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse teams config: %w", err)
+	}
+
+	teamsService, err := NewTeamsService(config, s.logger)
+	if err != nil {
+		return fmt.Errorf("create teams service: %w", err)
+	}
+
+	return teamsService.SendTestRestoreFailed(data)
+}
+
+// sendDiscordTestRestoreFailed sends a test restore failed notification via Discord.
+func (s *Service) sendDiscordTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
+	var config models.DiscordChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse discord config: %w", err)
+	}
+
+	discordService, err := NewDiscordService(config, s.logger)
+	if err != nil {
+		return fmt.Errorf("create discord service: %w", err)
+	}
+
+	return discordService.SendTestRestoreFailed(data)
+}
+
+// sendPagerDutyTestRestoreFailed sends a test restore failed notification via PagerDuty.
+func (s *Service) sendPagerDutyTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
+	var config models.PagerDutyChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse pagerduty config: %w", err)
+	}
+
+	pdService, err := NewPagerDutyService(config, s.logger)
+	if err != nil {
+		return fmt.Errorf("create pagerduty service: %w", err)
+	}
+
+	return pdService.SendTestRestoreFailed(data)
+}
+
+// sendWebhookTestRestoreFailed sends a test restore failed notification via generic webhook.
+func (s *Service) sendWebhookTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
+	var config models.WebhookChannelConfig
+	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("parse webhook config: %w", err)
+	}
+
+	webhookService, err := NewWebhookService(config, s.logger)
+	if err != nil {
+		return fmt.Errorf("create webhook service: %w", err)
+	}
+
+	return webhookService.SendTestRestoreFailed(data)
+}
+
 // formatDuration formats a duration into a human-readable string.
 func formatDuration(d time.Duration) string {
 	if d < time.Minute {
