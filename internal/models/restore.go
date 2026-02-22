@@ -96,6 +96,12 @@ type Restore struct {
 	ID           uuid.UUID     `json:"id"`
 	AgentID      uuid.UUID     `json:"agent_id"`                       // Target agent (where restore executes)
 	SourceAgentID *uuid.UUID   `json:"source_agent_id,omitempty"`      // Source agent for cross-agent restores
+)
+
+// Restore represents a restore job execution record.
+type Restore struct {
+	ID           uuid.UUID     `json:"id"`
+	AgentID      uuid.UUID     `json:"agent_id"`
 	RepositoryID uuid.UUID     `json:"repository_id"`
 	SnapshotID   string        `json:"snapshot_id"`
 	TargetPath   string        `json:"target_path"`
@@ -104,6 +110,7 @@ type Restore struct {
 	PathMappings []PathMapping `json:"path_mappings,omitempty"`        // Path remapping for cross-agent restores
 	Status       RestoreStatus `json:"status"`
 	Progress     *RestoreProgress `json:"progress,omitempty"`          // Real-time progress tracking
+	Status       RestoreStatus `json:"status"`
 	StartedAt    *time.Time    `json:"started_at,omitempty"`
 	CompletedAt  *time.Time    `json:"completed_at,omitempty"`
 	ErrorMessage string        `json:"error_message,omitempty"`

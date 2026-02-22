@@ -410,6 +410,9 @@ func NewRouter(
 	fileHistoryHandler := handlers.NewFileHistoryHandler(database, logger)
 	fileHistoryHandler.RegisterRoutes(apiV1)
 
+	snapshotsHandler := handlers.NewSnapshotsHandler(database, logger)
+	snapshotsHandler.RegisterRoutes(apiV1)
+
 	auditLogsHandler := handlers.NewAuditLogsHandler(database, logger)
 	auditLogsHandler.RegisterRoutes(auditLogsGroup)
 

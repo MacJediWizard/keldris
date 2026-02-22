@@ -372,11 +372,15 @@ func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID strin
 		Strs("include", opts.Include).
 		Strs("exclude", opts.Exclude).
 		Bool("dry_run", opts.DryRun).
+}
+
 // Restore restores a snapshot to the given target path.
-func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID, targetPath string) error {
+func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID string, opts RestoreOptions) error {
 	r.logger.Info().
 		Str("snapshot_id", snapshotID).
-		Str("target_path", targetPath).
+		Str("target_path", opts.TargetPath).
+		Strs("include", opts.Include).
+		Strs("exclude", opts.Exclude).
 		Msg("starting restore")
 
 	args := []string{
@@ -402,8 +406,17 @@ func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID, targ
 
 		"--target", targetPath,
 		"--json",
-		snapshotID,
 	}
+
+	for _, include := range opts.Include {
+		args = append(args, "--include", include)
+	}
+
+	for _, exclude := range opts.Exclude {
+		args = append(args, "--exclude", exclude)
+	}
+
+	args = append(args, snapshotID)
 
 	_, err := r.run(ctx, cfg, args)
 	if err != nil {

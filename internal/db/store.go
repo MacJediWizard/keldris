@@ -1935,6 +1935,22 @@ func (db *DB) GetBackupBySnapshotID(ctx context.Context, snapshotID string) (*mo
 
 // GetSchedulesByPolicyID returns all schedules using a policy.
 func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([]*models.Schedule, error) {
+		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		       status, size_bytes, files_new, files_changed, error_message, created_at
+		FROM backups
+		WHERE snapshot_id = $1
+	`, snapshotID).Scan(
+		&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
+		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
+		&b.FilesChanged, &b.ErrorMessage, &b.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get backup by snapshot ID: %w", err)
+	}
+	b.Status = models.BackupStatus(statusStr)
+	return &b, nil
+}
+
 // Alert methods
 
 // GetAlertsByOrgID returns all alerts for an organization.
@@ -2439,6 +2455,94 @@ func (db *DB) GetLatestBackupByScheduleID(ctx context.Context, scheduleID uuid.U
 	return &b, nil
 }
 
+// Restore methods
+
+// GetRestoresByAgentID returns all restores for an agent.
+func (db *DB) GetRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Restore, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
+		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
+		FROM restores
+		WHERE agent_id = $1
+		ORDER BY created_at DESC
+	`, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("list restores by agent: %w", err)
+	}
+	defer rows.Close()
+
+	return scanRestores(rows)
+}
+
+// GetRestoreByID returns a restore by ID.
+func (db *DB) GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore, error) {
+	var r models.Restore
+	var statusStr string
+	var includePathsBytes, excludePathsBytes []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
+		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
+		FROM restores
+		WHERE id = $1
+	`, id).Scan(
+		&r.ID, &r.AgentID, &r.RepositoryID, &r.SnapshotID, &r.TargetPath,
+		&includePathsBytes, &excludePathsBytes, &statusStr, &r.StartedAt,
+		&r.CompletedAt, &r.ErrorMessage, &r.CreatedAt, &r.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get restore: %w", err)
+	}
+	r.Status = models.RestoreStatus(statusStr)
+	if err := parseStringSlice(includePathsBytes, &r.IncludePaths); err != nil {
+		return nil, fmt.Errorf("parse include paths: %w", err)
+	}
+	if err := parseStringSlice(excludePathsBytes, &r.ExcludePaths); err != nil {
+		return nil, fmt.Errorf("parse exclude paths: %w", err)
+	}
+	return &r, nil
+}
+
+// CreateRestore creates a new restore record.
+func (db *DB) CreateRestore(ctx context.Context, restore *models.Restore) error {
+	includePathsBytes, err := toJSONBytes(restore.IncludePaths)
+	if err != nil {
+		return fmt.Errorf("marshal include paths: %w", err)
+	}
+
+	excludePathsBytes, err := toJSONBytes(restore.ExcludePaths)
+	if err != nil {
+		return fmt.Errorf("marshal exclude paths: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO restores (id, agent_id, repository_id, snapshot_id, target_path, include_paths,
+		                      exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, restore.ID, restore.AgentID, restore.RepositoryID, restore.SnapshotID,
+		restore.TargetPath, includePathsBytes, excludePathsBytes,
+		string(restore.Status), restore.StartedAt, restore.CompletedAt,
+		restore.ErrorMessage, restore.CreatedAt, restore.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create restore: %w", err)
+	}
+	return nil
+}
+
+// UpdateRestore updates an existing restore record.
+func (db *DB) UpdateRestore(ctx context.Context, restore *models.Restore) error {
+	restore.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE restores
+		SET status = $2, started_at = $3, completed_at = $4, error_message = $5, updated_at = $6
+		WHERE id = $1
+	`, restore.ID, string(restore.Status), restore.StartedAt, restore.CompletedAt,
+		restore.ErrorMessage, restore.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update restore: %w", err)
+	}
+	return nil
+}
+
 // GetOrgIDByAgentID returns the org ID for an agent.
 func (db *DB) GetOrgIDByAgentID(ctx context.Context, agentID uuid.UUID) (uuid.UUID, error) {
 	var orgID uuid.UUID
@@ -2857,6 +2961,66 @@ func (db *DB) UpdateBackup(ctx context.Context, backup *models.Backup) error {
 		}
 	}
 
+// scanRestores scans multiple restore rows.
+func scanRestores(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.Restore, error) {
+	type scanner interface {
+		Next() bool
+		Scan(dest ...any) error
+		Err() error
+	}
+	r := rows.(scanner)
+
+	var restores []*models.Restore
+	for r.Next() {
+		var restore models.Restore
+		var statusStr string
+		var includePathsBytes, excludePathsBytes []byte
+		if err := r.Scan(
+			&restore.ID, &restore.AgentID, &restore.RepositoryID, &restore.SnapshotID,
+			&restore.TargetPath, &includePathsBytes, &excludePathsBytes, &statusStr,
+			&restore.StartedAt, &restore.CompletedAt, &restore.ErrorMessage,
+			&restore.CreatedAt, &restore.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan restore: %w", err)
+		}
+		restore.Status = models.RestoreStatus(statusStr)
+		if err := parseStringSlice(includePathsBytes, &restore.IncludePaths); err != nil {
+			return nil, fmt.Errorf("parse include paths: %w", err)
+		}
+		if err := parseStringSlice(excludePathsBytes, &restore.ExcludePaths); err != nil {
+			return nil, fmt.Errorf("parse exclude paths: %w", err)
+		}
+		restores = append(restores, &restore)
+	}
+	if err := r.Err(); err != nil {
+		return nil, fmt.Errorf("iterate restores: %w", err)
+	}
+	return restores, nil
+}
+
+// toJSONBytes converts a slice to JSON bytes for database storage.
+func toJSONBytes(slice []string) ([]byte, error) {
+	if len(slice) == 0 {
+		return nil, nil
+	}
+	return json.Marshal(slice)
+}
+
+// parseStringSlice parses JSON bytes into a string slice.
+func parseStringSlice(data []byte, dest *[]string) error {
+	if len(data) == 0 {
+		return nil
+	}
+	return json.Unmarshal(data, dest)
+}
+
+// UpdateNotificationChannel updates an existing notification channel.
+func (db *DB) UpdateNotificationChannel(ctx context.Context, channel *models.NotificationChannel) error {
+	channel.UpdatedAt = time.Now()
 	_, err := db.Pool.Exec(ctx, `
 		UPDATE backups
 		SET snapshot_id = $2, completed_at = $3, status = $4, size_bytes = $5,

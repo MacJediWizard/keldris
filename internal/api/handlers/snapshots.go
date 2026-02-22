@@ -95,6 +95,18 @@ func (h *SnapshotsHandler) buildResticConfig(ctx context.Context, repositoryID u
 	return &cfg, nil
 }
 
+	store  SnapshotStore
+	logger zerolog.Logger
+}
+
+// NewSnapshotsHandler creates a new SnapshotsHandler.
+func NewSnapshotsHandler(store SnapshotStore, logger zerolog.Logger) *SnapshotsHandler {
+	return &SnapshotsHandler{
+		store:  store,
+		logger: logger.With().Str("component", "snapshots_handler").Logger(),
+	}
+}
+
 // RegisterRoutes registers snapshot and restore routes on the given router group.
 func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	snapshots := r.Group("/snapshots")
@@ -133,6 +145,7 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		restores.POST("/cloud", h.CreateCloudRestore)
 		restores.GET("/:id", h.GetRestore)
 		restores.GET("/:id/progress", h.GetCloudRestoreProgress)
+		restores.GET("/:id", h.GetRestore)
 	}
 }
 
@@ -164,6 +177,10 @@ type SnapshotResponse struct {
 //	@Failure		500				{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/snapshots [get]
+// GET /api/v1/snapshots
+// Optional query params:
+//   - agent_id: filter by agent
+//   - repository_id: filter by repository
 func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -235,6 +252,7 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 				}
 				// Check if the backup's repository matches the filter
 				if backup.RepositoryID == nil || *backup.RepositoryID != repoID {
+				if schedule.RepositoryID != repoID {
 					continue
 				}
 			}
@@ -257,6 +275,7 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 				Paths:        schedule.Paths,
 				AgentID:      agent.ID.String(),
 				RepositoryID: repoIDStr,
+				RepositoryID: schedule.RepositoryID.String(),
 				BackupID:     backup.ID.String(),
 				SizeBytes:    backup.SizeBytes,
 			})
@@ -281,6 +300,7 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 //	@Failure		500	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/snapshots/{id} [get]
+// GET /api/v1/snapshots/:id
 func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -336,6 +356,7 @@ func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 		Paths:        schedule.Paths,
 		AgentID:      agent.ID.String(),
 		RepositoryID: repoIDStr,
+		RepositoryID: schedule.RepositoryID.String(),
 		BackupID:     backup.ID.String(),
 		SizeBytes:    backup.SizeBytes,
 	})
@@ -406,6 +427,10 @@ type SnapshotCompareResponse struct {
 //	@Failure		500		{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/snapshots/{id}/files [get]
+// ListFiles returns files in a snapshot.
+// GET /api/v1/snapshots/:id/files
+// Optional query params:
+//   - path: filter to specific directory (default: root)
 func (h *SnapshotsHandler) ListFiles(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -614,6 +639,47 @@ type RestoreResponse struct {
 	CloudProgress       *CloudRestoreProgressResponse `json:"cloud_progress,omitempty"`
 	CloudTargetLocation string                        `json:"cloud_target_location,omitempty"`
 	VerifyUpload        bool                          `json:"verify_upload,omitempty"`
+	// Note: In a full implementation, this would call the agent to list files
+	// from the actual Restic repository. For now, we return a placeholder response
+	// indicating the functionality is available but requires agent communication.
+	h.logger.Info().
+		Str("snapshot_id", snapshotID).
+		Str("path_prefix", pathPrefix).
+		Msg("file listing requested")
+
+	// Placeholder response - in production this would query the agent
+	c.JSON(http.StatusOK, gin.H{
+		"files":       []SnapshotFileResponse{},
+		"snapshot_id": snapshotID,
+		"path":        pathPrefix,
+		"message":     "File listing requires agent communication. Files will be populated when agent connectivity is implemented.",
+	})
+}
+
+// CreateRestoreRequest is the request body for creating a restore job.
+type CreateRestoreRequest struct {
+	SnapshotID   string   `json:"snapshot_id" binding:"required"`
+	AgentID      string   `json:"agent_id" binding:"required"`
+	RepositoryID string   `json:"repository_id" binding:"required"`
+	TargetPath   string   `json:"target_path" binding:"required"`
+	IncludePaths []string `json:"include_paths,omitempty"`
+	ExcludePaths []string `json:"exclude_paths,omitempty"`
+}
+
+// RestoreResponse represents a restore job in API responses.
+type RestoreResponse struct {
+	ID           string   `json:"id"`
+	AgentID      string   `json:"agent_id"`
+	RepositoryID string   `json:"repository_id"`
+	SnapshotID   string   `json:"snapshot_id"`
+	TargetPath   string   `json:"target_path"`
+	IncludePaths []string `json:"include_paths,omitempty"`
+	ExcludePaths []string `json:"exclude_paths,omitempty"`
+	Status       string   `json:"status"`
+	StartedAt    string   `json:"started_at,omitempty"`
+	CompletedAt  string   `json:"completed_at,omitempty"`
+	ErrorMessage string   `json:"error_message,omitempty"`
+	CreatedAt    string   `json:"created_at"`
 }
 
 func toRestoreResponse(r *models.Restore) RestoreResponse {
@@ -632,6 +698,9 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 	}
 	if r.SourceAgentID != nil {
 		resp.SourceAgentID = r.SourceAgentID.String()
+	}
+		ErrorMessage: r.ErrorMessage,
+		CreatedAt:    r.CreatedAt.Format(time.RFC3339),
 	}
 	if r.StartedAt != nil {
 		resp.StartedAt = r.StartedAt.Format(time.RFC3339)
@@ -706,6 +775,7 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 //	@Failure		500		{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/restores [post]
+// POST /api/v1/restores
 func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -720,6 +790,8 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 
 	// Parse target agent ID (where restore will execute)
 	targetAgentID, err := uuid.Parse(req.AgentID)
+	// Parse IDs
+	agentID, err := uuid.Parse(req.AgentID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent_id"})
 		return
@@ -743,6 +815,7 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 	}
 
 	// Verify user access
+	// Verify user access to agent
 	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
@@ -772,6 +845,15 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "source agent not found"})
 			return
 		}
+	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	if agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
 	}
 
 	// Verify repository access
@@ -804,6 +886,8 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 	} else {
 		restore = models.NewRestore(targetAgentID, repositoryID, req.SnapshotID, req.TargetPath, req.IncludePaths, req.ExcludePaths)
 	}
+	// Create restore job
+	restore := models.NewRestore(agentID, repositoryID, req.SnapshotID, req.TargetPath, req.IncludePaths, req.ExcludePaths)
 
 	if err := h.store.CreateRestore(c.Request.Context(), restore); err != nil {
 		h.logger.Error().Err(err).Msg("failed to create restore job")
@@ -821,6 +905,12 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		logEvent = logEvent.Str("source_agent_id", req.SourceAgentID)
 	}
 	logEvent.Msg("restore job created")
+	h.logger.Info().
+		Str("restore_id", restore.ID.String()).
+		Str("snapshot_id", req.SnapshotID).
+		Str("agent_id", req.AgentID).
+		Str("target_path", req.TargetPath).
+		Msg("restore job created")
 
 	c.JSON(http.StatusCreated, toRestoreResponse(restore))
 }
@@ -856,6 +946,11 @@ func (h *SnapshotsHandler) PreviewRestore(c *gin.Context) {
 //	@Failure		500			{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/restores [get]
+// ListRestores returns all restore jobs for the authenticated user's organization.
+// GET /api/v1/restores
+// Optional query params:
+//   - agent_id: filter by agent
+//   - status: filter by status
 func (h *SnapshotsHandler) ListRestores(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -966,6 +1061,63 @@ func (h *SnapshotsHandler) CreateCloudRestore(c *gin.Context) {
 //	@Failure		404	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/restores/{id} [get]
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+		return
+	}
+
+	// Get all agents in the org
+	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), dbUser.OrgID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list agents")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list restores"})
+		return
+	}
+
+	// Apply agent_id filter if provided
+	agentIDParam := c.Query("agent_id")
+	if agentIDParam != "" {
+		agentID, err := uuid.Parse(agentIDParam)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent_id"})
+			return
+		}
+		// Filter to just this agent
+		var filtered []*models.Agent
+		for _, a := range agents {
+			if a.ID == agentID {
+				filtered = append(filtered, a)
+				break
+			}
+		}
+		agents = filtered
+	}
+
+	statusFilter := c.Query("status")
+
+	var restores []RestoreResponse
+	for _, agent := range agents {
+		agentRestores, err := h.store.GetRestoresByAgentID(c.Request.Context(), agent.ID)
+		if err != nil {
+			h.logger.Error().Err(err).Str("agent_id", agent.ID.String()).Msg("failed to get restores for agent")
+			continue
+		}
+
+		for _, restore := range agentRestores {
+			if statusFilter != "" && string(restore.Status) != statusFilter {
+				continue
+			}
+			restores = append(restores, toRestoreResponse(restore))
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"restores": restores})
+}
+
+// GetRestore returns a specific restore job by ID.
+// GET /api/v1/restores/:id
 func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -1030,6 +1182,22 @@ func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid restore ID"})
+		return
+	}
+
+	restore, err := h.store.GetRestoreByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
+		return
+	}
+
+	// Verify access through agent
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
 		return
 	}
@@ -1276,6 +1444,9 @@ func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 		return
 	}
 
+	agent, err := h.store.GetAgentByID(c.Request.Context(), restore.AgentID)
+	if err != nil || agent.OrgID != dbUser.OrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
 	agent, err := h.store.GetAgentByID(c.Request.Context(), restore.AgentID)
 	if err != nil || agent.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})

@@ -192,6 +192,7 @@ const navItems: NavItem[] = [
 		path: '/restore',
 		labelKey: 'nav.restore',
 		shortcut: 'G E',
+		label: 'Restore',
 		icon: (
 			<svg
 				aria-hidden="true"

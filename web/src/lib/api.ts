@@ -453,6 +453,7 @@ import type {
 	RestoreDockerStackRequest,
 	RestorePreview,
 	RestorePreviewRequest,
+	Restore,
 	RestoresResponse,
 	RotateAPIKeyResponse,
 	RotateCredentialsRequest,
@@ -512,6 +513,9 @@ import type {
 	SnapshotsResponse,
 	StartTrialRequest,
 	StorageDefaultSettings,
+	Snapshot,
+	SnapshotFilesResponse,
+	SnapshotsResponse,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
 	StorageGrowthTrend,
@@ -1299,6 +1303,63 @@ export const backupScriptsApi = {
 			`/schedules/${scheduleId}/scripts`,
 		);
 		return response.scripts ?? [];
+// Snapshots API
+export const snapshotsApi = {
+	list: async (params?: {
+		agent_id?: string;
+		repository_id?: string;
+	}): Promise<Snapshot[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.agent_id) searchParams.set('agent_id', params.agent_id);
+		if (params?.repository_id)
+			searchParams.set('repository_id', params.repository_id);
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/snapshots?${query}` : '/snapshots';
+		const response = await fetchApi<SnapshotsResponse>(endpoint);
+		return response.snapshots ?? [];
+	},
+
+	get: async (id: string): Promise<Snapshot> =>
+		fetchApi<Snapshot>(`/snapshots/${id}`),
+
+	listFiles: async (
+		id: string,
+		path?: string,
+	): Promise<SnapshotFilesResponse> => {
+		const endpoint = path
+			? `/snapshots/${id}/files?path=${encodeURIComponent(path)}`
+			: `/snapshots/${id}/files`;
+		return fetchApi<SnapshotFilesResponse>(endpoint);
+	},
+};
+
+// Restores API
+export const restoresApi = {
+	list: async (params?: {
+		agent_id?: string;
+		status?: string;
+	}): Promise<Restore[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.agent_id) searchParams.set('agent_id', params.agent_id);
+		if (params?.status) searchParams.set('status', params.status);
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/restores?${query}` : '/restores';
+		const response = await fetchApi<RestoresResponse>(endpoint);
+		return response.restores ?? [];
+	},
+
+	get: async (id: string): Promise<Restore> =>
+		fetchApi<Restore>(`/restores/${id}`),
+
+	create: async (data: CreateRestoreRequest): Promise<Restore> =>
+		fetchApi<Restore>('/restores', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+};
+
 // Alerts API
 export const alertsApi = {
 	list: async (): Promise<Alert[]> => {

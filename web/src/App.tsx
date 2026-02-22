@@ -413,6 +413,7 @@ function App() {
 						<Route path="file-search" element={<FileSearch />} />
 						<Route path="snapshots/compare" element={<SnapshotCompare />} />
 						<Route path="snapshots/file-diff" element={<FileDiff />} />
+						<Route path="restore" element={<Restore />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
 						<Route path="reports" element={<Reports />} />
