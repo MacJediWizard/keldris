@@ -66,6 +66,10 @@ type CreateRepositoryRequest struct {
 	Type          models.RepositoryType `json:"type" binding:"required" example:"s3"`
 	Config        map[string]any        `json:"config" binding:"required"`
 	EscrowEnabled bool                  `json:"escrow_enabled" example:"true"`
+	Name          string                `json:"name" binding:"required,min=1,max=255"`
+	Type          models.RepositoryType `json:"type" binding:"required"`
+	Config        map[string]any        `json:"config" binding:"required"`
+	EscrowEnabled bool                  `json:"escrow_enabled"`
 }
 
 // UpdateRepositoryRequest is the request body for updating a repository.
@@ -670,6 +674,7 @@ func (h *RepositoriesHandler) TestConnection(c *gin.Context) {
 //	@Failure		500	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/repositories/{id}/key/recover [get]
+// GET /api/v1/repositories/:id/key/recover
 func (h *RepositoriesHandler) RecoverKey(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {

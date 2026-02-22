@@ -205,6 +205,103 @@ function PasswordModal({
 	);
 }
 
+interface PasswordModalProps {
+	isOpen: boolean;
+	onClose: () => void;
+	repositoryName: string;
+	password: string;
+}
+
+function PasswordModal({
+	isOpen,
+	onClose,
+	repositoryName,
+	password,
+}: PasswordModalProps) {
+	const [copied, setCopied] = useState(false);
+
+	const handleCopy = async () => {
+		await navigator.clipboard.writeText(password);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	};
+
+	if (!isOpen) return null;
+
+	return (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+				<div className="flex items-center gap-3 mb-4">
+					<div className="flex-shrink-0 w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5 text-yellow-600"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+							/>
+						</svg>
+					</div>
+					<div>
+						<h3 className="text-lg font-semibold text-gray-900">
+							Repository Password
+						</h3>
+						<p className="text-sm text-gray-500">
+							Save this password - it will only be shown once
+						</p>
+					</div>
+				</div>
+
+				<div className="mb-4">
+					<p className="text-sm text-gray-600 mb-2">
+						Repository <span className="font-medium">{repositoryName}</span> has
+						been created. Use this password to access your Restic repository:
+					</p>
+				</div>
+
+				<div className="bg-gray-50 rounded-lg p-4 mb-4">
+					<div className="flex items-center justify-between gap-4">
+						<code className="text-sm font-mono break-all flex-1">
+							{password}
+						</code>
+						<button
+							type="button"
+							onClick={handleCopy}
+							className="flex-shrink-0 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+						>
+							{copied ? 'Copied!' : 'Copy'}
+						</button>
+					</div>
+				</div>
+
+				<div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+					<p className="text-sm text-amber-800">
+						<strong>Important:</strong> This password is required to decrypt
+						your backups. Store it securely - without it, your backup data
+						cannot be recovered.
+					</p>
+				</div>
+
+				<div className="flex justify-end">
+					<button
+						type="button"
+						onClick={onClose}
+						className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+					>
+						I've saved the password
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 interface AddRepositoryModalProps {
 	isOpen: boolean;
 	onClose: () => void;
@@ -773,6 +870,11 @@ function AddRepositoryModal({
 									Enable key escrow
 								</label>
 								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									className="block text-sm font-medium text-gray-700"
+								>
+									Enable key escrow
+								</label>
+								<p className="text-xs text-gray-500">
 									Store an encrypted copy of the password server-side for
 									recovery by administrators
 								</p>
@@ -946,8 +1048,10 @@ interface RepositoryCardProps {
 	isRecovering: boolean;
 	testResult?: { success: boolean; message: string };
 	isFavorite: boolean;
+	onRecoverKey: (id: string) => void;
 	isDeleting: boolean;
 	isTesting: boolean;
+	isRecovering: boolean;
 	testResult?: { success: boolean; message: string };
 }
 
@@ -1049,8 +1153,10 @@ function RepositoryCard({
 				)}
 			</div>
 
+	onRecoverKey,
 	isDeleting,
 	isTesting,
+	isRecovering,
 	testResult,
 }: RepositoryCardProps) {
 	const typeBadge = getRepositoryTypeBadge(repository.type);
@@ -1064,11 +1170,18 @@ function RepositoryCard({
 						Created {formatDate(repository.created_at)}
 					</p>
 				</div>
-				<span
-					className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${typeBadge.className}`}
-				>
-					{typeBadge.label}
-				</span>
+				<div className="flex items-center gap-2">
+					{repository.escrow_enabled && (
+						<span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+							Escrow
+						</span>
+					)}
+					<span
+						className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${typeBadge.className}`}
+					>
+						{typeBadge.label}
+					</span>
+				</div>
 			</div>
 			{testResult && (
 				<div
@@ -1127,6 +1240,19 @@ function RepositoryCard({
 				>
 					{isTesting ? 'Testing...' : 'Test Connection'}
 				</button>
+				{repository.escrow_enabled && (
+					<>
+						<span className="text-gray-300">|</span>
+						<button
+							type="button"
+							onClick={() => onRecoverKey(repository.id)}
+							disabled={isRecovering}
+							className="text-sm text-amber-600 hover:text-amber-800 font-medium disabled:opacity-50"
+						>
+							{isRecovering ? 'Recovering...' : 'Recover Key'}
+						</button>
+					</>
+				)}
 				<span className="text-gray-300">|</span>
 				<button
 					type="button"
@@ -1163,6 +1289,142 @@ function RecoveredKeyModal({
 	};
 
 	if (!isOpen) return null;
+
+	return (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+				<div className="flex items-center gap-3 mb-4">
+					<div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5 text-green-600"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+							/>
+						</svg>
+					</div>
+					<div>
+						<h3 className="text-lg font-semibold text-gray-900">
+							Recovered Password
+						</h3>
+						<p className="text-sm text-gray-500">
+							Password for repository: {repositoryName}
+						</p>
+					</div>
+				</div>
+
+				<div className="bg-gray-50 rounded-lg p-4 mb-4">
+					<div className="flex items-center justify-between gap-4">
+						<code className="text-sm font-mono break-all flex-1">
+							{password}
+						</code>
+						<button
+							type="button"
+							onClick={handleCopy}
+							className="flex-shrink-0 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+						>
+							{copied ? 'Copied!' : 'Copy'}
+						</button>
+					</div>
+				</div>
+
+				<div className="flex justify-end">
+					<button
+						type="button"
+						onClick={onClose}
+						className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+					>
+						Close
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+export function Repositories() {
+	const [searchQuery, setSearchQuery] = useState('');
+	const [typeFilter, setTypeFilter] = useState<RepositoryType | 'all'>('all');
+	const [showAddModal, setShowAddModal] = useState(false);
+	const [selectedType, setSelectedType] = useState<RepositoryType | undefined>(
+		undefined,
+	);
+	const [testResults, setTestResults] = useState<
+		Record<string, { success: boolean; message: string }>
+	>({});
+	const [passwordModal, setPasswordModal] = useState<{
+		isOpen: boolean;
+		repositoryName: string;
+		password: string;
+	}>({ isOpen: false, repositoryName: '', password: '' });
+	const [recoveredKeyModal, setRecoveredKeyModal] = useState<{
+		isOpen: boolean;
+		repositoryName: string;
+		password: string;
+	}>({ isOpen: false, repositoryName: '', password: '' });
+
+	const { data: repositories, isLoading, isError } = useRepositories();
+	const deleteRepository = useDeleteRepository();
+	const testRepository = useTestRepository();
+	const recoverKey = useRecoverRepositoryKey();
+
+	const filteredRepositories = repositories?.filter((repo) => {
+		const matchesSearch = repo.name
+			.toLowerCase()
+			.includes(searchQuery.toLowerCase());
+		const matchesType = typeFilter === 'all' || repo.type === typeFilter;
+		return matchesSearch && matchesType;
+	});
+
+function RecoveredKeyModal({
+	isOpen,
+	onClose,
+	repositoryName,
+	password,
+}: RecoveredKeyModalProps) {
+	const [copied, setCopied] = useState(false);
+
+	const handleCopy = async () => {
+		await navigator.clipboard.writeText(password);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	};
+
+	if (!isOpen) return null;
+	const handleRecoverKey = async (id: string) => {
+		try {
+			const result = await recoverKey.mutateAsync(id);
+			setRecoveredKeyModal({
+				isOpen: true,
+				repositoryName: result.repository_name,
+				password: result.password,
+			});
+		} catch {
+			alert('Failed to recover key. You may not have permission.');
+		}
+	};
+
+	const handleTypeClick = (type: RepositoryType) => {
+		setSelectedType(type);
+		setShowAddModal(true);
+	};
+
+	const handleCreateSuccess = (response: CreateRepositoryResponse) => {
+		setShowAddModal(false);
+		setSelectedType(undefined);
+		setPasswordModal({
+			isOpen: true,
+			repositoryName: response.repository.name,
+			password: response.password,
+		});
+	};
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1902,8 +2164,10 @@ export function Repositories() {
 								isRecovering={recoverKey.isPending}
 								testResult={testResults[repo.id]}
 								isFavorite={favoriteIds.has(repo.id)}
+								onRecoverKey={handleRecoverKey}
 								isDeleting={deleteRepository.isPending}
 								isTesting={testRepository.isPending}
+								isRecovering={recoverKey.isPending}
 								testResult={testResults[repo.id]}
 							/>
 						))}
@@ -2135,7 +2399,30 @@ export function Repositories() {
 					setShowAddModal(false);
 					setSelectedType(undefined);
 				}}
+				onSuccess={handleCreateSuccess}
 				initialType={selectedType}
+			/>
+
+			<PasswordModal
+				isOpen={passwordModal.isOpen}
+				onClose={() =>
+					setPasswordModal({ isOpen: false, repositoryName: '', password: '' })
+				}
+				repositoryName={passwordModal.repositoryName}
+				password={passwordModal.password}
+			/>
+
+			<RecoveredKeyModal
+				isOpen={recoveredKeyModal.isOpen}
+				onClose={() =>
+					setRecoveredKeyModal({
+						isOpen: false,
+						repositoryName: '',
+						password: '',
+					})
+				}
+				repositoryName={recoveredKeyModal.repositoryName}
+				password={recoveredKeyModal.password}
 			/>
 		</div>
 	);

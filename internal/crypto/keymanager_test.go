@@ -746,6 +746,17 @@ func TestMasterKeyBase64(t *testing.T) {
 
 	if !bytes.Equal(key, decoded) {
 		t.Errorf("masterKeyFromBase64() = %v, want %v", decoded, key)
+func TestMasterKeyBase64(t *testing.T) {
+	key, _ := GenerateMasterKey()
+
+	encoded := MasterKeyToBase64(key)
+	decoded, err := MasterKeyFromBase64(encoded)
+	if err != nil {
+		t.Fatalf("MasterKeyFromBase64() error = %v", err)
+	}
+
+	if !bytes.Equal(key, decoded) {
+		t.Errorf("MasterKeyFromBase64() = %v, want %v", decoded, key)
 	}
 }
 
@@ -759,6 +770,7 @@ func TestMasterKeyFromBase64_Invalid(t *testing.T) {
 		{"empty string", ""},                                                              // empty
 		{"16 bytes key", base64.StdEncoding.EncodeToString(make([]byte, 16))},             // AES-128 key
 		{"64 bytes key", base64.StdEncoding.EncodeToString(make([]byte, 64))},             // too long
+		{"wrong length", "dG9vLXNob3J0"}, // "too-short" in base64
 	}
 
 	for _, tt := range tests {
@@ -904,5 +916,12 @@ func TestKeyManager_CrossKeyIsolation(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+			_, err := MasterKeyFromBase64(tt.encoded)
+			if err == nil {
+				t.Error("MasterKeyFromBase64() expected error, got nil")
+			}
+		})
 	}
 }

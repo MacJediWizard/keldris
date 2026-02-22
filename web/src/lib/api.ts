@@ -363,6 +363,7 @@ import type {
 	LifecyclePolicy,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
+	KeyRecoveryResponse,
 	MembersResponse,
 	MessageResponse,
 	MetadataEntityType,
