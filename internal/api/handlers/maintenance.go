@@ -334,6 +334,9 @@ func (h *MaintenanceHandler) GetActive(c *gin.Context) {
 	}
 
 	// Get upcoming windows (within countdown or notify threshold, max 120 minutes)
+	}
+
+	// Get upcoming windows (within notify threshold of any window, max 120 minutes)
 	upcomingWindows, err := h.store.ListUpcomingMaintenanceWindows(c.Request.Context(), user.CurrentOrgID, now, 120)
 	if err != nil {
 		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get upcoming maintenance windows")
@@ -415,6 +418,9 @@ func (h *MaintenanceHandler) EmergencyOverride(c *gin.Context) {
 		Msg("emergency override set")
 
 	c.JSON(http.StatusOK, window)
+}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // toWindowSlice converts []*models.MaintenanceWindow to []models.MaintenanceWindow.

@@ -6461,6 +6461,33 @@ export interface DatabaseTestResponse {
 export interface ActivateLicenseRequest {
 	license_key: string;
 }
+// Maintenance Window types
+export interface MaintenanceWindow {
+	id: string;
+	org_id: string;
+	title: string;
+	message?: string;
+	starts_at: string;
+	ends_at: string;
+	notify_before_minutes: number;
+	notification_sent: boolean;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+// Exclude Pattern types
+export type ExcludePatternCategory =
+	| 'os'
+	| 'ide'
+	| 'language'
+	| 'build'
+	| 'cache'
+	| 'temp'
+	| 'logs'
+	| 'security'
+	| 'database'
+	| 'container';
 
 export interface ActivateLicenseResponse {
 	license_type: string;
@@ -6472,6 +6499,33 @@ export interface SetupStartTrialRequest {
 	company_name?: string;
 	contact_email: string;
 }
+export interface CreateMaintenanceWindowRequest {
+	title: string;
+	message?: string;
+	starts_at: string;
+	ends_at: string;
+	notify_before_minutes?: number;
+}
+
+export interface UpdateMaintenanceWindowRequest {
+	title?: string;
+	message?: string;
+	starts_at?: string;
+	ends_at?: string;
+	notify_before_minutes?: number;
+}
+
+export interface MaintenanceWindowsResponse {
+	maintenance_windows: MaintenanceWindow[];
+}
+
+export interface ActiveMaintenanceResponse {
+	active: MaintenanceWindow | null;
+	upcoming: MaintenanceWindow | null;
+}
+
+// DR Runbook types
+export type DRRunbookStatus = 'active' | 'draft' | 'archived';
 
 export interface SetupStartTrialResponse {
 	license_type: string;
@@ -6955,6 +7009,10 @@ export interface Verification {
 	details?: VerificationDetails;
 	created_at: string;
 }
+
+// Report types
+export type ReportFrequency = 'daily' | 'weekly' | 'monthly';
+export type ReportStatus = 'sent' | 'failed' | 'preview';
 
 export interface VerificationSchedule {
 	id: string;

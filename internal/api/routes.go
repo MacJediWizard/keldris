@@ -704,6 +704,9 @@ func NewRouter(
 			r.logger.Warn().Str("dir", cfg.WebDir).Msg("web directory not found, SPA not served")
 		}
 	}
+	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
+	maintenanceHandler.RegisterRoutes(apiV1)
+
 	// DR Runbook routes
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
 	drRunbooksHandler.RegisterRoutes(apiV1)

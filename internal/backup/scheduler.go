@@ -110,6 +110,16 @@ type Scheduler struct {
 	mu       sync.RWMutex
 	entries  map[uuid.UUID]cron.EntryID
 	running  bool
+	store       ScheduleStore
+	restic      *Restic
+	config      SchedulerConfig
+	notifier    *notifications.Service
+	maintenance *maintenance.Service
+	cron        *cron.Cron
+	logger      zerolog.Logger
+	mu          sync.RWMutex
+	entries     map[uuid.UUID]cron.EntryID
+	running     bool
 }
 
 // NewScheduler creates a new backup scheduler.
@@ -321,6 +331,22 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 			Time("next_allowed_time", nextAllowed).
 			Msg("backup skipped: outside allowed time window")
 		return
+	}
+
+	// Check if maintenance mode is active for the agent's organization
+	if s.maintenance != nil {
+		agent, err := s.store.GetAgentByID(ctx, schedule.AgentID)
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to get agent for maintenance check")
+			return
+		}
+		if s.maintenance.IsMaintenanceActive(agent.OrgID) {
+			logger.Info().
+				Str("agent_id", agent.ID.String()).
+				Str("org_id", agent.OrgID.String()).
+				Msg("backup skipped: maintenance mode active")
+			return
+		}
 	}
 
 	logger.Info().Msg("starting scheduled backup")
@@ -862,6 +888,33 @@ func (s *Scheduler) refreshLoop(ctx context.Context) {
 	defer ticker.Stop()
 
 	s.logger.Info().Msg("starting DR test scheduler")
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.mu.RLock()
+			running := s.running
+			s.mu.RUnlock()
+
+			if !running {
+				return
+			}
+
+			if err := s.Reload(ctx); err != nil {
+				s.logger.Error().Err(err).Msg("failed to reload schedules")
+			}
+
+			// Refresh maintenance window cache and check for pending notifications
+			if s.maintenance != nil {
+				if err := s.maintenance.RefreshCache(ctx); err != nil {
+					s.logger.Error().Err(err).Msg("failed to refresh maintenance cache")
+				}
+				s.maintenance.CheckAndSendNotifications(ctx)
+			}
+		}
+	}
+}
 
 	// Load initial schedules
 	if err := s.ReloadDRSchedules(ctx); err != nil {

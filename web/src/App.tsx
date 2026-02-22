@@ -38,6 +38,7 @@ import { LifecyclePolicies } from './pages/LifecyclePolicies';
 import { FileHistory } from './pages/FileHistory';
 import { Maintenance } from './pages/Maintenance';
 import { MigrationSettings } from './pages/MigrationSettings';
+import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
 import { NotFound } from './pages/NotFound';
 import { NotificationRules } from './pages/NotificationRules';
@@ -434,6 +435,7 @@ function App() {
 							path="organization/announcements"
 							element={<Announcements />}
 						/>
+						<Route path="organization/maintenance" element={<Maintenance />} />
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />
 						<Route path="onboarding" element={<Onboarding />} />

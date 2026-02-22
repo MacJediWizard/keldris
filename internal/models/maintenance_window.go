@@ -24,6 +24,17 @@ type MaintenanceWindow struct {
 	CreatedBy             *uuid.UUID `json:"created_by,omitempty"`
 	CreatedAt             time.Time  `json:"created_at"`
 	UpdatedAt             time.Time  `json:"updated_at"`
+	ID                  uuid.UUID  `json:"id"`
+	OrgID               uuid.UUID  `json:"org_id"`
+	Title               string     `json:"title"`
+	Message             string     `json:"message,omitempty"`
+	StartsAt            time.Time  `json:"starts_at"`
+	EndsAt              time.Time  `json:"ends_at"`
+	NotifyBeforeMinutes int        `json:"notify_before_minutes"`
+	NotificationSent    bool       `json:"notification_sent"`
+	CreatedBy           *uuid.UUID `json:"created_by,omitempty"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
 }
 
 // NewMaintenanceWindow creates a new MaintenanceWindow with the given details.
@@ -39,6 +50,14 @@ func NewMaintenanceWindow(orgID uuid.UUID, title string, startsAt, endsAt time.T
 		CountdownStartMinutes: 30,
 		CreatedAt:             now,
 		UpdatedAt:             now,
+		ID:                  uuid.New(),
+		OrgID:               orgID,
+		Title:               title,
+		StartsAt:            startsAt,
+		EndsAt:              endsAt,
+		NotifyBeforeMinutes: 60,
+		CreatedAt:           now,
+		UpdatedAt:           now,
 	}
 }
 
@@ -120,6 +139,13 @@ type CreateMaintenanceWindowRequest struct {
 	NotifyBeforeMinutes   *int      `json:"notify_before_minutes,omitempty"`
 	ReadOnly              *bool     `json:"read_only,omitempty"`
 	CountdownStartMinutes *int      `json:"countdown_start_minutes,omitempty"`
+// CreateMaintenanceWindowRequest is the request body for creating a maintenance window.
+type CreateMaintenanceWindowRequest struct {
+	Title               string    `json:"title" binding:"required,min=1,max=255"`
+	Message             string    `json:"message,omitempty"`
+	StartsAt            time.Time `json:"starts_at" binding:"required"`
+	EndsAt              time.Time `json:"ends_at" binding:"required"`
+	NotifyBeforeMinutes *int      `json:"notify_before_minutes,omitempty"`
 }
 
 // UpdateMaintenanceWindowRequest is the request body for updating a maintenance window.
@@ -136,6 +162,11 @@ type UpdateMaintenanceWindowRequest struct {
 // EmergencyOverrideRequest is the request body for emergency override.
 type EmergencyOverrideRequest struct {
 	Override bool `json:"override" binding:"required"`
+	Title               *string    `json:"title,omitempty"`
+	Message             *string    `json:"message,omitempty"`
+	StartsAt            *time.Time `json:"starts_at,omitempty"`
+	EndsAt              *time.Time `json:"ends_at,omitempty"`
+	NotifyBeforeMinutes *int       `json:"notify_before_minutes,omitempty"`
 }
 
 // MaintenanceWindowsResponse is the response for listing maintenance windows.
@@ -150,4 +181,6 @@ type ActiveMaintenanceResponse struct {
 	ReadOnlyMode  bool               `json:"read_only_mode"`
 	ShowCountdown bool               `json:"show_countdown"`
 	CountdownTo   *time.Time         `json:"countdown_to,omitempty"`
+	Active   *MaintenanceWindow `json:"active"`
+	Upcoming *MaintenanceWindow `json:"upcoming"`
 }

@@ -54,6 +54,8 @@ export function useUpdateMaintenanceWindow() {
 			id: string;
 			data: UpdateMaintenanceWindowRequest;
 		}) => maintenanceApi.update(id, data),
+		}: { id: string; data: UpdateMaintenanceWindowRequest }) =>
+			maintenanceApi.update(id, data),
 		onSuccess: (_, { id }) => {
 			queryClient.invalidateQueries({ queryKey: ['maintenance-windows'] });
 			queryClient.invalidateQueries({ queryKey: ['maintenance-windows', id] });

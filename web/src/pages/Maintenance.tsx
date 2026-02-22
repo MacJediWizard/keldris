@@ -145,6 +145,9 @@ export function Maintenance() {
 		emergencyOverride.mutate({ id, override: !currentOverride });
 	};
 
+		});
+	};
+
 	const cancelEdit = () => {
 		setEditingId(null);
 		setShowForm(false);
@@ -407,6 +410,32 @@ export function Maintenance() {
 								</label>
 								<p className="ml-6 text-xs text-gray-500">
 									Block write operations during this maintenance window
+							<div>
+								<label
+									htmlFor="notify_before"
+									className="block text-sm font-medium text-gray-700"
+								>
+									Notify Before (minutes)
+								</label>
+								<input
+									type="number"
+									id="notify_before"
+									value={formData.notify_before_minutes}
+									onChange={(e) =>
+										setFormData({
+											...formData,
+											notify_before_minutes: Number.parseInt(
+												e.target.value,
+												10,
+											),
+										})
+									}
+									min={0}
+									max={1440}
+									className="mt-1 block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+								/>
+								<p className="mt-1 text-xs text-gray-500">
+									Send notification this many minutes before maintenance starts
 								</p>
 							</div>
 
@@ -478,6 +507,7 @@ export function Maintenance() {
 									<div className="flex items-center justify-between">
 										<div className="flex-1 min-w-0">
 											<div className="flex items-center gap-2 flex-wrap">
+											<div className="flex items-center gap-2">
 												<h3 className="text-sm font-medium text-gray-900 truncate">
 													{w.title}
 												</h3>
@@ -539,6 +569,9 @@ export function Maintenance() {
 														Re-enable Read-only
 													</button>
 												)}
+											</div>
+										</div>
+										<div className="flex items-center gap-2 ml-4">
 											<button
 												type="button"
 												onClick={() => startEdit(w)}
