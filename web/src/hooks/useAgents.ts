@@ -5,6 +5,8 @@ import type {
 	CreateAgentCommandRequest,
 	CreateAgentRequest,
 	SetDebugModeRequest,
+	CreateAgentCommandRequest,
+	CreateAgentRequest,
 } from '../lib/types';
 
 export function useAgents() {

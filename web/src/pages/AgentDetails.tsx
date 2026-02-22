@@ -374,6 +374,7 @@ export function AgentDetails() {
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState<
 		'overview' | 'backups' | 'schedules' | 'health' | 'logs' | 'commands'
+		'overview' | 'backups' | 'schedules' | 'health' | 'commands'
 	>('overview');
 
 	const { data: agent, isLoading: agentLoading } = useAgent(id ?? '');
