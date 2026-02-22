@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 )
+import "os"
 
 // Environment represents the deployment environment.
 type Environment string
@@ -37,6 +38,9 @@ type ServerConfig struct {
 	LicenseKey       string // Ed25519-signed license key (base64 payload.signature)
 	LicensePublicKey string // hex-encoded Ed25519 public key for license verification
 	LicenseServerURL string // license server URL for phone-home (default: production)
+// ServerConfig holds server-level configuration loaded from environment variables.
+type ServerConfig struct {
+	Environment Environment
 }
 
 // LoadServerConfig reads server configuration from environment variables.
@@ -274,5 +278,7 @@ func LoadServerConfigFromEnv(cfg *ServerConfig) {
 	}
 	if redirectURL := os.Getenv("KELDRIS_OIDC_REDIRECT_URL"); redirectURL != "" {
 		cfg.OIDC.RedirectURL = redirectURL
+	return ServerConfig{
+		Environment: env,
 	}
 }

@@ -99,6 +99,7 @@ type Config struct {
 func DefaultConfig() Config {
 	devSecurityHeaders := middleware.DevelopmentSecurityHeadersConfig()
 	return Config{
+		Environment:       config.EnvDevelopment,
 		AllowedOrigins:    []string{},
 		RateLimitRequests: 100,
 		RateLimitPeriod:   "1m",
@@ -156,7 +157,7 @@ func NewRouter(
 	r.Engine.Use(middleware.SecurityHeaders(cfg.Environment))
 	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins, cfg.Environment))
 	r.Engine.Use(middleware.SecurityHeaders())
-	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins))
+	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins, cfg.Environment))
 
 	// Security headers middleware
 	securityHeadersConfig := middleware.DefaultSecurityHeadersConfig()
