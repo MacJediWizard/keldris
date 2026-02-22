@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { schedulesApi } from '../lib/api';
 import type {
+	BulkCloneScheduleRequest,
+	CloneScheduleRequest,
 	CreateScheduleRequest,
 	UpdateScheduleRequest,
 } from '../lib/types';
@@ -79,5 +81,29 @@ export function useReplicationStatus(scheduleId: string) {
 export function useDryRunSchedule() {
 	return useMutation({
 		mutationFn: (id: string) => schedulesApi.dryRun(id),
+	});
+}
+
+export function useCloneSchedule() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ id, data }: { id: string; data: CloneScheduleRequest }) =>
+			schedulesApi.clone(id, data),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['schedules'] });
+		},
+	});
+}
+
+export function useBulkCloneSchedule() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (data: BulkCloneScheduleRequest) =>
+			schedulesApi.bulkClone(data),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['schedules'] });
+		},
 	});
 }

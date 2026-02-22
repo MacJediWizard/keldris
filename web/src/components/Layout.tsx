@@ -5,6 +5,11 @@ import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
 import { useBranding } from '../hooks/useBranding';
 import { useLicense } from '../hooks/useLicense';
+import {
+	useLatestChanges,
+	useNewVersionAvailable,
+} from '../hooks/useChangelog';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useLocale } from '../hooks/useLocale';
 import { useTheme } from '../hooks/useTheme';
 import { useVersion } from '../hooks/useVersion';
@@ -13,19 +18,30 @@ import {
 	useOrganizations,
 	useSwitchOrganization,
 } from '../hooks/useOrganizations';
+import {
+	ReadOnlyModeContext,
+	useReadOnlyModeValue,
+} from '../hooks/useReadOnlyMode';
+import { PasswordExpirationBanner } from './PasswordExpirationBanner';
+import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { LanguageSelector } from './features/LanguageSelector';
 import { TierBadge } from './features/TierBadge';
+import { MaintenanceCountdown } from './features/MaintenanceCountdown';
+import { ShortcutHelpModal } from './features/ShortcutHelpModal';
+import { WhatsNewModal } from './features/WhatsNewModal';
 
 interface NavItem {
 	path: string;
 	labelKey: string;
 	icon: React.ReactNode;
+	shortcut?: string;
 }
 
 const navItems: NavItem[] = [
 	{
 		path: '/',
 		labelKey: 'nav.dashboard',
+		shortcut: 'G D',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -46,6 +62,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/agents',
 		labelKey: 'nav.agents',
+		shortcut: 'G A',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -66,6 +83,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/repositories',
 		labelKey: 'nav.repositories',
+		shortcut: 'G R',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -86,6 +104,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/schedules',
 		labelKey: 'nav.schedules',
+		shortcut: 'G S',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -106,6 +125,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/backups',
 		labelKey: 'nav.backups',
+		shortcut: 'G B',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -126,6 +146,7 @@ const navItems: NavItem[] = [
 	{
 		path: '/restore',
 		labelKey: 'nav.restore',
+		shortcut: 'G E',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -144,8 +165,49 @@ const navItems: NavItem[] = [
 		),
 	},
 	{
+		path: '/file-search',
+		labelKey: 'nav.fileSearch',
+		icon: (
+			<svg
+				aria-hidden="true"
+				className="w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+				/>
+			</svg>
+		),
+	},
+	{
+		path: '/file-history',
+		labelKey: 'nav.fileHistory',
+		icon: (
+			<svg
+				aria-hidden="true"
+				className="w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+				/>
+			</svg>
+		),
+	},
+	{
 		path: '/alerts',
 		labelKey: 'nav.alerts',
+		shortcut: 'G L',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -224,6 +286,26 @@ const navItems: NavItem[] = [
 		),
 	},
 	{
+		path: '/classifications',
+		labelKey: 'nav.classifications',
+		icon: (
+			<svg
+				aria-hidden="true"
+				className="w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+				/>
+			</svg>
+		),
+	},
+	{
 		path: '/costs',
 		labelKey: 'nav.costs',
 		icon: (
@@ -254,6 +336,7 @@ function Sidebar() {
 	const { data: license } = useLicense();
 	const { data: versionInfo } = useVersion();
 	const { theme, toggleTheme } = useTheme();
+	const { hasNewVersion, latestVersion } = useNewVersionAvailable();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
@@ -283,14 +366,28 @@ function Sidebar() {
 							<li key={item.path}>
 								<Link
 									to={item.path}
-									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+									title={
+										item.shortcut
+											? `${t(item.labelKey)} (${item.shortcut})`
+											: t(item.labelKey)
+									}
+									className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-colors ${
 										isActive
 											? 'bg-indigo-600 text-white'
 											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
 									}`}
 								>
-									{item.icon}
-									<span>{t(item.labelKey)}</span>
+									<span className="flex items-center gap-3">
+										{item.icon}
+										<span>{t(item.labelKey)}</span>
+									</span>
+									{item.shortcut && (
+										<span
+											className={`text-xs font-mono ${isActive ? 'text-indigo-200' : 'text-gray-500'}`}
+										>
+											{item.shortcut}
+										</span>
+									)}
 								</Link>
 							</li>
 						);
@@ -406,10 +503,166 @@ function Sidebar() {
 											strokeLinecap="round"
 											strokeLinejoin="round"
 											strokeWidth={2}
-											d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+											d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
 										/>
 									</svg>
 									<span>Branding</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/organization/announcements"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/announcements'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+										/>
+									</svg>
+									<span>Announcements</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/organization/ip-allowlist"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/ip-allowlist'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+										/>
+									</svg>
+									<span>IP Allowlist</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/organization/password-policies"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/password-policies'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+										/>
+									</svg>
+									<span>Password Policy</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/legal-holds"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/legal-holds'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+										/>
+									</svg>
+									<span>Legal Holds</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/admin/logs"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/admin/logs'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+										/>
+									</svg>
+									<span>Server Logs</span>
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/admin/rate-limits"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/admin/rate-limits'
+											? 'bg-indigo-600 text-white'
+											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
+									}`}
+								>
+									<svg
+										aria-hidden="true"
+										className="w-5 h-5"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M13 10V3L4 14h7v7l9-11h-7z"
+										/>
+									</svg>
+									<span>Rate Limits</span>
 								</Link>
 							</li>
 						</ul>
@@ -472,6 +725,17 @@ function Sidebar() {
 				<p className="text-xs text-gray-500">
 					{t('common.version', { version: versionInfo?.version ?? '...' })}
 				</p>
+				<Link
+					to="/changelog"
+					className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+				>
+					<span>{t('common.version', { version: '0.0.1' })}</span>
+					{hasNewVersion && (
+						<span className="px-1.5 py-0.5 text-[10px] font-medium bg-indigo-600 text-white rounded-full">
+							v{latestVersion} available
+						</span>
+					)}
+				</Link>
 			</div>
 		</aside>
 	);
@@ -684,6 +948,27 @@ function Header() {
 									<p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
 								</div>
 							)}
+							<Link
+								to="/account/sessions"
+								onClick={() => setShowDropdown(false)}
+								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+							>
+								<svg
+									aria-hidden="true"
+									className="w-4 h-4"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+									/>
+								</svg>
+								Active Sessions
+							</Link>
 							<button
 								type="button"
 								onClick={() => logout.mutate()}
@@ -769,6 +1054,16 @@ export function Layout() {
 			root.style.removeProperty('--brand-secondary');
 		};
 	}, [brandingData]);
+	const { latestEntry, currentVersion } = useLatestChanges();
+	const [showWhatsNew, setShowWhatsNew] = useState(true);
+	const readOnlyModeValue = useReadOnlyModeValue();
+	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+
+	const { shortcuts } = useKeyboardShortcuts({
+		onShowHelp: () => setShowShortcutHelp(true),
+		onCloseModal: () => setShowShortcutHelp(false),
+		enabled: !isLoading && !isError,
+	});
 
 	// Redirect to onboarding if needed (only from dashboard)
 	// Allow access to all other pages so users can complete onboarding steps
@@ -800,14 +1095,33 @@ export function Layout() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
-			<Sidebar />
-			<div className="flex-1 flex flex-col">
-				<Header />
-				<main className="flex-1 p-6">
-					<Outlet />
-				</main>
+		<ReadOnlyModeContext.Provider value={readOnlyModeValue}>
+			<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+				<MaintenanceCountdown />
+				<AnnouncementBanner />
+				<PasswordExpirationBanner />
+				<div className="flex flex-1">
+					<Sidebar />
+					<div className="flex-1 flex flex-col">
+						<Header />
+						<main className="flex-1 p-6">
+							<Outlet />
+						</main>
+					</div>
+				</div>
+				<ShortcutHelpModal
+					isOpen={showShortcutHelp}
+					onClose={() => setShowShortcutHelp(false)}
+					shortcuts={shortcuts}
+				/>
+				{showWhatsNew && (
+					<WhatsNewModal
+						entry={latestEntry ?? null}
+						currentVersion={currentVersion}
+						onDismiss={() => setShowWhatsNew(false)}
+					/>
+				)}
 			</div>
-		</div>
+		</ReadOnlyModeContext.Provider>
 	);
 }

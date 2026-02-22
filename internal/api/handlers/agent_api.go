@@ -11,7 +11,6 @@ import (
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
-	pkgmodels "github.com/MacJediWizard/keldris/pkg/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -26,6 +25,10 @@ type AgentAPIStore interface {
 	CreateAlert(ctx context.Context, alert *models.Alert) error
 	GetAlertByResourceAndType(ctx context.Context, orgID uuid.UUID, resourceType models.ResourceType, resourceID uuid.UUID, alertType models.AlertType) (*models.Alert, error)
 	ResolveAlertsByResource(ctx context.Context, resourceType models.ResourceType, resourceID uuid.UUID) error
+	CreateAgentLogs(ctx context.Context, logs []*models.AgentLog) error
+	GetPendingCommandsForAgent(ctx context.Context, agentID uuid.UUID) ([]*models.AgentCommand, error)
+	GetAgentCommandByID(ctx context.Context, id uuid.UUID) (*models.AgentCommand, error)
+	UpdateAgentCommand(ctx context.Context, cmd *models.AgentCommand) error
 	GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error)
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 	GetRepositoryKeyByRepositoryID(ctx context.Context, repositoryID uuid.UUID) (*models.RepositoryKey, error)
@@ -57,6 +60,37 @@ func (h *AgentAPIHandler) RegisterRoutes(r *gin.RouterGroup) {
 	r.GET("/schedules", h.GetSchedules)
 	r.POST("/backups", h.ReportBackup)
 	r.GET("/snapshots", h.GetSnapshots)
+	r.POST("/logs", h.PushLogs)
+	r.GET("/commands", h.GetCommands)
+	r.POST("/commands/:id/ack", h.AcknowledgeCommand)
+	r.POST("/commands/:id/result", h.ReportCommandResult)
+}
+
+// AgentHealthReport is the request body for agent health reporting.
+type AgentHealthReport struct {
+	Status  string         `json:"status" binding:"required,oneof=healthy unhealthy degraded"`
+	OSInfo  *models.OSInfo `json:"os_info,omitempty"`
+	Metrics *AgentMetrics  `json:"metrics,omitempty"`
+}
+
+// AgentMetrics contains optional metrics from the agent.
+type AgentMetrics struct {
+	CPUUsage        float64 `json:"cpu_usage,omitempty"`
+	MemoryUsage     float64 `json:"memory_usage,omitempty"`
+	DiskUsage       float64 `json:"disk_usage,omitempty"`
+	DiskFreeBytes   int64   `json:"disk_free_bytes,omitempty"`
+	DiskTotalBytes  int64   `json:"disk_total_bytes,omitempty"`
+	NetworkUp       bool    `json:"network_up"`
+	Uptime          int64   `json:"uptime_seconds,omitempty"`
+	ResticVersion   string  `json:"restic_version,omitempty"`
+	ResticAvailable bool    `json:"restic_available,omitempty"`
+}
+
+// AgentHealthResponse is the response for agent health reporting.
+type AgentHealthResponse struct {
+	Acknowledged bool      `json:"acknowledged"`
+	ServerTime   time.Time `json:"server_time"`
+	AgentID      string    `json:"agent_id"`
 }
 
 // ReportHealth handles agent health reports.
@@ -67,7 +101,7 @@ func (h *AgentAPIHandler) ReportHealth(c *gin.Context) {
 		return
 	}
 
-	var req pkgmodels.HeartbeatRequest
+	var req AgentHealthReport
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
 		return
@@ -89,7 +123,7 @@ func (h *AgentAPIHandler) ReportHealth(c *gin.Context) {
 			DiskFreeBytes:   req.Metrics.DiskFreeBytes,
 			DiskTotalBytes:  req.Metrics.DiskTotalBytes,
 			NetworkUp:       req.Metrics.NetworkUp,
-			UptimeSeconds:   req.Metrics.UptimeSeconds,
+			UptimeSeconds:   req.Metrics.Uptime,
 			ResticVersion:   req.Metrics.ResticVersion,
 			ResticAvailable: req.Metrics.ResticAvailable,
 		}
@@ -151,7 +185,7 @@ func (h *AgentAPIHandler) ReportHealth(c *gin.Context) {
 		Str("health_status", string(healthStatus)).
 		Msg("agent health report received")
 
-	c.JSON(http.StatusOK, pkgmodels.HeartbeatResponse{
+	c.JSON(http.StatusOK, AgentHealthResponse{
 		Acknowledged: true,
 		ServerTime:   time.Now().UTC(),
 		AgentID:      agent.ID.String(),
@@ -352,6 +386,233 @@ func (h *AgentAPIHandler) handleHealthStatusChange(ctx context.Context, agent *m
 		Msg("health alert created")
 }
 
+// PushLogsResponse is the response for log push operations.
+type PushLogsResponse struct {
+	Acknowledged bool   `json:"acknowledged"`
+	Count        int    `json:"count"`
+	AgentID      string `json:"agent_id"`
+}
+
+// PushLogs handles batched log submissions from agents.
+// POST /api/v1/agent/logs
+func (h *AgentAPIHandler) PushLogs(c *gin.Context) {
+	agent := middleware.RequireAgent(c)
+	if agent == nil {
+		return
+	}
+
+	var req models.AgentLogBatch
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	// Convert entries to log records
+	logs := make([]*models.AgentLog, 0, len(req.Logs))
+	for _, entry := range req.Logs {
+		log := models.NewAgentLog(agent.ID, agent.OrgID, entry.Level, entry.Message)
+		log.Component = entry.Component
+		log.Metadata = entry.Metadata
+		if !entry.Timestamp.IsZero() {
+			log.Timestamp = entry.Timestamp
+		}
+		logs = append(logs, log)
+	}
+
+	if err := h.store.CreateAgentLogs(c.Request.Context(), logs); err != nil {
+		h.logger.Error().Err(err).
+			Str("agent_id", agent.ID.String()).
+			Int("log_count", len(logs)).
+			Msg("failed to store agent logs")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to store logs"})
+		return
+	}
+
+	h.logger.Debug().
+		Str("agent_id", agent.ID.String()).
+		Str("hostname", agent.Hostname).
+		Int("log_count", len(logs)).
+		Msg("agent logs received")
+
+	c.JSON(http.StatusOK, PushLogsResponse{
+		Acknowledged: true,
+		Count:        len(logs),
+		AgentID:      agent.ID.String(),
+	})
+}
+
+// GetCommandsResponse is the response for the commands polling endpoint.
+type GetCommandsResponse struct {
+	Commands []*models.AgentCommandResponse `json:"commands"`
+}
+
+// GetCommands returns pending commands for the agent.
+// GET /api/v1/agent/commands
+func (h *AgentAPIHandler) GetCommands(c *gin.Context) {
+	agent := middleware.RequireAgent(c)
+	if agent == nil {
+		return
+	}
+
+	commands, err := h.store.GetPendingCommandsForAgent(c.Request.Context(), agent.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("agent_id", agent.ID.String()).Msg("failed to get pending commands")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get commands"})
+		return
+	}
+
+	// Convert to response format
+	resp := GetCommandsResponse{
+		Commands: make([]*models.AgentCommandResponse, len(commands)),
+	}
+	for i, cmd := range commands {
+		resp.Commands[i] = cmd.ToResponse()
+	}
+
+	h.logger.Debug().
+		Str("agent_id", agent.ID.String()).
+		Int("command_count", len(commands)).
+		Msg("agent polled for commands")
+
+	c.JSON(http.StatusOK, resp)
+}
+
+// AcknowledgeCommand marks a command as acknowledged by the agent.
+// POST /api/v1/agent/commands/:id/ack
+func (h *AgentAPIHandler) AcknowledgeCommand(c *gin.Context) {
+	agent := middleware.RequireAgent(c)
+	if agent == nil {
+		return
+	}
+
+	cmdID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid command ID"})
+		return
+	}
+
+	cmd, err := h.store.GetAgentCommandByID(c.Request.Context(), cmdID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "command not found"})
+		return
+	}
+
+	// Verify command belongs to this agent
+	if cmd.AgentID != agent.ID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "command not found"})
+		return
+	}
+
+	// Only pending commands can be acknowledged
+	if !cmd.IsPending() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "command is not pending"})
+		return
+	}
+
+	cmd.Acknowledge()
+	if err := h.store.UpdateAgentCommand(c.Request.Context(), cmd); err != nil {
+		h.logger.Error().Err(err).Str("command_id", cmdID.String()).Msg("failed to acknowledge command")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to acknowledge command"})
+		return
+	}
+
+	h.logger.Info().
+		Str("agent_id", agent.ID.String()).
+		Str("command_id", cmdID.String()).
+		Str("command_type", string(cmd.Type)).
+		Msg("command acknowledged")
+
+	c.JSON(http.StatusOK, gin.H{"acknowledged": true})
+}
+
+// CommandResultRequest is the request body for reporting command results.
+type CommandResultRequest struct {
+	Status  string                `json:"status" binding:"required,oneof=running completed failed"`
+	Result  *models.CommandResult `json:"result,omitempty"`
+}
+
+// ReportCommandResult reports the result of a command execution.
+// POST /api/v1/agent/commands/:id/result
+func (h *AgentAPIHandler) ReportCommandResult(c *gin.Context) {
+	agent := middleware.RequireAgent(c)
+	if agent == nil {
+		return
+	}
+
+	cmdID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid command ID"})
+		return
+	}
+
+	var req CommandResultRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	cmd, err := h.store.GetAgentCommandByID(c.Request.Context(), cmdID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "command not found"})
+		return
+	}
+
+	// Verify command belongs to this agent
+	if cmd.AgentID != agent.ID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "command not found"})
+		return
+	}
+
+	// Only acknowledged or running commands can have results reported
+	if cmd.IsTerminal() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "command is already in terminal state"})
+		return
+	}
+
+	// Update command based on status
+	switch req.Status {
+	case "running":
+		cmd.MarkRunning()
+	case "completed":
+		cmd.Complete(req.Result)
+	case "failed":
+		errorMsg := "command failed"
+		if req.Result != nil && req.Result.Error != "" {
+			errorMsg = req.Result.Error
+		}
+		cmd.Fail(errorMsg)
+	}
+
+	if err := h.store.UpdateAgentCommand(c.Request.Context(), cmd); err != nil {
+		h.logger.Error().Err(err).Str("command_id", cmdID.String()).Msg("failed to update command result")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update command"})
+		return
+	}
+
+	h.logger.Info().
+		Str("agent_id", agent.ID.String()).
+		Str("command_id", cmdID.String()).
+		Str("command_type", string(cmd.Type)).
+		Str("status", req.Status).
+		Msg("command result reported")
+
+	c.JSON(http.StatusOK, gin.H{"updated": true})
+}
+
+// ReportBackupRequest is the request body for reporting a completed backup.
+type ReportBackupRequest struct {
+	ScheduleID   uuid.UUID `json:"schedule_id" binding:"required"`
+	RepositoryID uuid.UUID `json:"repository_id" binding:"required"`
+	SnapshotID   string    `json:"snapshot_id"`
+	Status       string    `json:"status" binding:"required,oneof=completed failed"`
+	SizeBytes    *int64    `json:"size_bytes,omitempty"`
+	FilesNew     *int      `json:"files_new,omitempty"`
+	FilesChanged *int      `json:"files_changed,omitempty"`
+	ErrorMessage *string   `json:"error_message,omitempty"`
+	StartedAt    time.Time `json:"started_at" binding:"required"`
+	CompletedAt  time.Time `json:"completed_at" binding:"required"`
+}
+
 // ScheduleConfigResponse is the response for agent schedule configuration.
 type ScheduleConfigResponse struct {
 	ID                 uuid.UUID         `json:"id"`
@@ -365,6 +626,8 @@ type ScheduleConfigResponse struct {
 	RepositoryPassword string            `json:"repository_password"`
 	RepositoryEnv      map[string]string `json:"repository_env,omitempty"`
 }
+
+
 
 // GetSchedules returns backup schedules with decrypted repository credentials for the agent.
 // GET /api/v1/agent/schedules
@@ -442,19 +705,6 @@ func (h *AgentAPIHandler) GetSchedules(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
-// ReportBackupRequest is the request body for reporting a completed backup.
-type ReportBackupRequest struct {
-	ScheduleID   uuid.UUID `json:"schedule_id" binding:"required"`
-	RepositoryID uuid.UUID `json:"repository_id" binding:"required"`
-	SnapshotID   string    `json:"snapshot_id"`
-	Status       string    `json:"status" binding:"required,oneof=completed failed"`
-	SizeBytes    *int64    `json:"size_bytes,omitempty"`
-	FilesNew     *int      `json:"files_new,omitempty"`
-	FilesChanged *int      `json:"files_changed,omitempty"`
-	ErrorMessage *string   `json:"error_message,omitempty"`
-	StartedAt    time.Time `json:"started_at" binding:"required"`
-	CompletedAt  time.Time `json:"completed_at" binding:"required"`
-}
 
 // ReportBackup records a backup result from the agent.
 // POST /api/v1/agent/backups
@@ -510,6 +760,7 @@ func (h *AgentAPIHandler) ReportBackup(c *gin.Context) {
 	})
 }
 
+
 // GetSnapshots returns available snapshots for the agent's backups.
 // GET /api/v1/agent/snapshots
 func (h *AgentAPIHandler) GetSnapshots(c *gin.Context) {
@@ -561,3 +812,4 @@ func (h *AgentAPIHandler) GetSnapshots(c *gin.Context) {
 
 	c.JSON(http.StatusOK, snapshots)
 }
+

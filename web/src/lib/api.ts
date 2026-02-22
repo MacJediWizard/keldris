@@ -3,9 +3,19 @@ import type {
 	AddAgentToGroupRequest,
 	Agent,
 	AgentBackupsResponse,
+	AgentCommand,
+	AgentCommandsResponse,
 	AgentGroup,
 	AgentGroupsResponse,
 	AgentHealthHistoryResponse,
+	AgentImportJobResult,
+	AgentImportPreviewResponse,
+	AgentImportResponse,
+	AgentImportTemplateResponse,
+	AgentLogFilter,
+	AgentLogsResponse,
+	AgentRegistrationScriptRequest,
+	AgentRegistrationScriptResponse,
 	AgentSchedulesResponse,
 	AgentStatsResponse,
 	AgentWithGroups,
@@ -17,6 +27,8 @@ import type {
 	AlertRule,
 	AlertRulesResponse,
 	AlertsResponse,
+	Announcement,
+	AnnouncementsResponse,
 	ApplyPolicyRequest,
 	ApplyPolicyResponse,
 	AssignTagsRequest,
@@ -24,6 +36,7 @@ import type {
 	AuditLogFilter,
 	AuditLogsResponse,
 	Backup,
+	BackupCalendarResponse,
 	BackupDurationTrend,
 	BackupDurationTrendResponse,
 	BackupScript,
@@ -32,29 +45,54 @@ import type {
 	BackupSuccessRatesResponse,
 	BackupsResponse,
 	BrandingSettings,
+	BlockedRequestsResponse,
 	BuiltInPattern,
 	BuiltInPatternsResponse,
+	BulkCloneResponse,
+	BulkCloneScheduleRequest,
 	CategoriesResponse,
 	CategoryInfo,
+	ChangePasswordRequest,
+	ChangelogEntry,
+	ChangelogResponse,
+	ClassificationLevelsResponse,
+	ClassificationRulesResponse,
+	ClassificationSummary,
+	CloneRepositoryRequest,
+	CloneRepositoryResponse,
+	CloneScheduleRequest,
+	CloudRestoreProgress,
+	ComplianceReport,
+	ConfigTemplate,
+	ConfigTemplatesResponse,
 	CostAlert,
 	CostAlertsResponse,
 	CostForecastResponse,
 	CostHistoryResponse,
 	CostSummary,
+	CreateAgentCommandRequest,
 	CreateAgentGroupRequest,
 	CreateAgentRequest,
 	CreateAgentResponse,
 	CreateAlertRuleRequest,
+	CreateAnnouncementRequest,
 	CreateBackupScriptRequest,
+	CreateCloudRestoreRequest,
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
 	CreateExcludePatternRequest,
+	CreateIPAllowlistRequest,
+	CreateIPBanRequest,
+	CreateImmutabilityLockRequest,
+	CreateLegalHoldRequest,
 	CreateMaintenanceWindowRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
+	CreatePathClassificationRuleRequest,
 	CreatePolicyRequest,
+	CreateRateLimitConfigRequest,
 	CreateRegistrationCodeRequest,
 	CreateRegistrationCodeResponse,
 	CreateReportScheduleRequest,
@@ -67,6 +105,7 @@ import type {
 	CreateSnapshotCommentRequest,
 	CreateStoragePricingRequest,
 	CreateTagRequest,
+	CreateTemplateRequest,
 	CreateVerificationScheduleRequest,
 	DRRunbook,
 	DRRunbookRenderResponse,
@@ -80,6 +119,7 @@ import type {
 	DailyBackupStats,
 	DailyBackupStatsResponse,
 	DashboardStats,
+	DataTypesResponse,
 	DefaultPricingResponse,
 	DockerBackupRequest,
 	DockerBackupResponse,
@@ -91,13 +131,40 @@ import type {
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
+	ExportBundleRequest,
+	ExportFormat,
+	ExtendImmutabilityLockRequest,
+	FileDiffResponse,
 	FileHistoryParams,
 	FileHistoryResponse,
+	FileSearchParams,
+	FileSearchResponse,
 	FleetHealthSummary,
+	GeoRegion,
+	GeoReplicationConfig,
+	GeoReplicationConfigsResponse,
+	GeoReplicationCreateRequest,
+	GeoReplicationEvent,
+	GeoReplicationEventsResponse,
+	GeoReplicationRegionsResponse,
+	GeoReplicationSummary,
+	GeoReplicationSummaryResponse,
+	GeoReplicationUpdateRequest,
+	IPAllowlist,
+	IPAllowlistSettings,
+	IPAllowlistsResponse,
+	IPBan,
+	IPBansResponse,
+	IPBlockedAttemptsResponse,
+	ImmutabilityLock,
+	ImmutabilityLocksResponse,
+	ImmutabilityStatus,
+	ImportConfigRequest,
 	ImportPreviewRequest,
 	ImportPreviewResponse,
 	ImportRepositoryRequest,
 	ImportRepositoryResponse,
+	ImportResult,
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
@@ -108,10 +175,13 @@ import type {
 	StartTrialRequest,
 	StartTrialResponse,
 	TrialCheckResponse,
+	LegalHold,
+	LegalHoldsResponse,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
 	MembersResponse,
 	MessageResponse,
+	MountSnapshotRequest,
 	NotificationChannel,
 	NotificationChannelWithPreferencesResponse,
 	NotificationChannelsResponse,
@@ -126,10 +196,21 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	PasswordExpirationInfo,
+	PasswordLoginRequest,
+	PasswordLoginResponse,
+	PasswordPolicyResponse,
+	PasswordRequirements,
+	PasswordValidationResult,
+	PathClassificationRule,
 	PendingRegistration,
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	RateLimitDashboardStats,
+	RateLimitConfig,
+	RateLimitConfigsResponse,
+	RateLimitStatsResponse,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -144,6 +225,8 @@ import type {
 	RepositoryCostsResponse,
 	RepositoryGrowthResponse,
 	RepositoryHistoryResponse,
+	RepositoryImmutabilitySettings,
+	RepositoryReplicationStatusResponse,
 	RepositoryStatsListItem,
 	RepositoryStatsListResponse,
 	RepositoryStatsResponse,
@@ -151,6 +234,7 @@ import type {
 	RestorePreview,
 	RestorePreviewRequest,
 	RestoresResponse,
+	RevokeSessionsResponse,
 	RotateAPIKeyResponse,
 	RunDRTestRequest,
 	RunScheduleResponse,
@@ -168,11 +252,19 @@ import type {
 	SearchFilter,
 	SearchResponse,
 	ServerVersion,
+	ServerLogComponentsResponse,
+	ServerLogFilter,
+	ServerLogsResponse,
+	SetDebugModeRequest,
+	SetDebugModeResponse,
+	SetScheduleClassificationRequest,
 	Snapshot,
 	SnapshotComment,
 	SnapshotCommentsResponse,
 	SnapshotCompareResponse,
 	SnapshotFilesResponse,
+	SnapshotMount,
+	SnapshotMountsResponse,
 	SnapshotsResponse,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
@@ -189,18 +281,25 @@ import type {
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
 	UpdateAlertRuleRequest,
+	UpdateAnnouncementRequest,
 	UpdateBackupScriptRequest,
 	UpdateBrandingRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
 	UpdateExcludePatternRequest,
+	UpdateIPAllowlistRequest,
+	UpdateIPAllowlistSettingsRequest,
 	UpdateMaintenanceWindowRequest,
 	UpdateMemberRequest,
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
+	UpdatePasswordPolicyRequest,
+	UpdatePathClassificationRuleRequest,
 	UpdatePolicyRequest,
+	UpdateRateLimitConfigRequest,
 	UpdateReportScheduleRequest,
+	UpdateRepositoryImmutabilitySettingsRequest,
 	UpdateRepositoryRequest,
 	UpdateSLAPolicyRequest,
 	UpdateSSOGroupMappingRequest,
@@ -208,10 +307,16 @@ import type {
 	UpdateScheduleRequest,
 	UpdateStoragePricingRequest,
 	UpdateTagRequest,
+	UpdateTemplateRequest,
 	UpdateUserPreferencesRequest,
 	UpdateVerificationScheduleRequest,
+	UseTemplateRequest,
 	User,
 	UserSSOGroups,
+	UserSession,
+	UserSessionsResponse,
+	ValidateImportRequest,
+	ValidationResult,
 	Verification,
 	VerificationSchedule,
 	VerificationSchedulesResponse,
@@ -386,12 +491,69 @@ export const agentsApi = {
 	getFleetHealth: async (): Promise<FleetHealthSummary> =>
 		fetchApi<FleetHealthSummary>('/agents/fleet-health'),
 
+	setDebugMode: async (
+		id: string,
+		data: SetDebugModeRequest,
+	): Promise<SetDebugModeResponse> =>
+		fetchApi<SetDebugModeResponse>(`/agents/${id}/debug`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
 	listWithGroups: async (): Promise<AgentWithGroups[]> => {
 		const response = await fetchApi<AgentsWithGroupsResponse>(
 			'/agents/with-groups',
 		);
 		return response.agents ?? [];
 	},
+
+	getLogs: async (
+		id: string,
+		filter?: AgentLogFilter,
+	): Promise<AgentLogsResponse> => {
+		const params = new URLSearchParams();
+		if (filter?.level) params.set('level', filter.level);
+		if (filter?.component) params.set('component', filter.component);
+		if (filter?.search) params.set('search', filter.search);
+		if (filter?.limit) params.set('limit', filter.limit.toString());
+		if (filter?.offset) params.set('offset', filter.offset.toString());
+		const queryString = params.toString();
+		return fetchApi<AgentLogsResponse>(
+			`/agents/${id}/logs${queryString ? `?${queryString}` : ''}`,
+		);
+	},
+
+	// Command methods
+	getCommands: async (
+		agentId: string,
+		limit = 50,
+	): Promise<AgentCommandsResponse> =>
+		fetchApi<AgentCommandsResponse>(
+			`/agents/${agentId}/commands?limit=${limit}`,
+		),
+
+	createCommand: async (
+		agentId: string,
+		data: CreateAgentCommandRequest,
+	): Promise<AgentCommand> =>
+		fetchApi<AgentCommand>(`/agents/${agentId}/commands`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getCommand: async (
+		agentId: string,
+		commandId: string,
+	): Promise<AgentCommand> =>
+		fetchApi<AgentCommand>(`/agents/${agentId}/commands/${commandId}`),
+
+	cancelCommand: async (
+		agentId: string,
+		commandId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agents/${agentId}/commands/${commandId}`, {
+			method: 'DELETE',
+		}),
 };
 
 // Agent Groups API
@@ -519,6 +681,15 @@ export const repositoriesApi = {
 
 	recoverKey: async (id: string): Promise<KeyRecoveryResponse> =>
 		fetchApi<KeyRecoveryResponse>(`/repositories/${id}/key/recover`),
+
+	clone: async (
+		id: string,
+		data: CloneRepositoryRequest,
+	): Promise<CloneRepositoryResponse> =>
+		fetchApi<CloneRepositoryResponse>(`/repositories/${id}/clone`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Repository Import API
@@ -544,6 +715,123 @@ export const repositoryImportApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+};
+
+// Agent Import API
+export const agentImportApi = {
+	preview: async (
+		file: File,
+		options: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+		} = {},
+	): Promise<AgentImportPreviewResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options.hasHeader !== undefined)
+			formData.append('has_header', String(options.hasHeader));
+		if (options.hostnameCol !== undefined)
+			formData.append('hostname_col', String(options.hostnameCol));
+		if (options.groupCol !== undefined)
+			formData.append('group_col', String(options.groupCol));
+		if (options.tagsCol !== undefined)
+			formData.append('tags_col', String(options.tagsCol));
+		if (options.configCol !== undefined)
+			formData.append('config_col', String(options.configCol));
+
+		const response = await fetch(`${API_BASE}/agents/import/preview`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportPreviewResponse>(response);
+	},
+
+	import: async (
+		file: File,
+		options: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+			createMissingGroups?: boolean;
+			tokenExpiryHours?: number;
+		} = {},
+	): Promise<AgentImportResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options.hasHeader !== undefined)
+			formData.append('has_header', String(options.hasHeader));
+		if (options.hostnameCol !== undefined)
+			formData.append('hostname_col', String(options.hostnameCol));
+		if (options.groupCol !== undefined)
+			formData.append('group_col', String(options.groupCol));
+		if (options.tagsCol !== undefined)
+			formData.append('tags_col', String(options.tagsCol));
+		if (options.configCol !== undefined)
+			formData.append('config_col', String(options.configCol));
+		if (options.createMissingGroups !== undefined)
+			formData.append(
+				'create_missing_groups',
+				String(options.createMissingGroups),
+			);
+		if (options.tokenExpiryHours !== undefined)
+			formData.append('token_expiry_hours', String(options.tokenExpiryHours));
+
+		const response = await fetch(`${API_BASE}/agents/import`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportResponse>(response);
+	},
+
+	getTemplate: async (
+		format?: 'json' | 'csv',
+	): Promise<AgentImportTemplateResponse> => {
+		const endpoint = format
+			? `/agents/import/template?format=${format}`
+			: '/agents/import/template';
+		return fetchApi<AgentImportTemplateResponse>(endpoint);
+	},
+
+	downloadTemplate: async (): Promise<Blob> => {
+		const response = await fetch(
+			`${API_BASE}/agents/import/template?format=csv`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to download template');
+		}
+		return response.blob();
+	},
+
+	generateScript: async (
+		data: AgentRegistrationScriptRequest,
+	): Promise<AgentRegistrationScriptResponse> =>
+		fetchApi<AgentRegistrationScriptResponse>('/agents/import/script', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	exportTokens: async (results: AgentImportJobResult[]): Promise<Blob> => {
+		const response = await fetch(
+			`${API_BASE}/agents/import/tokens/export?results=${encodeURIComponent(JSON.stringify(results))}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export tokens');
+		}
+		return response.blob();
+	},
 };
 
 // Schedules API
@@ -590,6 +878,20 @@ export const schedulesApi = {
 		);
 		return response.replication_status ?? [];
 	},
+
+	clone: async (id: string, data: CloneScheduleRequest): Promise<Schedule> =>
+		fetchApi<Schedule>(`/schedules/${id}/clone`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	bulkClone: async (
+		data: BulkCloneScheduleRequest,
+	): Promise<BulkCloneResponse> =>
+		fetchApi<BulkCloneResponse>('/schedules/bulk-clone', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };
 
 // Policies API
@@ -657,6 +959,9 @@ export const backupsApi = {
 
 	get: async (id: string): Promise<Backup> =>
 		fetchApi<Backup>(`/backups/${id}`),
+
+	getCalendar: async (month: string): Promise<BackupCalendarResponse> =>
+		fetchApi<BackupCalendarResponse>(`/backups/calendar?month=${month}`),
 };
 
 // Backup Scripts API
@@ -730,6 +1035,52 @@ export const snapshotsApi = {
 		fetchApi<SnapshotCompareResponse>(
 			`/snapshots/compare?id1=${encodeURIComponent(id1)}&id2=${encodeURIComponent(id2)}`,
 		),
+
+	diffFile: async (
+		id1: string,
+		id2: string,
+		path: string,
+	): Promise<FileDiffResponse> =>
+		fetchApi<FileDiffResponse>(
+			`/snapshots/${id1}/files/diff/${id2}?path=${encodeURIComponent(path)}`,
+		),
+
+	mount: async (
+		snapshotId: string,
+		data: MountSnapshotRequest,
+	): Promise<SnapshotMount> =>
+		fetchApi<SnapshotMount>(`/snapshots/${snapshotId}/mount`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	unmount: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/snapshots/${snapshotId}/mount?agent_id=${agentId}`,
+			{
+				method: 'DELETE',
+			},
+		),
+
+	getMount: async (
+		snapshotId: string,
+		agentId: string,
+	): Promise<SnapshotMount> =>
+		fetchApi<SnapshotMount>(
+			`/snapshots/${snapshotId}/mount?agent_id=${agentId}`,
+		),
+};
+
+// Snapshot Mounts API
+export const snapshotMountsApi = {
+	list: async (agentId?: string): Promise<SnapshotMount[]> => {
+		const endpoint = agentId ? `/mounts?agent_id=${agentId}` : '/mounts';
+		const response = await fetchApi<SnapshotMountsResponse>(endpoint);
+		return response.mounts ?? [];
+	},
 };
 
 // Snapshot Comments API
@@ -786,6 +1137,15 @@ export const restoresApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+
+	createCloud: async (data: CreateCloudRestoreRequest): Promise<Restore> =>
+		fetchApi<Restore>('/restores/cloud', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getProgress: async (id: string): Promise<CloudRestoreProgress> =>
+		fetchApi<CloudRestoreProgress>(`/restores/${id}/progress`),
 };
 
 // File History API
@@ -799,6 +1159,42 @@ export const fileHistoryApi = {
 		searchParams.set('repository_id', params.repository_id);
 		return fetchApi<FileHistoryResponse>(
 			`/files/history?${searchParams.toString()}`,
+		);
+	},
+};
+
+// File Search API
+export const fileSearchApi = {
+	search: async (params: FileSearchParams): Promise<FileSearchResponse> => {
+		const searchParams = new URLSearchParams();
+		searchParams.set('q', params.q);
+		searchParams.set('agent_id', params.agent_id);
+		searchParams.set('repository_id', params.repository_id);
+
+		if (params.path) {
+			searchParams.set('path', params.path);
+		}
+		if (params.snapshot_ids) {
+			searchParams.set('snapshot_ids', params.snapshot_ids);
+		}
+		if (params.date_from) {
+			searchParams.set('date_from', params.date_from);
+		}
+		if (params.date_to) {
+			searchParams.set('date_to', params.date_to);
+		}
+		if (params.size_min !== undefined) {
+			searchParams.set('size_min', params.size_min.toString());
+		}
+		if (params.size_max !== undefined) {
+			searchParams.set('size_max', params.size_max.toString());
+		}
+		if (params.limit !== undefined) {
+			searchParams.set('limit', params.limit.toString());
+		}
+
+		return fetchApi<FileSearchResponse>(
+			`/search/files?${searchParams.toString()}`,
 		);
 	},
 };
@@ -1281,6 +1677,49 @@ export const ssoGroupMappingsApi = {
 		fetchApi<UserSSOGroups>(`/users/${userId}/sso-groups`),
 };
 
+// Announcements API
+export const announcementsApi = {
+	list: async (): Promise<Announcement[]> => {
+		const response = await fetchApi<AnnouncementsResponse>('/announcements');
+		return response.announcements ?? [];
+	},
+
+	getActive: async (): Promise<Announcement[]> => {
+		const response = await fetchApi<AnnouncementsResponse>(
+			'/announcements/active',
+		);
+		return response.announcements ?? [];
+	},
+
+	get: async (id: string): Promise<Announcement> =>
+		fetchApi<Announcement>(`/announcements/${id}`),
+
+	create: async (data: CreateAnnouncementRequest): Promise<Announcement> =>
+		fetchApi<Announcement>('/announcements', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateAnnouncementRequest,
+	): Promise<Announcement> =>
+		fetchApi<Announcement>(`/announcements/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/announcements/${id}`, {
+			method: 'DELETE',
+		}),
+
+	dismiss: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/announcements/${id}/dismiss`, {
+			method: 'POST',
+		}),
+};
+
 // Maintenance Windows API
 export const maintenanceApi = {
 	list: async (): Promise<MaintenanceWindow[]> => {
@@ -1309,6 +1748,7 @@ export const maintenanceApi = {
 			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
+
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/maintenance-windows/${id}`, {
 			method: 'DELETE',
@@ -1316,6 +1756,18 @@ export const maintenanceApi = {
 
 	getActive: async (): Promise<ActiveMaintenanceResponse> =>
 		fetchApi<ActiveMaintenanceResponse>('/maintenance/active'),
+
+	emergencyOverride: async (
+		id: string,
+		override: boolean,
+	): Promise<MaintenanceWindow> =>
+		fetchApi<MaintenanceWindow>(
+			`/maintenance-windows/${id}/emergency-override`,
+			{
+				method: 'POST',
+				body: JSON.stringify({ override }),
+			},
+		),
 };
 
 // Exclude Patterns API
@@ -1639,6 +2091,7 @@ export const reportsApi = {
 	getHistory: async (id: string): Promise<ReportHistory> =>
 		fetchApi<ReportHistory>(`/reports/history/${id}`),
 };
+
 // Onboarding API
 export const onboardingApi = {
 	getStatus: async (): Promise<OnboardingStatus> =>
@@ -1721,6 +2174,20 @@ export const pricingApi = {
 		}),
 };
 
+// Support API
+export const supportApi = {
+	generateBundle: async (): Promise<Blob> => {
+		const response = await fetch(`${API_BASE}/support/bundle`, {
+			method: 'POST',
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to generate support bundle');
+		}
+		return response.blob();
+	},
+};
+
 // Cost Alerts API
 export const costAlertsApi = {
 	list: async (): Promise<CostAlert[]> => {
@@ -1793,6 +2260,197 @@ export const slaPoliciesApi = {
 	},
 };
 
+// Changelog API
+export const changelogApi = {
+	list: async (): Promise<ChangelogResponse> =>
+		fetchApi<ChangelogResponse>('/changelog'),
+
+	get: async (version: string): Promise<ChangelogEntry> =>
+		fetchApi<ChangelogEntry>(`/changelog/${version}`),
+};
+
+// Server Logs API (Admin only)
+export const serverLogsApi = {
+	list: async (filter?: ServerLogFilter): Promise<ServerLogsResponse> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.level) searchParams.set('level', filter.level);
+		if (filter?.component) searchParams.set('component', filter.component);
+		if (filter?.search) searchParams.set('search', filter.search);
+		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
+		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
+		if (filter?.limit) searchParams.set('limit', filter.limit.toString());
+		if (filter?.offset) searchParams.set('offset', filter.offset.toString());
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/admin/logs?${query}` : '/admin/logs';
+		return fetchApi<ServerLogsResponse>(endpoint);
+	},
+
+	getComponents: async (): Promise<string[]> => {
+		const response = await fetchApi<ServerLogComponentsResponse>(
+			'/admin/logs/components',
+		);
+		return response.components ?? [];
+	},
+
+	exportCsv: async (filter?: ServerLogFilter): Promise<Blob> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.level) searchParams.set('level', filter.level);
+		if (filter?.component) searchParams.set('component', filter.component);
+		if (filter?.search) searchParams.set('search', filter.search);
+		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
+		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/admin/logs/export/csv?${query}`
+			: '/admin/logs/export/csv';
+		const response = await fetch(`${API_BASE}${endpoint}`, {
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export server logs');
+		}
+		return response.blob();
+	},
+
+	exportJson: async (filter?: ServerLogFilter): Promise<Blob> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.level) searchParams.set('level', filter.level);
+		if (filter?.component) searchParams.set('component', filter.component);
+		if (filter?.search) searchParams.set('search', filter.search);
+		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
+		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/admin/logs/export/json?${query}`
+			: '/admin/logs/export/json';
+		const response = await fetch(`${API_BASE}${endpoint}`, {
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export server logs');
+		}
+		return response.blob();
+	},
+
+	clear: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/admin/logs', {
+			method: 'DELETE',
+		}),
+};
+
+// Classification API
+export const classificationsApi = {
+	// Reference data
+	getLevels: async (): Promise<ClassificationLevelsResponse> =>
+		fetchApi<ClassificationLevelsResponse>('/classifications/levels'),
+
+	getDataTypes: async (): Promise<DataTypesResponse> =>
+		fetchApi<DataTypesResponse>('/classifications/data-types'),
+
+	getDefaultRules: async (): Promise<PathClassificationRule[]> => {
+		const response = await fetchApi<{ rules: PathClassificationRule[] }>(
+			'/classifications/default-rules',
+		);
+		return response.rules ?? [];
+	},
+
+	// Rules
+	listRules: async (): Promise<PathClassificationRule[]> => {
+		const response = await fetchApi<ClassificationRulesResponse>(
+			'/classifications/rules',
+		);
+		return response.rules ?? [];
+	},
+
+	getRule: async (id: string): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>(`/classifications/rules/${id}`),
+
+	createRule: async (
+		data: CreatePathClassificationRuleRequest,
+	): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>('/classifications/rules', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateRule: async (
+		id: string,
+		data: UpdatePathClassificationRuleRequest,
+	): Promise<PathClassificationRule> =>
+		fetchApi<PathClassificationRule>(`/classifications/rules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteRule: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/classifications/rules/${id}`, {
+			method: 'DELETE',
+		}),
+
+	// Schedule classifications
+	listScheduleClassifications: async (level?: string): Promise<Schedule[]> => {
+		const url = level
+			? `/classifications/schedules?level=${level}`
+			: '/classifications/schedules';
+		const response = await fetchApi<{ schedules: Schedule[] }>(url);
+		return response.schedules ?? [];
+	},
+
+	getScheduleClassification: async (
+		scheduleId: string,
+	): Promise<{ schedule_id: string; level: string; data_types: string[] }> =>
+		fetchApi<{ schedule_id: string; level: string; data_types: string[] }>(
+			`/classifications/schedules/${scheduleId}`,
+		),
+
+	setScheduleClassification: async (
+		scheduleId: string,
+		data: SetScheduleClassificationRequest,
+	): Promise<{ schedule_id: string; level: string; data_types: string[] }> =>
+		fetchApi<{ schedule_id: string; level: string; data_types: string[] }>(
+			`/classifications/schedules/${scheduleId}`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		),
+
+	autoClassifySchedule: async (
+		scheduleId: string,
+	): Promise<{
+		schedule_id: string;
+		level: string;
+		data_types: string[];
+		auto_classified: boolean;
+	}> =>
+		fetchApi<{
+			schedule_id: string;
+			level: string;
+			data_types: string[];
+			auto_classified: boolean;
+		}>(`/classifications/schedules/${scheduleId}/auto-classify`, {
+			method: 'POST',
+		}),
+
+	// Backup classifications
+	listBackupsByClassification: async (level: string): Promise<Backup[]> => {
+		const response = await fetchApi<{ backups: Backup[]; level: string }>(
+			`/classifications/backups?level=${level}`,
+		);
+		return response.backups ?? [];
+	},
+
+	// Summary and reports
+	getSummary: async (): Promise<ClassificationSummary> =>
+		fetchApi<ClassificationSummary>('/classifications/summary'),
+
+	getComplianceReport: async (): Promise<ComplianceReport> =>
+		fetchApi<ComplianceReport>('/classifications/compliance-report'),
+};
+
 // Docker Backup API
 export const dockerBackupApi = {
 	listContainers: async (agentId: string): Promise<DockerContainer[]> => {
@@ -1819,6 +2477,171 @@ export const dockerBackupApi = {
 
 	getDaemonStatus: async (agentId: string): Promise<DockerDaemonStatus> =>
 		fetchApi<DockerDaemonStatus>(`/docker/status?agent_id=${agentId}`),
+};
+
+// Immutability API
+export const immutabilityApi = {
+	listLocks: async (): Promise<ImmutabilityLock[]> => {
+		const response = await fetchApi<ImmutabilityLocksResponse>('/immutability');
+		return response.locks ?? [];
+	},
+
+	getLock: async (id: string): Promise<ImmutabilityLock> =>
+		fetchApi<ImmutabilityLock>(`/immutability/${id}`),
+
+	createLock: async (
+		data: CreateImmutabilityLockRequest,
+	): Promise<ImmutabilityLock> =>
+		fetchApi<ImmutabilityLock>('/immutability', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	extendLock: async (
+		id: string,
+		data: ExtendImmutabilityLockRequest,
+	): Promise<ImmutabilityLock> =>
+		fetchApi<ImmutabilityLock>(`/immutability/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	getSnapshotStatus: async (
+		snapshotId: string,
+		repositoryId: string,
+	): Promise<ImmutabilityStatus> =>
+		fetchApi<ImmutabilityStatus>(
+			`/snapshots/${snapshotId}/immutability?repository_id=${repositoryId}`,
+		),
+
+	getRepositorySettings: async (
+		repositoryId: string,
+	): Promise<RepositoryImmutabilitySettings> =>
+		fetchApi<RepositoryImmutabilitySettings>(
+			`/repositories/${repositoryId}/immutability`,
+		),
+
+	updateRepositorySettings: async (
+		repositoryId: string,
+		data: UpdateRepositoryImmutabilitySettingsRequest,
+	): Promise<RepositoryImmutabilitySettings> =>
+		fetchApi<RepositoryImmutabilitySettings>(
+			`/repositories/${repositoryId}/immutability`,
+			{
+				method: 'PUT',
+				body: JSON.stringify(data),
+			},
+		),
+
+	listRepositoryLocks: async (
+		repositoryId: string,
+	): Promise<ImmutabilityLock[]> => {
+		const response = await fetchApi<ImmutabilityLocksResponse>(
+			`/repositories/${repositoryId}/immutability/locks`,
+		);
+		return response.locks ?? [];
+	},
+};
+
+// Legal Holds API
+export const legalHoldsApi = {
+	list: async (): Promise<LegalHold[]> => {
+		const response = await fetchApi<LegalHoldsResponse>('/legal-holds');
+		return response.legal_holds ?? [];
+	},
+
+	get: async (snapshotId: string): Promise<LegalHold> =>
+		fetchApi<LegalHold>(`/snapshots/${snapshotId}/hold`),
+
+	create: async (
+		snapshotId: string,
+		data: CreateLegalHoldRequest,
+	): Promise<LegalHold> =>
+		fetchApi<LegalHold>(`/snapshots/${snapshotId}/hold`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (snapshotId: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/snapshots/${snapshotId}/hold`, {
+			method: 'DELETE',
+		}),
+};
+
+// Geo-Replication API
+export const geoReplicationApi = {
+	listRegions: async (): Promise<{
+		regions: GeoRegion[];
+		pairs: { primary: GeoRegion; secondary: GeoRegion }[];
+	}> => fetchApi<GeoReplicationRegionsResponse>('/geo-replication/regions'),
+
+	listConfigs: async (): Promise<GeoReplicationConfig[]> => {
+		const response = await fetchApi<GeoReplicationConfigsResponse>(
+			'/geo-replication/configs',
+		);
+		return response.configs ?? [];
+	},
+
+	getConfig: async (id: string): Promise<GeoReplicationConfig> =>
+		fetchApi<GeoReplicationConfig>(`/geo-replication/configs/${id}`),
+
+	createConfig: async (
+		data: GeoReplicationCreateRequest,
+	): Promise<GeoReplicationConfig> =>
+		fetchApi<GeoReplicationConfig>('/geo-replication/configs', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateConfig: async (
+		id: string,
+		data: GeoReplicationUpdateRequest,
+	): Promise<GeoReplicationConfig> =>
+		fetchApi<GeoReplicationConfig>(`/geo-replication/configs/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteConfig: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/geo-replication/configs/${id}`, {
+			method: 'DELETE',
+		}),
+
+	triggerReplication: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/geo-replication/configs/${id}/trigger`, {
+			method: 'POST',
+		}),
+
+	getEvents: async (id: string): Promise<GeoReplicationEvent[]> => {
+		const response = await fetchApi<GeoReplicationEventsResponse>(
+			`/geo-replication/configs/${id}/events`,
+		);
+		return response.events ?? [];
+	},
+
+	getRepositoryStatus: async (
+		repoId: string,
+	): Promise<RepositoryReplicationStatusResponse> =>
+		fetchApi<RepositoryReplicationStatusResponse>(
+			`/geo-replication/repositories/${repoId}/status`,
+		),
+
+	setRepositoryRegion: async (
+		repoId: string,
+		region: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(
+			`/geo-replication/repositories/${repoId}/region`,
+			{
+				method: 'PUT',
+				body: JSON.stringify({ region }),
+			},
+		),
+
+	getSummary: async (): Promise<{
+		summary: GeoReplicationSummary;
+		regions: GeoRegion[];
+	}> => fetchApi<GeoReplicationSummaryResponse>('/geo-replication/summary'),
 };
 
 // Air-Gap API
@@ -1851,4 +2674,316 @@ export const licenseApi = {
 
 export const versionApi = {
 	get: async (): Promise<ServerVersion> => fetchApi<ServerVersion>('/version'),
+};
+
+// Config Export/Import API
+export const configExportApi = {
+	// Export endpoints
+	exportAgent: async (
+		id: string,
+		format: ExportFormat = 'json',
+	): Promise<string> => {
+		const response = await fetch(
+			`${API_BASE}/export/agents/${id}?format=${format}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
+			throw new ApiError(response.status, errorData.error);
+		}
+		return response.text();
+	},
+
+	exportSchedule: async (
+		id: string,
+		format: ExportFormat = 'json',
+	): Promise<string> => {
+		const response = await fetch(
+			`${API_BASE}/export/schedules/${id}?format=${format}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
+			throw new ApiError(response.status, errorData.error);
+		}
+		return response.text();
+	},
+
+	exportRepository: async (
+		id: string,
+		format: ExportFormat = 'json',
+	): Promise<string> => {
+		const response = await fetch(
+			`${API_BASE}/export/repositories/${id}?format=${format}`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
+			throw new ApiError(response.status, errorData.error);
+		}
+		return response.text();
+	},
+
+	exportBundle: async (data: ExportBundleRequest): Promise<string> => {
+		const response = await fetch(`${API_BASE}/export/bundle`, {
+			method: 'POST',
+			credentials: 'include',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(data),
+		});
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Export failed' }));
+			throw new ApiError(response.status, errorData.error);
+		}
+		return response.text();
+	},
+
+	// Import endpoints
+	importConfig: async (data: ImportConfigRequest): Promise<ImportResult> =>
+		fetchApi<ImportResult>('/import', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	validateImport: async (
+		data: ValidateImportRequest,
+	): Promise<ValidationResult> =>
+		fetchApi<ValidationResult>('/import/validate', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+};
+
+// Config Templates API
+export const templatesApi = {
+	list: async (): Promise<ConfigTemplate[]> => {
+		const response = await fetchApi<ConfigTemplatesResponse>('/templates');
+		return response.templates ?? [];
+	},
+
+	get: async (id: string): Promise<ConfigTemplate> =>
+		fetchApi<ConfigTemplate>(`/templates/${id}`),
+
+	create: async (data: CreateTemplateRequest): Promise<ConfigTemplate> =>
+		fetchApi<ConfigTemplate>('/templates', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateTemplateRequest,
+	): Promise<ConfigTemplate> =>
+		fetchApi<ConfigTemplate>(`/templates/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/templates/${id}`, {
+			method: 'DELETE',
+		}),
+
+	use: async (
+		id: string,
+		data: UseTemplateRequest = {},
+	): Promise<ImportResult> =>
+		fetchApi<ImportResult>(`/templates/${id}/use`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+};
+
+export const ipAllowlistsApi = {
+	list: async (): Promise<IPAllowlist[]> => {
+		const response = await fetchApi<IPAllowlistsResponse>('/ip-allowlists');
+		return response.allowlists ?? [];
+	},
+
+	get: async (id: string): Promise<IPAllowlist> =>
+		fetchApi<IPAllowlist>(`/ip-allowlists/${id}`),
+
+	create: async (data: CreateIPAllowlistRequest): Promise<IPAllowlist> =>
+		fetchApi<IPAllowlist>('/ip-allowlists', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateIPAllowlistRequest,
+	): Promise<IPAllowlist> =>
+		fetchApi<IPAllowlist>(`/ip-allowlists/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/ip-allowlists/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getSettings: async (): Promise<IPAllowlistSettings> =>
+		fetchApi<IPAllowlistSettings>('/ip-allowlist-settings'),
+
+	updateSettings: async (
+		data: UpdateIPAllowlistSettingsRequest,
+	): Promise<IPAllowlistSettings> =>
+		fetchApi<IPAllowlistSettings>('/ip-allowlist-settings', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	listBlockedAttempts: async (
+		limit = 50,
+		offset = 0,
+	): Promise<IPBlockedAttemptsResponse> =>
+		fetchApi<IPBlockedAttemptsResponse>(
+			`/ip-blocked-attempts?limit=${limit}&offset=${offset}`,
+		),
+};
+
+// Rate Limits Dashboard API (Admin only)
+export const rateLimitsApi = {
+	getDashboardStats: async (): Promise<RateLimitDashboardStats> =>
+		fetchApi<RateLimitDashboardStats>('/admin/rate-limits'),
+};
+
+// Rate Limit Config Management API
+export const rateLimitConfigsApi = {
+	list: async (): Promise<RateLimitConfig[]> => {
+		const response = await fetchApi<RateLimitConfigsResponse>(
+			'/admin/rate-limit-configs',
+		);
+		return response.configs ?? [];
+	},
+
+	get: async (id: string): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>(`/admin/rate-limit-configs/${id}`),
+
+	create: async (
+		data: CreateRateLimitConfigRequest,
+	): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>('/admin/rate-limit-configs', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateRateLimitConfigRequest,
+	): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>(`/admin/rate-limit-configs/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/rate-limit-configs/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getStats: async (): Promise<RateLimitStatsResponse> =>
+		fetchApi<RateLimitStatsResponse>('/admin/rate-limit-configs/stats'),
+
+	listBlocked: async (): Promise<BlockedRequestsResponse> =>
+		fetchApi<BlockedRequestsResponse>('/admin/rate-limit-configs/blocked'),
+};
+
+// IP Bans API
+export const ipBansApi = {
+	list: async (): Promise<IPBan[]> => {
+		const response = await fetchApi<IPBansResponse>('/admin/ip-bans');
+		return response.bans ?? [];
+	},
+
+	create: async (data: CreateIPBanRequest): Promise<IPBan> =>
+		fetchApi<IPBan>('/admin/ip-bans', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/admin/ip-bans/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// User Sessions API
+export const userSessionsApi = {
+	list: async (): Promise<UserSession[]> => {
+		const response = await fetchApi<UserSessionsResponse>('/users/me/sessions');
+		return response.sessions ?? [];
+	},
+
+	revoke: async (id: string): Promise<RevokeSessionsResponse> =>
+		fetchApi<RevokeSessionsResponse>(`/users/me/sessions/${id}`, {
+			method: 'DELETE',
+		}),
+
+	revokeAll: async (): Promise<RevokeSessionsResponse> =>
+		fetchApi<RevokeSessionsResponse>('/users/me/sessions', {
+			method: 'DELETE',
+		}),
+};
+
+// Password Policies API
+export const passwordPoliciesApi = {
+	get: async (): Promise<PasswordPolicyResponse> =>
+		fetchApi<PasswordPolicyResponse>('/password-policies'),
+
+	update: async (
+		data: UpdatePasswordPolicyRequest,
+	): Promise<PasswordPolicyResponse> =>
+		fetchApi<PasswordPolicyResponse>('/password-policies', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	getRequirements: async (): Promise<PasswordRequirements> =>
+		fetchApi<PasswordRequirements>('/password-policies/requirements'),
+
+	validatePassword: async (
+		password: string,
+	): Promise<PasswordValidationResult> =>
+		fetchApi<PasswordValidationResult>('/password-policies/validate', {
+			method: 'POST',
+			body: JSON.stringify({ password }),
+		}),
+};
+
+// Password management API
+export const passwordApi = {
+	changePassword: async (
+		data: ChangePasswordRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/password/change', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getExpiration: async (): Promise<PasswordExpirationInfo> =>
+		fetchApi<PasswordExpirationInfo>('/password/expiration'),
+
+	login: async (data: PasswordLoginRequest): Promise<PasswordLoginResponse> =>
+		fetchApi<PasswordLoginResponse>('/auth/login/password', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
 };

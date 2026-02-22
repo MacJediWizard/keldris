@@ -1,5 +1,19 @@
 import { useState } from 'react';
 import { AgentDownloads } from '../components/features/AgentDownloads';
+import { ExportImportModal } from '../components/features/ExportImportModal';
+import { ImportAgentsWizard } from '../components/features/ImportAgentsWizard';
+import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
+import {
+	BulkOperationProgress,
+	useBulkOperation,
+} from '../components/ui/BulkOperationProgress';
+import {
+	BulkSelectCheckbox,
+	BulkSelectHeader,
+	BulkSelectToolbar,
+} from '../components/ui/BulkSelect';
+import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { useAddAgentToGroup, useAgentGroups } from '../hooks/useAgentGroups';
 import {
 	useCreateRegistrationCode,
 	useDeleteRegistrationCode,
@@ -11,13 +25,18 @@ import {
 	useRevokeAgentApiKey,
 	useRotateAgentApiKey,
 } from '../hooks/useAgents';
+import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useLocale } from '../hooks/useLocale';
+import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
 import { getAgentStatusColor } from '../lib/utils';
 
 function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
+			<td className="px-6 py-4 w-12">
+				<div className="h-4 w-4 bg-gray-200 rounded" />
+			</td>
 			<td className="px-6 py-4">
 				<div className="h-4 w-32 bg-gray-200 rounded" />
 			</td>
@@ -468,6 +487,8 @@ interface AgentRowProps {
 	isDeleting: boolean;
 	isRotating: boolean;
 	isRevoking: boolean;
+	isSelected: boolean;
+	onToggleSelect: () => void;
 }
 
 function AgentRow({
@@ -478,13 +499,18 @@ function AgentRow({
 	isDeleting,
 	isRotating,
 	isRevoking,
+	isSelected,
+	onToggleSelect,
 }: AgentRowProps) {
 	const [showMenu, setShowMenu] = useState(false);
 	const statusColor = getAgentStatusColor(agent.status);
 	const { t, formatRelativeTime } = useLocale();
 
 	return (
-		<tr className="hover:bg-gray-50">
+		<tr className={`hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''}`}>
+			<td className="px-6 py-4 w-12">
+				<BulkSelectCheckbox checked={isSelected} onChange={onToggleSelect} />
+			</td>
 			<td className="px-6 py-4">
 				<div className="font-medium text-gray-900">{agent.hostname}</div>
 				{agent.os_info && (
@@ -593,15 +619,31 @@ export function Agents() {
 		expiresAt: string;
 	} | null>(null);
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [showAddToGroupModal, setShowAddToGroupModal] = useState(false);
+	const [selectedGroupId, setSelectedGroupId] = useState('');
+	const [showExportModal, setShowExportModal] = useState(false);
+	const [selectedAgentForExport, setSelectedAgentForExport] =
+		useState<Agent | null>(null);
+	const [showBulkImportWizard, setShowBulkImportWizard] = useState(false);
+	const [importSuccessMessage, setImportSuccessMessage] = useState<
+		string | null
+	>(null);
 
 	const { data: agents, isLoading, isError } = useAgents();
 	const { data: pendingRegistrations, isLoading: isPendingLoading } =
 		usePendingRegistrations();
+	const { data: agentGroups } = useAgentGroups();
+	const { data: schedules } = useSchedules();
 	const deleteAgent = useDeleteAgent();
 	const rotateApiKey = useRotateAgentApiKey();
 	const revokeApiKey = useRevokeAgentApiKey();
 	const deleteCode = useDeleteRegistrationCode();
+	const addAgentToGroup = useAddAgentToGroup();
+	const runSchedule = useRunSchedule();
 	const { t } = useLocale();
+
+	const bulkOperation = useBulkOperation();
 
 	const filteredAgents = agents?.filter((agent) => {
 		const matchesSearch = agent.hostname
@@ -611,6 +653,138 @@ export function Agents() {
 			statusFilter === 'all' || agent.status === statusFilter;
 		return matchesSearch && matchesStatus;
 	});
+
+	const agentIds = filteredAgents?.map((a) => a.id) ?? [];
+	const bulkSelect = useBulkSelect(agentIds);
+
+	const bulkActions: BulkAction[] = [
+		{
+			id: 'add-to-group',
+			label: 'Add to Group',
+			icon: (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+					/>
+				</svg>
+			),
+		},
+		{
+			id: 'run-backup',
+			label: 'Run Backup',
+			icon: (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+					/>
+				</svg>
+			),
+		},
+		{
+			id: 'delete',
+			label: 'Delete',
+			variant: 'danger',
+			icon: (
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+					/>
+				</svg>
+			),
+			requiresConfirmation: true,
+		},
+	];
+
+	const handleBulkAction = (actionId: string) => {
+		switch (actionId) {
+			case 'delete':
+				setShowDeleteConfirm(true);
+				break;
+			case 'add-to-group':
+				setShowAddToGroupModal(true);
+				break;
+			case 'run-backup':
+				handleBulkRunBackup();
+				break;
+		}
+	};
+
+	const handleBulkDelete = async () => {
+		setShowDeleteConfirm(false);
+		await bulkOperation.start(
+			[...bulkSelect.selectedIds],
+			async (id: string) => {
+				await deleteAgent.mutateAsync(id);
+			},
+		);
+		bulkSelect.clear();
+	};
+
+	const handleBulkAddToGroup = async () => {
+		if (!selectedGroupId) return;
+		setShowAddToGroupModal(false);
+		await bulkOperation.start(
+			[...bulkSelect.selectedIds],
+			async (id: string) => {
+				await addAgentToGroup.mutateAsync({
+					groupId: selectedGroupId,
+					data: { agent_id: id },
+				});
+			},
+		);
+		bulkSelect.clear();
+		setSelectedGroupId('');
+	};
+
+	const handleBulkRunBackup = async () => {
+		// Find schedules for selected agents and run them
+		const agentScheduleMap = new Map<string, string>();
+		if (schedules) {
+			for (const schedule of schedules) {
+				if (bulkSelect.selectedIds.has(schedule.agent_id) && schedule.enabled) {
+					agentScheduleMap.set(schedule.agent_id, schedule.id);
+				}
+			}
+		}
+
+		const scheduleIds = [...agentScheduleMap.values()];
+		if (scheduleIds.length === 0) {
+			alert('No enabled schedules found for selected agents');
+			return;
+		}
+
+		await bulkOperation.start(scheduleIds, async (id: string) => {
+			await runSchedule.mutateAsync(id);
+		});
+		bulkSelect.clear();
+	};
 
 	const handleGenerateSuccess = (code: string, expiresAt: string) => {
 		setShowGenerateModal(false);
@@ -660,27 +834,77 @@ export function Agents() {
 					</h1>
 					<p className="text-gray-600 mt-1">{t('agents.subtitle')}</p>
 				</div>
-				<button
-					type="button"
-					onClick={() => setShowGenerateModal(true)}
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						aria-hidden="true"
-						className="w-5 h-5"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
+				<div className="flex items-center gap-3">
+					<button
+						type="button"
+						onClick={() => setShowBulkImportWizard(true)}
+						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+						title="Import agents from CSV file"
 					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 4v16m8-8H4"
-						/>
-					</svg>
-					{t('agents.registerAgent')}
-				</button>
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+							/>
+						</svg>
+						Bulk Import
+					</button>
+					<button
+						type="button"
+						onClick={() => {
+							setSelectedAgentForExport(null);
+							setShowExportModal(true);
+						}}
+						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+					>
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+							/>
+						</svg>
+						Import Config
+					</button>
+					<button
+						type="button"
+						onClick={() => setShowGenerateModal(true)}
+						data-action="register-agent"
+						title={`${t('agents.registerAgent')} (N)`}
+						className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+					>
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M12 4v16m8-8H4"
+							/>
+						</svg>
+						{t('agents.registerAgent')}
+					</button>
+				</div>
 			</div>
 
 			{/* Pending Registrations Section */}
@@ -755,6 +979,23 @@ export function Agents() {
 				</div>
 			)}
 
+			{/* Bulk Selection Toolbar */}
+			{bulkSelect.selectedCount > 0 && (
+				<BulkSelectToolbar
+					selectedCount={bulkSelect.selectedCount}
+					totalCount={agentIds.length}
+					onSelectAll={() => bulkSelect.selectAll(agentIds)}
+					onDeselectAll={bulkSelect.deselectAll}
+					itemLabel="agent"
+				>
+					<BulkActions
+						actions={bulkActions}
+						onAction={handleBulkAction}
+						label={t('common.actions')}
+					/>
+				</BulkSelectToolbar>
+			)}
+
 			{/* Registered Agents Section */}
 			<div className="bg-white rounded-lg border border-gray-200">
 				<div className="p-6 border-b border-gray-200">
@@ -791,6 +1032,7 @@ export function Agents() {
 					<table className="w-full">
 						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
+								<th className="px-6 py-3 w-12" />
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									{t('agents.hostname')}
 								</th>
@@ -818,6 +1060,15 @@ export function Agents() {
 					<table className="w-full">
 						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
+								<th className="px-6 py-3 w-12">
+									<BulkSelectHeader
+										isAllSelected={bulkSelect.isAllSelected}
+										isPartiallySelected={bulkSelect.isPartiallySelected}
+										onToggleAll={() => bulkSelect.toggleAll(agentIds)}
+										selectedCount={bulkSelect.selectedCount}
+										totalCount={agentIds.length}
+									/>
+								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									{t('agents.hostname')}
 								</th>
@@ -846,6 +1097,8 @@ export function Agents() {
 									isDeleting={deleteAgent.isPending}
 									isRotating={rotateApiKey.isPending}
 									isRevoking={revokeApiKey.isPending}
+									isSelected={bulkSelect.isSelected(agent.id)}
+									onToggleSelect={() => bulkSelect.toggle(agent.id)}
 								/>
 							))}
 						</tbody>
@@ -915,8 +1168,152 @@ export function Agents() {
 				<ApiKeyModal apiKey={newApiKey} onClose={() => setNewApiKey(null)} />
 			)}
 
+			{/* Bulk Delete Confirmation Modal */}
+			<ConfirmationModal
+				isOpen={showDeleteConfirm}
+				onClose={() => setShowDeleteConfirm(false)}
+				onConfirm={handleBulkDelete}
+				title="Delete Agents"
+				message="Are you sure you want to delete the selected agents? This action cannot be undone."
+				confirmLabel="Delete"
+				variant="danger"
+				itemCount={bulkSelect.selectedCount}
+			/>
+
+			{/* Add to Group Modal */}
+			{showAddToGroupModal && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+							Add to Group
+						</h3>
+						<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+							Select a group to add {bulkSelect.selectedCount} agent
+							{bulkSelect.selectedCount !== 1 ? 's' : ''} to.
+						</p>
+						<div className="mb-4">
+							<label
+								htmlFor="bulk-group-select"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Group
+							</label>
+							<select
+								id="bulk-group-select"
+								value={selectedGroupId}
+								onChange={(e) => setSelectedGroupId(e.target.value)}
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="">Select a group</option>
+								{agentGroups?.map((group) => (
+									<option key={group.id} value={group.id}>
+										{group.name}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="flex justify-end gap-3">
+							<button
+								type="button"
+								onClick={() => {
+									setShowAddToGroupModal(false);
+									setSelectedGroupId('');
+								}}
+								className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+							>
+								{t('common.cancel')}
+							</button>
+							<button
+								type="button"
+								onClick={handleBulkAddToGroup}
+								disabled={!selectedGroupId}
+								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+							>
+								Add to Group
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Bulk Operation Progress */}
+			<BulkOperationProgress
+				isOpen={bulkOperation.isRunning || bulkOperation.isComplete}
+				onClose={bulkOperation.reset}
+				title="Bulk Operation"
+				total={bulkOperation.total}
+				completed={bulkOperation.completed}
+				results={bulkOperation.results}
+				isComplete={bulkOperation.isComplete}
+			/>
+
 			{/* Download section - always visible */}
 			<AgentDownloads showInstallCommands={true} />
+
+			<ExportImportModal
+				isOpen={showExportModal}
+				onClose={() => {
+					setShowExportModal(false);
+					setSelectedAgentForExport(null);
+				}}
+				type="agent"
+				item={selectedAgentForExport ?? undefined}
+			/>
+
+			<ImportAgentsWizard
+				isOpen={showBulkImportWizard}
+				onClose={() => setShowBulkImportWizard(false)}
+				onSuccess={(importedCount, failedCount) => {
+					setImportSuccessMessage(
+						`Successfully imported ${importedCount} agent${importedCount !== 1 ? 's' : ''}${failedCount > 0 ? ` (${failedCount} failed)` : ''}`,
+					);
+					setTimeout(() => setImportSuccessMessage(null), 5000);
+				}}
+			/>
+
+			{importSuccessMessage && (
+				<div className="fixed bottom-4 right-4 bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg z-50">
+					<div className="flex items-center gap-3">
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5 text-green-500"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
+						</svg>
+						<span className="text-sm text-green-800">
+							{importSuccessMessage}
+						</span>
+						<button
+							type="button"
+							onClick={() => setImportSuccessMessage(null)}
+							className="text-green-600 hover:text-green-800"
+						>
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M6 18L18 6M6 6l12 12"
+								/>
+							</svg>
+						</button>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

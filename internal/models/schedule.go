@@ -44,8 +44,10 @@ type Schedule struct {
 	OnMountUnavailable   MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
 	DockerVolumes        []string             `json:"docker_volumes,omitempty"`        // Docker volume names to back up
 	DockerPauseContainers bool                `json:"docker_pause_containers,omitempty"` // Pause containers during volume backup
-	MaxFileSizeMB      *int                 `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
-	Enabled              bool                 `json:"enabled"`
+	MaxFileSizeMB           *int                 `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
+	ClassificationLevel     string               `json:"classification_level,omitempty"` // Data classification level: public, internal, confidential, restricted
+	ClassificationDataTypes []string             `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	Enabled                 bool                 `json:"enabled"`
 	Repositories         []ScheduleRepository `json:"repositories,omitempty"`
 	CreatedAt          time.Time            `json:"created_at"`
 	UpdatedAt          time.Time            `json:"updated_at"`
@@ -259,4 +261,21 @@ func (s *Schedule) NextAllowedTime(t time.Time) time.Time {
 	}
 	// Fallback: return original time if no valid window found
 	return t
+}
+
+// SetClassificationDataTypes sets the classification data types from JSON bytes.
+func (s *Schedule) SetClassificationDataTypes(data []byte) error {
+	if len(data) == 0 {
+		s.ClassificationDataTypes = []string{"general"}
+		return nil
+	}
+	return json.Unmarshal(data, &s.ClassificationDataTypes)
+}
+
+// ClassificationDataTypesJSON returns the classification data types as JSON bytes.
+func (s *Schedule) ClassificationDataTypesJSON() ([]byte, error) {
+	if len(s.ClassificationDataTypes) == 0 {
+		return []byte(`["general"]`), nil
+	}
+	return json.Marshal(s.ClassificationDataTypes)
 }

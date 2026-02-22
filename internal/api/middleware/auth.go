@@ -25,6 +25,8 @@ const (
 	UserContextKey ContextKey = "user"
 	// AgentContextKey is the context key for the authenticated agent.
 	AgentContextKey ContextKey = "agent"
+	// SessionIDContextKey is the context key for the database session record ID.
+	SessionIDContextKey ContextKey = "session_id"
 )
 
 // AuthMiddleware returns a Gin middleware that requires authentication.
@@ -46,6 +48,11 @@ func AuthMiddleware(sessions *auth.SessionStore, logger zerolog.Logger) gin.Hand
 
 		// Store user in Gin context for handlers to access
 		c.Set(string(UserContextKey), sessionUser)
+
+		// Store session record ID if present
+		if sessionUser.SessionRecordID != uuid.Nil {
+			c.Set(string(SessionIDContextKey), sessionUser.SessionRecordID)
+		}
 
 		log.Debug().
 			Str("user_id", sessionUser.ID.String()).
@@ -107,6 +114,20 @@ func RequireUser(c *gin.Context) *auth.SessionUser {
 		return nil
 	}
 	return user
+}
+
+// GetCurrentSessionID retrieves the database session record ID from the Gin context.
+// Returns uuid.Nil if no session ID is present.
+func GetCurrentSessionID(c *gin.Context) uuid.UUID {
+	sessionID, exists := c.Get(string(SessionIDContextKey))
+	if !exists {
+		return uuid.Nil
+	}
+	id, ok := sessionID.(uuid.UUID)
+	if !ok {
+		return uuid.Nil
+	}
+	return id
 }
 
 // APIKeyMiddleware returns a Gin middleware that authenticates requests using API keys.

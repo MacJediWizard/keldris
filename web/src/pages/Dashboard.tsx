@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { MiniBackupCalendar } from '../components/features/BackupCalendar';
 import { useBackups } from '../hooks/useBackups';
 import { useLocale } from '../hooks/useLocale';
 import { useDashboardStats } from '../hooks/useMetrics';
@@ -168,7 +169,7 @@ export function Dashboard() {
 				/>
 			</div>
 
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				<div className="bg-white rounded-lg border border-gray-200 p-6">
 					<h2 className="text-lg font-semibold text-gray-900 mb-4">
 						{t('dashboard.recentBackups')}
@@ -267,6 +268,10 @@ export function Dashboard() {
 							)}
 						</div>
 					</div>
+				</div>
+
+				<div>
+					<MiniBackupCalendar />
 				</div>
 			</div>
 

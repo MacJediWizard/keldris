@@ -22,6 +22,8 @@ type DashboardMetricsStore interface {
 	GetBackupDurationTrend(ctx context.Context, orgID uuid.UUID, days int) ([]*models.BackupDurationTrend, error)
 	GetDailyBackupStats(ctx context.Context, orgID uuid.UUID, days int) ([]*models.DailyBackupStats, error)
 	GetDailySummaries(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time) ([]models.MetricsDailySummary, error)
+	GetActiveRansomwareAlertCountByOrgID(ctx context.Context, orgID uuid.UUID) (int, error)
+	GetCriticalRansomwareAlertCountByOrgID(ctx context.Context, orgID uuid.UUID) (int, error)
 }
 
 // DashboardMetricsHandler handles dashboard metrics related HTTP endpoints.
@@ -83,6 +85,21 @@ func (h *DashboardMetricsHandler) GetDashboardStats(c *gin.Context) {
 		if rate30d != nil {
 			stats.SuccessRate30d = rate30d.SuccessPercent
 		}
+	}
+
+	// Get ransomware alert counts (displayed prominently)
+	activeCount, err := h.store.GetActiveRansomwareAlertCountByOrgID(c.Request.Context(), dbUser.OrgID)
+	if err != nil {
+		h.logger.Warn().Err(err).Msg("failed to get active ransomware alert count")
+	} else {
+		stats.RansomwareAlertsActive = activeCount
+	}
+
+	criticalCount, err := h.store.GetCriticalRansomwareAlertCountByOrgID(c.Request.Context(), dbUser.OrgID)
+	if err != nil {
+		h.logger.Warn().Err(err).Msg("failed to get critical ransomware alert count")
+	} else {
+		stats.RansomwareAlertsCritical = criticalCount
 	}
 
 	c.JSON(http.StatusOK, stats)

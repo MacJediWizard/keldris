@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAgents } from '../hooks/useAgents';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSnapshotCompare, useSnapshots } from '../hooks/useSnapshots';
@@ -147,10 +147,17 @@ function SnapshotSelector({
 
 interface DiffEntryRowProps {
 	entry: SnapshotDiffEntry;
+	snapshot1Id: string;
+	snapshot2Id: string;
 }
 
-function DiffEntryRow({ entry }: DiffEntryRowProps) {
+function DiffEntryRow({ entry, snapshot1Id, snapshot2Id }: DiffEntryRowProps) {
 	const color = getChangeTypeColor(entry.change_type);
+	const isFile = entry.type === 'file';
+
+	const diffUrl = isFile
+		? `/snapshots/file-diff?snapshot1=${snapshot1Id}&snapshot2=${snapshot2Id}&path=${encodeURIComponent(entry.path)}`
+		: undefined;
 
 	return (
 		<tr className="hover:bg-gray-50">
@@ -191,9 +198,18 @@ function DiffEntryRow({ entry }: DiffEntryRowProps) {
 							/>
 						</svg>
 					)}
-					<span className="font-mono text-sm text-gray-900 break-all">
-						{entry.path}
-					</span>
+					{diffUrl ? (
+						<Link
+							to={diffUrl}
+							className="font-mono text-sm text-indigo-600 hover:text-indigo-800 hover:underline break-all"
+						>
+							{entry.path}
+						</Link>
+					) : (
+						<span className="font-mono text-sm text-gray-900 break-all">
+							{entry.path}
+						</span>
+					)}
 				</div>
 			</td>
 			<td className="px-6 py-3 text-sm text-gray-500">
@@ -218,6 +234,36 @@ function DiffEntryRow({ entry }: DiffEntryRowProps) {
 					</span>
 				) : (
 					'-'
+				)}
+			</td>
+			<td className="px-6 py-3 text-sm">
+				{diffUrl && (
+					<Link
+						to={diffUrl}
+						className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800"
+					>
+						<svg
+							aria-hidden="true"
+							className="w-4 h-4"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+							/>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+							/>
+						</svg>
+						View Diff
+					</Link>
 				)}
 			</td>
 		</tr>
@@ -539,6 +585,9 @@ export function SnapshotCompare() {
 											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
 												Difference
 											</th>
+											<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+												Actions
+											</th>
 										</tr>
 									</thead>
 									<tbody className="divide-y divide-gray-200">
@@ -546,6 +595,8 @@ export function SnapshotCompare() {
 											<DiffEntryRow
 												key={`${entry.path}-${index}`}
 												entry={entry}
+												snapshot1Id={snapshot1Id}
+												snapshot2Id={snapshot2Id}
 											/>
 										))}
 									</tbody>

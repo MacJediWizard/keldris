@@ -14,6 +14,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/MacJediWizard/keldris/internal/license"
+	"github.com/MacJediWizard/keldris/internal/logs"
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -39,6 +40,8 @@ type Config struct {
 	Version   string
 	Commit    string
 	BuildDate string
+	// ServerURL is the base URL of the server for generating registration links.
+	ServerURL string
 	// VerificationTrigger for manually triggering verifications (optional).
 	VerificationTrigger handlers.VerificationTrigger
 	// ReportScheduler for report generation and sending (optional).
@@ -53,6 +56,8 @@ type Config struct {
 	LicensePublicKey []byte
 	// WebDir is the path to the built frontend files (e.g. "web/dist").
 	WebDir string
+	// LogBuffer for server log capture and viewing (optional).
+	LogBuffer *logs.LogBuffer
 }
 
 
@@ -118,6 +123,10 @@ func NewRouter(
 	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)
 	versionHandler.RegisterPublicRoutes(r.Engine)
 
+	// Changelog endpoint (no auth required for public access)
+	changelogHandler := handlers.NewChangelogHandler("CHANGELOG.md", cfg.Version, logger)
+	changelogHandler.RegisterPublicRoutes(r.Engine)
+
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
@@ -141,12 +150,16 @@ func NewRouter(
 		}
 		apiV1.Use(middleware.LicenseMiddleware(lic, logger))
 	}
+	// Create IP filter for IP-based access control
+	ipFilter := middleware.NewIPFilter(database, logger)
+	apiV1.Use(middleware.IPFilterMiddleware(ipFilter, logger))
 
 	// Create RBAC for permission checks
 	rbac := auth.NewRBAC(database)
 
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
+	changelogHandler.RegisterRoutes(apiV1)
 
 	// License info endpoint
 	licenseInfoHandler := handlers.NewLicenseInfoHandler(cfg.Validator, logger)
@@ -166,6 +179,9 @@ func NewRouter(
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1, middleware.LimitMiddleware(database, "agents", logger))
 
+	agentCommandsHandler := handlers.NewAgentCommandsHandler(database, logger)
+	agentCommandsHandler.RegisterRoutes(apiV1)
+
 	// Agent registration with 2FA codes
 	agentRegistrationHandler := handlers.NewAgentRegistrationHandler(database, logger)
 	agentRegistrationHandler.RegisterRoutes(apiV1)
@@ -173,6 +189,10 @@ func NewRouter(
 
 	agentGroupsHandler := handlers.NewAgentGroupsHandler(database, logger)
 	agentGroupsHandler.RegisterRoutes(apiV1)
+
+	// Agent CSV import for fleet deployment
+	agentImportHandler := handlers.NewAgentImportHandler(database, cfg.ServerURL, logger)
+	agentImportHandler.RegisterRoutes(apiV1)
 
 	reposHandler := handlers.NewRepositoriesHandler(database, keyManager, logger)
 	reposHandler.RegisterRoutes(apiV1)
@@ -195,10 +215,16 @@ func NewRouter(
 	snapshotsHandler := handlers.NewSnapshotsHandler(database, keyManager, logger)
 	snapshotsHandler.RegisterRoutes(apiV1)
 
+	legalHoldsHandler := handlers.NewLegalHoldsHandler(database, logger)
+	legalHoldsHandler.RegisterRoutes(apiV1)
+
 	fileHistoryHandler := handlers.NewFileHistoryHandler(database, logger)
 	fileHistoryHandler.RegisterRoutes(apiV1)
 
 	auditLogsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureAuditLogs, logger))
+	fileSearchHandler := handlers.NewFileSearchHandler(database, keyManager, logger)
+	fileSearchHandler.RegisterRoutes(apiV1)
+
 	auditLogsHandler := handlers.NewAuditLogsHandler(database, logger)
 	auditLogsHandler.RegisterRoutes(auditLogsGroup)
 
@@ -262,6 +288,26 @@ func NewRouter(
 
 	// DR Runbook routes (Enterprise)
 	drRunbooksGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDRRunbooks, logger))
+	announcementsHandler := handlers.NewAnnouncementsHandler(database, logger)
+	announcementsHandler.RegisterRoutes(apiV1)
+
+	// Password policies handler for non-OIDC authentication
+	passwordPoliciesHandler := handlers.NewPasswordPoliciesHandler(database, logger)
+	passwordPoliciesHandler.RegisterRoutes(apiV1)
+
+	// Server logs handler for admin (requires LogBuffer)
+	if cfg.LogBuffer != nil {
+		serverLogsHandler := handlers.NewServerLogsHandler(database, cfg.LogBuffer, logger)
+		serverLogsHandler.RegisterRoutes(apiV1)
+	}
+
+	ransomwareHandler := handlers.NewRansomwareHandler(database, logger)
+	ransomwareHandler.RegisterRoutes(apiV1)
+
+	configExportHandler := handlers.NewConfigExportHandler(database, logger)
+	configExportHandler.RegisterRoutes(apiV1)
+
+	// DR Runbook routes
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
 	drRunbooksHandler.RegisterRoutes(drRunbooksGroup)
 
@@ -279,6 +325,34 @@ func NewRouter(
 	airGapHandler := handlers.NewAirGapHandler(logger)
 	airGapHandler.RegisterRoutes(apiV1)
 
+	// Geo-Replication routes
+	geoReplicationHandler := handlers.NewGeoReplicationHandler(database, logger)
+	geoReplicationHandler.RegisterRoutes(apiV1)
+
+	// Classification routes
+	classificationsHandler := handlers.NewClassificationsHandler(database, logger)
+	classificationsHandler.RegisterRoutes(apiV1)
+
+	// Support bundle routes
+	supportHandler := handlers.NewSupportHandler(cfg.Version, cfg.Commit, cfg.BuildDate, "", logger)
+	supportHandler.RegisterRoutes(apiV1)
+
+	// IP allowlists routes
+	ipAllowlistsHandler := handlers.NewIPAllowlistsHandler(database, ipFilter, logger)
+	ipAllowlistsHandler.RegisterRoutes(apiV1)
+
+	// Rate limit dashboard routes (admin only)
+	rateLimitHandler := handlers.NewRateLimitHandler(database, logger)
+	rateLimitHandler.RegisterRoutes(apiV1)
+
+	// Rate limit config management routes
+	rateLimitsHandler := handlers.NewRateLimitsHandler(database, logger)
+	rateLimitsHandler.RegisterRoutes(apiV1)
+
+	// User sessions management routes
+	userSessionsHandler := handlers.NewUserSessionsHandler(database, logger)
+	userSessionsHandler.RegisterRoutes(apiV1)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
@@ -294,6 +368,7 @@ func NewRouter(
 		agentAPI.Use(middleware.LicenseMiddleware(agentLic, logger))
 	}
 	agentAPI.Use(middleware.FeatureMiddleware(license.FeatureAPIAccess, logger))
+	agentAPI.Use(middleware.IPFilterAgentMiddleware(ipFilter, logger))
 
 	agentAPIHandler := handlers.NewAgentAPIHandler(database, keyManager, logger)
 	agentAPIHandler.RegisterRoutes(agentAPI)

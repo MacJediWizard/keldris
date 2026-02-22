@@ -73,3 +73,17 @@ export function useDeleteMaintenanceWindow() {
 		},
 	});
 }
+
+export function useEmergencyOverride() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ id, override }: { id: string; override: boolean }) =>
+			maintenanceApi.emergencyOverride(id, override),
+		onSuccess: (_, { id }) => {
+			queryClient.invalidateQueries({ queryKey: ['maintenance-windows'] });
+			queryClient.invalidateQueries({ queryKey: ['maintenance-windows', id] });
+			queryClient.invalidateQueries({ queryKey: ['maintenance', 'active'] });
+		},
+	});
+}

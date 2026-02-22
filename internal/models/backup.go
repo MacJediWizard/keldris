@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	pkgmodels "github.com/MacJediWizard/keldris/pkg/models"
@@ -42,9 +43,11 @@ type Backup struct {
 	ExcludedLargeFiles []ExcludedLargeFile `json:"excluded_large_files,omitempty"`
 	Resumed            bool                `json:"resumed"`
 	CheckpointID       *uuid.UUID          `json:"checkpoint_id,omitempty"`
-	OriginalBackupID   *uuid.UUID          `json:"original_backup_id,omitempty"`
-	CreatedAt          time.Time           `json:"created_at"`
-	DeletedAt          *time.Time          `json:"deleted_at,omitempty"`
+	OriginalBackupID        *uuid.UUID          `json:"original_backup_id,omitempty"`
+	ClassificationLevel     string              `json:"classification_level,omitempty"` // Data classification level
+	ClassificationDataTypes []string            `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	CreatedAt               time.Time           `json:"created_at"`
+	DeletedAt               *time.Time          `json:"deleted_at,omitempty"`
 }
 
 // ExcludedLargeFile represents a file excluded from backup due to size.
@@ -160,3 +163,19 @@ func NewResumedBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID, ch
 	}
 }
 
+// SetClassificationDataTypes sets the classification data types from JSON bytes.
+func (b *Backup) SetClassificationDataTypes(data []byte) error {
+	if len(data) == 0 {
+		b.ClassificationDataTypes = []string{"general"}
+		return nil
+	}
+	return json.Unmarshal(data, &b.ClassificationDataTypes)
+}
+
+// ClassificationDataTypesJSON returns the classification data types as JSON bytes.
+func (b *Backup) ClassificationDataTypesJSON() ([]byte, error) {
+	if len(b.ClassificationDataTypes) == 0 {
+		return []byte(`["general"]`), nil
+	}
+	return json.Marshal(b.ClassificationDataTypes)
+}

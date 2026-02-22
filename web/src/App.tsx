@@ -15,7 +15,9 @@ const Policies = lazy(() => import('./pages/Policies'));
 const Backups = lazy(() => import('./pages/Backups'));
 const DRRunbooks = lazy(() => import('./pages/DRRunbooks'));
 const DRTests = lazy(() => import('./pages/DRTests'));
-const Restore = lazy(() => import('./pages/Restore'));
+const Restore = lazy(() =>
+	import('./pages/Restore').then((m) => ({ default: m.Restore })),
+);
 const FileHistory = lazy(() => import('./pages/FileHistory'));
 const SnapshotCompare = lazy(() => import('./pages/SnapshotCompare'));
 const Alerts = lazy(() => import('./pages/Alerts'));
@@ -42,6 +44,53 @@ const DockerBackup = lazy(() => import('./pages/DockerBackup'));
 const AirGapLicense = lazy(() => import('./pages/AirGapLicense'));
 const License = lazy(() => import('./pages/License'));
 const Docs = lazy(() => import('./pages/Docs'));
+const AdminLogs = lazy(() =>
+	import('./pages/AdminLogs').then((m) => ({ default: m.AdminLogs })),
+);
+const Announcements = lazy(() =>
+	import('./pages/Announcements').then((m) => ({ default: m.Announcements })),
+);
+const Changelog = lazy(() =>
+	import('./pages/Changelog').then((m) => ({ default: m.Changelog })),
+);
+const Classifications = lazy(() =>
+	import('./pages/Classifications').then((m) => ({
+		default: m.Classifications,
+	})),
+);
+const FileDiff = lazy(() =>
+	import('./pages/FileDiff').then((m) => ({ default: m.FileDiff })),
+);
+const FileSearch = lazy(() =>
+	import('./pages/FileSearch').then((m) => ({ default: m.FileSearch })),
+);
+const IPAllowlistSettings = lazy(() =>
+	import('./pages/IPAllowlistSettings').then((m) => ({
+		default: m.IPAllowlistSettings,
+	})),
+);
+const LegalHolds = lazy(() =>
+	import('./pages/LegalHolds').then((m) => ({ default: m.LegalHolds })),
+);
+const PasswordPolicies = lazy(() =>
+	import('./pages/PasswordPolicies').then((m) => ({
+		default: m.PasswordPolicies,
+	})),
+);
+const RateLimitDashboard = lazy(() =>
+	import('./pages/RateLimitDashboard').then((m) => ({
+		default: m.RateLimitDashboard,
+	})),
+);
+const RateLimits = lazy(() =>
+	import('./pages/RateLimits').then((m) => ({ default: m.RateLimits })),
+);
+const Templates = lazy(() =>
+	import('./pages/Templates').then((m) => ({ default: m.Templates })),
+);
+const UserSessions = lazy(() =>
+	import('./pages/UserSessions').then((m) => ({ default: m.UserSessions })),
+);
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -74,19 +123,33 @@ function App() {
 								<Route path="repositories" element={<Repositories />} />
 								<Route path="schedules" element={<Schedules />} />
 								<Route path="policies" element={<Policies />} />
+								<Route path="templates" element={<Templates />} />
 								<Route path="backups" element={<Backups />} />
 								<Route path="dr-runbooks" element={<DRRunbooks />} />
 								<Route path="dr-tests" element={<DRTests />} />
 								<Route path="restore" element={<Restore />} />
 								<Route path="file-history" element={<FileHistory />} />
-								<Route path="snapshots/compare" element={<SnapshotCompare />} />
+								<Route path="file-search" element={<FileSearch />} />
+								<Route
+									path="snapshots/compare"
+									element={<SnapshotCompare />}
+								/>
+								<Route path="snapshots/file-diff" element={<FileDiff />} />
 								<Route path="alerts" element={<Alerts />} />
 								<Route path="notifications" element={<Notifications />} />
 								<Route path="reports" element={<Reports />} />
 								<Route path="audit-logs" element={<AuditLogs />} />
+								<Route path="legal-holds" element={<LegalHolds />} />
 								<Route path="stats" element={<StorageStats />} />
-								<Route path="stats/:id" element={<RepositoryStatsDetail />} />
+								<Route
+									path="stats/:id"
+									element={<RepositoryStatsDetail />}
+								/>
 								<Route path="tags" element={<Tags />} />
+								<Route
+									path="classifications"
+									element={<Classifications />}
+								/>
 								<Route path="costs" element={<CostEstimation />} />
 								<Route
 									path="organization/members"
@@ -100,16 +163,51 @@ function App() {
 									path="organization/sso"
 									element={<OrganizationSSOSettings />}
 								/>
-								<Route path="organization/branding" element={<Branding />} />
+								<Route
+									path="organization/branding"
+									element={<Branding />}
+								/>
 								<Route
 									path="organization/maintenance"
 									element={<Maintenance />}
 								/>
-								<Route path="organization/new" element={<NewOrganization />} />
+								<Route
+									path="organization/announcements"
+									element={<Announcements />}
+								/>
+								<Route
+									path="organization/ip-allowlist"
+									element={<IPAllowlistSettings />}
+								/>
+								<Route
+									path="organization/password-policies"
+									element={<PasswordPolicies />}
+								/>
+								<Route
+									path="organization/new"
+									element={<NewOrganization />}
+								/>
+								<Route path="admin/logs" element={<AdminLogs />} />
+								<Route
+									path="admin/rate-limits"
+									element={<RateLimitDashboard />}
+								/>
+								<Route
+									path="admin/rate-limit-configs"
+									element={<RateLimits />}
+								/>
+								<Route
+									path="account/sessions"
+									element={<UserSessions />}
+								/>
 								<Route path="docker-backup" element={<DockerBackup />} />
 								<Route path="sla" element={<SLATracking />} />
 								<Route path="onboarding" element={<Onboarding />} />
-								<Route path="system/airgap" element={<AirGapLicense />} />
+								<Route path="changelog" element={<Changelog />} />
+								<Route
+									path="system/airgap"
+									element={<AirGapLicense />}
+								/>
 								<Route path="license" element={<License />} />
 								<Route path="docs/*" element={<Docs />} />
 							</Route>

@@ -38,6 +38,8 @@ const (
 	CurrentOrgRoleKey = "current_org_role"
 	// LastActivityKey is the session key for the last activity timestamp.
 	LastActivityKey = "last_activity"
+	// SessionRecordIDKey is the session key for the database session record ID.
+	SessionRecordIDKey = "session_record_id"
 )
 
 // SessionConfig holds session store configuration.
@@ -162,6 +164,7 @@ type SessionUser struct {
 	AuthenticatedAt time.Time
 	CurrentOrgID    uuid.UUID
 	CurrentOrgRole  string
+	SessionRecordID uuid.UUID
 }
 
 // SetUser stores user data in the session after successful authentication.
@@ -178,6 +181,7 @@ func (s *SessionStore) SetUser(r *http.Request, w http.ResponseWriter, user *Ses
 	session.Values[CurrentOrgIDKey] = user.CurrentOrgID
 	session.Values[CurrentOrgRoleKey] = user.CurrentOrgRole
 	session.Values[LastActivityKey] = time.Now()
+	session.Values[SessionRecordIDKey] = user.SessionRecordID
 	return s.Save(r, w, session)
 }
 
@@ -207,6 +211,7 @@ func (s *SessionStore) GetUser(r *http.Request) (*SessionUser, error) {
 	authenticatedAt, _ := session.Values[AuthenticatedAtKey].(time.Time)
 	currentOrgID, _ := session.Values[CurrentOrgIDKey].(uuid.UUID)
 	currentOrgRole, _ := session.Values[CurrentOrgRoleKey].(string)
+	sessionRecordID, _ := session.Values[SessionRecordIDKey].(uuid.UUID)
 
 	return &SessionUser{
 		ID:              userID,
@@ -216,6 +221,7 @@ func (s *SessionStore) GetUser(r *http.Request) (*SessionUser, error) {
 		AuthenticatedAt: authenticatedAt,
 		CurrentOrgID:    currentOrgID,
 		CurrentOrgRole:  currentOrgRole,
+		SessionRecordID: sessionRecordID,
 	}, nil
 }
 
@@ -260,6 +266,7 @@ func (s *SessionStore) ClearUser(r *http.Request, w http.ResponseWriter) error {
 	delete(session.Values, CurrentOrgIDKey)
 	delete(session.Values, CurrentOrgRoleKey)
 	delete(session.Values, LastActivityKey)
+	delete(session.Values, SessionRecordIDKey)
 	// Set MaxAge to -1 to delete the cookie
 	session.Options.MaxAge = -1
 	return s.Save(r, w, session)

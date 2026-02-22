@@ -2,8 +2,16 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SnapshotComments } from '../components/features/SnapshotComments';
 import { useAgents } from '../hooks/useAgents';
+import { useMe } from '../hooks/useAuth';
+import {
+	useCreateLegalHold,
+	useDeleteLegalHold,
+	useLegalHolds,
+} from '../hooks/useLegalHolds';
 import { useRepositories } from '../hooks/useRepositories';
 import {
+	useCloudRestoreProgress,
+	useCreateCloudRestore,
 	useCreateRestore,
 	useRestorePreview,
 	useRestores,
@@ -11,6 +19,10 @@ import {
 import { useSnapshotComments } from '../hooks/useSnapshotComments';
 import { useSnapshotFiles, useSnapshots } from '../hooks/useSnapshots';
 import type {
+	Agent,
+	CloudRestoreProgress,
+	CloudRestoreTarget,
+	CloudRestoreTargetType,
 	RestorePreview,
 	RestoreStatus,
 	Restore as RestoreType,
@@ -65,6 +77,18 @@ function getRestoreStatusColor(status: RestoreStatus): {
 				text: 'text-blue-800',
 				dot: 'bg-blue-500',
 			};
+		case 'uploading':
+			return {
+				bg: 'bg-purple-100',
+				text: 'text-purple-800',
+				dot: 'bg-purple-500',
+			};
+		case 'verifying':
+			return {
+				bg: 'bg-cyan-100',
+				text: 'text-cyan-800',
+				dot: 'bg-cyan-500',
+			};
 		case 'pending':
 			return {
 				bg: 'bg-yellow-100',
@@ -110,6 +134,32 @@ function CommentIndicator({ snapshotId }: { snapshotId: string }) {
 	);
 }
 
+function HoldIndicator({ hasHold }: { hasHold: boolean }) {
+	if (!hasHold) return null;
+
+	return (
+		<span
+			className="inline-flex items-center ml-2 text-amber-500"
+			title="Legal hold - cannot be deleted"
+		>
+			<svg
+				aria-hidden="true"
+				className="w-4 h-4"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+				/>
+			</svg>
+		</span>
+	);
+}
+
 interface SnapshotRowProps {
 	snapshot: Snapshot;
 	agentName?: string;
@@ -118,6 +168,10 @@ interface SnapshotRowProps {
 	isSelectedForCompare: boolean;
 	onToggleCompare: (snapshotId: string) => void;
 	compareSelectionCount: number;
+	hasHold: boolean;
+	isAdmin: boolean;
+	onToggleHold: (snapshotId: string, hasHold: boolean) => void;
+	isHoldLoading: boolean;
 }
 
 function SnapshotRow({
@@ -128,6 +182,10 @@ function SnapshotRow({
 	isSelectedForCompare,
 	onToggleCompare,
 	compareSelectionCount,
+	hasHold,
+	isAdmin,
+	onToggleHold,
+	isHoldLoading,
 }: SnapshotRowProps) {
 	return (
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -150,6 +208,7 @@ function SnapshotRow({
 					<code className="text-sm font-mono text-gray-900">
 						{snapshot.short_id}
 					</code>
+					<HoldIndicator hasHold={hasHold} />
 					<CommentIndicator snapshotId={snapshot.id} />
 				</div>
 			</td>
@@ -166,13 +225,43 @@ function SnapshotRow({
 				{formatDate(snapshot.time)}
 			</td>
 			<td className="px-6 py-4 text-right">
-				<button
-					type="button"
-					onClick={() => onSelect(snapshot)}
-					className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
-				>
-					Restore
-				</button>
+				<div className="flex items-center justify-end gap-2">
+					{isAdmin && (
+						<button
+							type="button"
+							onClick={() => onToggleHold(snapshot.id, hasHold)}
+							disabled={isHoldLoading}
+							className={`p-1.5 rounded transition-colors ${
+								hasHold
+									? 'text-amber-600 hover:bg-amber-50'
+									: 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+							} disabled:opacity-50`}
+							title={hasHold ? 'Remove legal hold' : 'Place legal hold'}
+						>
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill={hasHold ? 'currentColor' : 'none'}
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+								/>
+							</svg>
+						</button>
+					)}
+					<button
+						type="button"
+						onClick={() => onSelect(snapshot)}
+						className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
+					>
+						Restore
+					</button>
+				</div>
 			</td>
 		</tr>
 	);
@@ -181,10 +270,11 @@ function SnapshotRow({
 interface RestoreRowProps {
 	restore: RestoreType;
 	agentName?: string;
+	sourceAgentName?: string;
 	onViewDetails: (restore: RestoreType) => void;
 }
 
-function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
+function RestoreRow({ restore, agentName, sourceAgentName, onViewDetails }: RestoreRowProps) {
 	const statusColor = getRestoreStatusColor(restore.status);
 
 	return (
@@ -195,18 +285,40 @@ function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
 				</code>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-900">
-				{agentName ?? 'Unknown'}
+				<div className="flex items-center gap-1">
+					{agentName ?? 'Unknown'}
+					{restore.is_cross_agent && (
+						<span
+							className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800"
+							title={`Cross-agent restore from ${sourceAgentName ?? 'unknown'}`}
+						>
+							<svg aria-hidden="true" className="w-3 h-3 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+							</svg>
+							cross
+						</span>
+					)}
+				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
 				{restore.target_path}
 			</td>
 			<td className="px-6 py-4">
-				<span
-					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
-				>
-					<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
-					{restore.status}
-				</span>
+				<div className="flex items-center gap-2">
+					<span
+						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
+					>
+						<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
+						{restore.status}
+					</span>
+					{restore.progress && restore.status === 'running' && (
+						<span className="text-xs text-gray-500">
+							{restore.progress.total_bytes
+								? `${Math.round((restore.progress.bytes_restored / restore.progress.total_bytes) * 100)}%`
+								: `${formatBytes(restore.progress.bytes_restored)}`}
+						</span>
+					)}
+				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(restore.created_at)}
@@ -227,23 +339,35 @@ function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
 interface RestoreDetailsModalProps {
 	restore: RestoreType;
 	agentName?: string;
+	sourceAgentName?: string;
 	onClose: () => void;
 }
 
 function RestoreDetailsModal({
 	restore,
 	agentName,
+	sourceAgentName,
 	onClose,
 }: RestoreDetailsModalProps) {
 	const statusColor = getRestoreStatusColor(restore.status);
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-						Restore Details
-					</h3>
+					<div className="flex items-center gap-2">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+							Restore Details
+						</h3>
+						{restore.is_cross_agent && (
+							<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+								<svg aria-hidden="true" className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+								</svg>
+								Cross-Agent
+							</span>
+						)}
+					</div>
 					<span
 						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
 					>
@@ -260,13 +384,41 @@ function RestoreDetailsModal({
 						<p className="font-mono text-gray-900">{restore.snapshot_id}</p>
 					</div>
 
-					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-								Agent
-							</p>
-							<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
+					{restore.is_cross_agent ? (
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Source Agent
+								</p>
+								<p className="text-gray-900">{sourceAgentName ?? 'Unknown'}</p>
+							</div>
+							<div>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Target Agent
+								</p>
+								<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
+							</div>
 						</div>
+					) : (
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Agent
+								</p>
+								<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
+							</div>
+							<div>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Created
+								</p>
+								<p className="text-gray-900">
+									{formatDateTime(restore.created_at)}
+								</p>
+							</div>
+						</div>
+					)}
+
+					{restore.is_cross_agent && (
 						<div>
 							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 								Created
@@ -275,7 +427,7 @@ function RestoreDetailsModal({
 								{formatDateTime(restore.created_at)}
 							</p>
 						</div>
-					</div>
+					)}
 
 					<div>
 						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -285,6 +437,25 @@ function RestoreDetailsModal({
 							{restore.target_path}
 						</p>
 					</div>
+
+					{restore.path_mappings && restore.path_mappings.length > 0 && (
+						<div>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Path Mappings
+							</p>
+							<div className="mt-1 space-y-1">
+								{restore.path_mappings.map((mapping, idx) => (
+									<div key={idx} className="flex items-center gap-2 text-sm font-mono">
+										<span className="text-gray-600">{mapping.source_path}</span>
+										<svg aria-hidden="true" className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+										</svg>
+										<span className="text-gray-900">{mapping.target_path}</span>
+									</div>
+								))}
+							</div>
+						</div>
+					)}
 
 					{restore.include_paths && restore.include_paths.length > 0 && (
 						<div>
@@ -298,6 +469,47 @@ function RestoreDetailsModal({
 									</li>
 								))}
 							</ul>
+						</div>
+					)}
+
+					{restore.progress && (
+						<div>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+								Progress
+							</p>
+							<div className="bg-gray-50 rounded-lg p-3 space-y-2">
+								{restore.progress.total_bytes && (
+									<div className="w-full bg-gray-200 rounded-full h-2">
+										<div
+											className="bg-indigo-600 h-2 rounded-full transition-all"
+											style={{
+												width: `${Math.min(100, Math.round((restore.progress.bytes_restored / restore.progress.total_bytes) * 100))}%`,
+											}}
+										/>
+									</div>
+								)}
+								<div className="grid grid-cols-2 gap-2 text-sm">
+									<div>
+										<span className="text-gray-500">Files:</span>{' '}
+										<span className="text-gray-900">
+											{restore.progress.files_restored}
+											{restore.progress.total_files && ` / ${restore.progress.total_files}`}
+										</span>
+									</div>
+									<div>
+										<span className="text-gray-500">Bytes:</span>{' '}
+										<span className="text-gray-900">
+											{formatBytes(restore.progress.bytes_restored)}
+											{restore.progress.total_bytes && ` / ${formatBytes(restore.progress.total_bytes)}`}
+										</span>
+									</div>
+								</div>
+								{restore.progress.current_file && (
+									<div className="text-xs text-gray-500 truncate">
+										Current: {restore.progress.current_file}
+									</div>
+								)}
+							</div>
 						</div>
 					)}
 
@@ -334,6 +546,109 @@ function RestoreDetailsModal({
 							</p>
 						</div>
 					)}
+
+					{restore.is_cloud_restore && (
+						<div className="border-t border-gray-200 pt-4 mt-4">
+							<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+								Cloud Restore Details
+							</h4>
+							<div className="space-y-3">
+								{restore.cloud_target && (
+									<div>
+										<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+											Target Type
+										</p>
+										<p className="text-gray-900 capitalize">
+											{restore.cloud_target.type === 's3'
+												? 'Amazon S3'
+												: restore.cloud_target.type === 'b2'
+													? 'Backblaze B2'
+													: 'Restic Repository'}
+										</p>
+									</div>
+								)}
+								{restore.cloud_target_location && (
+									<div>
+										<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+											Target Location
+										</p>
+										<p className="font-mono text-gray-900 break-all text-sm">
+											{restore.cloud_target_location}
+										</p>
+									</div>
+								)}
+								{restore.cloud_progress && (
+									<div className="grid grid-cols-2 gap-4">
+										<div>
+											<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+												Files Uploaded
+											</p>
+											<p className="text-gray-900">
+												{restore.cloud_progress.uploaded_files} /{' '}
+												{restore.cloud_progress.total_files}
+											</p>
+										</div>
+										<div>
+											<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+												Data Uploaded
+											</p>
+											<p className="text-gray-900">
+												{formatBytes(restore.cloud_progress.uploaded_bytes)} /{' '}
+												{formatBytes(restore.cloud_progress.total_bytes)}
+											</p>
+										</div>
+									</div>
+								)}
+								{restore.verify_upload && restore.cloud_progress && (
+									<div
+										className={`flex items-center gap-2 p-2 rounded ${
+											restore.cloud_progress.verified_checksum
+												? 'bg-green-50 text-green-700'
+												: 'bg-yellow-50 text-yellow-700'
+										}`}
+									>
+										{restore.cloud_progress.verified_checksum ? (
+											<>
+												<svg
+													aria-hidden="true"
+													className="w-4 h-4"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M5 13l4 4L19 7"
+													/>
+												</svg>
+												<span className="text-sm">Integrity verified</span>
+											</>
+										) : (
+											<>
+												<svg
+													aria-hidden="true"
+													className="w-4 h-4"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+													/>
+												</svg>
+												<span className="text-sm">Verification pending</span>
+											</>
+										)}
+									</div>
+								)}
+							</div>
+						</div>
+					)}
 				</div>
 
 				<div className="flex justify-end mt-6">
@@ -355,6 +670,7 @@ interface FileTreeItemProps {
 	selectedPaths: Set<string>;
 	onToggle: (path: string) => void;
 	depth: number;
+	isParentSelected?: boolean;
 }
 
 function FileTreeItem({
@@ -362,25 +678,31 @@ function FileTreeItem({
 	selectedPaths,
 	onToggle,
 	depth,
+	isParentSelected = false,
 }: FileTreeItemProps) {
 	const isSelected = selectedPaths.has(file.path);
+	const isEffectivelySelected = isSelected || isParentSelected;
 
 	return (
 		<div
-			className="flex items-center py-1 hover:bg-gray-50 rounded"
+			className={`flex items-center py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors ${
+				isEffectivelySelected ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''
+			}`}
 			style={{ paddingLeft: `${depth * 16 + 8}px` }}
 		>
 			<input
 				type="checkbox"
-				checked={isSelected}
+				checked={isEffectivelySelected}
 				onChange={() => onToggle(file.path)}
-				className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+				disabled={isParentSelected}
+				className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
+				title={isParentSelected ? 'Included via parent folder' : undefined}
 			/>
-			<span className="ml-2 flex items-center">
+			<span className="ml-2 flex items-center flex-1 min-w-0">
 				{file.type === 'dir' ? (
 					<svg
 						aria-hidden="true"
-						className="w-4 h-4 text-yellow-500 mr-1"
+						className="w-4 h-4 text-yellow-500 mr-1.5 flex-shrink-0"
 						fill="currentColor"
 						viewBox="0 0 20 20"
 					>
@@ -389,7 +711,7 @@ function FileTreeItem({
 				) : (
 					<svg
 						aria-hidden="true"
-						className="w-4 h-4 text-gray-400 mr-1"
+						className="w-4 h-4 text-gray-400 mr-1.5 flex-shrink-0"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -402,11 +724,121 @@ function FileTreeItem({
 						/>
 					</svg>
 				)}
-				<span className="text-sm text-gray-900">{file.name}</span>
+				<span className="text-sm text-gray-900 dark:text-gray-100 truncate">
+					{file.name}
+				</span>
 			</span>
-			<span className="ml-auto text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+			<span className="ml-2 text-xs text-gray-500 dark:text-gray-400 tabular-nums flex-shrink-0">
 				{file.type === 'file' ? formatBytes(file.size) : ''}
 			</span>
+		</div>
+	);
+}
+
+interface FileBrowserProps {
+	files: SnapshotFile[];
+	selectedPaths: Set<string>;
+	onToggle: (path: string) => void;
+	onSelectAll: () => void;
+	onClearAll: () => void;
+	totalSize: number;
+	selectedSize: number;
+	selectedCount: number;
+}
+
+function FileBrowser({
+	files,
+	selectedPaths,
+	onToggle,
+	onSelectAll,
+	onClearAll,
+	totalSize,
+	selectedSize,
+	selectedCount,
+}: FileBrowserProps) {
+	// Check if a path's parent is selected
+	const isParentSelected = (path: string): boolean => {
+		for (const selectedPath of selectedPaths) {
+			if (path !== selectedPath && path.startsWith(`${selectedPath}/`)) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	return (
+		<div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+			<div className="bg-gray-50 dark:bg-gray-700 px-3 py-2 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
+				<div className="flex items-center gap-3">
+					<span className="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+						Files
+					</span>
+					<span className="text-xs text-gray-500 dark:text-gray-400">
+						{files.length} items ({formatBytes(totalSize)})
+					</span>
+				</div>
+				<div className="flex items-center gap-2">
+					<button
+						type="button"
+						onClick={onSelectAll}
+						className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+					>
+						Select All
+					</button>
+					<span className="text-gray-300 dark:text-gray-500">|</span>
+					<button
+						type="button"
+						onClick={onClearAll}
+						className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+					>
+						Clear
+					</button>
+				</div>
+			</div>
+			<div className="max-h-64 overflow-y-auto bg-white dark:bg-gray-800">
+				{files.length > 0 ? (
+					files.map((file) => (
+						<FileTreeItem
+							key={file.path}
+							file={file}
+							selectedPaths={selectedPaths}
+							onToggle={onToggle}
+							depth={0}
+							isParentSelected={isParentSelected(file.path)}
+						/>
+					))
+				) : (
+					<div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+						No files available for selection
+					</div>
+				)}
+			</div>
+			{selectedCount > 0 && (
+				<div className="bg-indigo-50 dark:bg-indigo-900/30 px-3 py-2 border-t border-indigo-100 dark:border-indigo-800 flex items-center justify-between">
+					<div className="flex items-center gap-2">
+						<svg
+							aria-hidden="true"
+							className="w-4 h-4 text-indigo-600 dark:text-indigo-400"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M5 13l4 4L19 7"
+							/>
+						</svg>
+						<span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+							{selectedCount} item{selectedCount !== 1 ? 's' : ''} selected
+						</span>
+					</div>
+					<span className="text-sm text-indigo-600 dark:text-indigo-400 tabular-nums">
+						{formatBytes(selectedSize)}
+					</span>
+				</div>
+			)}
 		</div>
 	);
 }
@@ -418,43 +850,84 @@ interface RestorePreviewDisplayProps {
 }
 
 function RestorePreviewDisplay({ preview }: RestorePreviewDisplayProps) {
+	const hasSelectedPaths =
+		preview.selected_paths && preview.selected_paths.length > 0;
+
 	return (
 		<div className="space-y-4">
-			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-				<h4 className="font-medium text-blue-900 mb-2">Restore Preview</h4>
-				<p className="text-sm text-blue-700">
-					Review what will be restored before proceeding.
+			<div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+				<h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+					Restore Preview
+				</h4>
+				<p className="text-sm text-blue-700 dark:text-blue-300">
+					{hasSelectedPaths
+						? `Restoring ${preview.selected_paths?.length} selected item(s) to ${preview.target_path === '/' ? 'original location' : preview.target_path}`
+						: `Restoring all files to ${preview.target_path === '/' ? 'original location' : preview.target_path}`}
 				</p>
 			</div>
 
+			{hasSelectedPaths && (
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+					<p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+						Selected Paths
+					</p>
+					<ul className="space-y-1">
+						{preview.selected_paths?.map((path) => (
+							<li
+								key={path}
+								className="text-sm font-mono text-gray-700 dark:text-gray-300 flex items-center gap-2"
+							>
+								<svg
+									aria-hidden="true"
+									className="w-4 h-4 text-indigo-500"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M5 13l4 4L19 7"
+									/>
+								</svg>
+								{path}
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-				<div className="bg-gray-50 rounded-lg p-3">
-					<p className="text-xs text-gray-500 uppercase tracking-wide">Files</p>
-					<p className="text-lg font-semibold text-gray-900">
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+					<p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+						Files
+					</p>
+					<p className="text-lg font-semibold text-gray-900 dark:text-white">
 						{preview.total_files}
 					</p>
 				</div>
-				<div className="bg-gray-50 rounded-lg p-3">
-					<p className="text-xs text-gray-500 uppercase tracking-wide">
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+					<p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
 						Directories
 					</p>
-					<p className="text-lg font-semibold text-gray-900">
+					<p className="text-lg font-semibold text-gray-900 dark:text-white">
 						{preview.total_dirs}
 					</p>
 				</div>
-				<div className="bg-gray-50 rounded-lg p-3">
-					<p className="text-xs text-gray-500 uppercase tracking-wide">
-						Total Size
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+					<p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+						{hasSelectedPaths ? 'Selected Size' : 'Total Size'}
 					</p>
-					<p className="text-lg font-semibold text-gray-900">
-						{formatBytes(preview.total_size)}
+					<p className="text-lg font-semibold text-gray-900 dark:text-white">
+						{formatBytes(preview.selected_size ?? preview.total_size)}
 					</p>
 				</div>
-				<div className="bg-gray-50 rounded-lg p-3">
-					<p className="text-xs text-gray-500 uppercase tracking-wide">
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+					<p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
 						Disk Space
 					</p>
-					<p className="text-lg font-semibold text-gray-900">
+					<p className="text-lg font-semibold text-gray-900 dark:text-white">
 						{formatBytes(preview.disk_space_needed)}
 					</p>
 				</div>
@@ -577,31 +1050,493 @@ function RestorePreviewDisplay({ preview }: RestorePreviewDisplayProps) {
 	);
 }
 
+interface CloudRestoreProgressDisplayProps {
+	progress: CloudRestoreProgress;
+	status: RestoreStatus;
+}
+
+function CloudRestoreProgressDisplay({
+	progress,
+	status,
+}: CloudRestoreProgressDisplayProps) {
+	const statusLabel =
+		status === 'uploading'
+			? 'Uploading to cloud storage...'
+			: status === 'verifying'
+				? 'Verifying upload integrity...'
+				: status === 'completed'
+					? 'Upload completed!'
+					: 'Processing...';
+
+	return (
+		<div className="space-y-4">
+			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+				<h4 className="font-medium text-blue-900 mb-2">
+					Cloud Restore Progress
+				</h4>
+				<p className="text-sm text-blue-700">{statusLabel}</p>
+			</div>
+
+			<div className="space-y-3">
+				<div>
+					<div className="flex justify-between text-sm text-gray-600 mb-1">
+						<span>Upload Progress</span>
+						<span>{progress.percent_complete.toFixed(1)}%</span>
+					</div>
+					<div className="w-full bg-gray-200 rounded-full h-2.5">
+						<div
+							className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
+							style={{ width: `${progress.percent_complete}%` }}
+						/>
+					</div>
+				</div>
+
+				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+					<div className="bg-gray-50 rounded-lg p-3">
+						<p className="text-xs text-gray-500 uppercase tracking-wide">
+							Files Uploaded
+						</p>
+						<p className="text-lg font-semibold text-gray-900">
+							{progress.uploaded_files} / {progress.total_files}
+						</p>
+					</div>
+					<div className="bg-gray-50 rounded-lg p-3">
+						<p className="text-xs text-gray-500 uppercase tracking-wide">
+							Data Uploaded
+						</p>
+						<p className="text-lg font-semibold text-gray-900">
+							{formatBytes(progress.uploaded_bytes)} /{' '}
+							{formatBytes(progress.total_bytes)}
+						</p>
+					</div>
+					<div className="bg-gray-50 rounded-lg p-3 col-span-2">
+						<p className="text-xs text-gray-500 uppercase tracking-wide">
+							Current File
+						</p>
+						<p className="text-sm font-mono text-gray-900 truncate">
+							{progress.current_file || '-'}
+						</p>
+					</div>
+				</div>
+
+				{status === 'completed' && (
+					<div
+						className={`flex items-center gap-2 p-3 rounded-lg ${
+							progress.verified_checksum
+								? 'bg-green-50 text-green-800'
+								: 'bg-yellow-50 text-yellow-800'
+						}`}
+					>
+						{progress.verified_checksum ? (
+							<>
+								<svg
+									aria-hidden="true"
+									className="w-5 h-5"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M5 13l4 4L19 7"
+									/>
+								</svg>
+								<span className="text-sm font-medium">
+									Upload verified successfully
+								</span>
+							</>
+						) : (
+							<>
+								<svg
+									aria-hidden="true"
+									className="w-5 h-5"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+									/>
+								</svg>
+								<span className="text-sm font-medium">
+									Upload completed (verification not requested)
+								</span>
+							</>
+						)}
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+interface CloudRestoreTargetFormProps {
+	target: CloudRestoreTarget;
+	onChange: (target: CloudRestoreTarget) => void;
+	verifyUpload: boolean;
+	onVerifyUploadChange: (verify: boolean) => void;
+}
+
+function CloudRestoreTargetForm({
+	target,
+	onChange,
+	verifyUpload,
+	onVerifyUploadChange,
+}: CloudRestoreTargetFormProps) {
+	const handleTypeChange = (type: CloudRestoreTargetType) => {
+		onChange({ ...target, type });
+	};
+
+	return (
+		<div className="space-y-4">
+			<div>
+				<p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+					Cloud Target Type
+				</p>
+				<div className="grid grid-cols-3 gap-3">
+					<button
+						type="button"
+						onClick={() => handleTypeChange('s3')}
+						className={`p-3 border rounded-lg text-center transition-colors ${
+							target.type === 's3'
+								? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+								: 'border-gray-200 hover:border-gray-300'
+						}`}
+					>
+						<svg
+							aria-hidden="true"
+							className="w-6 h-6 mx-auto mb-1"
+							fill="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+						</svg>
+						<span className="text-sm font-medium">Amazon S3</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => handleTypeChange('b2')}
+						className={`p-3 border rounded-lg text-center transition-colors ${
+							target.type === 'b2'
+								? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+								: 'border-gray-200 hover:border-gray-300'
+						}`}
+					>
+						<svg
+							aria-hidden="true"
+							className="w-6 h-6 mx-auto mb-1"
+							fill="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H6v-2h6v2zm4-4H6v-2h10v2zm0-4H6V7h10v2z" />
+						</svg>
+						<span className="text-sm font-medium">Backblaze B2</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => handleTypeChange('restic')}
+						className={`p-3 border rounded-lg text-center transition-colors ${
+							target.type === 'restic'
+								? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+								: 'border-gray-200 hover:border-gray-300'
+						}`}
+					>
+						<svg
+							aria-hidden="true"
+							className="w-6 h-6 mx-auto mb-1"
+							fill="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+						</svg>
+						<span className="text-sm font-medium">Restic Repo</span>
+					</button>
+				</div>
+			</div>
+
+			{(target.type === 's3' || target.type === 'b2') && (
+				<>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label
+								htmlFor="cloud-bucket"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Bucket
+							</label>
+							<input
+								type="text"
+								id="cloud-bucket"
+								value={target.bucket || ''}
+								onChange={(e) =>
+									onChange({ ...target, bucket: e.target.value })
+								}
+								placeholder="my-backup-bucket"
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+						</div>
+						<div>
+							<label
+								htmlFor="cloud-prefix"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Prefix (optional)
+							</label>
+							<input
+								type="text"
+								id="cloud-prefix"
+								value={target.prefix || ''}
+								onChange={(e) =>
+									onChange({ ...target, prefix: e.target.value })
+								}
+								placeholder="restores/2024/"
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+						</div>
+					</div>
+
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label
+								htmlFor="cloud-region"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Region
+							</label>
+							<input
+								type="text"
+								id="cloud-region"
+								value={target.region || ''}
+								onChange={(e) =>
+									onChange({ ...target, region: e.target.value })
+								}
+								placeholder={target.type === 'b2' ? 'us-west-002' : 'us-east-1'}
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+						</div>
+						{target.type === 's3' && (
+							<div>
+								<label
+									htmlFor="cloud-endpoint"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Endpoint (optional)
+								</label>
+								<input
+									type="text"
+									id="cloud-endpoint"
+									value={target.endpoint || ''}
+									onChange={(e) =>
+										onChange({ ...target, endpoint: e.target.value })
+									}
+									placeholder="s3.amazonaws.com"
+									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+						)}
+					</div>
+
+					{target.type === 's3' ? (
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<label
+									htmlFor="cloud-access-key"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Access Key ID
+								</label>
+								<input
+									type="text"
+									id="cloud-access-key"
+									value={target.access_key_id || ''}
+									onChange={(e) =>
+										onChange({ ...target, access_key_id: e.target.value })
+									}
+									placeholder="AKIAIOSFODNN7EXAMPLE"
+									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+							<div>
+								<label
+									htmlFor="cloud-secret-key"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Secret Access Key
+								</label>
+								<input
+									type="password"
+									id="cloud-secret-key"
+									value={target.secret_access_key || ''}
+									onChange={(e) =>
+										onChange({ ...target, secret_access_key: e.target.value })
+									}
+									placeholder="••••••••••••••••"
+									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+						</div>
+					) : (
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<label
+									htmlFor="cloud-account-id"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Account ID
+								</label>
+								<input
+									type="text"
+									id="cloud-account-id"
+									value={target.account_id || ''}
+									onChange={(e) =>
+										onChange({ ...target, account_id: e.target.value })
+									}
+									placeholder="0001234567890ab"
+									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+							<div>
+								<label
+									htmlFor="cloud-app-key"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Application Key
+								</label>
+								<input
+									type="password"
+									id="cloud-app-key"
+									value={target.application_key || ''}
+									onChange={(e) =>
+										onChange({ ...target, application_key: e.target.value })
+									}
+									placeholder="••••••••••••••••"
+									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+						</div>
+					)}
+				</>
+			)}
+
+			{target.type === 'restic' && (
+				<>
+					<div>
+						<label
+							htmlFor="cloud-repository"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							Target Repository
+						</label>
+						<input
+							type="text"
+							id="cloud-repository"
+							value={target.repository || ''}
+							onChange={(e) =>
+								onChange({ ...target, repository: e.target.value })
+							}
+							placeholder="s3:s3.amazonaws.com/bucket-name"
+							className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						/>
+						<p className="text-xs text-gray-500 mt-1">
+							Enter the restic repository URL (e.g., s3:..., b2:..., sftp:...)
+						</p>
+					</div>
+					<div>
+						<label
+							htmlFor="cloud-repo-password"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							Repository Password
+						</label>
+						<input
+							type="password"
+							id="cloud-repo-password"
+							value={target.repository_password || ''}
+							onChange={(e) =>
+								onChange({ ...target, repository_password: e.target.value })
+							}
+							placeholder="••••••••••••••••"
+							className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						/>
+					</div>
+				</>
+			)}
+
+			<div className="flex items-center">
+				<input
+					type="checkbox"
+					id="verify-upload"
+					checked={verifyUpload}
+					onChange={(e) => onVerifyUploadChange(e.target.checked)}
+					className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+				/>
+				<label
+					htmlFor="verify-upload"
+					className="ml-2 text-sm text-gray-700 dark:text-gray-300"
+				>
+					Verify upload integrity (recommended)
+				</label>
+			</div>
+		</div>
+	);
+}
+
+type RestoreTargetType = 'agent' | 'cloud';
+
 interface RestoreModalProps {
 	snapshot: Snapshot;
 	agentName?: string;
 	repoName?: string;
+	agents?: Agent[];
 	onClose: () => void;
-	onSubmit: (targetPath: string, includePaths: string[]) => void;
+	onSubmit: (targetPath: string, includePaths: string[], targetAgentId?: string, pathMappings?: Array<{source_path: string; target_path: string}>) => void;
+	onCloudSubmit: (
+		includePaths: string[],
+		cloudTarget: CloudRestoreTarget,
+		verifyUpload: boolean,
+	) => void;
 	isSubmitting: boolean;
+	cloudRestoreId?: string;
 }
 
 function RestoreModal({
 	snapshot,
 	agentName,
 	repoName,
+	agents,
 	onClose,
 	onSubmit,
+	onCloudSubmit,
 	isSubmitting,
+	cloudRestoreId,
 }: RestoreModalProps) {
 	const [step, setStep] = useState<RestoreStep>('configure');
+	const [restoreType, setRestoreType] = useState<RestoreTargetType>('agent');
 	const [targetPath, setTargetPath] = useState('');
 	const [useOriginalPath, setUseOriginalPath] = useState(true);
 	const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
 	const [preview, setPreview] = useState<RestorePreview | null>(null);
+	const [cloudTarget, setCloudTarget] = useState<CloudRestoreTarget>({
+		type: 's3',
+	});
+	const [verifyUpload, setVerifyUpload] = useState(true);
+	const [enableCrossAgent, setEnableCrossAgent] = useState(false);
+	const [targetAgentId, setTargetAgentId] = useState(snapshot.agent_id);
+	const [pathMappings, setPathMappings] = useState<Array<{source_path: string; target_path: string}>>([]);
 
 	const { data: filesData } = useSnapshotFiles(snapshot.id);
 	const previewMutation = useRestorePreview();
+	const { data: cloudProgress } = useCloudRestoreProgress(
+		cloudRestoreId ?? '',
+		!!cloudRestoreId && step === 'restoring',
+	);
+
+	const isCrossAgent = enableCrossAgent && targetAgentId !== snapshot.agent_id;
 
 	const togglePath = (path: string) => {
 		const newSelected = new Set(selectedPaths);
@@ -613,18 +1548,35 @@ function RestoreModal({
 		setSelectedPaths(newSelected);
 	};
 
+	const addPathMapping = () => {
+		setPathMappings([...pathMappings, { source_path: '', target_path: '' }]);
+	};
+
+	const updatePathMapping = (index: number, field: 'source_path' | 'target_path', value: string) => {
+		const newMappings = [...pathMappings];
+		newMappings[index][field] = value;
+		setPathMappings(newMappings);
+	};
+
+	const removePathMapping = (index: number) => {
+		setPathMappings(pathMappings.filter((_, i) => i !== index));
+	};
+
 	const handlePreview = async (e: React.FormEvent) => {
 		e.preventDefault();
 		const finalTargetPath = useOriginalPath ? '/' : targetPath;
 		const includePaths = Array.from(selectedPaths);
+		const validMappings = pathMappings.filter(m => m.source_path && m.target_path);
 
 		try {
 			const result = await previewMutation.mutateAsync({
 				snapshot_id: snapshot.id,
-				agent_id: snapshot.agent_id,
+				agent_id: isCrossAgent ? targetAgentId : snapshot.agent_id,
+				source_agent_id: isCrossAgent ? snapshot.agent_id : undefined,
 				repository_id: snapshot.repository_id,
 				target_path: finalTargetPath,
 				include_paths: includePaths.length > 0 ? includePaths : undefined,
+				path_mappings: validMappings.length > 0 ? validMappings : undefined,
 			});
 			setPreview(result);
 			setStep('preview');
@@ -634,10 +1586,42 @@ function RestoreModal({
 	};
 
 	const handleRestore = () => {
-		const finalTargetPath = useOriginalPath ? '/' : targetPath;
 		const includePaths = Array.from(selectedPaths);
+		const validMappings = pathMappings.filter(m => m.source_path && m.target_path);
 		setStep('restoring');
-		onSubmit(finalTargetPath, includePaths);
+
+		if (restoreType === 'cloud') {
+			onCloudSubmit(includePaths, cloudTarget, verifyUpload);
+		} else {
+			const finalTargetPath = useOriginalPath ? '/' : targetPath;
+			onSubmit(
+				finalTargetPath,
+				includePaths,
+				isCrossAgent ? targetAgentId : undefined,
+				validMappings.length > 0 ? validMappings : undefined
+			);
+		}
+	};
+
+	const isCloudTargetValid = () => {
+		if (cloudTarget.type === 's3') {
+			return (
+				!!cloudTarget.bucket &&
+				!!cloudTarget.access_key_id &&
+				!!cloudTarget.secret_access_key
+			);
+		}
+		if (cloudTarget.type === 'b2') {
+			return (
+				!!cloudTarget.bucket &&
+				!!cloudTarget.account_id &&
+				!!cloudTarget.application_key
+			);
+		}
+		if (cloudTarget.type === 'restic') {
+			return !!cloudTarget.repository && !!cloudTarget.repository_password;
+		}
+		return false;
 	};
 
 	const handleBack = () => {
@@ -735,74 +1719,262 @@ function RestoreModal({
 								</ul>
 							</div>
 
-							<div>
-								<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-									Restore Destination
-								</p>
-								<div className="mt-2 space-y-2">
+							{/* Cross-Agent Restore Option */}
+							{agents && agents.length > 1 && (
+								<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
 									<label className="flex items-center">
 										<input
-											type="radio"
-											checked={useOriginalPath}
-											onChange={() => setUseOriginalPath(true)}
-											className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+											type="checkbox"
+											checked={enableCrossAgent}
+											onChange={(e) => {
+												setEnableCrossAgent(e.target.checked);
+												if (!e.target.checked) {
+													setTargetAgentId(snapshot.agent_id);
+													setPathMappings([]);
+												}
+											}}
+											className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
 										/>
-										<span className="ml-2 text-sm text-gray-900">
-											Original location
+										<span className="ml-2 text-sm font-medium text-gray-900 dark:text-white">
+											Restore to a different agent
 										</span>
 									</label>
-									<label className="flex items-center">
-										<input
-											type="radio"
-											checked={!useOriginalPath}
-											onChange={() => setUseOriginalPath(false)}
-											className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-										/>
-										<span className="ml-2 text-sm text-gray-900">
-											Custom location
-										</span>
-									</label>
-									{!useOriginalPath && (
-										<input
-											type="text"
-											value={targetPath}
-											onChange={(e) => setTargetPath(e.target.value)}
-											placeholder="/path/to/restore"
-											className="mt-2 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
-										/>
+									{enableCrossAgent && (
+										<div className="mt-3 space-y-3">
+											<div>
+												<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+													Target Agent
+												</label>
+												<select
+													value={targetAgentId}
+													onChange={(e) => setTargetAgentId(e.target.value)}
+													className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+												>
+													{agents.map((agent) => (
+														<option key={agent.id} value={agent.id}>
+															{agent.hostname}
+															{agent.id === snapshot.agent_id ? ' (original)' : ''}
+														</option>
+													))}
+												</select>
+											</div>
+
+											{isCrossAgent && (
+												<div>
+													<div className="flex items-center justify-between mb-2">
+														<label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+															Path Mappings (optional)
+														</label>
+														<button
+															type="button"
+															onClick={addPathMapping}
+															className="text-sm text-indigo-600 hover:text-indigo-700"
+														>
+															+ Add mapping
+														</button>
+													</div>
+													<p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+														Map source paths to different target paths
+													</p>
+													{pathMappings.map((mapping, idx) => (
+														<div key={idx} className="flex items-center gap-2 mb-2">
+															<input
+																type="text"
+																value={mapping.source_path}
+																onChange={(e) => updatePathMapping(idx, 'source_path', e.target.value)}
+																placeholder="/source/path"
+																className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded text-sm font-mono"
+															/>
+															<svg aria-hidden="true" className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+															</svg>
+															<input
+																type="text"
+																value={mapping.target_path}
+																onChange={(e) => updatePathMapping(idx, 'target_path', e.target.value)}
+																placeholder="/target/path"
+																className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded text-sm font-mono"
+															/>
+															<button
+																type="button"
+																onClick={() => removePathMapping(idx)}
+																className="text-red-500 hover:text-red-700 p-1"
+															>
+																<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+																</svg>
+															</button>
+														</div>
+													))}
+												</div>
+											)}
+										</div>
 									)}
 								</div>
+							)}
+
+							<div>
+								<p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									Restore Type
+								</p>
+								<div className="grid grid-cols-2 gap-3">
+									<button
+										type="button"
+										onClick={() => setRestoreType('agent')}
+										className={`p-3 border rounded-lg text-left transition-colors ${
+											restoreType === 'agent'
+												? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+												: 'border-gray-200 hover:border-gray-300'
+										}`}
+									>
+										<div className="flex items-center gap-2">
+											<svg
+												aria-hidden="true"
+												className="w-5 h-5"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+												/>
+											</svg>
+											<span className="font-medium">Restore to Agent</span>
+										</div>
+										<p className="text-xs text-gray-500 mt-1">
+											Restore files back to the original agent
+										</p>
+									</button>
+									<button
+										type="button"
+										onClick={() => setRestoreType('cloud')}
+										className={`p-3 border rounded-lg text-left transition-colors ${
+											restoreType === 'cloud'
+												? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+												: 'border-gray-200 hover:border-gray-300'
+										}`}
+									>
+										<div className="flex items-center gap-2">
+											<svg
+												aria-hidden="true"
+												className="w-5 h-5"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+												/>
+											</svg>
+											<span className="font-medium">Restore to Cloud</span>
+										</div>
+										<p className="text-xs text-gray-500 mt-1">
+											Upload restored files to S3, B2, or another repo
+										</p>
+									</button>
+								</div>
 							</div>
+
+							{restoreType === 'cloud' ? (
+								<CloudRestoreTargetForm
+									target={cloudTarget}
+									onChange={setCloudTarget}
+									verifyUpload={verifyUpload}
+									onVerifyUploadChange={setVerifyUpload}
+								/>
+							) : (
+								<div>
+									<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+										Restore Destination
+									</p>
+									<div className="mt-2 space-y-2">
+										<label className="flex items-center">
+											<input
+												type="radio"
+												checked={useOriginalPath}
+												onChange={() => setUseOriginalPath(true)}
+												className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+											/>
+											<span className="ml-2 text-sm text-gray-900">
+												Original location
+											</span>
+										</label>
+										<label className="flex items-center">
+											<input
+												type="radio"
+												checked={!useOriginalPath}
+												onChange={() => setUseOriginalPath(false)}
+												className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+											/>
+											<span className="ml-2 text-sm text-gray-900">
+												Custom location
+											</span>
+										</label>
+										{!useOriginalPath && (
+											<input
+												type="text"
+												value={targetPath}
+												onChange={(e) => setTargetPath(e.target.value)}
+												placeholder="/path/to/restore"
+												className="mt-2 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+											/>
+										)}
+									</div>
+								</div>
+							)}
 
 							<div>
 								<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
 									Select files to restore (optional)
 								</p>
 								<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">
-									Leave empty to restore all files
+									Leave empty to restore all files, or select specific
+									files/folders
 								</p>
-								<div className="border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto bg-gray-50">
-									{filesData?.files && filesData.files.length > 0 ? (
-										filesData.files.map((file) => (
-											<FileTreeItem
-												key={file.path}
-												file={file}
-												selectedPaths={selectedPaths}
-												onToggle={togglePath}
-												depth={0}
-											/>
-										))
-									) : (
-										<p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+								{filesData?.files && filesData.files.length > 0 ? (
+									<FileBrowser
+										files={filesData.files}
+										selectedPaths={selectedPaths}
+										onToggle={togglePath}
+										onSelectAll={() => {
+											const allPaths = new Set(
+												filesData.files.map((f) => f.path),
+											);
+											setSelectedPaths(allPaths);
+										}}
+										onClearAll={() => setSelectedPaths(new Set())}
+										totalSize={filesData.files.reduce(
+											(acc, f) => acc + (f.type === 'file' ? f.size : 0),
+											0,
+										)}
+										selectedSize={filesData.files
+											.filter((f) => {
+												if (selectedPaths.has(f.path)) return true;
+												// Check if parent is selected
+												for (const path of selectedPaths) {
+													if (f.path.startsWith(`${path}/`)) return true;
+												}
+												return false;
+											})
+											.reduce(
+												(acc, f) => acc + (f.type === 'file' ? f.size : 0),
+												0,
+											)}
+										selectedCount={selectedPaths.size}
+									/>
+								) : (
+									<div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
+										<p className="text-sm text-gray-500 dark:text-gray-400 text-center">
 											{filesData?.message ||
 												'File listing not available. All files will be restored.'}
 										</p>
-									)}
-								</div>
-								{selectedPaths.size > 0 && (
-									<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-										{selectedPaths.size} item(s) selected
-									</p>
+									</div>
 								)}
 							</div>
 
@@ -815,64 +1987,139 @@ function RestoreModal({
 							<button
 								type="button"
 								onClick={onClose}
-								disabled={previewMutation.isPending}
+								disabled={previewMutation.isPending || isSubmitting}
 								className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
 							>
 								Cancel
 							</button>
-							<button
-								type="submit"
-								disabled={
-									previewMutation.isPending || (!useOriginalPath && !targetPath)
-								}
-								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-							>
-								{previewMutation.isPending ? (
-									<>
-										<svg
-											aria-hidden="true"
-											className="animate-spin h-4 w-4"
-											fill="none"
-											viewBox="0 0 24 24"
-										>
-											<circle
-												className="opacity-25"
-												cx="12"
-												cy="12"
-												r="10"
+							{restoreType === 'cloud' ? (
+								<button
+									type="button"
+									onClick={handleRestore}
+									disabled={isSubmitting || !isCloudTargetValid()}
+									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+								>
+									{isSubmitting ? (
+										<>
+											<svg
+												aria-hidden="true"
+												className="animate-spin h-4 w-4"
+												fill="none"
+												viewBox="0 0 24 24"
+											>
+												<circle
+													className="opacity-25"
+													cx="12"
+													cy="12"
+													r="10"
+													stroke="currentColor"
+													strokeWidth="4"
+												/>
+												<path
+													className="opacity-75"
+													fill="currentColor"
+													d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+												/>
+											</svg>
+											Starting Cloud Restore...
+										</>
+									) : (
+										<>
+											<svg
+												aria-hidden="true"
+												className="w-4 h-4"
+												fill="none"
 												stroke="currentColor"
-												strokeWidth="4"
-											/>
-											<path
-												className="opacity-75"
-												fill="currentColor"
-												d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-											/>
-										</svg>
-										Loading Preview...
-									</>
-								) : (
-									<>
-										Preview Restore
-										<svg
-											aria-hidden="true"
-											className="w-4 h-4"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M9 5l7 7-7 7"
-											/>
-										</svg>
-									</>
-								)}
-							</button>
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+												/>
+											</svg>
+											Start Cloud Restore
+										</>
+									)}
+								</button>
+							) : (
+								<button
+									type="submit"
+									disabled={
+										previewMutation.isPending ||
+										(!useOriginalPath && !targetPath)
+									}
+									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+								>
+									{previewMutation.isPending ? (
+										<>
+											<svg
+												aria-hidden="true"
+												className="animate-spin h-4 w-4"
+												fill="none"
+												viewBox="0 0 24 24"
+											>
+												<circle
+													className="opacity-25"
+													cx="12"
+													cy="12"
+													r="10"
+													stroke="currentColor"
+													strokeWidth="4"
+												/>
+												<path
+													className="opacity-75"
+													fill="currentColor"
+													d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+												/>
+											</svg>
+											Loading Preview...
+										</>
+									) : (
+										<>
+											Preview Restore
+											<svg
+												aria-hidden="true"
+												className="w-4 h-4"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M9 5l7 7-7 7"
+												/>
+											</svg>
+										</>
+									)}
+								</button>
+							)}
 						</div>
 					</form>
+				)}
+
+				{step === 'restoring' && restoreType === 'cloud' && cloudProgress && (
+					<div className="flex flex-col flex-1 overflow-hidden">
+						<div className="p-6 overflow-y-auto flex-1">
+							<CloudRestoreProgressDisplay
+								progress={cloudProgress}
+								status={isSubmitting ? 'uploading' : 'completed'}
+							/>
+						</div>
+						<div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+							<button
+								type="button"
+								onClick={onClose}
+								disabled={isSubmitting}
+								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+							>
+								{isSubmitting ? 'Uploading...' : 'Close'}
+							</button>
+						</div>
+					</div>
 				)}
 
 				{step === 'preview' && preview && (
@@ -986,7 +2233,12 @@ export function Restore() {
 	const [compareSelection, setCompareSelection] = useState<Set<string>>(
 		new Set(),
 	);
+	const [holdModalSnapshot, setHoldModalSnapshot] = useState<string | null>(
+		null,
+	);
+	const [holdReason, setHoldReason] = useState('');
 
+	const { data: user } = useMe();
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
 	const {
@@ -1005,25 +2257,103 @@ export function Restore() {
 		agent_id: agentFilter !== 'all' ? agentFilter : undefined,
 	});
 	const createRestore = useCreateRestore();
+	const createCloudRestore = useCreateCloudRestore();
+	const [cloudRestoreId, setCloudRestoreId] = useState<string | undefined>();
+
+	// Legal holds
+	const { data: legalHolds } = useLegalHolds();
+	const createLegalHold = useCreateLegalHold();
+	const deleteLegalHold = useDeleteLegalHold();
+
+	const isAdmin =
+		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
+
+	// Build a set of snapshot IDs that have legal holds
+	const holdsSet = new Set(legalHolds?.map((h) => h.snapshot_id) ?? []);
 
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
 
-	const handleRestore = (targetPath: string, includePaths: string[]) => {
+	const handleRestore = (
+		targetPath: string,
+		includePaths: string[],
+		targetAgentId?: string,
+		pathMappings?: Array<{source_path: string; target_path: string}>
+	) => {
 		if (!selectedSnapshot) return;
+
+		const isCrossAgent = targetAgentId && targetAgentId !== selectedSnapshot.agent_id;
 
 		createRestore.mutate(
 			{
 				snapshot_id: selectedSnapshot.id,
-				agent_id: selectedSnapshot.agent_id,
+				agent_id: isCrossAgent ? targetAgentId : selectedSnapshot.agent_id,
+				source_agent_id: isCrossAgent ? selectedSnapshot.agent_id : undefined,
 				repository_id: selectedSnapshot.repository_id,
 				target_path: targetPath,
 				include_paths: includePaths.length > 0 ? includePaths : undefined,
+				path_mappings: pathMappings && pathMappings.length > 0 ? pathMappings : undefined,
 			},
 			{
 				onSuccess: () => {
 					setSelectedSnapshot(null);
 					setActiveTab('restores');
+				},
+			},
+		);
+	};
+
+	const handleCloudRestore = (
+		includePaths: string[],
+		cloudTarget: CloudRestoreTarget,
+		verifyUpload: boolean,
+	) => {
+		if (!selectedSnapshot) return;
+
+		createCloudRestore.mutate(
+			{
+				snapshot_id: selectedSnapshot.id,
+				agent_id: selectedSnapshot.agent_id,
+				repository_id: selectedSnapshot.repository_id,
+				include_paths: includePaths.length > 0 ? includePaths : undefined,
+				cloud_target: cloudTarget,
+				verify_upload: verifyUpload,
+			},
+			{
+				onSuccess: (restore) => {
+					setCloudRestoreId(restore.id);
+					setActiveTab('restores');
+				},
+				onSettled: () => {
+					setSelectedSnapshot(null);
+					setCloudRestoreId(undefined);
+				},
+			},
+		);
+	};
+
+	const handleToggleHold = (snapshotId: string, hasHold: boolean) => {
+		if (hasHold) {
+			// Remove hold
+			deleteLegalHold.mutate(snapshotId);
+		} else {
+			// Show modal to add hold
+			setHoldModalSnapshot(snapshotId);
+			setHoldReason('');
+		}
+	};
+
+	const handleCreateHold = () => {
+		if (!holdModalSnapshot || !holdReason.trim()) return;
+		createLegalHold.mutate(
+			{
+				snapshotId: holdModalSnapshot,
+				data: { reason: holdReason.trim() },
+			},
+			{
+				onSuccess: () => {
+					setHoldModalSnapshot(null);
+					setHoldReason('');
 				},
 			},
 		);
@@ -1250,6 +2580,12 @@ export function Restore() {
 											isSelectedForCompare={compareSelection.has(snapshot.id)}
 											onToggleCompare={toggleCompareSelection}
 											compareSelectionCount={compareSelection.size}
+											hasHold={holdsSet.has(snapshot.id)}
+											isAdmin={isAdmin}
+											onToggleHold={handleToggleHold}
+											isHoldLoading={
+												createLegalHold.isPending || deleteLegalHold.isPending
+											}
 										/>
 									))}
 								</tbody>
@@ -1343,6 +2679,7 @@ export function Restore() {
 										key={restore.id}
 										restore={restore}
 										agentName={agentMap.get(restore.agent_id)}
+										sourceAgentName={restore.source_agent_id ? agentMap.get(restore.source_agent_id) : undefined}
 										onViewDetails={setSelectedRestore}
 									/>
 								))}
@@ -1380,9 +2717,15 @@ export function Restore() {
 					snapshot={selectedSnapshot}
 					agentName={agentMap.get(selectedSnapshot.agent_id)}
 					repoName={repoMap.get(selectedSnapshot.repository_id)}
-					onClose={() => setSelectedSnapshot(null)}
+					agents={agents}
+					onClose={() => {
+						setSelectedSnapshot(null);
+						setCloudRestoreId(undefined);
+					}}
 					onSubmit={handleRestore}
-					isSubmitting={createRestore.isPending}
+					onCloudSubmit={handleCloudRestore}
+					isSubmitting={createRestore.isPending || createCloudRestore.isPending}
+					cloudRestoreId={cloudRestoreId}
 				/>
 			)}
 
@@ -1390,11 +2733,88 @@ export function Restore() {
 				<RestoreDetailsModal
 					restore={selectedRestore}
 					agentName={agentMap.get(selectedRestore.agent_id)}
+					sourceAgentName={selectedRestore.source_agent_id ? agentMap.get(selectedRestore.source_agent_id) : undefined}
 					onClose={() => setSelectedRestore(null)}
 				/>
+			)}
+
+			{/* Legal Hold Modal */}
+			{holdModalSnapshot && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+						<div className="flex items-center gap-3 mb-4">
+							<div className="p-2 bg-amber-100 rounded-full">
+								<svg
+									aria-hidden="true"
+									className="w-6 h-6 text-amber-600"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+									/>
+								</svg>
+							</div>
+							<div>
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+									Place Legal Hold
+								</h3>
+								<p className="text-sm text-gray-500 dark:text-gray-400">
+									Snapshot {holdModalSnapshot.substring(0, 8)}...
+								</p>
+							</div>
+						</div>
+
+						<p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+							This will prevent the snapshot from being deleted by retention
+							policies or manual deletion. All hold actions are recorded in the
+							audit log.
+						</p>
+
+						<div className="mb-4">
+							<label
+								htmlFor="hold-reason"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Reason for hold
+							</label>
+							<textarea
+								id="hold-reason"
+								value={holdReason}
+								onChange={(e) => setHoldReason(e.target.value)}
+								placeholder="e.g., Legal discovery request #12345"
+								rows={3}
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+						</div>
+
+						<div className="flex justify-end gap-3">
+							<button
+								type="button"
+								onClick={() => {
+									setHoldModalSnapshot(null);
+									setHoldReason('');
+								}}
+								className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={handleCreateHold}
+								disabled={!holdReason.trim() || createLegalHold.isPending}
+								className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
+							>
+								{createLegalHold.isPending ? 'Placing Hold...' : 'Place Hold'}
+							</button>
+						</div>
+					</div>
+				</div>
 			)}
 		</div>
 	);
 }
-
-export default Restore;

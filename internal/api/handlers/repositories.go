@@ -54,6 +54,7 @@ func (h *RepositoriesHandler) RegisterRoutes(r *gin.RouterGroup) {
 		repos.PUT("/:id", h.Update)
 		repos.DELETE("/:id", h.Delete)
 		repos.POST("/:id/test", h.Test)
+		repos.POST("/:id/clone", h.Clone)
 		repos.POST("/test-connection", h.TestConnection)
 		repos.GET("/:id/key/recover", h.RecoverKey)
 	}
@@ -95,6 +96,19 @@ type KeyRecoveryResponse struct {
 	RepositoryID   uuid.UUID `json:"repository_id"`
 	RepositoryName string    `json:"repository_name"`
 	Password       string    `json:"password"`
+}
+
+// CloneRepositoryRequest is the request body for cloning a repository configuration.
+type CloneRepositoryRequest struct {
+	Name        string         `json:"name" binding:"required,min=1,max=255" example:"My S3 Backup Clone"`
+	Credentials map[string]any `json:"credentials" binding:"required"`
+	TargetOrgID *uuid.UUID     `json:"target_org_id,omitempty"`
+}
+
+// CloneRepositoryResponse is returned when cloning a repository.
+type CloneRepositoryResponse struct {
+	Repository RepositoryResponse `json:"repository"`
+	Password   string             `json:"password"`
 }
 
 // toResponse converts a Repository model to a RepositoryResponse.
@@ -725,4 +739,205 @@ func (h *RepositoriesHandler) RecoverKey(c *gin.Context) {
 		RepositoryName: repo.Name,
 		Password:       string(password),
 	})
+}
+
+// Clone creates a copy of a repository configuration with new credentials.
+//
+//	@Summary		Clone repository configuration
+//	@Description	Creates a new repository by copying settings from an existing one. Requires new credentials. Target org is admin-only.
+//	@Tags			Repositories
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string					true	"Repository ID to clone"
+//	@Param			request	body		CloneRepositoryRequest	true	"Clone configuration"
+//	@Success		201		{object}	CloneRepositoryResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		403		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/repositories/{id}/clone [post]
+func (h *RepositoriesHandler) Clone(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	idParam := c.Param("id")
+	sourceID, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid repository ID"})
+		return
+	}
+
+	var req CloneRepositoryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get the source repository
+	sourceRepo, err := h.store.GetRepositoryByID(c.Request.Context(), sourceID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("repo_id", sourceID.String()).Msg("failed to get source repository")
+		c.JSON(http.StatusNotFound, gin.H{"error": "source repository not found"})
+		return
+	}
+
+	// Verify the user has access to the source repository
+	if sourceRepo.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "source repository not found"})
+		return
+	}
+
+	// Determine target organization
+	targetOrgID := user.CurrentOrgID
+	if req.TargetOrgID != nil && *req.TargetOrgID != user.CurrentOrgID {
+		// Only admins can clone to a different org
+		dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+		if err != nil {
+			h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
+			return
+		}
+		if !dbUser.IsAdmin() {
+			c.JSON(http.StatusForbidden, gin.H{"error": "only administrators can clone to a different organization"})
+			return
+		}
+		targetOrgID = *req.TargetOrgID
+	}
+
+	// Decrypt the source repository config to get non-credential settings
+	configJSON, err := h.keyManager.Decrypt(sourceRepo.ConfigEncrypted)
+	if err != nil {
+		h.logger.Error().Err(err).Str("repo_id", sourceID.String()).Msg("failed to decrypt source repository config")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read source repository configuration"})
+		return
+	}
+
+	var sourceConfig map[string]any
+	if err := json.Unmarshal(configJSON, &sourceConfig); err != nil {
+		h.logger.Error().Err(err).Str("repo_id", sourceID.String()).Msg("failed to parse source repository config")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to parse source repository configuration"})
+		return
+	}
+
+	// Build the new config by merging source settings with new credentials
+	newConfig := make(map[string]any)
+	// Copy non-credential fields from source
+	for k, v := range sourceConfig {
+		// Skip credential-related fields - these will come from the request
+		if !isCredentialField(k) {
+			newConfig[k] = v
+		}
+	}
+	// Apply new credentials from request
+	for k, v := range req.Credentials {
+		newConfig[k] = v
+	}
+
+	// Encrypt the new configuration
+	configJSONBytes, err := json.Marshal(newConfig)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to marshal new config")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to prepare configuration"})
+		return
+	}
+
+	// Create and validate the backend with new credentials
+	backend, err := backends.ParseBackend(sourceRepo.Type, configJSONBytes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid backend configuration: " + err.Error()})
+		return
+	}
+
+	if err := backend.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid credentials: " + err.Error()})
+		return
+	}
+
+	// Test connection with new credentials before creating
+	if err := backend.TestConnection(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "credential validation failed: " + err.Error()})
+		return
+	}
+
+	encryptedConfig, err := h.keyManager.Encrypt(configJSONBytes)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to encrypt new config")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encrypt configuration"})
+		return
+	}
+
+	// Generate new repository password
+	password, err := h.keyManager.GeneratePassword()
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to generate repository password")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate repository password"})
+		return
+	}
+
+	encryptedPassword, err := h.keyManager.Encrypt([]byte(password))
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to encrypt new repository password")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to secure repository password"})
+		return
+	}
+
+	// Check source repo's escrow setting
+	sourceKey, err := h.store.GetRepositoryKeyByRepositoryID(c.Request.Context(), sourceID)
+	escrowEnabled := err == nil && sourceKey != nil && sourceKey.EscrowEnabled
+
+	// Create the new repository
+	newRepo := models.NewRepository(targetOrgID, req.Name, sourceRepo.Type, encryptedConfig)
+
+	if err := h.store.CreateRepository(c.Request.Context(), newRepo); err != nil {
+		h.logger.Error().Err(err).Msg("failed to create cloned repository")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create repository"})
+		return
+	}
+
+	// Create repository key with escrow if enabled on source
+	var escrowKey []byte
+	if escrowEnabled {
+		escrowKey = encryptedPassword
+	}
+	repoKey := models.NewRepositoryKey(newRepo.ID, encryptedPassword, escrowEnabled, escrowKey)
+	if err := h.store.CreateRepositoryKey(c.Request.Context(), repoKey); err != nil {
+		h.logger.Error().Err(err).Str("repo_id", newRepo.ID.String()).Msg("failed to create repository key")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to store repository key"})
+		return
+	}
+
+	h.logger.Info().
+		Str("source_repo_id", sourceID.String()).
+		Str("new_repo_id", newRepo.ID.String()).
+		Str("target_org_id", targetOrgID.String()).
+		Str("user_id", user.ID.String()).
+		Msg("repository configuration cloned successfully")
+
+	c.JSON(http.StatusCreated, CloneRepositoryResponse{
+		Repository: toRepositoryResponse(newRepo, escrowEnabled),
+		Password:   password,
+	})
+}
+
+// isCredentialField returns true if the field name is typically a credential.
+func isCredentialField(field string) bool {
+	credentialFields := map[string]bool{
+		"password":           true,
+		"secret_key":         true,
+		"access_key":         true,
+		"api_key":            true,
+		"token":              true,
+		"private_key":        true,
+		"secret":             true,
+		"aws_secret_key":     true,
+		"account_key":        true,
+		"connection_string":  true,
+		"sas_token":          true,
+		"application_secret": true,
+	}
+	return credentialFields[field]
 }
