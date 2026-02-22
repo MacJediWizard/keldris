@@ -661,6 +661,8 @@ function App() {
 							<Route path="organization/license" element={<License />} />
 							<Route path="organization/new" element={<NewOrganization />} />
 							<Route path="admin/logs" element={<AdminLogs />} />
+							<Route path="admin/docker-logs" element={<DockerLogs />} />
+							<Route path="admin/organizations" element={<OrgManagement />} />
 							<Route
 								path="admin/rate-limits"
 								element={<RateLimitDashboard />}
