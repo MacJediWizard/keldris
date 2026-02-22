@@ -7526,3 +7526,349 @@ func (db *DB) scanRansomwareAlerts(rows pgx.Rows) ([]*models.RansomwareAlert, er
 
 	return alerts, nil
 }
+
+// ============================================================================
+// Snapshot Immutability Methods
+// ============================================================================
+
+// CreateSnapshotImmutability creates a new immutability lock for a snapshot.
+func (db *DB) CreateSnapshotImmutability(ctx context.Context, lock *models.SnapshotImmutability) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO snapshot_immutability (
+			id, org_id, repository_id, snapshot_id, short_id,
+			locked_at, locked_until, locked_by, reason,
+			s3_object_lock_enabled, s3_object_lock_mode,
+			created_at, updated_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		ON CONFLICT (repository_id, snapshot_id) DO UPDATE SET
+			locked_until = EXCLUDED.locked_until,
+			reason = EXCLUDED.reason,
+			updated_at = NOW()
+	`, lock.ID, lock.OrgID, lock.RepositoryID, lock.SnapshotID, lock.ShortID,
+		lock.LockedAt, lock.LockedUntil, lock.LockedBy, lock.Reason,
+		lock.S3ObjectLockEnabled, lock.S3ObjectLockMode,
+		lock.CreatedAt, lock.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create snapshot immutability: %w", err)
+	}
+	return nil
+}
+
+// GetSnapshotImmutability returns the immutability lock for a snapshot.
+func (db *DB) GetSnapshotImmutability(ctx context.Context, repositoryID uuid.UUID, snapshotID string) (*models.SnapshotImmutability, error) {
+	var lock models.SnapshotImmutability
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, repository_id, snapshot_id, short_id,
+		       locked_at, locked_until, locked_by, reason,
+		       s3_object_lock_enabled, s3_object_lock_mode,
+		       created_at, updated_at
+		FROM snapshot_immutability
+		WHERE repository_id = $1 AND snapshot_id = $2
+	`, repositoryID, snapshotID).Scan(
+		&lock.ID, &lock.OrgID, &lock.RepositoryID, &lock.SnapshotID, &lock.ShortID,
+		&lock.LockedAt, &lock.LockedUntil, &lock.LockedBy, &lock.Reason,
+		&lock.S3ObjectLockEnabled, &lock.S3ObjectLockMode,
+		&lock.CreatedAt, &lock.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot immutability: %w", err)
+	}
+	return &lock, nil
+}
+
+// GetSnapshotImmutabilityByID returns an immutability lock by ID.
+func (db *DB) GetSnapshotImmutabilityByID(ctx context.Context, id uuid.UUID) (*models.SnapshotImmutability, error) {
+	var lock models.SnapshotImmutability
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, repository_id, snapshot_id, short_id,
+		       locked_at, locked_until, locked_by, reason,
+		       s3_object_lock_enabled, s3_object_lock_mode,
+		       created_at, updated_at
+		FROM snapshot_immutability
+		WHERE id = $1
+	`, id).Scan(
+		&lock.ID, &lock.OrgID, &lock.RepositoryID, &lock.SnapshotID, &lock.ShortID,
+		&lock.LockedAt, &lock.LockedUntil, &lock.LockedBy, &lock.Reason,
+		&lock.S3ObjectLockEnabled, &lock.S3ObjectLockMode,
+		&lock.CreatedAt, &lock.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot immutability by id: %w", err)
+	}
+	return &lock, nil
+}
+
+// UpdateSnapshotImmutability updates an existing immutability lock.
+func (db *DB) UpdateSnapshotImmutability(ctx context.Context, lock *models.SnapshotImmutability) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE snapshot_immutability
+		SET locked_until = $2, reason = $3, updated_at = NOW()
+		WHERE id = $1
+	`, lock.ID, lock.LockedUntil, lock.Reason)
+	if err != nil {
+		return fmt.Errorf("update snapshot immutability: %w", err)
+	}
+	return nil
+}
+
+// DeleteExpiredImmutabilityLocks removes expired locks and returns the count deleted.
+func (db *DB) DeleteExpiredImmutabilityLocks(ctx context.Context) (int, error) {
+	result, err := db.Pool.Exec(ctx, `
+		DELETE FROM snapshot_immutability
+		WHERE locked_until < NOW()
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("delete expired immutability locks: %w", err)
+	}
+	return int(result.RowsAffected()), nil
+}
+
+// GetActiveImmutabilityLocksByRepositoryID returns all active locks for a repository.
+func (db *DB) GetActiveImmutabilityLocksByRepositoryID(ctx context.Context, repositoryID uuid.UUID) ([]*models.SnapshotImmutability, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, repository_id, snapshot_id, short_id,
+		       locked_at, locked_until, locked_by, reason,
+		       s3_object_lock_enabled, s3_object_lock_mode,
+		       created_at, updated_at
+		FROM snapshot_immutability
+		WHERE repository_id = $1 AND locked_until > NOW()
+		ORDER BY locked_until DESC
+	`, repositoryID)
+	if err != nil {
+		return nil, fmt.Errorf("list active immutability locks: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotImmutabilityRows(rows)
+}
+
+// GetActiveImmutabilityLocksByOrgID returns all active locks for an organization.
+func (db *DB) GetActiveImmutabilityLocksByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.SnapshotImmutability, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, repository_id, snapshot_id, short_id,
+		       locked_at, locked_until, locked_by, reason,
+		       s3_object_lock_enabled, s3_object_lock_mode,
+		       created_at, updated_at
+		FROM snapshot_immutability
+		WHERE org_id = $1 AND locked_until > NOW()
+		ORDER BY locked_until DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list active immutability locks by org: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotImmutabilityRows(rows)
+}
+
+// IsSnapshotLocked checks if a snapshot has an active immutability lock.
+func (db *DB) IsSnapshotLocked(ctx context.Context, repositoryID uuid.UUID, snapshotID string) (bool, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM snapshot_immutability
+		WHERE repository_id = $1 AND snapshot_id = $2 AND locked_until > NOW()
+	`, repositoryID, snapshotID).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("check snapshot locked: %w", err)
+	}
+	return count > 0, nil
+}
+
+// GetImmutabilityLocksBySnapshotIDs returns locks for multiple snapshot IDs (for batch lookup).
+func (db *DB) GetImmutabilityLocksBySnapshotIDs(ctx context.Context, repositoryID uuid.UUID, snapshotIDs []string) (map[string]*models.SnapshotImmutability, error) {
+	if len(snapshotIDs) == 0 {
+		return make(map[string]*models.SnapshotImmutability), nil
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, repository_id, snapshot_id, short_id,
+		       locked_at, locked_until, locked_by, reason,
+		       s3_object_lock_enabled, s3_object_lock_mode,
+		       created_at, updated_at
+		FROM snapshot_immutability
+		WHERE repository_id = $1 AND snapshot_id = ANY($2) AND locked_until > NOW()
+	`, repositoryID, snapshotIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get immutability locks by snapshot ids: %w", err)
+	}
+	defer rows.Close()
+
+	locks, err := scanSnapshotImmutabilityRows(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*models.SnapshotImmutability)
+	for _, lock := range locks {
+		result[lock.SnapshotID] = lock
+	}
+	return result, nil
+}
+
+// GetRepositoryImmutabilitySettings returns the immutability settings for a repository.
+func (db *DB) GetRepositoryImmutabilitySettings(ctx context.Context, repositoryID uuid.UUID) (*models.RepositoryImmutabilitySettings, error) {
+	var settings models.RepositoryImmutabilitySettings
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(immutability_enabled, false), default_immutability_days
+		FROM repositories
+		WHERE id = $1
+	`, repositoryID).Scan(&settings.Enabled, &settings.DefaultDays)
+	if err != nil {
+		return nil, fmt.Errorf("get repository immutability settings: %w", err)
+	}
+	return &settings, nil
+}
+
+// UpdateRepositoryImmutabilitySettings updates the immutability settings for a repository.
+func (db *DB) UpdateRepositoryImmutabilitySettings(ctx context.Context, repositoryID uuid.UUID, settings *models.RepositoryImmutabilitySettings) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE repositories
+		SET immutability_enabled = $2, default_immutability_days = $3, updated_at = NOW()
+		WHERE id = $1
+	`, repositoryID, settings.Enabled, settings.DefaultDays)
+	if err != nil {
+		return fmt.Errorf("update repository immutability settings: %w", err)
+	}
+	return nil
+}
+
+// scanSnapshotImmutabilityRows scans rows into snapshot immutability locks.
+func scanSnapshotImmutabilityRows(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.SnapshotImmutability, error) {
+	var locks []*models.SnapshotImmutability
+	for rows.Next() {
+		var lock models.SnapshotImmutability
+		err := rows.Scan(
+			&lock.ID, &lock.OrgID, &lock.RepositoryID, &lock.SnapshotID, &lock.ShortID,
+			&lock.LockedAt, &lock.LockedUntil, &lock.LockedBy, &lock.Reason,
+			&lock.S3ObjectLockEnabled, &lock.S3ObjectLockMode,
+			&lock.CreatedAt, &lock.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan snapshot immutability: %w", err)
+		}
+		locks = append(locks, &lock)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate snapshot immutability: %w", err)
+	}
+
+	return locks, nil
+}
+
+// Legal Hold methods
+
+// CreateLegalHold creates a new legal hold on a snapshot.
+func (db *DB) CreateLegalHold(ctx context.Context, hold *models.LegalHold) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO legal_holds (id, org_id, snapshot_id, reason, placed_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, hold.ID, hold.OrgID, hold.SnapshotID, hold.Reason, hold.PlacedBy, hold.CreatedAt, hold.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create legal hold: %w", err)
+	}
+	return nil
+}
+
+// GetLegalHoldByID returns a legal hold by ID.
+func (db *DB) GetLegalHoldByID(ctx context.Context, id uuid.UUID) (*models.LegalHold, error) {
+	var h models.LegalHold
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, snapshot_id, reason, placed_by, created_at, updated_at
+		FROM legal_holds
+		WHERE id = $1
+	`, id).Scan(&h.ID, &h.OrgID, &h.SnapshotID, &h.Reason, &h.PlacedBy, &h.CreatedAt, &h.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get legal hold: %w", err)
+	}
+	return &h, nil
+}
+
+// GetLegalHoldBySnapshotID returns the legal hold for a specific snapshot within an organization.
+func (db *DB) GetLegalHoldBySnapshotID(ctx context.Context, snapshotID string, orgID uuid.UUID) (*models.LegalHold, error) {
+	var h models.LegalHold
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, snapshot_id, reason, placed_by, created_at, updated_at
+		FROM legal_holds
+		WHERE snapshot_id = $1 AND org_id = $2
+	`, snapshotID, orgID).Scan(&h.ID, &h.OrgID, &h.SnapshotID, &h.Reason, &h.PlacedBy, &h.CreatedAt, &h.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get legal hold by snapshot: %w", err)
+	}
+	return &h, nil
+}
+
+// GetLegalHoldsByOrgID returns all legal holds for an organization.
+func (db *DB) GetLegalHoldsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.LegalHold, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, snapshot_id, reason, placed_by, created_at, updated_at
+		FROM legal_holds
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list legal holds: %w", err)
+	}
+	defer rows.Close()
+
+	var holds []*models.LegalHold
+	for rows.Next() {
+		var h models.LegalHold
+		err := rows.Scan(&h.ID, &h.OrgID, &h.SnapshotID, &h.Reason, &h.PlacedBy, &h.CreatedAt, &h.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan legal hold: %w", err)
+		}
+		holds = append(holds, &h)
+	}
+
+	return holds, nil
+}
+
+// DeleteLegalHold removes a legal hold by ID.
+func (db *DB) DeleteLegalHold(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM legal_holds WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete legal hold: %w", err)
+	}
+	return nil
+}
+
+// IsSnapshotOnHold checks if a snapshot has a legal hold.
+func (db *DB) IsSnapshotOnHold(ctx context.Context, snapshotID string, orgID uuid.UUID) (bool, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM legal_holds WHERE snapshot_id = $1 AND org_id = $2
+	`, snapshotID, orgID).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("check legal hold: %w", err)
+	}
+	return count > 0, nil
+}
+
+// GetSnapshotHoldStatus returns a map of snapshot IDs to their hold status for the given snapshots.
+func (db *DB) GetSnapshotHoldStatus(ctx context.Context, snapshotIDs []string, orgID uuid.UUID) (map[string]bool, error) {
+	result := make(map[string]bool)
+	if len(snapshotIDs) == 0 {
+		return result, nil
+	}
+
+	rows, err := db.Pool.Query(ctx, `
+		SELECT snapshot_id FROM legal_holds
+		WHERE snapshot_id = ANY($1) AND org_id = $2
+	`, snapshotIDs, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot hold status: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var snapshotID string
+		if err := rows.Scan(&snapshotID); err != nil {
+			return nil, fmt.Errorf("scan snapshot hold: %w", err)
+		}
+		result[snapshotID] = true
+	}
+
+	return result, nil
+}
