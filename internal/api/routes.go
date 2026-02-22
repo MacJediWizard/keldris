@@ -179,6 +179,8 @@ func NewRouter(
 	if cfg.DatabaseBackupService != nil {
 		healthHandler.SetDatabaseBackupService(cfg.DatabaseBackupService)
 	}
+	// Health check endpoints (no auth required)
+	healthHandler := handlers.NewHealthHandler(database, oidc, logger)
 	healthHandler.RegisterPublicRoutes(r.Engine)
 
 	// Prometheus metrics endpoint (no auth required)
@@ -694,6 +696,15 @@ func NewRouter(
 	drTestsHandler.RegisterRoutes(apiV1)
 	notificationsHandler := handlers.NewNotificationsHandler(database, logger)
 	notificationsHandler.RegisterRoutes(apiV1)
+
+	// Agent API routes (API key auth required)
+	// These endpoints are for agents to communicate with the server
+	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
+	agentAPI := r.Engine.Group("/api/v1/agent")
+	agentAPI.Use(middleware.APIKeyMiddleware(apiKeyValidator, logger))
+
+	agentAPIHandler := handlers.NewAgentAPIHandler(database, logger)
+	agentAPIHandler.RegisterRoutes(agentAPI)
 
 	r.logger.Info().Msg("API router initialized")
 	return r, nil

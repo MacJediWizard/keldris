@@ -34,6 +34,9 @@ type HealthResponse struct {
 	Status HealthStatus                  `json:"status"`
 	Checks map[string]*HealthCheckResult `json:"checks,omitempty"`
 	Error  string                        `json:"error,omitempty"`
+	Status HealthStatus              `json:"status"`
+	Checks map[string]*HealthCheckResult `json:"checks,omitempty"`
+	Error  string                    `json:"error,omitempty"`
 }
 
 // DatabaseHealthChecker defines the interface for database health checking.
@@ -75,6 +78,11 @@ type HealthHandler struct {
 	backupService *maintenance.DatabaseBackupService
 	shutdown      ShutdownStatusProvider
 	logger        zerolog.Logger
+// HealthHandler handles health-related HTTP endpoints.
+type HealthHandler struct {
+	db     DatabaseHealthChecker
+	oidc   OIDCHealthChecker
+	logger zerolog.Logger
 }
 
 // NewHealthHandler creates a new HealthHandler.
