@@ -91,6 +91,10 @@ func (m *PrometheusMetrics) SetStorageBytes(storageType string, bytes float64) {
 package metrics
 
 import (
+// Package metrics provides Prometheus metrics collection for Keldris.
+package metrics
+
+import (
 	"context"
 	"fmt"
 	"strings"
