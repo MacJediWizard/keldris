@@ -100,6 +100,9 @@ type Backup struct {
 	ValidationError           string              `json:"validation_error,omitempty"`  // Error message if validation failed
 	PiholeVersion             string              `json:"pihole_version,omitempty"`    // Pi-hole version at time of backup
 	CreatedAt                 time.Time           `json:"created_at"`
+	PostScriptOutput string       `json:"post_script_output,omitempty"`
+	PostScriptError  string       `json:"post_script_error,omitempty"`
+	CreatedAt        time.Time    `json:"created_at"`
 }
 
 // NewBackup creates a new Backup record for the given schedule, agent, and repository.

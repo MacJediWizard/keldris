@@ -214,6 +214,7 @@ func (m *mockStore) GetBackupValidationByBackupID(ctx context.Context, backupID 
 func (m *mockStore) GetLatestBackupValidationByRepoID(ctx context.Context, repoID uuid.UUID) (*models.BackupValidation, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	// Return empty slice for tests - no scripts configured
 	return nil, nil
 }
 

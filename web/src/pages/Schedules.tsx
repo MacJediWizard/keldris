@@ -7,6 +7,7 @@ import {
 } from '../components/features/DockerStackSelector';
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
 import { ExportImportModal } from '../components/features/ExportImportModal';
+import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
 import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
@@ -1139,6 +1140,7 @@ interface ScheduleRowProps {
 	onToggle: (id: string, enabled: boolean) => void;
 	onDelete: (id: string) => void;
 	onRun: (id: string) => void;
+	onEditScripts: (id: string) => void;
 	isUpdating: boolean;
 	isDeleting: boolean;
 	isRunning: boolean;
@@ -1205,6 +1207,7 @@ function CloneScheduleModal({
 	onToggle,
 	onDelete,
 	onRun,
+	onEditScripts,
 	isUpdating,
 	isDeleting,
 	isRunning,
@@ -1899,6 +1902,14 @@ function ScheduleRow({
 					<span className="text-gray-300 dark:text-gray-600">|</span>
 					<button
 						type="button"
+						onClick={() => onEditScripts(schedule.id)}
+						className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+					>
+						Scripts
+					</button>
+					<span className="text-gray-300">|</span>
+					<button
+						type="button"
 						onClick={() => onDelete(schedule.id)}
 						disabled={isDeleting}
 						className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
@@ -2440,6 +2451,7 @@ export function Schedules() {
 											setShowExportModal(true);
 										}}
 										onClone={handleClone}
+										onEditScripts={setEditingScriptsScheduleId}
 										isUpdating={updateSchedule.isPending}
 										isDeleting={deleteSchedule.isPending}
 										isRunning={runSchedule.isPending}

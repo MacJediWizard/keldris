@@ -2009,6 +2009,79 @@ func (pq *PriorityQueue) PreemptBackup(ctx context.Context, runningItem *models.
 		Int("preempting_priority", int(newItem.Priority)).
 		Msg("backup preempted by higher priority backup")
 
+// runScript executes a backup script with the given timeout.
+func (s *Scheduler) runScript(ctx context.Context, script *models.BackupScript, logger zerolog.Logger) (string, error) {
+	logger.Info().
+		Str("script_type", string(script.Type)).
+		Int("timeout_seconds", script.TimeoutSeconds).
+		Msg("running backup script")
+
+	// Create context with timeout
+	scriptCtx, cancel := context.WithTimeout(ctx, time.Duration(script.TimeoutSeconds)*time.Second)
+	defer cancel()
+
+	// Execute the script using sh -c
+	cmd := exec.CommandContext(scriptCtx, "sh", "-c", script.Script)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+
+	// Combine stdout and stderr for output
+	output := stdout.String()
+	if stderr.Len() > 0 {
+		if output != "" {
+			output += "\n"
+		}
+		output += stderr.String()
+	}
+
+	// Truncate output if too long (max 64KB)
+	const maxOutputLen = 64 * 1024
+	if len(output) > maxOutputLen {
+		output = output[:maxOutputLen] + "\n... (output truncated)"
+	}
+
+	if err != nil {
+		if scriptCtx.Err() == context.DeadlineExceeded {
+			return output, fmt.Errorf("script timed out after %d seconds", script.TimeoutSeconds)
+		}
+		return output, fmt.Errorf("script failed: %w", err)
+	}
+
+	logger.Info().
+		Str("script_type", string(script.Type)).
+		Msg("backup script completed successfully")
+
+	return output, nil
+}
+
+// getScriptsByType returns scripts of the specified type from the scripts list.
+func getScriptsByType(scripts []*models.BackupScript, scriptType models.BackupScriptType) *models.BackupScript {
+	for _, script := range scripts {
+		if script.Type == scriptType {
+			return script
+		}
+	}
+	return nil
+}
+
+// runPreBackupScript runs the pre-backup script if configured.
+func (s *Scheduler) runPreBackupScript(ctx context.Context, scripts []*models.BackupScript, backup *models.Backup, logger zerolog.Logger) error {
+	script := getScriptsByType(scripts, models.BackupScriptTypePreBackup)
+	if script == nil {
+		return nil
+	}
+
+	output, err := s.runScript(ctx, script, logger)
+	backup.RecordPreScript(output, err)
+
+	if err != nil && script.FailOnError {
+		return fmt.Errorf("pre-backup script failed: %w", err)
+	}
+
 	return nil
 }
 
@@ -2055,4 +2128,49 @@ func GetPriorityLabel(priority models.SchedulePriority) string {
 	default:
 		return "medium"
 	}
+// runPostBackupScripts runs the appropriate post-backup scripts based on backup success.
+func (s *Scheduler) runPostBackupScripts(ctx context.Context, scripts []*models.BackupScript, backup *models.Backup, success bool, logger zerolog.Logger) {
+	var scriptsToRun []*models.BackupScript
+
+	// Always run post_always scripts
+	if script := getScriptsByType(scripts, models.BackupScriptTypePostAlways); script != nil {
+		scriptsToRun = append(scriptsToRun, script)
+	}
+
+	// Run success or failure script based on outcome
+	if success {
+		if script := getScriptsByType(scripts, models.BackupScriptTypePostSuccess); script != nil {
+			scriptsToRun = append(scriptsToRun, script)
+		}
+	} else {
+		if script := getScriptsByType(scripts, models.BackupScriptTypePostFailure); script != nil {
+			scriptsToRun = append(scriptsToRun, script)
+		}
+	}
+
+	if len(scriptsToRun) == 0 {
+		return
+	}
+
+	var combinedOutput string
+	var combinedError error
+
+	for _, script := range scriptsToRun {
+		output, err := s.runScript(ctx, script, logger)
+		if combinedOutput != "" && output != "" {
+			combinedOutput += "\n--- " + string(script.Type) + " ---\n"
+		}
+		combinedOutput += output
+
+		if err != nil {
+			if combinedError == nil {
+				combinedError = err
+			} else {
+				combinedError = fmt.Errorf("%v; %w", combinedError, err)
+			}
+			logger.Warn().Err(err).Str("script_type", string(script.Type)).Msg("post-backup script failed")
+		}
+	}
+
+	backup.RecordPostScript(combinedOutput, combinedError)
 }

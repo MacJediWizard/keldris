@@ -999,6 +999,44 @@ export interface ContainerHookExecutionsResponse {
 	executions: ContainerHookExecution[];
 }
 
+// Backup Script types
+export type BackupScriptType =
+	| 'pre_backup'
+	| 'post_success'
+	| 'post_failure'
+	| 'post_always';
+
+export interface BackupScript {
+	id: string;
+	schedule_id: string;
+	type: BackupScriptType;
+	script: string;
+	timeout_seconds: number;
+	fail_on_error: boolean;
+	enabled: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateBackupScriptRequest {
+	type: BackupScriptType;
+	script: string;
+	timeout_seconds?: number;
+	fail_on_error?: boolean;
+	enabled?: boolean;
+}
+
+export interface UpdateBackupScriptRequest {
+	script?: string;
+	timeout_seconds?: number;
+	fail_on_error?: boolean;
+	enabled?: boolean;
+}
+
+export interface BackupScriptsResponse {
+	scripts: BackupScript[];
+}
+
 // Auth types
 export type SupportedLanguage = 'en' | 'es' | 'pt';
 
