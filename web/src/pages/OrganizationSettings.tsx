@@ -117,12 +117,12 @@ export function OrganizationSettings() {
 					<div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
 					<div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
 				</div>
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 					<div className="space-y-4">
-						<div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-						<div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
-						<div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-						<div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
+						<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+						<div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+						<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+						<div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
 					</div>
 				</div>
 			</div>
@@ -150,7 +150,7 @@ export function OrganizationSettings() {
 				<h1 className="text-2xl font-bold text-gray-900">
 					Organization Settings
 				</h1>
-				<p className="text-gray-600 mt-1">
+				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Manage settings for {currentOrg.organization.name}
 				</p>
 			</div>
@@ -222,7 +222,7 @@ export function OrganizationSettings() {
 									pattern="[a-z0-9-]+"
 									required
 								/>
-								<p className="mt-1 text-xs text-gray-500">
+								<p className="mt-1 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 									Only lowercase letters, numbers, and hyphens
 								</p>
 							</div>
@@ -525,7 +525,7 @@ export function OrganizationSettings() {
 								<h3 className="font-medium text-gray-900">
 									Delete this organization
 								</h3>
-								<p className="text-sm text-gray-500 mt-1">
+								<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 									Once you delete an organization, there is no going back. This
 									will permanently delete all agents, repositories, schedules,
 									and backups associated with this organization.
@@ -573,7 +573,7 @@ export function OrganizationSettings() {
 								Delete Organization
 							</h3>
 						</div>
-						<p className="text-sm text-gray-600 mb-4">
+						<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
 							This action cannot be undone. This will permanently delete the{' '}
 							<strong>{currentOrg.organization.name}</strong> organization and
 							all of its data.

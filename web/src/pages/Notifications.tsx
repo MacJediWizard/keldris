@@ -36,13 +36,13 @@ function LoadingRow() {
 				<div className="h-4 w-32 bg-gray-200 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 rounded-full" />
+				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 rounded inline-block" />
+				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
 			</td>
 		</tr>
 	);
@@ -434,7 +434,9 @@ function LogRow({ log }: { log: NotificationLog }) {
 			<td className="px-6 py-4 text-sm text-gray-900">
 				{log.subject || log.event_type}
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">{log.recipient}</td>
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+				{log.recipient}
+			</td>
 			<td className="px-6 py-4">
 				<span
 					className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
@@ -449,7 +451,7 @@ function LogRow({ log }: { log: NotificationLog }) {
 			<td className="px-6 py-4 text-sm text-gray-500">
 				{formatDate(log.sent_at || log.created_at)}
 			</td>
-			<td className="px-6 py-4 text-sm text-red-500">
+			<td className="px-6 py-4 text-sm text-red-500 dark:text-red-400">
 				{log.error_message || '-'}
 			</td>
 		</tr>
@@ -552,7 +554,7 @@ export function Notifications() {
 						<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
 				<div className="bg-white rounded-lg border border-gray-200">
 					{channelsError ? (
-						<div className="p-12 text-center text-red-500">
+						<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
 							<p className="font-medium">
 								Failed to load notification channels
 							</p>
@@ -574,16 +576,16 @@ export function Notifications() {
 									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 							<thead className="bg-gray-50 border-b border-gray-200">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Channel
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Enabled
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Events
 									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
@@ -611,16 +613,16 @@ export function Notifications() {
 									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 							<thead className="bg-gray-50 border-b border-gray-200">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Channel
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Enabled
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Events
 									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
@@ -679,7 +681,7 @@ export function Notifications() {
 						<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
 				<div className="bg-white rounded-lg border border-gray-200">
 					{logsError ? (
-						<div className="p-12 text-center text-red-500">
+						<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
 							<p className="font-medium">Failed to load notification history</p>
 							<p className="text-sm mt-1">Please try refreshing the page</p>
 						</div>
@@ -702,19 +704,19 @@ export function Notifications() {
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 							<thead className="bg-gray-50 border-b border-gray-200">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Subject
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Recipient
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Status
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Sent
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Error
 									</th>
 								</tr>
@@ -745,19 +747,19 @@ export function Notifications() {
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 							<thead className="bg-gray-50 border-b border-gray-200">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Subject
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Recipient
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Status
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Sent
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Error
 									</th>
 								</tr>

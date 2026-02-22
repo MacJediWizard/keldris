@@ -32,16 +32,16 @@ function LoadingRow() {
 				<div className="h-4 w-32 bg-gray-200 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-40 bg-gray-200 rounded" />
+				<div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-6 w-20 bg-gray-200 rounded-full" />
+				<div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 rounded inline-block" />
+				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
 			</td>
 		</tr>
 	);
@@ -167,7 +167,7 @@ function getRoleBadgeColor(role: OrgRole) {
 			return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
 			return 'bg-gray-100 text-gray-700';
 		default:
-			return 'bg-gray-100 text-gray-700';
+			return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
 	}
 }
 
@@ -227,11 +227,13 @@ function MemberRow({
 			</td>
 		<tr className="hover:bg-gray-50">
 			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900">
+				<div className="font-medium text-gray-900 dark:text-white">
 					{member.name || 'No name'}
 				</div>
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">{member.email}</td>
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+				{member.email}
+			</td>
 			<td className="px-6 py-4">
 				{isEditing ? (
 					<div className="flex items-center gap-2">
@@ -347,7 +349,7 @@ function InvitationRow({ invitation, orgId }: InvitationRowProps) {
 					<span className="text-gray-500 dark:text-gray-400">
 					<span className="text-red-600">Expired</span>
 				) : (
-					<span className="text-gray-500">
+					<span className="text-gray-500 dark:text-gray-400">
 						Expires {formatDate(invitation.expires_at)}
 					</span>
 				)}
@@ -460,19 +462,19 @@ export function OrganizationMembers() {
 								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Name
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Email
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Role
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Joined
 								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
@@ -502,19 +504,19 @@ export function OrganizationMembers() {
 								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Name
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Email
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Role
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Joined
 								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
@@ -577,19 +579,19 @@ export function OrganizationMembers() {
 									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 							<thead className="bg-gray-50 border-b border-gray-200">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Email
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Role
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Invited By
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Status
 									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>

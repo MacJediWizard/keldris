@@ -210,7 +210,7 @@ export function AgentDownloads({
 										<div className="font-medium text-gray-900">
 											{platform.os} ({platform.arch})
 										</div>
-										<div className="text-sm text-gray-500">
+										<div className="text-sm text-gray-500 dark:text-gray-400">
 											{platform.filename}
 										</div>
 									</div>
@@ -245,7 +245,7 @@ export function AgentDownloads({
 				<div className="pt-2 border-t border-gray-200">
 					<a
 						href="/docs/agent-installation"
-						className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+						className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
 					>
 						View full installation guide
 					</a>

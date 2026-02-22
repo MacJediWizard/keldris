@@ -76,7 +76,7 @@ export function RepositoryStatsDetail() {
 					<h1 className="text-2xl font-bold text-gray-900">
 						{repositoryName ?? 'Repository Statistics'}
 					</h1>
-					<p className="text-gray-600 mt-1">
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Detailed storage efficiency metrics
 					</p>
 				</div>
@@ -107,7 +107,7 @@ export function RepositoryStatsDetail() {
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm text-gray-500 mt-1">Compression factor</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm font-medium text-gray-600">Space Saved</p>
 							<p
 								className={`text-3xl font-bold mt-1 ${getSpaceSavedColor(stats.space_saved_pct)}`}
@@ -123,7 +123,7 @@ export function RepositoryStatsDetail() {
 								{formatPercent(stats.space_saved_pct)} of original
 							</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm font-medium text-gray-600">
 								Actual Storage
 							</p>
@@ -137,7 +137,7 @@ export function RepositoryStatsDetail() {
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm text-gray-500 mt-1">On disk</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm font-medium text-gray-600">Original Size</p>
 							<p className="text-3xl font-bold text-gray-900 mt-1">
 								{formatBytes(stats.restore_size)}
@@ -162,7 +162,7 @@ export function RepositoryStatsDetail() {
 						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 				<div className="bg-white rounded-lg border border-gray-200 p-6">
 					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-lg font-semibold text-gray-900">
+						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Storage Growth
 						</h2>
 						<select
@@ -241,7 +241,7 @@ export function RepositoryStatsDetail() {
 						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 				<div className="bg-white rounded-lg border border-gray-200 p-6">
 					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-lg font-semibold text-gray-900">
+						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Dedup Efficiency
 						</h2>
 					</div>
@@ -279,7 +279,7 @@ export function RepositoryStatsDetail() {
 									<span className="text-xs text-gray-500">
 										{formatBytes(stats.raw_data_size)} stored
 									</span>
-									<span className="text-xs text-gray-500">
+									<span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 										{formatBytes(stats.restore_size)} original
 									</span>
 								</div>
@@ -366,19 +366,19 @@ export function RepositoryStatsDetail() {
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 										Collected At
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Dedup Ratio
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Space Saved
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actual Size
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Original Size
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Snapshots
 									</th>
 								</tr>
@@ -391,7 +391,10 @@ export function RepositoryStatsDetail() {
 									>
 							<tbody className="bg-white divide-y divide-gray-200">
 								{history.map((record) => (
-									<tr key={record.id} className="hover:bg-gray-50">
+									<tr
+										key={record.id}
+										className="hover:bg-gray-50 dark:hover:bg-gray-700"
+									>
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 											{formatDateTime(record.collected_at)}
 										</td>

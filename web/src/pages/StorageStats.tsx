@@ -100,7 +100,7 @@ export function StorageStats() {
 								Across {summary.repository_count} repositories
 							</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm font-medium text-gray-600">
 								Total Space Saved
 							</p>
@@ -137,7 +137,7 @@ export function StorageStats() {
 								From {formatBytes(summary.total_restore_size)} original
 							</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<p className="text-sm font-medium text-gray-600">
 								Total Snapshots
 							</p>
@@ -163,7 +163,7 @@ export function StorageStats() {
 					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 			<div className="bg-white rounded-lg border border-gray-200 p-6">
 				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-lg font-semibold text-gray-900">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Storage Growth
 					</h2>
 					<select
@@ -230,8 +230,10 @@ export function StorageStats() {
 								<span className="text-sm text-gray-600">Actual storage</span>
 							</div>
 							<div className="flex items-center gap-2">
-								<div className="w-3 h-3 bg-gray-200 rounded" />
-								<span className="text-sm text-gray-600">Original data</span>
+								<div className="w-3 h-3 bg-gray-200 dark:bg-gray-700 rounded" />
+								<span className="text-sm text-gray-600 dark:text-gray-400">
+									Original data
+								</span>
 							</div>
 						</div>
 					</div>
@@ -302,22 +304,22 @@ export function StorageStats() {
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 										Repository
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Dedup Ratio
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Space Saved
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actual Size
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Original Size
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Snapshots
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Last Updated
 									</th>
 								</tr>
@@ -334,11 +336,14 @@ export function StorageStats() {
 												className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
 							<tbody className="bg-white divide-y divide-gray-200">
 								{repoStats.map((stats) => (
-									<tr key={stats.id} className="hover:bg-gray-50">
+									<tr
+										key={stats.id}
+										className="hover:bg-gray-50 dark:hover:bg-gray-700"
+									>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Link
 												to={`/stats/${stats.repository_id}`}
-												className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+												className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
 											>
 												{stats.repository_name}
 											</Link>

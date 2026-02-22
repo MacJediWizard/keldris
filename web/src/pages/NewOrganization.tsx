@@ -74,7 +74,7 @@ export function NewOrganization() {
 					<h1 className="text-xl font-semibold text-gray-900">
 						Create New Organization
 					</h1>
-					<p className="text-sm text-gray-500 mt-1">
+					<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 						Organizations help you manage backup resources separately
 					</p>
 				</div>
@@ -123,7 +123,7 @@ export function NewOrganization() {
 							pattern="[a-z0-9-]+"
 							required
 						/>
-						<p className="mt-1 text-xs text-gray-500">
+						<p className="mt-1 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 							Only lowercase letters, numbers, and hyphens. This will be used in
 							URLs.
 						</p>

@@ -63,8 +63,8 @@ function LoadingCard() {
 				<div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded-full" />
 		<div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
 			<div className="flex items-start justify-between mb-4">
-				<div className="h-5 w-32 bg-gray-200 rounded" />
-				<div className="h-6 w-12 bg-gray-200 rounded-full" />
+				<div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+				<div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded-full" />
 			</div>
 			<div className="h-4 w-24 bg-gray-100 rounded" />
 		</div>
@@ -119,7 +119,11 @@ function FormField({
 				className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 				required={required}
 			/>
-			{helpText && <p className="mt-1 text-xs text-gray-500">{helpText}</p>}
+			{helpText && (
+				<p className="mt-1 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+					{helpText}
+				</p>
+			)}
 		</div>
 	);
 }
@@ -265,23 +269,23 @@ function PasswordModal({
 						</svg>
 					</div>
 					<div>
-						<h3 className="text-lg font-semibold text-gray-900">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Repository Password
 						</h3>
-						<p className="text-sm text-gray-500">
+						<p className="text-sm text-gray-500 dark:text-gray-400">
 							Save this password - it will only be shown once
 						</p>
 					</div>
 				</div>
 
 				<div className="mb-4">
-					<p className="text-sm text-gray-600 mb-2">
+					<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
 						Repository <span className="font-medium">{repositoryName}</span> has
 						been created. Use this password to access your Restic repository:
 					</p>
 				</div>
 
-				<div className="bg-gray-50 rounded-lg p-4 mb-4">
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
 					<div className="flex items-center justify-between gap-4">
 						<code className="text-sm font-mono break-all flex-1">
 							{password}
@@ -1113,7 +1117,7 @@ function AddRepositoryModal({
 								>
 									Enable key escrow
 								</label>
-								<p className="text-xs text-gray-500">
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 									Store an encrypted copy of the password server-side for
 									recovery by administrators
 								</p>
@@ -1317,6 +1321,11 @@ function RepositoryCard({
 							Created {formatDate(repository.created_at)}
 						</p>
 					</div>
+				<div>
+					<h3 className="font-semibold text-gray-900">{repository.name}</h3>
+					<p className="text-sm text-gray-500 dark:text-gray-400">
+						Created {formatDate(repository.created_at)}
+					</p>
 				</div>
 				<div className="flex items-center gap-2">
 					{repository.escrow_enabled && (
@@ -1340,7 +1349,9 @@ function RepositoryCard({
 					</span>
 			<div className="mb-4 p-3 bg-gray-50 rounded-lg">
 				<div className="flex items-center justify-between mb-2">
-					<span className="text-sm font-medium text-gray-700">Integrity</span>
+					<span className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
+						Integrity
+					</span>
 					<span
 						className={`px-2 py-0.5 rounded-full text-xs font-medium ${verificationBadge.className}`}
 					>
@@ -1350,6 +1361,7 @@ function RepositoryCard({
 				{lastVerification && (
 					<p className="text-xs text-gray-500 dark:text-gray-400">
 					<p className="text-xs text-gray-500">
+					<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 						Last checked: {formatRelativeTime(lastVerification.started_at)}
 						{lastVerification.status === 'failed' &&
 							lastVerification.error_message && (
@@ -1476,7 +1488,7 @@ function RepositoryCard({
 						</button>
 					</>
 				)}
-				<span className="text-gray-300">|</span>
+				<span className="text-gray-300 dark:text-gray-600">|</span>
 				<button
 					type="button"
 					onClick={() => onDelete(repository.id)}
@@ -1515,7 +1527,7 @@ function RecoveredKeyModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4">
 				<div className="flex items-center gap-3 mb-4">
 					<div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
 						<svg
@@ -1534,16 +1546,16 @@ function RecoveredKeyModal({
 						</svg>
 					</div>
 					<div>
-						<h3 className="text-lg font-semibold text-gray-900">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Recovered Password
 						</h3>
-						<p className="text-sm text-gray-500">
+						<p className="text-sm text-gray-500 dark:text-gray-400">
 							Password for repository: {repositoryName}
 						</p>
 					</div>
 				</div>
 
-				<div className="bg-gray-50 rounded-lg p-4 mb-4">
+				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
 					<div className="flex items-center justify-between gap-4">
 						<code className="text-sm font-mono break-all flex-1">
 							{password}
@@ -2265,6 +2277,12 @@ export function Repositories() {
 							size="md"
 						/>
 					</div>
+		<div className="space-y-6">
+			<div className="flex items-center justify-between">
+				<div>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Repositories
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Configure backup storage destinations
 					</p>
@@ -2368,8 +2386,8 @@ export function Repositories() {
 				</button>
 			</div>
 
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="p-6 border-b border-gray-200">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 					<div className="flex items-center gap-4">
 						<input
 							type="text"
@@ -2684,16 +2702,24 @@ export function Repositories() {
 								onClick={() => handleTypeClick('rest')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900">REST</p>
-								<p className="text-xs text-gray-500">Restic REST server</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									REST
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Restic REST server
+								</p>
 							</button>
 							<button
 								type="button"
 								onClick={() => handleTypeClick('dropbox')}
 								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
 							>
-								<p className="font-medium text-gray-900">Dropbox</p>
-								<p className="text-xs text-gray-500">Via rclone</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									Dropbox
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									Via rclone
+								</p>
 							</button>
 						</div>
 					</div>

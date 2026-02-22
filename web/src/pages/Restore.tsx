@@ -62,21 +62,22 @@ function LoadingRow() {
 			<td className="px-6 py-4 text-right">
 				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
 				<div className="h-4 w-20 bg-gray-200 rounded" />
+				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 rounded" />
+				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-28 bg-gray-200 rounded" />
+				<div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4 text-right">
-				<div className="h-4 w-16 bg-gray-200 rounded inline-block" />
+				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
 			</td>
 		</tr>
 	);
@@ -236,7 +237,7 @@ function SnapshotRow({
 				</div>
 }: SnapshotRowProps) {
 	return (
-		<tr className="hover:bg-gray-50">
+		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
 				<code className="text-sm font-mono text-gray-900">
 					{snapshot.short_id}
@@ -297,14 +298,14 @@ function SnapshotRow({
 			<td className="px-6 py-4 text-sm text-gray-500">
 				{formatBytes(snapshot.size_bytes)}
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(snapshot.time)}
 			</td>
 			<td className="px-6 py-4 text-right">
 				<button
 					type="button"
 					onClick={() => onSelect(snapshot)}
-					className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+					className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
 				>
 					Restore
 				</button>
@@ -332,7 +333,7 @@ function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
 	const statusColor = getRestoreStatusColor(restore.status);
 
 	return (
-		<tr className="hover:bg-gray-50">
+		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
 				<code className="text-sm font-mono text-gray-900">
 					{restore.snapshot_id.substring(0, 8)}
@@ -377,7 +378,7 @@ function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{agentName ?? 'Unknown'}
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
 				{restore.target_path}
 			</td>
 			<td className="px-6 py-4">
@@ -388,7 +389,7 @@ function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
 					{restore.status}
 				</span>
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(restore.created_at)}
 			</td>
 			<td className="px-6 py-4 text-right">
@@ -438,8 +439,9 @@ function RestoreDetailsModal({
 						)}
 					</div>
 			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Restore Details
 					</h3>
 					<span
@@ -503,11 +505,15 @@ function RestoreDetailsModal({
 
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<p className="text-sm font-medium text-gray-500">Agent</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Agent
+							</p>
 							<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
 						</div>
 						<div>
-							<p className="text-sm font-medium text-gray-500">Created</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Created
+							</p>
 							<p className="text-gray-900">
 								{formatDateTime(restore.created_at)}
 							</p>
@@ -521,7 +527,9 @@ function RestoreDetailsModal({
 					</div>
 
 					<div>
-						<p className="text-sm font-medium text-gray-500">Target Path</p>
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Target Path
+						</p>
 						<p className="font-mono text-gray-900 break-all">
 							{restore.target_path}
 						</p>
@@ -551,7 +559,7 @@ function RestoreDetailsModal({
 							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 					{restore.include_paths && restore.include_paths.length > 0 && (
 						<div>
-							<p className="text-sm font-medium text-gray-500">
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 								Included Paths
 							</p>
 							<ul className="list-disc list-inside text-sm text-gray-900">
@@ -614,7 +622,9 @@ function RestoreDetailsModal({
 					{restore.started_at && (
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<p className="text-sm font-medium text-gray-500">Started</p>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Started
+								</p>
 								<p className="text-gray-900">
 									{formatDateTime(restore.started_at)}
 								</p>
@@ -846,7 +856,7 @@ function FileTreeItem({
 			<span className="ml-2 text-xs text-gray-500 dark:text-gray-400 tabular-nums flex-shrink-0">
 				<span className="text-sm text-gray-900">{file.name}</span>
 			</span>
-			<span className="ml-auto text-xs text-gray-500">
+			<span className="ml-auto text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 				{file.type === 'file' ? formatBytes(file.size) : ''}
 			</span>
 		</div>
@@ -2360,9 +2370,14 @@ function RestoreModal({
 				)}
 				<div className="p-6 border-b border-gray-200">
 					<h3 className="text-lg font-semibold text-gray-900">
+	return (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Restore Snapshot
 					</h3>
-					<p className="text-sm text-gray-500 mt-1">
+					<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 						Snapshot {snapshot.short_id} from {formatDateTime(snapshot.time)}
 					</p>
 				</div>
@@ -2374,11 +2389,15 @@ function RestoreModal({
 					<div className="p-6 space-y-6 overflow-y-auto flex-1">
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<p className="text-sm font-medium text-gray-500">Agent</p>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Agent
+								</p>
 								<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-500">Repository</p>
+								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Repository
+								</p>
 								<p className="text-gray-900">{repoName ?? 'Unknown'}</p>
 							</div>
 						</div>
@@ -2397,7 +2416,7 @@ function RestoreModal({
 						</div>
 
 						<div>
-							<p className="text-sm font-medium text-gray-700">
+							<p className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
 								Restore Destination
 							</p>
 							<div className="mt-2 space-y-2">
@@ -2429,17 +2448,17 @@ function RestoreModal({
 										value={targetPath}
 										onChange={(e) => setTargetPath(e.target.value)}
 										placeholder="/path/to/restore"
-										className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+										className="mt-2 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
 									/>
 								)}
 							</div>
 						</div>
 
 						<div>
-							<p className="text-sm font-medium text-gray-700">
+							<p className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
 								Select files to restore (optional)
 							</p>
-							<p className="text-xs text-gray-500 mt-1 mb-2">
+							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">
 								Leave empty to restore all files
 							</p>
 							<div className="border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto bg-gray-50">
@@ -2454,14 +2473,14 @@ function RestoreModal({
 										/>
 									))
 								) : (
-									<p className="text-sm text-gray-500 text-center py-4">
+									<p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
 										{filesData?.message ||
 											'File listing not available. All files will be restored.'}
 									</p>
 								)}
 							</div>
 							{selectedPaths.size > 0 && (
-								<p className="text-xs text-gray-500 mt-2">
+								<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
 									{selectedPaths.size} item(s) selected
 								</p>
 							)}
@@ -2472,12 +2491,12 @@ function RestoreModal({
 						</div>
 					</div>
 
-					<div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+					<div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
 						<button
 							type="button"
 							onClick={onClose}
 							disabled={isSubmitting}
-							className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+							className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
 						>
 							Cancel
 						</button>
@@ -2733,7 +2752,7 @@ export function Restore() {
 				</div>
 			</div>
 
-			<div className="border-b border-gray-200">
+			<div className="border-b border-gray-200 dark:border-gray-700">
 				<nav className="-mb-px flex space-x-8">
 					<button
 						type="button"
@@ -2827,7 +2846,7 @@ export function Restore() {
 						<select
 							value={agentFilter}
 							onChange={(e) => setAgentFilter(e.target.value)}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="all">All Agents</option>
 							{agents?.map((agent) => (
@@ -2907,6 +2926,7 @@ export function Restore() {
 						snapshotsError ? (
 							<div className="p-12 text-center text-red-500 dark:text-red-400">
 							<div className="p-12 text-center text-red-500">
+							<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
 								<p className="font-medium">Failed to load snapshots</p>
 								<p className="text-sm">Please try refreshing the page</p>
 							</div>
@@ -2935,22 +2955,22 @@ export function Restore() {
 										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 								<thead className="bg-gray-50 border-b border-gray-200">
 									<tr>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Snapshot ID
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Agent
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Repository
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Size
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Date
 										</th>
-										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Actions
 										</th>
 									</tr>
@@ -2987,22 +3007,22 @@ export function Restore() {
 										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 								<thead className="bg-gray-50 border-b border-gray-200">
 									<tr>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Snapshot ID
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Agent
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Repository
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Size
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Date
 										</th>
-										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Actions
 										</th>
 									</tr>
@@ -3083,22 +3103,22 @@ export function Restore() {
 									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 							<thead className="bg-gray-50 border-b border-gray-200">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Snapshot ID
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Agent
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Target Path
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Status
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Date
 									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
@@ -3132,22 +3152,22 @@ export function Restore() {
 									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 							<thead className="bg-gray-50 border-b border-gray-200">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Snapshot ID
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Agent
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Target Path
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Status
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Date
 									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>

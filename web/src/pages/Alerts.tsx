@@ -28,11 +28,11 @@ function LoadingCard() {
 					<div className="h-3 w-1/4 bg-gray-200 dark:bg-gray-700 rounded" />
 		<div className="bg-white rounded-lg border border-gray-200 p-4 animate-pulse">
 			<div className="flex items-start gap-4">
-				<div className="w-10 h-10 bg-gray-200 rounded-full" />
+				<div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
 				<div className="flex-1">
-					<div className="h-5 w-3/4 bg-gray-200 rounded mb-2" />
-					<div className="h-4 w-1/2 bg-gray-200 rounded mb-3" />
-					<div className="h-3 w-1/4 bg-gray-200 rounded" />
+					<div className="h-5 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+					<div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
+					<div className="h-3 w-1/4 bg-gray-200 dark:bg-gray-700 rounded" />
 				</div>
 			</div>
 		</div>
@@ -297,7 +297,9 @@ export function Alerts() {
 							<div className="text-2xl font-bold text-gray-900">
 								{activeCount}
 							</div>
-							<div className="text-sm text-gray-500">Active</div>
+							<div className="text-sm text-gray-500 dark:text-gray-400">
+								Active
+							</div>
 						</div>
 					</div>
 				</button>
@@ -348,7 +350,9 @@ export function Alerts() {
 							<div className="text-2xl font-bold text-gray-900">
 								{acknowledgedCount}
 							</div>
-							<div className="text-sm text-gray-500">Acknowledged</div>
+							<div className="text-sm text-gray-500 dark:text-gray-400">
+								Acknowledged
+							</div>
 						</div>
 					</div>
 				</button>
@@ -391,7 +395,9 @@ export function Alerts() {
 							<div className="text-2xl font-bold text-gray-900">
 								{resolvedCount}
 							</div>
-							<div className="text-sm text-gray-500">Resolved</div>
+							<div className="text-sm text-gray-500 dark:text-gray-400">
+								Resolved
+							</div>
 						</div>
 					</div>
 				</button>
@@ -440,7 +446,7 @@ export function Alerts() {
 							onChange={(e) =>
 								setStatusFilter(e.target.value as AlertStatus | 'all')
 							}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="all">All Status</option>
 							<option value="active">Active</option>
@@ -450,7 +456,7 @@ export function Alerts() {
 						<select
 							value={severityFilter}
 							onChange={(e) => setSeverityFilter(e.target.value)}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="all">All Severity</option>
 							<option value="critical">Critical</option>

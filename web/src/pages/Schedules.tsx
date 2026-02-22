@@ -78,19 +78,19 @@ function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
 			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 rounded" />
+				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 rounded" />
+				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 rounded-full" />
+				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
 			</td>
 			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-24 bg-gray-200 rounded inline-block" />
+				<div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
 			</td>
 		</tr>
 	);
@@ -220,8 +220,8 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-				<h3 className="text-lg font-semibold text-gray-900 mb-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 					Create Schedule
 				</h3>
 				<form onSubmit={handleSubmit}>
@@ -229,7 +229,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						<div>
 							<label
 								htmlFor="schedule-name"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Name
 							</label>
@@ -239,14 +239,14 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								value={name}
 								onChange={(e) => setName(e.target.value)}
 								placeholder="e.g., Daily Home Backup"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								required
 							/>
 						</div>
 						<div>
 							<label
 								htmlFor="schedule-agent"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Agent
 							</label>
@@ -254,7 +254,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								id="schedule-agent"
 								value={agentId}
 								onChange={(e) => setAgentId(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								required
 							>
 								<option value="">Select an agent</option>
@@ -275,7 +275,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						<div>
 							<label
 								htmlFor="schedule-cron"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Schedule (Cron Expression)
 							</label>
@@ -285,17 +285,17 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								value={cronExpression}
 								onChange={(e) => setCronExpression(e.target.value)}
 								placeholder="0 2 * * *"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
 								required
 							/>
-							<p className="text-xs text-gray-500 mt-1">
+							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 								Examples: 0 2 * * * (daily at 2 AM), 0 */6 * * * (every 6 hours)
 							</p>
 						</div>
 						<div>
 							<label
 								htmlFor="schedule-paths"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Paths to Backup (one per line)
 							</label>
@@ -305,25 +305,101 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								onChange={(e) => setPaths(e.target.value)}
 								placeholder="/home&#10;/etc&#10;/var/www"
 								rows={3}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
 								required
 							/>
 						</div>
 						<div className="border-t border-gray-200 pt-4">
+
+						{/* Exclude Patterns Section */}
+						<div className="border-t border-gray-200 pt-4">
+							<div className="flex items-center justify-between mb-2">
+								<span className="block text-sm font-medium text-gray-700">
+									Exclude Patterns
+								</span>
+								<button
+									type="button"
+									onClick={() => setShowPatternLibrary(true)}
+									className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+								>
+									<svg
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										aria-hidden="true"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+										/>
+									</svg>
+									Browse Library
+								</button>
+							</div>
+							{excludes.length > 0 ? (
+								<div className="space-y-2">
+									<div className="flex flex-wrap gap-1.5 p-3 bg-gray-50 rounded-lg max-h-32 overflow-y-auto">
+										{excludes.map((pattern) => (
+											<span
+												key={pattern}
+												className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-200 rounded group"
+											>
+												<code className="text-gray-700">{pattern}</code>
+												<button
+													type="button"
+													onClick={() => handleRemovePattern(pattern)}
+													className="text-gray-400 hover:text-red-500 transition-colors"
+												>
+													<svg
+														className="w-3 h-3"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+														aria-hidden="true"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M6 18L18 6M6 6l12 12"
+														/>
+													</svg>
+												</button>
+											</span>
+										))}
+									</div>
+									<p className="text-xs text-gray-500">
+										{excludes.length} pattern{excludes.length !== 1 ? 's' : ''}{' '}
+										will be excluded from backup
+									</p>
+								</div>
+							) : (
+								<p className="text-sm text-gray-500">
+									No patterns selected. Click "Browse Library" to add common
+									patterns.
+								</p>
+							)}
+						</div>
+
+						{/* Retention Policy Section */}
+						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
 							<div className="flex items-center justify-between mb-3">
-								<span className="text-sm font-medium text-gray-700">
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
 									Retention Policy
 								</span>
 								<button
 									type="button"
 									onClick={() => setShowRetention(!showRetention)}
-									className="text-sm text-indigo-600 hover:text-indigo-800"
+									className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
 								>
 									{showRetention ? 'Use defaults' : 'Customize'}
 								</button>
 							</div>
 							{!showRetention ? (
-								<p className="text-sm text-gray-500">
+								<p className="text-sm text-gray-500 dark:text-gray-400">
 									Using default policy: Keep last 5, 7 daily, 4 weekly, 6
 									monthly
 								</p>
@@ -344,7 +420,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											onChange={(e) =>
 												setKeepLast(Number.parseInt(e.target.value, 10) || 0)
 											}
-											className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+											className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 										/>
 									</div>
 									<div>
@@ -362,7 +438,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											onChange={(e) =>
 												setKeepDaily(Number.parseInt(e.target.value, 10) || 0)
 											}
-											className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+											className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 										/>
 									</div>
 									<div>
@@ -380,7 +456,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											onChange={(e) =>
 												setKeepWeekly(Number.parseInt(e.target.value, 10) || 0)
 											}
-											className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+											className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 										/>
 									</div>
 									<div>
@@ -398,7 +474,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											onChange={(e) =>
 												setKeepMonthly(Number.parseInt(e.target.value, 10) || 0)
 											}
-											className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+											className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 										/>
 									</div>
 									<div>
@@ -416,12 +492,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											onChange={(e) =>
 												setKeepYearly(Number.parseInt(e.target.value, 10) || 0)
 											}
-											className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+											className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 										/>
 									</div>
 								</div>
 							)}
-							<p className="text-xs text-gray-500 mt-2">
+							<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
 								Retention policy automatically removes old backups to save
 								storage space.
 							</p>
@@ -1466,6 +1542,36 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 										<label
 											htmlFor="bandwidth-limit"
 											className="block text-sm font-medium text-gray-700 mb-1"
+						{/* Advanced Settings Section (Bandwidth Controls) */}
+						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+							<button
+								type="button"
+								onClick={() => setShowAdvanced(!showAdvanced)}
+								className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900"
+							>
+								<svg
+									className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M9 5l7 7-7 7"
+									/>
+								</svg>
+								Advanced Settings
+							</button>
+
+							{showAdvanced && (
+								<div className="mt-4 space-y-4">
+									<div>
+										<label
+											htmlFor="bandwidth-limit"
+											className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 										>
 											Bandwidth Limit (KB/s)
 										</label>
@@ -1495,6 +1601,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 												title={advancedSettingsHelp.backupWindow.title}
 											/>
 										<legend className="block text-sm font-medium text-gray-700 mb-1">
+										<legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 											Backup Window
 										</legend>
 										<div className="flex items-center gap-2">
@@ -1511,7 +1618,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 												className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 												aria-label="Window start time"
 											/>
-											<span className="text-gray-500">to</span>
+											<span className="text-gray-500 dark:text-gray-400">
+												to
+											</span>
 											<input
 												type="time"
 												value={windowEnd}
@@ -1525,7 +1634,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 												aria-label="Window end time"
 											/>
 										</div>
-										<p className="text-xs text-gray-500 mt-1">
+										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 											Only run backups within this time window. Leave empty to
 											allow any time.
 										</p>
@@ -1539,6 +1648,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 												title={advancedSettingsHelp.excludedHours.title}
 											/>
 										<legend className="block text-sm font-medium text-gray-700 mb-2">
+										<legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 											Excluded Hours
 										</legend>
 										<div className="grid grid-cols-6 gap-1">
@@ -2044,6 +2154,7 @@ function CloneScheduleModal({
 							type="button"
 							onClick={onClose}
 							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+							className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 						>
 							Cancel
 						</button>
@@ -2374,6 +2485,10 @@ function ScheduleRow({
 					{schedule.name}
 					{agentName ?? 'Unknown Agent'} →{' '}
 					{repoNames.length > 0 ? repoNames.join(', ') : 'No repos'}
+		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
+			<td className="px-6 py-4">
+				<div className="font-medium text-gray-900 dark:text-white">
+					{schedule.name}
 				</div>
 				<div className="text-sm text-gray-500 dark:text-gray-400">
 					{agentName ?? 'Unknown Agent'} →{' '}
@@ -3080,8 +3195,12 @@ export function Schedules() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Schedules</h1>
-					<p className="text-gray-600 mt-1">Configure automated backup jobs</p>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Schedules
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						Configure automated backup jobs
+					</p>
 				</div>
 				<button
 					type="button"
@@ -3105,8 +3224,8 @@ export function Schedules() {
 				</button>
 			</div>
 
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="p-6 border-b border-gray-200">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 					<div className="flex items-center gap-4">
 						<input
 							type="text"
@@ -3162,6 +3281,7 @@ export function Schedules() {
 				{isError ? (
 					<div className="p-12 text-center text-red-500 dark:text-red-400">
 					<div className="p-12 text-center text-red-500">
+					<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
 						<p className="font-medium">Failed to load schedules</p>
 						<p className="text-sm">Please try refreshing the page</p>
 					</div>
@@ -3185,19 +3305,19 @@ export function Schedules() {
 								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Schedule
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Cron
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Paths
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Status
 								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
@@ -3240,19 +3360,19 @@ export function Schedules() {
 								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Schedule
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Cron
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Paths
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Status
 								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
@@ -3456,7 +3576,7 @@ export function Schedules() {
 						</tbody>
 					</table>
 				) : (
-					<div className="p-12 text-center text-gray-500">
+					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
 						<svg
 							aria-hidden="true"
 							className="w-16 h-16 mx-auto mb-4 text-gray-300"
@@ -3471,15 +3591,15 @@ export function Schedules() {
 								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
 							/>
 						</svg>
-						<h3 className="text-lg font-medium text-gray-900 mb-2">
+						<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
 							No schedules configured
 						</h3>
 						<p className="mb-4">Create a schedule to automate your backups</p>
-						<div className="bg-gray-50 rounded-lg p-4 max-w-md mx-auto text-left space-y-2">
-							<p className="text-sm font-medium text-gray-700">
+						<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-w-md mx-auto text-left space-y-2">
+							<p className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
 								Common schedules:
 							</p>
-							<div className="text-sm text-gray-600 space-y-1">
+							<div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
 								<p>
 									<span className="font-mono bg-gray-200 px-1 rounded">
 										0 2 * * *
