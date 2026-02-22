@@ -1,5 +1,7 @@
 import type { ErrorInfo, ReactNode } from 'react';
 import { Component } from 'react';
+import { Component } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import { ServerError } from '../pages/ServerError';
 
 interface ErrorBoundaryProps {
