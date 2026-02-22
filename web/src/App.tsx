@@ -419,6 +419,11 @@ function App() {
 							<Route path="repositories" element={<Repositories />} />
 							<Route path="schedules" element={<Schedules />} />
 							<Route path="policies" element={<Policies />} />
+							<Route path="templates" element={<Templates />} />
+							<Route
+								path="backup-hook-templates"
+								element={<BackupHookTemplates />}
+							/>
 							<Route path="backups" element={<Backups />} />
 							<Route path="dr-runbooks" element={<DRRunbooks />} />
 							<Route path="restore" element={<Restore />} />
