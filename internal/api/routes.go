@@ -417,6 +417,11 @@ func NewRouter(
 		activityHandler.RegisterWebSocketRoute(r.Engine, middleware.AuthMiddleware(sessions, logger))
 	}
 
+	// Komodo integration routes
+	komodoHandler := handlers.NewKomodoHandler(database, logger)
+	komodoHandler.RegisterRoutes(apiV1)
+	komodoHandler.RegisterWebhookRoutes(r.Engine)
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)

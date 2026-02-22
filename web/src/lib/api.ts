@@ -108,6 +108,7 @@ import type {
 	CreateIPAllowlistRequest,
 	CreateIPBanRequest,
 	CreateImmutabilityLockRequest,
+	CreateKomodoIntegrationRequest,
 	CreateLegalHoldRequest,
 	CreateLifecyclePolicyRequest,
 	CreateMaintenanceWindowRequest,
@@ -250,6 +251,18 @@ import type {
 	StartTrialRequest,
 	StartTrialResponse,
 	TrialCheckResponse,
+	KomodoConnectionTestResponse,
+	KomodoContainer,
+	KomodoContainersResponse,
+	KomodoDiscoveryResult,
+	KomodoIntegration,
+	KomodoIntegrationResponse,
+	KomodoIntegrationsResponse,
+	KomodoStack,
+	KomodoStacksResponse,
+	KomodoSyncResponse,
+	KomodoWebhookEvent,
+	KomodoWebhookEventsResponse,
 	LegalHold,
 	LegalHoldsResponse,
 	LifecycleDeletionEvent,
@@ -413,6 +426,8 @@ import type {
 	UpdateExcludePatternRequest,
 	UpdateIPAllowlistRequest,
 	UpdateIPAllowlistSettingsRequest,
+	UpdateKomodoContainerRequest,
+	UpdateKomodoIntegrationRequest,
 	UpdateLifecyclePolicyRequest,
 	UpdateMaintenanceWindowRequest,
 	UpdateMemberRequest,
@@ -4213,4 +4228,95 @@ export const dockerRegistriesApi = {
 		fetchApi<MessageResponse>(`/docker-registries/${id}/set-default`, {
 			method: 'POST',
 		}),
+};
+
+// =============================================================================
+// Komodo Integration API
+// =============================================================================
+
+export const komodoApi = {
+	// Integrations
+	listIntegrations: async (): Promise<KomodoIntegration[]> => {
+		const response = await fetchApi<KomodoIntegrationsResponse>(
+			'/integrations/komodo',
+		);
+		return response.integrations ?? [];
+	},
+
+	getIntegration: async (id: string): Promise<KomodoIntegrationResponse> =>
+		fetchApi<KomodoIntegrationResponse>(`/integrations/komodo/${id}`),
+
+	createIntegration: async (
+		data: CreateKomodoIntegrationRequest,
+	): Promise<KomodoIntegration> =>
+		fetchApi<KomodoIntegration>('/integrations/komodo', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateIntegration: async (
+		id: string,
+		data: UpdateKomodoIntegrationRequest,
+	): Promise<KomodoIntegration> =>
+		fetchApi<KomodoIntegration>(`/integrations/komodo/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteIntegration: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/integrations/komodo/${id}`, {
+			method: 'DELETE',
+		}),
+
+	testConnection: async (id: string): Promise<KomodoConnectionTestResponse> =>
+		fetchApi<KomodoConnectionTestResponse>(`/integrations/komodo/${id}/test`, {
+			method: 'POST',
+		}),
+
+	syncIntegration: async (id: string): Promise<KomodoSyncResponse> =>
+		fetchApi<KomodoSyncResponse>(`/integrations/komodo/${id}/sync`, {
+			method: 'POST',
+		}),
+
+	discoverContainers: async (id: string): Promise<KomodoDiscoveryResult> =>
+		fetchApi<KomodoDiscoveryResult>(`/integrations/komodo/${id}/discover`),
+
+	// Containers
+	listContainers: async (): Promise<KomodoContainer[]> => {
+		const response = await fetchApi<KomodoContainersResponse>(
+			'/integrations/komodo/containers',
+		);
+		return response.containers ?? [];
+	},
+
+	getContainer: async (id: string): Promise<KomodoContainer> =>
+		fetchApi<KomodoContainer>(`/integrations/komodo/containers/${id}`),
+
+	updateContainer: async (
+		id: string,
+		data: UpdateKomodoContainerRequest,
+	): Promise<KomodoContainer> =>
+		fetchApi<KomodoContainer>(`/integrations/komodo/containers/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	// Stacks
+	listStacks: async (): Promise<KomodoStack[]> => {
+		const response = await fetchApi<KomodoStacksResponse>(
+			'/integrations/komodo/stacks',
+		);
+		return response.stacks ?? [];
+	},
+
+	getStack: async (id: string): Promise<KomodoStack> =>
+		fetchApi<KomodoStack>(`/integrations/komodo/stacks/${id}`),
+
+	// Webhook Events
+	listWebhookEvents: async (): Promise<KomodoWebhookEvent[]> => {
+		const response = await fetchApi<KomodoWebhookEventsResponse>(
+			'/integrations/komodo/events',
+		);
+		return response.events ?? [];
+	},
 };
