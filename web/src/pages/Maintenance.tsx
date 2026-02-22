@@ -148,6 +148,10 @@ export function Maintenance() {
 		});
 	};
 
+	const handleEmergencyOverride = (id: string, currentOverride: boolean) => {
+		emergencyOverride.mutate({ id, override: !currentOverride });
+	};
+
 	const cancelEdit = () => {
 		setEditingId(null);
 		setShowForm(false);
@@ -418,24 +422,25 @@ export function Maintenance() {
 									Notify Before (minutes)
 								</label>
 								<input
-									type="number"
-									id="notify_before"
-									value={formData.notify_before_minutes}
+									type="checkbox"
+									id="read_only"
+									checked={formData.read_only}
 									onChange={(e) =>
 										setFormData({
 											...formData,
-											notify_before_minutes: Number.parseInt(
-												e.target.value,
-												10,
-											),
+											read_only: e.target.checked,
 										})
 									}
-									min={0}
-									max={1440}
-									className="mt-1 block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
 								/>
-								<p className="mt-1 text-xs text-gray-500">
-									Send notification this many minutes before maintenance starts
+								<label
+									htmlFor="read_only"
+									className="ml-2 block text-sm text-gray-900"
+								>
+									Enable read-only mode
+								</label>
+								<p className="ml-6 text-xs text-gray-500">
+									Block write operations during this maintenance window
 								</p>
 							</div>
 
@@ -572,6 +577,35 @@ export function Maintenance() {
 											</div>
 										</div>
 										<div className="flex items-center gap-2 ml-4">
+											{isActiveReadOnly && (
+												<button
+													type="button"
+													onClick={() =>
+														handleEmergencyOverride(w.id, w.emergency_override)
+													}
+													disabled={emergencyOverride.isPending}
+													className="text-amber-600 hover:text-amber-900 text-sm font-medium disabled:opacity-50"
+												>
+													Emergency Override
+												</button>
+											)}
+											{status === 'active' &&
+												w.read_only &&
+												w.emergency_override && (
+													<button
+														type="button"
+														onClick={() =>
+															handleEmergencyOverride(
+																w.id,
+																w.emergency_override,
+															)
+														}
+														disabled={emergencyOverride.isPending}
+														className="text-green-600 hover:text-green-900 text-sm font-medium disabled:opacity-50"
+													>
+														Re-enable Read-only
+													</button>
+												)}
 											<button
 												type="button"
 												onClick={() => startEdit(w)}

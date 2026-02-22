@@ -141,11 +141,13 @@ type CreateMaintenanceWindowRequest struct {
 	CountdownStartMinutes *int      `json:"countdown_start_minutes,omitempty"`
 // CreateMaintenanceWindowRequest is the request body for creating a maintenance window.
 type CreateMaintenanceWindowRequest struct {
-	Title               string    `json:"title" binding:"required,min=1,max=255"`
-	Message             string    `json:"message,omitempty"`
-	StartsAt            time.Time `json:"starts_at" binding:"required"`
-	EndsAt              time.Time `json:"ends_at" binding:"required"`
-	NotifyBeforeMinutes *int      `json:"notify_before_minutes,omitempty"`
+	Title                 string    `json:"title" binding:"required,min=1,max=255"`
+	Message               string    `json:"message,omitempty"`
+	StartsAt              time.Time `json:"starts_at" binding:"required"`
+	EndsAt                time.Time `json:"ends_at" binding:"required"`
+	NotifyBeforeMinutes   *int      `json:"notify_before_minutes,omitempty"`
+	ReadOnly              *bool     `json:"read_only,omitempty"`
+	CountdownStartMinutes *int      `json:"countdown_start_minutes,omitempty"`
 }
 
 // UpdateMaintenanceWindowRequest is the request body for updating a maintenance window.

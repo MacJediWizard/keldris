@@ -336,7 +336,7 @@ func (h *MaintenanceHandler) GetActive(c *gin.Context) {
 	// Get upcoming windows (within countdown or notify threshold, max 120 minutes)
 	}
 
-	// Get upcoming windows (within notify threshold of any window, max 120 minutes)
+	// Get upcoming windows (within countdown or notify threshold, max 120 minutes)
 	upcomingWindows, err := h.store.ListUpcomingMaintenanceWindows(c.Request.Context(), user.CurrentOrgID, now, 120)
 	if err != nil {
 		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get upcoming maintenance windows")
@@ -421,6 +421,67 @@ func (h *MaintenanceHandler) EmergencyOverride(c *gin.Context) {
 }
 
 	c.JSON(http.StatusOK, response)
+}
+
+// EmergencyOverride sets or clears the emergency override for a maintenance window.
+// POST /api/v1/maintenance-windows/:id/emergency-override
+func (h *MaintenanceHandler) EmergencyOverride(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	// Only admins can set emergency override
+	if !isAdmin(user.CurrentOrgRole) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "admin access required"})
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid maintenance window ID"})
+		return
+	}
+
+	window, err := h.store.GetMaintenanceWindowByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "maintenance window not found"})
+		return
+	}
+
+	// Verify the window belongs to the user's org
+	if window.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "maintenance window not found"})
+		return
+	}
+
+	var req models.EmergencyOverrideRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.store.SetMaintenanceEmergencyOverride(c.Request.Context(), id, req.Override, user.ID); err != nil {
+		h.logger.Error().Err(err).Str("window_id", id.String()).Bool("override", req.Override).Msg("failed to set emergency override")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to set emergency override"})
+		return
+	}
+
+	// Get the updated window
+	window, err = h.store.GetMaintenanceWindowByID(c.Request.Context(), id)
+	if err != nil {
+		h.logger.Error().Err(err).Str("window_id", id.String()).Msg("failed to get updated maintenance window")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get updated maintenance window"})
+		return
+	}
+
+	h.logger.Info().
+		Str("window_id", id.String()).
+		Str("user_id", user.ID.String()).
+		Bool("override", req.Override).
+		Msg("emergency override set")
+
+	c.JSON(http.StatusOK, window)
 }
 
 // toWindowSlice converts []*models.MaintenanceWindow to []models.MaintenanceWindow.

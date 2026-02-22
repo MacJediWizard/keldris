@@ -42,6 +42,9 @@ import { TierBadge } from './features/TierBadge';
 import { LicenseBanner } from './features/LicenseBanner';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { RecentItemsDropdown } from './features/RecentItems';
+import { AnnouncementBanner } from './features/AnnouncementBanner';
+import { LanguageSelector } from './features/LanguageSelector';
+import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { TrialBanner } from './features/TrialBanner';
 import { WhatsNewModal } from './features/WhatsNewModal';
@@ -2011,6 +2014,7 @@ export function Layout() {
 	const [showWhatsNew, setShowWhatsNew] = useState(true);
 	const readOnlyModeValue = useReadOnlyModeValue();
 	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+	const readOnlyModeValue = useReadOnlyModeValue();
 	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
 
 	const { shortcuts } = useKeyboardShortcuts({
@@ -2149,5 +2153,24 @@ export function Layout() {
 				shortcuts={shortcuts}
 			/>
 		</div>
+			<div className="min-h-screen bg-gray-50 flex flex-col">
+				<MaintenanceCountdown />
+				<AnnouncementBanner />
+				<div className="flex flex-1">
+					<Sidebar />
+					<div className="flex-1 flex flex-col">
+						<Header />
+						<main className="flex-1 p-6">
+							<Outlet />
+						</main>
+					</div>
+				</div>
+				<ShortcutHelpModal
+					isOpen={showShortcutHelp}
+					onClose={() => setShowShortcutHelp(false)}
+					shortcuts={shortcuts}
+				/>
+			</div>
+		</ReadOnlyModeContext.Provider>
 	);
 }

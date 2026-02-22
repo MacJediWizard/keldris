@@ -2519,6 +2519,7 @@ export const maintenanceApi = {
 			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
+
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/maintenance-windows/${id}`, {
 			method: 'DELETE',
