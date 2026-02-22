@@ -578,6 +578,7 @@ import type {
 	UpdateContainerBackupHookRequest,
 	UpdateCostAlertRequest,
 	UpdateBackupScriptRequest,
+	UpdateBrandingRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
 	UpdateDockerRegistryRequest,
@@ -5726,6 +5727,23 @@ export const webhooksApi = {
 		data: CreateWebhookEndpointRequest,
 	): Promise<WebhookEndpoint> =>
 		fetchApi<WebhookEndpoint>('/webhooks/endpoints', {
+// Branding API
+export const brandingApi = {
+	get: async (): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding'),
+
+	update: async (data: UpdateBrandingRequest): Promise<BrandingSettings> =>
+		fetchApi<BrandingSettings>('/branding', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	reset: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/branding', {
+			method: 'DELETE',
+		}),
+};
+
 // Cost Estimation API
 export const costsApi = {
 	getSummary: async (): Promise<CostSummary> =>

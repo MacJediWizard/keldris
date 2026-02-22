@@ -22,6 +22,7 @@ import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
+import { useBranding } from '../hooks/useBranding';
 import { useLocale } from '../hooks/useLocale';
 import { useOnboardingStatus } from '../hooks/useOnboarding';
 import {
@@ -423,6 +424,8 @@ function Sidebar() {
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
+	const displayName = brandingData?.product_name || t('common.appName');
+
 	return (
 		<aside className="w-64 bg-gray-900 text-white flex flex-col">
 			<div className="p-6">
@@ -442,6 +445,7 @@ function Sidebar() {
 					</h1>
 				)}
 				<h1 className="text-2xl font-bold">{t('common.appName')}</h1>
+				)}
 				<p className="text-gray-400 text-sm">{t('common.tagline')}</p>
 				<h1 className="text-2xl font-bold">Keldris</h1>
 				<p className="text-gray-400 text-sm">Keeper of your data</p>
@@ -620,6 +624,7 @@ function Sidebar() {
 											strokeLinejoin="round"
 											strokeWidth={2}
 											d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+											d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
 										/>
 									</svg>
 									<span>Branding</span>
@@ -1223,6 +1228,11 @@ function OrgSwitcher() {
 				<svg
 					aria-hidden="true"
 					className="w-4 h-4 text-gray-500 dark:text-gray-400"
+				className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+			>
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4 text-gray-500"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -1241,6 +1251,10 @@ function OrgSwitcher() {
 				<svg
 					aria-hidden="true"
 					className="w-4 h-4 text-gray-400 dark:text-gray-500"
+				</span>
+				<svg
+					aria-hidden="true"
+					className="w-4 h-4 text-gray-400"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -1291,6 +1305,10 @@ function OrgSwitcher() {
 						>
 							<span className="truncate">{org.name}</span>
 							<span className="text-xs text-gray-400 dark:text-gray-500 capitalize">
+							}`}
+						>
+							<span className="truncate">{org.name}</span>
+							<span className="text-xs text-gray-400 capitalize">
 								{org.role}
 							</span>
 						</button>
