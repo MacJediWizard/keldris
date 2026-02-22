@@ -172,6 +172,17 @@ func NewResumedBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID, ch
 		CheckpointID:     &checkpointID,
 		OriginalBackupID: originalBackupID,
 		CreatedAt:        now,
+// NewBackup creates a new Backup record for the given schedule, agent, and repository.
+func NewBackup(scheduleID, agentID uuid.UUID, repositoryID *uuid.UUID) *Backup {
+	now := time.Now()
+	return &Backup{
+		ID:           uuid.New(),
+		ScheduleID:   scheduleID,
+		AgentID:      agentID,
+		RepositoryID: repositoryID,
+		StartedAt:    now,
+		Status:       BackupStatusRunning,
+		CreatedAt:    now,
 	}
 }
 

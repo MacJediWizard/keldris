@@ -55,6 +55,7 @@ func (h *SchedulesHandler) RegisterRoutes(r *gin.RouterGroup) {
 		schedules.GET("/:id/replication", h.GetReplicationStatus)
 		schedules.POST("/:id/clone", h.Clone)
 		schedules.POST("/bulk-clone", h.BulkClone)
+		schedules.GET("/:id/replication", h.GetReplicationStatus)
 	}
 }
 
@@ -128,6 +129,7 @@ type CreateScheduleRequest struct {
 	PostgresOptions    *models.PostgresBackupConfig  `json:"postgres_options,omitempty"`     // PostgreSQL-specific backup options
 	ProxmoxOptions     *models.ProxmoxBackupOptions  `json:"proxmox_options,omitempty"`      // Proxmox-specific backup options
 	Enabled            *bool                         `json:"enabled,omitempty"`
+	Enabled          *bool                       `json:"enabled,omitempty"`
 }
 
 // UpdateScheduleRequest is the request body for updating a schedule.
@@ -388,6 +390,11 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "repository not found"})
 		return
 	}
+
+	}
+
+	// TODO: Validate cron expression using robfig/cron parser
+	// For now we accept any string
 
 	schedule := models.NewSchedule(req.AgentID, req.Name, req.CronExpression, req.Paths)
 	schedule.Repositories = scheduleRepos

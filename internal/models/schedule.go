@@ -252,6 +252,8 @@ type Schedule struct {
 	AgentGroupID     *uuid.UUID           `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
 	PolicyID         *uuid.UUID           `json:"policy_id,omitempty"`      // Policy this schedule was created from
 	PolicyID         *uuid.UUID           `json:"policy_id,omitempty"` // Policy this schedule was created from
+	ID               uuid.UUID            `json:"id"`
+	AgentID          uuid.UUID            `json:"agent_id"`
 	Name             string               `json:"name"`
 	CronExpression   string               `json:"cron_expression"`
 	Paths            []string             `json:"paths"`
@@ -462,6 +464,19 @@ func (s *Schedule) PriorityLabel() string {
 // IsHigherPriorityThan returns true if this schedule has higher priority than other.
 func (s *Schedule) IsHigherPriorityThan(other *Schedule) bool {
 	return s.Priority < other.Priority
+}
+
+	now := time.Now()
+	return &Schedule{
+		ID:             uuid.New(),
+		AgentID:        agentID,
+		Name:           name,
+		CronExpression: cronExpr,
+		Paths:          paths,
+		Enabled:        true,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
 }
 
 // GetPrimaryRepository returns the primary repository (priority 0), or nil if none.

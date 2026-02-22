@@ -569,7 +569,6 @@ export interface Schedule {
 export interface Schedule {
 	id: string;
 	agent_id: string;
-	repository_id: string;
 	name: string;
 	cron_expression: string;
 	paths: string[];
@@ -591,6 +590,7 @@ export interface Schedule {
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	enabled: boolean;
+	repositories?: ScheduleRepository[];
 	created_at: string;
 	updated_at: string;
 }
@@ -659,11 +659,32 @@ export interface CloneScheduleRequest {
 	target_agent_id?: string;
 	target_repo_ids?: string[];
 }
+export interface ReplicationStatusResponse {
+	replication_status: ReplicationStatus[];
+}
+
+// Backup types
+export type BackupStatus = 'running' | 'completed' | 'failed' | 'canceled';
 
 export interface BulkCloneScheduleRequest {
 	schedule_id: string;
 	target_agent_ids: string[];
 	name_prefix?: string;
+	agent_id: string;
+	repository_id?: string;
+	snapshot_id?: string;
+	started_at: string;
+	completed_at?: string;
+	status: BackupStatus;
+	size_bytes?: number;
+	files_new?: number;
+	files_changed?: number;
+	error_message?: string;
+	retention_applied: boolean;
+	snapshots_removed?: number;
+	snapshots_kept?: number;
+	retention_error?: string;
+	created_at: string;
 }
 
 export interface BulkCloneResponse {

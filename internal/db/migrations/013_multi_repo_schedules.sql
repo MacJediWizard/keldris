@@ -1,4 +1,5 @@
 -- 013_multi_repo_schedules.sql
+-- 002_multi_repo_schedules.sql
 -- Migration: Add multi-repository support for schedules with failover and replication
 
 -- Create junction table for schedule-repository many-to-many relationship

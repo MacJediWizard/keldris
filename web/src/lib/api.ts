@@ -431,6 +431,8 @@ import type {
 	OrgResponse,
 	OrganizationWithRole,
 	OrganizationsResponse,
+	ReplicationStatus,
+	ReplicationStatusResponse,
 	RepositoriesResponse,
 	Repository,
 	RepositoryCostResponse,
