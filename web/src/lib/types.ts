@@ -1098,21 +1098,12 @@ export interface RestorePreviewRequest {
 	agent_id: string; // Target agent
 	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
-	include_paths?: string[];
-	exclude_paths?: string[];
-	cloud_target: CloudRestoreTarget;
-	verify_upload?: boolean;
-}
-
-export interface RestorePreviewRequest {
-	snapshot_id: string;
-	agent_id: string; // Target agent
-	source_agent_id?: string; // Source agent for cross-agent restores
-	repository_id: string;
-	target_path: string;
+	target_path?: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
 	path_mappings?: PathMapping[];
+	cloud_target?: CloudRestoreTarget;
+	verify_upload?: boolean;
 }
 
 export interface RestorePreviewFile {

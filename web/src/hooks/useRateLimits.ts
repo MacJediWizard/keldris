@@ -1,6 +1,3 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { rateLimitsApi } from '../lib/api';
-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ipBansApi, rateLimitConfigsApi, rateLimitsApi } from '../lib/api';
 import type {
