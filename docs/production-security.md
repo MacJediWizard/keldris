@@ -100,6 +100,7 @@ OIDC_ISSUER=https://auth.example.com
 OIDC_CLIENT_ID=keldris
 OIDC_CLIENT_SECRET=<from-oidc-provider>
 OIDC_REDIRECT_URL=https://backups.example.com/auth/callback
+OIDC_REDIRECT_URL=https://backups.example.com/api/v1/auth/callback
 CORS_ORIGINS=https://backups.example.com
 ```
 
@@ -201,6 +202,103 @@ OIDC_ISSUER=https://auth.example.com/realms/keldris
 OIDC_CLIENT_ID=keldris-app
 OIDC_CLIENT_SECRET=<stored-in-secrets-manager>
 OIDC_REDIRECT_URL=https://backups.example.com/auth/callback
+
+Use platform-specific secrets management instead of `.env` files:
+
+```bash
+# Docker Swarm
+docker secret create keldris_session_secret session_secret.txt
+docker secret create keldris_encryption_key encryption_key.txt
+
+# Kubernetes
+kubectl create secret generic keldris-secrets \
+  --from-literal=SESSION_SECRET="$(openssl rand -base64 48)" \
+  --from-literal=ENCRYPTION_KEY="$(openssl rand -hex 32)" \
+  --from-literal=OIDC_CLIENT_SECRET="your-client-secret"
+
+# HashiCorp Vault
+vault kv put secret/keldris \
+  session_secret="$(openssl rand -base64 48)" \
+  encryption_key="$(openssl rand -hex 32)"
+```
+
+### Key Rotation
+
+Rotate `SESSION_SECRET` and `ENCRYPTION_KEY` periodically:
+
+1. **SESSION_SECRET** - Rotating this invalidates all active sessions. Users must re-authenticate. Schedule rotation during maintenance windows.
+2. **ENCRYPTION_KEY** - Rotating this requires re-encrypting all stored credentials. Plan a migration before changing this value.
+3. **OIDC_CLIENT_SECRET** - Rotate through your OIDC provider. Update both the provider and Keldris simultaneously.
+
+## Database
+
+### Connection Security
+
+Always use TLS for PostgreSQL connections in production:
+
+```bash
+# Require TLS (verify server certificate exists)
+DATABASE_URL=postgresql://keldris:PASSWORD@db.internal:5432/keldris?sslmode=require
+
+# Verify server certificate against CA (strongest)
+DATABASE_URL=postgresql://keldris:PASSWORD@db.internal:5432/keldris?sslmode=verify-full&sslrootcert=/path/to/ca.crt
+```
+
+### Strong Passwords
+
+Generate a strong database password:
+
+```bash
+openssl rand -base64 32
+```
+
+### Least Privilege
+
+Create a dedicated database user with only the permissions Keldris needs:
+
+```sql
+-- Create the keldris database and user
+CREATE DATABASE keldris;
+CREATE USER keldris WITH PASSWORD '<strong-password>';
+
+-- Grant only necessary privileges
+GRANT CONNECT ON DATABASE keldris TO keldris;
+GRANT USAGE ON SCHEMA public TO keldris;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO keldris;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO keldris;
+
+-- Allow creating tables for migrations
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO keldris;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO keldris;
+```
+
+### Network Restrictions
+
+- Run PostgreSQL on a private network inaccessible from the internet
+- Use firewall rules to allow connections only from the Keldris server
+- Bind PostgreSQL to a private IP, not `0.0.0.0`
+
+```bash
+# postgresql.conf
+listen_addresses = '10.0.1.5'
+
+# pg_hba.conf - only allow keldris user from the app server
+hostssl keldris keldris 10.0.1.10/32 scram-sha-256
+```
+
+## OIDC
+
+### Provider Configuration
+
+- **Always use HTTPS** for the OIDC issuer URL. Keldris validates the issuer's TLS certificate.
+- Store `OIDC_CLIENT_SECRET` in a secrets manager, never in source control.
+- Set `OIDC_REDIRECT_URL` to your HTTPS frontend URL.
+
+```bash
+OIDC_ISSUER=https://auth.example.com/realms/keldris
+OIDC_CLIENT_ID=keldris-app
+OIDC_CLIENT_SECRET=<stored-in-secrets-manager>
+OIDC_REDIRECT_URL=https://backups.example.com/api/v1/auth/callback
 ```
 
 ### Token Lifetimes
@@ -288,6 +386,23 @@ Internet
   │               └── [S3/B2/SFTP] ── Storage network
   │
   └── [Agents] ── Agent network (HTTPS to reverse proxy)
+```
+
+- Database and storage backends should never be directly accessible from the internet
+- Use VPC peering, VPNs, or private links for cloud storage connections
+- DNS rebinding protection: use a resolver that refuses to resolve private IPs for public domains
+
+## Docker
+
+### Non-Root Containers
+
+Keldris Docker images run as a non-root user (`keldris`, UID 1000) by default. This is configured in both `Dockerfile.server` and `Dockerfile.agent`:
+
+```dockerfile
+RUN adduser -D -u 1000 keldris
+USER keldris
+```
+
 ```
 
 - Database and storage backends should never be directly accessible from the internet
@@ -478,7 +593,108 @@ Configure log retention based on your compliance requirements:
 | PCI DSS | 1 year (3 months immediately available) |
 Keldris requires **Go 1.25.7 or later** for both building and running.
 
-### Why Go 1.25.7+
+docker build -f docker/Dockerfile.server -t keldris-server .
+docker build -f docker/Dockerfile.agent -t keldris-agent .
+```
+
+Subscribe to security advisories for Alpine Linux and rebuild when patches are released.
+
+### Read-Only Filesystem
+
+Run containers with a read-only root filesystem. Mount writable volumes only where needed:
+
+```bash
+docker run -d \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+  -v keldris-data:/app/data:rw \
+  --name keldris-server \
+  keldris-server
+```
+
+```yaml
+# docker-compose.yml
+services:
+  keldris-server:
+    image: keldris-server:latest
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    volumes:
+      - keldris-data:/app/data:rw
+    security_opt:
+      - no-new-privileges:true
+```
+
+### Additional Docker Hardening
+
+```yaml
+# docker-compose.yml security options
+services:
+  keldris-server:
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+```
+
+## Rate Limiting
+
+Keldris uses [ulule/limiter](https://github.com/ulule/limiter) for rate limiting. The default is **100 requests per minute per IP**.
+
+### Configuration
+
+```bash
+# Default: in-memory store (single instance)
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_PERIOD=1m
+
+# Higher limits for API-heavy workloads
+RATE_LIMIT_REQUESTS=500
+RATE_LIMIT_PERIOD=1m
+```
+
+### Redis for Distributed Rate Limiting
+
+When running multiple Keldris instances behind a load balancer, use Redis to share rate limit state:
+
+```bash
+REDIS_URL=redis://redis.internal:6379/0
+```
+
+Without Redis, each instance tracks rate limits independently, which means the effective limit is multiplied by the number of instances.
+
+### Adjusting for Load
+
+| Deployment | Recommended Limit | Notes |
+|-----------|-------------------|-------|
+| Small team (< 10 users) | 100 req/min | Default is sufficient |
+| Medium org (10-100 users) | 300 req/min | Increase for dashboard-heavy usage |
+| API-heavy / CI integration | 500-1000 req/min | Monitor 429 rates and adjust |
+| Behind CDN | Consider CDN-level limiting | Supplement with application limits |
+
+### Proxy-Level Rate Limiting
+
+Add rate limiting at the reverse proxy for defense in depth:
+
+```nginx
+# Define in http block
+limit_req_zone $binary_remote_addr zone=keldris:10m rate=10r/s;
+
+# Apply in location block
+location / {
+    limit_req zone=keldris burst=20 nodelay;
+    proxy_pass http://127.0.0.1:8080;
+}
+```
+
+## Audit Logging
+
+Audit logging is a **Pro+** feature. When enabled, Keldris logs all authenticated API actions with user identity, client IP, resource type, and result (success/failure/denied).
+
+### Enabling Audit Logs
 
 Set retention at the SIEM/log aggregator level. Keldris stores audit logs in PostgreSQL; use scheduled cleanup or archival for database-level retention.
 
@@ -570,6 +786,124 @@ request_body {
 ```
 
 ## Other Production Settings
+Audit logging is automatically active when a Pro or Enterprise license is installed. No additional configuration is required.
+
+### What Gets Logged
+
+| Field | Description |
+|-------|-------------|
+| `action` | `create`, `read`, `update`, `delete` |
+| `resource_type` | `agent`, `repository`, `schedule`, `backup`, `user`, `organization` |
+| `result` | `success`, `failure`, `denied` |
+| `user_id` | Authenticated user who performed the action |
+| `ip_address` | Client IP (from `X-Forwarded-For` or direct connection) |
+| `user_agent` | Browser or API client identifier |
+
+Health check endpoints (`/health`, `/api/v1/health`) and audit log reads are excluded to avoid noise.
+
+### Querying Audit Logs
+
+```bash
+# List recent audit events
+curl -s https://backups.example.com/api/v1/audit-logs \
+  -H "Cookie: session=..." | jq '.[] | {action, resource_type, result, created_at}'
+
+# Filter by action
+curl -s "https://backups.example.com/api/v1/audit-logs?action=delete" \
+  -H "Cookie: session=..."
+```
+
+### Exporting to SIEM
+
+Keldris outputs structured JSON logs. Ship them to your SIEM for centralized analysis:
+
+```bash
+# Forward container logs to a SIEM via syslog
+docker run -d \
+  --log-driver=syslog \
+  --log-opt syslog-address=tcp://siem.internal:514 \
+  --log-opt tag=keldris-server \
+  keldris-server
+
+# Or use Fluentd/Fluent Bit
+docker run -d \
+  --log-driver=fluentd \
+  --log-opt fluentd-address=fluentd.internal:24224 \
+  --log-opt tag=keldris \
+  keldris-server
+```
+
+### Retention Policies
+
+Configure log retention based on your compliance requirements:
+
+| Regulation | Minimum Retention |
+|-----------|-------------------|
+| SOC 2 | 1 year |
+| HIPAA | 6 years |
+| GDPR | As needed (minimize) |
+| PCI DSS | 1 year (3 months immediately available) |
+
+Set retention at the SIEM/log aggregator level. Keldris stores audit logs in PostgreSQL; use scheduled cleanup or archival for database-level retention.
+
+## Backup Encryption
+
+Keldris encrypts sensitive data at rest using **AES-256-GCM** via the `ENCRYPTION_KEY` environment variable.
+
+### What Gets Encrypted
+
+- Restic repository passwords
+- Storage backend credentials (S3 access keys, B2 keys, SFTP passwords)
+- Notification channel configurations (Slack tokens, webhook secrets)
+
+### How It Works
+
+The `ENCRYPTION_KEY` is a 32-byte hex-encoded key used as the AES-256-GCM master key. A random 12-byte nonce is generated for each encryption operation. Ciphertext is stored as `nonce + ciphertext + GCM tag`.
+
+```bash
+# Generate a new encryption key
+openssl rand -hex 32
+```
+
+### Backing Up the Master Key
+
+The `ENCRYPTION_KEY` is critical. If lost, all encrypted credentials become unrecoverable.
+
+1. **Store the key in a secrets manager** (Vault, AWS Secrets Manager, etc.)
+2. **Keep an offline backup** in a secure, access-controlled location (e.g., printed and stored in a safe)
+3. **Do not store the key alongside database backups** - if an attacker obtains both, encryption is defeated
+
+### Key Escrow
+
+For organizations with compliance requirements, implement key escrow:
+
+```bash
+# Split the key using Shamir's Secret Sharing (e.g., with `ssss-split`)
+echo "<ENCRYPTION_KEY>" | ssss-split -t 3 -n 5
+# Requires 3 of 5 shares to reconstruct the key
+# Distribute shares to different custodians
+```
+
+Store shares with separate custodians who cannot independently access backup data. Document the recovery procedure and test it periodically.
+
+### Restic Repository Encryption
+
+In addition to Keldris's at-rest encryption of credentials, Restic itself encrypts all backup data with a per-repository password. This provides two layers of encryption:
+
+1. **Restic layer** - Backup data is encrypted in the storage backend
+2. **Keldris layer** - Repository passwords and credentials are encrypted in PostgreSQL
+
+## Session Security
+
+### Cookie Configuration
+
+These are enforced by default in production (`ENV=production`):
+
+- **HttpOnly** - Session cookies are never accessible to JavaScript
+- **SameSite=Lax** - Prevents CSRF in most scenarios
+- **Secure** - Requires HTTPS (active when `ENV=production`)
+
+### Session Timeouts
 
 ```bash
 # Production defaults
