@@ -7395,3 +7395,69 @@ export interface OnboardingStatus {
 	skipped: boolean;
 	is_complete: boolean;
 }
+
+export interface WebhookDelivery {
+	id: string;
+	org_id: string;
+	endpoint_id: string;
+	event_type: WebhookEventType;
+	event_id?: string;
+	payload: Record<string, unknown>;
+	request_headers?: Record<string, string>;
+	response_status?: number;
+	response_body?: string;
+	response_headers?: Record<string, string>;
+	attempt_number: number;
+	max_attempts: number;
+	status: WebhookDeliveryStatus;
+	error_message?: string;
+	delivered_at?: string;
+	next_retry_at?: string;
+	created_at: string;
+}
+
+export interface CreateWebhookEndpointRequest {
+	name: string;
+	url: string;
+	secret: string;
+	event_types: WebhookEventType[];
+	headers?: Record<string, string>;
+	retry_count?: number;
+	timeout_seconds?: number;
+}
+
+export interface UpdateWebhookEndpointRequest {
+	name?: string;
+	url?: string;
+	secret?: string;
+	enabled?: boolean;
+	event_types?: WebhookEventType[];
+	headers?: Record<string, string>;
+	retry_count?: number;
+	timeout_seconds?: number;
+}
+
+export interface WebhookEndpointsResponse {
+	endpoints: WebhookEndpoint[];
+}
+
+export interface WebhookDeliveriesResponse {
+	deliveries: WebhookDelivery[];
+	total: number;
+}
+
+export interface WebhookEventTypesResponse {
+	event_types: WebhookEventType[];
+}
+
+export interface TestWebhookRequest {
+	event_type?: WebhookEventType;
+}
+
+export interface TestWebhookResponse {
+	success: boolean;
+	response_status?: number;
+	response_body?: string;
+	error_message?: string;
+	duration_ms: number;
+}

@@ -676,6 +676,12 @@ func NewRouter(
 		webhooksHandler.RegisterRoutes(apiV1)
 	}
 
+	// Outbound webhooks routes
+	if cfg.WebhookDispatcher != nil {
+		webhooksHandler := handlers.NewWebhooksHandler(database, keyManager, cfg.WebhookDispatcher, logger)
+		webhooksHandler.RegisterRoutes(apiV1)
+	}
+
 	// Agent API routes (API key auth required)
 	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
