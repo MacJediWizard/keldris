@@ -22,6 +22,7 @@
 | Backup Engine | Restic (exec wrapper) | latest |
 | i18next | i18next | ^25.7.4 |
 | i18n React Bindings | react-i18next | ^16.x |
+| i18n React Bindings | react-i18next | ^15.x |
 | Linting | Biome (frontend), staticcheck (Go) | latest |
 
 ---

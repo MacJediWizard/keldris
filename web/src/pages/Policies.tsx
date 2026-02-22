@@ -742,7 +742,6 @@ function PolicyRow({
 								onKeyDown={(e) => {
 									if (e.key === 'Escape') setShowActions(false);
 								}}
-								role="button"
 								tabIndex={0}
 								aria-label="Close menu"
 							/>
