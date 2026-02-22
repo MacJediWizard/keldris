@@ -15,6 +15,7 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { EmptyStateNoAgents } from '../components/ui/EmptyState';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
 import { StarButton } from '../components/ui/StarButton';
 import { useAddAgentToGroup, useAgentGroups } from '../hooks/useAgentGroups';
@@ -1346,6 +1347,12 @@ export function Agents() {
 							Install and register an agent to start backing up your systems
 						</p>
 					</div>
+					<EmptyStateNoAgents
+						onAddAgent={() => setShowGenerateModal(true)}
+						title={t('agents.noAgentsRegistered')}
+						description="Generate a registration code to start backing up your systems"
+						actionLabel="Generate Registration Code"
+					/>
 				)}
 			</div>
 
