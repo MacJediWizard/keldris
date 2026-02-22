@@ -77,6 +77,7 @@ const DRTests = lazy(() => import('./pages/DRTests'));
 const Restore = lazy(() =>
 	import('./pages/Restore').then((m) => ({ default: m.Restore })),
 );
+const Restore = lazy(() => import('./pages/Restore'));
 const FileHistory = lazy(() => import('./pages/FileHistory'));
 const SnapshotCompare = lazy(() => import('./pages/SnapshotCompare'));
 const Alerts = lazy(() => import('./pages/Alerts'));
@@ -434,6 +435,7 @@ function App() {
 							/>
 							<Route path="backups" element={<Backups />} />
 							<Route path="dr-runbooks" element={<DRRunbooks />} />
+							<Route path="dr-tests" element={<DRTests />} />
 							<Route path="restore" element={<Restore />} />
 							<Route path="file-history" element={<FileHistory />} />
 							<Route path="snapshots/compare" element={<SnapshotCompare />} />
