@@ -39,6 +39,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/rs/zerolog"
+	"github.com/MacJediWizard/keldris/internal/updater"
 	"github.com/spf13/cobra"
 )
 
@@ -63,6 +64,7 @@ func checkUpdateOnStartup() {
 	}
 
 	u := updater.NewWithProxy(Version, cfg.GetProxyConfig())
+	u := updater.New(Version)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -89,6 +91,7 @@ Run 'keldris-agent register' to connect to a server.`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// Skip auto-check for certain commands
 			if cmd.Name() == "update" || cmd.Name() == "version" || cmd.Name() == "help" || cmd.Name() == "diagnostics" {
+			if cmd.Name() == "update" || cmd.Name() == "version" || cmd.Name() == "help" {
 				return
 			}
 			checkUpdateOnStartup()
@@ -434,6 +437,7 @@ Default: 100`,
 			if err := cfg.SaveDefault(); err != nil {
 				return fmt.Errorf("save config: %w", err)
 			}
+			fmt.Printf("Auto-check update: %v\n", cfg.AutoCheckUpdate)
 
 			fmt.Printf("Max queue size set to: %d\n", size)
 			return nil
@@ -1254,6 +1258,7 @@ func runUpdate(checkOnly, force bool) error {
 	}
 
 	u := updater.NewWithProxy(Version, proxyConfig)
+	u := updater.New(Version)
 
 	fmt.Printf("Current version: %s\n", Version)
 	fmt.Println("Checking for updates...")

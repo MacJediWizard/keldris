@@ -137,6 +137,9 @@ func ProductionConfig() Config {
 		Commit:            "unknown",
 		BuildDate:         "unknown",
 		SecurityHeaders:   &prodSecurityHeaders,
+		Version:           "dev",
+		Commit:            "unknown",
+		BuildDate:         "unknown",
 	}
 }
 
@@ -278,6 +281,10 @@ func NewRouter(
 	// Health check endpoint (no auth required)
 	r.Engine.GET("/health", r.healthCheck)
 
+	// Version endpoint (no auth required)
+	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)
+	versionHandler.RegisterPublicRoutes(r.Engine)
+
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
@@ -361,6 +368,7 @@ func NewRouter(
 	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
 	orgsHandler.RegisterMultiOrgRoutes(orgsGroup, middleware.LimitMiddleware(database, "organizations", logger))
 	orgsHandler.RegisterRoutes(orgsGroup)
+
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
 	orgsHandler.RegisterRoutes(apiV1)
 

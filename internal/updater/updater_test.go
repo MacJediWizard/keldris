@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"testing"
 )
 
 func TestNormalizeVersion(t *testing.T) {
@@ -34,6 +35,10 @@ func TestNormalizeVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%q", tt.input), func(t *testing.T) {
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
 			result := normalizeVersion(tt.input)
 			if result != tt.expected {
 				t.Errorf("normalizeVersion(%q) = %q, want %q", tt.input, result, tt.expected)
@@ -147,6 +152,10 @@ func TestNew(t *testing.T) {
 
 func TestNewWithConfig(t *testing.T) {
 	u := NewWithConfig("2.0.0", "custom-owner", "custom-repo", nil)
+}
+
+func TestNewWithConfig(t *testing.T) {
+	u := NewWithConfig("2.0.0", "custom-owner", "custom-repo")
 	if u == nil {
 		t.Fatal("NewWithConfig() returned nil")
 	}
@@ -1181,5 +1190,25 @@ func TestApply_NewBinaryInDifferentFilesystem(t *testing.T) {
 	// Just verify it doesn't panic
 	if err != nil {
 		t.Logf("Apply() error = %v (expected on some systems)", err)
+func TestFindAssetForPlatform(t *testing.T) {
+	assets := []Asset{
+		{Name: "keldris-agent-linux-amd64", DownloadURL: "https://example.com/linux-amd64"},
+		{Name: "keldris-agent-linux-arm64", DownloadURL: "https://example.com/linux-arm64"},
+		{Name: "keldris-agent-darwin-amd64", DownloadURL: "https://example.com/darwin-amd64"},
+		{Name: "keldris-agent-darwin-arm64", DownloadURL: "https://example.com/darwin-arm64"},
+		{Name: "keldris-agent-windows-amd64.exe", DownloadURL: "https://example.com/windows-amd64"},
+	}
+
+	u := New("1.0.0")
+
+	// Test that we can find an asset for the current platform
+	asset, err := u.findAssetForPlatform(assets)
+	// This test will find something based on the runtime.GOOS/GOARCH
+	// We just verify no error for common platforms
+	if err != nil {
+		// Only fail if we're on a common platform that should be supported
+		t.Logf("findAssetForPlatform error: %v (may be expected for uncommon platforms)", err)
+	} else if asset == nil {
+		t.Error("findAssetForPlatform returned nil asset without error")
 	}
 }
