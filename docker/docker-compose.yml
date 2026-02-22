@@ -33,6 +33,7 @@ services:
       AIR_GAP_MODE: ${AIR_GAP_MODE:-false}
       RETENTION_DAYS: ${RETENTION_DAYS:-90}
       LICENSE_SERVER_URL: ${LICENSE_SERVER_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       db:
         condition: service_healthy
