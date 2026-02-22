@@ -128,6 +128,7 @@ import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
 import { DockerLogs } from './pages/DockerLogs';
+import { DockerRegistries } from './pages/DockerRegistries';
 import { DowntimeHistory } from './pages/DowntimeHistory';
 import { FileDiff } from './pages/FileDiff';
 import { FileHistory } from './pages/FileHistory';
@@ -344,6 +345,10 @@ function App() {
 							<Route path="classifications" element={<Classifications />} />
 							<Route path="costs" element={<CostEstimation />} />
 							<Route path="sla" element={<SLA />} />
+							<Route
+								path="organization/docker-registries"
+								element={<DockerRegistries />}
+							/>
 							<Route
 								path="organization/members"
 								element={<OrganizationMembers />}

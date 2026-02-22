@@ -96,6 +96,7 @@ import type {
 	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
+	CreateDockerRegistryRequest,
 	CreateDockerRestoreRequest,
 	CreateDockerStackRequest,
 	CreateDowntimeAlertRequest,
@@ -156,6 +157,8 @@ import type {
 	DiscoveredDockerStack,
 	DockerContainer,
 	DockerContainersResponse,
+	DockerHealthCheckAllResponse,
+	DockerHealthCheckResponse,
 	DockerLogBackup,
 	DockerLogBackupsResponse,
 	DockerLogRetentionResult,
@@ -163,6 +166,15 @@ import type {
 	DockerLogSettingsUpdate,
 	DockerLogStorageStats,
 	DockerLogViewResponse,
+	DockerLoginAllResponse,
+	DockerLoginResult,
+	DockerLoginResultResponse,
+	DockerRegistriesResponse,
+	DockerRegistry,
+	DockerRegistryHealthCheck,
+	DockerRegistryResponse,
+	DockerRegistryTypeInfo,
+	DockerRegistryTypesResponse,
 	DockerRestore,
 	DockerRestorePlan,
 	DockerRestorePreviewRequest,
@@ -182,6 +194,7 @@ import type {
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
+	ExpiringCredentialsResponse,
 	ExportBundleRequest,
 	ExportFormat,
 	ExtendImmutabilityLockRequest,
@@ -312,6 +325,7 @@ import type {
 	RestorePreviewRequest,
 	RestoresResponse,
 	RotateAPIKeyResponse,
+	RotateCredentialsRequest,
 	RunDRTestRequest,
 	RunScheduleResponse,
 	SLAPoliciesResponse,
@@ -384,6 +398,7 @@ import type {
 	UpdateContainerBackupHookRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
+	UpdateDockerRegistryRequest,
 	UpdateDockerStackRequest,
 	UpdateDowntimeAlertRequest,
 	UpdateDowntimeEventRequest,
@@ -4097,4 +4112,98 @@ export const dockerStacksApi = {
 		);
 		return response.stacks ?? [];
 	},
+};
+
+// Docker Registry API
+export const dockerRegistriesApi = {
+	list: async (): Promise<DockerRegistry[]> => {
+		const response =
+			await fetchApi<DockerRegistriesResponse>('/docker-registries');
+		return response.registries ?? [];
+	},
+
+	get: async (id: string): Promise<DockerRegistry> => {
+		const response = await fetchApi<DockerRegistryResponse>(
+			`/docker-registries/${id}`,
+		);
+		return response.registry;
+	},
+
+	create: async (data: CreateDockerRegistryRequest): Promise<DockerRegistry> =>
+		fetchApi<DockerRegistry>('/docker-registries', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateDockerRegistryRequest,
+	): Promise<DockerRegistry> =>
+		fetchApi<DockerRegistry>(`/docker-registries/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-registries/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getTypes: async (): Promise<DockerRegistryTypeInfo[]> => {
+		const response = await fetchApi<DockerRegistryTypesResponse>(
+			'/docker-registries/types',
+		);
+		return response.types ?? [];
+	},
+
+	getExpiringCredentials: async (): Promise<{
+		registries: DockerRegistry[];
+		warning_days: number;
+	}> => fetchApi<ExpiringCredentialsResponse>('/docker-registries/expiring'),
+
+	login: async (id: string): Promise<DockerLoginResult> => {
+		const response = await fetchApi<DockerLoginResultResponse>(
+			`/docker-registries/${id}/login`,
+			{ method: 'POST' },
+		);
+		return response.result;
+	},
+
+	loginAll: async (): Promise<DockerLoginResult[]> => {
+		const response = await fetchApi<DockerLoginAllResponse>(
+			'/docker-registries/login-all',
+			{ method: 'POST' },
+		);
+		return response.results ?? [];
+	},
+
+	healthCheck: async (id: string): Promise<DockerRegistryHealthCheck> => {
+		const response = await fetchApi<DockerHealthCheckResponse>(
+			`/docker-registries/${id}/health-check`,
+			{ method: 'POST' },
+		);
+		return response.result;
+	},
+
+	healthCheckAll: async (): Promise<DockerRegistryHealthCheck[]> => {
+		const response = await fetchApi<DockerHealthCheckAllResponse>(
+			'/docker-registries/health-check-all',
+			{ method: 'POST' },
+		);
+		return response.results ?? [];
+	},
+
+	rotateCredentials: async (
+		id: string,
+		data: RotateCredentialsRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-registries/${id}/rotate-credentials`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	setDefault: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/docker-registries/${id}/set-default`, {
+			method: 'POST',
+		}),
 };

@@ -5201,3 +5201,123 @@ export interface DockerLogSettingsUpdate {
 	since?: string;
 	until?: string;
 }
+
+// Docker Registry types
+export type DockerRegistryType =
+	| 'dockerhub'
+	| 'gcr'
+	| 'ecr'
+	| 'acr'
+	| 'ghcr'
+	| 'private';
+
+export type DockerRegistryHealthStatus = 'healthy' | 'unhealthy' | 'unknown';
+
+export interface DockerRegistry {
+	id: string;
+	org_id: string;
+	name: string;
+	type: DockerRegistryType;
+	url: string;
+	is_default: boolean;
+	enabled: boolean;
+	health_status: DockerRegistryHealthStatus;
+	last_health_check?: string;
+	last_health_error?: string;
+	credentials_rotated_at?: string;
+	credentials_expires_at?: string;
+	metadata?: Record<string, unknown>;
+	created_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerRegistryCredentials {
+	username?: string;
+	password?: string;
+	access_token?: string;
+	aws_access_key_id?: string;
+	aws_secret_access_key?: string;
+	aws_region?: string;
+	azure_tenant_id?: string;
+	azure_client_id?: string;
+	azure_client_secret?: string;
+	gcr_key_json?: string;
+}
+
+export interface DockerLoginResult {
+	success: boolean;
+	registry_id: string;
+	registry_url: string;
+	error_message?: string;
+	logged_in_at: string;
+}
+
+export interface DockerRegistryHealthCheck {
+	registry_id: string;
+	status: DockerRegistryHealthStatus;
+	response_time_ms: number;
+	error_message?: string;
+	checked_at: string;
+}
+
+export interface DockerRegistryTypeInfo {
+	type: DockerRegistryType;
+	name: string;
+	description: string;
+	default_url: string;
+	fields: string[];
+}
+
+export interface CreateDockerRegistryRequest {
+	name: string;
+	type: DockerRegistryType;
+	url?: string;
+	credentials: DockerRegistryCredentials;
+	is_default?: boolean;
+}
+
+export interface UpdateDockerRegistryRequest {
+	name?: string;
+	url?: string;
+	enabled?: boolean;
+	is_default?: boolean;
+}
+
+export interface RotateCredentialsRequest {
+	credentials: DockerRegistryCredentials;
+	expires_at?: string;
+}
+
+export interface DockerRegistriesResponse {
+	registries: DockerRegistry[];
+}
+
+export interface DockerRegistryResponse {
+	registry: DockerRegistry;
+}
+
+export interface DockerRegistryTypesResponse {
+	types: DockerRegistryTypeInfo[];
+}
+
+export interface DockerLoginResultResponse {
+	result: DockerLoginResult;
+}
+
+export interface DockerLoginAllResponse {
+	results: DockerLoginResult[];
+}
+
+export interface DockerHealthCheckResponse {
+	result: DockerRegistryHealthCheck;
+}
+
+export interface DockerHealthCheckAllResponse {
+	results: DockerRegistryHealthCheck[];
+}
+
+export interface ExpiringCredentialsResponse {
+	registries: DockerRegistry[];
+	warning_days: number;
+}
