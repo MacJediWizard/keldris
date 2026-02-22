@@ -33,6 +33,14 @@ import type {
 	VerificationStatus,
 	VerificationType,
 } from '../lib/types';
+import { useState } from 'react';
+import {
+	useCreateRepository,
+	useDeleteRepository,
+	useRepositories,
+	useTestRepository,
+} from '../hooks/useRepositories';
+import type { Repository, RepositoryType } from '../lib/types';
 import { formatDate, getRepositoryTypeBadge } from '../lib/utils';
 
 function LoadingCard() {
@@ -41,6 +49,10 @@ function LoadingCard() {
 			<div className="flex items-start justify-between mb-4">
 				<div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
 				<div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded-full" />
+		<div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
+			<div className="flex items-start justify-between mb-4">
+				<div className="h-5 w-32 bg-gray-200 rounded" />
+				<div className="h-6 w-12 bg-gray-200 rounded-full" />
 			</div>
 			<div className="h-4 w-24 bg-gray-100 rounded" />
 		</div>
@@ -196,6 +208,9 @@ interface AddRepositoryModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	onSuccess: (response: CreateRepositoryResponse) => void;
+interface AddRepositoryModalProps {
+	isOpen: boolean;
+	onClose: () => void;
 	initialType?: RepositoryType;
 }
 
@@ -370,6 +385,8 @@ function AddRepositoryModal({
 				return { path: localPath };
 		}
 	};
+	const [path, setPath] = useState('');
+	const createRepository = useCreateRepository();
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -382,6 +399,14 @@ function AddRepositoryModal({
 			});
 			onSuccess(response);
 			resetForm();
+			await createRepository.mutateAsync({
+				name,
+				type,
+				config: { path },
+			});
+			onClose();
+			setName('');
+			setPath('');
 		} catch {
 			// Error handled by mutation
 		}
@@ -671,6 +696,10 @@ function AddRepositoryModal({
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+	return (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+				<h3 className="text-lg font-semibold text-gray-900 mb-4">
 					Add Repository
 				</h3>
 				<form onSubmit={handleSubmit}>
@@ -687,6 +716,27 @@ function AddRepositoryModal({
 							<label
 								htmlFor="repo-type"
 								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						<div>
+							<label
+								htmlFor="repo-name"
+								className="block text-sm font-medium text-gray-700 mb-1"
+							>
+								Name
+							</label>
+							<input
+								type="text"
+								id="repo-name"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								placeholder="e.g., primary-backup"
+								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								required
+							/>
+						</div>
+						<div>
+							<label
+								htmlFor="repo-type"
+								className="block text-sm font-medium text-gray-700 mb-1"
 							>
 								Type
 							</label>
@@ -768,6 +818,35 @@ function AddRepositoryModal({
 							</div>
 						</div>
 					)}
+								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>
+								<option value="local">Local</option>
+								<option value="s3">Amazon S3</option>
+								<option value="b2">Backblaze B2</option>
+								<option value="sftp">SFTP</option>
+								<option value="rest">REST Server</option>
+							</select>
+						</div>
+						<div>
+							<label
+								htmlFor="repo-path"
+								className="block text-sm font-medium text-gray-700 mb-1"
+							>
+								{type === 'local' ? 'Path' : 'Connection String'}
+							</label>
+							<input
+								type="text"
+								id="repo-path"
+								value={path}
+								onChange={(e) => setPath(e.target.value)}
+								placeholder={
+									type === 'local' ? '/var/backups' : 's3://bucket/path'
+								}
+								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								required
+							/>
+						</div>
+					</div>
 					{createRepository.isError && (
 						<p className="text-sm text-red-600 mt-4">
 							Failed to create repository. Please try again.
@@ -801,6 +880,21 @@ function AddRepositoryModal({
 								{createRepository.isPending ? 'Creating...' : 'Add Repository'}
 							</button>
 						</div>
+					<div className="flex justify-end gap-3 mt-6">
+						<button
+							type="button"
+							onClick={onClose}
+							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={createRepository.isPending}
+							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+						>
+							{createRepository.isPending ? 'Creating...' : 'Add Repository'}
+						</button>
 					</div>
 				</form>
 			</div>
@@ -851,6 +945,9 @@ interface RepositoryCardProps {
 	isRecovering: boolean;
 	testResult?: { success: boolean; message: string };
 	isFavorite: boolean;
+	isDeleting: boolean;
+	isTesting: boolean;
+	testResult?: { success: boolean; message: string };
 }
 
 function RepositoryCard({
@@ -951,6 +1048,27 @@ function RepositoryCard({
 				)}
 			</div>
 
+	isDeleting,
+	isTesting,
+	testResult,
+}: RepositoryCardProps) {
+	const typeBadge = getRepositoryTypeBadge(repository.type);
+
+	return (
+		<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="flex items-start justify-between mb-4">
+				<div>
+					<h3 className="font-semibold text-gray-900">{repository.name}</h3>
+					<p className="text-sm text-gray-500">
+						Created {formatDate(repository.created_at)}
+					</p>
+				</div>
+				<span
+					className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${typeBadge.className}`}
+				>
+					{typeBadge.label}
+				</span>
+			</div>
 			{testResult && (
 				<div
 					className={`mb-4 p-3 rounded-lg text-sm ${
@@ -973,6 +1091,7 @@ function RepositoryCard({
 				</button>
 				<span className="text-gray-300 dark:text-gray-600">|</span>
 				<span className="text-gray-300">|</span>
+			<div className="flex items-center gap-2">
 				<button
 					type="button"
 					onClick={() => onTest(repository.id)}
@@ -1003,6 +1122,11 @@ function RepositoryCard({
 					Clone
 				</button>
 				<span className="text-gray-300 dark:text-gray-600">|</span>
+					className="text-sm text-indigo-600 hover:text-indigo-800 font-medium disabled:opacity-50"
+				>
+					{isTesting ? 'Testing...' : 'Test Connection'}
+				</button>
+				<span className="text-gray-300">|</span>
 				<button
 					type="button"
 					onClick={() => onDelete(repository.id)}
@@ -1441,6 +1565,9 @@ export function Repositories() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [typeFilter, setTypeFilter] = useState<RepositoryType | 'all'>('all');
 	const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+export function Repositories() {
+	const [searchQuery, setSearchQuery] = useState('');
+	const [typeFilter, setTypeFilter] = useState<RepositoryType | 'all'>('all');
 	const [showAddModal, setShowAddModal] = useState(false);
 	const [selectedType, setSelectedType] = useState<RepositoryType | undefined>(
 		undefined,
@@ -1480,6 +1607,10 @@ export function Repositories() {
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
+	const { data: repositories, isLoading, isError } = useRepositories();
+	const deleteRepository = useDeleteRepository();
+	const testRepository = useTestRepository();
+
 	const filteredRepositories = repositories?.filter((repo) => {
 		const matchesSearch = repo.name
 			.toLowerCase()
@@ -1487,6 +1618,7 @@ export function Repositories() {
 		const matchesType = typeFilter === 'all' || repo.type === typeFilter;
 		const matchesFavorites = !showFavoritesOnly || favoriteIds.has(repo.id);
 		return matchesSearch && matchesType && matchesFavorites;
+		return matchesSearch && matchesType;
 	});
 
 	const handleDelete = (id: string) => {
@@ -1588,6 +1720,20 @@ export function Repositories() {
 						type="button"
 						onClick={() => setShowImportWizard(true)}
 						className="inline-flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
+				<button
+					type="button"
+					onClick={() => {
+						setSelectedType(undefined);
+						setShowAddModal(true);
+					}}
+					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+				>
+					<svg
+						aria-hidden="true"
+						className="w-5 h-5"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
 					>
 						<svg
 							aria-hidden="true"
@@ -1643,6 +1789,7 @@ export function Repositories() {
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 						<select
 							value={typeFilter}
@@ -1650,6 +1797,7 @@ export function Repositories() {
 								setTypeFilter(e.target.value as RepositoryType | 'all')
 							}
 							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="all">All Types</option>
 							<option value="local">Local</option>
@@ -1689,6 +1837,7 @@ export function Repositories() {
 
 				{isError ? (
 					<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
+					<div className="p-12 text-center text-red-500">
 						<p className="font-medium">Failed to load repositories</p>
 						<p className="text-sm">Please try refreshing the page</p>
 					</div>
@@ -1715,11 +1864,15 @@ export function Repositories() {
 								isRecovering={recoverKey.isPending}
 								testResult={testResults[repo.id]}
 								isFavorite={favoriteIds.has(repo.id)}
+								isDeleting={deleteRepository.isPending}
+								isTesting={testRepository.isPending}
+								testResult={testResults[repo.id]}
 							/>
 						))}
 					</div>
 				) : (
 					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
+					<div className="p-12 text-center text-gray-500">
 						<svg
 							aria-hidden="true"
 							className="w-16 h-16 mx-auto mb-4 text-gray-300"
@@ -1739,6 +1892,11 @@ export function Repositories() {
 						</h3>
 						<p className="mb-4">Add a repository to store your backup data</p>
 						<div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
+						<h3 className="text-lg font-medium text-gray-900 mb-2">
+							No repositories configured
+						</h3>
+						<p className="mb-4">Add a repository to store your backup data</p>
+						<div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
 							<button
 								type="button"
 								onClick={() => handleTypeClick('local')}
@@ -1750,6 +1908,8 @@ export function Repositories() {
 								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 									Filesystem path
 								</p>
+								<p className="font-medium text-gray-900">Local</p>
+								<p className="text-xs text-gray-500">Filesystem path</p>
 							</button>
 							<button
 								type="button"
@@ -1760,6 +1920,8 @@ export function Repositories() {
 								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 									AWS / MinIO / Wasabi
 								</p>
+								<p className="font-medium text-gray-900">S3</p>
+								<p className="text-xs text-gray-500">AWS / MinIO</p>
 							</button>
 							<button
 								type="button"
@@ -1770,6 +1932,8 @@ export function Repositories() {
 								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 									Backblaze
 								</p>
+								<p className="font-medium text-gray-900">B2</p>
+								<p className="text-xs text-gray-500">Backblaze</p>
 							</button>
 							<button
 								type="button"
@@ -1919,6 +2083,22 @@ export function Repositories() {
 					</div>
 				</div>
 			)}
+								<p className="font-medium text-gray-900">SFTP</p>
+								<p className="text-xs text-gray-500">Remote server</p>
+							</button>
+						</div>
+					</div>
+				)}
+			</div>
+
+			<AddRepositoryModal
+				isOpen={showAddModal}
+				onClose={() => {
+					setShowAddModal(false);
+					setSelectedType(undefined);
+				}}
+				initialType={selectedType}
+			/>
 		</div>
 	);
 }

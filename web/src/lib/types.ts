@@ -132,6 +132,8 @@ export interface AgentGroup {
 	description?: string;
 	color?: string;
 	agent_count: number;
+	last_seen?: string;
+	status: AgentStatus;
 	created_at: string;
 	updated_at: string;
 }
@@ -375,6 +377,8 @@ export type BackendConfig =
 	| SFTPBackendConfig
 	| RestBackendConfig
 	| DropboxBackendConfig;
+// Repository types
+export type RepositoryType = 'local' | 's3' | 'b2' | 'sftp' | 'rest';
 
 export interface Repository {
 	id: string;
@@ -395,6 +399,7 @@ export interface CreateRepositoryRequest {
 export interface CreateRepositoryResponse {
 	repository: Repository;
 	password: string;
+	config: Record<string, unknown>;
 }
 
 export interface UpdateRepositoryRequest {
@@ -503,6 +508,11 @@ export interface Schedule {
 	policy_id?: string; // Policy this schedule was created from
 	name: string;
 	backup_type: BackupType; // Type of backup: file or docker
+export interface Schedule {
+	id: string;
+	agent_id: string;
+	repository_id: string;
+	name: string;
 	cron_expression: string;
 	paths: string[];
 	excludes?: string[];
@@ -521,6 +531,7 @@ export interface Schedule {
 	docker_stack_config?: DockerStackScheduleConfig; // Docker stack backup configuration
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
+	enabled: boolean;
 	created_at: string;
 	updated_at: string;
 }
@@ -544,6 +555,12 @@ export interface CreateScheduleRequest {
 	preemptible?: boolean;
 	docker_options?: DockerBackupOptions; // Docker-specific backup options
 	docker_stack_config?: DockerStackScheduleConfig;
+	repository_id: string;
+	name: string;
+	cron_expression: string;
+	paths: string[];
+	excludes?: string[];
+	retention_policy?: RetentionPolicy;
 	enabled?: boolean;
 }
 
@@ -686,6 +703,9 @@ export interface ExcludedLargeFile {
 	size_bytes: number;
 	size_mb: number;
 }
+
+// Backup types
+export type BackupStatus = 'running' | 'completed' | 'failed' | 'canceled';
 
 export interface Backup {
 	id: string;
@@ -1332,6 +1352,35 @@ export type UpgradeFeature =
 	| 'geo_replication'
 	| 'lifecycle_policies'
 	| 'legal_holds';
+
+// API response wrappers
+export interface AgentsResponse {
+	agents: Agent[];
+}
+
+export interface RepositoriesResponse {
+	repositories: Repository[];
+}
+
+export interface SchedulesResponse {
+	schedules: Schedule[];
+}
+
+export interface BackupsResponse {
+	backups: Backup[];
+}
+
+export interface ErrorResponse {
+	error: string;
+	created_at: string;
+}
+
+// Auth types
+export interface User {
+	id: string;
+	email: string;
+	name: string;
+}
 
 // API response wrappers
 export interface AgentsResponse {

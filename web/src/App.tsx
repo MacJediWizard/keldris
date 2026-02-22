@@ -205,6 +205,22 @@ const queryClient = new QueryClient({
 	},
 });
 
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			retry: (failureCount, error) => {
+				// Don't retry on 4xx errors
+				if (error instanceof Error && 'status' in error) {
+					const status = (error as { status: number }).status;
+					if (status >= 400 && status < 500) return false;
+				}
+				return failureCount < 3;
+			},
+			refetchOnWindowFocus: false,
+		},
+	},
+});
+
 function App() {
 	return (
 		<QueryClientProvider client={queryClient}>
@@ -640,6 +656,13 @@ function App() {
 				</BrowserRouter>
 			</QueryClientProvider>
 		</ErrorBoundary>
+						<Route path="repositories" element={<Repositories />} />
+						<Route path="schedules" element={<Schedules />} />
+						<Route path="backups" element={<Backups />} />
+					</Route>
+				</Routes>
+			</BrowserRouter>
+		</QueryClientProvider>
 	);
 }
 

@@ -43,6 +43,9 @@ import { Breadcrumbs } from './ui/Breadcrumbs';
 import { useSearch } from '../hooks/useSearch';
 import type { SearchResult, SearchResultType } from '../lib/types';
 import { WhatsNewModal } from './features/WhatsNewModal';
+import { useState } from 'react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useLogout, useMe } from '../hooks/useAuth';
 
 interface NavItem {
 	path: string;
@@ -1598,6 +1601,7 @@ function Header() {
 	const { data: alertCount } = useAlertCount();
 	const logout = useLogout();
 	const { t } = useLocale();
+	const logout = useLogout();
 
 	const userInitial =
 		user?.name?.charAt(0).toUpperCase() ??
@@ -1714,6 +1718,7 @@ function Header() {
 						</span>
 					)}
 				</Link>
+				</button>
 				<div className="relative">
 					<button
 						type="button"
@@ -1725,6 +1730,7 @@ function Header() {
 								isSuperuser ? 'bg-purple-600' : 'bg-indigo-600'
 							}`}
 						>
+						<div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
 							{userInitial}
 						</div>
 					</button>
@@ -1828,6 +1834,21 @@ function Header() {
 								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
 							>
 								{t('common.signOut')}
+						<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+							{user && (
+								<div className="px-4 py-2 border-b border-gray-100">
+									<p className="text-sm font-medium text-gray-900 truncate">
+										{user.name}
+									</p>
+									<p className="text-xs text-gray-500 truncate">{user.email}</p>
+								</div>
+							)}
+							<button
+								type="button"
+								onClick={() => logout.mutate()}
+								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+							>
+								Sign out
 							</button>
 						</div>
 					)}
@@ -1844,6 +1865,11 @@ function LoadingScreen() {
 			<div className="text-center">
 				<div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
 				<p className="text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
+	return (
+		<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+			<div className="text-center">
+				<div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
+				<p className="text-gray-600">Loading...</p>
 			</div>
 		</div>
 	);
@@ -1938,6 +1964,10 @@ export function Layout() {
 
 	// Show loading state while checking auth
 	if (isLoading || onboardingLoading) {
+	const { isLoading, isError } = useMe();
+
+	// Show loading state while checking auth
+	if (isLoading) {
 		return <LoadingScreen />;
 	}
 

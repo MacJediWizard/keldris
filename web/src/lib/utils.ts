@@ -1,5 +1,7 @@
 // Format date to relative time (past or future)
 export function formatRelativeTime(dateString: string | undefined): string {
+// Format date to relative time or absolute date
+export function formatDate(dateString: string | undefined): string {
 	if (!dateString) return 'Never';
 
 	const date = new Date(dateString);

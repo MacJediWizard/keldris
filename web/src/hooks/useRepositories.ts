@@ -4,6 +4,7 @@ import type {
 	CloneRepositoryRequest,
 	CreateRepositoryRequest,
 	TestConnectionRequest,
+	CreateRepositoryRequest,
 	UpdateRepositoryRequest,
 } from '../lib/types';
 

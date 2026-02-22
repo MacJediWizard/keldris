@@ -600,6 +600,25 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
+	Agent,
+	AgentsResponse,
+	Backup,
+	BackupsResponse,
+	CreateAgentRequest,
+	CreateAgentResponse,
+	CreateRepositoryRequest,
+	CreateScheduleRequest,
+	ErrorResponse,
+	MessageResponse,
+	RepositoriesResponse,
+	Repository,
+	RunScheduleResponse,
+	Schedule,
+	SchedulesResponse,
+	TestRepositoryResponse,
+	UpdateRepositoryRequest,
+	UpdateScheduleRequest,
+	User,
 } from './types';
 
 const API_BASE = '/api/v1';
@@ -662,6 +681,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
 			throw err;
 		}
 		throw new ApiError(response.status, (errorData as ErrorResponse).error);
+		const errorData = (await response.json().catch(() => ({
+			error: 'Unknown error',
+		}))) as ErrorResponse;
+		throw new ApiError(response.status, errorData.error);
 	}
 
 	return response.json() as Promise<T>;
@@ -976,6 +999,8 @@ export const repositoriesApi = {
 		data: CreateRepositoryRequest,
 	): Promise<CreateRepositoryResponse> =>
 		fetchApi<CreateRepositoryResponse>('/repositories', {
+	create: async (data: CreateRepositoryRequest): Promise<Repository> =>
+		fetchApi<Repository>('/repositories', {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
