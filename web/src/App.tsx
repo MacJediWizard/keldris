@@ -408,6 +408,7 @@ function App() {
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />
 						<Route path="onboarding" element={<Onboarding />} />
+						<Route path="changelog" element={<Changelog />} />
 					</Route>
 				</Routes>
 				<Suspense fallback={<LoadingSpinner />}>

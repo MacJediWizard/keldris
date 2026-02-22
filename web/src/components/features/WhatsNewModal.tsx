@@ -19,6 +19,7 @@ function ChangeList({
 	items: string[];
 	icon: string;
 }) {
+}: { title: string; items: string[]; icon: string }) {
 	if (!items || items.length === 0) return null;
 
 	return (

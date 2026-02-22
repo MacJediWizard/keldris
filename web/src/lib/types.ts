@@ -3149,6 +3149,26 @@ export interface SLAStatusHistoryResponse {
 }
 
 // Air-Gap types
+// Changelog types
+export interface ChangelogEntry {
+	version: string;
+	date: string;
+	added?: string[];
+	changed?: string[];
+	deprecated?: string[];
+	removed?: string[];
+	fixed?: string[];
+	security?: string[];
+	is_unreleased?: boolean;
+}
+
+export interface ChangelogResponse {
+	entries: ChangelogEntry[];
+	current_version: string;
+}
+
+// Server Log types
+export type ServerLogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
 export interface AirGapDisabledFeature {
 	name: string;
