@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/backup/docker"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -25,30 +27,49 @@ type DockerBackupStore interface {
 	GetDockerVolumes(ctx context.Context, orgID uuid.UUID, agentID uuid.UUID) ([]models.DockerVolume, error)
 	GetDockerDaemonStatus(ctx context.Context, orgID uuid.UUID, agentID uuid.UUID) (*models.DockerDaemonStatus, error)
 	CreateDockerBackup(ctx context.Context, orgID uuid.UUID, req *models.DockerBackupParams) (*models.DockerBackupResult, error)
+	GetDockerContainerByID(ctx context.Context, id uuid.UUID) (*models.DockerContainerConfig, error)
+	UpdateDockerContainer(ctx context.Context, config *models.DockerContainerConfig) error
+	DeleteDockerContainer(ctx context.Context, id uuid.UUID) error
+	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
 }
 
 // DockerBackupHandler handles Docker backup-related HTTP endpoints.
 type DockerBackupHandler struct {
-	store  DockerBackupStore
-	logger zerolog.Logger
+	store     DockerBackupStore
+	discovery *docker.DiscoveryService
+	parser    *docker.LabelParser
+	logger    zerolog.Logger
 }
 
 // NewDockerBackupHandler creates a new DockerBackupHandler.
-func NewDockerBackupHandler(store DockerBackupStore, logger zerolog.Logger) *DockerBackupHandler {
+func NewDockerBackupHandler(store DockerBackupStore, discovery *docker.DiscoveryService, logger zerolog.Logger) *DockerBackupHandler {
 	return &DockerBackupHandler{
-		store:  store,
-		logger: logger.With().Str("component", "docker_backup_handler").Logger(),
+		store:     store,
+		discovery: discovery,
+		parser:    docker.NewLabelParser(),
+		logger:    logger.With().Str("component", "docker_backup_handler").Logger(),
 	}
 }
 
 // RegisterRoutes registers Docker backup routes on the given router group.
 func (h *DockerBackupHandler) RegisterRoutes(r *gin.RouterGroup) {
-	docker := r.Group("/docker")
+	dockerGroup := r.Group("/docker")
 	{
-		docker.GET("/containers", h.ListContainers)
-		docker.GET("/volumes", h.ListVolumes)
-		docker.POST("/backup", h.TriggerBackup)
-		docker.GET("/status", h.DaemonStatus)
+		dockerGroup.GET("/containers", h.ListContainers)
+		dockerGroup.GET("/containers/:id", h.GetContainer)
+		dockerGroup.PUT("/containers/:id", h.UpdateContainer)
+		dockerGroup.DELETE("/containers/:id", h.DeleteContainer)
+		dockerGroup.POST("/containers/:id/override", h.SetOverride)
+		dockerGroup.DELETE("/containers/:id/override", h.ClearOverride)
+		dockerGroup.POST("/containers/:id/refresh", h.RefreshContainer)
+		dockerGroup.GET("/volumes", h.ListVolumes)
+		dockerGroup.POST("/backup", h.TriggerBackup)
+		dockerGroup.GET("/status", h.DaemonStatus)
+		dockerGroup.POST("/discover", h.DiscoverContainers)
+		dockerGroup.GET("/labels/docs", h.GetLabelDocs)
+		dockerGroup.GET("/labels/examples/compose", h.GetComposeExample)
+		dockerGroup.GET("/labels/examples/run", h.GetRunExample)
+		dockerGroup.POST("/labels/validate", h.ValidateLabels)
 	}
 }
 
@@ -253,72 +274,6 @@ func (h *DockerBackupHandler) DaemonStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, status)
 }
 
-import (
-	"context"
-	"net/http"
-
-	"github.com/MacJediWizard/keldris/internal/api/middleware"
-	"github.com/MacJediWizard/keldris/internal/backup/docker"
-	"github.com/MacJediWizard/keldris/internal/models"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/rs/zerolog"
-)
-
-// DockerBackupStore defines the interface for Docker backup persistence operations.
-type DockerBackupStore interface {
-	GetDockerContainersByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.DockerContainerConfig, error)
-	GetDockerContainerByID(ctx context.Context, id uuid.UUID) (*models.DockerContainerConfig, error)
-	GetDockerContainerByContainerID(ctx context.Context, agentID uuid.UUID, containerID string) (*models.DockerContainerConfig, error)
-	CreateDockerContainer(ctx context.Context, config *models.DockerContainerConfig) error
-	UpdateDockerContainer(ctx context.Context, config *models.DockerContainerConfig) error
-	DeleteDockerContainer(ctx context.Context, id uuid.UUID) error
-	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
-	GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error)
-}
-
-// DockerBackupHandler handles Docker backup-related HTTP endpoints.
-type DockerBackupHandler struct {
-	store     DockerBackupStore
-	discovery *docker.DiscoveryService
-	parser    *docker.LabelParser
-	logger    zerolog.Logger
-}
-
-// NewDockerBackupHandler creates a new DockerBackupHandler.
-func NewDockerBackupHandler(store DockerBackupStore, discovery *docker.DiscoveryService, logger zerolog.Logger) *DockerBackupHandler {
-	return &DockerBackupHandler{
-		store:     store,
-		discovery: discovery,
-		parser:    docker.NewLabelParser(),
-		logger:    logger.With().Str("component", "docker_backup_handler").Logger(),
-	}
-}
-
-// RegisterRoutes registers Docker backup routes on the given router group.
-func (h *DockerBackupHandler) RegisterRoutes(r *gin.RouterGroup) {
-	docker := r.Group("/docker")
-	{
-		// Container backup configurations
-		docker.GET("/containers", h.ListContainers)
-		docker.GET("/containers/:id", h.GetContainer)
-		docker.PUT("/containers/:id", h.UpdateContainer)
-		docker.DELETE("/containers/:id", h.DeleteContainer)
-		docker.POST("/containers/:id/override", h.SetOverride)
-		docker.DELETE("/containers/:id/override", h.ClearOverride)
-
-		// Discovery
-		docker.POST("/discover", h.DiscoverContainers)
-		docker.POST("/containers/:id/refresh", h.RefreshContainer)
-
-		// Label documentation
-		docker.GET("/labels/docs", h.GetLabelDocs)
-		docker.GET("/labels/examples/compose", h.GetComposeExample)
-		docker.GET("/labels/examples/run", h.GetRunExample)
-		docker.POST("/labels/validate", h.ValidateLabels)
-	}
-}
-
 // ContainerDiscoveryRequest is the request body for container discovery.
 type ContainerDiscoveryRequest struct {
 	AgentID    uuid.UUID              `json:"agent_id" binding:"required"`
@@ -377,93 +332,6 @@ type ValidateLabelsResponse struct {
 	Valid  bool     `json:"valid"`
 	Errors []string `json:"errors,omitempty"`
 }
-
-// ListContainers returns all Docker containers configured for backup.
-//
-//	@Summary		List Docker containers
-//	@Description	Returns all Docker containers configured for backup in the organization
-//	@Tags			Docker Backup
-//	@Accept			json
-//	@Produce		json
-//	@Param			agent_id	query		string	false	"Filter by agent ID"
-//	@Success		200			{object}	map[string][]models.DockerContainerConfig
-//	@Failure		400			{object}	map[string]string
-//	@Failure		401			{object}	map[string]string
-//	@Failure		500			{object}	map[string]string
-//	@Security		SessionAuth
-//	@Router			/docker/containers [get]
-func (h *DockerBackupHandler) ListContainers(c *gin.Context) {
-	user := middleware.RequireUser(c)
-	if user == nil {
-		return
-	}
-
-	if user.CurrentOrgID == uuid.Nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
-		return
-	}
-
-	// Optional agent_id filter
-	agentIDParam := c.Query("agent_id")
-	if agentIDParam != "" {
-		agentID, err := uuid.Parse(agentIDParam)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent_id"})
-			return
-		}
-
-		// Verify agent belongs to user's org
-		agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
-			return
-		}
-		if agent.OrgID != user.CurrentOrgID {
-			c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
-			return
-		}
-
-		containers, err := h.store.GetDockerContainersByAgentID(c.Request.Context(), agentID)
-		if err != nil {
-			h.logger.Error().Err(err).Str("agent_id", agentID.String()).Msg("failed to list containers")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list containers"})
-			return
-		}
-
-		// Apply overrides
-		for _, container := range containers {
-			container.ApplyOverrides()
-		}
-
-		c.JSON(http.StatusOK, gin.H{"containers": containers})
-		return
-	}
-
-	// Get all containers for all agents in the org
-	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), user.CurrentOrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list agents")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list containers"})
-		return
-	}
-
-	var allContainers []*models.DockerContainerConfig
-	for _, agent := range agents {
-		containers, err := h.store.GetDockerContainersByAgentID(c.Request.Context(), agent.ID)
-		if err != nil {
-			h.logger.Error().Err(err).Str("agent_id", agent.ID.String()).Msg("failed to list containers for agent")
-			continue
-		}
-		// Apply overrides
-		for _, container := range containers {
-			container.ApplyOverrides()
-		}
-		allContainers = append(allContainers, containers...)
-	}
-
-	c.JSON(http.StatusOK, gin.H{"containers": allContainers})
-}
-
 // GetContainer returns a specific Docker container configuration.
 //
 //	@Summary		Get Docker container
@@ -997,7 +865,7 @@ func (h *DockerBackupHandler) verifyContainerAccess(c *gin.Context, orgID uuid.U
 
 	if agent.OrgID != orgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "container not found"})
-		return err
+		return fmt.Errorf("container agent org mismatch")
 	}
 
 	return nil

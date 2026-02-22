@@ -1332,15 +1332,19 @@ export interface DockerContainer {
 	id: string;
 	name: string;
 	image: string;
+	status?: string;
+	state?: string;
 	volumes?: string[];
 	ports?: string[];
 	networks?: string[];
-	created_at: string;
+	created?: string;
+	created_at?: string;
 }
 
 export interface DockerVolume {
 	name: string;
 	driver: string;
+	mountpoint?: string;
 	size_bytes: number;
 	created_at: string;
 }
@@ -2818,26 +2822,6 @@ export interface AirGapDisabledFeature {
 export interface AirGapStatus {
 	enabled: boolean;
 	disabled_features: AirGapDisabledFeature[];
-}
-
-// Docker Backup types
-
-export interface DockerContainer {
-	id: string;
-	name: string;
-	image: string;
-	status: string;
-	state: string;
-	created: string;
-	ports: string[];
-}
-
-export interface DockerVolume {
-	name: string;
-	driver: string;
-	mountpoint: string;
-	size_bytes: number;
-	created: string;
 }
 
 export interface DockerDaemonStatus {
@@ -4902,26 +4886,6 @@ export interface FavoritesResponse {
 	favorites: Favorite[];
 }
 
-// Docker Backup types
-
-export interface DockerContainer {
-	id: string;
-	name: string;
-	image: string;
-	status: string;
-	state: string;
-	created: string;
-	ports: string[];
-}
-
-export interface DockerVolume {
-	name: string;
-	driver: string;
-	mountpoint: string;
-	size_bytes: number;
-	created: string;
-}
-
 export interface DockerDaemonStatus {
 	available: boolean;
 	version: string;
@@ -4951,6 +4915,8 @@ export interface DockerContainersResponse {
 
 export interface DockerVolumesResponse {
 	volumes: DockerVolume[];
+}
+
 // Docker Stack Backup types
 export type DockerStackBackupStatus =
 	| 'pending'

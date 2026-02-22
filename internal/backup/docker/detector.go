@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 // DetectDocker checks if Docker is available and returns the version string.
@@ -46,15 +49,39 @@ func GetDockerInfo() (*DockerInfo, error) {
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "docker", "info", "--format", "{{json .}}")
-	"runtime"
-	"strings"
-	"time"
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
-	"github.com/rs/zerolog"
-)
+	if err := cmd.Run(); err != nil {
+		errMsg := stderr.String()
+		if errMsg == "" {
+			errMsg = stdout.String()
+		}
+		return nil, fmt.Errorf("docker info: %w: %s", err, strings.TrimSpace(errMsg))
+	}
 
-// DockerInfo contains information about the Docker installation on an agent.
-type DockerInfo struct {
+	var raw dockerInfoOutput
+	if err := json.Unmarshal(stdout.Bytes(), &raw); err != nil {
+		return nil, fmt.Errorf("parse docker info: %w", err)
+	}
+
+	return &DockerInfo{
+		ServerVersion:   raw.ServerVersion,
+		StorageDriver:   raw.Driver,
+		DockerRootDir:   raw.DockerRootDir,
+		Containers:      raw.Containers,
+		ContRunning:     raw.ContainersRunning,
+		ContPaused:      raw.ContainersPaused,
+		ContStopped:     raw.ContainersStopped,
+		Images:          raw.Images,
+		OperatingSystem: raw.OperatingSystem,
+		Architecture:    raw.Architecture,
+	}, nil
+}
+
+// DetectorInfo contains information about the Docker installation on an agent.
+type DetectorInfo struct {
 	Available       bool       `json:"available"`
 	Version         string     `json:"version,omitempty"`
 	APIVersion      string     `json:"api_version,omitempty"`
@@ -97,10 +124,10 @@ func NewDetectorWithBinary(binary string, logger zerolog.Logger) *Detector {
 }
 
 // Detect checks if Docker is available and returns information about the installation.
-func (d *Detector) Detect(ctx context.Context) (*DockerInfo, error) {
+func (d *Detector) Detect(ctx context.Context) (*DetectorInfo, error) {
 	d.logger.Debug().Msg("detecting Docker")
 
-	info := &DockerInfo{
+	info := &DetectorInfo{
 		DetectedAt: time.Now(),
 	}
 
@@ -364,32 +391,10 @@ func (d *Detector) run(ctx context.Context, args []string) ([]byte, error) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-	err := cmd.Run()
-	if err != nil {
 		errMsg := stderr.String()
 		if errMsg == "" {
 			errMsg = stdout.String()
 		}
-		return nil, fmt.Errorf("docker info: %w: %s", err, strings.TrimSpace(errMsg))
-	}
-
-	var raw dockerInfoOutput
-	if err := json.Unmarshal(stdout.Bytes(), &raw); err != nil {
-		return nil, fmt.Errorf("parse docker info: %w", err)
-	}
-
-	return &DockerInfo{
-		ServerVersion:   raw.ServerVersion,
-		StorageDriver:   raw.Driver,
-		DockerRootDir:   raw.DockerRootDir,
-		Containers:      raw.Containers,
-		ContRunning:     raw.ContainersRunning,
-		ContPaused:      raw.ContainersPaused,
-		ContStopped:     raw.ContainersStopped,
-		Images:          raw.Images,
-		OperatingSystem: raw.OperatingSystem,
-		Architecture:    raw.Architecture,
-	}, nil
 		if strings.Contains(errMsg, "Cannot connect to the Docker daemon") ||
 			strings.Contains(errMsg, "Is the docker daemon running") ||
 			strings.Contains(errMsg, "permission denied") {

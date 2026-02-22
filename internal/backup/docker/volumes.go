@@ -13,13 +13,13 @@ import (
 
 // VolumeBackup handles backing up Docker volumes via restic.
 type VolumeBackup struct {
-	docker *DockerClient
+	docker *DockerCLI
 	restic *backup.Restic
 	logger zerolog.Logger
 }
 
 // NewVolumeBackup creates a new VolumeBackup instance.
-func NewVolumeBackup(docker *DockerClient, restic *backup.Restic, logger zerolog.Logger) *VolumeBackup {
+func NewVolumeBackup(docker *DockerCLI, restic *backup.Restic, logger zerolog.Logger) *VolumeBackup {
 	return &VolumeBackup{
 		docker: docker,
 		restic: restic,

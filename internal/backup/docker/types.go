@@ -11,6 +11,7 @@ type Container struct {
 	State   string            `json:"state"`
 	Status  string            `json:"status"`
 	Labels  map[string]string `json:"labels,omitempty"`
+	Ports   []string          `json:"ports,omitempty"`
 	Mounts  []Mount           `json:"mounts,omitempty"`
 	Created time.Time         `json:"created"`
 }
@@ -34,21 +35,21 @@ type Volume struct {
 	CreatedAt  string            `json:"created_at"`
 }
 
-// ContainerInfo contains detailed information about a container.
-type ContainerInfo struct {
-	ID         string            `json:"id"`
-	Name       string            `json:"name"`
-	Image      string            `json:"image"`
-	State      ContainerState    `json:"state"`
-	Config     ContainerConfig   `json:"config"`
-	Mounts     []Mount           `json:"mounts,omitempty"`
-	Labels     map[string]string `json:"labels,omitempty"`
-	Created    time.Time         `json:"created"`
-	RestartKey string            `json:"restart_policy,omitempty"`
+// InspectContainerInfo contains detailed information from docker inspect.
+type InspectContainerInfo struct {
+	ID         string                 `json:"id"`
+	Name       string                 `json:"name"`
+	Image      string                 `json:"image"`
+	State      InspectContainerState  `json:"state"`
+	Config     InspectContainerConfig `json:"config"`
+	Mounts     []Mount                `json:"mounts,omitempty"`
+	Labels     map[string]string      `json:"labels,omitempty"`
+	Created    time.Time              `json:"created"`
+	RestartKey string                 `json:"restart_policy,omitempty"`
 }
 
-// ContainerState represents the running state of a container.
-type ContainerState struct {
+// InspectContainerState represents the running state from docker inspect.
+type InspectContainerState struct {
 	Status     string     `json:"status"`
 	Running    bool       `json:"running"`
 	Paused     bool       `json:"paused"`
@@ -57,8 +58,8 @@ type ContainerState struct {
 	ExitCode   int        `json:"exit_code"`
 }
 
-// ContainerConfig holds the container's configuration.
-type ContainerConfig struct {
+// InspectContainerConfig holds the container's configuration from docker inspect.
+type InspectContainerConfig struct {
 	Hostname string   `json:"hostname"`
 	Env      []string `json:"env,omitempty"`
 	Cmd      []string `json:"cmd,omitempty"`

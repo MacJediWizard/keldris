@@ -66,7 +66,7 @@ func setupDockerBackupTestRouter(store DockerBackupStore, user *auth.SessionUser
 		c.Next()
 	})
 
-	handler := NewDockerBackupHandler(store, zerolog.Nop())
+	handler := NewDockerBackupHandler(store, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

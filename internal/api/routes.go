@@ -295,7 +295,9 @@ func NewRouter(
 
 	// Docker backup routes (Pro+)
 	dockerBackupGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDockerBackup, logger))
-	dockerBackupHandler := handlers.NewDockerBackupHandler(database, logger)
+	dockerBackupDiscoveryConfig := docker.DefaultDiscoveryConfig()
+	dockerBackupDiscoveryService := docker.NewDiscoveryService(database, dockerBackupDiscoveryConfig, logger)
+	dockerBackupHandler := handlers.NewDockerBackupHandler(database, dockerBackupDiscoveryService, logger)
 	dockerBackupHandler.RegisterRoutes(dockerBackupGroup)
 
 	// Branding routes (Enterprise - White Label)
@@ -394,12 +396,6 @@ func NewRouter(
 	// Lifecycle policy routes
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
-
-	// Docker backup routes
-	dockerDiscoveryConfig := docker.DefaultDiscoveryConfig()
-	dockerDiscoveryService := docker.NewDiscoveryService(database, dockerDiscoveryConfig, logger)
-	dockerBackupHandler := handlers.NewDockerBackupHandler(database, dockerDiscoveryService, logger)
-	dockerBackupHandler.RegisterRoutes(apiV1)
 
 	// Docker container logs backup routes
 	dockerLogBackupService := docker.NewLogBackupService(docker.DefaultLogBackupConfig(), logger)

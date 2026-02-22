@@ -472,6 +472,7 @@
       "newItem": "New item (context-aware)",
       "closeModal": "Close modal"
     }
+  },
   "airGap": {
     "title": "Air-Gap Mode",
     "subtitle": "Manage air-gapped deployment settings and offline license",

@@ -431,6 +431,7 @@
       "newItem": "Novo item (contexto-aware)",
       "closeModal": "Fechar modal"
     }
+  },
   "airGap": {
     "title": "Modo Air-Gap",
     "subtitle": "Gerenciar configurações de implantação air-gap e licença offline",

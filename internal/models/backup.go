@@ -44,8 +44,12 @@ type Backup struct {
 	Resumed            bool                `json:"resumed"`
 	CheckpointID       *uuid.UUID          `json:"checkpoint_id,omitempty"`
 	OriginalBackupID        *uuid.UUID          `json:"original_backup_id,omitempty"`
-	ClassificationLevel     string              `json:"classification_level,omitempty"` // Data classification level
-	ClassificationDataTypes []string            `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	ClassificationLevel     string              `json:"classification_level,omitempty"`
+	ClassificationDataTypes []string            `json:"classification_data_types,omitempty"`
+	ContainerPreHookOutput  string              `json:"container_pre_hook_output,omitempty"`
+	ContainerPreHookError   string              `json:"container_pre_hook_error,omitempty"`
+	ContainerPostHookOutput string              `json:"container_post_hook_output,omitempty"`
+	ContainerPostHookError  string              `json:"container_post_hook_error,omitempty"`
 	CreatedAt               time.Time           `json:"created_at"`
 	DeletedAt               *time.Time          `json:"deleted_at,omitempty"`
 }
@@ -55,37 +59,6 @@ type ExcludedLargeFile struct {
 	Path      string `json:"path"`
 	SizeBytes int64  `json:"size_bytes"`
 	SizeMB    int64  `json:"size_mb"`
-	ID                      uuid.UUID           `json:"id"`
-	ScheduleID              uuid.UUID           `json:"schedule_id"`
-	AgentID                 uuid.UUID           `json:"agent_id"`
-	RepositoryID            *uuid.UUID          `json:"repository_id,omitempty"`
-	SnapshotID              string              `json:"snapshot_id,omitempty"`
-	StartedAt               time.Time           `json:"started_at"`
-	CompletedAt             *time.Time          `json:"completed_at,omitempty"`
-	Status                  BackupStatus        `json:"status"`
-	SizeBytes               *int64              `json:"size_bytes,omitempty"`
-	FilesNew                *int                `json:"files_new,omitempty"`
-	FilesChanged            *int                `json:"files_changed,omitempty"`
-	ErrorMessage            string              `json:"error_message,omitempty"`
-	RetentionApplied        bool                `json:"retention_applied"`
-	SnapshotsRemoved        *int                `json:"snapshots_removed,omitempty"`
-	SnapshotsKept           *int                `json:"snapshots_kept,omitempty"`
-	RetentionError          string              `json:"retention_error,omitempty"`
-	PreScriptOutput         string              `json:"pre_script_output,omitempty"`
-	PreScriptError          string              `json:"pre_script_error,omitempty"`
-	PostScriptOutput        string              `json:"post_script_output,omitempty"`
-	PostScriptError         string              `json:"post_script_error,omitempty"`
-	ExcludedLargeFiles      []ExcludedLargeFile `json:"excluded_large_files,omitempty"` // Files excluded due to size limit
-	Resumed                 bool                `json:"resumed"`                        // True if this backup was resumed from a checkpoint
-	CheckpointID            *uuid.UUID          `json:"checkpoint_id,omitempty"`        // Associated checkpoint if resumed
-	OriginalBackupID        *uuid.UUID          `json:"original_backup_id,omitempty"`   // Original backup that was interrupted
-	ClassificationLevel       string              `json:"classification_level,omitempty"` // Data classification level
-	ClassificationDataTypes   []string            `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
-	ContainerPreHookOutput    string              `json:"container_pre_hook_output,omitempty"`
-	ContainerPreHookError     string              `json:"container_pre_hook_error,omitempty"`
-	ContainerPostHookOutput   string              `json:"container_post_hook_output,omitempty"`
-	ContainerPostHookError    string              `json:"container_post_hook_error,omitempty"`
-	CreatedAt                 time.Time           `json:"created_at"`
 }
 
 // NewBackup creates a new Backup record for the given schedule, agent, and repository.

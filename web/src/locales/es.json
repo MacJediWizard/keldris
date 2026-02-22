@@ -431,6 +431,7 @@
       "newItem": "Nuevo elemento (según contexto)",
       "closeModal": "Cerrar modal"
     }
+  },
   "airGap": {
     "title": "Modo Air-Gap",
     "subtitle": "Administrar configuración de despliegue air-gap y licencia offline",

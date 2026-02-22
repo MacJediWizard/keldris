@@ -99,8 +99,6 @@ import type {
 	CreateDockerRegistryRequest,
 	CreateDockerRestoreRequest,
 	CreateDockerStackRequest,
-	CreateDockerRestoreRequest,
-	CreateDockerStackRequest,
 	CreateDowntimeAlertRequest,
 	CreateDowntimeEventRequest,
 	CreateExcludePatternRequest,
@@ -158,8 +156,6 @@ import type {
 	DiscoverDockerStacksRequest,
 	DiscoverDockerStacksResponse,
 	DiscoveredDockerStack,
-	DockerContainer,
-	DockerContainersResponse,
 	DockerHealthCheckAllResponse,
 	DockerHealthCheckResponse,
 	DockerLogBackup,
@@ -178,11 +174,6 @@ import type {
 	DockerRegistryResponse,
 	DockerRegistryTypeInfo,
 	DockerRegistryTypesResponse,
-	DiscoverDockerStacksRequest,
-	DiscoverDockerStacksResponse,
-	DiscoveredDockerStack,
-	DockerContainer,
-	DockerContainersResponse,
 	DockerRestore,
 	DockerRestorePlan,
 	DockerRestorePreviewRequest,
@@ -2553,6 +2544,11 @@ export const slaPoliciesApi = {
 export const changelogApi = {
 	list: async (): Promise<ChangelogResponse> =>
 		fetchApi<ChangelogResponse>('/changelog'),
+
+	get: async (version: string): Promise<ChangelogEntry> =>
+		fetchApi<ChangelogEntry>(`/changelog/${version}`),
+};
+
 // Docker Backup API
 export const dockerBackupApi = {
 	listContainers: async (agentId: string): Promise<DockerContainer[]> => {
@@ -2585,9 +2581,6 @@ export const dockerBackupApi = {
 export const airGapApi = {
 	getStatus: async (): Promise<AirGapStatus> =>
 		fetchApi<AirGapStatus>('/system/airgap'),
-
-	get: async (version: string): Promise<ChangelogEntry> =>
-		fetchApi<ChangelogEntry>(`/changelog/${version}`),
 };
 
 // Server Logs API (Admin only)
@@ -2772,34 +2765,6 @@ export const classificationsApi = {
 		fetchApi<ComplianceReport>('/classifications/compliance-report'),
 };
 
-// Docker Backup API
-export const dockerBackupApi = {
-	listContainers: async (agentId: string): Promise<DockerContainer[]> => {
-		const response = await fetchApi<DockerContainersResponse>(
-			`/docker/containers?agent_id=${agentId}`,
-		);
-		return response.containers ?? [];
-	},
-
-	listVolumes: async (agentId: string): Promise<DockerVolume[]> => {
-		const response = await fetchApi<DockerVolumesResponse>(
-			`/docker/volumes?agent_id=${agentId}`,
-		);
-		return response.volumes ?? [];
-	},
-
-	triggerBackup: async (
-		data: DockerBackupRequest,
-	): Promise<DockerBackupResponse> =>
-		fetchApi<DockerBackupResponse>('/docker/backup', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	getDaemonStatus: async (agentId: string): Promise<DockerDaemonStatus> =>
-		fetchApi<DockerDaemonStatus>(`/docker/status?agent_id=${agentId}`),
-};
-
 // Immutability API
 export const immutabilityApi = {
 	listLocks: async (): Promise<ImmutabilityLock[]> => {
@@ -2963,12 +2928,6 @@ export const geoReplicationApi = {
 		summary: GeoReplicationSummary;
 		regions: GeoRegion[];
 	}> => fetchApi<GeoReplicationSummaryResponse>('/geo-replication/summary'),
-};
-
-// Air-Gap API
-export const airGapApi = {
-	getStatus: async (): Promise<AirGapStatus> =>
-		fetchApi<AirGapStatus>('/system/airgap'),
 };
 
 export const licenseApi = {
