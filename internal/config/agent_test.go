@@ -12,11 +12,13 @@ func TestAgentConfig_Validate(t *testing.T) {
 		name    string
 		cfg     AgentConfig
 		wantErr string
+		wantErr bool
 	}{
 		{
 			name:    "empty config",
 			cfg:     AgentConfig{},
 			wantErr: "server_url is required",
+			wantErr: true,
 		},
 		{
 			name: "missing api_key",
@@ -24,6 +26,7 @@ func TestAgentConfig_Validate(t *testing.T) {
 				ServerURL: "https://example.com",
 			},
 			wantErr: "api_key is required",
+			wantErr: true,
 		},
 		{
 			name: "missing server_url",
@@ -31,6 +34,7 @@ func TestAgentConfig_Validate(t *testing.T) {
 				APIKey: "test-key",
 			},
 			wantErr: "server_url is required",
+			wantErr: true,
 		},
 		{
 			name: "valid config",
@@ -50,6 +54,7 @@ func TestAgentConfig_Validate(t *testing.T) {
 				AutoCheckUpdate: true,
 			},
 			wantErr: "",
+			wantErr: false,
 		},
 	}
 
@@ -66,6 +71,8 @@ func TestAgentConfig_Validate(t *testing.T) {
 				} else if !strings.Contains(err.Error(), tt.wantErr) {
 					t.Errorf("Validate() error = %q, want containing %q", err.Error(), tt.wantErr)
 				}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -84,6 +91,7 @@ func TestAgentConfig_IsConfigured(t *testing.T) {
 		},
 		{
 			name: "only server_url",
+			name: "partial config",
 			cfg: AgentConfig{
 				ServerURL: "https://example.com",
 			},
@@ -264,6 +272,13 @@ func TestAgentConfig_SaveAndLoad(t *testing.T) {
 		AutoCheckUpdate: true,
 	}
 
+		ServerURL: "https://backup.example.com",
+		APIKey:    "secret-key-12345",
+		AgentID:   "agent-uuid",
+		Hostname:  "testhost",
+	}
+
+	// Save config
 	if err := original.Save(configPath); err != nil {
 		t.Fatalf("Save() error: %v", err)
 	}
@@ -273,6 +288,7 @@ func TestAgentConfig_SaveAndLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Stat() error: %v", err)
 	}
+	// Check that file is not world-readable (0600 on Unix)
 	if info.Mode().Perm()&0077 != 0 {
 		t.Errorf("Config file has insecure permissions: %v", info.Mode())
 	}
@@ -283,6 +299,7 @@ func TestAgentConfig_SaveAndLoad(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 
+	// Verify fields
 	if loaded.ServerURL != original.ServerURL {
 		t.Errorf("ServerURL = %q, want %q", loaded.ServerURL, original.ServerURL)
 	}
@@ -509,5 +526,19 @@ func TestAgentConfig_Validate_ErrorMessages(t *testing.T) {
 	err = cfg.Validate()
 	if err == nil || err.Error() != "api_key is required" {
 		t.Errorf("Validate() with only server_url: error = %v, want 'api_key is required'", err)
+}
+
+func TestLoad_InvalidYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yml")
+
+	// Write invalid YAML
+	if err := os.WriteFile(configPath, []byte("not: valid: yaml: {{"), 0600); err != nil {
+		t.Fatalf("WriteFile() error: %v", err)
+	}
+
+	_, err := Load(configPath)
+	if err == nil {
+		t.Error("Load() expected error for invalid YAML")
 	}
 }

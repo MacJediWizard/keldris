@@ -66,6 +66,10 @@ func (p *ProxyConfig) HasProxy() bool {
 // GetProxyConfig returns the proxy configuration or nil if not configured.
 func (c *AgentConfig) GetProxyConfig() *ProxyConfig {
 	return c.Proxy
+	ServerURL string `yaml:"server_url,omitempty"`
+	APIKey    string `yaml:"api_key,omitempty"`
+	AgentID   string `yaml:"agent_id,omitempty"`
+	Hostname  string `yaml:"hostname,omitempty"`
 }
 
 // Validate checks that the configuration has required fields for operation.
