@@ -151,6 +151,7 @@ type Schedule struct {
 	AgentID          uuid.UUID            `json:"agent_id"`
 	AgentGroupID     *uuid.UUID           `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
 	PolicyID         *uuid.UUID           `json:"policy_id,omitempty"`      // Policy this schedule was created from
+	PolicyID         *uuid.UUID           `json:"policy_id,omitempty"` // Policy this schedule was created from
 	Name             string               `json:"name"`
 	CronExpression   string               `json:"cron_expression"`
 	Paths            []string             `json:"paths"`

@@ -377,6 +377,32 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 							/>
 						</div>
 						{/* Backup Type Selector */}
+						{policies && policies.length > 0 && (
+							<div>
+								<label
+									htmlFor="schedule-policy"
+									className="block text-sm font-medium text-gray-700 mb-1"
+								>
+									Policy Template (optional)
+								</label>
+								<select
+									id="schedule-policy"
+									value={selectedPolicyId}
+									onChange={(e) => handlePolicySelect(e.target.value)}
+									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								>
+									<option value="">No template - configure manually</option>
+									{policies.map((policy) => (
+										<option key={policy.id} value={policy.id}>
+											{policy.name}
+										</option>
+									))}
+								</select>
+								<p className="text-xs text-gray-500 mt-1">
+									Select a policy to pre-fill the form with template values
+								</p>
+							</div>
+						)}
 						<div>
 							<label
 								htmlFor="schedule-backup-type"
@@ -1105,6 +1131,17 @@ interface CloneScheduleModalProps {
 		};
 	}) => Promise<Schedule>;
 	isCloning: boolean;
+interface ScheduleRowProps {
+	schedule: Schedule;
+	agentName?: string;
+	repoNames: string[];
+	policyName?: string;
+	onToggle: (id: string, enabled: boolean) => void;
+	onDelete: (id: string) => void;
+	onRun: (id: string) => void;
+	isUpdating: boolean;
+	isDeleting: boolean;
+	isRunning: boolean;
 }
 
 function CloneScheduleModal({
@@ -1162,6 +1199,22 @@ function CloneScheduleModal({
 	};
 
 	if (!isOpen || !schedule) return null;
+	agentName,
+	repoNames,
+	policyName,
+	onToggle,
+	onDelete,
+	onRun,
+	isUpdating,
+	isDeleting,
+	isRunning,
+}: ScheduleRowProps) {
+	const hasResourceControls =
+		schedule.bandwidth_limit_kb ||
+		schedule.backup_window ||
+		(schedule.excluded_hours && schedule.excluded_hours.length > 0);
+
+	const hasBadges = hasResourceControls || policyName;
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1573,6 +1626,10 @@ function ScheduleRow({
 					</div>
 				</div>
 				<div className="text-sm text-gray-500 dark:text-gray-400">
+		<tr className="hover:bg-gray-50">
+			<td className="px-6 py-4">
+				<div className="font-medium text-gray-900">{schedule.name}</div>
+				<div className="text-sm text-gray-500">
 					{agentName ?? 'Unknown Agent'} →{' '}
 					{repoNames.length > 0 ? repoNames.join(', ') : 'No repos'}
 				</div>

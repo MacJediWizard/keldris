@@ -55,6 +55,8 @@ import type {
 	ApplyPolicyRequest,
 	ApplyPolicyResponse,
 	AssignSLARequest,
+	ApplyPolicyRequest,
+	ApplyPolicyResponse,
 	AssignTagsRequest,
 	AuditLog,
 	AuditLogFilter,
@@ -146,6 +148,7 @@ import type {
 	CreateRateLimitConfigRequest,
 	CreateRegistrationCodeRequest,
 	CreateRegistrationCodeResponse,
+	CreatePolicyRequest,
 	CreateReportScheduleRequest,
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
@@ -362,6 +365,8 @@ import type {
 	RecentItem,
 	RecentItemsResponse,
 	RecentSearchesResponse,
+	PoliciesResponse,
+	Policy,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -511,6 +516,7 @@ import type {
 	UpdatePathClassificationRuleRequest,
 	UpdatePolicyRequest,
 	UpdateRateLimitConfigRequest,
+	UpdatePolicyRequest,
 	UpdateReportScheduleRequest,
 	UpdateRepositoryImmutabilitySettingsRequest,
 	UpdateRepositoryRequest,
@@ -1051,6 +1057,50 @@ export const schedulesApi = {
 		data: BulkCloneScheduleRequest,
 	): Promise<BulkCloneResponse> =>
 		fetchApi<BulkCloneResponse>('/schedules/bulk-clone', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+};
+
+// Policies API
+export const policiesApi = {
+	list: async (): Promise<Policy[]> => {
+		const response = await fetchApi<PoliciesResponse>('/policies');
+		return response.policies ?? [];
+	},
+
+	get: async (id: string): Promise<Policy> =>
+		fetchApi<Policy>(`/policies/${id}`),
+
+	create: async (data: CreatePolicyRequest): Promise<Policy> =>
+		fetchApi<Policy>('/policies', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (id: string, data: UpdatePolicyRequest): Promise<Policy> =>
+		fetchApi<Policy>(`/policies/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/policies/${id}`, {
+			method: 'DELETE',
+		}),
+
+	listSchedules: async (id: string): Promise<Schedule[]> => {
+		const response = await fetchApi<SchedulesResponse>(
+			`/policies/${id}/schedules`,
+		);
+		return response.schedules ?? [];
+	},
+
+	apply: async (
+		id: string,
+		data: ApplyPolicyRequest,
+	): Promise<ApplyPolicyResponse> =>
+		fetchApi<ApplyPolicyResponse>(`/policies/${id}/apply`, {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
