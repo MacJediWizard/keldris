@@ -613,6 +613,12 @@ func (s *Scheduler) runBackupToRepo(
 			BandwidthLimitKB: schedule.BandwidthLimitKB,
 			CompressionLevel: schedule.CompressionLevel,
 			MaxFileSizeMB:    schedule.MaxFileSizeMB,
+	// Build backup options with bandwidth limit and compression level
+	var opts *BackupOptions
+	if schedule.BandwidthLimitKB != nil || schedule.CompressionLevel != nil {
+		opts = &BackupOptions{
+			BandwidthLimitKB: schedule.BandwidthLimitKB,
+			CompressionLevel: schedule.CompressionLevel,
 		}
 		if schedule.BandwidthLimitKB != nil {
 			logger.Debug().Int("bandwidth_limit_kb", *schedule.BandwidthLimitKB).Msg("bandwidth limit applied")

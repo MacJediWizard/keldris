@@ -55,6 +55,9 @@ import type {
 	Repository,
 	Schedule,
 	SchedulePriority,
+import type {
+	CompressionLevel,
+	Schedule,
 	ScheduleRepositoryRequest,
 } from '../lib/types';
 
@@ -1121,6 +1124,43 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											Click to exclude hours when backups should not run.
 										</p>
 									</fieldset>
+
+									<div>
+										<label
+											htmlFor="compression-level"
+											className="block text-sm font-medium text-gray-700 mb-1"
+										>
+											Compression Level
+										</label>
+										<select
+											id="compression-level"
+											value={compressionLevel}
+											onChange={(e) =>
+												setCompressionLevel(
+													e.target.value as CompressionLevel | '',
+												)
+											}
+											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										>
+											<option value="">Auto (default)</option>
+											<option value="off">
+												Off - No compression (fastest, largest files)
+											</option>
+											<option value="auto">Auto - Balanced compression</option>
+											<option value="max">
+												Max - Maximum compression (slowest, smallest files)
+											</option>
+										</select>
+										<p className="text-xs text-gray-500 mt-1">
+											<strong>Off:</strong> Best for already-compressed data
+											(videos, images, archives).
+											<br />
+											<strong>Auto:</strong> Good balance for most data types.
+											<br />
+											<strong>Max:</strong> Best for text files, logs, and
+											databases.
+										</p>
+									</div>
 								</div>
 							)}
 						</div>
@@ -1283,7 +1323,8 @@ function CloneScheduleModal({
 	const hasResourceControls =
 		schedule.bandwidth_limit_kb ||
 		schedule.backup_window ||
-		(schedule.excluded_hours && schedule.excluded_hours.length > 0);
+		(schedule.excluded_hours && schedule.excluded_hours.length > 0) ||
+		schedule.compression_level;
 
 	const hasBadges = hasResourceControls || policyName;
 

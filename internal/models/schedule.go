@@ -160,6 +160,7 @@ type Schedule struct {
 	BandwidthLimitKB *int                 `json:"bandwidth_limit_kb,omitempty"` // Upload limit in KB/s
 	BackupWindow     *BackupWindow        `json:"backup_window,omitempty"`      // Allowed backup time window
 	ExcludedHours    []int                `json:"excluded_hours,omitempty"`     // Hours (0-23) when backups should not run
+	CompressionLevel *string              `json:"compression_level,omitempty"`  // Compression level: off, auto, max
 	Enabled          bool                 `json:"enabled"`
 	Repositories     []ScheduleRepository `json:"repositories,omitempty"`
 	CreatedAt        time.Time            `json:"created_at"`
