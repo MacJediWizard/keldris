@@ -960,6 +960,53 @@ Webhook notifications send HTTP POST requests to user-configured URLs. Mitigate 
 ### Payload Signatures
 
 Keldris signs all webhook payloads with HMAC-SHA256:
+## Request Body Limits
+
+Keldris does not enforce a global request body size limit at the application layer. In production, you should enforce body size limits at the reverse proxy level to prevent denial-of-service via oversized payloads.
+
+### Reverse Proxy Configuration
+
+**Nginx:**
+
+```nginx
+client_max_body_size 10m;
+```
+
+**Caddy:**
+
+```caddyfile
+request_body {
+    max_size 10MB
+}
+```
+
+The server does set `ReadHeaderTimeout: 10s` on the HTTP server to protect against slow-header (Slowloris) attacks.
+
+### Recommended Limits
+
+| Endpoint Type | Recommended Limit |
+|---------------|-------------------|
+| API requests (JSON) | 1 MB |
+| File uploads (if any) | 10 MB |
+| Webhook payloads | 256 KB |
+
+## Webhook URL Validation
+
+Webhook notifications send HTTP POST requests to user-configured URLs. To prevent Server-Side Request Forgery (SSRF), deploy Keldris behind a reverse proxy or firewall that restricts outbound requests to internal networks.
+
+### Risks
+
+- A malicious or misconfigured webhook URL pointing to internal services (e.g., `http://169.254.169.254/` for cloud metadata, or `http://localhost:5432/`) could allow internal network probing.
+
+### Mitigations
+
+1. **Network-level controls** - Run Keldris in a network segment with outbound firewall rules that block access to RFC 1918 ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) and link-local addresses (`169.254.0.0/16`).
+2. **DNS rebinding protection** - Use a DNS resolver that refuses to resolve private IPs for public domains.
+3. **Webhook allow-listing** - If feasible, maintain an allow-list of permitted webhook destination domains.
+
+### Webhook Security Features
+
+Keldris signs all webhook payloads with HMAC-SHA256. The signature is sent in the `X-Keldris-Signature` header. Verify this signature on the receiving end to ensure authenticity.
 
 ```
 X-Keldris-Signature: sha256=<hex-encoded-hmac>
@@ -983,3 +1030,125 @@ Complete the full [Security Checklist](security-checklist.md) before deploying t
 - Request limits and rate limiting
 - Webhook security
 - Monitoring and alerting recommendations
+## Go Runtime Requirements
+
+Keldris requires **Go 1.24 or later** for both building and running.
+
+### Why Go 1.24+
+
+- TLS 1.3 support with modern cipher suites
+- Improved cryptographic library hardening
+- Security fixes in `net/http` and `crypto` packages
+- Required by dependency tree (see `go.mod`)
+
+### Docker Base Image
+
+The official Docker image uses:
+
+```dockerfile
+FROM golang:1.24-alpine AS go-builder
+FROM alpine:3.21
+```
+
+Alpine 3.21 is the current stable release. Keep both the Go toolchain and Alpine base image updated to receive security patches.
+
+### Verifying Your Go Version
+
+```bash
+go version
+# Should output: go version go1.24.x ...
+```
+
+## Reverse Proxy Recommendations
+
+Keldris should always run behind a reverse proxy (nginx, Caddy, Traefik, etc.) in production. The application server binds to a local port and should not be exposed directly to the internet.
+
+### Why a Reverse Proxy
+
+- **TLS termination** - Let the proxy handle HTTPS certificates (e.g., via Let's Encrypt).
+- **Request filtering** - Enforce body size limits, rate limiting, and header sanitization.
+- **HSTS** - The proxy can add `Strict-Transport-Security` headers consistently.
+- **Trusted proxies** - Keldris uses Gin's `c.ClientIP()` which reads `X-Forwarded-For` and `X-Real-IP`. Configure your proxy to set these headers correctly.
+
+### Nginx Example
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name backups.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/backups.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/backups.example.com/privkey.pem;
+
+    # Security headers (Keldris also sets these, but belt-and-suspenders)
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options DENY always;
+    add_header X-Content-Type-Options nosniff always;
+
+    # Body size limit
+    client_max_body_size 10m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### Caddy Example
+
+```caddyfile
+backups.example.com {
+    reverse_proxy localhost:8080
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Frame-Options DENY
+        X-Content-Type-Options nosniff
+    }
+
+    request_body {
+        max_size 10MB
+    }
+}
+```
+
+## CSRF Protection
+
+Keldris uses multiple layers to prevent Cross-Site Request Forgery:
+
+### SameSite Cookies
+
+Session cookies are set with `SameSite=Lax`, which prevents the browser from sending them on cross-origin POST, PUT, PATCH, and DELETE requests. This is the primary CSRF defense.
+
+### CORS Policy
+
+The CORS middleware restricts which origins can make credentialed requests:
+
+- **Production** - `CORS_ORIGINS` must be explicitly set or the server refuses to start.
+- **Development** - All origins are allowed (with a warning).
+
+Only origins listed in `CORS_ORIGINS` can include cookies (`credentials: include`) in cross-origin requests.
+
+### OIDC State Parameter
+
+The OIDC login flow uses a cryptographically random 256-bit state parameter to prevent login CSRF attacks. The state is validated on the callback to ensure the login was initiated by the same browser session.
+
+### Security Headers
+
+Keldris sets `X-Frame-Options: DENY` to prevent clickjacking and applies a strict Content-Security-Policy on API routes (`default-src 'none'; frame-ancestors 'none'`).
+
+### Recommendations
+
+For maximum protection in sensitive environments:
+
+```bash
+# Restrict CORS to your exact frontend domain
+CORS_ORIGINS=https://backups.example.com
+
+# Use HTTPS so Secure cookie flag is active
+ENV=production
+```
