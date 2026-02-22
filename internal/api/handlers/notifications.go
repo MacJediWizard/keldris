@@ -14,6 +14,7 @@ import (
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -82,10 +83,11 @@ type NotificationService interface {
 }
 
 // NewNotificationsHandler creates a new NotificationsHandler.
-func NewNotificationsHandler(store NotificationStore, logger zerolog.Logger) *NotificationsHandler {
+func NewNotificationsHandler(store NotificationStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *NotificationsHandler {
 	return &NotificationsHandler{
-		store:  store,
-		logger: logger.With().Str("component", "notifications_handler").Logger(),
+		store:      store,
+		keyManager: keyManager,
+		logger:     logger.With().Str("component", "notifications_handler").Logger(),
 	}
 }
 

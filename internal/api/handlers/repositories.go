@@ -561,6 +561,7 @@ func (h *RepositoriesHandler) Test(c *gin.Context) {
 		c.JSON(http.StatusOK, TestRepositoryResponse{
 			Success: false,
 			Message: "Connection test failed",
+			Message: "Connection failed: " + err.Error(),
 		})
 		return
 	}
