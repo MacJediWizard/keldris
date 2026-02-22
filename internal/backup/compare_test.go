@@ -351,6 +351,34 @@ func TestRestic_Diff(t *testing.T) {
 	})
 }
 
+func TestRestic_DiffCompact(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		response := `{"message_type":"change","source_path":"","target_path":"/new.txt","modifier":"+"}
+{"message_type":"statistics","added":{"files":1,"dirs":0,"bytes":100},"removed":{"files":0,"dirs":0,"bytes":0}}`
+
+		r, cleanup := newTestRestic(response)
+		defer cleanup()
+
+		stats, err := r.DiffCompact(context.Background(), testResticConfig(), "snap1", "snap2")
+		if err != nil {
+			t.Fatalf("DiffCompact() error = %v", err)
+		}
+		if stats.FilesAdded != 1 {
+			t.Errorf("FilesAdded = %d, want 1", stats.FilesAdded)
+		}
+	})
+
+	t.Run("error propagation", func(t *testing.T) {
+		r, cleanup := newTestResticError("no matching ID")
+		defer cleanup()
+
+		_, err := r.DiffCompact(context.Background(), testResticConfig(), "snap1", "snap2")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
+}
+
 func TestBackendConfig(t *testing.T) {
 	backend := &LocalBackend{Path: "/tmp/repo"}
 	data, err := BackendConfig(backend)
