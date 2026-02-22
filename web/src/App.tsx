@@ -204,6 +204,9 @@ const queryClient = new QueryClient({
 		},
 	},
 });
+const Maintenance = lazy(() => import('./pages/Maintenance'));
+const NewOrganization = lazy(() => import('./pages/NewOrganization'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -439,6 +442,7 @@ function App() {
 		<ErrorBoundary>
 			<QueryClientProvider client={queryClient}>
 				<BrowserRouter>
+				<Suspense fallback={<LoadingSpinner />}>
 					<Routes>
 						<Route path="/" element={<Layout />}>
 							<Route index element={<Dashboard />} />
@@ -456,6 +460,8 @@ function App() {
 							<Route path="backups" element={<Backups />} />
 							<Route path="dr-runbooks" element={<DRRunbooks />} />
 							<Route path="dr-tests" element={<DRTests />} />
+							<Route path="backups" element={<Backups />} />
+							<Route path="dr-runbooks" element={<DRRunbooks />} />
 							<Route path="restore" element={<Restore />} />
 							<Route path="file-history" element={<FileHistory />} />
 							<Route path="snapshots/compare" element={<SnapshotCompare />} />
@@ -661,6 +667,10 @@ function App() {
 						<Route path="backups" element={<Backups />} />
 					</Route>
 				</Routes>
+							<Route path="onboarding" element={<Onboarding />} />
+						</Route>
+					</Routes>
+				</Suspense>
 			</BrowserRouter>
 		</QueryClientProvider>
 	);
