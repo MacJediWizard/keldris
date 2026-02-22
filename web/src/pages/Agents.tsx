@@ -39,6 +39,8 @@ import { useLocale } from '../hooks/useLocale';
 import { usePlanLimits } from '../hooks/usePlanLimits';
 import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
 import { statusHelp } from '../lib/help-content';
+import { useLocale } from '../hooks/useLocale';
+import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
 import { getAgentStatusColor } from '../lib/utils';
 import type { AgentGroup, AgentStatus, AgentWithGroups } from '../lib/types';

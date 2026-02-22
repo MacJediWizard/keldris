@@ -27,6 +27,8 @@ import { useAgents } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useDockerStacks } from '../hooks/useDockerStacks';
 import { useFavoriteIds } from '../hooks/useFavorites';
+import { useAgents } from '../hooks/useAgents';
+import { useBulkSelect } from '../hooks/useBulkSelect';
 import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
 import {
@@ -702,6 +704,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						<div className="border-t border-gray-200 pt-4">
 							<div className="flex items-center justify-between mb-3">
 								<span className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 									Retention Policy
 									<HelpTooltip
 										content={retentionHelp.overview.content}
@@ -1203,6 +1206,9 @@ interface ScheduleRowProps {
 	isUpdating: boolean;
 	isDeleting: boolean;
 	isRunning: boolean;
+	isDryRunning: boolean;
+	isSelected: boolean;
+	onToggleSelect: () => void;
 }
 
 function CloneScheduleModal({
@@ -1270,6 +1276,9 @@ function CloneScheduleModal({
 	isUpdating,
 	isDeleting,
 	isRunning,
+	isDryRunning,
+	isSelected,
+	onToggleSelect,
 }: ScheduleRowProps) {
 	const hasResourceControls =
 		schedule.bandwidth_limit_kb ||
@@ -1693,6 +1702,10 @@ function ScheduleRow({
 			<td className="px-6 py-4">
 				<div className="font-medium text-gray-900">{schedule.name}</div>
 				<div className="text-sm text-gray-500">
+				<div className="font-medium text-gray-900 dark:text-white">
+					{schedule.name}
+				</div>
+				<div className="text-sm text-gray-500 dark:text-gray-400">
 					{agentName ?? 'Unknown Agent'} →{' '}
 					{repoNames.length > 0 ? repoNames.join(', ') : 'No repos'}
 				</div>
@@ -2019,6 +2032,8 @@ export function Schedules() {
 	const dryRunSchedule = useDryRunSchedule();
 	const cloneSchedule = useCloneSchedule();
 	const bulkCloneSchedule = useBulkCloneSchedule();
+
+	const bulkOperation = useBulkOperation();
 
 	const bulkOperation = useBulkOperation();
 
