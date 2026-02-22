@@ -44,6 +44,7 @@ func (m *mockOnboardingStore) SkipOnboarding(_ context.Context, _ uuid.UUID) err
 
 func setupOnboardingTestRouter(store OnboardingStore, orgID uuid.UUID) *gin.Engine {
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	r := SetupTestRouter(user)
 	handler := NewOnboardingHandler(store, zerolog.Nop())
 	api := r.Group("/api/v1")
@@ -145,6 +146,8 @@ func TestOnboardingCompleteStep(t *testing.T) {
 		}
 		if resp.CurrentStep != models.OnboardingStepLicense {
 			t.Fatalf("expected step to advance to license, got %q", resp.CurrentStep)
+		if resp.CurrentStep != models.OnboardingStepOrganization {
+			t.Fatalf("expected step to advance to organization, got %q", resp.CurrentStep)
 		}
 	})
 

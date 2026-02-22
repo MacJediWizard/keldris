@@ -96,6 +96,7 @@ func testMaintenanceWindow(orgID uuid.UUID) *models.MaintenanceWindow {
 func TestMaintenanceList(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 
 	t.Run("success", func(t *testing.T) {
 		w1 := testMaintenanceWindow(orgID)
@@ -120,6 +121,7 @@ func TestMaintenanceList(t *testing.T) {
 	t.Run("no org", func(t *testing.T) {
 		store := &mockMaintenanceStore{}
 		r := setupMaintenanceTestRouter(store, testUserNoOrg())
+		r := setupMaintenanceTestRouter(store, TestUserNoOrg())
 
 		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/maintenance-windows"))
 
@@ -154,6 +156,7 @@ func TestMaintenanceList(t *testing.T) {
 func TestMaintenanceGet(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	w1 := testMaintenanceWindow(orgID)
 
 	t.Run("success", func(t *testing.T) {
@@ -205,6 +208,7 @@ func TestMaintenanceGet(t *testing.T) {
 func TestMaintenanceCreate(t *testing.T) {
 	orgID := uuid.New()
 	adminUser := testUser(orgID)
+	adminUser := TestUser(orgID)
 	adminUser.CurrentOrgRole = "admin"
 
 	startsAt := time.Now().Add(1 * time.Hour).UTC().Truncate(time.Second)
@@ -225,6 +229,7 @@ func TestMaintenanceCreate(t *testing.T) {
 
 	t.Run("non-admin forbidden", func(t *testing.T) {
 		memberUser := testUser(orgID)
+		memberUser := TestUser(orgID)
 		memberUser.CurrentOrgRole = "member"
 		store := &mockMaintenanceStore{}
 		r := setupMaintenanceTestRouter(store, memberUser)
@@ -279,6 +284,7 @@ func TestMaintenanceCreate(t *testing.T) {
 func TestMaintenanceUpdate(t *testing.T) {
 	orgID := uuid.New()
 	adminUser := testUser(orgID)
+	adminUser := TestUser(orgID)
 	adminUser.CurrentOrgRole = "admin"
 	w1 := testMaintenanceWindow(orgID)
 
@@ -296,6 +302,7 @@ func TestMaintenanceUpdate(t *testing.T) {
 
 	t.Run("non-admin forbidden", func(t *testing.T) {
 		memberUser := testUser(orgID)
+		memberUser := TestUser(orgID)
 		memberUser.CurrentOrgRole = "member"
 		store := &mockMaintenanceStore{windows: []*models.MaintenanceWindow{w1}}
 		r := setupMaintenanceTestRouter(store, memberUser)
@@ -359,6 +366,7 @@ func TestMaintenanceUpdate(t *testing.T) {
 func TestMaintenanceDelete(t *testing.T) {
 	orgID := uuid.New()
 	adminUser := testUser(orgID)
+	adminUser := TestUser(orgID)
 	adminUser.CurrentOrgRole = "admin"
 	w1 := testMaintenanceWindow(orgID)
 
@@ -375,6 +383,7 @@ func TestMaintenanceDelete(t *testing.T) {
 
 	t.Run("non-admin forbidden", func(t *testing.T) {
 		memberUser := testUser(orgID)
+		memberUser := TestUser(orgID)
 		memberUser.CurrentOrgRole = "member"
 		store := &mockMaintenanceStore{windows: []*models.MaintenanceWindow{w1}}
 		r := setupMaintenanceTestRouter(store, memberUser)
@@ -415,6 +424,7 @@ func TestMaintenanceDelete(t *testing.T) {
 func TestMaintenanceGetActive(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 
 	t.Run("no active or upcoming", func(t *testing.T) {
 		store := &mockMaintenanceStore{}
@@ -458,6 +468,7 @@ func TestMaintenanceGetActive(t *testing.T) {
 	t.Run("no org", func(t *testing.T) {
 		store := &mockMaintenanceStore{}
 		r := setupMaintenanceTestRouter(store, testUserNoOrg())
+		r := setupMaintenanceTestRouter(store, TestUserNoOrg())
 
 		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/maintenance/active"))
 

@@ -100,6 +100,7 @@ func setupAgentAPITestRouter(store AgentAPIStore, agent *models.Agent) *gin.Engi
 	r := gin.New()
 	r.Use(InjectAgent(agent))
 	handler := NewAgentAPIHandler(store, nil, zerolog.Nop())
+	handler := NewAgentAPIHandler(store, zerolog.Nop())
 	agentGroup := r.Group("/api/v1/agent")
 	handler.RegisterRoutes(agentGroup)
 	return r

@@ -199,6 +199,7 @@ func (m *mockSnapshotStore) GetSnapshotCommentCounts(_ context.Context, _ []stri
 func setupSnapshotsRouter(store SnapshotStore, user *auth.SessionUser) *gin.Engine {
 	r := SetupTestRouter(user)
 	handler := NewSnapshotsHandler(store, nil, zerolog.Nop())
+	handler := NewSnapshotsHandler(store, zerolog.Nop())
 	api := r.Group("/api/v1")
 
 	snapshots := api.Group("/snapshots")
@@ -228,6 +229,11 @@ func setupCompareRouter(store SnapshotStore, user *auth.SessionUser) *gin.Engine
 
 	snapshots := api.Group("/snapshots")
 	snapshots.GET("/compare", handler.CompareSnapshots)
+	handler := NewSnapshotsHandler(store, zerolog.Nop())
+	api := r.Group("/api/v1")
+
+	snapshots := api.Group("/snapshots")
+	snapshots.GET("/:id1/compare/:id2", handler.CompareSnapshots)
 
 	return r
 }
@@ -658,6 +664,14 @@ func TestListFiles(t *testing.T) {
 		SnapshotID:   snapshotID,
 		Status:       models.BackupStatusCompleted,
 		StartedAt:    time.Now(),
+	agent := &models.Agent{ID: agentID, OrgID: orgID, Hostname: "host-1"}
+	backup := &models.Backup{
+		ID:         uuid.New(),
+		ScheduleID: scheduleID,
+		AgentID:    agentID,
+		SnapshotID: snapshotID,
+		Status:     models.BackupStatusCompleted,
+		StartedAt:  time.Now(),
 	}
 
 	dbUser := &models.User{ID: userID, OrgID: orgID, Role: models.UserRoleAdmin}
@@ -666,6 +680,7 @@ func TestListFiles(t *testing.T) {
 	t.Run("access verified but repo lookup fails", func(t *testing.T) {
 		// ListFiles requires real repository credentials for Restic access.
 		// This test verifies auth/access passes but returns 500 when repo is not found.
+	t.Run("success", func(t *testing.T) {
 		store := &mockSnapshotStore{
 			user:             dbUser,
 			agent:            agent,
@@ -680,6 +695,19 @@ func TestListFiles(t *testing.T) {
 	})
 
 	t.Run("access verified with path filter but repo lookup fails", func(t *testing.T) {
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("json unmarshal: %v", err)
+		}
+		if resp["snapshot_id"] != snapshotID {
+			t.Errorf("expected snapshot_id %s, got %v", snapshotID, resp["snapshot_id"])
+		}
+	})
+
+	t.Run("success with path filter", func(t *testing.T) {
 		store := &mockSnapshotStore{
 			user:             dbUser,
 			agent:            agent,
@@ -690,6 +718,13 @@ func TestListFiles(t *testing.T) {
 
 		if w.Code != http.StatusInternalServerError {
 			t.Fatalf("expected 500 (repo not in mock), got %d: %s", w.Code, w.Body.String())
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp map[string]interface{}
+		_ = json.Unmarshal(w.Body.Bytes(), &resp)
+		if resp["path"] != "/data/subdir" {
+			t.Errorf("expected path /data/subdir, got %v", resp["path"])
 		}
 	})
 
@@ -1799,6 +1834,22 @@ func TestCompareSnapshots(t *testing.T) {
 		Status:       models.BackupStatusCompleted,
 		StartedAt:    time.Now(),
 		SizeBytes:    ptrInt64(2048),
+		ID:         uuid.New(),
+		ScheduleID: scheduleID,
+		AgentID:    agentID,
+		SnapshotID: snapshotID1,
+		Status:     models.BackupStatusCompleted,
+		StartedAt:  time.Now().Add(-1 * time.Hour),
+		SizeBytes:  ptrInt64(1024),
+	}
+	backup2 := &models.Backup{
+		ID:         uuid.New(),
+		ScheduleID: scheduleID,
+		AgentID:    agentID,
+		SnapshotID: snapshotID2,
+		Status:     models.BackupStatusCompleted,
+		StartedAt:  time.Now(),
+		SizeBytes:  ptrInt64(2048),
 	}
 
 	dbUser := &models.User{ID: userID, OrgID: orgID, Role: models.UserRoleAdmin}
@@ -1807,6 +1858,7 @@ func TestCompareSnapshots(t *testing.T) {
 	t.Run("access verified but repo lookup fails", func(t *testing.T) {
 		// CompareSnapshots requires real repository credentials for Restic diff.
 		// This test verifies auth/access passes but returns 500 when repo credentials are unavailable.
+	t.Run("success", func(t *testing.T) {
 		store := &mockSnapshotStore{
 			user:  dbUser,
 			agent: agent,
@@ -1821,6 +1873,35 @@ func TestCompareSnapshots(t *testing.T) {
 
 		if w.Code != http.StatusInternalServerError {
 			t.Fatalf("expected 500 (repo not in mock), got %d: %s", w.Code, w.Body.String())
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp SnapshotCompareResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("json unmarshal: %v", err)
+		}
+		if resp.SnapshotID1 != snapshotID1 {
+			t.Errorf("expected snapshot_id_1 %s, got %s", snapshotID1, resp.SnapshotID1)
+		}
+		if resp.SnapshotID2 != snapshotID2 {
+			t.Errorf("expected snapshot_id_2 %s, got %s", snapshotID2, resp.SnapshotID2)
+		}
+		if resp.Snapshot1 == nil {
+			t.Fatal("expected snapshot_1 to be set")
+		}
+		if resp.Snapshot2 == nil {
+			t.Fatal("expected snapshot_2 to be set")
+		}
+		if resp.Snapshot1.Hostname != "host-1" {
+			t.Errorf("expected snapshot_1 hostname host-1, got %s", resp.Snapshot1.Hostname)
+		}
+		if resp.Snapshot1.RepositoryID != repoID.String() {
+			t.Errorf("expected snapshot_1 repo ID %s, got %s", repoID.String(), resp.Snapshot1.RepositoryID)
+		}
+		if len(resp.Changes) != 0 {
+			t.Errorf("expected empty changes (placeholder), got %d", len(resp.Changes))
 		}
 	})
 
@@ -1833,6 +1914,7 @@ func TestCompareSnapshots(t *testing.T) {
 		}
 		r := setupCompareRouter(store, sessionUser)
 		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1=nonexistent&id2="+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/nonexistent/compare/"+snapshotID2))
 
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
@@ -1849,6 +1931,7 @@ func TestCompareSnapshots(t *testing.T) {
 		}
 		r := setupCompareRouter(store, sessionUser)
 		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2=nonexistent"))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/nonexistent"))
 
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
@@ -1861,6 +1944,7 @@ func TestCompareSnapshots(t *testing.T) {
 		}
 		r := setupCompareRouter(store, sessionUser)
 		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2="+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
 
 		if w.Code != http.StatusInternalServerError {
 			t.Fatalf("expected 500, got %d", w.Code)
@@ -1879,6 +1963,7 @@ func TestCompareSnapshots(t *testing.T) {
 		}
 		r := setupCompareRouter(store, sessionUser)
 		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2="+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
 
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
@@ -1921,6 +2006,7 @@ func TestCompareSnapshots(t *testing.T) {
 		}
 		r := setupCompareRouter(store, sessionUser)
 		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2="+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
 
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
@@ -1930,6 +2016,8 @@ func TestCompareSnapshots(t *testing.T) {
 	t.Run("schedule error still reaches restic call", func(t *testing.T) {
 		// CompareSnapshots logs schedule errors but does not fail on them.
 		// It will still fail on the restic diff call since repo credentials are unavailable.
+	t.Run("schedule error for first snapshot still succeeds", func(t *testing.T) {
+		// CompareSnapshots logs schedule errors but does not fail
 		store := &mockSnapshotStore{
 			user:  dbUser,
 			agent: agent,
@@ -1944,6 +2032,16 @@ func TestCompareSnapshots(t *testing.T) {
 
 		if w.Code != http.StatusInternalServerError {
 			t.Fatalf("expected 500 (repo not in mock), got %d: %s", w.Code, w.Body.String())
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp SnapshotCompareResponse
+		_ = json.Unmarshal(w.Body.Bytes(), &resp)
+		// Paths should be nil when schedule fails
+		if resp.Snapshot1 != nil && resp.Snapshot1.Paths != nil {
+			t.Errorf("expected nil paths when schedule error, got %v", resp.Snapshot1.Paths)
 		}
 	})
 
@@ -1951,6 +2049,7 @@ func TestCompareSnapshots(t *testing.T) {
 		store := &mockSnapshotStore{}
 		r := setupCompareRouter(store, nil)
 		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1="+snapshotID1+"&id2="+snapshotID2))
+		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
 
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("expected 401, got %d", w.Code)
@@ -2127,6 +2226,7 @@ func TestSnapshotsRegisterRoutes(t *testing.T) {
 	t.Run("GET compare route", func(t *testing.T) {
 		rc := setupCompareRouter(store, sessionUser)
 		req := AuthenticatedRequest("GET", "/api/v1/snapshots/compare?id1=id1&id2=id2")
+		req := AuthenticatedRequest("GET", "/api/v1/snapshots/id1/compare/id2")
 		w := httptest.NewRecorder()
 		rc.ServeHTTP(w, req)
 		if w.Code == http.StatusMethodNotAllowed {

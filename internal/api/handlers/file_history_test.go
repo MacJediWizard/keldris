@@ -80,6 +80,7 @@ func setupFileHistoryTestRouter(store FileHistoryStore, user *auth.SessionUser) 
 func TestFileHistoryGetHistory(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	agentID := uuid.New()
 	repoID := uuid.New()

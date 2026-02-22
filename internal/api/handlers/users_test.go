@@ -77,6 +77,7 @@ func setupUsersTestRouter(store UsersStore, memberStore auth.MembershipStore, us
 func TestUsersList(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	membership := &models.OrgMembership{UserID: user.ID, OrgID: orgID, Role: models.OrgRoleAdmin}
 
 	t.Run("success", func(t *testing.T) {
@@ -140,6 +141,7 @@ func TestUsersList(t *testing.T) {
 func TestUsersGet(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	membership := &models.OrgMembership{UserID: user.ID, OrgID: orgID, Role: models.OrgRoleAdmin}
 	target := models.NewUser(orgID, "sub1", "target@example.com", "Target", models.UserRoleUser)
 
@@ -196,6 +198,7 @@ func TestUsersGet(t *testing.T) {
 func TestUsersUpdate(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	membership := &models.OrgMembership{UserID: user.ID, OrgID: orgID, Role: models.OrgRoleAdmin}
 	target := models.NewUser(orgID, "sub1", "target@example.com", "Target", models.UserRoleUser)
 
@@ -254,6 +257,7 @@ func TestUsersUpdate(t *testing.T) {
 func TestUsersDelete(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	membership := &models.OrgMembership{UserID: user.ID, OrgID: orgID, Role: models.OrgRoleAdmin}
 	target := models.NewUser(orgID, "sub1", "target@example.com", "Target", models.UserRoleUser)
 

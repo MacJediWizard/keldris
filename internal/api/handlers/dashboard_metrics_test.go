@@ -30,6 +30,19 @@ type mockDashboardMetricsStore struct {
 	durationErr    error
 	dailyErr       error
 	summariesErr   error
+	user         *models.User
+	dashStats    *models.DashboardStats
+	rate7d       *models.BackupSuccessRate
+	rate30d      *models.BackupSuccessRate
+	growthTrend  []*models.StorageGrowthTrend
+	durationTrend []*models.BackupDurationTrend
+	dailyStats   []*models.DailyBackupStats
+	getUserErr   error
+	dashErr      error
+	ratesErr     error
+	growthErr    error
+	durationErr  error
+	dailyErr     error
 }
 
 func (m *mockDashboardMetricsStore) GetUserByID(_ context.Context, _ uuid.UUID) (*models.User, error) {
@@ -92,6 +105,7 @@ func setupDashboardMetricsTestRouter(store DashboardMetricsStore, user *auth.Ses
 func TestDashboardGetStats(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -152,6 +166,7 @@ func TestDashboardGetStats(t *testing.T) {
 func TestDashboardGetSuccessRates(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -180,6 +195,7 @@ func TestDashboardGetSuccessRates(t *testing.T) {
 func TestDashboardGetStorageGrowthTrend(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -219,6 +235,7 @@ func TestDashboardGetStorageGrowthTrend(t *testing.T) {
 func TestDashboardGetBackupDurationTrend(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -246,6 +263,7 @@ func TestDashboardGetBackupDurationTrend(t *testing.T) {
 func TestDashboardGetDailyBackupStats(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {

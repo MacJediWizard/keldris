@@ -90,6 +90,7 @@ func testBackupScriptSetup(orgID uuid.UUID) (uuid.UUID, *models.Schedule, *model
 func TestBackupScriptsList(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	scheduleID, schedule, agent := testBackupScriptSetup(orgID)
 
 	t.Run("success", func(t *testing.T) {
@@ -109,6 +110,7 @@ func TestBackupScriptsList(t *testing.T) {
 	t.Run("no org", func(t *testing.T) {
 		store := &mockBackupScriptStore{schedule: schedule, agent: agent}
 		r := setupBackupScriptsTestRouter(store, testUserNoOrg())
+		r := setupBackupScriptsTestRouter(store, TestUserNoOrg())
 		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/schedules/"+scheduleID.String()+"/scripts"))
 		if resp.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d", resp.Code)
@@ -169,6 +171,7 @@ func TestBackupScriptsList(t *testing.T) {
 func TestBackupScriptsGet(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	scheduleID, schedule, agent := testBackupScriptSetup(orgID)
 	script := models.NewBackupScript(scheduleID, models.BackupScriptTypePreBackup, "echo hello")
 
@@ -216,6 +219,7 @@ func TestBackupScriptsGet(t *testing.T) {
 func TestBackupScriptsCreate(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	scheduleID, schedule, agent := testBackupScriptSetup(orgID)
 
 	t.Run("success", func(t *testing.T) {
@@ -272,6 +276,7 @@ func TestBackupScriptsCreate(t *testing.T) {
 func TestBackupScriptsUpdate(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	scheduleID, schedule, agent := testBackupScriptSetup(orgID)
 	script := models.NewBackupScript(scheduleID, models.BackupScriptTypePreBackup, "echo old")
 
@@ -334,6 +339,7 @@ func TestBackupScriptsUpdate(t *testing.T) {
 func TestBackupScriptsDelete(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
+	user := TestUser(orgID)
 	scheduleID, schedule, agent := testBackupScriptSetup(orgID)
 	script := models.NewBackupScript(scheduleID, models.BackupScriptTypePreBackup, "echo hello")
 
