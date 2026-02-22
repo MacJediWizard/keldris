@@ -17,6 +17,7 @@ import { Dashboard } from './pages/Dashboard';
 import { FileDiff } from './pages/FileDiff';
 import { FileHistory } from './pages/FileHistory';
 import { FileSearch } from './pages/FileSearch';
+import { IPAllowlistSettings } from './pages/IPAllowlistSettings';
 import { LegalHolds } from './pages/LegalHolds';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
@@ -25,8 +26,10 @@ import { Onboarding } from './pages/Onboarding';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
+import { PasswordPolicies } from './pages/PasswordPolicies';
 import { Policies } from './pages/Policies';
 import { RateLimitDashboard } from './pages/RateLimitDashboard';
+import { RateLimits } from './pages/RateLimits';
 import Reports from './pages/Reports';
 import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
@@ -36,6 +39,7 @@ import { SnapshotCompare } from './pages/SnapshotCompare';
 import { StorageStats } from './pages/StorageStats';
 import { Tags } from './pages/Tags';
 import { Templates } from './pages/Templates';
+import { UserSessions } from './pages/UserSessions';
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -101,9 +105,19 @@ function App() {
 							path="organization/announcements"
 							element={<Announcements />}
 						/>
+						<Route
+							path="organization/ip-allowlist"
+							element={<IPAllowlistSettings />}
+						/>
+						<Route
+							path="organization/password-policies"
+							element={<PasswordPolicies />}
+						/>
 						<Route path="organization/new" element={<NewOrganization />} />
 						<Route path="admin/logs" element={<AdminLogs />} />
 						<Route path="admin/rate-limits" element={<RateLimitDashboard />} />
+						<Route path="admin/rate-limit-configs" element={<RateLimits />} />
+						<Route path="account/sessions" element={<UserSessions />} />
 						<Route path="onboarding" element={<Onboarding />} />
 						<Route path="changelog" element={<Changelog />} />
 					</Route>

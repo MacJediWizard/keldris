@@ -1,0 +1,40 @@
+# Keldris Agent Role - Server Registration Tasks
+---
+- name: Check if agent is already registered
+  ansible.builtin.command: "{{ keldris_install_dir }}/{{ keldris_binary_name }} status"
+  register: keldris_status_check
+  changed_when: false
+  failed_when: false
+  become: "{{ ansible_system == 'Linux' }}"
+  environment:
+    KELDRIS_CONFIG_DIR: "{{ keldris_config_dir }}"
+
+- name: Determine if registration is needed
+  ansible.builtin.set_fact:
+    keldris_needs_registration: >-
+      {{ keldris_force_registration | bool or
+         keldris_status_check.rc != 0 or
+         'Not configured' in keldris_status_check.stdout | default('') }}
+
+- name: Verify server connectivity
+  ansible.builtin.uri:
+    url: "{{ keldris_server_url }}/health"
+    method: GET
+    timeout: 10
+    status_code: 200
+  register: keldris_health_check
+  when: keldris_needs_registration | bool
+  ignore_errors: true
+
+- name: Warn if server is not reachable
+  ansible.builtin.debug:
+    msg: "Warning: Keldris server at {{ keldris_server_url }} is not reachable. Registration may fail."
+  when:
+    - keldris_needs_registration | bool
+    - keldris_health_check.failed | default(false)
+
+- name: Display registration status
+  ansible.builtin.debug:
+    msg: >-
+      Agent registration status:
+      {{ 'Already registered' if not keldris_needs_registration else 'Registration pending' }}
