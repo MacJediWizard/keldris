@@ -11,6 +11,9 @@ import (
 // OSInfo is a type alias for the shared OSInfo type in pkg/models.
 type OSInfo = pkgmodels.OSInfo
 
+	"github.com/google/uuid"
+)
+
 // AgentStatus represents the current status of an agent.
 type AgentStatus string
 
@@ -168,6 +171,12 @@ type OSInfo struct {
 	Arch     string `json:"arch" example:"amd64"`
 	Hostname string `json:"hostname" example:"backup-server-01"`
 	Version  string `json:"version,omitempty" example:"Ubuntu 22.04"`
+// OSInfo contains operating system information from the agent.
+type OSInfo struct {
+	OS       string `json:"os"`
+	Arch     string `json:"arch"`
+	Hostname string `json:"hostname"`
+	Version  string `json:"version,omitempty"`
 }
 
 // Agent represents a backup agent installed on a host.
@@ -213,6 +222,13 @@ type Agent struct {
 	OSInfo     *OSInfo     `json:"os_info,omitempty"`
 	LastSeen   *time.Time  `json:"last_seen,omitempty"`
 	Status     AgentStatus `json:"status" example:"active"`
+	ID         uuid.UUID   `json:"id"`
+	OrgID      uuid.UUID   `json:"org_id"`
+	Hostname   string      `json:"hostname"`
+	APIKeyHash string      `json:"-"` // Never expose in JSON
+	OSInfo     *OSInfo     `json:"os_info,omitempty"`
+	LastSeen   *time.Time  `json:"last_seen,omitempty"`
+	Status     AgentStatus `json:"status"`
 	CreatedAt  time.Time   `json:"created_at"`
 	UpdatedAt  time.Time   `json:"updated_at"`
 }

@@ -53,6 +53,16 @@ type User struct {
 	EmailVerifiedAt     *time.Time `json:"email_verified_at,omitempty"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
+// User represents a user authenticated via OIDC.
+type User struct {
+	ID          uuid.UUID `json:"id"`
+	OrgID       uuid.UUID `json:"org_id"`
+	OIDCSubject string    `json:"oidc_subject"`
+	Email       string    `json:"email"`
+	Name        string    `json:"name,omitempty"`
+	Role        UserRole  `json:"role"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // NewUser creates a new User with the given details.
