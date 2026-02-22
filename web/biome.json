@@ -9,6 +9,9 @@
 			"*.css"
 		]
 	},
+		"ignore": ["node_modules", "dist", "*.json", "*.config.js", "*.config.ts"]
+	},
+	"organizeImports": { "enabled": true },
 	"linter": {
 		"enabled": true,
 		"rules": {
@@ -38,5 +41,8 @@
 	},
 	"organizeImports": {
 		"enabled": true
+	"formatter": { "indentStyle": "tab" },
+	"javascript": {
+		"formatter": { "quoteStyle": "single", "semicolons": "always" }
 	}
 }

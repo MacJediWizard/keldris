@@ -66,6 +66,12 @@ interface NavItem {
 	labelKey: string;
 	icon: React.ReactNode;
 	shortcut?: string;
+import { Link, Outlet, useLocation } from 'react-router-dom';
+
+interface NavItem {
+	path: string;
+	label: string;
+	icon: React.ReactNode;
 }
 
 const navItems: NavItem[] = [
@@ -73,6 +79,7 @@ const navItems: NavItem[] = [
 		path: '/',
 		labelKey: 'nav.dashboard',
 		shortcut: 'G D',
+		label: 'Dashboard',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -94,6 +101,7 @@ const navItems: NavItem[] = [
 		path: '/agents',
 		labelKey: 'nav.agents',
 		shortcut: 'G A',
+		label: 'Agents',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -115,6 +123,7 @@ const navItems: NavItem[] = [
 		path: '/repositories',
 		labelKey: 'nav.repositories',
 		shortcut: 'G R',
+		label: 'Repositories',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -136,6 +145,7 @@ const navItems: NavItem[] = [
 		path: '/schedules',
 		labelKey: 'nav.schedules',
 		shortcut: 'G S',
+		label: 'Schedules',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -157,6 +167,7 @@ const navItems: NavItem[] = [
 		path: '/backups',
 		labelKey: 'nav.backups',
 		shortcut: 'G B',
+		label: 'Backups',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -425,6 +436,8 @@ function Sidebar() {
 				)}
 				<h1 className="text-2xl font-bold">{t('common.appName')}</h1>
 				<p className="text-gray-400 text-sm">{t('common.tagline')}</p>
+				<h1 className="text-2xl font-bold">Keldris</h1>
+				<p className="text-gray-400 text-sm">Keeper of your data</p>
 			</div>
 			<nav className="flex-1 px-4">
 				<ul className="space-y-1">
@@ -879,6 +892,8 @@ function Sidebar() {
 									to="/admin/organizations"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/admin/organizations'
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										isActive
 											? 'bg-indigo-600 text-white'
 											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
 									}`}
@@ -902,6 +917,8 @@ function Sidebar() {
 							</li>
 									{item.icon}
 									<span>{t(item.labelKey)}</span>
+									{item.icon}
+									<span>{item.label}</span>
 								</Link>
 							</li>
 						);
@@ -1124,6 +1141,9 @@ function Sidebar() {
 				<p className="text-xs text-gray-500">
 					{t('common.version', { version: '0.0.1' })}
 				</p>
+			</nav>
+			<div className="p-4 border-t border-gray-800">
+				<p className="text-xs text-gray-500">v0.0.1</p>
 			</div>
 		</aside>
 	);
@@ -1720,6 +1740,19 @@ function Header() {
 					to="/alerts"
 					aria-label="Alerts"
 					className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+function Header() {
+	return (
+		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+			<div className="flex items-center gap-4">
+				<h2 className="text-lg font-semibold text-gray-900">
+					Backup Management
+				</h2>
+			</div>
+			<div className="flex items-center gap-4">
+				<button
+					type="button"
+					aria-label="Notifications"
+					className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
 				>
 					<svg
 						aria-hidden="true"
@@ -1889,6 +1922,9 @@ function Header() {
 							</button>
 						</div>
 					)}
+				</button>
+				<div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+					U
 				</div>
 			</div>
 		</header>
@@ -2086,6 +2122,12 @@ export function Layout() {
 				<AnnouncementBanner />
 				<Header />
 				<MaintenanceBanner />
+export function Layout() {
+	return (
+		<div className="min-h-screen bg-gray-50 flex">
+			<Sidebar />
+			<div className="flex-1 flex flex-col">
+				<Header />
 				<main className="flex-1 p-6">
 					<Outlet />
 				</main>
