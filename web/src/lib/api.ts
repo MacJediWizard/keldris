@@ -178,6 +178,7 @@ import type {
 	CreateSLADefinitionRequest,
 	CreateSSOGroupMappingRequest,
 	CreateSavedFilterRequest,
+	CreateSSOGroupMappingRequest,
 	CreateScheduleRequest,
 	CreateSnapshotCommentRequest,
 	CreateStoragePricingRequest,
@@ -598,6 +599,8 @@ import type {
 	UpdateSSOGroupMappingRequest,
 	UpdateSSOSettingsRequest,
 	UpdateSavedFilterRequest,
+	UpdateSSOGroupMappingRequest,
+	UpdateSSOSettingsRequest,
 	UpdateScheduleRequest,
 	UpdateSecuritySettingsRequest,
 	UpdateStorageDefaultsRequest,
@@ -629,6 +632,7 @@ import type {
 	User,
 	ValidateImportRequest,
 	ValidationResult,
+	UserSSOGroups,
 	Verification,
 	VerificationSchedule,
 	VerificationSchedulesResponse,
@@ -2515,7 +2519,6 @@ export const maintenanceApi = {
 			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
-
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/maintenance-windows/${id}`, {
 			method: 'DELETE',

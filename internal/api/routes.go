@@ -712,6 +712,9 @@ func NewRouter(
 			r.logger.Warn().Str("dir", cfg.WebDir).Msg("web directory not found, SPA not served")
 		}
 	}
+	ssoGroupMappingsHandler := handlers.NewSSOGroupMappingsHandler(database, rbac, logger)
+	ssoGroupMappingsHandler.RegisterRoutes(apiV1)
+
 	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
 	maintenanceHandler.RegisterRoutes(apiV1)
 

@@ -1014,6 +1014,9 @@ function Sidebar() {
 									to="/organization/maintenance"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/organization/maintenance'
+									to="/organization/sso"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/sso'
 											? 'bg-indigo-600 text-white'
 											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
 									}`}
@@ -1034,6 +1037,10 @@ function Sidebar() {
 									</svg>
 									<span>Maintenance</span>
 									<span>Settings</span>
+											d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+										/>
+									</svg>
+									<span>SSO Group Sync</span>
 								</Link>
 							</li>
 						</ul>
@@ -1198,6 +1205,9 @@ function OrgSwitcher() {
 				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
 					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
 						Organizations
+				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+						{t('org.organizations')}
 					</div>
 					{organizations.map((org) => (
 						<button
@@ -1695,6 +1705,7 @@ function Header() {
 				<Link
 					to="/alerts"
 					aria-label="Alerts"
+	return (
 		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
 			<div className="flex items-center gap-4">
 				<OrgSwitcher />
