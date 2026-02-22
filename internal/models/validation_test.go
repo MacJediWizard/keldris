@@ -6,6 +6,32 @@ import (
 	"github.com/google/uuid"
 )
 
+func TestRepository_IsValidType(t *testing.T) {
+	tests := []struct {
+		name     string
+		repoType RepositoryType
+		valid    bool
+	}{
+		{"local", RepositoryTypeLocal, true},
+		{"s3", RepositoryTypeS3, true},
+		{"b2", RepositoryTypeB2, true},
+		{"sftp", RepositoryTypeSFTP, true},
+		{"rest", RepositoryTypeRest, true},
+		{"dropbox", RepositoryTypeDropbox, true},
+		{"invalid type", RepositoryType("azure"), false},
+		{"empty type", RepositoryType(""), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &Repository{Type: tt.repoType}
+			if got := repo.IsValidType(); got != tt.valid {
+				t.Errorf("IsValidType() = %v, want %v", got, tt.valid)
+			}
+		})
+	}
+}
+
 func TestValidRepositoryTypes(t *testing.T) {
 	types := ValidRepositoryTypes()
 	if len(types) != 6 {
