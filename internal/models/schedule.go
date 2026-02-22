@@ -84,6 +84,7 @@ type Schedule struct {
 	Priority                SchedulePriority     `json:"priority"`                       // Backup priority: 1=high, 2=medium, 3=low
 	Preemptible             bool                 `json:"preemptible"`                    // Can be preempted by higher priority backups
 	Enabled                 bool                 `json:"enabled"`
+	Enabled              bool                 `json:"enabled"`
 	Repositories         []ScheduleRepository `json:"repositories,omitempty"`
 	CreatedAt          time.Time            `json:"created_at"`
 	UpdatedAt          time.Time            `json:"updated_at"`
