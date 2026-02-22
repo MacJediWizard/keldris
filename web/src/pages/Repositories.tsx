@@ -4,6 +4,7 @@ import { HelpTooltip } from '../components/ui/HelpTooltip';
 import { StarButton } from '../components/ui/StarButton';
 import { useMe } from '../hooks/useAuth';
 import { useFavoriteIds } from '../hooks/useFavorites';
+import { useMe } from '../hooks/useAuth';
 import { useOrganizations } from '../hooks/useOrganizations';
 import {
 	useCloneRepository,
