@@ -23,6 +23,7 @@ import {
 	useDeleteRegistrationCode,
 	usePendingRegistrations,
 } from '../hooks/useAgentRegistration';
+import { AgentDownloads } from '../components/features/AgentDownloads';
 import {
 	useAgents,
 import { useAgentGroups, useAgentsWithGroups } from '../hooks/useAgentGroups';
@@ -1332,6 +1333,8 @@ export function Agents() {
 							</svg>
 							Generate Registration Code
 						</button>
+							Install and register an agent to start backing up your systems
+						</p>
 					</div>
 				)}
 			</div>
@@ -1500,6 +1503,8 @@ export function Agents() {
 					</div>
 				</div>
 			)}
+			{/* Download section - always visible */}
+			<AgentDownloads showInstallCommands={true} />
 		</div>
 	);
 }

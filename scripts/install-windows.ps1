@@ -33,6 +33,7 @@ param(
 
     [Parameter(Mandatory = $false)]
     [string]$DownloadUrl = "https://github.com/MacJediWizard/keldris/releases/latest/download"
+    [string]$DownloadUrl = "https://releases.keldris.io/agent"
 )
 
 # Configuration
@@ -83,6 +84,7 @@ function Get-AgentBinary {
     param([string]$Arch)
 
     $downloadFullUrl = "$DownloadUrl/keldris-agent-windows-$Arch.exe"
+    $downloadFullUrl = "$DownloadUrl/$Version/keldris-agent-windows-$Arch.exe"
     $tempFile = Join-Path $env:TEMP $BinaryName
 
     Write-Info "Downloading Keldris Agent ($Version, windows/$Arch)..."
