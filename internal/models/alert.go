@@ -193,6 +193,10 @@ type AlertRuleConfig struct {
 	GeoReplicationConfigs []uuid.UUID `json:"geo_replication_configs,omitempty"`
 	ContainerNames        []string    `json:"container_names,omitempty"`
 	VolumeNames           []string    `json:"volume_names,omitempty"`
+	// Target-specific filters
+	AgentIDs     []uuid.UUID `json:"agent_ids,omitempty"`
+	ScheduleIDs  []uuid.UUID `json:"schedule_ids,omitempty"`
+	RepositoryID *uuid.UUID  `json:"repository_id,omitempty"`
 }
 
 // AlertRule defines conditions that trigger alerts.

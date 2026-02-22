@@ -1467,6 +1467,440 @@ func (db *DB) DeletePolicy(ctx context.Context, id uuid.UUID) error {
 
 // GetSchedulesByPolicyID returns all schedules using a policy.
 func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([]*models.Schedule, error) {
+// Alert methods
+
+// GetAlertsByOrgID returns all alerts for an organization.
+func (db *DB) GetAlertsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Alert, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, rule_id, type, severity, status, title, message,
+		       resource_type, resource_id, acknowledged_by, acknowledged_at,
+		       resolved_at, metadata, created_at, updated_at
+		FROM alerts
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list alerts: %w", err)
+	}
+	defer rows.Close()
+
+	return db.scanAlerts(rows)
+}
+
+// GetActiveAlertsByOrgID returns active (non-resolved) alerts for an organization.
+func (db *DB) GetActiveAlertsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Alert, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, rule_id, type, severity, status, title, message,
+		       resource_type, resource_id, acknowledged_by, acknowledged_at,
+		       resolved_at, metadata, created_at, updated_at
+		FROM alerts
+		WHERE org_id = $1 AND status != 'resolved'
+		ORDER BY
+			CASE severity
+				WHEN 'critical' THEN 1
+				WHEN 'warning' THEN 2
+				ELSE 3
+			END,
+			created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list active alerts: %w", err)
+	}
+	defer rows.Close()
+
+	return db.scanAlerts(rows)
+}
+
+// GetActiveAlertCountByOrgID returns the count of active alerts for an organization.
+func (db *DB) GetActiveAlertCountByOrgID(ctx context.Context, orgID uuid.UUID) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM alerts
+		WHERE org_id = $1 AND status != 'resolved'
+	`, orgID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count active alerts: %w", err)
+	}
+	return count, nil
+}
+
+// GetAlertByID returns an alert by ID.
+func (db *DB) GetAlertByID(ctx context.Context, id uuid.UUID) (*models.Alert, error) {
+	var a models.Alert
+	var typeStr, severityStr, statusStr string
+	var resourceTypeStr *string
+	var metadataBytes []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, rule_id, type, severity, status, title, message,
+		       resource_type, resource_id, acknowledged_by, acknowledged_at,
+		       resolved_at, metadata, created_at, updated_at
+		FROM alerts
+		WHERE id = $1
+	`, id).Scan(
+		&a.ID, &a.OrgID, &a.RuleID, &typeStr, &severityStr, &statusStr,
+		&a.Title, &a.Message, &resourceTypeStr, &a.ResourceID,
+		&a.AcknowledgedBy, &a.AcknowledgedAt, &a.ResolvedAt,
+		&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get alert: %w", err)
+	}
+	a.Type = models.AlertType(typeStr)
+	a.Severity = models.AlertSeverity(severityStr)
+	a.Status = models.AlertStatus(statusStr)
+	if resourceTypeStr != nil {
+		rt := models.ResourceType(*resourceTypeStr)
+		a.ResourceType = &rt
+	}
+	if err := a.SetMetadata(metadataBytes); err != nil {
+		db.logger.Warn().Err(err).Str("alert_id", a.ID.String()).Msg("failed to parse alert metadata")
+	}
+	return &a, nil
+}
+
+// GetAlertByResourceAndType returns an active alert for a specific resource and type.
+func (db *DB) GetAlertByResourceAndType(ctx context.Context, orgID uuid.UUID, resourceType models.ResourceType, resourceID uuid.UUID, alertType models.AlertType) (*models.Alert, error) {
+	var a models.Alert
+	var typeStr, severityStr, statusStr string
+	var resourceTypeStr *string
+	var metadataBytes []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, rule_id, type, severity, status, title, message,
+		       resource_type, resource_id, acknowledged_by, acknowledged_at,
+		       resolved_at, metadata, created_at, updated_at
+		FROM alerts
+		WHERE org_id = $1 AND resource_type = $2 AND resource_id = $3 AND type = $4 AND status != 'resolved'
+		LIMIT 1
+	`, orgID, string(resourceType), resourceID, string(alertType)).Scan(
+		&a.ID, &a.OrgID, &a.RuleID, &typeStr, &severityStr, &statusStr,
+		&a.Title, &a.Message, &resourceTypeStr, &a.ResourceID,
+		&a.AcknowledgedBy, &a.AcknowledgedAt, &a.ResolvedAt,
+		&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get alert by resource: %w", err)
+	}
+	a.Type = models.AlertType(typeStr)
+	a.Severity = models.AlertSeverity(severityStr)
+	a.Status = models.AlertStatus(statusStr)
+	if resourceTypeStr != nil {
+		rt := models.ResourceType(*resourceTypeStr)
+		a.ResourceType = &rt
+	}
+	if err := a.SetMetadata(metadataBytes); err != nil {
+		db.logger.Warn().Err(err).Str("alert_id", a.ID.String()).Msg("failed to parse alert metadata")
+	}
+	return &a, nil
+}
+
+// CreateAlert creates a new alert.
+func (db *DB) CreateAlert(ctx context.Context, alert *models.Alert) error {
+	metadataBytes, err := alert.MetadataJSON()
+	if err != nil {
+		return fmt.Errorf("marshal metadata: %w", err)
+	}
+
+	var resourceType *string
+	if alert.ResourceType != nil {
+		rt := string(*alert.ResourceType)
+		resourceType = &rt
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO alerts (id, org_id, rule_id, type, severity, status, title, message,
+		                    resource_type, resource_id, acknowledged_by, acknowledged_at,
+		                    resolved_at, metadata, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+	`, alert.ID, alert.OrgID, alert.RuleID, string(alert.Type), string(alert.Severity),
+		string(alert.Status), alert.Title, alert.Message, resourceType, alert.ResourceID,
+		alert.AcknowledgedBy, alert.AcknowledgedAt, alert.ResolvedAt,
+		metadataBytes, alert.CreatedAt, alert.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create alert: %w", err)
+	}
+	return nil
+}
+
+// UpdateAlert updates an existing alert.
+func (db *DB) UpdateAlert(ctx context.Context, alert *models.Alert) error {
+	metadataBytes, err := alert.MetadataJSON()
+	if err != nil {
+		return fmt.Errorf("marshal metadata: %w", err)
+	}
+
+	alert.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE alerts
+		SET status = $2, acknowledged_by = $3, acknowledged_at = $4,
+		    resolved_at = $5, metadata = $6, updated_at = $7
+		WHERE id = $1
+	`, alert.ID, string(alert.Status), alert.AcknowledgedBy, alert.AcknowledgedAt,
+		alert.ResolvedAt, metadataBytes, alert.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update alert: %w", err)
+	}
+	return nil
+}
+
+// ResolveAlertsByResource resolves all active alerts for a specific resource.
+func (db *DB) ResolveAlertsByResource(ctx context.Context, resourceType models.ResourceType, resourceID uuid.UUID) error {
+	now := time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE alerts
+		SET status = 'resolved', resolved_at = $3, updated_at = $3
+		WHERE resource_type = $1 AND resource_id = $2 AND status != 'resolved'
+	`, string(resourceType), resourceID, now)
+	if err != nil {
+		return fmt.Errorf("resolve alerts by resource: %w", err)
+	}
+	return nil
+}
+
+// scanAlerts scans multiple alert rows.
+func (db *DB) scanAlerts(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.Alert, error) {
+	var alerts []*models.Alert
+	for rows.Next() {
+		var a models.Alert
+		var typeStr, severityStr, statusStr string
+		var resourceTypeStr *string
+		var metadataBytes []byte
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.RuleID, &typeStr, &severityStr, &statusStr,
+			&a.Title, &a.Message, &resourceTypeStr, &a.ResourceID,
+			&a.AcknowledgedBy, &a.AcknowledgedAt, &a.ResolvedAt,
+			&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan alert: %w", err)
+		}
+		a.Type = models.AlertType(typeStr)
+		a.Severity = models.AlertSeverity(severityStr)
+		a.Status = models.AlertStatus(statusStr)
+		if resourceTypeStr != nil {
+			rt := models.ResourceType(*resourceTypeStr)
+			a.ResourceType = &rt
+		}
+		if err := a.SetMetadata(metadataBytes); err != nil {
+			db.logger.Warn().Err(err).Str("alert_id", a.ID.String()).Msg("failed to parse alert metadata")
+		}
+		alerts = append(alerts, &a)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate alerts: %w", err)
+	}
+
+	return alerts, nil
+}
+
+// Alert Rule methods
+
+// GetAlertRulesByOrgID returns all alert rules for an organization.
+func (db *DB) GetAlertRulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.AlertRule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, type, enabled, config, created_at, updated_at
+		FROM alert_rules
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list alert rules: %w", err)
+	}
+	defer rows.Close()
+
+	var rules []*models.AlertRule
+	for rows.Next() {
+		var r models.AlertRule
+		var typeStr string
+		var configBytes []byte
+		err := rows.Scan(
+			&r.ID, &r.OrgID, &r.Name, &typeStr, &r.Enabled,
+			&configBytes, &r.CreatedAt, &r.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan alert rule: %w", err)
+		}
+		r.Type = models.AlertType(typeStr)
+		if err := r.SetConfig(configBytes); err != nil {
+			db.logger.Warn().Err(err).Str("rule_id", r.ID.String()).Msg("failed to parse alert rule config")
+		}
+		rules = append(rules, &r)
+	}
+
+	return rules, nil
+}
+
+// GetEnabledAlertRulesByOrgID returns enabled alert rules for an organization.
+func (db *DB) GetEnabledAlertRulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.AlertRule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, type, enabled, config, created_at, updated_at
+		FROM alert_rules
+		WHERE org_id = $1 AND enabled = true
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list enabled alert rules: %w", err)
+	}
+	defer rows.Close()
+
+	var rules []*models.AlertRule
+	for rows.Next() {
+		var r models.AlertRule
+		var typeStr string
+		var configBytes []byte
+		err := rows.Scan(
+			&r.ID, &r.OrgID, &r.Name, &typeStr, &r.Enabled,
+			&configBytes, &r.CreatedAt, &r.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan alert rule: %w", err)
+		}
+		r.Type = models.AlertType(typeStr)
+		if err := r.SetConfig(configBytes); err != nil {
+			db.logger.Warn().Err(err).Str("rule_id", r.ID.String()).Msg("failed to parse alert rule config")
+		}
+		rules = append(rules, &r)
+	}
+
+	return rules, nil
+}
+
+// GetAlertRuleByID returns an alert rule by ID.
+func (db *DB) GetAlertRuleByID(ctx context.Context, id uuid.UUID) (*models.AlertRule, error) {
+	var r models.AlertRule
+	var typeStr string
+	var configBytes []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, type, enabled, config, created_at, updated_at
+		FROM alert_rules
+		WHERE id = $1
+	`, id).Scan(
+		&r.ID, &r.OrgID, &r.Name, &typeStr, &r.Enabled,
+		&configBytes, &r.CreatedAt, &r.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get alert rule: %w", err)
+	}
+	r.Type = models.AlertType(typeStr)
+	if err := r.SetConfig(configBytes); err != nil {
+		db.logger.Warn().Err(err).Str("rule_id", r.ID.String()).Msg("failed to parse alert rule config")
+	}
+	return &r, nil
+}
+
+// CreateAlertRule creates a new alert rule.
+func (db *DB) CreateAlertRule(ctx context.Context, rule *models.AlertRule) error {
+	configBytes, err := rule.ConfigJSON()
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO alert_rules (id, org_id, name, type, enabled, config, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, rule.ID, rule.OrgID, rule.Name, string(rule.Type), rule.Enabled,
+		configBytes, rule.CreatedAt, rule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create alert rule: %w", err)
+	}
+	return nil
+}
+
+// UpdateAlertRule updates an existing alert rule.
+func (db *DB) UpdateAlertRule(ctx context.Context, rule *models.AlertRule) error {
+	configBytes, err := rule.ConfigJSON()
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+
+	rule.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE alert_rules
+		SET name = $2, enabled = $3, config = $4, updated_at = $5
+		WHERE id = $1
+	`, rule.ID, rule.Name, rule.Enabled, configBytes, rule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update alert rule: %w", err)
+	}
+	return nil
+}
+
+// DeleteAlertRule deletes an alert rule by ID.
+func (db *DB) DeleteAlertRule(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM alert_rules WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete alert rule: %w", err)
+	}
+	return nil
+}
+
+// GetAllAgents returns all agents across all organizations (for monitoring).
+func (db *DB) GetAllAgents(ctx context.Context) ([]*models.Agent, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status, created_at, updated_at
+		FROM agents
+		WHERE status != 'disabled'
+		ORDER BY org_id, hostname
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list all agents: %w", err)
+	}
+	defer rows.Close()
+
+	var agents []*models.Agent
+	for rows.Next() {
+		var a models.Agent
+		var osInfoBytes []byte
+		var statusStr string
+		err := rows.Scan(
+			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+			&a.LastSeen, &statusStr, &a.CreatedAt, &a.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan agent: %w", err)
+		}
+		a.Status = models.AgentStatus(statusStr)
+		if err := a.SetOSInfo(osInfoBytes); err != nil {
+			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse OS info")
+		}
+		agents = append(agents, &a)
+	}
+
+	return agents, nil
+}
+
+// GetAllSchedules returns all enabled schedules across all organizations (for monitoring).
+func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT s.id, s.agent_id, s.repository_id, s.name, s.cron_expression, s.paths, s.excludes,
+		       s.retention_policy, s.enabled, s.created_at, s.updated_at
+		FROM schedules s
+		WHERE s.enabled = true
+		ORDER BY s.name
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list all schedules: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []*models.Schedule
+	for rows.Next() {
+		s, err := scanSchedule(rows)
+		if err != nil {
+			return nil, err
+		}
+		schedules = append(schedules, s)
+	}
+
+	return schedules, nil
+}
+
+// GetEnabledSchedules returns all enabled schedules.
+func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, repository_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, enabled, created_at, updated_at
@@ -1508,6 +1942,71 @@ func scanPolicy(rows interface {
 		&retentionBytes, &p.BandwidthLimitKB, &windowStart, &windowEnd,
 		&excludedHoursBytes, &cronExpression, &p.CreatedAt, &p.UpdatedAt,
 	)
+// GetLatestBackupByScheduleID returns the most recent backup for a schedule.
+func (db *DB) GetLatestBackupByScheduleID(ctx context.Context, scheduleID uuid.UUID) (*models.Backup, error) {
+	var b models.Backup
+	var statusStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
+		       status, size_bytes, files_new, files_changed, error_message, created_at
+		FROM backups
+		WHERE schedule_id = $1
+		ORDER BY started_at DESC
+		LIMIT 1
+	`, scheduleID).Scan(
+		&b.ID, &b.ScheduleID, &b.AgentID, &b.SnapshotID, &b.StartedAt,
+		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
+		&b.FilesChanged, &b.ErrorMessage, &b.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get latest backup: %w", err)
+	}
+	b.Status = models.BackupStatus(statusStr)
+	return &b, nil
+}
+
+// GetOrgIDByAgentID returns the org ID for an agent.
+func (db *DB) GetOrgIDByAgentID(ctx context.Context, agentID uuid.UUID) (uuid.UUID, error) {
+	var orgID uuid.UUID
+	err := db.Pool.QueryRow(ctx, `
+		SELECT org_id FROM agents WHERE id = $1
+	`, agentID).Scan(&orgID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("get org by agent: %w", err)
+	}
+	return orgID, nil
+}
+
+// GetOrgIDByScheduleID returns the org ID for a schedule (via its agent).
+func (db *DB) GetOrgIDByScheduleID(ctx context.Context, scheduleID uuid.UUID) (uuid.UUID, error) {
+	var orgID uuid.UUID
+	err := db.Pool.QueryRow(ctx, `
+		SELECT a.org_id
+		FROM schedules s
+		JOIN agents a ON s.agent_id = a.id
+		WHERE s.id = $1
+	`, scheduleID).Scan(&orgID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("get org by schedule: %w", err)
+	}
+	return orgID, nil
+}
+
+// GetRepository returns a repository by ID (alias for GetRepositoryByID).
+func (db *DB) GetRepository(ctx context.Context, id uuid.UUID) (*models.Repository, error) {
+	return db.GetRepositoryByID(ctx, id)
+}
+
+// Organization methods
+
+// GetOrganizationByID returns an organization by ID.
+func (db *DB) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
+	var org models.Organization
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, name, slug, created_at, updated_at
+		FROM organizations
+		WHERE id = $1
+	`, id).Scan(&org.ID, &org.Name, &org.Slug, &org.CreatedAt, &org.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("scan policy: %w", err)
 	}

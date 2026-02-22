@@ -234,6 +234,8 @@ const navItems: NavItem[] = [
 		path: '/alerts',
 		labelKey: 'nav.alerts',
 		shortcut: 'G L',
+		path: '/alerts',
+		label: 'Alerts',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -1681,6 +1683,9 @@ function Header() {
 				<Link
 					to="/alerts"
 					aria-label={t('nav.alerts')}
+				<Link
+					to="/alerts"
+					aria-label="Alerts"
 					className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
 				>
 					<svg

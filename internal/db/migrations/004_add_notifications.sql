@@ -1,4 +1,5 @@
 -- 004_add_notifications.sql
+-- 002_add_notifications.sql
 -- Migration: Add notification channels and preferences
 
 -- Notification channels (SMTP, Slack, Webhook, etc.)

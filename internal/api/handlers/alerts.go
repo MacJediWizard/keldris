@@ -74,6 +74,7 @@ func (h *AlertsHandler) RegisterRoutes(r *gin.RouterGroup) {
 //	@Failure		500	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/alerts [get]
+// GET /api/v1/alerts
 func (h *AlertsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -142,6 +143,7 @@ func (h *AlertsHandler) ListActive(c *gin.Context) {
 //	@Failure		500	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/alerts/count [get]
+// GET /api/v1/alerts/count
 func (h *AlertsHandler) Count(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -347,6 +349,10 @@ type CreateRuleRequest struct {
 	Type    models.AlertType       `json:"type" binding:"required"`
 	Enabled bool                   `json:"enabled"`
 	Config  models.AlertRuleConfig `json:"config" binding:"required"`
+	Name    string                  `json:"name" binding:"required,min=1,max=255"`
+	Type    models.AlertType        `json:"type" binding:"required"`
+	Enabled bool                    `json:"enabled"`
+	Config  models.AlertRuleConfig  `json:"config" binding:"required"`
 }
 
 // CreateRule creates a new alert rule.
@@ -367,6 +373,7 @@ func (h *AlertsHandler) CreateRule(c *gin.Context) {
 	switch req.Type {
 	case models.AlertTypeAgentOffline, models.AlertTypeBackupSLA, models.AlertTypeStorageUsage,
 		models.AlertTypeAgentHealthWarning, models.AlertTypeAgentHealthCritical, models.AlertTypeRansomwareSuspected:
+	case models.AlertTypeAgentOffline, models.AlertTypeBackupSLA, models.AlertTypeStorageUsage:
 		// Valid
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid alert type"})

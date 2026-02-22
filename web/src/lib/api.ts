@@ -558,6 +558,7 @@ import type {
 	UpdateDRRunbookRequest,
 	UpdateExcludePatternRequest,
 	UpdateMaintenanceWindowRequest,
+	UpdateAlertRuleRequest,
 	UpdateMemberRequest,
 	UpdateMetadataSchemaRequest,
 	UpdateNotificationChannelRequest,
@@ -1277,6 +1278,72 @@ export const backupScriptsApi = {
 			`/schedules/${scheduleId}/scripts`,
 		);
 		return response.scripts ?? [];
+// Alerts API
+export const alertsApi = {
+	list: async (): Promise<Alert[]> => {
+		const response = await fetchApi<AlertsResponse>('/alerts');
+		return response.alerts ?? [];
+	},
+
+	listActive: async (): Promise<Alert[]> => {
+		const response = await fetchApi<AlertsResponse>('/alerts/active');
+		return response.alerts ?? [];
+	},
+
+	count: async (): Promise<number> => {
+		const response = await fetchApi<AlertCountResponse>('/alerts/count');
+		return response.count;
+	},
+
+	get: async (id: string): Promise<Alert> => fetchApi<Alert>(`/alerts/${id}`),
+
+	acknowledge: async (id: string): Promise<Alert> =>
+		fetchApi<Alert>(`/alerts/${id}/actions/acknowledge`, {
+			method: 'POST',
+		}),
+
+	resolve: async (id: string): Promise<Alert> =>
+		fetchApi<Alert>(`/alerts/${id}/actions/resolve`, {
+			method: 'POST',
+		}),
+};
+
+// Alert Rules API
+export const alertRulesApi = {
+	list: async (): Promise<AlertRule[]> => {
+		const response = await fetchApi<AlertRulesResponse>('/alert-rules');
+		return response.rules ?? [];
+	},
+
+	get: async (id: string): Promise<AlertRule> =>
+		fetchApi<AlertRule>(`/alert-rules/${id}`),
+
+	create: async (data: CreateAlertRuleRequest): Promise<AlertRule> =>
+		fetchApi<AlertRule>('/alert-rules', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateAlertRuleRequest,
+	): Promise<AlertRule> =>
+		fetchApi<AlertRule>(`/alert-rules/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/alert-rules/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Organizations API
+export const organizationsApi = {
+	list: async (): Promise<OrganizationWithRole[]> => {
+		const response = await fetchApi<OrganizationsResponse>('/organizations');
+		return response.organizations ?? [];
 	},
 
 	get: async (scheduleId: string, id: string): Promise<BackupScript> =>

@@ -6551,6 +6551,42 @@ export interface SetupLicenseInfo {
 	expires_at?: string;
 	company_name?: string;
 }
+// Alert types
+export type AlertType = 'agent_offline' | 'backup_sla' | 'storage_usage';
+export type AlertSeverity = 'info' | 'warning' | 'critical';
+export type AlertStatus = 'active' | 'acknowledged' | 'resolved';
+export type ResourceType = 'agent' | 'schedule' | 'repository';
+
+export interface Alert {
+	id: string;
+	org_id: string;
+	rule_id?: string;
+	type: AlertType;
+	severity: AlertSeverity;
+	status: AlertStatus;
+	title: string;
+	message: string;
+	resource_type?: ResourceType;
+	resource_id?: string;
+	acknowledged_by?: string;
+	acknowledged_at?: string;
+	resolved_at?: string;
+	metadata?: Record<string, unknown>;
+	created_at: string;
+	updated_at: string;
+}
+
+// Notification types
+export type NotificationChannelType =
+	| 'email'
+	| 'slack'
+	| 'webhook'
+	| 'pagerduty';
+export type NotificationEventType =
+	| 'backup_success'
+	| 'backup_failed'
+	| 'agent_offline';
+export type NotificationStatus = 'queued' | 'sent' | 'failed';
 
 export interface RerunStatusResponse {
 	setup_completed: boolean;
@@ -6655,6 +6691,33 @@ export interface LicenseFeatures {
 	priority_support: boolean;
 	backup_hooks: boolean;
 	multi_destination: boolean;
+export interface AlertRuleConfig {
+	offline_threshold_minutes?: number;
+	max_hours_since_backup?: number;
+	storage_usage_percent?: number;
+	agent_ids?: string[];
+	schedule_ids?: string[];
+	repository_id?: string;
+}
+
+export interface AlertRule {
+	id: string;
+	org_id: string;
+	name: string;
+	type: AlertType;
+	enabled: boolean;
+	config: AlertRuleConfig;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface EmailChannelConfig {
+	host: string;
+	port: number;
+	username: string;
+	password: string;
+	from: string;
+	tls: boolean;
 }
 
 export interface LicenseUsage {
@@ -6682,6 +6745,32 @@ export interface License {
 }
 
 export interface LicenseHistory {
+export interface CreateAlertRuleRequest {
+	name: string;
+	type: AlertType;
+	enabled: boolean;
+	config: AlertRuleConfig;
+}
+
+export interface UpdateAlertRuleRequest {
+	name?: string;
+	enabled?: boolean;
+	config?: AlertRuleConfig;
+}
+
+export interface AlertsResponse {
+	alerts: Alert[];
+}
+
+export interface AlertRulesResponse {
+	rules: AlertRule[];
+}
+
+export interface AlertCountResponse {
+	count: number;
+}
+
+export interface NotificationLog {
 	id: string;
 	license_id: string;
 	org_id: string;

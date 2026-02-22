@@ -717,6 +717,9 @@ func NewRouter(
 	// DR Test routes (runner is nil for now, will be set up when scheduler is integrated)
 	drTestsHandler := handlers.NewDRTestsHandler(database, nil, logger)
 	drTestsHandler.RegisterRoutes(apiV1)
+	alertsHandler := handlers.NewAlertsHandler(database, logger)
+	alertsHandler.RegisterRoutes(apiV1)
+
 	notificationsHandler := handlers.NewNotificationsHandler(database, logger)
 	notificationsHandler.RegisterRoutes(apiV1)
 

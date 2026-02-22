@@ -417,6 +417,7 @@ function App() {
 						<Route path="tags" element={<Tags />} />
 						<Route path="classifications" element={<Classifications />} />
 						<Route path="costs" element={<CostEstimation />} />
+						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
 						<Route
 							path="organization/members"
