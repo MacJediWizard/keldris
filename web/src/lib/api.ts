@@ -34,6 +34,8 @@ import type {
 	AgentStatsResponse,
 	AgentWithGroups,
 	AgentHealthHistoryResponse,
+	AgentLogFilter,
+	AgentLogsResponse,
 	AgentSchedulesResponse,
 	AgentStatsResponse,
 	AgentWithGroups,

@@ -36,6 +36,7 @@ type AgentStore interface {
 	SetAgentDebugMode(ctx context.Context, id uuid.UUID, enabled bool, expiresAt *time.Time, enabledBy *uuid.UUID) error
 	GetAgentLogs(ctx context.Context, agentID uuid.UUID, filter *models.AgentLogFilter) ([]*models.AgentLog, int, error)
 	GetAgentDockerHealth(ctx context.Context, agentID uuid.UUID) (*models.AgentDockerHealth, error)
+	GetAgentLogs(ctx context.Context, agentID uuid.UUID, filter *models.AgentLogFilter) ([]*models.AgentLog, int, error)
 }
 
 // AgentsHandler handles agent-related HTTP endpoints.
@@ -74,6 +75,7 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup, createMiddleware ...g
 		agents.POST("/:id/debug", h.SetDebugMode)
 		agents.GET("/:id/logs", h.Logs)
 		agents.GET("/:id/docker-health", h.DockerHealth)
+		agents.GET("/:id/logs", h.Logs)
 	}
 }
 
