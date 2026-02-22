@@ -14,6 +14,13 @@ import (
 	"github.com/MacJediWizard/keldris/internal/maintenance"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/notifications"
+	"context"
+	"errors"
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog"
@@ -61,6 +68,8 @@ const (
 	// retryDelay is the delay between retry attempts.
 	retryDelay = 5 * time.Second
 )
+
+}
 
 // DecryptFunc is a function that decrypts repository configuration.
 type DecryptFunc func(encrypted []byte) ([]byte, error)
@@ -179,6 +188,28 @@ func (s *Scheduler) SetValidationConfig(config ValidationConfig) {
 func (s *Scheduler) EnableValidation(config ValidationConfig) {
 	s.validationConfig = config
 	s.validator = NewBackupValidator(s.restic, config, s.store, s.logger)
+}
+
+	store   ScheduleStore
+	restic  *Restic
+	config  SchedulerConfig
+	cron    *cron.Cron
+	logger  zerolog.Logger
+	mu      sync.RWMutex
+	entries map[uuid.UUID]cron.EntryID
+	running bool
+}
+
+// NewScheduler creates a new backup scheduler.
+func NewScheduler(store ScheduleStore, restic *Restic, config SchedulerConfig, logger zerolog.Logger) *Scheduler {
+	return &Scheduler{
+		store:   store,
+		restic:  restic,
+		config:  config,
+		cron:    cron.New(cron.WithSeconds()),
+		logger:  logger.With().Str("component", "scheduler").Logger(),
+		entries: make(map[uuid.UUID]cron.EntryID),
+	}
 }
 
 // Start starts the scheduler and loads initial schedules.
@@ -315,6 +346,7 @@ func (s *Scheduler) addSchedule(schedule models.Schedule) error {
 }
 
 // executeBackup runs a backup for the given schedule with retry/failover and replication.
+// executeBackup runs a backup for the given schedule.
 func (s *Scheduler) executeBackup(schedule models.Schedule) {
 	ctx := context.Background()
 	logger := s.logger.With().
@@ -754,6 +786,19 @@ func (s *Scheduler) runBackupToRepo(
 		s.failBackup(ctx, backup, fmt.Sprintf("get repository: %v", err), logger)
 		return nil, nil, ResticConfig{}, fmt.Errorf("get repository: %w", err)
 		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("get repository: %v", err), logger)
+	logger.Info().Msg("starting scheduled backup")
+
+	// Create backup record
+	backup := models.NewBackup(schedule.ID, schedule.AgentID)
+	if err := s.store.CreateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Msg("failed to create backup record")
+		return
+	}
+
+	// Get repository configuration
+	repo, err := s.store.GetRepository(ctx, schedule.RepositoryID)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("get repository: %v", err), logger)
 		return
 	}
 
@@ -862,6 +907,10 @@ func (s *Scheduler) runBackupToRepo(
 		s.failBackup(ctx, backup, fmt.Sprintf("backup failed (attempt %d): %v", attempt, err), logger)
 		return nil, nil, ResticConfig{}, fmt.Errorf("backup failed: %w", err)
 		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("backup failed: %v", err), logger)
+	// Run the backup
+	stats, err := s.restic.Backup(ctx, resticCfg, schedule.Paths, schedule.Excludes, tags)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("backup failed: %v", err), logger)
 		return
 	}
 
@@ -896,6 +945,18 @@ func (s *Scheduler) replicateToOtherRepos(
 			continue
 	// Send success notification
 	s.sendBackupNotification(ctx, schedule, backup, true, "")
+	if err := s.store.UpdateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Msg("failed to update backup record")
+		return
+	}
+
+	logger.Info().
+		Str("snapshot_id", stats.SnapshotID).
+		Int("files_new", stats.FilesNew).
+		Int("files_changed", stats.FilesChanged).
+		Int64("size_bytes", stats.SizeBytes).
+		Dur("duration", stats.Duration).
+		Msg("scheduled backup completed")
 
 	// Run prune if retention policy is set
 	if schedule.RetentionPolicy != nil {
@@ -1099,6 +1160,17 @@ func (s *Scheduler) sendBackupNotification(ctx context.Context, schedule models.
 	}
 
 	s.notifier.NotifyBackupComplete(ctx, result)
+	}
+}
+
+// failBackup marks a backup as failed and logs the error.
+func (s *Scheduler) failBackup(ctx context.Context, backup *models.Backup, errMsg string, logger zerolog.Logger) {
+	backup.Fail(errMsg)
+	if err := s.store.UpdateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Str("original_error", errMsg).Msg("failed to update backup record")
+		return
+	}
+	logger.Error().Str("error", errMsg).Msg("backup failed")
 }
 
 // refreshLoop periodically reloads schedules from the database.
@@ -2684,6 +2756,40 @@ func (s *Scheduler) GetNextAllowedRun(ctx context.Context, scheduleID uuid.UUID)
 	entryID, exists := s.entries[scheduleID]
 	s.mu.RUnlock()
 
+		}
+	}
+}
+
+// TriggerBackup manually triggers a backup for the given schedule.
+func (s *Scheduler) TriggerBackup(ctx context.Context, scheduleID uuid.UUID) error {
+	schedules, err := s.store.GetEnabledSchedules(ctx)
+	if err != nil {
+		return fmt.Errorf("get schedules: %w", err)
+	}
+
+	for _, schedule := range schedules {
+		if schedule.ID == scheduleID {
+			go s.executeBackup(schedule)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("schedule not found: %s", scheduleID)
+}
+
+// GetActiveSchedules returns the number of active schedules.
+func (s *Scheduler) GetActiveSchedules() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.entries)
+}
+
+// GetNextRun returns the next scheduled run time for a schedule.
+func (s *Scheduler) GetNextRun(scheduleID uuid.UUID) (time.Time, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	entryID, exists := s.entries[scheduleID]
 	if !exists {
 		return time.Time{}, false
 	}
@@ -2998,4 +3104,5 @@ func (s *Scheduler) runPostBackupScripts(ctx context.Context, scripts []*models.
 	}
 
 	backup.RecordPostScript(combinedOutput, combinedError)
+	return entry.Next, true
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/notifications"
+	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )
@@ -56,6 +57,15 @@ type mockStore struct {
 	updateErr         error
 	scriptErr         error
 	replicationStatus *models.ReplicationStatus
+// mockStore implements ScheduleStore for testing.
+type mockStore struct {
+	mu         sync.Mutex
+	schedules  []models.Schedule
+	repos      map[uuid.UUID]*models.Repository
+	backups    []*models.Backup
+	getErr     error
+	createErr  error
+	updateErr  error
 }
 
 func newMockStore() *mockStore {
@@ -243,6 +253,7 @@ func TestScheduler_StartStop(t *testing.T) {
 	config.RefreshInterval = 100 * time.Millisecond
 
 	scheduler := NewScheduler(store, restic, config, nil, logger)
+	scheduler := NewScheduler(store, restic, config, logger)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -271,6 +282,7 @@ func TestScheduler_Reload(t *testing.T) {
 	config.RefreshInterval = time.Hour // Prevent auto-refresh during test
 
 	scheduler := NewScheduler(store, restic, config, nil, logger)
+	scheduler := NewScheduler(store, restic, config, logger)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -291,6 +303,10 @@ func TestScheduler_Reload(t *testing.T) {
 	schedule := models.Schedule{
 		ID:             uuid.New(),
 		AgentID:        uuid.New(),
+	schedule := models.Schedule{
+		ID:             uuid.New(),
+		AgentID:        uuid.New(),
+		RepositoryID:   uuid.New(),
 		Name:           "Test Schedule",
 		CronExpression: "0 */5 * * * *", // Every 5 minutes with seconds
 		Paths:          []string{"/home/user"},
@@ -321,6 +337,7 @@ func TestScheduler_Reload(t *testing.T) {
 	store.mu.Lock()
 	store.schedules = nil
 	store.mu.Unlock()
+	store.schedules = nil
 	if err := scheduler.Reload(ctx); err != nil {
 		t.Fatalf("Reload() error = %v", err)
 	}
@@ -354,6 +371,7 @@ func TestScheduler_GetNextRun_NotFound(t *testing.T) {
 	config := DefaultSchedulerConfig()
 
 	scheduler := NewScheduler(store, restic, config, nil, logger)
+	scheduler := NewScheduler(store, restic, config, logger)
 
 	_, ok := scheduler.GetNextRun(uuid.New())
 	if ok {
@@ -382,6 +400,13 @@ func TestScheduler_InvalidCronExpression(t *testing.T) {
 	schedule := models.Schedule{
 		ID:             uuid.New(),
 		AgentID:        uuid.New(),
+	scheduler := NewScheduler(store, restic, config, logger)
+
+	// Add a schedule with invalid cron expression
+	schedule := models.Schedule{
+		ID:             uuid.New(),
+		AgentID:        uuid.New(),
+		RepositoryID:   uuid.New(),
 		Name:           "Invalid Schedule",
 		CronExpression: "invalid cron",
 		Paths:          []string{"/home/user"},

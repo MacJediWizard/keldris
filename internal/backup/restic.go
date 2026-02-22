@@ -25,6 +25,12 @@ var ErrSnapshotNotFound = errors.New("snapshot not found")
 
 // ResticConfig is an alias to backends.ResticConfig for backwards compatibility.
 type ResticConfig = backends.ResticConfig
+// ResticConfig holds configuration for a Restic backup operation.
+type ResticConfig struct {
+	Repository string
+	Password   string
+	Env        map[string]string
+}
 
 // Snapshot represents a Restic snapshot.
 type Snapshot struct {
@@ -129,6 +135,8 @@ func (r *Restic) Backup(ctx context.Context, cfg ResticConfig, paths, excludes [
 
 // BackupWithOptions runs a backup operation with additional options.
 func (r *Restic) BackupWithOptions(ctx context.Context, cfg ResticConfig, paths, excludes []string, tags []string, opts *BackupOptions) (*BackupStats, error) {
+// Backup runs a backup operation with the given paths and excludes.
+func (r *Restic) Backup(ctx context.Context, cfg ResticConfig, paths, excludes []string, tags []string) (*BackupStats, error) {
 	if len(paths) == 0 {
 		return nil, errors.New("no paths specified for backup")
 	}
@@ -148,6 +156,11 @@ func (r *Restic) BackupWithOptions(ctx context.Context, cfg ResticConfig, paths,
 		logEvent = logEvent.Int("max_file_size_mb", *opts.MaxFileSizeMB)
 	}
 	logEvent.Msg("starting backup")
+	r.logger.Info().
+		Strs("paths", paths).
+		Strs("excludes", excludes).
+		Strs("tags", tags).
+		Msg("starting backup")
 
 	start := time.Now()
 
@@ -359,6 +372,11 @@ func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID strin
 		Strs("include", opts.Include).
 		Strs("exclude", opts.Exclude).
 		Bool("dry_run", opts.DryRun).
+// Restore restores a snapshot to the given target path.
+func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID, targetPath string) error {
+	r.logger.Info().
+		Str("snapshot_id", snapshotID).
+		Str("target_path", targetPath).
 		Msg("starting restore")
 
 	args := []string{
@@ -381,6 +399,11 @@ func (r *Restic) Restore(ctx context.Context, cfg ResticConfig, snapshotID strin
 	}
 
 	args = append(args, snapshotID)
+
+		"--target", targetPath,
+		"--json",
+		snapshotID,
+	}
 
 	_, err := r.run(ctx, cfg, args)
 	if err != nil {
@@ -556,6 +579,10 @@ func (r *Restic) Forget(ctx context.Context, cfg ResticConfig, retention *models
 func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.RetentionPolicy) (*ForgetResult, error) {
 	if retention == nil {
 		return nil, errors.New("retention policy required for prune")
+// Prune removes old snapshots according to the retention policy.
+func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.RetentionPolicy) error {
+	if retention == nil {
+		return errors.New("retention policy required for prune")
 	}
 
 	r.logger.Info().
@@ -574,6 +601,9 @@ func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.
 		// If we can't parse the output, still return a minimal result
 		r.logger.Warn().Err(err).Msg("failed to parse forget output")
 		result = &ForgetResult{}
+	_, err := r.run(ctx, cfg, forgetArgs)
+	if err != nil {
+		return fmt.Errorf("forget failed: %w", err)
 	}
 
 	// Then, prune unreferenced data
@@ -740,6 +770,25 @@ func (r *Restic) CheckWithOptions(ctx context.Context, cfg ResticConfig, opts Ch
 		Msg("repository check passed")
 
 	return result, nil
+		return fmt.Errorf("prune failed: %w", err)
+	}
+
+	r.logger.Info().Msg("prune completed successfully")
+	return nil
+}
+
+// Check verifies the repository integrity.
+func (r *Restic) Check(ctx context.Context, cfg ResticConfig) error {
+	r.logger.Debug().Msg("checking repository integrity")
+
+	args := []string{"check", "--repo", cfg.Repository, "--json"}
+	_, err := r.run(ctx, cfg, args)
+	if err != nil {
+		return fmt.Errorf("check failed: %w", err)
+	}
+
+	r.logger.Debug().Msg("repository check passed")
+	return nil
 }
 
 // Stats returns statistics about the repository.
