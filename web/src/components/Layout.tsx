@@ -953,6 +953,9 @@ function Header() {
 			<div className="flex-1 max-w-xl mx-4">
 				<GlobalSearchBar placeholder={t('common.search')} />
 			</div>
+			<div className="flex-1 max-w-xl mx-4">
+				<GlobalSearchBar placeholder={t('common.search')} />
+			</div>
 			<div className="flex items-center gap-4">
 				<LanguageSelector />
 				<RecentItemsDropdown />
