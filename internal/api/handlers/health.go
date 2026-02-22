@@ -36,7 +36,7 @@ type HealthResponse struct {
 	Error  string                        `json:"error,omitempty"`
 	Status HealthStatus              `json:"status"`
 	Checks map[string]*HealthCheckResult `json:"checks,omitempty"`
-	Error  string                    `json:"error,omitempty"`
+	Error  string                        `json:"error,omitempty"`
 }
 
 // DatabaseHealthChecker defines the interface for database health checking.
