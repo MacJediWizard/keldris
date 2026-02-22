@@ -259,6 +259,9 @@ func NewRouter(
 	filtersHandler := handlers.NewFiltersHandler(database, logger)
 	filtersHandler.RegisterRoutes(apiV1)
 
+	favoritesHandler := handlers.NewFavoritesHandler(database, logger)
+	favoritesHandler.RegisterRoutes(apiV1)
+
 	searchHandler := handlers.NewSearchHandler(database, logger)
 	searchHandler.RegisterRoutes(apiV1)
 

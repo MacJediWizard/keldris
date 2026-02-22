@@ -24,6 +24,7 @@ import {
 } from '../hooks/useReadOnlyMode';
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
+import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
 import { TierBadge } from './features/TierBadge';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
@@ -946,6 +947,9 @@ function Header() {
 			<div className="flex items-center gap-4">
 				<OrgSwitcher />
 				<AirGapIndicator />
+			</div>
+			<div className="flex-1 max-w-xl mx-4">
+				<GlobalSearchBar placeholder={t('common.search')} />
 			</div>
 			<div className="flex items-center gap-4">
 				<LanguageSelector />

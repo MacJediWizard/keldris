@@ -1969,6 +1969,56 @@ export interface SearchResponse {
 	total: number;
 }
 
+export interface GroupedSearchResult {
+	type: SearchResultType;
+	id: string;
+	name: string;
+	description?: string;
+	status?: string;
+	tags?: string[];
+	created_at: string;
+	metadata?: Record<string, unknown>;
+}
+
+export interface GroupedSearchResponse {
+	agents: GroupedSearchResult[];
+	backups: GroupedSearchResult[];
+	snapshots: GroupedSearchResult[];
+	schedules: GroupedSearchResult[];
+	repositories: GroupedSearchResult[];
+	query: string;
+	total: number;
+}
+
+export interface SearchSuggestion {
+	text: string;
+	type: SearchResultType;
+	id: string;
+	detail?: string;
+}
+
+export interface SearchSuggestionsResponse {
+	suggestions: SearchSuggestion[];
+}
+
+export interface RecentSearch {
+	id: string;
+	user_id: string;
+	org_id: string;
+	query: string;
+	types?: string[];
+	created_at: string;
+}
+
+export interface RecentSearchesResponse {
+	recent_searches: RecentSearch[];
+}
+
+export interface SaveRecentSearchRequest {
+	query: string;
+	types?: string[];
+}
+
 // Dashboard Metrics types
 export interface DashboardStats {
 	agent_total: number;
@@ -4520,4 +4570,25 @@ export interface ActivityEventFilter {
 	end_time?: string;
 	limit?: number;
 	offset?: number;
+}
+
+// Favorite types
+export type FavoriteEntityType = 'agent' | 'schedule' | 'repository';
+
+export interface Favorite {
+	id: string;
+	user_id: string;
+	org_id: string;
+	entity_type: FavoriteEntityType;
+	entity_id: string;
+	created_at: string;
+}
+
+export interface CreateFavoriteRequest {
+	entity_type: FavoriteEntityType;
+	entity_id: string;
+}
+
+export interface FavoritesResponse {
+	favorites: Favorite[];
 }

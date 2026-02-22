@@ -14,6 +14,7 @@ import {
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
+import { StarButton } from '../components/ui/StarButton';
 import { useAddAgentToGroup, useAgentGroups } from '../hooks/useAgentGroups';
 import {
 	useCreateRegistrationCode,
@@ -27,6 +28,7 @@ import {
 	useRotateAgentApiKey,
 } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
+import { useFavoriteIds } from '../hooks/useFavorites';
 import { useLocale } from '../hooks/useLocale';
 import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
 import { statusHelp } from '../lib/help-content';
@@ -491,6 +493,7 @@ interface AgentRowProps {
 	isRevoking: boolean;
 	isSelected: boolean;
 	onToggleSelect: () => void;
+	isFavorite: boolean;
 }
 
 function AgentRow({
@@ -503,6 +506,7 @@ function AgentRow({
 	isRevoking,
 	isSelected,
 	onToggleSelect,
+	isFavorite,
 }: AgentRowProps) {
 	const [showMenu, setShowMenu] = useState(false);
 	const statusColor = getAgentStatusColor(agent.status);
@@ -514,7 +518,15 @@ function AgentRow({
 				<BulkSelectCheckbox checked={isSelected} onChange={onToggleSelect} />
 			</td>
 			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900">{agent.hostname}</div>
+				<div className="flex items-center gap-2">
+					<StarButton
+						entityType="agent"
+						entityId={agent.id}
+						isFavorite={isFavorite}
+						size="sm"
+					/>
+					<div className="font-medium text-gray-900">{agent.hostname}</div>
+				</div>
 				{agent.os_info && (
 					<div className="text-sm text-gray-500">
 						{agent.os_info.os} {agent.os_info.arch}
@@ -638,6 +650,7 @@ function AgentRow({
 export function Agents() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [statusFilter, setStatusFilter] = useState<AgentStatus | 'all'>('all');
+	const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 	const [showGenerateModal, setShowGenerateModal] = useState(false);
 	const [newCode, setNewCode] = useState<{
 		code: string;
@@ -660,6 +673,7 @@ export function Agents() {
 		usePendingRegistrations();
 	const { data: agentGroups } = useAgentGroups();
 	const { data: schedules } = useSchedules();
+	const favoriteIds = useFavoriteIds('agent');
 	const deleteAgent = useDeleteAgent();
 	const rotateApiKey = useRotateAgentApiKey();
 	const revokeApiKey = useRevokeAgentApiKey();
@@ -676,7 +690,8 @@ export function Agents() {
 			.includes(searchQuery.toLowerCase());
 		const matchesStatus =
 			statusFilter === 'all' || agent.status === statusFilter;
-		return matchesSearch && matchesStatus;
+		const matchesFavorites = !showFavoritesOnly || favoriteIds.has(agent.id);
+		return matchesSearch && matchesStatus && matchesFavorites;
 	});
 
 	const agentIds = filteredAgents?.map((a) => a.id) ?? [];
@@ -1045,6 +1060,31 @@ export function Agents() {
 							<option value="pending">{t('agents.pending')}</option>
 							<option value="disabled">{t('agents.disabled')}</option>
 						</select>
+						<button
+							type="button"
+							onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+							className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
+								showFavoritesOnly
+									? 'border-yellow-400 bg-yellow-50 text-yellow-700'
+									: 'border-gray-300 text-gray-700 hover:bg-gray-50'
+							}`}
+						>
+							<svg
+								aria-hidden="true"
+								className={`w-4 h-4 ${showFavoritesOnly ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
+								fill={showFavoritesOnly ? 'currentColor' : 'none'}
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+								/>
+							</svg>
+							Favorites
+						</button>
 					</div>
 				</div>
 
@@ -1124,6 +1164,7 @@ export function Agents() {
 									isRevoking={revokeApiKey.isPending}
 									isSelected={bulkSelect.isSelected(agent.id)}
 									onToggleSelect={() => bulkSelect.toggle(agent.id)}
+									isFavorite={favoriteIds.has(agent.id)}
 								/>
 							))}
 						</tbody>
