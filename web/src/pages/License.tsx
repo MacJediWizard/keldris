@@ -75,6 +75,22 @@ import type {
 	ProFeature,
 } from '../lib/types';
 
+import { useState } from 'react';
+import { useMe } from '../hooks/useAuth';
+import {
+	useActivateLicense,
+	useCurrentLicense,
+	useLicenseHistory,
+	useLicensePurchaseUrl,
+	useValidateLicense,
+} from '../hooks/useLicenses';
+import type {
+	LicenseHistory,
+	LicenseTier,
+	OrgRole,
+	ProFeature,
+} from '../lib/types';
+
 function formatBytes(bytes: number): string {
 	if (bytes === 0) return '0 B';
 	const k = 1024;
@@ -118,6 +134,7 @@ function UsageBar({
 	limit: number;
 	label: string;
 }) {
+}: { used: number; limit: number; label: string }) {
 	const percentage = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
 	const isWarning = percentage >= 80;
 	const isCritical = percentage >= 95;
@@ -158,6 +175,7 @@ function StorageUsageBar({
 	limit: number;
 	label: string;
 }) {
+}: { used: number; limit: number; label: string }) {
 	const percentage = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
 	const isWarning = percentage >= 80;
 	const isCritical = percentage >= 95;
@@ -197,6 +215,7 @@ function FeatureItem({
 	enabled: boolean;
 	proFeature?: ProFeature;
 }) {
+}: { name: string; enabled: boolean; proFeature?: ProFeature }) {
 	return (
 		<div className="flex items-center justify-between py-2">
 			<div className="flex items-center gap-2">

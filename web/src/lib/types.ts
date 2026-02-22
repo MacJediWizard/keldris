@@ -6582,6 +6582,51 @@ export interface WebhookEndpoint {
 	updated_at: string;
 }
 
+// License types
+export type LicenseTier = 'free' | 'pro' | 'professional' | 'enterprise';
+export type LicenseStatus =
+	| 'active'
+	| 'expiring_soon'
+	| 'expired'
+	| 'grace_period';
+
+export interface LicenseFeatures {
+	max_agents: number;
+	max_repositories: number;
+	max_storage_bytes: number;
+	sso_enabled: boolean;
+	api_access: boolean;
+	advanced_reporting: boolean;
+	custom_branding: boolean;
+	priority_support: boolean;
+	backup_hooks: boolean;
+	multi_destination: boolean;
+}
+
+export interface LicenseUsage {
+	agents_used: number;
+	agents_limit: number;
+	repositories_used: number;
+	repositories_limit: number;
+	storage_used_bytes: number;
+	storage_limit_bytes: number;
+}
+
+export interface License {
+	id: string;
+	org_id: string;
+	license_key: string;
+	tier: LicenseTier;
+	status: LicenseStatus;
+	valid_from: string;
+	valid_until: string;
+	grace_period_days: number;
+	features: LicenseFeatures;
+	usage: LicenseUsage;
+	created_at: string;
+	updated_at: string;
+}
+
 export interface LicenseHistory {
 	id: string;
 	license_id: string;

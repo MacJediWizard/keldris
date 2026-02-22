@@ -649,6 +649,7 @@ function App() {
 								path="organization/password-policies"
 								element={<PasswordPolicies />}
 							/>
+							<Route path="organization/license" element={<License />} />
 							<Route path="organization/new" element={<NewOrganization />} />
 							<Route path="admin/logs" element={<AdminLogs />} />
 							<Route
