@@ -1066,6 +1066,16 @@ export interface CreateCloudRestoreRequest {
 
 export interface RestorePreviewRequest {
 	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	include_paths?: string[];
+	exclude_paths?: string[];
+	cloud_target: CloudRestoreTarget;
+	verify_upload?: boolean;
+}
+
+export interface RestorePreviewRequest {
+	snapshot_id: string;
 	agent_id: string; // Target agent
 	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;

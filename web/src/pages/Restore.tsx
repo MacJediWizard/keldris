@@ -1529,6 +1529,442 @@ function CloudRestoreTargetForm({
 	);
 }
 
+interface CloudRestoreProgressDisplayProps {
+	progress: CloudRestoreProgress;
+	status: RestoreStatus;
+}
+
+function CloudRestoreProgressDisplay({
+	progress,
+	status,
+}: CloudRestoreProgressDisplayProps) {
+	const statusLabel =
+		status === 'uploading'
+			? 'Uploading to cloud storage...'
+			: status === 'verifying'
+				? 'Verifying upload integrity...'
+				: status === 'completed'
+					? 'Upload completed!'
+					: 'Processing...';
+
+	return (
+		<div className="space-y-4">
+			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+				<h4 className="font-medium text-blue-900 mb-2">
+					Cloud Restore Progress
+				</h4>
+				<p className="text-sm text-blue-700">{statusLabel}</p>
+			</div>
+
+			<div className="space-y-3">
+				<div>
+					<div className="flex justify-between text-sm text-gray-600 mb-1">
+						<span>Upload Progress</span>
+						<span>{progress.percent_complete.toFixed(1)}%</span>
+					</div>
+					<div className="w-full bg-gray-200 rounded-full h-2.5">
+						<div
+							className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
+							style={{ width: `${progress.percent_complete}%` }}
+						/>
+					</div>
+				</div>
+
+				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+					<div className="bg-gray-50 rounded-lg p-3">
+						<p className="text-xs text-gray-500 uppercase tracking-wide">
+							Files Uploaded
+						</p>
+						<p className="text-lg font-semibold text-gray-900">
+							{progress.uploaded_files} / {progress.total_files}
+						</p>
+					</div>
+					<div className="bg-gray-50 rounded-lg p-3">
+						<p className="text-xs text-gray-500 uppercase tracking-wide">
+							Data Uploaded
+						</p>
+						<p className="text-lg font-semibold text-gray-900">
+							{formatBytes(progress.uploaded_bytes)} /{' '}
+							{formatBytes(progress.total_bytes)}
+						</p>
+					</div>
+					<div className="bg-gray-50 rounded-lg p-3 col-span-2">
+						<p className="text-xs text-gray-500 uppercase tracking-wide">
+							Current File
+						</p>
+						<p className="text-sm font-mono text-gray-900 truncate">
+							{progress.current_file || '-'}
+						</p>
+					</div>
+				</div>
+
+				{status === 'completed' && (
+					<div
+						className={`flex items-center gap-2 p-3 rounded-lg ${
+							progress.verified_checksum
+								? 'bg-green-50 text-green-800'
+								: 'bg-yellow-50 text-yellow-800'
+						}`}
+					>
+						{progress.verified_checksum ? (
+							<>
+								<svg
+									aria-hidden="true"
+									className="w-5 h-5"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M5 13l4 4L19 7"
+									/>
+								</svg>
+								<span className="text-sm font-medium">
+									Upload verified successfully
+								</span>
+							</>
+						) : (
+							<>
+								<svg
+									aria-hidden="true"
+									className="w-5 h-5"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+									/>
+								</svg>
+								<span className="text-sm font-medium">
+									Upload completed (verification not requested)
+								</span>
+							</>
+						)}
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+interface CloudRestoreTargetFormProps {
+	target: CloudRestoreTarget;
+	onChange: (target: CloudRestoreTarget) => void;
+	verifyUpload: boolean;
+	onVerifyUploadChange: (verify: boolean) => void;
+}
+
+function CloudRestoreTargetForm({
+	target,
+	onChange,
+	verifyUpload,
+	onVerifyUploadChange,
+}: CloudRestoreTargetFormProps) {
+	const handleTypeChange = (type: CloudRestoreTargetType) => {
+		onChange({ ...target, type });
+	};
+
+	return (
+		<div className="space-y-4">
+			<div>
+				<p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+					Cloud Target Type
+				</p>
+				<div className="grid grid-cols-3 gap-3">
+					<button
+						type="button"
+						onClick={() => handleTypeChange('s3')}
+						className={`p-3 border rounded-lg text-center transition-colors ${
+							target.type === 's3'
+								? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+								: 'border-gray-200 hover:border-gray-300'
+						}`}
+					>
+						<svg
+							aria-hidden="true"
+							className="w-6 h-6 mx-auto mb-1"
+							fill="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+						</svg>
+						<span className="text-sm font-medium">Amazon S3</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => handleTypeChange('b2')}
+						className={`p-3 border rounded-lg text-center transition-colors ${
+							target.type === 'b2'
+								? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+								: 'border-gray-200 hover:border-gray-300'
+						}`}
+					>
+						<svg
+							aria-hidden="true"
+							className="w-6 h-6 mx-auto mb-1"
+							fill="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H6v-2h6v2zm4-4H6v-2h10v2zm0-4H6V7h10v2z" />
+						</svg>
+						<span className="text-sm font-medium">Backblaze B2</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => handleTypeChange('restic')}
+						className={`p-3 border rounded-lg text-center transition-colors ${
+							target.type === 'restic'
+								? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+								: 'border-gray-200 hover:border-gray-300'
+						}`}
+					>
+						<svg
+							aria-hidden="true"
+							className="w-6 h-6 mx-auto mb-1"
+							fill="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+						</svg>
+						<span className="text-sm font-medium">Restic Repo</span>
+					</button>
+				</div>
+			</div>
+
+			{(target.type === 's3' || target.type === 'b2') && (
+				<>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label
+								htmlFor="cloud-bucket"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Bucket
+							</label>
+							<input
+								type="text"
+								id="cloud-bucket"
+								value={target.bucket || ''}
+								onChange={(e) =>
+									onChange({ ...target, bucket: e.target.value })
+								}
+								placeholder="my-backup-bucket"
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+						</div>
+						<div>
+							<label
+								htmlFor="cloud-prefix"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Prefix (optional)
+							</label>
+							<input
+								type="text"
+								id="cloud-prefix"
+								value={target.prefix || ''}
+								onChange={(e) =>
+									onChange({ ...target, prefix: e.target.value })
+								}
+								placeholder="restores/2024/"
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+						</div>
+					</div>
+
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label
+								htmlFor="cloud-region"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Region
+							</label>
+							<input
+								type="text"
+								id="cloud-region"
+								value={target.region || ''}
+								onChange={(e) =>
+									onChange({ ...target, region: e.target.value })
+								}
+								placeholder={target.type === 'b2' ? 'us-west-002' : 'us-east-1'}
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+						</div>
+						{target.type === 's3' && (
+							<div>
+								<label
+									htmlFor="cloud-endpoint"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Endpoint (optional)
+								</label>
+								<input
+									type="text"
+									id="cloud-endpoint"
+									value={target.endpoint || ''}
+									onChange={(e) =>
+										onChange({ ...target, endpoint: e.target.value })
+									}
+									placeholder="s3.amazonaws.com"
+									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+						)}
+					</div>
+
+					{target.type === 's3' ? (
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<label
+									htmlFor="cloud-access-key"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Access Key ID
+								</label>
+								<input
+									type="text"
+									id="cloud-access-key"
+									value={target.access_key_id || ''}
+									onChange={(e) =>
+										onChange({ ...target, access_key_id: e.target.value })
+									}
+									placeholder="AKIAIOSFODNN7EXAMPLE"
+									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+							<div>
+								<label
+									htmlFor="cloud-secret-key"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Secret Access Key
+								</label>
+								<input
+									type="password"
+									id="cloud-secret-key"
+									value={target.secret_access_key || ''}
+									onChange={(e) =>
+										onChange({ ...target, secret_access_key: e.target.value })
+									}
+									placeholder="••••••••••••••••"
+									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+						</div>
+					) : (
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<label
+									htmlFor="cloud-account-id"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Account ID
+								</label>
+								<input
+									type="text"
+									id="cloud-account-id"
+									value={target.account_id || ''}
+									onChange={(e) =>
+										onChange({ ...target, account_id: e.target.value })
+									}
+									placeholder="0001234567890ab"
+									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+							<div>
+								<label
+									htmlFor="cloud-app-key"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+								>
+									Application Key
+								</label>
+								<input
+									type="password"
+									id="cloud-app-key"
+									value={target.application_key || ''}
+									onChange={(e) =>
+										onChange({ ...target, application_key: e.target.value })
+									}
+									placeholder="••••••••••••••••"
+									className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								/>
+							</div>
+						</div>
+					)}
+				</>
+			)}
+
+			{target.type === 'restic' && (
+				<>
+					<div>
+						<label
+							htmlFor="cloud-repository"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							Target Repository
+						</label>
+						<input
+							type="text"
+							id="cloud-repository"
+							value={target.repository || ''}
+							onChange={(e) =>
+								onChange({ ...target, repository: e.target.value })
+							}
+							placeholder="s3:s3.amazonaws.com/bucket-name"
+							className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						/>
+						<p className="text-xs text-gray-500 mt-1">
+							Enter the restic repository URL (e.g., s3:..., b2:..., sftp:...)
+						</p>
+					</div>
+					<div>
+						<label
+							htmlFor="cloud-repo-password"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							Repository Password
+						</label>
+						<input
+							type="password"
+							id="cloud-repo-password"
+							value={target.repository_password || ''}
+							onChange={(e) =>
+								onChange({ ...target, repository_password: e.target.value })
+							}
+							placeholder="••••••••••••••••"
+							className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						/>
+					</div>
+				</>
+			)}
+
+			<div className="flex items-center">
+				<input
+					type="checkbox"
+					id="verify-upload"
+					checked={verifyUpload}
+					onChange={(e) => onVerifyUploadChange(e.target.checked)}
+					className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+				/>
+				<label
+					htmlFor="verify-upload"
+					className="ml-2 text-sm text-gray-700 dark:text-gray-300"
+				>
+					Verify upload integrity (recommended)
+				</label>
+			</div>
+		</div>
+	);
+}
+
 type RestoreTargetType = 'agent' | 'cloud';
 
 interface RestoreModalProps {
@@ -1543,6 +1979,7 @@ interface RestoreModalProps {
 		targetAgentId?: string,
 		pathMappings?: Array<{ source_path: string; target_path: string }>,
 	) => void;
+	onSubmit: (targetPath: string, includePaths: string[]) => void;
 	onCloudSubmit: (
 		includePaths: string[],
 		cloudTarget: CloudRestoreTarget,
@@ -1661,6 +2098,7 @@ function RestoreModal({
 				isCrossAgent ? targetAgentId : undefined,
 				validMappings.length > 0 ? validMappings : undefined,
 			);
+			onSubmit(finalTargetPath, includePaths);
 		}
 	};
 
@@ -1914,6 +2352,71 @@ function RestoreModal({
 											)}
 										</div>
 									)}
+							<div>
+								<p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									Restore Type
+								</p>
+								<div className="grid grid-cols-2 gap-3">
+									<button
+										type="button"
+										onClick={() => setRestoreType('agent')}
+										className={`p-3 border rounded-lg text-left transition-colors ${
+											restoreType === 'agent'
+												? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+												: 'border-gray-200 hover:border-gray-300'
+										}`}
+									>
+										<div className="flex items-center gap-2">
+											<svg
+												aria-hidden="true"
+												className="w-5 h-5"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+												/>
+											</svg>
+											<span className="font-medium">Restore to Agent</span>
+										</div>
+										<p className="text-xs text-gray-500 mt-1">
+											Restore files back to the original agent
+										</p>
+									</button>
+									<button
+										type="button"
+										onClick={() => setRestoreType('cloud')}
+										className={`p-3 border rounded-lg text-left transition-colors ${
+											restoreType === 'cloud'
+												? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+												: 'border-gray-200 hover:border-gray-300'
+										}`}
+									>
+										<div className="flex items-center gap-2">
+											<svg
+												aria-hidden="true"
+												className="w-5 h-5"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+												/>
+											</svg>
+											<span className="font-medium">Restore to Cloud</span>
+										</div>
+										<p className="text-xs text-gray-500 mt-1">
+											Upload restored files to S3, B2, or another repo
+										</p>
+									</button>
 								</div>
 							)}
 
