@@ -109,6 +109,7 @@ import { FileHistory } from './pages/FileHistory';
 import { FileSearch } from './pages/FileSearch';
 import { IPAllowlistSettings } from './pages/IPAllowlistSettings';
 import { LegalHolds } from './pages/LegalHolds';
+import { LifecyclePolicies } from './pages/LifecyclePolicies';
 import { Maintenance } from './pages/Maintenance';
 import { NewOrganization } from './pages/NewOrganization';
 import { Notifications } from './pages/Notifications';
@@ -275,6 +276,7 @@ function App() {
 						<Route path="reports" element={<Reports />} />
 						<Route path="audit-logs" element={<AuditLogs />} />
 						<Route path="legal-holds" element={<LegalHolds />} />
+						<Route path="lifecycle-policies" element={<LifecyclePolicies />} />
 						<Route path="stats" element={<StorageStats />} />
 						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
 						<Route path="tags" element={<Tags />} />

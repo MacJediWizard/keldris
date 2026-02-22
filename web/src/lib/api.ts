@@ -89,6 +89,7 @@ import type {
 	CreateIPBanRequest,
 	CreateImmutabilityLockRequest,
 	CreateLegalHoldRequest,
+	CreateLifecyclePolicyRequest,
 	CreateMaintenanceWindowRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
@@ -180,6 +181,12 @@ import type {
 	TrialCheckResponse,
 	LegalHold,
 	LegalHoldsResponse,
+	LifecycleDeletionEvent,
+	LifecycleDeletionEventsResponse,
+	LifecycleDryRunRequest,
+	LifecycleDryRunResult,
+	LifecyclePoliciesResponse,
+	LifecyclePolicy,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
 	MembersResponse,
@@ -295,6 +302,7 @@ import type {
 	UpdateExcludePatternRequest,
 	UpdateIPAllowlistRequest,
 	UpdateIPAllowlistSettingsRequest,
+	UpdateLifecyclePolicyRequest,
 	UpdateMaintenanceWindowRequest,
 	UpdateMemberRequest,
 	UpdateNotificationChannelRequest,
@@ -3037,4 +3045,76 @@ export const passwordApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+};
+// Lifecycle Policies API
+export const lifecyclePoliciesApi = {
+	list: async (): Promise<LifecyclePolicy[]> => {
+		const response = await fetchApi<LifecyclePoliciesResponse>(
+			'/lifecycle-policies',
+		);
+		return response.policies ?? [];
+	},
+
+	get: async (id: string): Promise<LifecyclePolicy> =>
+		fetchApi<LifecyclePolicy>(`/lifecycle-policies/${id}`),
+
+	create: async (
+		data: CreateLifecyclePolicyRequest,
+	): Promise<LifecyclePolicy> =>
+		fetchApi<LifecyclePolicy>('/lifecycle-policies', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateLifecyclePolicyRequest,
+	): Promise<LifecyclePolicy> =>
+		fetchApi<LifecyclePolicy>(`/lifecycle-policies/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/lifecycle-policies/${id}`, {
+			method: 'DELETE',
+		}),
+
+	dryRun: async (id: string): Promise<LifecycleDryRunResult> =>
+		fetchApi<LifecycleDryRunResult>(`/lifecycle-policies/${id}/dry-run`, {
+			method: 'POST',
+		}),
+
+	preview: async (
+		data: LifecycleDryRunRequest,
+	): Promise<LifecycleDryRunResult> =>
+		fetchApi<LifecycleDryRunResult>('/lifecycle-policies/preview', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	listDeletions: async (
+		id: string,
+		limit?: number,
+	): Promise<LifecycleDeletionEvent[]> => {
+		const params = new URLSearchParams();
+		if (limit) params.set('limit', limit.toString());
+		const query = params.toString() ? `?${params.toString()}` : '';
+		const response = await fetchApi<LifecycleDeletionEventsResponse>(
+			`/lifecycle-policies/${id}/deletions${query}`,
+		);
+		return response.events ?? [];
+	},
+
+	listOrgDeletions: async (
+		limit?: number,
+	): Promise<LifecycleDeletionEvent[]> => {
+		const params = new URLSearchParams();
+		if (limit) params.set('limit', limit.toString());
+		const query = params.toString() ? `?${params.toString()}` : '';
+		const response = await fetchApi<LifecycleDeletionEventsResponse>(
+			`/lifecycle-deletions${query}`,
+		);
+		return response.events ?? [];
+	},
 };

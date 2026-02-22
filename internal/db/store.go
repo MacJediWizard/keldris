@@ -10809,6 +10809,136 @@ func (db *DB) UpdateSLAPolicy(ctx context.Context, policy *models.SLAPolicy) err
 	`, policy.ID, policy.Name, policy.Description, policy.TargetRPOHours, policy.TargetRTOHours, policy.TargetSuccessRate, policy.Enabled, policy.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update SLA policy: %w", err)
+// Lifecycle Policy methods
+
+// CreateLifecyclePolicy creates a new lifecycle policy.
+func (db *DB) CreateLifecyclePolicy(ctx context.Context, policy *models.LifecyclePolicy) error {
+	rulesJSON, err := policy.RulesJSON()
+	if err != nil {
+		return fmt.Errorf("marshal rules: %w", err)
+	}
+
+	repoIDsJSON, err := policy.RepositoryIDsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal repository_ids: %w", err)
+	}
+
+	scheduleIDsJSON, err := policy.ScheduleIDsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal schedule_ids: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO lifecycle_policies (
+			id, org_id, name, description, status, rules, repository_ids, schedule_ids,
+			deletion_count, bytes_reclaimed, created_by, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, policy.ID, policy.OrgID, policy.Name, policy.Description, policy.Status,
+		rulesJSON, repoIDsJSON, scheduleIDsJSON, policy.DeletionCount, policy.BytesReclaimed,
+		policy.CreatedBy, policy.CreatedAt, policy.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create lifecycle policy: %w", err)
+	}
+	return nil
+}
+
+// GetLifecyclePolicyByID returns a lifecycle policy by ID.
+func (db *DB) GetLifecyclePolicyByID(ctx context.Context, id uuid.UUID) (*models.LifecyclePolicy, error) {
+	var p models.LifecyclePolicy
+	var rulesJSON, repoIDsJSON, scheduleIDsJSON []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, description, status, rules, repository_ids, schedule_ids,
+			last_evaluated_at, last_deletion_at, deletion_count, bytes_reclaimed,
+			created_by, created_at, updated_at
+		FROM lifecycle_policies
+		WHERE id = $1
+	`, id).Scan(
+		&p.ID, &p.OrgID, &p.Name, &p.Description, &p.Status, &rulesJSON, &repoIDsJSON, &scheduleIDsJSON,
+		&p.LastEvaluatedAt, &p.LastDeletionAt, &p.DeletionCount, &p.BytesReclaimed,
+		&p.CreatedBy, &p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get lifecycle policy: %w", err)
+	}
+
+	if err := p.SetRules(rulesJSON); err != nil {
+		return nil, fmt.Errorf("parse rules: %w", err)
+	}
+	if err := p.SetRepositoryIDs(repoIDsJSON); err != nil {
+		return nil, fmt.Errorf("parse repository_ids: %w", err)
+	}
+	if err := p.SetScheduleIDs(scheduleIDsJSON); err != nil {
+		return nil, fmt.Errorf("parse schedule_ids: %w", err)
+	}
+
+	return &p, nil
+}
+
+// GetLifecyclePoliciesByOrgID returns all lifecycle policies for an organization.
+func (db *DB) GetLifecyclePoliciesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.LifecyclePolicy, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, description, status, rules, repository_ids, schedule_ids,
+			last_evaluated_at, last_deletion_at, deletion_count, bytes_reclaimed,
+			created_by, created_at, updated_at
+		FROM lifecycle_policies
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list lifecycle policies: %w", err)
+	}
+	defer rows.Close()
+
+	return scanLifecyclePolicies(rows)
+}
+
+// GetActiveLifecyclePoliciesByOrgID returns all active lifecycle policies for an organization.
+func (db *DB) GetActiveLifecyclePoliciesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.LifecyclePolicy, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, description, status, rules, repository_ids, schedule_ids,
+			last_evaluated_at, last_deletion_at, deletion_count, bytes_reclaimed,
+			created_by, created_at, updated_at
+		FROM lifecycle_policies
+		WHERE org_id = $1 AND status = 'active'
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list active lifecycle policies: %w", err)
+	}
+	defer rows.Close()
+
+	return scanLifecyclePolicies(rows)
+}
+
+// UpdateLifecyclePolicy updates a lifecycle policy.
+func (db *DB) UpdateLifecyclePolicy(ctx context.Context, policy *models.LifecyclePolicy) error {
+	rulesJSON, err := policy.RulesJSON()
+	if err != nil {
+		return fmt.Errorf("marshal rules: %w", err)
+	}
+
+	repoIDsJSON, err := policy.RepositoryIDsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal repository_ids: %w", err)
+	}
+
+	scheduleIDsJSON, err := policy.ScheduleIDsJSON()
+	if err != nil {
+		return fmt.Errorf("marshal schedule_ids: %w", err)
+	}
+
+	policy.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE lifecycle_policies
+		SET name = $2, description = $3, status = $4, rules = $5, repository_ids = $6, schedule_ids = $7,
+			last_evaluated_at = $8, last_deletion_at = $9, deletion_count = $10, bytes_reclaimed = $11,
+			updated_at = $12
+		WHERE id = $1
+	`, policy.ID, policy.Name, policy.Description, policy.Status, rulesJSON, repoIDsJSON, scheduleIDsJSON,
+		policy.LastEvaluatedAt, policy.LastDeletionAt, policy.DeletionCount, policy.BytesReclaimed,
+		policy.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update lifecycle policy: %w", err)
 	}
 	return nil
 }
@@ -10821,6 +10951,11 @@ func (db *DB) DeleteSLAPolicy(ctx context.Context, id uuid.UUID) error {
 	`, id)
 	if err != nil {
 		return fmt.Errorf("delete SLA policy: %w", err)
+// DeleteLifecyclePolicy deletes a lifecycle policy by ID.
+func (db *DB) DeleteLifecyclePolicy(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM lifecycle_policies WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete lifecycle policy: %w", err)
 	}
 	return nil
 }
@@ -10835,6 +10970,16 @@ func (db *DB) CreateSLAStatusSnapshot(ctx context.Context, snapshot *models.SLAS
 	`, snapshot.ID, snapshot.PolicyID, snapshot.RPOHours, snapshot.RTOHours, snapshot.SuccessRate, snapshot.Compliant, snapshot.CalculatedAt)
 	if err != nil {
 		return fmt.Errorf("create SLA status snapshot: %w", err)
+// CreateLifecycleDeletionEvent creates a deletion event for audit logging.
+func (db *DB) CreateLifecycleDeletionEvent(ctx context.Context, event *models.LifecycleDeletionEvent) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO lifecycle_deletion_events (
+			id, org_id, policy_id, snapshot_id, repository_id, reason, size_bytes, deleted_by, deleted_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, event.ID, event.OrgID, event.PolicyID, event.SnapshotID, event.RepositoryID,
+		event.Reason, event.SizeBytes, event.DeletedBy, event.DeletedAt)
+	if err != nil {
+		return fmt.Errorf("create lifecycle deletion event: %w", err)
 	}
 	return nil
 }
@@ -10842,6 +10987,8 @@ func (db *DB) CreateSLAStatusSnapshot(ctx context.Context, snapshot *models.SLAS
 
 // GetSLAStatusHistory returns SLA status history for a policy, ordered by most recent first.
 func (db *DB) GetSLAStatusHistory(ctx context.Context, policyID uuid.UUID, limit int) ([]*models.SLAStatusSnapshot, error) {
+// GetLifecycleDeletionEventsByPolicyID returns deletion events for a policy.
+func (db *DB) GetLifecycleDeletionEventsByPolicyID(ctx context.Context, policyID uuid.UUID, limit int) ([]*models.LifecycleDeletionEvent, error) {
 	if limit <= 0 {
 		limit = 100
 	}
@@ -11253,3 +11400,116 @@ func (db *DB) UserCount(ctx context.Context) (int, error) {
 	return count, nil
 }
 
+		SELECT id, org_id, policy_id, snapshot_id, repository_id, reason, size_bytes, deleted_by, deleted_at
+		FROM lifecycle_deletion_events
+		WHERE policy_id = $1
+		ORDER BY deleted_at DESC
+		LIMIT $2
+	`, policyID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list deletion events: %w", err)
+	}
+	defer rows.Close()
+
+	return scanLifecycleDeletionEvents(rows)
+}
+
+// GetLifecycleDeletionEventsByOrgID returns deletion events for an organization.
+func (db *DB) GetLifecycleDeletionEventsByOrgID(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.LifecycleDeletionEvent, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, policy_id, snapshot_id, repository_id, reason, size_bytes, deleted_by, deleted_at
+		FROM lifecycle_deletion_events
+		WHERE org_id = $1
+		ORDER BY deleted_at DESC
+		LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list deletion events: %w", err)
+	}
+	defer rows.Close()
+
+	return scanLifecycleDeletionEvents(rows)
+}
+
+// scanLifecyclePolicies scans rows into lifecycle policies.
+func scanLifecyclePolicies(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.LifecyclePolicy, error) {
+	var policies []*models.LifecyclePolicy
+	for rows.Next() {
+		var p models.LifecyclePolicy
+		var rulesJSON, repoIDsJSON, scheduleIDsJSON []byte
+		err := rows.Scan(
+			&p.ID, &p.OrgID, &p.Name, &p.Description, &p.Status, &rulesJSON, &repoIDsJSON, &scheduleIDsJSON,
+			&p.LastEvaluatedAt, &p.LastDeletionAt, &p.DeletionCount, &p.BytesReclaimed,
+			&p.CreatedBy, &p.CreatedAt, &p.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan lifecycle policy: %w", err)
+		}
+
+		if err := p.SetRules(rulesJSON); err != nil {
+			return nil, fmt.Errorf("parse rules: %w", err)
+		}
+		if err := p.SetRepositoryIDs(repoIDsJSON); err != nil {
+			return nil, fmt.Errorf("parse repository_ids: %w", err)
+		}
+		if err := p.SetScheduleIDs(scheduleIDsJSON); err != nil {
+			return nil, fmt.Errorf("parse schedule_ids: %w", err)
+		}
+
+		policies = append(policies, &p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate lifecycle policies: %w", err)
+	}
+
+	return policies, nil
+}
+
+// scanLifecycleDeletionEvents scans rows into deletion events.
+func scanLifecycleDeletionEvents(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.LifecycleDeletionEvent, error) {
+	var events []*models.LifecycleDeletionEvent
+	for rows.Next() {
+		var e models.LifecycleDeletionEvent
+		err := rows.Scan(
+			&e.ID, &e.OrgID, &e.PolicyID, &e.SnapshotID, &e.RepositoryID,
+			&e.Reason, &e.SizeBytes, &e.DeletedBy, &e.DeletedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan deletion event: %w", err)
+		}
+		events = append(events, &e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate deletion events: %w", err)
+	}
+
+	return events, nil
+}
+
+// GetBackupsByOrgID returns all backups for an organization.
+// This is used by lifecycle policy evaluation to assess which snapshots can be deleted.
+func (db *DB) GetBackupsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at, b.completed_at,
+		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
+		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
+		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1
+		ORDER BY b.started_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get backups by org: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackups(rows)
+}
