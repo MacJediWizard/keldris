@@ -561,6 +561,12 @@ func TestKeyManager_StoreKey(t *testing.T) {
 	retrieved, err := masterKeyFromBase64(stored)
 	if err != nil {
 		t.Fatalf("masterKeyFromBase64() error = %v", err)
+	stored := MasterKeyToBase64(key)
+
+	// "Retrieve" the key from storage
+	retrieved, err := MasterKeyFromBase64(stored)
+	if err != nil {
+		t.Fatalf("MasterKeyFromBase64() error = %v", err)
 	}
 
 	// Create a new KeyManager with the retrieved key
@@ -585,11 +591,13 @@ func TestKeyManager_RetrieveKey(t *testing.T) {
 	key, _ := GenerateMasterKey()
 
 	encoded := masterKeyToBase64(key)
+	encoded := MasterKeyToBase64(key)
 
 	// Verify encoded form is valid base64
 	decoded, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		t.Fatalf("masterKeyToBase64() produced invalid base64: %v", err)
+		t.Fatalf("MasterKeyToBase64() produced invalid base64: %v", err)
 	}
 	if !bytes.Equal(key, decoded) {
 		t.Error("raw base64 decode doesn't match original key")
@@ -602,6 +610,13 @@ func TestKeyManager_RetrieveKey(t *testing.T) {
 	}
 	if !bytes.Equal(key, retrieved) {
 		t.Error("masterKeyFromBase64() result doesn't match original key")
+	// Verify MasterKeyFromBase64 gives identical result
+	retrieved, err := MasterKeyFromBase64(encoded)
+	if err != nil {
+		t.Fatalf("MasterKeyFromBase64() error = %v", err)
+	}
+	if !bytes.Equal(key, retrieved) {
+		t.Error("MasterKeyFromBase64() result doesn't match original key")
 	}
 }
 
