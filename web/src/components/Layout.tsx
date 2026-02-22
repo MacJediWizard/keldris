@@ -28,6 +28,7 @@ import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
 import { TierBadge } from './features/TierBadge';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
+import { RecentItemsDropdown } from './features/RecentItems';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { WhatsNewModal } from './features/WhatsNewModal';
 
@@ -953,6 +954,7 @@ function Header() {
 			</div>
 			<div className="flex items-center gap-4">
 				<LanguageSelector />
+				<RecentItemsDropdown />
 				<Link
 					to="/alerts"
 					aria-label={t('nav.alerts')}
