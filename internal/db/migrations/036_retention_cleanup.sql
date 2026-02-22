@@ -8,6 +8,7 @@
 DROP FUNCTION IF EXISTS cleanup_agent_health_history();
 
 -- Create the new version with configurable retention period.
+-- Update the cleanup function to accept a configurable retention period.
 CREATE OR REPLACE FUNCTION cleanup_agent_health_history(retention_days INTEGER DEFAULT 90) RETURNS BIGINT AS $$
 DECLARE
     deleted_count BIGINT;

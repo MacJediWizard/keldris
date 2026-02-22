@@ -81,6 +81,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/shutdown"
+	"github.com/MacJediWizard/keldris/internal/maintenance"
 	"github.com/rs/zerolog"
 )
 
