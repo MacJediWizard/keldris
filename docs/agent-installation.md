@@ -64,6 +64,16 @@ Invoke-WebRequest -Uri https://releases.keldris.io/install-windows.ps1 -OutFile 
 .\install-windows.ps1 -Action Install
 ```
 
+### Docker
+
+```bash
+docker pull ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.1
+docker run -d --name keldris-agent \
+  -e KELDRIS_SERVER_URL=https://your-keldris-server.com \
+  -v /etc/keldris:/etc/keldris \
+  ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.1
+```
+
 ## Post-Installation Setup
 
 After installation, register the agent with your Keldris server:
@@ -109,11 +119,21 @@ Download the appropriate binary for your platform from the releases page:
 
 | Platform | Architecture | Download |
 |----------|-------------|----------|
-| Linux | x86_64 | `keldris-agent-linux-amd64` |
-| Linux | ARM64 | `keldris-agent-linux-arm64` |
-| macOS | Intel | `keldris-agent-darwin-amd64` |
-| macOS | Apple Silicon | `keldris-agent-darwin-arm64` |
-| Windows | x86_64 | `keldris-agent-windows-amd64.exe` |
+| Linux | x86_64 | [keldris-agent-linux-amd64](https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-linux-amd64) |
+| Linux | ARM64 | [keldris-agent-linux-arm64](https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-linux-arm64) |
+| macOS | Intel | [keldris-agent-darwin-amd64](https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-darwin-amd64) |
+| macOS | Apple Silicon | [keldris-agent-darwin-arm64](https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-darwin-arm64) |
+| Windows | x86_64 | [keldris-agent-windows-amd64.exe](https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-windows-amd64.exe) |
+
+Example download with curl:
+
+```bash
+# Linux x86_64
+curl -Lo keldris-agent https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-linux-amd64
+
+# macOS Apple Silicon
+curl -Lo keldris-agent https://github.com/MacJediWizard/keldris/releases/latest/download/keldris-agent-darwin-arm64
+```
 
 ### 2. Install the Binary
 
@@ -327,7 +347,12 @@ docker rmi ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.4
 
 If you used the install script:
 
+docker rmi ghcr.io/macjediwizard/keldris-agent:1.0.0-beta.1
+```
+
 ### Linux
+
+If you used the install script:
 
 ```bash
 sudo ./install-linux.sh uninstall
