@@ -796,7 +796,7 @@ func isValidChannelType(t models.NotificationChannelType) bool {
 // isValidChannelType checks if a channel type is valid.
 func isValidChannelType(t models.NotificationChannelType) bool {
 	switch t {
-	case models.ChannelTypeEmail, models.ChannelTypeSlack, models.ChannelTypeWebhook, models.ChannelTypePagerDuty:
+	case models.ChannelTypeEmail, models.ChannelTypeSlack, models.ChannelTypeWebhook, models.ChannelTypePagerDuty, models.ChannelTypeTeams, models.ChannelTypeDiscord:
 		return true
 	default:
 		return false
