@@ -645,11 +645,10 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable,
-		       priority, preemptible, enabled, created_at, updated_at
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
-		ORDER BY priority, name
+		ORDER BY name
 	`, agentID)
 	if err != nil {
 		return nil, fmt.Errorf("list schedules: %w", err)
@@ -682,8 +681,7 @@ func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedu
 	row := db.Pool.QueryRow(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable,
-		       priority, preemptible, enabled, created_at, updated_at
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`, id)
@@ -742,24 +740,16 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 		mountBehavior = string(models.MountBehaviorFail)
 	}
 
-	// Set default priority if not set
-	priority := schedule.Priority
-	if priority == 0 {
-		priority = models.PriorityMedium
-	}
-
 	_, err = db.Pool.Exec(ctx, `
 		INSERT INTO schedules (id, agent_id, agent_group_id, policy_id, name, cron_expression, paths,
 		                       excludes, retention_policy, bandwidth_limit_kbps,
 		                       backup_window_start, backup_window_end, excluded_hours,
-		                       compression_level, max_file_size_mb, on_mount_unavailable,
-		                       priority, preemptible, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+		                       compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 	`, schedule.ID, schedule.AgentID, schedule.AgentGroupID, schedule.PolicyID, schedule.Name,
 		schedule.CronExpression, pathsBytes, excludesBytes, retentionBytes,
 		schedule.BandwidthLimitKB, windowStart, windowEnd, excludedHoursBytes,
-		schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior,
-		priority, schedule.Preemptible, schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
+		schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior, schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create schedule: %w", err)
 	}
@@ -814,25 +804,17 @@ func (db *DB) UpdateSchedule(ctx context.Context, schedule *models.Schedule) err
 		mountBehavior = string(models.MountBehaviorFail)
 	}
 
-	// Set default priority if not set
-	priority := schedule.Priority
-	if priority == 0 {
-		priority = models.PriorityMedium
-	}
-
 	schedule.UpdatedAt = time.Now()
 	_, err = db.Pool.Exec(ctx, `
 		UPDATE schedules
 		SET policy_id = $2, name = $3, cron_expression = $4, paths = $5, excludes = $6,
 		    retention_policy = $7, bandwidth_limit_kbps = $8, backup_window_start = $9,
 		    backup_window_end = $10, excluded_hours = $11, compression_level = $12,
-		    max_file_size_mb = $13, on_mount_unavailable = $14, priority = $15,
-		    preemptible = $16, enabled = $17, updated_at = $18
+		    max_file_size_mb = $13, on_mount_unavailable = $14, enabled = $15, updated_at = $16
 		WHERE id = $1
 	`, schedule.ID, schedule.PolicyID, schedule.Name, schedule.CronExpression, pathsBytes,
 		excludesBytes, retentionBytes, schedule.BandwidthLimitKB, windowStart, windowEnd,
-		excludedHoursBytes, schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior,
-		priority, schedule.Preemptible, schedule.Enabled, schedule.UpdatedAt)
+		excludedHoursBytes, schedule.CompressionLevel, schedule.MaxFileSizeMB, mountBehavior, schedule.Enabled, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update schedule: %w", err)
 	}
@@ -992,12 +974,11 @@ func scanSchedule(rows interface {
 	var pathsBytes, excludesBytes, retentionBytes, excludedHoursBytes []byte
 	var agentGroupID *uuid.UUID
 	var windowStart, windowEnd, compressionLevel, mountBehavior *string
-	var priority *int
 	err := rows.Scan(
 		&s.ID, &s.AgentID, &agentGroupID, &s.PolicyID, &s.Name, &s.CronExpression,
 		&pathsBytes, &excludesBytes, &retentionBytes, &s.BandwidthLimitKB,
 		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel, &s.MaxFileSizeMB,
-		&mountBehavior, &priority, &s.Preemptible, &s.Enabled, &s.CreatedAt, &s.UpdatedAt,
+		&mountBehavior, &s.Enabled, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scan schedule: %w", err)
@@ -1024,13 +1005,6 @@ func scanSchedule(rows interface {
 		s.OnMountUnavailable = models.MountBehavior(*mountBehavior)
 	} else {
 		s.OnMountUnavailable = models.MountBehaviorFail
-	}
-
-	// Set priority with default
-	if priority != nil {
-		s.Priority = models.SchedulePriority(*priority)
-	} else {
-		s.Priority = models.PriorityMedium
 	}
 
 	return &s, nil
@@ -1194,11 +1168,10 @@ func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable,
-		       priority, preemptible, enabled, created_at, updated_at
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE policy_id = $1
-		ORDER BY priority, name
+		ORDER BY name
 	`, policyID)
 	if err != nil {
 		return nil, fmt.Errorf("list schedules by policy: %w", err)
@@ -2132,14 +2105,13 @@ func (db *DB) GetLatestBackupByScheduleID(ctx context.Context, scheduleID uuid.U
 
 // Restore methods
 
-// GetRestoresByAgentID returns all restores for an agent (as either source or target).
+// GetRestoresByAgentID returns all restores for an agent.
 func (db *DB) GetRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Restore, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
-		       exclude_paths, path_mappings, status, files_restored, bytes_restored, total_files,
-		       total_bytes, current_file, started_at, completed_at, error_message, created_at, updated_at
+		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
+		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
 		FROM restores
-		WHERE agent_id = $1 OR source_agent_id = $1
+		WHERE agent_id = $1
 		ORDER BY created_at DESC
 	`, agentID)
 	if err != nil {
@@ -2154,21 +2126,16 @@ func (db *DB) GetRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*m
 func (db *DB) GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore, error) {
 	var r models.Restore
 	var statusStr string
-	var includePathsBytes, excludePathsBytes, pathMappingsBytes []byte
-	var filesRestored, bytesRestored int64
-	var totalFiles, totalBytes *int64
-	var currentFile *string
+	var includePathsBytes, excludePathsBytes []byte
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
-		       exclude_paths, path_mappings, status, files_restored, bytes_restored, total_files,
-		       total_bytes, current_file, started_at, completed_at, error_message, created_at, updated_at
+		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
+		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
 		FROM restores
 		WHERE id = $1
 	`, id).Scan(
-		&r.ID, &r.AgentID, &r.SourceAgentID, &r.RepositoryID, &r.SnapshotID, &r.TargetPath,
-		&includePathsBytes, &excludePathsBytes, &pathMappingsBytes, &statusStr,
-		&filesRestored, &bytesRestored, &totalFiles, &totalBytes, &currentFile,
-		&r.StartedAt, &r.CompletedAt, &r.ErrorMessage, &r.CreatedAt, &r.UpdatedAt,
+		&r.ID, &r.AgentID, &r.RepositoryID, &r.SnapshotID, &r.TargetPath,
+		&includePathsBytes, &excludePathsBytes, &statusStr, &r.StartedAt,
+		&r.CompletedAt, &r.ErrorMessage, &r.CreatedAt, &r.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get restore: %w", err)
@@ -2179,21 +2146,6 @@ func (db *DB) GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore
 	}
 	if err := parseStringSlice(excludePathsBytes, &r.ExcludePaths); err != nil {
 		return nil, fmt.Errorf("parse exclude paths: %w", err)
-	}
-	if err := parsePathMappings(pathMappingsBytes, &r.PathMappings); err != nil {
-		return nil, fmt.Errorf("parse path mappings: %w", err)
-	}
-	// Build progress if there's any progress data
-	if filesRestored > 0 || bytesRestored > 0 || totalFiles != nil || totalBytes != nil {
-		r.Progress = &models.RestoreProgress{
-			FilesRestored: filesRestored,
-			BytesRestored: bytesRestored,
-			TotalFiles:    totalFiles,
-			TotalBytes:    totalBytes,
-		}
-		if currentFile != nil {
-			r.Progress.CurrentFile = *currentFile
-		}
 	}
 	return &r, nil
 }
@@ -2210,17 +2162,12 @@ func (db *DB) CreateRestore(ctx context.Context, restore *models.Restore) error 
 		return fmt.Errorf("marshal exclude paths: %w", err)
 	}
 
-	pathMappingsBytes, err := toPathMappingsJSONBytes(restore.PathMappings)
-	if err != nil {
-		return fmt.Errorf("marshal path mappings: %w", err)
-	}
-
 	_, err = db.Pool.Exec(ctx, `
-		INSERT INTO restores (id, agent_id, source_agent_id, repository_id, snapshot_id, target_path, include_paths,
-		                      exclude_paths, path_mappings, status, started_at, completed_at, error_message, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-	`, restore.ID, restore.AgentID, restore.SourceAgentID, restore.RepositoryID, restore.SnapshotID,
-		restore.TargetPath, includePathsBytes, excludePathsBytes, pathMappingsBytes,
+		INSERT INTO restores (id, agent_id, repository_id, snapshot_id, target_path, include_paths,
+		                      exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, restore.ID, restore.AgentID, restore.RepositoryID, restore.SnapshotID,
+		restore.TargetPath, includePathsBytes, excludePathsBytes,
 		string(restore.Status), restore.StartedAt, restore.CompletedAt,
 		restore.ErrorMessage, restore.CreatedAt, restore.UpdatedAt)
 	if err != nil {
@@ -2232,29 +2179,12 @@ func (db *DB) CreateRestore(ctx context.Context, restore *models.Restore) error 
 // UpdateRestore updates an existing restore record.
 func (db *DB) UpdateRestore(ctx context.Context, restore *models.Restore) error {
 	restore.UpdatedAt = time.Now()
-
-	var filesRestored, bytesRestored int64
-	var totalFiles, totalBytes *int64
-	var currentFile *string
-	if restore.Progress != nil {
-		filesRestored = restore.Progress.FilesRestored
-		bytesRestored = restore.Progress.BytesRestored
-		totalFiles = restore.Progress.TotalFiles
-		totalBytes = restore.Progress.TotalBytes
-		if restore.Progress.CurrentFile != "" {
-			currentFile = &restore.Progress.CurrentFile
-		}
-	}
-
 	_, err := db.Pool.Exec(ctx, `
 		UPDATE restores
-		SET status = $2, started_at = $3, completed_at = $4, error_message = $5,
-		    files_restored = $6, bytes_restored = $7, total_files = $8, total_bytes = $9,
-		    current_file = $10, updated_at = $11
+		SET status = $2, started_at = $3, completed_at = $4, error_message = $5, updated_at = $6
 		WHERE id = $1
 	`, restore.ID, string(restore.Status), restore.StartedAt, restore.CompletedAt,
-		restore.ErrorMessage, filesRestored, bytesRestored, totalFiles, totalBytes,
-		currentFile, restore.UpdatedAt)
+		restore.ErrorMessage, restore.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update restore: %w", err)
 	}
@@ -2714,14 +2644,10 @@ func scanRestores(rows interface {
 	for r.Next() {
 		var restore models.Restore
 		var statusStr string
-		var includePathsBytes, excludePathsBytes, pathMappingsBytes []byte
-		var filesRestored, bytesRestored int64
-		var totalFiles, totalBytes *int64
-		var currentFile *string
+		var includePathsBytes, excludePathsBytes []byte
 		if err := r.Scan(
-			&restore.ID, &restore.AgentID, &restore.SourceAgentID, &restore.RepositoryID, &restore.SnapshotID,
-			&restore.TargetPath, &includePathsBytes, &excludePathsBytes, &pathMappingsBytes, &statusStr,
-			&filesRestored, &bytesRestored, &totalFiles, &totalBytes, &currentFile,
+			&restore.ID, &restore.AgentID, &restore.RepositoryID, &restore.SnapshotID,
+			&restore.TargetPath, &includePathsBytes, &excludePathsBytes, &statusStr,
 			&restore.StartedAt, &restore.CompletedAt, &restore.ErrorMessage,
 			&restore.CreatedAt, &restore.UpdatedAt,
 		); err != nil {
@@ -2733,21 +2659,6 @@ func scanRestores(rows interface {
 		}
 		if err := parseStringSlice(excludePathsBytes, &restore.ExcludePaths); err != nil {
 			return nil, fmt.Errorf("parse exclude paths: %w", err)
-		}
-		if err := parsePathMappings(pathMappingsBytes, &restore.PathMappings); err != nil {
-			return nil, fmt.Errorf("parse path mappings: %w", err)
-		}
-		// Build progress if there's any progress data
-		if filesRestored > 0 || bytesRestored > 0 || totalFiles != nil || totalBytes != nil {
-			restore.Progress = &models.RestoreProgress{
-				FilesRestored: filesRestored,
-				BytesRestored: bytesRestored,
-				TotalFiles:    totalFiles,
-				TotalBytes:    totalBytes,
-			}
-			if currentFile != nil {
-				restore.Progress.CurrentFile = *currentFile
-			}
 		}
 		restores = append(restores, &restore)
 	}
@@ -2767,22 +2678,6 @@ func toJSONBytes(slice []string) ([]byte, error) {
 
 // parseStringSlice parses JSON bytes into a string slice.
 func parseStringSlice(data []byte, dest *[]string) error {
-	if len(data) == 0 {
-		return nil
-	}
-	return json.Unmarshal(data, dest)
-}
-
-// toPathMappingsJSONBytes converts path mappings to JSON bytes for database storage.
-func toPathMappingsJSONBytes(mappings []models.PathMapping) ([]byte, error) {
-	if len(mappings) == 0 {
-		return nil, nil
-	}
-	return json.Marshal(mappings)
-}
-
-// parsePathMappings parses JSON bytes into path mappings.
-func parsePathMappings(data []byte, dest *[]models.PathMapping) error {
 	if len(data) == 0 {
 		return nil
 	}
@@ -6260,11 +6155,10 @@ func (db *DB) GetSchedulesByAgentGroupID(ctx context.Context, agentGroupID uuid.
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable,
-		       priority, preemptible, enabled, created_at, updated_at
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_group_id = $1
-		ORDER BY priority, name
+		ORDER BY name
 	`, agentGroupID)
 	if err != nil {
 		return nil, fmt.Errorf("list schedules by group: %w", err)
@@ -9273,8 +9167,8 @@ func (db *DB) CreateIPAllowlist(ctx context.Context, a *models.IPAllowlist) erro
 func (db *DB) UpdateIPAllowlist(ctx context.Context, a *models.IPAllowlist) error {
 	a.UpdatedAt = time.Now()
 	_, err := db.Pool.Exec(ctx, `
-		UPDATE ip_allowlists
-		SET cidr = $2, description = $3, type = $4, enabled = $5, updated_by = $6, updated_at = $7
+		UPDATE ip_allowlists SET
+			cidr = $2, description = $3, type = $4, enabled = $5, updated_by = $6, updated_at = $7
 		WHERE id = $1
 	`, a.ID, a.CIDR, a.Description, a.Type, a.Enabled, a.UpdatedBy, a.UpdatedAt)
 	if err != nil {
@@ -9358,7 +9252,6 @@ func (db *DB) CreateIPBlockedAttempt(ctx context.Context, b *models.IPBlockedAtt
 
 // ListIPBlockedAttemptsByOrg returns blocked attempts for an organization.
 func (db *DB) ListIPBlockedAttemptsByOrg(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.IPBlockedAttempt, int, error) {
-	// Get total count
 	var total int
 	err := db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*) FROM ip_blocked_attempts WHERE org_id = $1
@@ -9403,7 +9296,7 @@ func scanIPAllowlists(rows interface{ Next() bool; Scan(dest ...interface{}) err
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate ip allowlists: %w", err)
+		return nil, fmt.Errorf("iterate IP allowlists: %w", err)
 	}
 
 	return allowlists, nil
@@ -9432,29 +9325,11 @@ func scanIPBlockedAttempts(rows interface{ Next() bool; Scan(dest ...interface{}
 
 // Rate Limit Config methods
 
-// ListRateLimitConfigs returns all rate limit configs for an organization.
-func (db *DB) ListRateLimitConfigs(ctx context.Context, orgID uuid.UUID) ([]*models.RateLimitConfig, error) {
-	rows, err := db.Pool.Query(ctx, `
-		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled,
-		       created_by, created_at, updated_at
-		FROM rate_limit_configs
-		WHERE org_id = $1
-		ORDER BY endpoint ASC
-	`, orgID)
-	if err != nil {
-		return nil, fmt.Errorf("list rate limit configs: %w", err)
-	}
-	defer rows.Close()
-
-	return scanRateLimitConfigs(rows)
-}
-
 // GetRateLimitConfigByID returns a rate limit config by ID.
 func (db *DB) GetRateLimitConfigByID(ctx context.Context, id uuid.UUID) (*models.RateLimitConfig, error) {
 	var c models.RateLimitConfig
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled,
-		       created_by, created_at, updated_at
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled, created_by, created_at, updated_at
 		FROM rate_limit_configs
 		WHERE id = $1
 	`, id).Scan(
@@ -9467,14 +9342,29 @@ func (db *DB) GetRateLimitConfigByID(ctx context.Context, id uuid.UUID) (*models
 	return &c, nil
 }
 
+// ListRateLimitConfigs returns all rate limit configs for an organization.
+func (db *DB) ListRateLimitConfigs(ctx context.Context, orgID uuid.UUID) ([]*models.RateLimitConfig, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled, created_by, created_at, updated_at
+		FROM rate_limit_configs
+		WHERE org_id = $1
+		ORDER BY endpoint
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("list rate limit configs: %w", err)
+	}
+	defer rows.Close()
+
+	return scanRateLimitConfigs(rows)
+}
+
 // GetRateLimitConfigByEndpoint returns a rate limit config for a specific endpoint.
 func (db *DB) GetRateLimitConfigByEndpoint(ctx context.Context, orgID uuid.UUID, endpoint string) (*models.RateLimitConfig, error) {
 	var c models.RateLimitConfig
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled,
-		       created_by, created_at, updated_at
+		SELECT id, org_id, endpoint, requests_per_period, period_seconds, enabled, created_by, created_at, updated_at
 		FROM rate_limit_configs
-		WHERE org_id = $1 AND endpoint = $2
+		WHERE org_id = $1 AND endpoint = $2 AND enabled = true
 	`, orgID, endpoint).Scan(
 		&c.ID, &c.OrgID, &c.Endpoint, &c.RequestsPerPeriod, &c.PeriodSeconds,
 		&c.Enabled, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
@@ -9488,11 +9378,9 @@ func (db *DB) GetRateLimitConfigByEndpoint(ctx context.Context, orgID uuid.UUID,
 // CreateRateLimitConfig creates a new rate limit config.
 func (db *DB) CreateRateLimitConfig(ctx context.Context, c *models.RateLimitConfig) error {
 	_, err := db.Pool.Exec(ctx, `
-		INSERT INTO rate_limit_configs (id, org_id, endpoint, requests_per_period, period_seconds,
-		            enabled, created_by, created_at, updated_at)
+		INSERT INTO rate_limit_configs (id, org_id, endpoint, requests_per_period, period_seconds, enabled, created_by, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, c.ID, c.OrgID, c.Endpoint, c.RequestsPerPeriod, c.PeriodSeconds,
-		c.Enabled, c.CreatedBy, c.CreatedAt, c.UpdatedAt)
+	`, c.ID, c.OrgID, c.Endpoint, c.RequestsPerPeriod, c.PeriodSeconds, c.Enabled, c.CreatedBy, c.CreatedAt, c.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create rate limit config: %w", err)
 	}
@@ -9503,10 +9391,10 @@ func (db *DB) CreateRateLimitConfig(ctx context.Context, c *models.RateLimitConf
 func (db *DB) UpdateRateLimitConfig(ctx context.Context, c *models.RateLimitConfig) error {
 	c.UpdatedAt = time.Now()
 	_, err := db.Pool.Exec(ctx, `
-		UPDATE rate_limit_configs
-		SET requests_per_period = $2, period_seconds = $3, enabled = $4, updated_at = $5
+		UPDATE rate_limit_configs SET
+			endpoint = $2, requests_per_period = $3, period_seconds = $4, enabled = $5, updated_at = $6
 		WHERE id = $1
-	`, c.ID, c.RequestsPerPeriod, c.PeriodSeconds, c.Enabled, c.UpdatedAt)
+	`, c.ID, c.Endpoint, c.RequestsPerPeriod, c.PeriodSeconds, c.Enabled, c.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update rate limit config: %w", err)
 	}
@@ -9515,17 +9403,14 @@ func (db *DB) UpdateRateLimitConfig(ctx context.Context, c *models.RateLimitConf
 
 // DeleteRateLimitConfig deletes a rate limit config.
 func (db *DB) DeleteRateLimitConfig(ctx context.Context, id uuid.UUID) error {
-	_, err := db.Pool.Exec(ctx, `
-		DELETE FROM rate_limit_configs
-		WHERE id = $1
-	`, id)
+	_, err := db.Pool.Exec(ctx, `DELETE FROM rate_limit_configs WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("delete rate limit config: %w", err)
 	}
 	return nil
 }
 
-// scanRateLimitConfigs scans rows into rate limit config structs.
+// scanRateLimitConfigs scans rows into rate limit configs.
 func scanRateLimitConfigs(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.RateLimitConfig, error) {
 	var configs []*models.RateLimitConfig
 	for rows.Next() {
@@ -9655,126 +9540,109 @@ func (db *DB) ListRecentBlockedRequests(ctx context.Context, orgID uuid.UUID, li
 	return requests, nil
 }
 
-// IP Ban methods
+// ========== IP Ban Methods ==========
+
+// GetIPBanByID returns an IP ban by ID.
+func (db *DB) GetIPBanByID(ctx context.Context, id uuid.UUID) (*models.IPBan, error) {
+	var b models.IPBan
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, ip_address, reason, banned_by, expires_at, created_at
+		FROM ip_bans
+		WHERE id = $1
+	`, id).Scan(
+		&b.ID, &b.OrgID, &b.IPAddress, &b.Reason, &b.BannedBy, &b.ExpiresAt, &b.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get ip ban: %w", err)
+	}
+	return &b, nil
+}
 
 // ListIPBans returns all IP bans for an organization.
 func (db *DB) ListIPBans(ctx context.Context, orgID uuid.UUID) ([]*models.IPBan, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at
+		SELECT id, org_id, ip_address, reason, banned_by, expires_at, created_at
 		FROM ip_bans
-		WHERE org_id = $1 OR org_id IS NULL
-		ORDER BY banned_at DESC
+		WHERE org_id = $1
+		ORDER BY created_at DESC
 	`, orgID)
 	if err != nil {
-		return nil, fmt.Errorf("list IP bans: %w", err)
+		return nil, fmt.Errorf("list ip bans: %w", err)
 	}
 	defer rows.Close()
 
 	return scanIPBans(rows)
 }
 
-// ListActiveIPBans returns active IP bans.
+// ListActiveIPBans returns active (non-expired) IP bans for an organization.
 func (db *DB) ListActiveIPBans(ctx context.Context, orgID uuid.UUID) ([]*models.IPBan, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at
+		SELECT id, org_id, ip_address, reason, banned_by, expires_at, created_at
 		FROM ip_bans
-		WHERE (org_id = $1 OR org_id IS NULL)
-		  AND (expires_at IS NULL OR expires_at > NOW())
-		ORDER BY banned_at DESC
+		WHERE org_id = $1 AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY created_at DESC
 	`, orgID)
 	if err != nil {
-		return nil, fmt.Errorf("list active IP bans: %w", err)
+		return nil, fmt.Errorf("list active ip bans: %w", err)
 	}
 	defer rows.Close()
 
 	return scanIPBans(rows)
 }
 
-// GetIPBan returns an IP ban by IP address.
-func (db *DB) GetIPBan(ctx context.Context, ipAddress string) (*models.IPBan, error) {
-	var b models.IPBan
+// IsIPBanned checks if an IP address is banned for an organization.
+func (db *DB) IsIPBanned(ctx context.Context, orgID uuid.UUID, ipAddress string) (bool, error) {
+	var count int
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at
-		FROM ip_bans
-		WHERE ip_address = $1
-		  AND (expires_at IS NULL OR expires_at > NOW())
-		ORDER BY banned_at DESC
-		LIMIT 1
-	`, ipAddress).Scan(
-		&b.ID, &b.OrgID, &b.IPAddress, &b.Reason, &b.BanCount,
-		&b.BannedBy, &b.BannedAt, &b.ExpiresAt, &b.CreatedAt,
-	)
+		SELECT COUNT(*) FROM ip_bans
+		WHERE org_id = $1 AND ip_address = $2 AND (expires_at IS NULL OR expires_at > NOW())
+	`, orgID, ipAddress).Scan(&count)
 	if err != nil {
-		return nil, fmt.Errorf("get IP ban: %w", err)
+		return false, fmt.Errorf("check ip ban: %w", err)
 	}
-	return &b, nil
+	return count > 0, nil
 }
 
 // CreateIPBan creates a new IP ban.
 func (db *DB) CreateIPBan(ctx context.Context, b *models.IPBan) error {
 	_, err := db.Pool.Exec(ctx, `
-		INSERT INTO ip_bans (id, org_id, ip_address, reason, ban_count, banned_by, banned_at, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, b.ID, b.OrgID, b.IPAddress, b.Reason, b.BanCount, b.BannedBy, b.BannedAt, b.ExpiresAt, b.CreatedAt)
+		INSERT INTO ip_bans (id, org_id, ip_address, reason, banned_by, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, b.ID, b.OrgID, b.IPAddress, b.Reason, b.BannedBy, b.ExpiresAt, b.CreatedAt)
 	if err != nil {
-		return fmt.Errorf("create IP ban: %w", err)
+		return fmt.Errorf("create ip ban: %w", err)
 	}
 	return nil
 }
 
-// DeleteIPBan removes an IP ban.
+// DeleteIPBan deletes an IP ban.
 func (db *DB) DeleteIPBan(ctx context.Context, id uuid.UUID) error {
-	_, err := db.Pool.Exec(ctx, `
-		DELETE FROM ip_bans
-		WHERE id = $1
-	`, id)
+	_, err := db.Pool.Exec(ctx, `DELETE FROM ip_bans WHERE id = $1`, id)
 	if err != nil {
-		return fmt.Errorf("delete IP ban: %w", err)
+		return fmt.Errorf("delete ip ban: %w", err)
 	}
 	return nil
 }
 
-// IncrementIPBanCount increments the ban count for repeat offenders.
-func (db *DB) IncrementIPBanCount(ctx context.Context, ipAddress string) (int, error) {
-	var count int
-	err := db.Pool.QueryRow(ctx, `
-		UPDATE ip_bans
-		SET ban_count = ban_count + 1
-		WHERE ip_address = $1
-		RETURNING ban_count
-	`, ipAddress).Scan(&count)
+// DeleteExpiredIPBans removes expired IP bans.
+func (db *DB) DeleteExpiredIPBans(ctx context.Context) (int64, error) {
+	result, err := db.Pool.Exec(ctx, `DELETE FROM ip_bans WHERE expires_at IS NOT NULL AND expires_at < NOW()`)
 	if err != nil {
-		return 0, fmt.Errorf("increment IP ban count: %w", err)
+		return 0, fmt.Errorf("delete expired ip bans: %w", err)
 	}
-	return count, nil
+	return result.RowsAffected(), nil
 }
 
-// GetBlockedRequestCountForIP returns the number of blocked requests for an IP in a time window.
-func (db *DB) GetBlockedRequestCountForIP(ctx context.Context, ipAddress string, since time.Time) (int, error) {
-	var count int
-	err := db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*)
-		FROM blocked_requests
-		WHERE ip_address = $1
-		  AND blocked_at >= $2
-	`, ipAddress, since).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("get blocked request count for IP: %w", err)
-	}
-	return count, nil
-}
-
-// scanIPBans scans rows into IP ban structs.
+// scanIPBans scans rows into IP bans.
 func scanIPBans(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.IPBan, error) {
 	var bans []*models.IPBan
 	for rows.Next() {
 		var b models.IPBan
 		err := rows.Scan(
-			&b.ID, &b.OrgID, &b.IPAddress, &b.Reason, &b.BanCount,
-			&b.BannedBy, &b.BannedAt, &b.ExpiresAt, &b.CreatedAt,
+			&b.ID, &b.OrgID, &b.IPAddress, &b.Reason, &b.BannedBy, &b.ExpiresAt, &b.CreatedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("scan IP ban: %w", err)
+			return nil, fmt.Errorf("scan ip ban: %w", err)
 		}
 		bans = append(bans, &b)
 	}
@@ -9784,6 +9652,823 @@ func scanIPBans(rows interface{ Next() bool; Scan(dest ...interface{}) error; Er
 	}
 
 	return bans, nil
+}
+
+// Storage Tiering methods
+
+// GetStorageTierConfigs returns all tier configurations for an organization.
+func (db *DB) GetStorageTierConfigs(ctx context.Context, orgID uuid.UUID) ([]*models.StorageTierConfig, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, tier_type, name, description, cost_per_gb_month, retrieval_cost,
+		       retrieval_time, enabled, created_at, updated_at
+		FROM storage_tier_configs
+		WHERE org_id = $1
+		ORDER BY
+			CASE tier_type
+				WHEN 'hot' THEN 1
+				WHEN 'warm' THEN 2
+				WHEN 'cold' THEN 3
+				WHEN 'archive' THEN 4
+			END
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get tier configs: %w", err)
+	}
+	defer rows.Close()
+
+	var configs []*models.StorageTierConfig
+	for rows.Next() {
+		var c models.StorageTierConfig
+		var tierType string
+		var desc *string
+		err := rows.Scan(
+			&c.ID, &c.OrgID, &tierType, &c.Name, &desc, &c.CostPerGBMonth,
+			&c.RetrievalCost, &c.RetrievalTime, &c.Enabled, &c.CreatedAt, &c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan tier config: %w", err)
+		}
+		c.TierType = models.StorageTierType(tierType)
+		if desc != nil {
+			c.Description = *desc
+		}
+		configs = append(configs, &c)
+	}
+
+	return configs, nil
+}
+
+// GetStorageTierConfig returns a single tier configuration by ID.
+func (db *DB) GetStorageTierConfig(ctx context.Context, id uuid.UUID) (*models.StorageTierConfig, error) {
+	var c models.StorageTierConfig
+	var tierType string
+	var desc *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, tier_type, name, description, cost_per_gb_month, retrieval_cost,
+		       retrieval_time, enabled, created_at, updated_at
+		FROM storage_tier_configs
+		WHERE id = $1
+	`, id).Scan(
+		&c.ID, &c.OrgID, &tierType, &c.Name, &desc, &c.CostPerGBMonth,
+		&c.RetrievalCost, &c.RetrievalTime, &c.Enabled, &c.CreatedAt, &c.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get tier config: %w", err)
+	}
+	c.TierType = models.StorageTierType(tierType)
+	if desc != nil {
+		c.Description = *desc
+	}
+	return &c, nil
+}
+
+// CreateStorageTierConfig creates a new tier configuration.
+func (db *DB) CreateStorageTierConfig(ctx context.Context, config *models.StorageTierConfig) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO storage_tier_configs (id, org_id, tier_type, name, description, cost_per_gb_month,
+		            retrieval_cost, retrieval_time, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`, config.ID, config.OrgID, string(config.TierType), config.Name, config.Description,
+		config.CostPerGBMonth, config.RetrievalCost, config.RetrievalTime, config.Enabled,
+		config.CreatedAt, config.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create tier config: %w", err)
+	}
+	return nil
+}
+
+// UpdateStorageTierConfig updates an existing tier configuration.
+func (db *DB) UpdateStorageTierConfig(ctx context.Context, config *models.StorageTierConfig) error {
+	config.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE storage_tier_configs SET
+			name = $2, description = $3, cost_per_gb_month = $4, retrieval_cost = $5,
+			retrieval_time = $6, enabled = $7, updated_at = $8
+		WHERE id = $1
+	`, config.ID, config.Name, config.Description, config.CostPerGBMonth,
+		config.RetrievalCost, config.RetrievalTime, config.Enabled, config.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update tier config: %w", err)
+	}
+	return nil
+}
+
+// CreateDefaultTierConfigs creates default tier configurations for an organization.
+func (db *DB) CreateDefaultTierConfigs(ctx context.Context, orgID uuid.UUID) error {
+	configs := models.DefaultTierConfigs(orgID)
+	for _, config := range configs {
+		if err := db.CreateStorageTierConfig(ctx, config); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetTierRules returns all tier rules for an organization.
+func (db *DB) GetTierRules(ctx context.Context, orgID uuid.UUID) ([]*models.TierRule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, repository_id, schedule_id, name, description, from_tier, to_tier,
+		       age_threshold_days, min_copies, priority, enabled, created_at, updated_at
+		FROM tier_rules
+		WHERE org_id = $1
+		ORDER BY priority, name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get tier rules: %w", err)
+	}
+	defer rows.Close()
+
+	return scanTierRules(rows)
+}
+
+// GetTierRule returns a single tier rule by ID.
+func (db *DB) GetTierRule(ctx context.Context, id uuid.UUID) (*models.TierRule, error) {
+	var r models.TierRule
+	var fromTier, toTier string
+	var desc *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, repository_id, schedule_id, name, description, from_tier, to_tier,
+		       age_threshold_days, min_copies, priority, enabled, created_at, updated_at
+		FROM tier_rules
+		WHERE id = $1
+	`, id).Scan(
+		&r.ID, &r.OrgID, &r.RepositoryID, &r.ScheduleID, &r.Name, &desc, &fromTier, &toTier,
+		&r.AgeThresholdDay, &r.MinCopies, &r.Priority, &r.Enabled, &r.CreatedAt, &r.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get tier rule: %w", err)
+	}
+	r.FromTier = models.StorageTierType(fromTier)
+	r.ToTier = models.StorageTierType(toTier)
+	if desc != nil {
+		r.Description = *desc
+	}
+	return &r, nil
+}
+
+// CreateTierRule creates a new tier rule.
+func (db *DB) CreateTierRule(ctx context.Context, rule *models.TierRule) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO tier_rules (id, org_id, repository_id, schedule_id, name, description,
+		            from_tier, to_tier, age_threshold_days, min_copies, priority, enabled,
+		            created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+	`, rule.ID, rule.OrgID, rule.RepositoryID, rule.ScheduleID, rule.Name, rule.Description,
+		string(rule.FromTier), string(rule.ToTier), rule.AgeThresholdDay, rule.MinCopies,
+		rule.Priority, rule.Enabled, rule.CreatedAt, rule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create tier rule: %w", err)
+	}
+	return nil
+}
+
+// UpdateTierRule updates an existing tier rule.
+func (db *DB) UpdateTierRule(ctx context.Context, rule *models.TierRule) error {
+	rule.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE tier_rules SET
+			repository_id = $2, schedule_id = $3, name = $4, description = $5,
+			from_tier = $6, to_tier = $7, age_threshold_days = $8, min_copies = $9,
+			priority = $10, enabled = $11, updated_at = $12
+		WHERE id = $1
+	`, rule.ID, rule.RepositoryID, rule.ScheduleID, rule.Name, rule.Description,
+		string(rule.FromTier), string(rule.ToTier), rule.AgeThresholdDay, rule.MinCopies,
+		rule.Priority, rule.Enabled, rule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update tier rule: %w", err)
+	}
+	return nil
+}
+
+// DeleteTierRule deletes a tier rule.
+func (db *DB) DeleteTierRule(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM tier_rules WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete tier rule: %w", err)
+	}
+	return nil
+}
+
+// GetEnabledTierRules returns all enabled tier rules for an organization, sorted by priority.
+func (db *DB) GetEnabledTierRules(ctx context.Context, orgID uuid.UUID) ([]*models.TierRule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, repository_id, schedule_id, name, description, from_tier, to_tier,
+		       age_threshold_days, min_copies, priority, enabled, created_at, updated_at
+		FROM tier_rules
+		WHERE org_id = $1 AND enabled = true
+		ORDER BY priority, name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get enabled tier rules: %w", err)
+	}
+	defer rows.Close()
+
+	return scanTierRules(rows)
+}
+
+// scanTierRules scans rows into tier rules.
+func scanTierRules(rows pgx.Rows) ([]*models.TierRule, error) {
+	var rules []*models.TierRule
+	for rows.Next() {
+		var r models.TierRule
+		var fromTier, toTier string
+		var desc *string
+		err := rows.Scan(
+			&r.ID, &r.OrgID, &r.RepositoryID, &r.ScheduleID, &r.Name, &desc, &fromTier, &toTier,
+			&r.AgeThresholdDay, &r.MinCopies, &r.Priority, &r.Enabled, &r.CreatedAt, &r.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan tier rule: %w", err)
+		}
+		r.FromTier = models.StorageTierType(fromTier)
+		r.ToTier = models.StorageTierType(toTier)
+		if desc != nil {
+			r.Description = *desc
+		}
+		rules = append(rules, &r)
+	}
+	return rules, nil
+}
+
+// GetSnapshotTier returns the tier info for a specific snapshot.
+func (db *DB) GetSnapshotTier(ctx context.Context, snapshotID string, repositoryID uuid.UUID) (*models.SnapshotTier, error) {
+	var st models.SnapshotTier
+	var tierType string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, snapshot_id, repository_id, org_id, current_tier, size_bytes,
+		       snapshot_time, tiered_at, created_at, updated_at
+		FROM snapshot_tiers
+		WHERE snapshot_id = $1 AND repository_id = $2
+	`, snapshotID, repositoryID).Scan(
+		&st.ID, &st.SnapshotID, &st.RepositoryID, &st.OrgID, &tierType, &st.SizeBytes,
+		&st.SnapshotTime, &st.TieredAt, &st.CreatedAt, &st.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot tier: %w", err)
+	}
+	st.CurrentTier = models.StorageTierType(tierType)
+	return &st, nil
+}
+
+// GetSnapshotTierByID returns a snapshot tier by its ID.
+func (db *DB) GetSnapshotTierByID(ctx context.Context, id uuid.UUID) (*models.SnapshotTier, error) {
+	var st models.SnapshotTier
+	var tierType string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, snapshot_id, repository_id, org_id, current_tier, size_bytes,
+		       snapshot_time, tiered_at, created_at, updated_at
+		FROM snapshot_tiers
+		WHERE id = $1
+	`, id).Scan(
+		&st.ID, &st.SnapshotID, &st.RepositoryID, &st.OrgID, &tierType, &st.SizeBytes,
+		&st.SnapshotTime, &st.TieredAt, &st.CreatedAt, &st.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot tier by ID: %w", err)
+	}
+	st.CurrentTier = models.StorageTierType(tierType)
+	return &st, nil
+}
+
+// CreateSnapshotTier creates a new snapshot tier record.
+func (db *DB) CreateSnapshotTier(ctx context.Context, tier *models.SnapshotTier) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO snapshot_tiers (id, snapshot_id, repository_id, org_id, current_tier,
+		            size_bytes, snapshot_time, tiered_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		ON CONFLICT (snapshot_id, repository_id) DO UPDATE SET
+			current_tier = EXCLUDED.current_tier,
+			size_bytes = EXCLUDED.size_bytes,
+			updated_at = EXCLUDED.updated_at
+	`, tier.ID, tier.SnapshotID, tier.RepositoryID, tier.OrgID, string(tier.CurrentTier),
+		tier.SizeBytes, tier.SnapshotTime, tier.TieredAt, tier.CreatedAt, tier.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create snapshot tier: %w", err)
+	}
+	return nil
+}
+
+// UpdateSnapshotTier updates an existing snapshot tier record.
+func (db *DB) UpdateSnapshotTier(ctx context.Context, tier *models.SnapshotTier) error {
+	tier.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE snapshot_tiers SET
+			current_tier = $2, size_bytes = $3, tiered_at = $4, updated_at = $5
+		WHERE id = $1
+	`, tier.ID, string(tier.CurrentTier), tier.SizeBytes, tier.TieredAt, tier.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update snapshot tier: %w", err)
+	}
+	return nil
+}
+
+// GetSnapshotsForTiering returns snapshots that are candidates for tier transition.
+func (db *DB) GetSnapshotsForTiering(ctx context.Context, orgID uuid.UUID, currentTier models.StorageTierType, olderThanDays int) ([]*models.SnapshotTier, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, snapshot_id, repository_id, org_id, current_tier, size_bytes,
+		       snapshot_time, tiered_at, created_at, updated_at
+		FROM snapshot_tiers
+		WHERE org_id = $1
+		  AND current_tier = $2
+		  AND tiered_at < NOW() - INTERVAL '1 day' * $3
+		ORDER BY tiered_at
+		LIMIT 1000
+	`, orgID, string(currentTier), olderThanDays)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshots for tiering: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotTiers(rows)
+}
+
+// GetSnapshotTiersByRepository returns all snapshot tiers for a repository.
+func (db *DB) GetSnapshotTiersByRepository(ctx context.Context, repositoryID uuid.UUID) ([]*models.SnapshotTier, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, snapshot_id, repository_id, org_id, current_tier, size_bytes,
+		       snapshot_time, tiered_at, created_at, updated_at
+		FROM snapshot_tiers
+		WHERE repository_id = $1
+		ORDER BY snapshot_time DESC
+	`, repositoryID)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot tiers by repository: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotTiers(rows)
+}
+
+// GetSnapshotTiersByOrg returns all snapshot tiers for an organization.
+func (db *DB) GetSnapshotTiersByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.SnapshotTier, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, snapshot_id, repository_id, org_id, current_tier, size_bytes,
+		       snapshot_time, tiered_at, created_at, updated_at
+		FROM snapshot_tiers
+		WHERE org_id = $1
+		ORDER BY snapshot_time DESC
+		LIMIT 1000
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get snapshot tiers by org: %w", err)
+	}
+	defer rows.Close()
+
+	return scanSnapshotTiers(rows)
+}
+
+// scanSnapshotTiers scans rows into snapshot tiers.
+func scanSnapshotTiers(rows pgx.Rows) ([]*models.SnapshotTier, error) {
+	var tiers []*models.SnapshotTier
+	for rows.Next() {
+		var st models.SnapshotTier
+		var tierType string
+		err := rows.Scan(
+			&st.ID, &st.SnapshotID, &st.RepositoryID, &st.OrgID, &tierType, &st.SizeBytes,
+			&st.SnapshotTime, &st.TieredAt, &st.CreatedAt, &st.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan snapshot tier: %w", err)
+		}
+		st.CurrentTier = models.StorageTierType(tierType)
+		tiers = append(tiers, &st)
+	}
+	return tiers, nil
+}
+
+// CreateTierTransition creates a new tier transition record.
+func (db *DB) CreateTierTransition(ctx context.Context, transition *models.TierTransition) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO tier_transitions (id, snapshot_tier_id, snapshot_id, repository_id, org_id,
+		            from_tier, to_tier, trigger_rule_id, trigger_reason, size_bytes,
+		            estimated_saving, status, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, transition.ID, transition.SnapshotTierID, transition.SnapshotID, transition.RepositoryID,
+		transition.OrgID, string(transition.FromTier), string(transition.ToTier),
+		transition.TriggerRuleID, transition.TriggerReason, transition.SizeBytes,
+		transition.EstimatedSaving, transition.Status, transition.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create tier transition: %w", err)
+	}
+	return nil
+}
+
+// UpdateTierTransition updates a tier transition record.
+func (db *DB) UpdateTierTransition(ctx context.Context, transition *models.TierTransition) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE tier_transitions SET
+			status = $2, error_message = $3, started_at = $4, completed_at = $5
+		WHERE id = $1
+	`, transition.ID, transition.Status, transition.ErrorMessage,
+		transition.StartedAt, transition.CompletedAt)
+	if err != nil {
+		return fmt.Errorf("update tier transition: %w", err)
+	}
+	return nil
+}
+
+// GetPendingTierTransitions returns all pending tier transitions for an organization.
+func (db *DB) GetPendingTierTransitions(ctx context.Context, orgID uuid.UUID) ([]*models.TierTransition, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, snapshot_tier_id, snapshot_id, repository_id, org_id, from_tier, to_tier,
+		       trigger_rule_id, trigger_reason, size_bytes, estimated_saving, status,
+		       error_message, started_at, completed_at, created_at
+		FROM tier_transitions
+		WHERE org_id = $1 AND status IN ('pending', 'in_progress')
+		ORDER BY created_at
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get pending tier transitions: %w", err)
+	}
+	defer rows.Close()
+
+	return scanTierTransitions(rows)
+}
+
+// GetTierTransitionHistory returns the tier transition history for a snapshot.
+func (db *DB) GetTierTransitionHistory(ctx context.Context, snapshotID string, repositoryID uuid.UUID, limit int) ([]*models.TierTransition, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, snapshot_tier_id, snapshot_id, repository_id, org_id, from_tier, to_tier,
+		       trigger_rule_id, trigger_reason, size_bytes, estimated_saving, status,
+		       error_message, started_at, completed_at, created_at
+		FROM tier_transitions
+		WHERE snapshot_id = $1 AND repository_id = $2
+		ORDER BY created_at DESC
+		LIMIT $3
+	`, snapshotID, repositoryID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get tier transition history: %w", err)
+	}
+	defer rows.Close()
+
+	return scanTierTransitions(rows)
+}
+
+// scanTierTransitions scans rows into tier transitions.
+func scanTierTransitions(rows pgx.Rows) ([]*models.TierTransition, error) {
+	var transitions []*models.TierTransition
+	for rows.Next() {
+		var t models.TierTransition
+		var fromTier, toTier string
+		var errMsg *string
+		err := rows.Scan(
+			&t.ID, &t.SnapshotTierID, &t.SnapshotID, &t.RepositoryID, &t.OrgID,
+			&fromTier, &toTier, &t.TriggerRuleID, &t.TriggerReason, &t.SizeBytes,
+			&t.EstimatedSaving, &t.Status, &errMsg, &t.StartedAt, &t.CompletedAt, &t.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan tier transition: %w", err)
+		}
+		t.FromTier = models.StorageTierType(fromTier)
+		t.ToTier = models.StorageTierType(toTier)
+		if errMsg != nil {
+			t.ErrorMessage = *errMsg
+		}
+		transitions = append(transitions, &t)
+	}
+	return transitions, nil
+}
+
+// CreateColdRestoreRequest creates a new cold restore request.
+func (db *DB) CreateColdRestoreRequest(ctx context.Context, req *models.ColdRestoreRequest) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO cold_restore_requests (id, org_id, snapshot_id, repository_id, requested_by,
+		            from_tier, target_path, priority, status, estimated_ready_at, retrieval_cost,
+		            created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, req.ID, req.OrgID, req.SnapshotID, req.RepositoryID, req.RequestedBy,
+		string(req.FromTier), req.TargetPath, req.Priority, req.Status,
+		req.EstimatedReady, req.RetrievalCost, req.CreatedAt, req.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create cold restore request: %w", err)
+	}
+	return nil
+}
+
+// UpdateColdRestoreRequest updates a cold restore request.
+func (db *DB) UpdateColdRestoreRequest(ctx context.Context, req *models.ColdRestoreRequest) error {
+	req.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE cold_restore_requests SET
+			status = $2, estimated_ready_at = $3, ready_at = $4, expires_at = $5,
+			error_message = $6, updated_at = $7
+		WHERE id = $1
+	`, req.ID, req.Status, req.EstimatedReady, req.ReadyAt, req.ExpiresAt,
+		req.ErrorMessage, req.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update cold restore request: %w", err)
+	}
+	return nil
+}
+
+// GetColdRestoreRequest returns a cold restore request by ID.
+func (db *DB) GetColdRestoreRequest(ctx context.Context, id uuid.UUID) (*models.ColdRestoreRequest, error) {
+	var req models.ColdRestoreRequest
+	var fromTier string
+	var targetPath, errMsg *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, snapshot_id, repository_id, requested_by, from_tier, target_path,
+		       priority, status, estimated_ready_at, ready_at, expires_at, error_message,
+		       retrieval_cost, created_at, updated_at
+		FROM cold_restore_requests
+		WHERE id = $1
+	`, id).Scan(
+		&req.ID, &req.OrgID, &req.SnapshotID, &req.RepositoryID, &req.RequestedBy,
+		&fromTier, &targetPath, &req.Priority, &req.Status, &req.EstimatedReady,
+		&req.ReadyAt, &req.ExpiresAt, &errMsg, &req.RetrievalCost, &req.CreatedAt, &req.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get cold restore request: %w", err)
+	}
+	req.FromTier = models.StorageTierType(fromTier)
+	if targetPath != nil {
+		req.TargetPath = *targetPath
+	}
+	if errMsg != nil {
+		req.ErrorMessage = *errMsg
+	}
+	return &req, nil
+}
+
+// GetColdRestoreRequestBySnapshot returns an active cold restore request for a snapshot.
+func (db *DB) GetColdRestoreRequestBySnapshot(ctx context.Context, snapshotID string, repositoryID uuid.UUID) (*models.ColdRestoreRequest, error) {
+	var req models.ColdRestoreRequest
+	var fromTier string
+	var targetPath, errMsg *string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, snapshot_id, repository_id, requested_by, from_tier, target_path,
+		       priority, status, estimated_ready_at, ready_at, expires_at, error_message,
+		       retrieval_cost, created_at, updated_at
+		FROM cold_restore_requests
+		WHERE snapshot_id = $1 AND repository_id = $2 AND status NOT IN ('completed', 'failed', 'expired')
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, snapshotID, repositoryID).Scan(
+		&req.ID, &req.OrgID, &req.SnapshotID, &req.RepositoryID, &req.RequestedBy,
+		&fromTier, &targetPath, &req.Priority, &req.Status, &req.EstimatedReady,
+		&req.ReadyAt, &req.ExpiresAt, &errMsg, &req.RetrievalCost, &req.CreatedAt, &req.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get cold restore request by snapshot: %w", err)
+	}
+	req.FromTier = models.StorageTierType(fromTier)
+	if targetPath != nil {
+		req.TargetPath = *targetPath
+	}
+	if errMsg != nil {
+		req.ErrorMessage = *errMsg
+	}
+	return &req, nil
+}
+
+// GetPendingColdRestoreRequests returns all pending cold restore requests for an organization.
+func (db *DB) GetPendingColdRestoreRequests(ctx context.Context, orgID uuid.UUID) ([]*models.ColdRestoreRequest, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, snapshot_id, repository_id, requested_by, from_tier, target_path,
+		       priority, status, estimated_ready_at, ready_at, expires_at, error_message,
+		       retrieval_cost, created_at, updated_at
+		FROM cold_restore_requests
+		WHERE org_id = $1 AND status IN ('pending', 'warming')
+		ORDER BY created_at
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get pending cold restore requests: %w", err)
+	}
+	defer rows.Close()
+
+	return scanColdRestoreRequests(rows)
+}
+
+// GetActiveColdRestoreRequests returns all active cold restore requests for an organization.
+func (db *DB) GetActiveColdRestoreRequests(ctx context.Context, orgID uuid.UUID) ([]*models.ColdRestoreRequest, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, snapshot_id, repository_id, requested_by, from_tier, target_path,
+		       priority, status, estimated_ready_at, ready_at, expires_at, error_message,
+		       retrieval_cost, created_at, updated_at
+		FROM cold_restore_requests
+		WHERE org_id = $1 AND status NOT IN ('completed', 'failed', 'expired')
+		ORDER BY created_at DESC
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get active cold restore requests: %w", err)
+	}
+	defer rows.Close()
+
+	return scanColdRestoreRequests(rows)
+}
+
+// ExpireColdRestoreRequests marks ready requests as expired if past their expiration time.
+func (db *DB) ExpireColdRestoreRequests(ctx context.Context) (int, error) {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE cold_restore_requests SET
+			status = 'expired', updated_at = NOW()
+		WHERE status = 'ready' AND expires_at < NOW()
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("expire cold restore requests: %w", err)
+	}
+	return int(result.RowsAffected()), nil
+}
+
+// scanColdRestoreRequests scans rows into cold restore requests.
+func scanColdRestoreRequests(rows pgx.Rows) ([]*models.ColdRestoreRequest, error) {
+	var requests []*models.ColdRestoreRequest
+	for rows.Next() {
+		var req models.ColdRestoreRequest
+		var fromTier string
+		var targetPath, errMsg *string
+		err := rows.Scan(
+			&req.ID, &req.OrgID, &req.SnapshotID, &req.RepositoryID, &req.RequestedBy,
+			&fromTier, &targetPath, &req.Priority, &req.Status, &req.EstimatedReady,
+			&req.ReadyAt, &req.ExpiresAt, &errMsg, &req.RetrievalCost, &req.CreatedAt, &req.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan cold restore request: %w", err)
+		}
+		req.FromTier = models.StorageTierType(fromTier)
+		if targetPath != nil {
+			req.TargetPath = *targetPath
+		}
+		if errMsg != nil {
+			req.ErrorMessage = *errMsg
+		}
+		requests = append(requests, &req)
+	}
+	return requests, nil
+}
+
+// CreateTierCostReport creates a new tier cost report.
+func (db *DB) CreateTierCostReport(ctx context.Context, report *models.TierCostReport) error {
+	breakdownJSON, err := json.Marshal(report.TierBreakdown)
+	if err != nil {
+		return fmt.Errorf("marshal tier breakdown: %w", err)
+	}
+	suggestionsJSON, err := json.Marshal(report.Suggestions)
+	if err != nil {
+		return fmt.Errorf("marshal suggestions: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO tier_cost_reports (id, org_id, report_date, total_size_bytes,
+		            current_monthly_cost, optimized_monthly_cost, potential_monthly_savings,
+		            tier_breakdown, suggestions, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		ON CONFLICT (org_id, report_date) DO UPDATE SET
+			total_size_bytes = EXCLUDED.total_size_bytes,
+			current_monthly_cost = EXCLUDED.current_monthly_cost,
+			optimized_monthly_cost = EXCLUDED.optimized_monthly_cost,
+			potential_monthly_savings = EXCLUDED.potential_monthly_savings,
+			tier_breakdown = EXCLUDED.tier_breakdown,
+			suggestions = EXCLUDED.suggestions
+	`, report.ID, report.OrgID, report.ReportDate.Format("2006-01-02"), report.TotalSize,
+		report.CurrentCost, report.OptimizedCost, report.PotentialSave,
+		breakdownJSON, suggestionsJSON, report.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create tier cost report: %w", err)
+	}
+	return nil
+}
+
+// GetLatestTierCostReport returns the most recent cost report for an organization.
+func (db *DB) GetLatestTierCostReport(ctx context.Context, orgID uuid.UUID) (*models.TierCostReport, error) {
+	var report models.TierCostReport
+	var breakdownJSON, suggestionsJSON []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, report_date, total_size_bytes, current_monthly_cost,
+		       optimized_monthly_cost, potential_monthly_savings, tier_breakdown,
+		       suggestions, created_at
+		FROM tier_cost_reports
+		WHERE org_id = $1
+		ORDER BY report_date DESC
+		LIMIT 1
+	`, orgID).Scan(
+		&report.ID, &report.OrgID, &report.ReportDate, &report.TotalSize,
+		&report.CurrentCost, &report.OptimizedCost, &report.PotentialSave,
+		&breakdownJSON, &suggestionsJSON, &report.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get latest tier cost report: %w", err)
+	}
+
+	if err := json.Unmarshal(breakdownJSON, &report.TierBreakdown); err != nil {
+		return nil, fmt.Errorf("unmarshal tier breakdown: %w", err)
+	}
+	if err := json.Unmarshal(suggestionsJSON, &report.Suggestions); err != nil {
+		return nil, fmt.Errorf("unmarshal suggestions: %w", err)
+	}
+
+	return &report, nil
+}
+
+// GetTierCostReports returns recent cost reports for an organization.
+func (db *DB) GetTierCostReports(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.TierCostReport, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, report_date, total_size_bytes, current_monthly_cost,
+		       optimized_monthly_cost, potential_monthly_savings, tier_breakdown,
+		       suggestions, created_at
+		FROM tier_cost_reports
+		WHERE org_id = $1
+		ORDER BY report_date DESC
+		LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get tier cost reports: %w", err)
+	}
+	defer rows.Close()
+
+	var reports []*models.TierCostReport
+	for rows.Next() {
+		var report models.TierCostReport
+		var breakdownJSON, suggestionsJSON []byte
+		err := rows.Scan(
+			&report.ID, &report.OrgID, &report.ReportDate, &report.TotalSize,
+			&report.CurrentCost, &report.OptimizedCost, &report.PotentialSave,
+			&breakdownJSON, &suggestionsJSON, &report.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan tier cost report: %w", err)
+		}
+
+		if err := json.Unmarshal(breakdownJSON, &report.TierBreakdown); err != nil {
+			return nil, fmt.Errorf("unmarshal tier breakdown: %w", err)
+		}
+		if err := json.Unmarshal(suggestionsJSON, &report.Suggestions); err != nil {
+			return nil, fmt.Errorf("unmarshal suggestions: %w", err)
+		}
+
+		reports = append(reports, &report)
+	}
+
+	return reports, nil
+}
+
+// GetTierStatsSummary returns aggregate tier statistics for an organization.
+func (db *DB) GetTierStatsSummary(ctx context.Context, orgID uuid.UUID) (*models.TierStatsSummary, error) {
+	// Get tier configurations for cost calculation
+	configs, err := db.GetStorageTierConfigs(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get tier configs: %w", err)
+	}
+
+	costMap := make(map[models.StorageTierType]float64)
+	for _, c := range configs {
+		costMap[c.TierType] = c.CostPerGBMonth
+	}
+
+	// Default costs if no configs
+	if len(costMap) == 0 {
+		costMap[models.StorageTierHot] = 0.023
+		costMap[models.StorageTierWarm] = 0.0125
+		costMap[models.StorageTierCold] = 0.004
+		costMap[models.StorageTierArchive] = 0.00099
+	}
+
+	// Get statistics by tier
+	rows, err := db.Pool.Query(ctx, `
+		SELECT current_tier,
+		       COUNT(*) as snapshot_count,
+		       COALESCE(SUM(size_bytes), 0) as total_size,
+		       COALESCE(EXTRACT(DAY FROM NOW() - MIN(snapshot_time)), 0) as oldest_days,
+		       COALESCE(EXTRACT(DAY FROM NOW() - MAX(snapshot_time)), 0) as newest_days
+		FROM snapshot_tiers
+		WHERE org_id = $1
+		GROUP BY current_tier
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get tier stats: %w", err)
+	}
+	defer rows.Close()
+
+	summary := &models.TierStatsSummary{
+		ByTier: make(map[models.StorageTierType]models.TierStats),
+	}
+
+	for rows.Next() {
+		var tierType string
+		var stats models.TierStats
+		err := rows.Scan(&tierType, &stats.SnapshotCount, &stats.TotalSizeBytes, &stats.OldestDays, &stats.NewestDays)
+		if err != nil {
+			return nil, fmt.Errorf("scan tier stats: %w", err)
+		}
+
+		tier := models.StorageTierType(tierType)
+		sizeGB := float64(stats.TotalSizeBytes) / (1024 * 1024 * 1024)
+		stats.MonthlyCost = sizeGB * costMap[tier]
+
+		summary.ByTier[tier] = stats
+		summary.TotalSnapshots += stats.SnapshotCount
+		summary.TotalSizeBytes += stats.TotalSizeBytes
+		summary.EstimatedMonthlyCost += stats.MonthlyCost
+	}
+
+	// Calculate potential savings (if all hot data older than 30 days moved to warm)
+	if hotStats, ok := summary.ByTier[models.StorageTierHot]; ok && hotStats.OldestDays > 30 {
+		// Rough estimate: assume 50% of hot data could be moved to warm
+		hotSizeGB := float64(hotStats.TotalSizeBytes) / (1024 * 1024 * 1024) * 0.5
+		summary.PotentialSavings = hotSizeGB * (costMap[models.StorageTierHot] - costMap[models.StorageTierWarm])
+	}
+
+	return summary, nil
 }
 
 
