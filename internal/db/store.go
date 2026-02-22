@@ -4575,11 +4575,13 @@ func (db *DB) GetStorageStatsByRepositoryID(ctx context.Context, repositoryID uu
 		WHERE repository_id = $1
 		ORDER BY collected_at DESC
 	`
+	args := []any{repositoryID}
 	if limit > 0 {
-		query += fmt.Sprintf(" LIMIT %d", limit)
+		query += " LIMIT $2"
+		args = append(args, limit)
 	}
 
-	rows, err := db.Pool.Query(ctx, query, repositoryID)
+	rows, err := db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list storage stats: %w", err)
 	}
@@ -6453,13 +6455,16 @@ func (db *DB) searchAgents(ctx context.Context, orgID uuid.UUID, query string, f
 		WHERE org_id = $1 AND hostname ILIKE $2
 	`
 	args := []any{orgID, query}
+	argNum := 3
 
 	if filter.Status != "" {
-		sqlQuery += " AND status = $3"
+		sqlQuery += fmt.Sprintf(" AND status = $%d", argNum)
 		args = append(args, filter.Status)
+		argNum++
 	}
 
-	sqlQuery += fmt.Sprintf(" ORDER BY hostname LIMIT %d", filter.Limit)
+	sqlQuery += fmt.Sprintf(" ORDER BY hostname LIMIT $%d", argNum)
+	args = append(args, filter.Limit)
 
 	rows, err := db.Pool.Query(ctx, sqlQuery, args...)
 	if err != nil {
@@ -6533,7 +6538,8 @@ func (db *DB) searchBackups(ctx context.Context, orgID uuid.UUID, query string, 
 		argNum++
 	}
 
-	sqlQuery += fmt.Sprintf(" ORDER BY b.started_at DESC LIMIT %d", filter.Limit)
+	sqlQuery += fmt.Sprintf(" ORDER BY b.started_at DESC LIMIT $%d", argNum)
+	args = append(args, filter.Limit)
 
 	rows, err := db.Pool.Query(ctx, sqlQuery, args...)
 	if err != nil {
@@ -6579,7 +6585,8 @@ func (db *DB) searchSchedules(ctx context.Context, orgID uuid.UUID, query string
 	`
 	args := []any{orgID, query}
 
-	sqlQuery += fmt.Sprintf(" ORDER BY s.name LIMIT %d", filter.Limit)
+	sqlQuery += " ORDER BY s.name LIMIT $3"
+	args = append(args, filter.Limit)
 
 	rows, err := db.Pool.Query(ctx, sqlQuery, args...)
 	if err != nil {
@@ -6619,7 +6626,8 @@ func (db *DB) searchRepositories(ctx context.Context, orgID uuid.UUID, query str
 	`
 	args := []any{orgID, query}
 
-	sqlQuery += fmt.Sprintf(" ORDER BY name LIMIT %d", filter.Limit)
+	sqlQuery += " ORDER BY name LIMIT $3"
+	args = append(args, filter.Limit)
 
 	rows, err := db.Pool.Query(ctx, sqlQuery, args...)
 	if err != nil {
