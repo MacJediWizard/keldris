@@ -46,6 +46,17 @@ func NewDockerClientWithBinary(binary string, logger zerolog.Logger) *DockerCLI 
 		binary: binary,
 		logger: logger.With().Str("component", "docker").Logger(),
 	}
+// Container represents a Docker container.
+type Container struct {
+	ID      string            `json:"id"`
+	Name    string            `json:"name"`
+	Image   string            `json:"image"`
+	Status  string            `json:"status"`
+	State   string            `json:"state"` // running, paused, exited, etc.
+	Created time.Time         `json:"created"`
+	Ports   []string          `json:"ports,omitempty"`
+	Mounts  []ContainerMount  `json:"mounts,omitempty"`
+	Labels  map[string]string `json:"labels,omitempty"`
 }
 
 // ContainerMount represents a mount point in a container.
@@ -63,6 +74,40 @@ type PortBinding struct {
 	HostPort      string `json:"host_port"`
 	ContainerPort string `json:"container_port"`
 	Protocol      string `json:"protocol,omitempty"` // tcp, udp
+// Volume represents a Docker volume.
+type Volume struct {
+	Name       string            `json:"name"`
+	Driver     string            `json:"driver"`
+	Mountpoint string            `json:"mountpoint"`
+	Scope      string            `json:"scope"`
+	Labels     map[string]string `json:"labels,omitempty"`
+	CreatedAt  time.Time         `json:"created_at"`
+	SizeBytes  int64             `json:"size_bytes,omitempty"`
+	UsedBy     []string          `json:"used_by,omitempty"` // Container IDs using this volume
+}
+
+// ContainerConfig represents the configuration of a Docker container for backup.
+type ContainerConfig struct {
+	ID       string          `json:"id"`
+	Name     string          `json:"name"`
+	Image    string          `json:"image"`
+	Hostname string          `json:"hostname,omitempty"`
+	Env      []string        `json:"env,omitempty"`
+	Cmd      []string        `json:"cmd,omitempty"`
+	Labels   map[string]string `json:"labels,omitempty"`
+	Mounts   []ContainerMount `json:"mounts,omitempty"`
+	Ports    []PortBinding   `json:"ports,omitempty"`
+	Networks []NetworkInfo   `json:"networks,omitempty"`
+	// Full inspect output for complete restore
+	InspectData json.RawMessage `json:"inspect_data,omitempty"`
+}
+
+// PortBinding represents a port binding.
+type PortBinding struct {
+	HostIP   string `json:"host_ip,omitempty"`
+	HostPort string `json:"host_port"`
+	ContainerPort string `json:"container_port"`
+	Protocol string `json:"protocol,omitempty"` // tcp, udp
 }
 
 // NetworkInfo represents network configuration.
@@ -88,6 +133,11 @@ type BackupContainerConfig struct {
 	InspectData json.RawMessage `json:"inspect_data,omitempty"`
 }
 
+	Name    string `json:"name"`
+	ID      string `json:"id"`
+	IPAddress string `json:"ip_address,omitempty"`
+}
+
 // BackupOptions contains options for Docker backup operations.
 type BackupOptions struct {
 	// PauseContainers pauses running containers during volume backup for consistency.
@@ -111,6 +161,13 @@ type BackupResult struct {
 	SizeBytes          int64         `json:"size_bytes"`
 	Duration           time.Duration `json:"duration"`
 	Errors             []string      `json:"errors,omitempty"`
+	SnapshotID       string        `json:"snapshot_id"`
+	VolumesBackedUp  []string      `json:"volumes_backed_up"`
+	ContainersBackedUp []string    `json:"containers_backed_up"`
+	ContainersPaused []string      `json:"containers_paused,omitempty"`
+	SizeBytes        int64         `json:"size_bytes"`
+	Duration         time.Duration `json:"duration"`
+	Errors           []string      `json:"errors,omitempty"`
 }
 
 // DockerBackup provides Docker backup functionality using restic.
@@ -143,6 +200,11 @@ func (d *DockerCLI) ListContainers(ctx context.Context) ([]Container, error) {
 	d.logger.Debug().Msg("listing containers")
 
 	args := []string{"ps", "-a", "--no-trunc", "--format", "{{json .}}"}
+// ListContainers returns all containers on the system.
+func (d *DockerBackup) ListContainers(ctx context.Context) ([]Container, error) {
+	d.logger.Debug().Msg("listing containers")
+
+	args := []string{"ps", "-a", "--format", "{{json .}}"}
 	output, err := d.run(ctx, args)
 	if err != nil {
 		return nil, fmt.Errorf("list containers: %w", err)
@@ -152,6 +214,7 @@ func (d *DockerCLI) ListContainers(ctx context.Context) ([]Container, error) {
 	lines := bytes.Split(output, []byte("\n"))
 	for _, line := range lines {
 		if len(bytes.TrimSpace(line)) == 0 {
+		if len(line) == 0 {
 			continue
 		}
 
@@ -162,6 +225,14 @@ func (d *DockerCLI) ListContainers(ctx context.Context) ([]Container, error) {
 			Status    string `json:"Status"`
 			State     string `json:"State"`
 			Labels    string `json:"Labels"`
+			ID      string `json:"ID"`
+			Names   string `json:"Names"`
+			Image   string `json:"Image"`
+			Status  string `json:"Status"`
+			State   string `json:"State"`
+			Ports   string `json:"Ports"`
+			Mounts  string `json:"Mounts"`
+			Labels  string `json:"Labels"`
 			CreatedAt string `json:"CreatedAt"`
 		}
 		if err := json.Unmarshal(line, &rawContainer); err != nil {
@@ -176,6 +247,11 @@ func (d *DockerCLI) ListContainers(ctx context.Context) ([]Container, error) {
 			Status: rawContainer.Status,
 			State:  rawContainer.State,
 			Labels: parseLabels(rawContainer.Labels),
+		}
+
+		// Parse ports
+		if rawContainer.Ports != "" {
+			container.Ports = strings.Split(rawContainer.Ports, ", ")
 		}
 
 		// Parse created time
@@ -195,6 +271,8 @@ func (d *DockerCLI) ListContainers(ctx context.Context) ([]Container, error) {
 
 // ListVolumes returns all Docker volumes.
 func (d *DockerCLI) ListVolumes(ctx context.Context) ([]Volume, error) {
+// ListVolumes returns all volumes on the system.
+func (d *DockerBackup) ListVolumes(ctx context.Context) ([]Volume, error) {
 	d.logger.Debug().Msg("listing volumes")
 
 	args := []string{"volume", "ls", "--format", "{{json .}}"}
@@ -207,6 +285,7 @@ func (d *DockerCLI) ListVolumes(ctx context.Context) ([]Volume, error) {
 	lines := bytes.Split(output, []byte("\n"))
 	for _, line := range lines {
 		if len(bytes.TrimSpace(line)) == 0 {
+		if len(line) == 0 {
 			continue
 		}
 
@@ -447,6 +526,7 @@ func (d *DockerBackup) ListVolumes(ctx context.Context) ([]Volume, error) {
 	for i := range volumes {
 		if details, err := d.inspectVolume(ctx, volumes[i].Name); err == nil {
 			volumes[i].CreatedAt = details.CreatedAt
+			volumes[i].UsedBy = details.UsedBy
 		}
 	}
 
@@ -468,6 +548,11 @@ func (d *DockerBackup) inspectVolume(ctx context.Context, name string) (*Volume,
 		Mountpoint string            `json:"Mountpoint"`
 		Scope      string            `json:"Scope"`
 		CreatedAt  string            `json:"CreatedAt"`
+		Name       string    `json:"Name"`
+		Driver     string    `json:"Driver"`
+		Mountpoint string    `json:"Mountpoint"`
+		Scope      string    `json:"Scope"`
+		CreatedAt  time.Time `json:"CreatedAt"`
 		Labels     map[string]string `json:"Labels"`
 	}
 	if err := json.Unmarshal(output, &inspectResult); err != nil {
@@ -491,6 +576,7 @@ func (d *DockerBackup) inspectVolume(ctx context.Context, name string) (*Volume,
 
 // GetContainerConfig retrieves the full configuration of a container.
 func (d *DockerBackup) GetContainerConfig(ctx context.Context, containerID string) (*BackupContainerConfig, error) {
+func (d *DockerBackup) GetContainerConfig(ctx context.Context, containerID string) (*ContainerConfig, error) {
 	d.logger.Debug().Str("container_id", containerID).Msg("getting container config")
 
 	args := []string{"inspect", containerID}
@@ -531,6 +617,7 @@ func (d *DockerBackup) GetContainerConfig(ctx context.Context, containerID strin
 		} `json:"Mounts"`
 		NetworkSettings struct {
 			Ports map[string][]struct {
+			Ports    map[string][]struct {
 				HostIP   string `json:"HostIp"`
 				HostPort string `json:"HostPort"`
 			} `json:"Ports"`
@@ -545,6 +632,7 @@ func (d *DockerBackup) GetContainerConfig(ctx context.Context, containerID strin
 	}
 
 	config := &BackupContainerConfig{
+	config := &ContainerConfig{
 		ID:          basicInfo.ID,
 		Name:        strings.TrimPrefix(basicInfo.Name, "/"),
 		Image:       basicInfo.Config.Image,
@@ -722,6 +810,10 @@ func (d *DockerBackup) BackupContainerConfigs(ctx context.Context, containerIDs 
 	d.logger.Info().Strs("container_ids", containerIDs).Msg("backing up container configs")
 
 	var configs []BackupContainerConfig
+func (d *DockerBackup) BackupContainerConfigs(ctx context.Context, containerIDs []string) ([]ContainerConfig, error) {
+	d.logger.Info().Strs("container_ids", containerIDs).Msg("backing up container configs")
+
+	var configs []ContainerConfig
 
 	// If no specific containers, get all
 	if len(containerIDs) == 0 {
@@ -755,6 +847,12 @@ type DockerBackupMetadata struct {
 	ContainerConfigs []BackupContainerConfig `json:"container_configs,omitempty"`
 	CreatedAt        time.Time               `json:"created_at"`
 	AgentHostname    string                  `json:"agent_hostname"`
+	BackupID         uuid.UUID         `json:"backup_id"`
+	BackupType       string            `json:"backup_type"` // "volume", "config", "full"
+	Volumes          []Volume          `json:"volumes,omitempty"`
+	ContainerConfigs []ContainerConfig `json:"container_configs,omitempty"`
+	CreatedAt        time.Time         `json:"created_at"`
+	AgentHostname    string            `json:"agent_hostname"`
 }
 
 // run executes a docker command and returns the output.
