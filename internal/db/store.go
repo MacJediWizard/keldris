@@ -2727,6 +2727,34 @@ func (db *DB) DeleteInvitation(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// GetInvitationByID returns an invitation by its ID.
+func (db *DB) GetInvitationByID(ctx context.Context, id uuid.UUID) (*models.OrgInvitation, error) {
+	var inv models.OrgInvitation
+	var roleStr string
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, email, role, token, invited_by, expires_at, accepted_at, created_at
+		FROM org_invitations WHERE id = $1
+	`, id).Scan(&inv.ID, &inv.OrgID, &inv.Email, &roleStr, &inv.Token, &inv.InvitedBy, &inv.ExpiresAt, &inv.AcceptedAt, &inv.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("get invitation by id: %w", err)
+	}
+	inv.Role = models.OrgRole(roleStr)
+	return &inv, nil
+}
+
+// UpdateInvitationResent updates the resent timestamp and count for an invitation.
+func (db *DB) UpdateInvitationResent(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE org_invitations
+		SET resent_at = NOW(), resent_count = COALESCE(resent_count, 0) + 1
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("update invitation resent: %w", err)
+	}
+	return nil
+}
+
 // Notification Channel methods
 
 // GetNotificationChannelsByOrgID returns all notification channels for an organization.

@@ -963,9 +963,17 @@ export function Agents() {
 			)}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">
-						{t('agents.title')}
-					</h1>
+					<div className="flex items-center gap-2">
+						<h1 className="text-2xl font-bold text-gray-900">
+							{t('agents.title')}
+						</h1>
+						<HelpTooltip
+							content="Learn how to install, configure, and manage backup agents across your infrastructure."
+							title="Agent Management"
+							docsUrl="/docs/agent-deployment"
+							size="md"
+						/>
+					</div>
 					<p className="text-gray-600 mt-1">{t('agents.subtitle')}</p>
 				</div>
 				<div className="flex items-center gap-3">

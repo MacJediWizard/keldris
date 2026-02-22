@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/httpclient"
+	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/rs/zerolog"
 )
 
@@ -27,6 +30,36 @@ func NewDiscordSender(logger zerolog.Logger) *DiscordSender {
 			},
 		},
 		logger: logger.With().Str("component", "discord_sender").Logger(),
+// NewDiscordService creates a new Discord notification service.
+func NewDiscordService(cfg models.DiscordChannelConfig, logger zerolog.Logger) (*DiscordService, error) {
+	return NewDiscordServiceWithProxy(cfg, nil, logger)
+}
+
+// NewDiscordServiceWithProxy creates a Discord notification service with proxy support.
+func NewDiscordServiceWithProxy(cfg models.DiscordChannelConfig, proxyConfig *config.ProxyConfig, logger zerolog.Logger) (*DiscordService, error) {
+	if err := ValidateDiscordConfig(&cfg); err != nil {
+		return nil, err
+	}
+
+	client, err := httpclient.New(httpclient.Options{
+		Timeout:     30 * time.Second,
+		ProxyConfig: proxyConfig,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create http client: %w", err)
+	}
+
+	return &DiscordService{
+		config: cfg,
+		client: client,
+		logger: logger.With().Str("component", "discord_service").Logger(),
+	}, nil
+}
+
+// ValidateDiscordConfig validates the Discord configuration.
+func ValidateDiscordConfig(config *models.DiscordChannelConfig) error {
+	if config.WebhookURL == "" {
+		return fmt.Errorf("discord webhook URL is required")
 	}
 }
 

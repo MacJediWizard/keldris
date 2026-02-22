@@ -6488,3 +6488,75 @@ export interface TrialActivityResponse {
 export interface TrialExtensionsResponse {
 	extensions: TrialExtension[];
 }
+
+// Migration Export/Import Types
+export interface MigrationExportRequest {
+	include_secrets?: boolean;
+	include_system_config?: boolean;
+	encryption_key?: string;
+	description?: string;
+}
+
+export interface MigrationImportRequest {
+	data: string;
+	decryption_key?: string;
+	conflict_resolution?: 'skip' | 'replace' | 'rename' | 'fail';
+	dry_run?: boolean;
+	target_org_slug?: string;
+}
+
+export interface MigrationValidationResult {
+	valid: boolean;
+	encrypted: boolean;
+	requires_key: boolean;
+	metadata?: MigrationMetadata;
+	warnings?: string[];
+	errors?: string[];
+	entity_counts?: MigrationEntityCounts;
+}
+
+export interface MigrationMetadata {
+	version: string;
+	exported_at: string;
+	exported_by: string;
+	description?: string;
+	source_instance?: string;
+	includes_secrets: boolean;
+	includes_system_config: boolean;
+}
+
+export interface MigrationEntityCounts {
+	organizations?: number;
+	users?: number;
+	agents?: number;
+	repositories?: number;
+	schedules?: number;
+	policies?: number;
+}
+
+export interface MigrationImportResult {
+	success: boolean;
+	dry_run: boolean;
+	message?: string;
+	imported: MigrationImportedCounts;
+	skipped: MigrationImportedCounts;
+	errors?: string[];
+	warnings?: string[];
+	id_mappings?: MigrationIDMappings;
+}
+
+export interface MigrationImportedCounts {
+	organizations?: number;
+	users?: number;
+	agents?: number;
+	repositories?: number;
+	schedules?: number;
+	policies?: number;
+}
+
+export interface MigrationIDMappings {
+	organizations?: Record<string, string>;
+	users?: Record<string, string>;
+	agents?: Record<string, string>;
+	repositories?: Record<string, string>;
+}

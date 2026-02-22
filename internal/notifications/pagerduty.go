@@ -12,6 +12,74 @@ import (
 )
 
 const pagerDutyEventsURL = "https://events.pagerduty.com/v2/enqueue"
+	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/httpclient"
+	"github.com/MacJediWizard/keldris/internal/models"
+	"github.com/rs/zerolog"
+)
+
+const (
+	// PagerDuty Events API v2 endpoint
+	pagerDutyEventsAPIURL = "https://events.pagerduty.com/v2/enqueue"
+)
+
+// PagerDutyService handles sending notifications via PagerDuty Events API v2.
+type PagerDutyService struct {
+	config models.PagerDutyChannelConfig
+	client *http.Client
+	logger zerolog.Logger
+}
+
+// NewPagerDutyService creates a new PagerDuty notification service.
+func NewPagerDutyService(cfg models.PagerDutyChannelConfig, logger zerolog.Logger) (*PagerDutyService, error) {
+	return NewPagerDutyServiceWithProxy(cfg, nil, logger)
+}
+
+// NewPagerDutyServiceWithProxy creates a PagerDuty notification service with proxy support.
+func NewPagerDutyServiceWithProxy(cfg models.PagerDutyChannelConfig, proxyConfig *config.ProxyConfig, logger zerolog.Logger) (*PagerDutyService, error) {
+	if err := ValidatePagerDutyConfig(&cfg); err != nil {
+		return nil, err
+	}
+
+	// Set default severity if not specified
+	if cfg.Severity == "" {
+		cfg.Severity = "warning"
+	}
+
+	client, err := httpclient.New(httpclient.Options{
+		Timeout:     30 * time.Second,
+		ProxyConfig: proxyConfig,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create http client: %w", err)
+	}
+
+	return &PagerDutyService{
+		config: cfg,
+		client: client,
+		logger: logger.With().Str("component", "pagerduty_service").Logger(),
+	}, nil
+}
+
+// ValidatePagerDutyConfig validates the PagerDuty configuration.
+func ValidatePagerDutyConfig(config *models.PagerDutyChannelConfig) error {
+	if config.RoutingKey == "" {
+		return fmt.Errorf("pagerduty routing key is required")
+	}
+	return nil
+}
+
+// PagerDutyEventAction represents the action to take on an event.
+type PagerDutyEventAction string
+
+const (
+	PagerDutyEventTrigger     PagerDutyEventAction = "trigger"
+	PagerDutyEventAcknowledge PagerDutyEventAction = "acknowledge"
+	PagerDutyEventResolve     PagerDutyEventAction = "resolve"
+)
+
+// PagerDutySeverity represents the severity of an event.
+type PagerDutySeverity string
 
 // PagerDutyEvent represents the data needed to create a PagerDuty event.
 type PagerDutyEvent struct {

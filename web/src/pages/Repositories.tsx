@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ImportRepositoryWizard } from '../components/features/ImportRepositoryWizard';
+import { HelpTooltip } from '../components/ui/HelpTooltip';
 import { StarButton } from '../components/ui/StarButton';
 import { useMe } from '../hooks/useAuth';
 import { useFavoriteIds } from '../hooks/useFavorites';
@@ -1561,9 +1562,17 @@ export function Repositories() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-						Repositories
-					</h1>
+					<div className="flex items-center gap-2">
+						<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+							Repositories
+						</h1>
+						<HelpTooltip
+							content="Configure storage backends for your backups. Supports S3, B2, SFTP, local storage, and more."
+							title="Repository Configuration"
+							docsUrl="/docs/configuration#storage-backend-configuration"
+							size="md"
+						/>
+					</div>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Configure backup storage destinations
 					</p>

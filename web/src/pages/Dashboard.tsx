@@ -660,9 +660,17 @@ export function Dashboard() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900">
-					{t('dashboard.title')}
-				</h1>
+				<div className="flex items-center gap-2">
+					<h1 className="text-2xl font-bold text-gray-900">
+						{t('dashboard.title')}
+					</h1>
+					<HelpTooltip
+						content="Your central hub for monitoring backup status, agent health, and storage efficiency across your infrastructure."
+						title="Dashboard Overview"
+						docsUrl="/docs/getting-started"
+						size="md"
+					/>
+				</div>
 				<p className="text-gray-600 mt-1">{t('dashboard.subtitle')}</p>
 			</div>
 

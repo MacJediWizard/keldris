@@ -24,6 +24,10 @@ import { Classifications } from './pages/Classifications';
 import { CostEstimation } from './pages/CostEstimation';
 import { DRRunbooks } from './pages/DRRunbooks';
 import { Dashboard } from './pages/Dashboard';
+import { DockerLogs } from './pages/DockerLogs';
+import { DockerRegistries } from './pages/DockerRegistries';
+import { Documentation } from './pages/Documentation';
+import { DowntimeHistory } from './pages/DowntimeHistory';
 import { FileDiff } from './pages/FileDiff';
 import { FileHistory } from './pages/FileHistory';
 import { FileSearch } from './pages/FileSearch';
@@ -31,6 +35,7 @@ import { LegalHolds } from './pages/LegalHolds';
 import { License } from './pages/License';
 import { LifecyclePolicies } from './pages/LifecyclePolicies';
 import { Maintenance } from './pages/Maintenance';
+import { MigrationSettings } from './pages/MigrationSettings';
 import { NewOrganization } from './pages/NewOrganization';
 import { Notifications } from './pages/Notifications';
 import { Onboarding } from './pages/Onboarding';
@@ -38,6 +43,8 @@ import { OrgManagement } from './pages/OrgManagement';
 import { OrganizationMembers } from './pages/OrganizationMembers';
 import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
 import { OrganizationSettings } from './pages/OrganizationSettings';
+import { PasswordPolicies } from './pages/PasswordPolicies';
+import { PasswordReset } from './pages/PasswordReset';
 import { Policies } from './pages/Policies';
 import Reports from './pages/Reports';
 import { Repositories } from './pages/Repositories';
@@ -200,8 +207,9 @@ function App() {
 				<BrandingProvider>
 					<BrowserRouter>
 						<Routes>
-							{/* Setup route - outside Layout, no auth required */}
+							{/* Public routes - outside Layout, no auth required */}
 							<Route path="/setup" element={<Setup />} />
+							<Route path="/reset-password" element={<PasswordReset />} />
 							<Route path="/" element={<Layout />}>
 								<Route index element={<Dashboard />} />
 								<Route path="agents" element={<Agents />} />
@@ -404,9 +412,12 @@ function App() {
 								<Route path="admin/health" element={<SystemHealth />} />
 								<Route path="admin/license" element={<LicenseManagement />} />
 								<Route path="admin/setup" element={<AdminSetup />} />
+								<Route path="admin/migration" element={<MigrationSettings />} />
 								<Route path="account/sessions" element={<UserSessions />} />
 								<Route path="onboarding" element={<Onboarding />} />
 								<Route path="changelog" element={<Changelog />} />
+								<Route path="docs" element={<Documentation />} />
+								<Route path="docs/:slug" element={<Documentation />} />
 								<Route path="*" element={<NotFound />} />
 							</Route>
 						</Routes>

@@ -448,6 +448,18 @@
     "installCommands": "Installation Commands",
     "copyCommand": "Copy command"
   },
+  "help": {
+    "title": "Help",
+    "gettingStarted": "Getting Started",
+    "installation": "Installation",
+    "configuration": "Configuration",
+    "agentDeployment": "Agent Deployment",
+    "apiReference": "API Reference",
+    "troubleshooting": "Troubleshooting",
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "swaggerDocs": "API Documentation (Swagger)",
+    "documentation": "Documentation"
+  },
   "shortcuts": {
     "title": "Keyboard Shortcuts",
     "navigation": "Navigation",

@@ -16,6 +16,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/httpclient"
 )
 
 const (
@@ -73,29 +76,51 @@ type Updater struct {
 	githubOwner    string
 	githubRepo     string
 	airGapMode     bool
+	proxyConfig    *config.ProxyConfig
 }
 
 // New creates a new Updater with the given current version.
 func New(currentVersion string) *Updater {
+	return NewWithProxy(currentVersion, nil)
+}
+
+// NewWithProxy creates an Updater with proxy configuration.
+func NewWithProxy(currentVersion string, proxyConfig *config.ProxyConfig) *Updater {
+	client, err := httpclient.New(httpclient.Options{
+		Timeout:     DefaultTimeout,
+		ProxyConfig: proxyConfig,
+	})
+	if err != nil {
+		// Fall back to simple client if proxy config fails
+		client = httpclient.NewSimple(DefaultTimeout)
+	}
+
 	return &Updater{
 		currentVersion: currentVersion,
-		httpClient: &http.Client{
-			Timeout: DefaultTimeout,
-		},
-		githubOwner: GitHubOwner,
-		githubRepo:  GitHubRepo,
+		httpClient:     client,
+		githubOwner:    GitHubOwner,
+		githubRepo:     GitHubRepo,
+		proxyConfig:    proxyConfig,
 	}
 }
 
 // NewWithConfig creates an Updater with custom GitHub configuration.
-func NewWithConfig(currentVersion, owner, repo string) *Updater {
+func NewWithConfig(currentVersion, owner, repo string, proxyConfig *config.ProxyConfig) *Updater {
+	client, err := httpclient.New(httpclient.Options{
+		Timeout:     DefaultTimeout,
+		ProxyConfig: proxyConfig,
+	})
+	if err != nil {
+		// Fall back to simple client if proxy config fails
+		client = httpclient.NewSimple(DefaultTimeout)
+	}
+
 	return &Updater{
 		currentVersion: currentVersion,
-		httpClient: &http.Client{
-			Timeout: DefaultTimeout,
-		},
-		githubOwner: owner,
-		githubRepo:  repo,
+		httpClient:     client,
+		githubOwner:    owner,
+		githubRepo:     repo,
+		proxyConfig:    proxyConfig,
 	}
 }
 
@@ -147,7 +172,13 @@ func (u *Updater) Download(ctx context.Context, info *UpdateInfo, progress func(
 	// GitHub requires Accept header for binary downloads
 	req.Header.Set("Accept", "application/octet-stream")
 
-	client := &http.Client{Timeout: DownloadTimeout}
+	client, err := httpclient.New(httpclient.Options{
+		Timeout:     DownloadTimeout,
+		ProxyConfig: u.proxyConfig,
+	})
+	if err != nil {
+		return "", fmt.Errorf("create download client: %w", err)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("download: %w", err)

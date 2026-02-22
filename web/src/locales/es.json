@@ -407,6 +407,18 @@
     "installCommands": "Comandos de instalación",
     "copyCommand": "Copiar comando"
   },
+  "help": {
+    "title": "Ayuda",
+    "gettingStarted": "Primeros pasos",
+    "installation": "Instalación",
+    "configuration": "Configuración",
+    "agentDeployment": "Despliegue de agentes",
+    "apiReference": "Referencia de API",
+    "troubleshooting": "Solución de problemas",
+    "keyboardShortcuts": "Atajos de teclado",
+    "swaggerDocs": "Documentación API (Swagger)",
+    "documentation": "Documentación"
+  },
   "shortcuts": {
     "title": "Atajos de teclado",
     "navigation": "Navegación",
