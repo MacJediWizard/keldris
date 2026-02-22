@@ -564,6 +564,9 @@ export interface UpdateScheduleRequest {
 	priority?: SchedulePriority;
 	preemptible?: boolean;
 	docker_options?: DockerBackupOptions;
+	bandwidth_limit_kb?: number;
+	backup_window?: BackupWindow;
+	excluded_hours?: number[];
 	enabled?: boolean;
 }
 

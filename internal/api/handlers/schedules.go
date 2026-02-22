@@ -85,6 +85,17 @@ type CreateScheduleRequest struct {
 	Preemptible        *bool                        `json:"preemptible,omitempty"`          // Can be preempted by higher priority
 	DockerOptions      *models.DockerBackupOptions  `json:"docker_options,omitempty"`       // Docker-specific backup options
 	Enabled            *bool                        `json:"enabled,omitempty"`
+	AgentID          uuid.UUID               `json:"agent_id" binding:"required"`
+	RepositoryID     uuid.UUID               `json:"repository_id" binding:"required"`
+	Name             string                  `json:"name" binding:"required,min=1,max=255"`
+	CronExpression   string                  `json:"cron_expression" binding:"required"`
+	Paths            []string                `json:"paths" binding:"required,min=1"`
+	Excludes         []string                `json:"excludes,omitempty"`
+	RetentionPolicy  *models.RetentionPolicy `json:"retention_policy,omitempty"`
+	BandwidthLimitKB *int                    `json:"bandwidth_limit_kb,omitempty"`
+	BackupWindow     *models.BackupWindow    `json:"backup_window,omitempty"`
+	ExcludedHours    []int                   `json:"excluded_hours,omitempty"`
+	Enabled          *bool                   `json:"enabled,omitempty"`
 }
 
 // UpdateScheduleRequest is the request body for updating a schedule.
@@ -126,6 +137,15 @@ type BulkCloneScheduleRequest struct {
 type BulkCloneResponse struct {
 	Schedules []*models.Schedule `json:"schedules"`
 	Errors    []string           `json:"errors,omitempty"`
+	Name             string                  `json:"name,omitempty"`
+	CronExpression   string                  `json:"cron_expression,omitempty"`
+	Paths            []string                `json:"paths,omitempty"`
+	Excludes         []string                `json:"excludes,omitempty"`
+	RetentionPolicy  *models.RetentionPolicy `json:"retention_policy,omitempty"`
+	BandwidthLimitKB *int                    `json:"bandwidth_limit_kb,omitempty"`
+	BackupWindow     *models.BackupWindow    `json:"backup_window,omitempty"`
+	ExcludedHours    []int                   `json:"excluded_hours,omitempty"`
+	Enabled          *bool                   `json:"enabled,omitempty"`
 }
 
 // List returns all schedules for agents in the authenticated user's organization.

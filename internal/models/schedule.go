@@ -164,6 +164,20 @@ type Schedule struct {
 	Repositories     []ScheduleRepository `json:"repositories,omitempty"`
 	CreatedAt        time.Time            `json:"created_at"`
 	UpdatedAt        time.Time            `json:"updated_at"`
+	ID               uuid.UUID        `json:"id"`
+	AgentID          uuid.UUID        `json:"agent_id"`
+	RepositoryID     uuid.UUID        `json:"repository_id"`
+	Name             string           `json:"name"`
+	CronExpression   string           `json:"cron_expression"`
+	Paths            []string         `json:"paths"`
+	Excludes         []string         `json:"excludes,omitempty"`
+	RetentionPolicy  *RetentionPolicy `json:"retention_policy,omitempty"`
+	BandwidthLimitKB *int             `json:"bandwidth_limit_kb,omitempty"` // Upload limit in KB/s
+	BackupWindow     *BackupWindow    `json:"backup_window,omitempty"`      // Allowed backup time window
+	ExcludedHours    []int            `json:"excluded_hours,omitempty"`     // Hours (0-23) when backups should not run
+	Enabled          bool             `json:"enabled"`
+	CreatedAt        time.Time        `json:"created_at"`
+	UpdatedAt        time.Time        `json:"updated_at"`
 }
 
 // NewSchedule creates a new Schedule with the given details.

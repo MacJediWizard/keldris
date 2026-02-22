@@ -119,6 +119,7 @@ type BackupOptions struct {
 	BandwidthLimitKB *int    // Upload bandwidth limit in KB/s (nil = unlimited)
 	CompressionLevel *string // Compression level: off, auto, max (nil = restic default "auto")
 	MaxFileSizeMB    *int    // Maximum file size in MB to include (nil/0 = no limit)
+	BandwidthLimitKB *int // Upload bandwidth limit in KB/s (nil = unlimited)
 }
 
 // Backup runs a backup operation with the given paths and excludes.

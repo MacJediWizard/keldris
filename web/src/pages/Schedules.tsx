@@ -131,6 +131,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	const [dockerStackId, setDockerStackId] = useState<string | null>(null);
 	const [dockerStackConfig, setDockerStackConfig] =
 		useState<DockerStackBackupConfig | null>(null);
+	const [showAdvanced, setShowAdvanced] = useState(false);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
@@ -302,6 +303,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			// Reset docker stack state
 			setDockerStackId(null);
 			setDockerStackConfig(null);
+			setShowAdvanced(false);
 		} catch {
 			// Error handled by mutation
 		}
@@ -678,6 +680,26 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 
 						{/* Retention Policy Section */}
 						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+						<div>
+							<label
+								htmlFor="schedule-paths"
+								className="block text-sm font-medium text-gray-700 mb-1"
+							>
+								Paths to Backup (one per line)
+							</label>
+							<textarea
+								id="schedule-paths"
+								value={paths}
+								onChange={(e) => setPaths(e.target.value)}
+								placeholder="/home&#10;/etc&#10;/var/www"
+								rows={3}
+								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+								required
+							/>
+						</div>
+
+						{/* Retention Policy Section */}
+						<div className="border-t border-gray-200 pt-4">
 							<div className="flex items-center justify-between mb-3">
 								<span className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
 									Retention Policy
@@ -806,6 +828,11 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								type="button"
 								onClick={() => setShowAdvanced(!showAdvanced)}
 								className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900"
+						<div className="border-t border-gray-200 pt-4">
+							<button
+								type="button"
+								onClick={() => setShowAdvanced(!showAdvanced)}
+								className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
 							>
 								<svg
 									className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
@@ -833,6 +860,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											helpContent={advancedSettingsHelp.bandwidthLimit.content}
 											helpTitle={advancedSettingsHelp.bandwidthLimit.title}
 										/>
+										<label
+											htmlFor="bandwidth-limit"
+											className="block text-sm font-medium text-gray-700 mb-1"
+										>
+											Bandwidth Limit (KB/s)
+										</label>
 										<input
 											type="number"
 											id="bandwidth-limit"
@@ -843,6 +876,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 										/>
 										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										/>
+										<p className="text-xs text-gray-500 mt-1">
 											Limit upload speed during backups. Leave empty for
 											unlimited.
 										</p>
@@ -855,6 +891,8 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 												content={advancedSettingsHelp.backupWindow.content}
 												title={advancedSettingsHelp.backupWindow.title}
 											/>
+										<legend className="block text-sm font-medium text-gray-700 mb-1">
+											Backup Window
 										</legend>
 										<div className="flex items-center gap-2">
 											<input
@@ -867,6 +905,10 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											<span className="text-gray-500 dark:text-gray-400">
 												to
 											</span>
+												className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+												aria-label="Window start time"
+											/>
+											<span className="text-gray-500">to</span>
 											<input
 												type="time"
 												value={windowEnd}
@@ -876,6 +918,11 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											/>
 										</div>
 										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+												className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+												aria-label="Window end time"
+											/>
+										</div>
+										<p className="text-xs text-gray-500 mt-1">
 											Only run backups within this time window. Leave empty to
 											allow any time.
 										</p>
@@ -888,6 +935,8 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 												content={advancedSettingsHelp.excludedHours.content}
 												title={advancedSettingsHelp.excludedHours.title}
 											/>
+										<legend className="block text-sm font-medium text-gray-700 mb-2">
+											Excluded Hours
 										</legend>
 										<div className="grid grid-cols-6 gap-1">
 											{Array.from({ length: 24 }, (_, i) => (
@@ -1065,6 +1114,13 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 							agentId={agentId}
 							isLoading={isLoadingStacks}
 						/>
+										<p className="text-xs text-gray-500 mt-1">
+											Click to exclude hours when backups should not run.
+										</p>
+									</fieldset>
+								</div>
+							)}
+						</div>
 					</div>
 					{createSchedule.isError && (
 						<p className="text-sm text-red-600 mt-4">
@@ -1111,6 +1167,9 @@ function formatBackupWindow(window?: {
 	start?: string;
 	end?: string;
 }): string | null {
+function formatBackupWindow(window?: { start?: string; end?: string }):
+	| string
+	| null {
 	if (!window || (!window.start && !window.end)) return null;
 	const start = window.start || '00:00';
 	const end = window.end || '23:59';
@@ -1608,6 +1667,7 @@ function ScheduleRow({
 
 	const hasBadges =
 		hasResourceControls || policyName || hasClassification || hasPriorityBadge;
+		(schedule.excluded_hours && schedule.excluded_hours.length > 0);
 
 	return (
 		<tr

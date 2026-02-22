@@ -304,6 +304,15 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		return
 	}
 
+	logger.Info().Msg("starting scheduled backup")
+
+	// Create backup record
+	backup := models.NewBackup(schedule.ID, schedule.AgentID)
+	if err := s.store.CreateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Msg("failed to create backup record")
+		return
+	}
+
 	// Get agent for subsequent checks
 	agent, err := s.store.GetAgentByID(ctx, schedule.AgentID)
 	if err != nil {
@@ -411,6 +420,19 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 			logger.Error().Err(updateErr).Msg("failed to update backup record with post-script output")
 		}
 		s.sendBackupNotification(ctx, schedule, preScriptBackup, false, fmt.Sprintf("pre-backup script failed: %v", err))
+	// Build backup options with bandwidth limit
+	var opts *BackupOptions
+	if schedule.BandwidthLimitKB != nil {
+		opts = &BackupOptions{
+			BandwidthLimitKB: schedule.BandwidthLimitKB,
+		}
+		logger.Debug().Int("bandwidth_limit_kb", *schedule.BandwidthLimitKB).Msg("bandwidth limit applied")
+	}
+
+	// Run the backup with options
+	stats, err := s.restic.BackupWithOptions(ctx, resticCfg, schedule.Paths, schedule.Excludes, tags, opts)
+	if err != nil {
+		s.failBackupWithSchedule(ctx, backup, schedule, fmt.Sprintf("backup failed: %v", err), logger)
 		return
 	}
 
