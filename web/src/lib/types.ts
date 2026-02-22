@@ -2840,6 +2840,29 @@ export interface ConfigTemplatesResponse {
 	templates: ConfigTemplate[];
 }
 
+// Rate Limit types
+export interface RateLimitClientStats {
+	client_ip: string;
+	total_requests: number;
+	rejected_count: number;
+	last_request: string;
+}
+
+export interface EndpointRateLimitInfo {
+	pattern: string;
+	limit: number;
+	period: string;
+}
+
+export interface RateLimitDashboardStats {
+	default_limit: number;
+	default_period: string;
+	endpoint_configs: EndpointRateLimitInfo[];
+	client_stats: RateLimitClientStats[];
+	total_requests: number;
+	total_rejected: number;
+}
+
 // Announcement types
 export type AnnouncementType = 'info' | 'warning' | 'critical';
 

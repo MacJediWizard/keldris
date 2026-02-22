@@ -174,6 +174,7 @@ import type {
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	RateLimitDashboardStats,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -2598,4 +2599,10 @@ export const templatesApi = {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
+};
+
+// Rate Limits API (Admin only)
+export const rateLimitsApi = {
+	getDashboardStats: async (): Promise<RateLimitDashboardStats> =>
+		fetchApi<RateLimitDashboardStats>('/admin/rate-limits'),
 };
