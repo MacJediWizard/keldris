@@ -21,6 +21,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/agent"
 	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
+	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/health"
 	"github.com/MacJediWizard/keldris/internal/diagnostics"
@@ -36,6 +37,7 @@ import (
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
 

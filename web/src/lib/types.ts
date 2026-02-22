@@ -589,6 +589,7 @@ export interface Schedule {
 	proxmox_options?: ProxmoxBackupOptions; // Proxmox-specific backup options
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
+	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -621,6 +622,7 @@ export interface CreateScheduleRequest {
 	excludes?: string[];
 	retention_policy?: RetentionPolicy;
 	proxmox_options?: ProxmoxBackupOptions; // Proxmox-specific backup options
+	on_mount_unavailable?: MountBehavior;
 	enabled?: boolean;
 }
 
@@ -645,6 +647,7 @@ export interface UpdateScheduleRequest {
 	backup_window?: BackupWindow;
 	excluded_hours?: number[];
 	proxmox_options?: ProxmoxBackupOptions;
+	on_mount_unavailable?: MountBehavior;
 	enabled?: boolean;
 }
 

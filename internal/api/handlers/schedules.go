@@ -130,6 +130,19 @@ type CreateScheduleRequest struct {
 	ProxmoxOptions     *models.ProxmoxBackupOptions  `json:"proxmox_options,omitempty"`      // Proxmox-specific backup options
 	Enabled            *bool                         `json:"enabled,omitempty"`
 	Enabled          *bool                       `json:"enabled,omitempty"`
+	AgentID            uuid.UUID                   `json:"agent_id" binding:"required"`
+	Repositories       []ScheduleRepositoryRequest `json:"repositories" binding:"required,min=1"`
+	Name               string                      `json:"name" binding:"required,min=1,max=255"`
+	CronExpression     string                      `json:"cron_expression" binding:"required"`
+	Paths              []string                    `json:"paths" binding:"required,min=1"`
+	Excludes           []string                    `json:"excludes,omitempty"`
+	RetentionPolicy    *models.RetentionPolicy     `json:"retention_policy,omitempty"`
+	BandwidthLimitKB   *int                        `json:"bandwidth_limit_kb,omitempty"`
+	BackupWindow       *models.BackupWindow        `json:"backup_window,omitempty"`
+	ExcludedHours      []int                       `json:"excluded_hours,omitempty"`
+	CompressionLevel   *string                     `json:"compression_level,omitempty"`
+	OnMountUnavailable string                      `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
+	Enabled            *bool                       `json:"enabled,omitempty"`
 }
 
 // UpdateScheduleRequest is the request body for updating a schedule.
@@ -193,6 +206,18 @@ type BulkCloneResponse struct {
 	ExcludedHours    []int                       `json:"excluded_hours,omitempty"`
 	CompressionLevel *string                     `json:"compression_level,omitempty"`
 	Enabled          *bool                       `json:"enabled,omitempty"`
+	Name               string                      `json:"name,omitempty"`
+	CronExpression     string                      `json:"cron_expression,omitempty"`
+	Paths              []string                    `json:"paths,omitempty"`
+	Excludes           []string                    `json:"excludes,omitempty"`
+	RetentionPolicy    *models.RetentionPolicy     `json:"retention_policy,omitempty"`
+	Repositories       []ScheduleRepositoryRequest `json:"repositories,omitempty"`
+	BandwidthLimitKB   *int                        `json:"bandwidth_limit_kb,omitempty"`
+	BackupWindow       *models.BackupWindow        `json:"backup_window,omitempty"`
+	ExcludedHours      []int                       `json:"excluded_hours,omitempty"`
+	CompressionLevel   *string                     `json:"compression_level,omitempty"`
+	OnMountUnavailable *string                     `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
+	Enabled            *bool                       `json:"enabled,omitempty"`
 }
 
 // List returns all schedules for agents in the authenticated user's organization.
@@ -615,6 +640,9 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 		schedule.ProxmoxOptions = req.ProxmoxOptions
 	}
 
+	if req.OnMountUnavailable != nil {
+		schedule.OnMountUnavailable = models.MountBehavior(*req.OnMountUnavailable)
+	}
 	if req.Enabled != nil {
 		schedule.Enabled = *req.Enabled
 	}

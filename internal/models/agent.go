@@ -192,6 +192,7 @@ type Agent struct {
 	Hostname        string         `json:"hostname" example:"backup-server-01"`
 	APIKeyHash      string         `json:"-"` // Never expose in JSON
 	OSInfo          *OSInfo        `json:"os_info,omitempty"`
+	NetworkMounts   []NetworkMount `json:"network_mounts,omitempty"`
 	LastSeen        *time.Time     `json:"last_seen,omitempty"`
 	Status          AgentStatus    `json:"status" example:"active"`
 	HealthStatus    HealthStatus   `json:"health_status" example:"healthy"`
@@ -333,18 +334,39 @@ type AgentStats struct {
 	NextScheduledAt   *time.Time `json:"next_scheduled_at,omitempty"`
 	ScheduleCount     int        `json:"schedule_count"`
 	Uptime            *string    `json:"uptime,omitempty"`
+// GetMountByPath returns a mount by its path, or nil if not found.
+func (a *Agent) GetMountByPath(path string) *NetworkMount {
+	for i := range a.NetworkMounts {
+		if a.NetworkMounts[i].Path == path {
+			return &a.NetworkMounts[i]
+		}
+	}
+	return nil
+}
+
+// GetConnectedMounts returns only connected mounts.
+func (a *Agent) GetConnectedMounts() []NetworkMount {
+	var connected []NetworkMount
+	for _, m := range a.NetworkMounts {
+		if m.Status == MountStatusConnected {
+			connected = append(connected, m)
+		}
+	}
+	return connected
+}
+
 // AgentStats contains aggregated statistics for an agent.
 type AgentStats struct {
-	AgentID          uuid.UUID  `json:"agent_id"`
-	TotalBackups     int        `json:"total_backups"`
-	SuccessfulBackups int       `json:"successful_backups"`
-	FailedBackups    int        `json:"failed_backups"`
-	SuccessRate      float64    `json:"success_rate"`
-	TotalSizeBytes   int64      `json:"total_size_bytes"`
-	LastBackupAt     *time.Time `json:"last_backup_at,omitempty"`
-	NextScheduledAt  *time.Time `json:"next_scheduled_at,omitempty"`
-	ScheduleCount    int        `json:"schedule_count"`
-	Uptime           *string    `json:"uptime,omitempty"`
+	AgentID           uuid.UUID  `json:"agent_id"`
+	TotalBackups      int        `json:"total_backups"`
+	SuccessfulBackups int        `json:"successful_backups"`
+	FailedBackups     int        `json:"failed_backups"`
+	SuccessRate       float64    `json:"success_rate"`
+	TotalSizeBytes    int64      `json:"total_size_bytes"`
+	LastBackupAt      *time.Time `json:"last_backup_at,omitempty"`
+	NextScheduledAt   *time.Time `json:"next_scheduled_at,omitempty"`
+	ScheduleCount     int        `json:"schedule_count"`
+	Uptime            *string    `json:"uptime,omitempty"`
 }
 
 // AgentStatsResponse is the response for the agent stats endpoint.

@@ -252,7 +252,7 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		var statusStr string
 		var healthStatusStr *string
 		err := rows.Scan(
-			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 			&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 			&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 		)
@@ -312,12 +312,12 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 	var statusStr string
 	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
+		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at, created_at, updated_at
 		FROM agents
 		WHERE id = $1
 	`, id).Scan(
-		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 	)
@@ -374,12 +374,12 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 	var statusStr string
 	var healthStatusStr *string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, hostname, api_key_hash, os_info, last_seen, status,
+		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at, created_at, updated_at
 		FROM agents
 		WHERE api_key_hash = $1
 	`, hash).Scan(
-		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
+		&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes, &networkMountsBytes,
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 		&a.HealthCheckedAt, &a.CreatedAt, &a.UpdatedAt,
 	)
@@ -463,7 +463,7 @@ func (db *DB) UpdateAgent(ctx context.Context, agent *models.Agent) error {
 		SET hostname = $2, os_info = $3, last_seen = $4, status = $5, updated_at = $6,
 		    health_status = $7, health_metrics = $8, health_checked_at = $9
 		WHERE id = $1
-	`, agent.ID, agent.Hostname, osInfoBytes, agent.LastSeen, string(agent.Status), agent.UpdatedAt,
+	`, agent.ID, agent.Hostname, osInfoBytes, networkMountsBytes, agent.LastSeen, string(agent.Status), agent.UpdatedAt,
 		string(agent.HealthStatus), healthMetricsBytes, agent.HealthCheckedAt)
 	if err != nil {
 		return fmt.Errorf("update agent: %w", err)
@@ -814,6 +814,7 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 		       priority, preemptible, classification_level, classification_data_types,
 		       docker_options, pihole_config, proxmox_options,
 		       enabled, created_at, updated_at
+		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_id = $1
 		ORDER BY name
@@ -858,6 +859,7 @@ func (db *DB) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedu
 		       priority, preemptible, classification_level, classification_data_types,
 		       docker_options, pihole_config, proxmox_options,
 		       enabled, created_at, updated_at
+		       excluded_hours, compression_level, on_mount_unavailable, enabled, created_at, updated_at
 		FROM schedules
 		WHERE id = $1
 	`, id)
@@ -953,6 +955,8 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		                       compression_level, enabled, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+		                       compression_level, on_mount_unavailable, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 	`, schedule.ID, schedule.AgentID, schedule.AgentGroupID, schedule.PolicyID, schedule.Name,
 		INSERT INTO schedules (id, agent_id, policy_id, name, cron_expression, paths,
 		                       excludes, retention_policy, enabled, created_at, updated_at)
@@ -978,6 +982,7 @@ func (db *DB) CreateSchedule(ctx context.Context, schedule *models.Schedule) err
 		schedule.Priority, schedule.Preemptible, schedule.ClassificationLevel, classificationDataTypesBytes,
 		dockerOptionsBytes, piholeConfigBytes, proxmoxOptionsBytes,
 		schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
+		schedule.CompressionLevel, mountBehavior, schedule.Enabled, schedule.CreatedAt, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("create schedule: %w", err)
 	}
@@ -1083,6 +1088,17 @@ func (db *DB) UpdateSchedule(ctx context.Context, schedule *models.Schedule) err
 		schedule.Priority, schedule.Preemptible, schedule.ClassificationLevel, classificationDataTypesBytes,
 		dockerOptionsBytes, piholeConfigBytes, proxmoxOptionsBytes,
 		schedule.Enabled, schedule.UpdatedAt)
+	schedule.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE schedules
+		SET policy_id = $2, name = $3, cron_expression = $4, paths = $5, excludes = $6,
+		    retention_policy = $7, bandwidth_limit_kbps = $8, backup_window_start = $9,
+		    backup_window_end = $10, excluded_hours = $11, compression_level = $12,
+		    on_mount_unavailable = $13, enabled = $14, updated_at = $15
+		WHERE id = $1
+	`, schedule.ID, schedule.PolicyID, schedule.Name, schedule.CronExpression, pathsBytes,
+		excludesBytes, retentionBytes, schedule.BandwidthLimitKB, windowStart, windowEnd,
+		excludedHoursBytes, schedule.CompressionLevel, mountBehavior, schedule.Enabled, schedule.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update schedule: %w", err)
 	}
@@ -1250,7 +1266,7 @@ func scanSchedule(rows interface {
 		&mountBehavior, &s.Enabled, &s.CreatedAt, &s.UpdatedAt,
 	var pathsBytes, excludesBytes, retentionBytes []byte
 	var agentGroupID *uuid.UUID
-	var windowStart, windowEnd, compressionLevel *string
+	var windowStart, windowEnd, compressionLevel, mountBehavior *string
 	err := rows.Scan(
 		&s.ID, &s.AgentID, &agentGroupID, &s.PolicyID, &s.Name, &s.CronExpression,
 		&s.ID, &s.AgentID, &s.PolicyID, &s.Name, &s.CronExpression,
@@ -1260,6 +1276,7 @@ func scanSchedule(rows interface {
 		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel,
 		&mountBehavior, &s.Priority, &s.Preemptible, &classificationLevel, &classificationDataTypesBytes,
 		&dockerOptionsBytes, &piholeConfigBytes, &proxmoxOptionsBytes,
+		&windowStart, &windowEnd, &excludedHoursBytes, &compressionLevel, &mountBehavior,
 		&s.Enabled, &s.CreatedAt, &s.UpdatedAt,
 	var pathsBytes, excludesBytes, retentionBytes []byte
 	err := rows.Scan(

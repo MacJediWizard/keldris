@@ -349,6 +349,28 @@ func (s *Scheduler) executeBackup(schedule models.Schedule) {
 		}
 	}
 
+	// Check network mount availability for scheduled paths
+	mountErr := s.checkNetworkMounts(ctx, schedule, logger)
+	if mountErr != nil {
+		if schedule.OnMountUnavailable == models.MountBehaviorSkip {
+			logger.Info().Err(mountErr).Msg("backup skipped: network mount unavailable")
+			return
+		}
+		// Create backup record and mark as failed
+		// Get primary repository ID for the backup record
+		var repoID *uuid.UUID
+		if primaryRepo := schedule.GetPrimaryRepository(); primaryRepo != nil {
+			repoID = &primaryRepo.RepositoryID
+		}
+		backup := models.NewBackup(schedule.ID, schedule.AgentID, repoID)
+		if err := s.store.CreateBackup(ctx, backup); err != nil {
+			logger.Error().Err(err).Msg("failed to create backup record")
+			return
+		}
+		s.failBackup(ctx, backup, fmt.Sprintf("network mount unavailable: %v", mountErr), logger)
+		return
+	}
+
 	logger.Info().Msg("starting scheduled backup")
 
 	// Get enabled repositories sorted by priority

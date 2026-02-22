@@ -65,6 +65,7 @@ import type {
 	SchedulePriority,
 import type {
 	CompressionLevel,
+	MountBehavior,
 	Schedule,
 	ScheduleRepositoryRequest,
 } from '../lib/types';
@@ -108,6 +109,29 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	>([]);
 	const [cronExpression, setCronExpression] = useState('0 2 * * *');
 	const [paths, setPaths] = useState('/home');
+	// Policy template state
+	const [selectedPolicyId, setSelectedPolicyId] = useState('');
+	// Retention policy state
+	const [showRetention, setShowRetention] = useState(false);
+	const [keepLast, setKeepLast] = useState(5);
+	const [keepDaily, setKeepDaily] = useState(7);
+	const [keepWeekly, setKeepWeekly] = useState(4);
+	const [keepMonthly, setKeepMonthly] = useState(6);
+	const [keepYearly, setKeepYearly] = useState(0);
+	// Bandwidth control state
+	const [bandwidthLimitKb, setBandwidthLimitKb] = useState('');
+	const [windowStart, setWindowStart] = useState('');
+	const [windowEnd, setWindowEnd] = useState('');
+	const [excludedHours, setExcludedHours] = useState<number[]>([]);
+	const [compressionLevel, setCompressionLevel] = useState<
+		CompressionLevel | ''
+	>('');
+	const [onMountUnavailable, setOnMountUnavailable] =
+		useState<MountBehavior>('fail');
+	const [showAdvanced, setShowAdvanced] = useState(false);
+	// Exclude patterns state
+	const [excludes, setExcludes] = useState<string[]>([]);
+	const [showPatternLibrary, setShowPatternLibrary] = useState(false);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
@@ -127,12 +151,55 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				paths: paths.split('\n').filter((p) => p.trim()),
 				enabled: true,
 			});
+			};
+
+			if (bandwidthLimitKb && Number.parseInt(bandwidthLimitKb, 10) > 0) {
+				data.bandwidth_limit_kb = Number.parseInt(bandwidthLimitKb, 10);
+			}
+
+			if (windowStart || windowEnd) {
+				data.backup_window = {
+					start: windowStart || undefined,
+					end: windowEnd || undefined,
+				};
+			}
+
+			if (excludedHours.length > 0) {
+				data.excluded_hours = excludedHours;
+			}
+
+			if (compressionLevel) {
+				data.compression_level = compressionLevel;
+			}
+			if (onMountUnavailable !== 'fail') {
+				data.on_mount_unavailable = onMountUnavailable;
+			}
+
+			await createSchedule.mutateAsync(data);
 			onClose();
 			setName('');
 			setAgentId('');
 			setSelectedRepos([]);
 			setCronExpression('0 2 * * *');
 			setPaths('/home');
+			// Reset retention policy state
+			setShowRetention(false);
+			setKeepLast(5);
+			setKeepDaily(7);
+			setKeepWeekly(4);
+			setKeepMonthly(6);
+			setKeepYearly(0);
+			// Reset bandwidth control state
+			setBandwidthLimitKb('');
+			setWindowStart('');
+			setWindowEnd('');
+			setExcludedHours([]);
+			setCompressionLevel('');
+			setOnMountUnavailable('fail');
+			setShowAdvanced(false);
+			// Reset exclude patterns state
+			setExcludes([]);
+			setShowPatternLibrary(false);
 		} catch {
 			// Error handled by mutation
 		}
@@ -1561,6 +1628,31 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											<br />
 											<strong>Max:</strong> Best for text files, logs, and
 											databases.
+										</p>
+									</div>
+
+									{/* Network Mount Behavior */}
+									<div>
+										<label
+											htmlFor="schedule-mount-behavior"
+											className="block text-sm font-medium text-gray-700 mb-1"
+										>
+											On Network Mount Unavailable
+										</label>
+										<select
+											id="schedule-mount-behavior"
+											value={onMountUnavailable}
+											onChange={(e) =>
+												setOnMountUnavailable(e.target.value as MountBehavior)
+											}
+											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										>
+											<option value="fail">Fail backup</option>
+											<option value="skip">Skip backup</option>
+										</select>
+										<p className="text-xs text-gray-500 mt-1">
+											Choose what happens if a network path is unavailable when
+											backup runs.
 										</p>
 									</div>
 								</div>

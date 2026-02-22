@@ -302,6 +302,11 @@ type Schedule struct {
 	Repositories            []ScheduleRepository `json:"repositories,omitempty"`
 	CreatedAt               time.Time            `json:"created_at"`
 	UpdatedAt               time.Time            `json:"updated_at"`
+	OnMountUnavailable MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
+	Enabled            bool                 `json:"enabled"`
+	Repositories       []ScheduleRepository `json:"repositories,omitempty"`
+	CreatedAt          time.Time            `json:"created_at"`
+	UpdatedAt          time.Time            `json:"updated_at"`
 }
 
 // NewSchedule creates a new Schedule with the given details.
@@ -476,6 +481,12 @@ func (s *Schedule) IsHigherPriorityThan(other *Schedule) bool {
 		Enabled:        true,
 		CreatedAt:      now,
 		UpdatedAt:      now,
+		CronExpression:     cronExpr,
+		Paths:              paths,
+		OnMountUnavailable: MountBehaviorFail,
+		Enabled:            true,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 }
 

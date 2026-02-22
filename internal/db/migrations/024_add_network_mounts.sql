@@ -1,4 +1,5 @@
 -- 024_add_network_mounts.sql
+-- 012_add_network_mounts.sql
 -- Migration: Add network mount tracking for agents and schedule behavior
 
 -- Add network mounts tracking to agents (stores array of detected mounts)
