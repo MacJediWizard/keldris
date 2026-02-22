@@ -4,6 +4,8 @@
 node_modules
 dist
 build/
+node_modules
+dist
 *.log
 *.md
 !README.md
