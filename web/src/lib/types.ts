@@ -43,11 +43,42 @@ export interface NetworkMount {
 	last_checked: string;
 }
 
+// Docker container info for agent display
+export interface DockerContainerInfo {
+	id: string;
+	name: string;
+	image: string;
+	status: string;
+	state: string; // running, paused, exited, etc.
+}
+
+// Docker volume info for agent display
+export interface DockerVolumeInfo {
+	name: string;
+	driver: string;
+	mountpoint?: string;
+}
+
+// Docker info for an agent
+export interface DockerInfo {
+	available: boolean;
+	version?: string;
+	api_version?: string;
+	container_count: number;
+	running_count: number;
+	volume_count: number;
+	containers?: DockerContainerInfo[];
+	volumes?: DockerVolumeInfo[];
+	error?: string;
+	detected_at?: string;
+}
+
 export interface Agent {
 	id: string;
 	org_id: string;
 	hostname: string;
 	os_info?: OSInfo;
+	docker_info?: DockerInfo;
 	network_mounts?: NetworkMount[];
 	last_seen?: string;
 	status: AgentStatus;
@@ -418,11 +449,23 @@ export type CompressionLevel = 'off' | 'auto' | 'max';
 
 export type SchedulePriority = 1 | 2 | 3; // 1=high, 2=medium, 3=low
 
+// Backup type determines what kind of backup to perform
+export type BackupType = 'file' | 'docker';
+
+// Docker backup options
+export interface DockerBackupOptions {
+	volume_ids?: string[]; // Specific volumes to backup (empty = all)
+	container_ids?: string[]; // Specific container configs to backup (empty = all)
+	pause_containers: boolean; // Pause containers during volume backup
+	include_container_configs: boolean; // Backup container configurations
+}
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
 	policy_id?: string; // Policy this schedule was created from
 	name: string;
+	backup_type: BackupType; // Type of backup: file or docker
 	cron_expression: string;
 	paths: string[];
 	excludes?: string[];
@@ -437,6 +480,7 @@ export interface Schedule {
 	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
 	priority: SchedulePriority; // Backup priority: 1=high, 2=medium, 3=low
 	preemptible: boolean; // Can be preempted by higher priority backups
+	docker_options?: DockerBackupOptions; // Docker-specific backup options
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -447,8 +491,9 @@ export interface CreateScheduleRequest {
 	agent_id: string;
 	repositories: ScheduleRepositoryRequest[];
 	name: string;
+	backup_type?: BackupType; // Type of backup: file (default) or docker
 	cron_expression: string;
-	paths: string[];
+	paths?: string[]; // Required for file backups, optional for docker
 	excludes?: string[];
 	retention_policy?: RetentionPolicy;
 	bandwidth_limit_kb?: number;
@@ -459,11 +504,13 @@ export interface CreateScheduleRequest {
 	on_mount_unavailable?: MountBehavior;
 	priority?: SchedulePriority;
 	preemptible?: boolean;
+	docker_options?: DockerBackupOptions; // Docker-specific backup options
 	enabled?: boolean;
 }
 
 export interface UpdateScheduleRequest {
 	name?: string;
+	backup_type?: BackupType;
 	cron_expression?: string;
 	paths?: string[];
 	excludes?: string[];
@@ -477,6 +524,7 @@ export interface UpdateScheduleRequest {
 	on_mount_unavailable?: MountBehavior;
 	priority?: SchedulePriority;
 	preemptible?: boolean;
+	docker_options?: DockerBackupOptions;
 	enabled?: boolean;
 }
 

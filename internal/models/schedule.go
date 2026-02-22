@@ -35,6 +35,28 @@ const (
 	PriorityLow SchedulePriority = 3
 )
 
+// BackupType represents the type of backup to perform.
+type BackupType string
+
+const (
+	// BackupTypeFile is a standard file/directory backup.
+	BackupTypeFile BackupType = "file"
+	// BackupTypeDocker backs up Docker volumes and container configs.
+	BackupTypeDocker BackupType = "docker"
+)
+
+// DockerBackupOptions contains Docker-specific backup configuration.
+type DockerBackupOptions struct {
+	// VolumeIDs specifies which Docker volumes to backup. Empty means all volumes.
+	VolumeIDs []string `json:"volume_ids,omitempty"`
+	// ContainerIDs specifies which container configs to backup. Empty means all containers.
+	ContainerIDs []string `json:"container_ids,omitempty"`
+	// PauseContainers pauses running containers during volume backup for consistency.
+	PauseContainers bool `json:"pause_containers"`
+	// IncludeContainerConfigs backs up container configurations as JSON.
+	IncludeContainerConfigs bool `json:"include_container_configs"`
+}
+
 // Schedule represents a backup schedule configuration.
 // A schedule can be assigned to either an individual agent (via AgentID)
 // or to an agent group (via AgentGroupID). When AgentGroupID is set,
@@ -65,6 +87,27 @@ type Schedule struct {
 	Repositories         []ScheduleRepository `json:"repositories,omitempty"`
 	CreatedAt          time.Time            `json:"created_at"`
 	UpdatedAt          time.Time            `json:"updated_at"`
+	ID                      uuid.UUID              `json:"id"`
+	AgentID                 uuid.UUID              `json:"agent_id"`
+	AgentGroupID            *uuid.UUID             `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
+	PolicyID                *uuid.UUID             `json:"policy_id,omitempty"`      // Policy this schedule was created from
+	Name                    string                 `json:"name"`
+	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker
+	CronExpression          string                 `json:"cron_expression"`
+	Paths                   []string               `json:"paths"`
+	Excludes                []string               `json:"excludes,omitempty"`
+	RetentionPolicy         *RetentionPolicy       `json:"retention_policy,omitempty"`
+	BandwidthLimitKB        *int                   `json:"bandwidth_limit_kb,omitempty"`   // Upload limit in KB/s
+	BackupWindow            *BackupWindow          `json:"backup_window,omitempty"`        // Allowed backup time window
+	ExcludedHours           []int                  `json:"excluded_hours,omitempty"`       // Hours (0-23) when backups should not run
+	CompressionLevel        *string                `json:"compression_level,omitempty"`    // Compression level: off, auto, max
+	MaxFileSizeMB           *int                   `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
+	OnMountUnavailable      MountBehavior          `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
+	ClassificationLevel     string                 `json:"classification_level,omitempty"` // Data classification level: public, internal, confidential, restricted
+	ClassificationDataTypes []string               `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	Priority                SchedulePriority       `json:"priority"`                       // Backup priority: 1=high, 2=medium, 3=low
+	Preemptible             bool                   `json:"preemptible"`                    // Can be preempted by higher priority backups
+	DockerOptions           *DockerBackupOptions   `json:"docker_options,omitempty"`       // Docker-specific backup options
 	Metadata                map[string]interface{} `json:"metadata,omitempty"`
 }
 
@@ -75,6 +118,7 @@ func NewSchedule(agentID uuid.UUID, name, cronExpr string, paths []string) *Sche
 		ID:                 uuid.New(),
 		AgentID:            agentID,
 		Name:               name,
+		BackupType:         BackupTypeFile, // Default to file backup
 		CronExpression:     cronExpr,
 		Paths:              paths,
 		OnMountUnavailable: MountBehaviorFail,
@@ -84,6 +128,52 @@ func NewSchedule(agentID uuid.UUID, name, cronExpr string, paths []string) *Sche
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}
+}
+
+// NewDockerSchedule creates a new Schedule for Docker backup.
+func NewDockerSchedule(agentID uuid.UUID, name, cronExpr string, opts *DockerBackupOptions) *Schedule {
+	now := time.Now()
+	return &Schedule{
+		ID:                 uuid.New(),
+		AgentID:            agentID,
+		Name:               name,
+		BackupType:         BackupTypeDocker,
+		CronExpression:     cronExpr,
+		Paths:              []string{}, // Docker backups don't use paths
+		DockerOptions:      opts,
+		OnMountUnavailable: MountBehaviorFail,
+		Priority:           PriorityMedium,
+		Preemptible:        false,
+		Enabled:            true,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+}
+
+// IsDockerBackup returns true if this is a Docker backup schedule.
+func (s *Schedule) IsDockerBackup() bool {
+	return s.BackupType == BackupTypeDocker
+}
+
+// SetDockerOptions sets the Docker backup options from JSON bytes.
+func (s *Schedule) SetDockerOptions(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	var opts DockerBackupOptions
+	if err := json.Unmarshal(data, &opts); err != nil {
+		return err
+	}
+	s.DockerOptions = &opts
+	return nil
+}
+
+// DockerOptionsJSON returns the Docker options as JSON bytes for database storage.
+func (s *Schedule) DockerOptionsJSON() ([]byte, error) {
+	if s.DockerOptions == nil {
+		return nil, nil
+	}
+	return json.Marshal(s.DockerOptions)
 }
 
 // PriorityLabel returns a human-readable label for the priority.

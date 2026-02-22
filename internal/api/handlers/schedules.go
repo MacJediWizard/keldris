@@ -67,41 +67,45 @@ type ScheduleRepositoryRequest struct {
 
 // CreateScheduleRequest is the request body for creating a schedule.
 type CreateScheduleRequest struct {
-	AgentID            uuid.UUID                   `json:"agent_id" binding:"required"`
-	Repositories       []ScheduleRepositoryRequest `json:"repositories" binding:"required,min=1"`
-	Name               string                      `json:"name" binding:"required,min=1,max=255"`
-	CronExpression     string                      `json:"cron_expression" binding:"required"`
-	Paths              []string                    `json:"paths" binding:"required,min=1"`
-	Excludes           []string                    `json:"excludes,omitempty"`
-	RetentionPolicy    *models.RetentionPolicy     `json:"retention_policy,omitempty"`
-	BandwidthLimitKB   *int                        `json:"bandwidth_limit_kb,omitempty"`
-	BackupWindow       *models.BackupWindow        `json:"backup_window,omitempty"`
-	ExcludedHours      []int                       `json:"excluded_hours,omitempty"`
-	CompressionLevel   *string                     `json:"compression_level,omitempty"`
-	MaxFileSizeMB      *int                        `json:"max_file_size_mb,omitempty"` // Max file size in MB (0 = disabled)
-	OnMountUnavailable string                      `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
-	Priority           *int                        `json:"priority,omitempty"`   // 1=high, 2=medium, 3=low
-	Preemptible        *bool                       `json:"preemptible,omitempty"` // Can be preempted by higher priority
-	Enabled            *bool                       `json:"enabled,omitempty"`
+	AgentID            uuid.UUID                    `json:"agent_id" binding:"required"`
+	Repositories       []ScheduleRepositoryRequest  `json:"repositories" binding:"required,min=1"`
+	Name               string                       `json:"name" binding:"required,min=1,max=255"`
+	BackupType         string                       `json:"backup_type,omitempty"`     // "file" (default) or "docker"
+	CronExpression     string                       `json:"cron_expression" binding:"required"`
+	Paths              []string                     `json:"paths,omitempty"`           // Required for file backups, optional for docker
+	Excludes           []string                     `json:"excludes,omitempty"`
+	RetentionPolicy    *models.RetentionPolicy      `json:"retention_policy,omitempty"`
+	BandwidthLimitKB   *int                         `json:"bandwidth_limit_kb,omitempty"`
+	BackupWindow       *models.BackupWindow         `json:"backup_window,omitempty"`
+	ExcludedHours      []int                        `json:"excluded_hours,omitempty"`
+	CompressionLevel   *string                      `json:"compression_level,omitempty"`
+	MaxFileSizeMB      *int                         `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
+	OnMountUnavailable string                       `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
+	Priority           *int                         `json:"priority,omitempty"`             // 1=high, 2=medium, 3=low
+	Preemptible        *bool                        `json:"preemptible,omitempty"`          // Can be preempted by higher priority
+	DockerOptions      *models.DockerBackupOptions  `json:"docker_options,omitempty"`       // Docker-specific backup options
+	Enabled            *bool                        `json:"enabled,omitempty"`
 }
 
 // UpdateScheduleRequest is the request body for updating a schedule.
 type UpdateScheduleRequest struct {
-	Name               string                      `json:"name,omitempty"`
-	CronExpression     string                      `json:"cron_expression,omitempty"`
-	Paths              []string                    `json:"paths,omitempty"`
-	Excludes           []string                    `json:"excludes,omitempty"`
-	RetentionPolicy    *models.RetentionPolicy     `json:"retention_policy,omitempty"`
-	Repositories       []ScheduleRepositoryRequest `json:"repositories,omitempty"`
-	BandwidthLimitKB   *int                        `json:"bandwidth_limit_kb,omitempty"`
-	BackupWindow       *models.BackupWindow        `json:"backup_window,omitempty"`
-	ExcludedHours      []int                       `json:"excluded_hours,omitempty"`
-	CompressionLevel   *string                     `json:"compression_level,omitempty"`
-	MaxFileSizeMB      *int                        `json:"max_file_size_mb,omitempty"` // Max file size in MB (0 = disabled)
-	OnMountUnavailable *string                     `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
-	Priority           *int                        `json:"priority,omitempty"`   // 1=high, 2=medium, 3=low
-	Preemptible        *bool                       `json:"preemptible,omitempty"` // Can be preempted by higher priority
-	Enabled            *bool                       `json:"enabled,omitempty"`
+	Name               string                       `json:"name,omitempty"`
+	BackupType         string                       `json:"backup_type,omitempty"` // "file" or "docker"
+	CronExpression     string                       `json:"cron_expression,omitempty"`
+	Paths              []string                     `json:"paths,omitempty"`
+	Excludes           []string                     `json:"excludes,omitempty"`
+	RetentionPolicy    *models.RetentionPolicy      `json:"retention_policy,omitempty"`
+	Repositories       []ScheduleRepositoryRequest  `json:"repositories,omitempty"`
+	BandwidthLimitKB   *int                         `json:"bandwidth_limit_kb,omitempty"`
+	BackupWindow       *models.BackupWindow         `json:"backup_window,omitempty"`
+	ExcludedHours      []int                        `json:"excluded_hours,omitempty"`
+	CompressionLevel   *string                      `json:"compression_level,omitempty"`
+	MaxFileSizeMB      *int                         `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
+	OnMountUnavailable *string                      `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
+	Priority           *int                         `json:"priority,omitempty"`             // 1=high, 2=medium, 3=low
+	Preemptible        *bool                        `json:"preemptible,omitempty"`          // Can be preempted by higher priority
+	DockerOptions      *models.DockerBackupOptions  `json:"docker_options,omitempty"`       // Docker-specific backup options
+	Enabled            *bool                        `json:"enabled,omitempty"`
 }
 
 // CloneScheduleRequest is the request body for cloning a schedule.
@@ -365,6 +369,24 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		schedule.Preemptible = *req.Preemptible
 	}
 
+	// Handle backup type
+	if req.BackupType != "" {
+		schedule.BackupType = models.BackupType(req.BackupType)
+	} else {
+		schedule.BackupType = models.BackupTypeFile
+	}
+
+	// Handle Docker-specific options
+	if req.DockerOptions != nil {
+		schedule.DockerOptions = req.DockerOptions
+	}
+
+	// Validate paths for file backups
+	if schedule.BackupType == models.BackupTypeFile && len(schedule.Paths) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "paths are required for file backups"})
+		return
+	}
+
 	if req.Enabled != nil {
 		schedule.Enabled = *req.Enabled
 	}
@@ -482,6 +504,17 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 	if req.Preemptible != nil {
 		schedule.Preemptible = *req.Preemptible
 	}
+
+	// Handle backup type
+	if req.BackupType != "" {
+		schedule.BackupType = models.BackupType(req.BackupType)
+	}
+
+	// Handle Docker-specific options
+	if req.DockerOptions != nil {
+		schedule.DockerOptions = req.DockerOptions
+	}
+
 	if req.Enabled != nil {
 		schedule.Enabled = *req.Enabled
 	}
@@ -896,6 +929,7 @@ func (h *SchedulesHandler) Clone(c *gin.Context) {
 
 	// Create new schedule with copied settings
 	cloned := models.NewSchedule(targetAgentID, name, source.CronExpression, source.Paths)
+	cloned.BackupType = source.BackupType
 	cloned.Excludes = source.Excludes
 	cloned.RetentionPolicy = source.RetentionPolicy
 	cloned.BandwidthLimitKB = source.BandwidthLimitKB
@@ -906,6 +940,7 @@ func (h *SchedulesHandler) Clone(c *gin.Context) {
 	cloned.OnMountUnavailable = source.OnMountUnavailable
 	cloned.ClassificationLevel = source.ClassificationLevel
 	cloned.ClassificationDataTypes = source.ClassificationDataTypes
+	cloned.DockerOptions = source.DockerOptions
 	cloned.Enabled = source.Enabled
 
 	// Handle repositories
@@ -1026,6 +1061,7 @@ func (h *SchedulesHandler) BulkClone(c *gin.Context) {
 
 		// Create new schedule with copied settings
 		cloned := models.NewSchedule(targetAgentID, name, source.CronExpression, source.Paths)
+		cloned.BackupType = source.BackupType
 		cloned.Excludes = source.Excludes
 		cloned.RetentionPolicy = source.RetentionPolicy
 		cloned.BandwidthLimitKB = source.BandwidthLimitKB
@@ -1036,6 +1072,7 @@ func (h *SchedulesHandler) BulkClone(c *gin.Context) {
 		cloned.OnMountUnavailable = source.OnMountUnavailable
 		cloned.ClassificationLevel = source.ClassificationLevel
 		cloned.ClassificationDataTypes = source.ClassificationDataTypes
+		cloned.DockerOptions = source.DockerOptions
 		cloned.Enabled = source.Enabled
 
 		// Copy repositories from source

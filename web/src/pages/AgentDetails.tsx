@@ -932,6 +932,188 @@ export function AgentDetails() {
 				</div>
 			</div>
 
+			{/* Docker Information */}
+			{agent.docker_info && (
+				<div className="bg-white rounded-lg border border-gray-200 p-6">
+					<div className="flex items-center gap-3 mb-4">
+						<div className="p-2 bg-blue-100 rounded-lg">
+							<svg
+								className="w-5 h-5 text-blue-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+								aria-hidden="true"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+								/>
+							</svg>
+						</div>
+						<div>
+							<h2 className="text-lg font-semibold text-gray-900">
+								Docker Information
+							</h2>
+							{agent.docker_info.available ? (
+								<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+									Available
+								</span>
+							) : (
+								<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+									Not Available
+								</span>
+							)}
+						</div>
+					</div>
+
+					{agent.docker_info.available ? (
+						<>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+								<div>
+									<p className="text-sm text-gray-600">Docker Version</p>
+									<p className="font-medium text-gray-900">
+										{agent.docker_info.version ?? 'Unknown'}
+									</p>
+								</div>
+								<div>
+									<p className="text-sm text-gray-600">Containers</p>
+									<p className="font-medium text-gray-900">
+										{agent.docker_info.container_count}
+										<span className="text-sm text-gray-500 ml-1">
+											({agent.docker_info.running_count} running)
+										</span>
+									</p>
+								</div>
+								<div>
+									<p className="text-sm text-gray-600">Volumes</p>
+									<p className="font-medium text-gray-900">
+										{agent.docker_info.volume_count}
+									</p>
+								</div>
+								{agent.docker_info.detected_at && (
+									<div>
+										<p className="text-sm text-gray-600">Last Detected</p>
+										<p className="font-medium text-gray-900">
+											{formatDateTime(agent.docker_info.detected_at)}
+										</p>
+									</div>
+								)}
+							</div>
+
+							{/* Containers List */}
+							{agent.docker_info.containers &&
+								agent.docker_info.containers.length > 0 && (
+									<div className="mb-6">
+										<h3 className="text-sm font-medium text-gray-700 mb-3">
+											Containers
+										</h3>
+										<div className="overflow-x-auto">
+											<table className="min-w-full text-sm">
+												<thead className="bg-gray-50">
+													<tr>
+														<th className="px-3 py-2 text-left font-medium text-gray-500">
+															Name
+														</th>
+														<th className="px-3 py-2 text-left font-medium text-gray-500">
+															Image
+														</th>
+														<th className="px-3 py-2 text-left font-medium text-gray-500">
+															Status
+														</th>
+													</tr>
+												</thead>
+												<tbody className="divide-y divide-gray-200">
+													{agent.docker_info.containers.map((container) => (
+														<tr key={container.id} className="hover:bg-gray-50">
+															<td className="px-3 py-2 font-medium text-gray-900">
+																{container.name}
+															</td>
+															<td className="px-3 py-2 text-gray-500 font-mono text-xs">
+																{container.image}
+															</td>
+															<td className="px-3 py-2">
+																<span
+																	className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+																		container.state === 'running'
+																			? 'bg-green-100 text-green-800'
+																			: container.state === 'paused'
+																				? 'bg-yellow-100 text-yellow-800'
+																				: 'bg-gray-100 text-gray-600'
+																	}`}
+																>
+																	{container.state}
+																</span>
+															</td>
+														</tr>
+													))}
+												</tbody>
+											</table>
+										</div>
+									</div>
+								)}
+
+							{/* Volumes List */}
+							{agent.docker_info.volumes &&
+								agent.docker_info.volumes.length > 0 && (
+									<div>
+										<h3 className="text-sm font-medium text-gray-700 mb-3">
+											Volumes
+										</h3>
+										<div className="overflow-x-auto">
+											<table className="min-w-full text-sm">
+												<thead className="bg-gray-50">
+													<tr>
+														<th className="px-3 py-2 text-left font-medium text-gray-500">
+															Name
+														</th>
+														<th className="px-3 py-2 text-left font-medium text-gray-500">
+															Driver
+														</th>
+														<th className="px-3 py-2 text-left font-medium text-gray-500">
+															Mount Point
+														</th>
+													</tr>
+												</thead>
+												<tbody className="divide-y divide-gray-200">
+													{agent.docker_info.volumes.map((volume) => (
+														<tr key={volume.name} className="hover:bg-gray-50">
+															<td className="px-3 py-2 font-medium text-gray-900">
+																{volume.name}
+															</td>
+															<td className="px-3 py-2 text-gray-500">
+																{volume.driver}
+															</td>
+															<td className="px-3 py-2 text-gray-500 font-mono text-xs">
+																{volume.mountpoint || '-'}
+															</td>
+														</tr>
+													))}
+												</tbody>
+											</table>
+										</div>
+									</div>
+								)}
+						</>
+					) : (
+						<div className="text-sm text-gray-500">
+							{agent.docker_info.error ? (
+								<p>
+									<span className="font-medium text-red-600">Error:</span>{' '}
+									{agent.docker_info.error}
+								</p>
+							) : (
+								<p>
+									Docker is not installed or not running on this agent. Install
+									Docker to enable Docker volume backups.
+								</p>
+							)}
+						</div>
+					)}
+				</div>
+			)}
+
 			{/* Backup Concurrency Settings */}
 			<div className="bg-white rounded-lg border border-gray-200 p-6">
 				<div className="flex items-center justify-between mb-4">
