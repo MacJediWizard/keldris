@@ -38,6 +38,7 @@ func TestLicenseMiddleware(t *testing.T) {
 
 func TestFeatureMiddleware_Allowed(t *testing.T) {
 	// Pro tier has OIDC feature
+func TestFeatureMiddleware_FeatureAvailable(t *testing.T) {
 	lic := &license.License{Tier: license.TierPro}
 
 	r := gin.New()
@@ -58,6 +59,7 @@ func TestFeatureMiddleware_Allowed(t *testing.T) {
 
 func TestFeatureMiddleware_Blocked(t *testing.T) {
 	// Free tier does NOT have OIDC
+func TestFeatureMiddleware_FeatureNotAvailable(t *testing.T) {
 	lic := &license.License{Tier: license.TierFree}
 
 	r := gin.New()
@@ -256,6 +258,46 @@ func TestFeatureMiddleware_NoLicense(t *testing.T) {
 	if resp["error"] != "license required" {
 		t.Fatalf("expected error 'license required', got %q", resp["error"])
 	}
+}
+
+func TestFeatureMiddleware_EnterpriseFeature(t *testing.T) {
+	t.Run("enterprise tier has access", func(t *testing.T) {
+		lic := &license.License{Tier: license.TierEnterprise}
+
+		r := gin.New()
+		r.Use(LicenseMiddleware(lic, zerolog.Nop()))
+		r.Use(FeatureMiddleware(license.FeatureMultiOrg, zerolog.Nop()))
+		r.GET("/test", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{"ok": true})
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/test", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", w.Code)
+		}
+	})
+
+	t.Run("pro tier lacks enterprise feature", func(t *testing.T) {
+		lic := &license.License{Tier: license.TierPro}
+
+		r := gin.New()
+		r.Use(LicenseMiddleware(lic, zerolog.Nop()))
+		r.Use(FeatureMiddleware(license.FeatureMultiOrg, zerolog.Nop()))
+		r.GET("/test", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{"ok": true})
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/test", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusPaymentRequired {
+			t.Fatalf("expected status 402, got %d", w.Code)
+		}
+	})
 }
 
 func TestGetLicense_NoLicense(t *testing.T) {

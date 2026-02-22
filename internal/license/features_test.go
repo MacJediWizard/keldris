@@ -32,6 +32,10 @@ func TestHasFeature(t *testing.T) {
 		{"pro tier has docker backup", TierPro, FeatureDockerBackup, true},
 		{"pro tier has multi repo", TierPro, FeatureMultiRepo, true},
 		{"pro tier has API access", TierPro, FeatureAPIAccess, true},
+
+		// Pro tier - OIDC and audit logs
+		{"pro tier has OIDC", TierPro, FeatureOIDC, true},
+		{"pro tier has audit logs", TierPro, FeatureAuditLogs, true},
 		{"pro tier has no multi-org", TierPro, FeatureMultiOrg, false},
 		{"pro tier has no SLA tracking", TierPro, FeatureSLATracking, false},
 		{"pro tier has no white label", TierPro, FeatureWhiteLabel, false},
@@ -85,6 +89,8 @@ func TestFeaturesForTier(t *testing.T) {
 		features := FeaturesForTier(TierPro)
 		if len(features) != 12 {
 			t.Errorf("FeaturesForTier(TierPro) returned %d features, want 12", len(features))
+		if len(features) != 2 {
+			t.Errorf("FeaturesForTier(TierPro) returned %d features, want 2", len(features))
 		}
 	})
 
@@ -94,6 +100,8 @@ func TestFeaturesForTier(t *testing.T) {
 			t.Errorf("FeaturesForTier(TierEnterprise) returned %d features, want 17", len(features))
 		if len(features) != 18 {
 			t.Errorf("FeaturesForTier(TierEnterprise) returned %d features, want 18", len(features))
+		if len(features) != 6 {
+			t.Errorf("FeaturesForTier(TierEnterprise) returned %d features, want 6", len(features))
 		}
 	})
 

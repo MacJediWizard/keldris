@@ -1,6 +1,10 @@
 package license
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -53,6 +57,125 @@ func TestValidTiers(t *testing.T) {
 			t.Errorf("ValidTiers() missing expected tier: %s", tier)
 		}
 	}
+}
+
+func createValidLicenseKey(tier LicenseTier, customerID string, expiresAt, issuedAt int64) string {
+	payload := licensePayload{
+		Tier:       tier,
+		CustomerID: customerID,
+		ExpiresAt:  expiresAt,
+		IssuedAt:   issuedAt,
+	}
+
+	payloadJSON, _ := json.Marshal(payload)
+	payloadB64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
+
+	key := []byte("keldris-license-signing-key")
+	h := hmac.New(sha256.New, key)
+	h.Write(payloadJSON)
+	signature := h.Sum(nil)
+	signatureB64 := base64.RawURLEncoding.EncodeToString(signature)
+
+	return payloadB64 + "." + signatureB64
+}
+
+func TestParseLicense(t *testing.T) {
+	now := time.Now()
+	futureExpiry := now.Add(365 * 24 * time.Hour).Unix()
+	issuedAt := now.Unix()
+
+	validKey := createValidLicenseKey(TierPro, "customer-123", futureExpiry, issuedAt)
+
+	t.Run("valid license key", func(t *testing.T) {
+		lic, err := ParseLicense(validKey)
+		if err != nil {
+			t.Fatalf("ParseLicense() error = %v, want nil", err)
+		}
+		if lic.Tier != TierPro {
+			t.Errorf("Tier = %v, want %v", lic.Tier, TierPro)
+		}
+		if lic.CustomerID != "customer-123" {
+			t.Errorf("CustomerID = %v, want customer-123", lic.CustomerID)
+		}
+	})
+
+	t.Run("empty key", func(t *testing.T) {
+		_, err := ParseLicense("")
+		if err == nil {
+			t.Error("ParseLicense() error = nil, want error")
+		}
+	})
+
+	t.Run("missing dot separator", func(t *testing.T) {
+		_, err := ParseLicense("no-dot-separator")
+		if err == nil {
+			t.Error("ParseLicense() error = nil, want error")
+		}
+	})
+
+	t.Run("invalid base64 in payload", func(t *testing.T) {
+		_, err := ParseLicense("invalid!!!.validbase64")
+		if err == nil {
+			t.Error("ParseLicense() error = nil, want error")
+		}
+	})
+
+	t.Run("invalid base64 in signature", func(t *testing.T) {
+		payload := licensePayload{
+			Tier:       TierPro,
+			CustomerID: "customer-123",
+			ExpiresAt:  futureExpiry,
+			IssuedAt:   issuedAt,
+		}
+		payloadJSON, _ := json.Marshal(payload)
+		payloadB64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
+
+		_, err := ParseLicense(payloadB64 + ".invalid!!!")
+		if err == nil {
+			t.Error("ParseLicense() error = nil, want error")
+		}
+	})
+
+	t.Run("invalid signature", func(t *testing.T) {
+		payload := licensePayload{
+			Tier:       TierPro,
+			CustomerID: "customer-123",
+			ExpiresAt:  futureExpiry,
+			IssuedAt:   issuedAt,
+		}
+		payloadJSON, _ := json.Marshal(payload)
+		payloadB64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
+
+		wrongSignature := base64.RawURLEncoding.EncodeToString([]byte("wrong-signature-value-here"))
+		_, err := ParseLicense(payloadB64 + "." + wrongSignature)
+		if err == nil {
+			t.Error("ParseLicense() error = nil, want error")
+		}
+	})
+
+	t.Run("invalid JSON payload", func(t *testing.T) {
+		invalidJSON := []byte("{invalid json")
+		payloadB64 := base64.RawURLEncoding.EncodeToString(invalidJSON)
+
+		key := []byte("keldris-license-signing-key")
+		h := hmac.New(sha256.New, key)
+		h.Write(invalidJSON)
+		signature := h.Sum(nil)
+		signatureB64 := base64.RawURLEncoding.EncodeToString(signature)
+
+		_, err := ParseLicense(payloadB64 + "." + signatureB64)
+		if err == nil {
+			t.Error("ParseLicense() error = nil, want error")
+		}
+	})
+
+	t.Run("unknown tier", func(t *testing.T) {
+		unknownTierKey := createValidLicenseKey(LicenseTier("unknown"), "customer-123", futureExpiry, issuedAt)
+		_, err := ParseLicense(unknownTierKey)
+		if err == nil {
+			t.Error("ParseLicense() error = nil, want error for unknown tier")
+		}
+	})
 }
 
 func TestValidateLicense(t *testing.T) {

@@ -17,6 +17,9 @@ func TestGetLimits(t *testing.T) {
 		if limits.MaxOrgs != 1 {
 			t.Errorf("MaxOrgs = %d, want 1", limits.MaxOrgs)
 		}
+		if limits.MaxStorage != 10*1024*1024*1024 {
+			t.Errorf("MaxStorage = %d, want %d", limits.MaxStorage, int64(10*1024*1024*1024))
+		}
 	})
 
 	t.Run("pro tier limits", func(t *testing.T) {
@@ -31,6 +34,9 @@ func TestGetLimits(t *testing.T) {
 		if limits.MaxOrgs != 3 {
 			t.Errorf("MaxOrgs = %d, want 3", limits.MaxOrgs)
 		}
+		if limits.MaxStorage != 100*1024*1024*1024 {
+			t.Errorf("MaxStorage = %d, want %d", limits.MaxStorage, int64(100*1024*1024*1024))
+		}
 	})
 
 	t.Run("enterprise tier limits", func(t *testing.T) {
@@ -44,6 +50,9 @@ func TestGetLimits(t *testing.T) {
 		}
 		if limits.MaxOrgs != -1 {
 			t.Errorf("MaxOrgs = %d, want -1 (unlimited)", limits.MaxOrgs)
+		}
+		if limits.MaxStorage != -1 {
+			t.Errorf("MaxStorage = %d, want -1 (unlimited)", limits.MaxStorage)
 		}
 	})
 
@@ -130,6 +139,16 @@ func TestLimits_CheckUserLimit(t *testing.T) {
 		{"free tier allows 3 users", TierFree, 3},
 		{"pro tier allows 10 users", TierPro, 10},
 		{"enterprise tier has unlimited users", TierEnterprise, Unlimited},
+func TestIsStorageUnlimited(t *testing.T) {
+	tests := []struct {
+		name      string
+		limit     int64
+		unlimited bool
+	}{
+		{"negative one is unlimited", -1, true},
+		{"zero is limited", 0, false},
+		{"positive number is limited", 10 * 1024 * 1024 * 1024, false},
+		{"negative two is limited", -2, false},
 	}
 
 	for _, tt := range tests {
@@ -243,4 +262,15 @@ func TestLimits_Exceeded(t *testing.T) {
 			t.Error("3 agents should not exceed free tier limit of 3 (at limit, not over)")
 		}
 	})
+			if got := IsStorageUnlimited(tt.limit); got != tt.unlimited {
+				t.Errorf("IsStorageUnlimited(%d) = %v, want %v", tt.limit, got, tt.unlimited)
+			}
+		})
+	}
+}
+
+func TestUnlimitedConstant(t *testing.T) {
+	if Unlimited != -1 {
+		t.Errorf("Unlimited constant = %d, want -1", Unlimited)
+	}
 }
