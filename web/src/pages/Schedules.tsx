@@ -16,6 +16,7 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { FormLabelWithHelp, HelpTooltip } from '../components/ui/HelpTooltip';
 import { useAgents } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { usePolicies } from '../hooks/usePolicies';
@@ -30,6 +31,11 @@ import {
 	useSchedules,
 	useUpdateSchedule,
 } from '../hooks/useSchedules';
+import {
+	advancedSettingsHelp,
+	retentionHelp,
+	scheduleHelp,
+} from '../lib/help-content';
 import type {
 	Agent,
 	CompressionLevel,
@@ -272,12 +278,13 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				<form onSubmit={handleSubmit}>
 					<div className="space-y-4">
 						<div>
-							<label
+							<FormLabelWithHelp
 								htmlFor="schedule-name"
-								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-							>
-								Name
-							</label>
+								label="Name"
+								helpContent={scheduleHelp.name.content}
+								helpTitle={scheduleHelp.name.title}
+								required
+							/>
 							<input
 								type="text"
 								id="schedule-name"
@@ -289,12 +296,14 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 							/>
 						</div>
 						<div>
-							<label
+							<FormLabelWithHelp
 								htmlFor="schedule-agent"
-								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-							>
-								Agent
-							</label>
+								label="Agent"
+								helpContent={scheduleHelp.agent.content}
+								helpTitle={scheduleHelp.agent.title}
+								docsUrl={scheduleHelp.agent.docsUrl}
+								required
+							/>
 							<select
 								id="schedule-agent"
 								value={agentId}
@@ -319,12 +328,13 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						</div>
 						{policies && policies.length > 0 && (
 							<div>
-								<label
+								<FormLabelWithHelp
 									htmlFor="schedule-policy"
-									className="block text-sm font-medium text-gray-700 mb-1"
-								>
-									Policy Template (optional)
-								</label>
+									label="Policy Template (optional)"
+									helpContent={scheduleHelp.policyTemplate.content}
+									helpTitle={scheduleHelp.policyTemplate.title}
+									docsUrl={scheduleHelp.policyTemplate.docsUrl}
+								/>
 								<select
 									id="schedule-policy"
 									value={selectedPolicyId}
@@ -344,12 +354,14 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 							</div>
 						)}
 						<div>
-							<label
+							<FormLabelWithHelp
 								htmlFor="schedule-cron"
-								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-							>
-								Schedule (Cron Expression)
-							</label>
+								label="Schedule (Cron Expression)"
+								helpContent={scheduleHelp.cronExpression.content}
+								helpTitle={scheduleHelp.cronExpression.title}
+								docsUrl={scheduleHelp.cronExpression.docsUrl}
+								required
+							/>
 							<input
 								type="text"
 								id="schedule-cron"
@@ -364,12 +376,13 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 							</p>
 						</div>
 						<div>
-							<label
+							<FormLabelWithHelp
 								htmlFor="schedule-paths"
-								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-							>
-								Paths to Backup (one per line)
-							</label>
+								label="Paths to Backup (one per line)"
+								helpContent={scheduleHelp.paths.content}
+								helpTitle={scheduleHelp.paths.title}
+								required
+							/>
 							<textarea
 								id="schedule-paths"
 								value={paths}
@@ -384,8 +397,13 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						{/* Exclude Patterns Section */}
 						<div className="border-t border-gray-200 pt-4">
 							<div className="flex items-center justify-between mb-2">
-								<span className="block text-sm font-medium text-gray-700">
+								<span className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
 									Exclude Patterns
+									<HelpTooltip
+										content={scheduleHelp.excludePatterns.content}
+										title={scheduleHelp.excludePatterns.title}
+										docsUrl={scheduleHelp.excludePatterns.docsUrl}
+									/>
 								</span>
 								<button
 									type="button"
@@ -457,8 +475,13 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						{/* Retention Policy Section */}
 						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
 							<div className="flex items-center justify-between mb-3">
-								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+								<span className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
 									Retention Policy
+									<HelpTooltip
+										content={retentionHelp.overview.content}
+										title={retentionHelp.overview.title}
+										docsUrl={retentionHelp.overview.docsUrl}
+									/>
 								</span>
 								<button
 									type="button"
@@ -600,12 +623,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 							{showAdvanced && (
 								<div className="mt-4 space-y-4">
 									<div>
-										<label
+										<FormLabelWithHelp
 											htmlFor="bandwidth-limit"
-											className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-										>
-											Bandwidth Limit (KB/s)
-										</label>
+											label="Bandwidth Limit (KB/s)"
+											helpContent={advancedSettingsHelp.bandwidthLimit.content}
+											helpTitle={advancedSettingsHelp.bandwidthLimit.title}
+										/>
 										<input
 											type="number"
 											id="bandwidth-limit"
@@ -622,8 +645,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 									</div>
 
 									<fieldset>
-										<legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+										<legend className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 											Backup Window
+											<HelpTooltip
+												content={advancedSettingsHelp.backupWindow.content}
+												title={advancedSettingsHelp.backupWindow.title}
+											/>
 										</legend>
 										<div className="flex items-center gap-2">
 											<input
@@ -651,8 +678,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 									</fieldset>
 
 									<fieldset>
-										<legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										<legend className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 											Excluded Hours
+											<HelpTooltip
+												content={advancedSettingsHelp.excludedHours.content}
+												title={advancedSettingsHelp.excludedHours.title}
+											/>
 										</legend>
 										<div className="grid grid-cols-6 gap-1">
 											{Array.from({ length: 24 }, (_, i) => (
@@ -677,12 +708,14 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 									</fieldset>
 
 									<div>
-										<label
+										<FormLabelWithHelp
 											htmlFor="compression-level"
-											className="block text-sm font-medium text-gray-700 mb-1"
-										>
-											Compression Level
-										</label>
+											label="Compression Level"
+											helpContent={
+												advancedSettingsHelp.compressionLevel.content
+											}
+											helpTitle={advancedSettingsHelp.compressionLevel.title}
+										/>
 										<select
 											id="compression-level"
 											value={compressionLevel}
@@ -715,12 +748,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 
 									{/* Max File Size */}
 									<div>
-										<label
+										<FormLabelWithHelp
 											htmlFor="max-file-size"
-											className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-										>
-											Max File Size (MB)
-										</label>
+											label="Max File Size (MB)"
+											helpContent={advancedSettingsHelp.maxFileSize.content}
+											helpTitle={advancedSettingsHelp.maxFileSize.title}
+										/>
 										<input
 											type="number"
 											id="max-file-size"
@@ -738,12 +771,14 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 
 									{/* Network Mount Behavior */}
 									<div>
-										<label
+										<FormLabelWithHelp
 											htmlFor="schedule-mount-behavior"
-											className="block text-sm font-medium text-gray-700 mb-1"
-										>
-											On Network Mount Unavailable
-										</label>
+											label="On Network Mount Unavailable"
+											helpContent={
+												advancedSettingsHelp.onMountUnavailable.content
+											}
+											helpTitle={advancedSettingsHelp.onMountUnavailable.title}
+										/>
 										<select
 											id="schedule-mount-behavior"
 											value={onMountUnavailable}

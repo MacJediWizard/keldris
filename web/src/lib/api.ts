@@ -1,6 +1,11 @@
 import type {
 	AcknowledgeBreachRequest,
 	ActiveMaintenanceResponse,
+	ActivityCategoriesResponse,
+	ActivityEvent,
+	ActivityEventCountResponse,
+	ActivityEventFilter,
+	ActivityEventsResponse,
 	AddAgentToGroupRequest,
 	Agent,
 	AgentBackupsResponse,
@@ -4071,5 +4076,61 @@ export const slaApi = {
 		const url = month ? `/sla-report?month=${month}` : '/sla-report';
 		const response = await fetchApi<SLAReportResponse>(url);
 		return response.report;
+	},
+};
+
+// Activity API
+export const activityApi = {
+	list: async (filter?: ActivityEventFilter): Promise<ActivityEvent[]> => {
+		const params = new URLSearchParams();
+		if (filter?.category) params.set('category', filter.category);
+		if (filter?.type) params.set('type', filter.type);
+		if (filter?.user_id) params.set('user_id', filter.user_id);
+		if (filter?.agent_id) params.set('agent_id', filter.agent_id);
+		if (filter?.start_time) params.set('start_time', filter.start_time);
+		if (filter?.end_time) params.set('end_time', filter.end_time);
+		if (filter?.limit) params.set('limit', String(filter.limit));
+		if (filter?.offset) params.set('offset', String(filter.offset));
+
+		const queryString = params.toString();
+		const url = queryString ? `/activity?${queryString}` : '/activity';
+		const response = await fetchApi<ActivityEventsResponse>(url);
+		return response.events ?? [];
+	},
+
+	recent: async (limit?: number): Promise<ActivityEvent[]> => {
+		const url = limit ? `/activity/recent?limit=${limit}` : '/activity/recent';
+		const response = await fetchApi<ActivityEventsResponse>(url);
+		return response.events ?? [];
+	},
+
+	count: async (category?: string, type?: string): Promise<number> => {
+		const params = new URLSearchParams();
+		if (category) params.set('category', category);
+		if (type) params.set('type', type);
+
+		const queryString = params.toString();
+		const url = queryString
+			? `/activity/count?${queryString}`
+			: '/activity/count';
+		const response = await fetchApi<ActivityEventCountResponse>(url);
+		return response.count;
+	},
+
+	categories: async (): Promise<Record<string, number>> => {
+		const response = await fetchApi<ActivityCategoriesResponse>(
+			'/activity/categories',
+		);
+		return response.categories ?? {};
+	},
+
+	search: async (query: string, limit?: number): Promise<ActivityEvent[]> => {
+		const params = new URLSearchParams({ q: query });
+		if (limit) params.set('limit', String(limit));
+
+		const response = await fetchApi<ActivityEventsResponse>(
+			`/activity/search?${params.toString()}`,
+		);
+		return response.events ?? [];
 	},
 };

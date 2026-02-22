@@ -1,9 +1,13 @@
 import { Link } from 'react-router-dom';
+import { ActivityFeedWidget } from '../components/features/ActivityFeed';
 import { MiniBackupCalendar } from '../components/features/BackupCalendar';
+import { HelpTooltip } from '../components/ui/HelpTooltip';
+import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useLocale } from '../hooks/useLocale';
 import { useDashboardStats } from '../hooks/useMetrics';
 import { useStorageStatsSummary } from '../hooks/useStorageStats';
+import { dashboardHelp } from '../lib/help-content';
 import {
 	formatDedupRatio,
 	getBackupStatusColor,
@@ -18,14 +22,35 @@ interface StatCardProps {
 	subtitle: string;
 	icon: React.ReactNode;
 	isLoading?: boolean;
+	helpContent?: string;
+	helpTitle?: string;
+	docsUrl?: string;
 }
 
-function StatCard({ title, value, subtitle, icon, isLoading }: StatCardProps) {
+function StatCard({
+	title,
+	value,
+	subtitle,
+	icon,
+	isLoading,
+	helpContent,
+	helpTitle,
+	docsUrl,
+}: StatCardProps) {
 	return (
 		<div className="bg-white rounded-lg border border-gray-200 p-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<p className="text-sm font-medium text-gray-600">{title}</p>
+					<p className="flex items-center gap-1.5 text-sm font-medium text-gray-600">
+						{title}
+						{helpContent && (
+							<HelpTooltip
+								content={helpContent}
+								title={helpTitle}
+								docsUrl={docsUrl}
+							/>
+						)}
+					</p>
 					<p className="text-2xl font-bold text-gray-900 mt-1">
 						{isLoading ? (
 							<span className="inline-block w-8 h-7 bg-gray-200 rounded animate-pulse" />
@@ -103,6 +128,10 @@ export function Dashboard() {
 					value={String(activeAgents)}
 					subtitle={t('dashboard.connectedAgents')}
 					isLoading={dashboardStatsLoading}
+					isLoading={agentsLoading}
+					helpContent={dashboardHelp.activeAgents.content}
+					helpTitle={dashboardHelp.activeAgents.title}
+					docsUrl={dashboardHelp.activeAgents.docsUrl}
 					icon={
 						<svg
 							aria-hidden="true"
@@ -125,6 +154,10 @@ export function Dashboard() {
 					value={String(dashboardStats?.repository_count ?? 0)}
 					subtitle={t('dashboard.backupDestinations')}
 					isLoading={dashboardStatsLoading}
+					isLoading={reposLoading}
+					helpContent={dashboardHelp.repositories.content}
+					helpTitle={dashboardHelp.repositories.title}
+					docsUrl={dashboardHelp.repositories.docsUrl}
 					icon={
 						<svg
 							aria-hidden="true"
@@ -147,6 +180,9 @@ export function Dashboard() {
 					value={String(enabledSchedules)}
 					subtitle={t('dashboard.activeSchedules')}
 					isLoading={dashboardStatsLoading}
+					isLoading={schedulesLoading}
+					helpContent={dashboardHelp.scheduledJobs.content}
+					helpTitle={dashboardHelp.scheduledJobs.title}
 					icon={
 						<svg
 							aria-hidden="true"
@@ -169,6 +205,9 @@ export function Dashboard() {
 					value={String(dashboardStats?.backup_total ?? 0)}
 					subtitle={t('dashboard.allTime')}
 					isLoading={dashboardStatsLoading}
+					isLoading={backupsLoading}
+					helpContent={dashboardHelp.totalBackups.content}
+					helpTitle={dashboardHelp.totalBackups.title}
 					icon={
 						<svg
 							aria-hidden="true"
@@ -366,8 +405,13 @@ export function Dashboard() {
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
+					<h2 className="flex items-center gap-1.5 text-lg font-semibold text-gray-900 mb-4">
 						{t('dashboard.recentBackups')}
+						<HelpTooltip
+							content={dashboardHelp.recentBackups.content}
+							title={dashboardHelp.recentBackups.title}
+							size="md"
+						/>
 					</h2>
 					{isLoading ? (
 						<div className="space-y-1">
@@ -430,8 +474,13 @@ export function Dashboard() {
 				</div>
 
 				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
+					<h2 className="flex items-center gap-1.5 text-lg font-semibold text-gray-900 mb-4">
 						{t('dashboard.systemStatus')}
+						<HelpTooltip
+							content={dashboardHelp.systemStatus.content}
+							title={dashboardHelp.systemStatus.title}
+							size="md"
+						/>
 					</h2>
 					<div className="space-y-4">
 						<div className="flex items-center justify-between">
@@ -472,8 +521,14 @@ export function Dashboard() {
 
 			<div className="bg-white rounded-lg border border-gray-200 p-6">
 				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-lg font-semibold text-gray-900">
+					<h2 className="flex items-center gap-1.5 text-lg font-semibold text-gray-900">
 						{t('dashboard.storageEfficiency')}
+						<HelpTooltip
+							content={dashboardHelp.storageEfficiency.content}
+							title={dashboardHelp.storageEfficiency.title}
+							docsUrl={dashboardHelp.storageEfficiency.docsUrl}
+							size="md"
+						/>
 					</h2>
 					<Link
 						to="/stats"
@@ -574,6 +629,9 @@ export function Dashboard() {
 					</div>
 				)}
 			</div>
+
+			{/* Activity Feed */}
+			<ActivityFeedWidget limit={5} enableRealtime={true} />
 		</div>
 	);
 }
