@@ -7561,3 +7561,214 @@ func (db *DB) DeleteRegistrationCode(ctx context.Context, id uuid.UUID) error {
 	}
 	return nil
 }
+
+// CreateImportedSnapshot creates a new imported snapshot record.
+func (db *DB) CreateImportedSnapshot(ctx context.Context, snap *models.ImportedSnapshot) error {
+	pathsJSON, err := json.Marshal(snap.Paths)
+	if err != nil {
+		return fmt.Errorf("marshal paths: %w", err)
+	}
+
+	tagsJSON, err := json.Marshal(snap.Tags)
+	if err != nil {
+		return fmt.Errorf("marshal tags: %w", err)
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO imported_snapshots (
+			id, repository_id, agent_id, restic_snapshot_id, short_id,
+			hostname, username, snapshot_time, paths, tags, imported_at, created_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, snap.ID, snap.RepositoryID, snap.AgentID, snap.ResticSnapshotID, snap.ShortID,
+		snap.Hostname, snap.Username, snap.SnapshotTime, pathsJSON, tagsJSON,
+		snap.ImportedAt, snap.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create imported snapshot: %w", err)
+	}
+	return nil
+}
+
+
+// CreateImportedSnapshots creates multiple imported snapshot records in a batch.
+func (db *DB) CreateImportedSnapshots(ctx context.Context, snapshots []*models.ImportedSnapshot) error {
+	if len(snapshots) == 0 {
+		return nil
+	}
+
+	for _, snap := range snapshots {
+		if err := db.CreateImportedSnapshot(ctx, snap); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+
+// GetImportedSnapshotsByRepositoryID returns all imported snapshots for a repository.
+func (db *DB) GetImportedSnapshotsByRepositoryID(ctx context.Context, repositoryID uuid.UUID) ([]*models.ImportedSnapshot, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, repository_id, agent_id, restic_snapshot_id, short_id,
+		       hostname, username, snapshot_time, paths, tags, imported_at, created_at
+		FROM imported_snapshots
+		WHERE repository_id = $1
+		ORDER BY snapshot_time DESC
+	`, repositoryID)
+	if err != nil {
+		return nil, fmt.Errorf("list imported snapshots: %w", err)
+	}
+	defer rows.Close()
+
+	return scanImportedSnapshots(rows)
+}
+
+
+// GetImportedSnapshotsByAgentID returns all imported snapshots for an agent.
+func (db *DB) GetImportedSnapshotsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.ImportedSnapshot, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, repository_id, agent_id, restic_snapshot_id, short_id,
+		       hostname, username, snapshot_time, paths, tags, imported_at, created_at
+		FROM imported_snapshots
+		WHERE agent_id = $1
+		ORDER BY snapshot_time DESC
+	`, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("list imported snapshots by agent: %w", err)
+	}
+	defer rows.Close()
+
+	return scanImportedSnapshots(rows)
+}
+
+
+// GetImportedSnapshotByID returns an imported snapshot by ID.
+func (db *DB) GetImportedSnapshotByID(ctx context.Context, id uuid.UUID) (*models.ImportedSnapshot, error) {
+	var snap models.ImportedSnapshot
+	var pathsBytes, tagsBytes []byte
+
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, repository_id, agent_id, restic_snapshot_id, short_id,
+		       hostname, username, snapshot_time, paths, tags, imported_at, created_at
+		FROM imported_snapshots
+		WHERE id = $1
+	`, id).Scan(
+		&snap.ID, &snap.RepositoryID, &snap.AgentID, &snap.ResticSnapshotID,
+		&snap.ShortID, &snap.Hostname, &snap.Username, &snap.SnapshotTime,
+		&pathsBytes, &tagsBytes, &snap.ImportedAt, &snap.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get imported snapshot: %w", err)
+	}
+
+	if err := json.Unmarshal(pathsBytes, &snap.Paths); err != nil {
+		return nil, fmt.Errorf("unmarshal paths: %w", err)
+	}
+	if err := json.Unmarshal(tagsBytes, &snap.Tags); err != nil {
+		return nil, fmt.Errorf("unmarshal tags: %w", err)
+	}
+
+	return &snap, nil
+}
+
+
+// DeleteImportedSnapshotsByRepositoryID deletes all imported snapshots for a repository.
+func (db *DB) DeleteImportedSnapshotsByRepositoryID(ctx context.Context, repositoryID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM imported_snapshots WHERE repository_id = $1`, repositoryID)
+	if err != nil {
+		return fmt.Errorf("delete imported snapshots: %w", err)
+	}
+	return nil
+}
+
+
+// UpdateImportedSnapshotAgent updates the agent association for imported snapshots.
+func (db *DB) UpdateImportedSnapshotAgent(ctx context.Context, snapshotID uuid.UUID, agentID *uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE imported_snapshots
+		SET agent_id = $2
+		WHERE id = $1
+	`, snapshotID, agentID)
+	if err != nil {
+		return fmt.Errorf("update imported snapshot agent: %w", err)
+	}
+	return nil
+}
+
+
+// MarkRepositoryAsImported marks a repository as imported.
+func (db *DB) MarkRepositoryAsImported(ctx context.Context, repositoryID uuid.UUID, snapshotCount int) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE repositories
+		SET imported = true, imported_at = NOW(), original_snapshot_count = $2, updated_at = NOW()
+		WHERE id = $1
+	`, repositoryID, snapshotCount)
+	if err != nil {
+		return fmt.Errorf("mark repository as imported: %w", err)
+	}
+	return nil
+}
+
+
+// GetImportedSnapshotsByHostname returns imported snapshots for a repository filtered by hostname.
+func (db *DB) GetImportedSnapshotsByHostname(ctx context.Context, repositoryID uuid.UUID, hostname string) ([]*models.ImportedSnapshot, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, repository_id, agent_id, restic_snapshot_id, short_id,
+		       hostname, username, snapshot_time, paths, tags, imported_at, created_at
+		FROM imported_snapshots
+		WHERE repository_id = $1 AND hostname = $2
+		ORDER BY snapshot_time DESC
+	`, repositoryID, hostname)
+	if err != nil {
+		return nil, fmt.Errorf("list imported snapshots by hostname: %w", err)
+	}
+	defer rows.Close()
+
+	return scanImportedSnapshots(rows)
+}
+
+
+// CountImportedSnapshotsByRepositoryID returns the count of imported snapshots for a repository.
+func (db *DB) CountImportedSnapshotsByRepositoryID(ctx context.Context, repositoryID uuid.UUID) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM imported_snapshots WHERE repository_id = $1
+	`, repositoryID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count imported snapshots: %w", err)
+	}
+	return count, nil
+}
+
+
+// scanImportedSnapshots scans rows into imported snapshots.
+func scanImportedSnapshots(rows interface{ Next() bool; Scan(dest ...interface{}) error; Err() error }) ([]*models.ImportedSnapshot, error) {
+	var snapshots []*models.ImportedSnapshot
+	for rows.Next() {
+		var snap models.ImportedSnapshot
+		var pathsBytes, tagsBytes []byte
+		err := rows.Scan(
+			&snap.ID, &snap.RepositoryID, &snap.AgentID, &snap.ResticSnapshotID,
+			&snap.ShortID, &snap.Hostname, &snap.Username, &snap.SnapshotTime,
+			&pathsBytes, &tagsBytes, &snap.ImportedAt, &snap.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan imported snapshot: %w", err)
+		}
+
+		if err := json.Unmarshal(pathsBytes, &snap.Paths); err != nil {
+			return nil, fmt.Errorf("unmarshal paths: %w", err)
+		}
+		if err := json.Unmarshal(tagsBytes, &snap.Tags); err != nil {
+			return nil, fmt.Errorf("unmarshal tags: %w", err)
+		}
+
+		snapshots = append(snapshots, &snap)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate imported snapshots: %w", err)
+	}
+
+	return snapshots, nil
+}
+
