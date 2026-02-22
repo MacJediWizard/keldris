@@ -76,6 +76,8 @@ import (
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/maintenance"
+	"github.com/MacJediWizard/keldris/internal/monitoring"
+	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )
@@ -269,6 +271,13 @@ func run() int {
 	drTestConfig.DecryptFunc = verificationConfig.DecryptFunc
 	drTestScheduler := backup.NewDRTestScheduler(database, resticBin, drTestConfig, logger)
 
+	// Initialize monitoring service
+	alertService := monitoring.NewAlertService(database, &monitoring.NoOpNotificationSender{}, logger)
+	monitor := monitoring.NewMonitor(database, alertService, monitoring.DefaultConfig(), logger)
+
+	// Initialize report scheduler
+	reportScheduler := reports.NewScheduler(database, reports.DefaultSchedulerConfig(), logger)
+
 	// Initialize license validator (phone-home for all tiers)
 	var validator *license.Validator
 	if !cfg.AirGapMode {
@@ -302,6 +311,8 @@ func run() int {
 		BuildDate:           BuildDate,
 		WebDir:              webDir,
 		VerificationTrigger: verificationScheduler,
+		ReportScheduler:     reportScheduler,
+		DRTestRunner:        drTestScheduler,
 		License:             lic,
 		Validator:           validator,
 		LicensePublicKey:    licPubKey,
@@ -363,6 +374,16 @@ func run() int {
 		logger.Error().Err(err).Msg("Failed to start DR test scheduler")
 	}
 	defer drTestScheduler.Stop()
+
+	// Start monitoring service
+	monitor.Start(ctx)
+	defer monitor.Stop()
+
+	// Start report scheduler
+	if err := reportScheduler.Start(ctx); err != nil {
+		logger.Error().Err(err).Msg("Failed to start report scheduler")
+	}
+	defer reportScheduler.Stop()
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)

@@ -567,17 +567,6 @@ var Categories = map[Category]CategoryInfo{
 	},
 }
 
-// GetPatternsByCategory returns all built-in patterns for a given category.
-func GetPatternsByCategory(category Category) []BuiltInPattern {
-	var patterns []BuiltInPattern
-	for _, p := range Library {
-		if p.Category == category {
-			patterns = append(patterns, p)
-		}
-	}
-	return patterns
-}
-
 // GetAllCategories returns a list of all available categories.
 func GetAllCategories() []Category {
 	return []Category{
@@ -594,17 +583,3 @@ func GetAllCategories() []Category {
 	}
 }
 
-// FlattenPatterns takes a list of BuiltInPatterns and returns all patterns as a single slice.
-func FlattenPatterns(patterns []BuiltInPattern) []string {
-	var result []string
-	seen := make(map[string]bool)
-	for _, p := range patterns {
-		for _, pattern := range p.Patterns {
-			if !seen[pattern] {
-				seen[pattern] = true
-				result = append(result, pattern)
-			}
-		}
-	}
-	return result
-}

@@ -1360,13 +1360,6 @@ export interface RunDRTestRequest {
 	notes?: string;
 }
 
-export interface UpdateDRTestRequest {
-	status?: DRTestStatus;
-	actual_rto_minutes?: number;
-	actual_rpo_minutes?: number;
-	notes?: string;
-}
-
 export interface CreateDRTestScheduleRequest {
 	runbook_id: string;
 	cron_expression: string;
