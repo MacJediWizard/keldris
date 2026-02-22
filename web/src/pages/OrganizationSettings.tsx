@@ -114,6 +114,15 @@ export function OrganizationSettings() {
 						<div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
 						<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
 						<div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+					<div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+					<div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
+				</div>
+				<div className="bg-white rounded-lg border border-gray-200 p-6">
+					<div className="space-y-4">
+						<div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+						<div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
+						<div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+						<div className="h-10 w-full bg-gray-200 rounded animate-pulse" />
 					</div>
 				</div>
 			</div>
@@ -126,6 +135,7 @@ export function OrganizationSettings() {
 				<p className="text-gray-500 dark:text-gray-400">
 					Organization not found
 				</p>
+				<p className="text-gray-500">Organization not found</p>
 			</div>
 		);
 	}
@@ -137,6 +147,10 @@ export function OrganizationSettings() {
 					Organization Settings
 				</h1>
 				<p className="text-gray-600 dark:text-gray-400 mt-1">
+				<h1 className="text-2xl font-bold text-gray-900">
+					Organization Settings
+				</h1>
+				<p className="text-gray-600 mt-1">
 					Manage settings for {currentOrg.organization.name}
 				</p>
 			</div>
@@ -144,6 +158,9 @@ export function OrganizationSettings() {
 			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
 					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+			<div className="bg-white rounded-lg border border-gray-200">
+				<div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+					<h2 className="text-lg font-semibold text-gray-900">
 						General Settings
 					</h2>
 					{canEdit && !isEditing && (
@@ -151,6 +168,7 @@ export function OrganizationSettings() {
 							type="button"
 							onClick={handleEdit}
 							className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
+							className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
 						>
 							Edit
 						</button>
@@ -164,6 +182,7 @@ export function OrganizationSettings() {
 								<label
 									htmlFor="name"
 									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+									className="block text-sm font-medium text-gray-700 mb-1"
 								>
 									Organization Name
 								</label>
@@ -173,6 +192,7 @@ export function OrganizationSettings() {
 									value={name}
 									onChange={(e) => setName(e.target.value)}
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 									required
 								/>
 							</div>
@@ -180,6 +200,7 @@ export function OrganizationSettings() {
 								<label
 									htmlFor="slug"
 									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+									className="block text-sm font-medium text-gray-700 mb-1"
 								>
 									URL Slug
 								</label>
@@ -197,11 +218,17 @@ export function OrganizationSettings() {
 									required
 								/>
 								<p className="mt-1 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
+									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									pattern="[a-z0-9-]+"
+									required
+								/>
+								<p className="mt-1 text-xs text-gray-500">
 									Only lowercase letters, numbers, and hyphens
 								</p>
 							</div>
 							{updateOrganization.isError && (
 								<p className="text-sm text-red-600 dark:text-red-400">
+								<p className="text-sm text-red-600">
 									Failed to update organization. Please try again.
 								</p>
 							)}
@@ -210,6 +237,7 @@ export function OrganizationSettings() {
 									type="button"
 									onClick={handleCancel}
 									className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+									className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
 								>
 									Cancel
 								</button>
@@ -226,6 +254,7 @@ export function OrganizationSettings() {
 						<dl className="space-y-4">
 							<div>
 								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								<dt className="text-sm font-medium text-gray-500">
 									Organization Name
 								</dt>
 								<dd className="mt-1 text-sm text-gray-900">
@@ -236,6 +265,7 @@ export function OrganizationSettings() {
 								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
 									URL Slug
 								</dt>
+								<dt className="text-sm font-medium text-gray-500">URL Slug</dt>
 								<dd className="mt-1 text-sm text-gray-900">
 									{currentOrg.organization.slug}
 								</dd>
@@ -244,6 +274,7 @@ export function OrganizationSettings() {
 								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
 									Your Role
 								</dt>
+								<dt className="text-sm font-medium text-gray-500">Your Role</dt>
 								<dd className="mt-1">
 									<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize bg-indigo-100 text-indigo-700">
 										{currentUserRole}
@@ -254,6 +285,7 @@ export function OrganizationSettings() {
 								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
 									Created
 								</dt>
+								<dt className="text-sm font-medium text-gray-500">Created</dt>
 								<dd className="mt-1 text-sm text-gray-900">
 									{new Date(
 										currentOrg.organization.created_at,
@@ -490,6 +522,10 @@ export function OrganizationSettings() {
 									Delete this organization
 								</h3>
 								<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+								<h3 className="font-medium text-gray-900">
+									Delete this organization
+								</h3>
+								<p className="text-sm text-gray-500 mt-1">
 									Once you delete an organization, there is no going back. This
 									will permanently delete all agents, repositories, schedules,
 									and backups associated with this organization.
@@ -510,6 +546,7 @@ export function OrganizationSettings() {
 			{showDeleteConfirm && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 					<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+					<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
 						<div className="flex items-center gap-3 mb-4">
 							<div className="p-2 bg-red-100 rounded-full">
 								<svg
@@ -532,11 +569,17 @@ export function OrganizationSettings() {
 							</h3>
 						</div>
 						<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+							<h3 className="text-lg font-semibold text-gray-900">
+								Delete Organization
+							</h3>
+						</div>
+						<p className="text-sm text-gray-600 mb-4">
 							This action cannot be undone. This will permanently delete the{' '}
 							<strong>{currentOrg.organization.name}</strong> organization and
 							all of its data.
 						</p>
 						<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+						<p className="text-sm text-gray-600 mb-4">
 							Please type <strong>{currentOrg.organization.name}</strong> to
 							confirm.
 						</p>
@@ -546,6 +589,7 @@ export function OrganizationSettings() {
 							onChange={(e) => setDeleteConfirmText(e.target.value)}
 							placeholder="Type organization name to confirm"
 							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-4"
+							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-4"
 						/>
 						{deleteOrganization.isError && (
 							<p className="text-sm text-red-600 mb-4">
@@ -560,6 +604,7 @@ export function OrganizationSettings() {
 									setDeleteConfirmText('');
 								}}
 								className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+								className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
 							>
 								Cancel
 							</button>

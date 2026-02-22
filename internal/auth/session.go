@@ -189,6 +189,13 @@ ID                 uuid.UUID
 // IsImpersonating returns true if the user is being impersonated.
 func (u *SessionUser) IsImpersonating() bool {
 	return u.Impersonating && u.OriginalUserID != uuid.Nil
+	ID              uuid.UUID
+	OIDCSubject     string
+	Email           string
+	Name            string
+	AuthenticatedAt time.Time
+	CurrentOrgID    uuid.UUID
+	CurrentOrgRole  string
 }
 
 // SetUser stores user data in the session after successful authentication.
@@ -280,6 +287,18 @@ func (s *SessionStore) TouchSession(r *http.Request, w http.ResponseWriter) erro
 
 	session.Values[LastActivityKey] = time.Now()
 	return s.Save(r, w, session)
+}
+
+
+	return &SessionUser{
+		ID:              userID,
+		OIDCSubject:     oidcSubject,
+		Email:           email,
+		Name:            name,
+		AuthenticatedAt: authenticatedAt,
+		CurrentOrgID:    currentOrgID,
+		CurrentOrgRole:  currentOrgRole,
+	}, nil
 }
 
 // SetCurrentOrg updates the current organization in the session.

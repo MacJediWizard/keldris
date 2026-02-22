@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"encoding/hex"
 	"io"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"time"
@@ -42,6 +43,7 @@ type OrganizationStore interface {
 	UpdateInvitationResent(ctx context.Context, id uuid.UUID) error
 	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
 // OrganizationsHandler handles organization-related HTTP endpoints.
@@ -64,6 +66,7 @@ func NewOrganizationsHandler(store OrganizationStore, sessions *auth.SessionStor
 
 // RegisterRoutes registers organization routes available on all tiers (read-only access).
 // These allow free-tier users to access their default organization.
+// RegisterRoutes registers organization routes on the given router group.
 func (h *OrganizationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	orgs := r.Group("/organizations")
 	{
@@ -86,6 +89,15 @@ func (h *OrganizationsHandler) RegisterMultiOrgRoutes(r *gin.RouterGroup, create
 		orgs.DELETE("/:id", h.Delete)
 
 		// Member management (write operations)
+		orgs.POST("", h.Create)
+		orgs.GET("/current", h.GetCurrent)
+		orgs.POST("/switch", h.Switch)
+		orgs.GET("/:id", h.Get)
+		orgs.PUT("/:id", h.Update)
+		orgs.DELETE("/:id", h.Delete)
+
+		// Member management
+		orgs.GET("/:id/members", h.ListMembers)
 		orgs.PUT("/:id/members/:user_id", h.UpdateMember)
 		orgs.DELETE("/:id/members/:user_id", h.RemoveMember)
 
@@ -101,6 +113,11 @@ func (h *OrganizationsHandler) RegisterMultiOrgRoutes(r *gin.RouterGroup, create
 	r.POST("/invitations/accept", h.AcceptInvitation)
 	// Public endpoint to get invitation details by token
 	r.GET("/invitations/:token", h.GetInvitationByToken)
+		orgs.DELETE("/:id/invitations/:invitation_id", h.DeleteInvitation)
+	}
+
+	// Invitation acceptance (public endpoint for accepting invites)
+	r.POST("/invitations/accept", h.AcceptInvitation)
 }
 
 // CreateOrgRequest is the request body for creating an organization.
@@ -154,6 +171,7 @@ type OrgResponse struct {
 //	@Failure		500	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/organizations [get]
+// GET /api/v1/organizations
 func (h *OrganizationsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -203,6 +221,7 @@ func (h *OrganizationsHandler) List(c *gin.Context) {
 //	@Failure		500		{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/organizations [post]
+// POST /api/v1/organizations
 func (h *OrganizationsHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {

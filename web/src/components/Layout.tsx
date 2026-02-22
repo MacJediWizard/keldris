@@ -55,6 +55,10 @@ import { LanguageSelector } from './features/LanguageSelector';
 import { ToastProvider } from './ui/Toast';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
 import { MaintenanceBanner } from './features/MaintenanceBanner';
+import {
+	useOrganizations,
+	useSwitchOrganization,
+} from '../hooks/useOrganizations';
 
 interface NavItem {
 	path: string;
@@ -397,6 +401,8 @@ function Sidebar() {
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
 	const displayName = brandingData?.product_name || t('common.appName');
+	const isAdmin =
+		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
 	return (
 		<aside className="w-64 bg-gray-900 text-white flex flex-col">
@@ -904,6 +910,7 @@ function Sidebar() {
 					<>
 						<div className="mt-6 mb-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
 							{t('nav.organization')}
+							Organization
 						</div>
 						<ul className="space-y-1">
 							<li>
@@ -911,6 +918,9 @@ function Sidebar() {
 									to="/admin/license"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/admin/license'
+									to="/organization/members"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/members'
 											? 'bg-indigo-600 text-white'
 											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
 									}`}
@@ -931,6 +941,10 @@ function Sidebar() {
 									</svg>
 									<span>License</span>
 									<span>{t('nav.members')}</span>
+											d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+										/>
+									</svg>
+									<span>Members</span>
 								</Link>
 							</li>
 							<li>
@@ -938,6 +952,9 @@ function Sidebar() {
 									to="/admin/setup"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/admin/setup'
+									to="/organization/settings"
+									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+										location.pathname === '/organization/settings'
 											? 'bg-indigo-600 text-white'
 											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
 									}`}
@@ -1016,6 +1033,7 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Maintenance</span>
+									<span>Settings</span>
 								</Link>
 							</li>
 						</ul>
@@ -1177,6 +1195,9 @@ function OrgSwitcher() {
 				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
 					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
 						{t('org.organizations')}
+				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+						Organizations
 					</div>
 					{organizations.map((org) => (
 						<button

@@ -269,6 +269,9 @@ func NewRouter(
 	// Create RBAC for permission checks
 	rbac := auth.NewRBAC(database)
 
+	// Create RBAC for permission checks
+	rbac := auth.NewRBAC(database)
+
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 	changelogHandler.RegisterRoutes(apiV1)
@@ -309,6 +312,8 @@ func NewRouter(
 	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
 	orgsHandler.RegisterMultiOrgRoutes(orgsGroup, middleware.LimitMiddleware(database, "organizations", logger))
 	orgsHandler.RegisterRoutes(orgsGroup)
+	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
+	orgsHandler.RegisterRoutes(apiV1)
 
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1, middleware.LimitMiddleware(database, "agents", logger))

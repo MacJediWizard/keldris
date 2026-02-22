@@ -53,6 +53,9 @@ import { PasswordPolicies } from './pages/PasswordPolicies';
 import { PasswordReset } from './pages/PasswordReset';
 import { Policies } from './pages/Policies';
 import Reports from './pages/Reports';
+import { NewOrganization } from './pages/NewOrganization';
+import { OrganizationMembers } from './pages/OrganizationMembers';
+import { OrganizationSettings } from './pages/OrganizationSettings';
 import { Repositories } from './pages/Repositories';
 import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
 import { Restore } from './pages/Restore';
@@ -672,6 +675,15 @@ function App() {
 						<Route path="repositories" element={<Repositories />} />
 						<Route path="schedules" element={<Schedules />} />
 						<Route path="backups" element={<Backups />} />
+						<Route
+							path="organization/members"
+							element={<OrganizationMembers />}
+						/>
+						<Route
+							path="organization/settings"
+							element={<OrganizationSettings />}
+						/>
+						<Route path="organization/new" element={<NewOrganization />} />
 					</Route>
 				</Routes>
 							<Route path="onboarding" element={<Onboarding />} />

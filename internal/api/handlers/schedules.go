@@ -384,6 +384,8 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 	cronParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	if _, err := cronParser.Parse(req.CronExpression); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cron expression"})
+	if repo.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "repository not found"})
 		return
 	}
 

@@ -211,6 +211,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	}
 
 	// Get user's memberships to set current org (after group sync)
+	// Get user's memberships to set current org
 	memberships, err := h.userStore.GetMembershipsByUserID(c.Request.Context(), user.ID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to get user memberships")
@@ -362,6 +363,11 @@ type MeResponse struct {
 	IsSuperuser       bool       `json:"is_superuser"`
 	IsImpersonating   bool       `json:"is_impersonating,omitempty"`
 	ImpersonatingID   *uuid.UUID `json:"impersonating_id,omitempty"`
+	ID             uuid.UUID `json:"id"`
+	Email          string    `json:"email"`
+	Name           string    `json:"name"`
+	CurrentOrgID   uuid.UUID `json:"current_org_id,omitempty"`
+	CurrentOrgRole string    `json:"current_org_role,omitempty"`
 }
 
 // Me returns the current authenticated user.
@@ -383,6 +389,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	}
 
 	response := MeResponse{
+	c.JSON(http.StatusOK, MeResponse{
 		ID:             sessionUser.ID,
 		Email:          sessionUser.Email,
 		Name:           sessionUser.Name,

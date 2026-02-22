@@ -281,6 +281,10 @@ func (h *RepositoriesHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encrypt config"})
 		return
 	}
+	// TODO: Encrypt config using internal/crypto package (AES-256-GCM)
+	// For now, we store an empty config. Encryption will be added when
+	// the crypto package is implemented.
+	var configEncrypted []byte
 
 	repo := models.NewRepository(user.CurrentOrgID, req.Name, req.Type, configEncrypted)
 
