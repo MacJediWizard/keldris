@@ -4,6 +4,7 @@ import { useAirGapStatus } from '../hooks/useAirGap';
 import { useBranding } from '../contexts/BrandingContext';
 import { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useBranding } from '../contexts/BrandingContext';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
 import { useBranding } from '../hooks/useBranding';
@@ -457,6 +458,7 @@ function Sidebar() {
 	const { hasNewVersion, latestVersion } = useNewVersionAvailable();
 	const { productName, logoUrl, branding } = useBranding();
 	const { hasNewVersion, latestVersion } = useNewVersionAvailable();
+	const { productName, logoUrl, branding } = useBranding();
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 

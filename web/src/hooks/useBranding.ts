@@ -25,6 +25,8 @@ export function useUpdateBranding() {
 		mutationFn: (data: UpdateBrandingRequest) => brandingApi.update(data),
 import type { UpdateBrandingSettingsRequest } from '../lib/types';
 
+import type { UpdateBrandingSettingsRequest } from '../lib/types';
+
 // Get branding settings (requires auth)
 export function useBrandingSettings() {
 	return useQuery({

@@ -81,6 +81,10 @@ func ValidateURL(rawURL string) error {
 package branding
 
 import (
+// Package branding provides white-label branding configuration for Enterprise organizations.
+package branding
+
+import (
 	"encoding/json"
 	"errors"
 	"fmt"
