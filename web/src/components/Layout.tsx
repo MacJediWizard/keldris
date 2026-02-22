@@ -25,6 +25,7 @@ import {
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { GlobalSearchBar } from './features/GlobalSearchBar';
+import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { LanguageSelector } from './features/LanguageSelector';
 import { TierBadge } from './features/TierBadge';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
@@ -1230,6 +1231,14 @@ export function Layout() {
 						onDismiss={() => setShowWhatsNew(false)}
 					/>
 				)}
+		<div className="min-h-screen bg-gray-50 flex">
+			<Sidebar />
+			<div className="flex-1 flex flex-col">
+				<AnnouncementBanner />
+				<Header />
+				<main className="flex-1 p-6">
+					<Outlet />
+				</main>
 			</div>
 		</ReadOnlyModeContext.Provider>
 	);

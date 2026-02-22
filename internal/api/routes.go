@@ -326,6 +326,9 @@ func NewRouter(
 	passwordPoliciesHandler := handlers.NewPasswordPoliciesHandler(database, logger)
 	passwordPoliciesHandler.RegisterRoutes(apiV1)
 
+	announcementsHandler := handlers.NewAnnouncementsHandler(database, logger)
+	announcementsHandler.RegisterRoutes(apiV1)
+
 	// Server logs handler for admin (requires LogBuffer)
 	if cfg.LogBuffer != nil {
 		serverLogsHandler := handlers.NewServerLogsHandler(database, cfg.LogBuffer, logger)
