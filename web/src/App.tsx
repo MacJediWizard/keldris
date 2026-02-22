@@ -427,6 +427,7 @@ function App() {
 						<Route path="costs" element={<CostEstimation />} />
 						<Route path="alerts" element={<Alerts />} />
 						<Route path="notifications" element={<Notifications />} />
+						<Route path="costs" element={<CostEstimation />} />
 						<Route
 							path="organization/members"
 							element={<OrganizationMembers />}

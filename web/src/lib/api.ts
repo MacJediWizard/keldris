@@ -123,6 +123,11 @@ import type {
 	BuiltInPatternsResponse,
 	CategoriesResponse,
 	CategoryInfo,
+	CostAlert,
+	CostAlertsResponse,
+	CostForecastResponse,
+	CostHistoryResponse,
+	CostSummary,
 	CreateAgentGroupRequest,
 	CreateAgentRequest,
 	CreateAgentResponse,
@@ -153,6 +158,7 @@ import type {
 	CreateLifecyclePolicyRequest,
 	CreateMaintenanceWindowRequest,
 	CreateMetadataSchemaRequest,
+	CreateCostAlertRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
 	CreateExcludePatternRequest,
@@ -259,6 +265,7 @@ import type {
 	DailyBackupStats,
 	DailyBackupStatsResponse,
 	DashboardStats,
+	DefaultPricingResponse,
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
@@ -562,6 +569,7 @@ import type {
 	UpdateContainerBackupHookRequest,
 	UpdateCostAlertRequest,
 	UpdateBackupScriptRequest,
+	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
 	UpdateDockerRegistryRequest,
 	UpdateDockerStackRequest,
@@ -5709,6 +5717,36 @@ export const webhooksApi = {
 		data: CreateWebhookEndpointRequest,
 	): Promise<WebhookEndpoint> =>
 		fetchApi<WebhookEndpoint>('/webhooks/endpoints', {
+// Cost Estimation API
+export const costsApi = {
+	getSummary: async (): Promise<CostSummary> =>
+		fetchApi<CostSummary>('/costs/summary'),
+
+	listRepositoryCosts: async (): Promise<RepositoryCostsResponse> =>
+		fetchApi<RepositoryCostsResponse>('/costs/repositories'),
+
+	getRepositoryCost: async (id: string): Promise<RepositoryCostResponse> =>
+		fetchApi<RepositoryCostResponse>(`/costs/repositories/${id}`),
+
+	getForecast: async (days = 30): Promise<CostForecastResponse> =>
+		fetchApi<CostForecastResponse>(`/costs/forecast?days=${days}`),
+
+	getHistory: async (days = 30): Promise<CostHistoryResponse> =>
+		fetchApi<CostHistoryResponse>(`/costs/history?days=${days}`),
+};
+
+// Pricing API
+export const pricingApi = {
+	list: async (): Promise<StoragePricing[]> => {
+		const response = await fetchApi<StoragePricingResponse>('/pricing');
+		return response.pricing ?? [];
+	},
+
+	getDefaults: async (): Promise<DefaultPricingResponse> =>
+		fetchApi<DefaultPricingResponse>('/pricing/defaults'),
+
+	create: async (data: CreateStoragePricingRequest): Promise<StoragePricing> =>
+		fetchApi<StoragePricing>('/pricing', {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
@@ -5718,6 +5756,11 @@ export const webhooksApi = {
 		data: UpdateWebhookEndpointRequest,
 	): Promise<WebhookEndpoint> =>
 		fetchApi<WebhookEndpoint>(`/webhooks/endpoints/${id}`, {
+	update: async (
+		id: string,
+		data: UpdateStoragePricingRequest,
+	): Promise<StoragePricing> =>
+		fetchApi<StoragePricing>(`/pricing/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
@@ -5760,5 +5803,39 @@ export const webhooksApi = {
 	retryDelivery: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/webhooks/deliveries/${id}/retry`, {
 			method: 'POST',
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/pricing/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Cost Alerts API
+export const costAlertsApi = {
+	list: async (): Promise<CostAlert[]> => {
+		const response = await fetchApi<CostAlertsResponse>('/cost-alerts');
+		return response.alerts ?? [];
+	},
+
+	get: async (id: string): Promise<CostAlert> =>
+		fetchApi<CostAlert>(`/cost-alerts/${id}`),
+
+	create: async (data: CreateCostAlertRequest): Promise<CostAlert> =>
+		fetchApi<CostAlert>('/cost-alerts', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateCostAlertRequest,
+	): Promise<CostAlert> =>
+		fetchApi<CostAlert>(`/cost-alerts/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
+			method: 'DELETE',
 		}),
 };

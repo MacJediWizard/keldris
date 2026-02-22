@@ -455,6 +455,10 @@ func (h *CostEstimationHandler) GetCostForecast(c *gin.Context) {
 		"current_storage_gb":   totalStorageGB,
 		"current_monthly_cost": totalMonthlyCost,
 		"monthly_growth_rate":  monthlyGrowthRate,
+		"forecasts":           forecasts,
+		"current_storage_gb":  totalStorageGB,
+		"current_monthly_cost": totalMonthlyCost,
+		"monthly_growth_rate": monthlyGrowthRate,
 	})
 }
 
@@ -492,6 +496,7 @@ func (h *CostEstimationHandler) GetCostHistory(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"estimates":      estimates,
+		"estimates":     estimates,
 		"storage_growth": growth,
 	})
 }
