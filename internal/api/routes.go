@@ -25,6 +25,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/MacJediWizard/keldris/internal/telemetry"
 	"github.com/MacJediWizard/keldris/internal/updates"
+	"github.com/MacJediWizard/keldris/internal/logs"
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/MacJediWizard/keldris/internal/webhooks"
 	"github.com/gin-gonic/gin"
@@ -106,6 +107,8 @@ type Config struct {
 	MeteringService *metering.Service
 	// DRTestRunner for triggering DR test execution (optional).
 	DRTestRunner handlers.DRTestRunner
+	// LogBuffer for server log capture and viewing (optional).
+	LogBuffer *logs.LogBuffer
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.

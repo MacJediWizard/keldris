@@ -11,6 +11,7 @@ import { AdminLogs } from './pages/AdminLogs';
 import { AdminSetup } from './pages/AdminSetup';
 import { AgentDetails } from './pages/AgentDetails';
 import { AgentGroups } from './pages/AgentGroups';
+import { AdminLogs } from './pages/AdminLogs';
 import { AgentDetails } from './pages/AgentDetails';
 import { AgentGroups } from './pages/AgentGroups';
 import { Agents } from './pages/Agents';

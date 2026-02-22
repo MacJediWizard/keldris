@@ -514,6 +514,9 @@ import type {
 	SetupCompleteResponse,
 	SetupStartTrialRequest,
 	SetupStartTrialResponse,
+	ServerLogComponentsResponse,
+	ServerLogFilter,
+	ServerLogsResponse,
 	SetScheduleClassificationRequest,
 	Snapshot,
 	SnapshotComment,
@@ -5456,6 +5459,83 @@ export const notificationsApi = {
 		);
 		return response.preferences ?? [];
 	},
+// Server Logs API (Admin only)
+export const serverLogsApi = {
+	list: async (filter?: ServerLogFilter): Promise<ServerLogsResponse> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.level) searchParams.set('level', filter.level);
+		if (filter?.component) searchParams.set('component', filter.component);
+		if (filter?.search) searchParams.set('search', filter.search);
+		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
+		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
+		if (filter?.limit) searchParams.set('limit', filter.limit.toString());
+		if (filter?.offset) searchParams.set('offset', filter.offset.toString());
+
+		const query = searchParams.toString();
+		const endpoint = query ? `/admin/logs?${query}` : '/admin/logs';
+		return fetchApi<ServerLogsResponse>(endpoint);
+	},
+
+	getComponents: async (): Promise<string[]> => {
+		const response = await fetchApi<ServerLogComponentsResponse>(
+			'/admin/logs/components',
+		);
+		return response.components ?? [];
+	},
+
+	exportCsv: async (filter?: ServerLogFilter): Promise<Blob> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.level) searchParams.set('level', filter.level);
+		if (filter?.component) searchParams.set('component', filter.component);
+		if (filter?.search) searchParams.set('search', filter.search);
+		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
+		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/admin/logs/export/csv?${query}`
+			: '/admin/logs/export/csv';
+		const response = await fetch(`${API_BASE}${endpoint}`, {
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export server logs');
+		}
+		return response.blob();
+	},
+
+	exportJson: async (filter?: ServerLogFilter): Promise<Blob> => {
+		const searchParams = new URLSearchParams();
+		if (filter?.level) searchParams.set('level', filter.level);
+		if (filter?.component) searchParams.set('component', filter.component);
+		if (filter?.search) searchParams.set('search', filter.search);
+		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
+		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
+
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/admin/logs/export/json?${query}`
+			: '/admin/logs/export/json';
+		const response = await fetch(`${API_BASE}${endpoint}`, {
+			credentials: 'include',
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export server logs');
+		}
+		return response.blob();
+	},
+
+	clear: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/admin/logs', {
+			method: 'DELETE',
+		}),
+};
+
+// Classification API
+export const classificationsApi = {
+	// Reference data
+	getLevels: async (): Promise<ClassificationLevelsResponse> =>
+		fetchApi<ClassificationLevelsResponse>('/classifications/levels'),
 
 	createPreference: async (
 		data: CreateNotificationPreferenceRequest,

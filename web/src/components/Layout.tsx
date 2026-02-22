@@ -1189,6 +1189,14 @@ function Sidebar() {
 			</nav>
 			<div className="p-4 border-t border-gray-800">
 				<p className="text-xs text-gray-500">v0.0.1</p>
+						</ul>
+					</>
+				)}
+			</nav>
+			<div className="p-4 border-t border-gray-800">
+				<p className="text-xs text-gray-500">
+					{t('common.version', { version: '0.0.1' })}
+				</p>
 			</div>
 		</aside>
 	);
