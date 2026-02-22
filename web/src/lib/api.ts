@@ -661,6 +661,7 @@ import type {
 	RunScheduleResponse,
 	Schedule,
 	SchedulesResponse,
+	TestConnectionRequest,
 	TestRepositoryResponse,
 	UpdateMemberRequest,
 	UpdateOrgRequest,

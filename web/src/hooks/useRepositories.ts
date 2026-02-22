@@ -5,6 +5,7 @@ import type {
 	CreateRepositoryRequest,
 	TestConnectionRequest,
 	CreateRepositoryRequest,
+	TestConnectionRequest,
 	UpdateRepositoryRequest,
 } from '../lib/types';
 
