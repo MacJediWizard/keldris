@@ -460,6 +460,14 @@ export interface DockerBackupOptions {
 	include_container_configs: boolean; // Backup container configurations
 }
 
+// Docker Compose stack backup configuration
+export interface DockerStackScheduleConfig {
+	stack_id: string;
+	export_images: boolean;
+	include_env_files: boolean;
+	stop_for_backup: boolean;
+}
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
@@ -481,6 +489,7 @@ export interface Schedule {
 	priority: SchedulePriority; // Backup priority: 1=high, 2=medium, 3=low
 	preemptible: boolean; // Can be preempted by higher priority backups
 	docker_options?: DockerBackupOptions; // Docker-specific backup options
+	docker_stack_config?: DockerStackScheduleConfig; // Docker stack backup configuration
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -505,6 +514,7 @@ export interface CreateScheduleRequest {
 	priority?: SchedulePriority;
 	preemptible?: boolean;
 	docker_options?: DockerBackupOptions; // Docker-specific backup options
+	docker_stack_config?: DockerStackScheduleConfig;
 	enabled?: boolean;
 }
 
@@ -666,6 +676,10 @@ export interface Backup {
 	pre_script_error?: string;
 	post_script_output?: string;
 	post_script_error?: string;
+	container_pre_hook_output?: string;
+	container_pre_hook_error?: string;
+	container_post_hook_output?: string;
+	container_post_hook_error?: string;
 	excluded_large_files?: ExcludedLargeFile[]; // Files excluded due to size limit
 	resumed: boolean;
 	checkpoint_id?: string;
@@ -782,6 +796,98 @@ export interface UpdateBackupScriptRequest {
 
 export interface BackupScriptsResponse {
 	scripts: BackupScript[];
+}
+
+// Container Backup Hook types
+export type ContainerHookType = 'pre_backup' | 'post_backup';
+
+export type ContainerHookTemplate =
+	| 'none'
+	| 'postgres'
+	| 'mysql'
+	| 'mongodb'
+	| 'redis'
+	| 'elasticsearch';
+
+export interface ContainerBackupHook {
+	id: string;
+	schedule_id: string;
+	container_name: string;
+	type: ContainerHookType;
+	template: ContainerHookTemplate;
+	command: string;
+	working_dir?: string;
+	user?: string;
+	timeout_seconds: number;
+	fail_on_error: boolean;
+	enabled: boolean;
+	description?: string;
+	template_vars?: Record<string, string>;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateContainerBackupHookRequest {
+	container_name: string;
+	type: ContainerHookType;
+	template?: ContainerHookTemplate;
+	command?: string;
+	working_dir?: string;
+	user?: string;
+	timeout_seconds?: number;
+	fail_on_error?: boolean;
+	enabled?: boolean;
+	description?: string;
+	template_vars?: Record<string, string>;
+}
+
+export interface UpdateContainerBackupHookRequest {
+	container_name?: string;
+	command?: string;
+	working_dir?: string;
+	user?: string;
+	timeout_seconds?: number;
+	fail_on_error?: boolean;
+	enabled?: boolean;
+	description?: string;
+	template_vars?: Record<string, string>;
+}
+
+export interface ContainerBackupHooksResponse {
+	hooks: ContainerBackupHook[];
+}
+
+export interface ContainerHookTemplateInfo {
+	name: string;
+	template: ContainerHookTemplate;
+	description: string;
+	pre_backup_cmd: string;
+	post_backup_cmd: string;
+	required_vars: string[];
+	optional_vars: string[];
+	default_vars: Record<string, string>;
+}
+
+export interface ContainerHookTemplatesResponse {
+	templates: ContainerHookTemplateInfo[];
+}
+
+export interface ContainerHookExecution {
+	hook_id: string;
+	backup_id: string;
+	container: string;
+	type: ContainerHookType;
+	command: string;
+	output: string;
+	exit_code: number;
+	error?: string;
+	duration: number;
+	started_at: string;
+	completed_at: string;
+}
+
+export interface ContainerHookExecutionsResponse {
+	executions: ContainerHookExecution[];
 }
 
 // Auth types
@@ -1187,6 +1293,133 @@ export interface RestorePreview {
 
 export interface RestoresResponse {
 	restores: Restore[];
+}
+
+// Docker Restore types
+export type DockerRestoreStatus =
+	| 'pending'
+	| 'preparing'
+	| 'restoring_volumes'
+	| 'creating_container'
+	| 'starting'
+	| 'verifying'
+	| 'completed'
+	| 'failed'
+	| 'canceled';
+
+export type DockerRestoreTargetType = 'local' | 'remote';
+
+export interface DockerRestoreTarget {
+	type: DockerRestoreTargetType;
+	host?: string;
+	cert_path?: string;
+	tls_verify?: boolean;
+}
+
+export interface DockerRestoreProgress {
+	status: string;
+	current_step: string;
+	total_steps: number;
+	completed_steps: number;
+	percent_complete: number;
+	total_bytes: number;
+	restored_bytes: number;
+	current_volume?: string;
+	error_message?: string;
+}
+
+export interface DockerContainer {
+	id: string;
+	name: string;
+	image: string;
+	volumes?: string[];
+	ports?: string[];
+	networks?: string[];
+	created_at: string;
+}
+
+export interface DockerVolume {
+	name: string;
+	driver: string;
+	size_bytes: number;
+	created_at: string;
+}
+
+export interface DockerRestoreConflict {
+	type: 'container' | 'volume' | 'network';
+	name: string;
+	existing_id?: string;
+	description: string;
+}
+
+export interface DockerRestorePlan {
+	container?: DockerContainer;
+	volumes: DockerVolume[];
+	total_size_bytes: number;
+	conflicts: DockerRestoreConflict[];
+	dependencies: string[];
+}
+
+export interface DockerRestore {
+	id: string;
+	agent_id: string;
+	repository_id: string;
+	snapshot_id: string;
+	container_name?: string;
+	volume_name?: string;
+	new_container_name?: string;
+	new_volume_name?: string;
+	target?: DockerRestoreTarget;
+	overwrite_existing: boolean;
+	start_after_restore: boolean;
+	verify_start: boolean;
+	status: DockerRestoreStatus;
+	progress?: DockerRestoreProgress;
+	restored_container_id?: string;
+	restored_volumes?: string[];
+	start_verified: boolean;
+	warnings?: string[];
+	started_at?: string;
+	completed_at?: string;
+	error_message?: string;
+	created_at: string;
+}
+
+export interface CreateDockerRestoreRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	container_name?: string;
+	volume_name?: string;
+	new_container_name?: string;
+	new_volume_name?: string;
+	target?: DockerRestoreTarget;
+	overwrite_existing?: boolean;
+	start_after_restore?: boolean;
+	verify_start?: boolean;
+}
+
+export interface DockerRestorePreviewRequest {
+	snapshot_id: string;
+	agent_id: string;
+	repository_id: string;
+	container_name?: string;
+	volume_name?: string;
+	target?: DockerRestoreTarget;
+}
+
+export interface DockerRestoresResponse {
+	docker_restores: DockerRestore[];
+}
+
+export interface DockerContainersResponse {
+	containers: DockerContainer[];
+	message?: string;
+}
+
+export interface DockerVolumesResponse {
+	volumes: DockerVolume[];
+	message?: string;
 }
 
 // Alert types
@@ -4718,4 +4951,253 @@ export interface DockerContainersResponse {
 
 export interface DockerVolumesResponse {
 	volumes: DockerVolume[];
+// Docker Stack Backup types
+export type DockerStackBackupStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed'
+	| 'canceled';
+
+export type DockerStackRestoreStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed';
+
+export interface DockerContainerState {
+	service_name: string;
+	container_id: string;
+	status: string;
+	health?: string;
+	image: string;
+	image_id: string;
+	created: string;
+	started?: string;
+}
+
+export interface DockerStack {
+	id: string;
+	org_id: string;
+	agent_id: string;
+	name: string;
+	compose_path: string;
+	description?: string;
+	service_count: number;
+	is_running: boolean;
+	last_backup_at?: string;
+	last_backup_id?: string;
+	backup_schedule_id?: string;
+	export_images: boolean;
+	include_env_files: boolean;
+	stop_for_backup: boolean;
+	exclude_paths?: string[];
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerStackBackup {
+	id: string;
+	org_id: string;
+	stack_id: string;
+	agent_id: string;
+	schedule_id?: string;
+	backup_id?: string;
+	status: DockerStackBackupStatus;
+	backup_path: string;
+	manifest_path?: string;
+	volume_count: number;
+	bind_mount_count: number;
+	image_count?: number;
+	total_size_bytes: number;
+	container_states?: DockerContainerState[];
+	dependency_order?: string[];
+	includes_images: boolean;
+	error_message?: string;
+	started_at?: string;
+	completed_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerStackRestore {
+	id: string;
+	org_id: string;
+	stack_backup_id: string;
+	agent_id: string;
+	status: DockerStackRestoreStatus;
+	target_path: string;
+	restore_volumes: boolean;
+	restore_images: boolean;
+	start_containers: boolean;
+	path_mappings?: Record<string, string>;
+	volumes_restored: number;
+	images_restored: number;
+	error_message?: string;
+	started_at?: string;
+	completed_at?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DiscoveredDockerStack {
+	name: string;
+	compose_path: string;
+	service_count: number;
+	is_running: boolean;
+	is_registered: boolean;
+}
+
+export interface CreateDockerStackRequest {
+	name: string;
+	agent_id: string;
+	compose_path: string;
+	description?: string;
+	export_images?: boolean;
+	include_env_files?: boolean;
+	stop_for_backup?: boolean;
+	exclude_paths?: string[];
+}
+
+export interface UpdateDockerStackRequest {
+	name?: string;
+	description?: string;
+	export_images?: boolean;
+	include_env_files?: boolean;
+	stop_for_backup?: boolean;
+	exclude_paths?: string[];
+}
+
+export interface TriggerDockerStackBackupRequest {
+	export_images?: boolean;
+	stop_for_backup?: boolean;
+}
+
+export interface RestoreDockerStackRequest {
+	backup_id: string;
+	target_agent_id: string;
+	target_path: string;
+	restore_volumes: boolean;
+	restore_images: boolean;
+	start_containers: boolean;
+	path_mappings?: Record<string, string>;
+}
+
+export interface DiscoverDockerStacksRequest {
+	agent_id: string;
+	search_paths: string[];
+}
+
+export interface DockerStackListResponse {
+	stacks: DockerStack[];
+}
+
+export interface DockerStackBackupListResponse {
+	backups: DockerStackBackup[];
+}
+
+export interface DiscoverDockerStacksResponse {
+	stacks: DiscoveredDockerStack[];
+}
+
+// Docker Container Logs types
+export type DockerLogBackupStatus =
+	| 'pending'
+	| 'running'
+	| 'completed'
+	| 'failed';
+
+export interface DockerLogRetentionPolicy {
+	max_age_days: number;
+	max_size_bytes: number;
+	max_files_per_day: number;
+	compress_enabled: boolean;
+	compress_level: number;
+}
+
+export interface DockerLogBackup {
+	id: string;
+	agent_id: string;
+	container_id: string;
+	container_name: string;
+	image_name?: string;
+	log_path: string;
+	original_size: number;
+	compressed_size: number;
+	compressed: boolean;
+	start_time: string;
+	end_time: string;
+	line_count: number;
+	status: DockerLogBackupStatus;
+	error_message?: string;
+	backup_schedule_id?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerLogSettings {
+	id: string;
+	agent_id: string;
+	enabled: boolean;
+	cron_expression: string;
+	retention_policy: DockerLogRetentionPolicy;
+	include_containers?: string[];
+	exclude_containers?: string[];
+	include_labels?: Record<string, string>;
+	exclude_labels?: Record<string, string>;
+	timestamps: boolean;
+	tail: number;
+	since?: string;
+	until?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DockerLogEntry {
+	timestamp: string;
+	stream: string;
+	message: string;
+	line_num: number;
+}
+
+export interface DockerLogViewResponse {
+	backup_id: string;
+	container_id: string;
+	container_name: string;
+	entries: DockerLogEntry[];
+	total_lines: number;
+	offset: number;
+	limit: number;
+	start_time: string;
+	end_time: string;
+}
+
+export interface DockerLogBackupsResponse {
+	backups: DockerLogBackup[];
+	total_count: number;
+}
+
+export interface DockerLogStorageStats {
+	total_size: number;
+	total_files: number;
+	container_stats: Record<string, { size: number; files: number }>;
+}
+
+export interface DockerLogRetentionResult {
+	removed_count: number;
+	removed_bytes: number;
+}
+
+export interface DockerLogSettingsUpdate {
+	enabled?: boolean;
+	cron_expression?: string;
+	retention_policy?: DockerLogRetentionPolicy;
+	include_containers?: string[];
+	exclude_containers?: string[];
+	include_labels?: Record<string, string>;
+	exclude_labels?: Record<string, string>;
+	timestamps?: boolean;
+	tail?: number;
+	since?: string;
+	until?: string;
 }

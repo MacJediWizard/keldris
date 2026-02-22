@@ -24,6 +24,8 @@ type DashboardMetricsStore interface {
 	GetDailySummaries(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time) ([]models.MetricsDailySummary, error)
 	GetActiveRansomwareAlertCountByOrgID(ctx context.Context, orgID uuid.UUID) (int, error)
 	GetCriticalRansomwareAlertCountByOrgID(ctx context.Context, orgID uuid.UUID) (int, error)
+	GetDockerHealthSummary(ctx context.Context, orgID uuid.UUID) (*models.DockerHealthSummary, error)
+	GetRecentContainerRestartEvents(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.ContainerRestartEvent, error)
 }
 
 // DashboardMetricsHandler handles dashboard metrics related HTTP endpoints.
@@ -49,6 +51,7 @@ func (h *DashboardMetricsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		metrics.GET("/storage-growth", h.GetStorageGrowthTrend)
 		metrics.GET("/backup-duration", h.GetBackupDurationTrend)
 		metrics.GET("/daily-backups", h.GetDailyBackupStats)
+		metrics.GET("/docker-health", h.GetDockerHealthWidget)
 	}
 }
 
@@ -256,4 +259,57 @@ func (h *DashboardMetricsHandler) GetDailyBackupStats(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"stats": stats})
+}
+
+// GetDockerHealthWidget returns Docker health data for the dashboard widget.
+//
+//	@Summary		Get Docker health widget data
+//	@Description	Returns Docker container and volume health summary for dashboard display
+//	@Tags			Dashboard
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.DockerDashboardWidget
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/dashboard-metrics/docker-health [get]
+func (h *DashboardMetricsHandler) GetDockerHealthWidget(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
+		return
+	}
+
+	// Get Docker health summary
+	summary, err := h.store.GetDockerHealthSummary(c.Request.Context(), dbUser.OrgID)
+	if err != nil {
+		h.logger.Warn().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get docker health summary")
+		// Return empty summary if no data available
+		summary = &models.DockerHealthSummary{}
+	}
+
+	// Get recent restart events
+	restarts, err := h.store.GetRecentContainerRestartEvents(c.Request.Context(), dbUser.OrgID, 10)
+	if err != nil {
+		h.logger.Warn().Err(err).Msg("failed to get recent restart events")
+		restarts = []*models.ContainerRestartEvent{}
+	}
+
+	widget := &models.DockerDashboardWidget{
+		Summary:        summary,
+		RecentRestarts: make([]models.ContainerRestartEvent, 0, len(restarts)),
+	}
+
+	for _, r := range restarts {
+		widget.RecentRestarts = append(widget.RecentRestarts, *r)
+	}
+
+	c.JSON(http.StatusOK, widget)
 }

@@ -35,6 +35,7 @@ type AgentStore interface {
 	GetFleetHealthSummary(ctx context.Context, orgID uuid.UUID) (*models.FleetHealthSummary, error)
 	SetAgentDebugMode(ctx context.Context, id uuid.UUID, enabled bool, expiresAt *time.Time, enabledBy *uuid.UUID) error
 	GetAgentLogs(ctx context.Context, agentID uuid.UUID, filter *models.AgentLogFilter) ([]*models.AgentLog, int, error)
+	GetAgentDockerHealth(ctx context.Context, agentID uuid.UUID) (*models.AgentDockerHealth, error)
 }
 
 // AgentsHandler handles agent-related HTTP endpoints.
@@ -71,6 +72,7 @@ func (h *AgentsHandler) RegisterRoutes(r *gin.RouterGroup, createMiddleware ...g
 		agents.GET("/:id/health-history", h.HealthHistory)
 		agents.POST("/:id/debug", h.SetDebugMode)
 		agents.GET("/:id/logs", h.Logs)
+		agents.GET("/:id/docker-health", h.DockerHealth)
 	}
 }
 
@@ -880,6 +882,63 @@ func (h *AgentsHandler) SetDebugMode(c *gin.Context) {
 		DebugModeExpiresAt: expiresAt,
 		Message:            message,
 	})
+}
+
+// DockerHealth returns Docker health for a specific agent.
+//
+//	@Summary		Get agent Docker health
+//	@Description	Returns Docker container and volume health information for an agent
+//	@Tags			Agents
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string	true	"Agent ID"
+//	@Success		200	{object}	models.DockerHealth
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/agents/{id}/docker-health [get]
+func (h *AgentsHandler) DockerHealth(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	agent, err := h.store.GetAgentByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	// Verify agent belongs to current org
+	if agent.OrgID != user.CurrentOrgID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
+		return
+	}
+
+	dockerHealth, err := h.store.GetAgentDockerHealth(c.Request.Context(), id)
+	if err != nil {
+		// No Docker health data - return empty but indicate Docker is not available
+		c.JSON(http.StatusOK, gin.H{
+			"available": false,
+			"message":   "Docker health data not available for this agent",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dockerHealth.DockerHealth)
 }
 
 // Logs returns logs for a specific agent.

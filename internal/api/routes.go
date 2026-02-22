@@ -12,6 +12,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/config"
+	"github.com/MacJediWizard/keldris/internal/backup/docker"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/MacJediWizard/keldris/internal/license"
@@ -210,6 +211,9 @@ func NewRouter(
 	backupScriptsHandler := handlers.NewBackupScriptsHandler(database, logger)
 	backupScriptsHandler.RegisterRoutes(apiV1)
 
+	containerHooksHandler := handlers.NewContainerHooksHandler(database, logger)
+	containerHooksHandler.RegisterRoutes(apiV1)
+
 	policiesHandler := handlers.NewPoliciesHandler(database, logger)
 	policiesHandler.RegisterRoutes(apiV1)
 
@@ -320,6 +324,10 @@ func NewRouter(
 	configExportHandler := handlers.NewConfigExportHandler(database, logger)
 	configExportHandler.RegisterRoutes(apiV1)
 
+	// Docker restore routes
+	dockerRestoreHandler := handlers.NewDockerRestoreHandler(database, logger)
+	dockerRestoreHandler.RegisterRoutes(apiV1)
+
 	// DR Runbook routes
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
 	drRunbooksHandler.RegisterRoutes(drRunbooksGroup)
@@ -359,6 +367,10 @@ func NewRouter(
 	downtimeHandler := handlers.NewDowntimeHandler(downtimeService, database, logger)
 	downtimeHandler.RegisterRoutes(apiV1)
 
+	// Docker health monitoring routes
+	dockerHandler := handlers.NewDockerHandler(database, logger)
+	dockerHandler.RegisterRoutes(apiV1)
+
 	// IP allowlists routes
 	ipAllowlistsHandler := handlers.NewIPAllowlistsHandler(database, ipFilter, logger)
 	ipAllowlistsHandler.RegisterRoutes(apiV1)
@@ -382,6 +394,17 @@ func NewRouter(
 	// Lifecycle policy routes
 	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
 	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
+
+	// Docker backup routes
+	dockerDiscoveryConfig := docker.DefaultDiscoveryConfig()
+	dockerDiscoveryService := docker.NewDiscoveryService(database, dockerDiscoveryConfig, logger)
+	dockerBackupHandler := handlers.NewDockerBackupHandler(database, dockerDiscoveryService, logger)
+	dockerBackupHandler.RegisterRoutes(apiV1)
+
+	// Docker container logs backup routes
+	dockerLogBackupService := docker.NewLogBackupService(docker.DefaultLogBackupConfig(), logger)
+	dockerLogsHandler := handlers.NewDockerLogsHandler(database, dockerLogBackupService, logger)
+	dockerLogsHandler.RegisterRoutes(apiV1)
 
 	// Activity feed routes
 	if cfg.ActivityFeed != nil {
