@@ -340,6 +340,17 @@ export interface UpdateRepositoryRequest {
 	config?: Record<string, unknown>;
 }
 
+export interface CloneRepositoryRequest {
+	name: string;
+	credentials: Record<string, unknown>;
+	target_org_id?: string;
+}
+
+export interface CloneRepositoryResponse {
+	repository: Repository;
+	password: string;
+}
+
 export interface TestRepositoryResponse {
 	success: boolean;
 	message: string;
@@ -462,6 +473,24 @@ export interface UpdateScheduleRequest {
 export interface RunScheduleResponse {
 	backup_id: string;
 	message: string;
+}
+
+// Clone schedule types
+export interface CloneScheduleRequest {
+	name?: string;
+	target_agent_id?: string;
+	target_repo_ids?: string[];
+}
+
+export interface BulkCloneScheduleRequest {
+	schedule_id: string;
+	target_agent_ids: string[];
+	name_prefix?: string;
+}
+
+export interface BulkCloneResponse {
+	schedules: Schedule[];
+	errors?: string[];
 }
 
 // Dry run types
@@ -1066,7 +1095,8 @@ export interface CreateCloudRestoreRequest {
 
 export interface RestorePreviewRequest {
 	snapshot_id: string;
-	agent_id: string;
+	agent_id: string; // Target agent
+	source_agent_id?: string; // Source agent for cross-agent restores
 	repository_id: string;
 	include_paths?: string[];
 	exclude_paths?: string[];
