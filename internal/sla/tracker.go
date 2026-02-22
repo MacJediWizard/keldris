@@ -10,18 +10,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Store defines the interface for SLA persistence operations.
-type Store interface {
-	GetSLADefinitionByID(ctx context.Context, id uuid.UUID) (*models.SLADefinition, error)
-	ListActiveSLADefinitionsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.SLADefinition, error)
-	ListSLAAssignmentsBySLA(ctx context.Context, slaID uuid.UUID) ([]*models.SLAAssignment, error)
-	ListSLAAssignmentsByAgent(ctx context.Context, agentID uuid.UUID) ([]*models.SLAAssignment, error)
-	CreateSLACompliance(ctx context.Context, c *models.SLACompliance) error
-	CreateSLABreach(ctx context.Context, b *models.SLABreach) error
-	ListActiveSLABreachesByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.SLABreach, error)
-	UpdateSLABreach(ctx context.Context, b *models.SLABreach) error
-}
-
 // BackupStore defines the interface for backup data needed for compliance.
 type BackupStore interface {
 	GetLastBackupTimeByAgent(ctx context.Context, agentID uuid.UUID) (*time.Time, error)

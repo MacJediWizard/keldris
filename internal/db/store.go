@@ -11,6 +11,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// scanner is an interface for row scanning (pgx.Rows, etc.)
+type scanner interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}
+
 // Organization methods
 
 // GetOrCreateDefaultOrg returns the default organization, creating it if necessary.
@@ -2645,11 +2652,6 @@ func scanRestores(rows interface {
 	Scan(dest ...any) error
 	Err() error
 }) ([]*models.Restore, error) {
-	type scanner interface {
-		Next() bool
-		Scan(dest ...any) error
-		Err() error
-	}
 	r := rows.(scanner)
 
 	var restores []*models.Restore
@@ -3157,11 +3159,6 @@ func scanAuditLogs(rows interface {
 	Scan(dest ...any) error
 	Err() error
 }) ([]*models.AuditLog, error) {
-	type scanner interface {
-		Next() bool
-		Scan(dest ...any) error
-		Err() error
-	}
 	r := rows.(scanner)
 
 	var logs []*models.AuditLog
@@ -3368,11 +3365,6 @@ func scanStorageStats(rows interface {
 	Scan(dest ...any) error
 	Err() error
 }) ([]*models.StorageStats, error) {
-	type scanner interface {
-		Next() bool
-		Scan(dest ...any) error
-		Err() error
-	}
 	r := rows.(scanner)
 
 	var stats []*models.StorageStats
@@ -3504,11 +3496,6 @@ func scanVerificationSchedules(rows interface {
 	Scan(dest ...any) error
 	Err() error
 }) ([]*models.VerificationSchedule, error) {
-	type scanner interface {
-		Next() bool
-		Scan(dest ...any) error
-		Err() error
-	}
 	r := rows.(scanner)
 
 	var schedules []*models.VerificationSchedule
@@ -3705,11 +3692,6 @@ func scanVerifications(rows interface {
 	Scan(dest ...any) error
 	Err() error
 }) ([]*models.Verification, error) {
-	type scanner interface {
-		Next() bool
-		Scan(dest ...any) error
-		Err() error
-	}
 	r := rows.(scanner)
 
 	var verifications []*models.Verification
@@ -4173,11 +4155,6 @@ func scanMaintenanceWindows(rows interface {
 	Scan(dest ...any) error
 	Err() error
 }) ([]*models.MaintenanceWindow, error) {
-	type scanner interface {
-		Next() bool
-		Scan(dest ...any) error
-		Err() error
-	}
 	r := rows.(scanner)
 
 	var windows []*models.MaintenanceWindow
@@ -4506,11 +4483,6 @@ func scanDRTests(rows interface {
 	Scan(dest ...any) error
 	Err() error
 }) ([]*models.DRTest, error) {
-	type scanner interface {
-		Next() bool
-		Scan(dest ...any) error
-		Err() error
-	}
 	r := rows.(scanner)
 
 	var tests []*models.DRTest
@@ -10961,6 +10933,11 @@ func (db *DB) UpdateSLAPolicy(ctx context.Context, policy *models.SLAPolicy) err
 	`, policy.ID, policy.Name, policy.Description, policy.TargetRPOHours, policy.TargetRTOHours, policy.TargetSuccessRate, policy.Enabled, policy.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update SLA policy: %w", err)
+	}
+	return nil
+}
+
+
 // Lifecycle Policy methods
 
 // CreateLifecyclePolicy creates a new lifecycle policy.
@@ -11103,6 +11080,11 @@ func (db *DB) DeleteSLAPolicy(ctx context.Context, id uuid.UUID) error {
 	`, id)
 	if err != nil {
 		return fmt.Errorf("delete SLA policy: %w", err)
+	}
+	return nil
+}
+
+
 // DeleteLifecyclePolicy deletes a lifecycle policy by ID.
 func (db *DB) DeleteLifecyclePolicy(ctx context.Context, id uuid.UUID) error {
 	_, err := db.Pool.Exec(ctx, `DELETE FROM lifecycle_policies WHERE id = $1`, id)
@@ -11122,6 +11104,11 @@ func (db *DB) CreateSLAStatusSnapshot(ctx context.Context, snapshot *models.SLAS
 	`, snapshot.ID, snapshot.PolicyID, snapshot.RPOHours, snapshot.RTOHours, snapshot.SuccessRate, snapshot.Compliant, snapshot.CalculatedAt)
 	if err != nil {
 		return fmt.Errorf("create SLA status snapshot: %w", err)
+	}
+	return nil
+}
+
+
 // CreateLifecycleDeletionEvent creates a deletion event for audit logging.
 func (db *DB) CreateLifecycleDeletionEvent(ctx context.Context, event *models.LifecycleDeletionEvent) error {
 	_, err := db.Pool.Exec(ctx, `
@@ -11139,8 +11126,6 @@ func (db *DB) CreateLifecycleDeletionEvent(ctx context.Context, event *models.Li
 
 // GetSLAStatusHistory returns SLA status history for a policy, ordered by most recent first.
 func (db *DB) GetSLAStatusHistory(ctx context.Context, policyID uuid.UUID, limit int) ([]*models.SLAStatusSnapshot, error) {
-// GetLifecycleDeletionEventsByPolicyID returns deletion events for a policy.
-func (db *DB) GetLifecycleDeletionEventsByPolicyID(ctx context.Context, policyID uuid.UUID, limit int) ([]*models.LifecycleDeletionEvent, error) {
 	if limit <= 0 {
 		limit = 100
 	}
@@ -11165,6 +11150,26 @@ func (db *DB) GetLifecycleDeletionEventsByPolicyID(ctx context.Context, policyID
 		snapshots = append(snapshots, &s)
 	}
 	return snapshots, nil
+}
+
+// GetLifecycleDeletionEventsByPolicyID returns deletion events for a policy.
+func (db *DB) GetLifecycleDeletionEventsByPolicyID(ctx context.Context, policyID uuid.UUID, limit int) ([]*models.LifecycleDeletionEvent, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, policy_id, snapshot_id, repository_id, reason, size_bytes, deleted_by, deleted_at
+		FROM lifecycle_deletion_events
+		WHERE policy_id = $1
+		ORDER BY deleted_at DESC
+		LIMIT $2
+	`, policyID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list deletion events: %w", err)
+	}
+	defer rows.Close()
+
+	return scanLifecycleDeletionEvents(rows)
 }
 
 
@@ -11552,20 +11557,6 @@ func (db *DB) UserCount(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-		SELECT id, org_id, policy_id, snapshot_id, repository_id, reason, size_bytes, deleted_by, deleted_at
-		FROM lifecycle_deletion_events
-		WHERE policy_id = $1
-		ORDER BY deleted_at DESC
-		LIMIT $2
-	`, policyID, limit)
-	if err != nil {
-		return nil, fmt.Errorf("list deletion events: %w", err)
-	}
-	defer rows.Close()
-
-	return scanLifecycleDeletionEvents(rows)
-}
-
 // GetLifecycleDeletionEventsByOrgID returns deletion events for an organization.
 func (db *DB) GetLifecycleDeletionEventsByOrgID(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.LifecycleDeletionEvent, error) {
 	if limit <= 0 {
@@ -11641,29 +11632,6 @@ func scanLifecycleDeletionEvents(rows interface{ Next() bool; Scan(dest ...inter
 	}
 
 	return events, nil
-}
-
-// GetBackupsByOrgID returns all backups for an organization.
-// This is used by lifecycle policy evaluation to assess which snapshots can be deleted.
-func (db *DB) GetBackupsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Backup, error) {
-	rows, err := db.Pool.Query(ctx, `
-		SELECT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at, b.completed_at,
-		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
-		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
-		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
-		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
-		FROM backups b
-		JOIN schedules s ON b.schedule_id = s.id
-		JOIN agents a ON s.agent_id = a.id
-		WHERE a.org_id = $1
-		ORDER BY b.started_at DESC
-	`, orgID)
-	if err != nil {
-		return nil, fmt.Errorf("get backups by org: %w", err)
-	}
-	defer rows.Close()
-
-	return scanBackups(rows)
 }
 // ============================================================================
 // SLA Definitions

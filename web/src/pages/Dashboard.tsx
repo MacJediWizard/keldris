@@ -3,12 +3,13 @@ import { ActivityFeedWidget } from '../components/features/ActivityFeed';
 import { MiniBackupCalendar } from '../components/features/BackupCalendar';
 import { HelpTooltip } from '../components/ui/HelpTooltip';
 import { StarButton } from '../components/ui/StarButton';
-import { MiniBackupCalendar } from '../components/features/BackupCalendar';
 import { useAgents } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
 import { useFavorites } from '../hooks/useFavorites';
 import { useLocale } from '../hooks/useLocale';
 import { useDashboardStats } from '../hooks/useMetrics';
+import { useRepositories } from '../hooks/useRepositories';
+import { useSchedules } from '../hooks/useSchedules';
 import { useStorageStatsSummary } from '../hooks/useStorageStats';
 import { dashboardHelp } from '../lib/help-content';
 import type { Agent, Repository, Schedule } from '../lib/types';
@@ -87,7 +88,10 @@ function LoadingRow() {
 export function Dashboard() {
 	const { data: dashboardStats, isLoading: dashboardStatsLoading } =
 		useDashboardStats();
+	const { data: agents, isLoading: agentsLoading } = useAgents();
 	const { data: backups, isLoading: backupsLoading } = useBackups();
+	const { data: schedules, isLoading: schedulesLoading } = useSchedules();
+	const { data: repositories, isLoading: reposLoading } = useRepositories();
 	const { data: storageStats, isLoading: statsLoading } =
 		useStorageStatsSummary();
 	const { data: favorites, isLoading: favoritesLoading } = useFavorites();
@@ -100,38 +104,28 @@ export function Dashboard() {
 
 	// Calculate priority queue summary from schedules
 	const priorityQueueSummary = {
-		high: schedules?.filter((s) => s.enabled && s.priority === 1).length ?? 0,
-		medium: schedules?.filter((s) => s.enabled && s.priority === 2).length ?? 0,
-		low: schedules?.filter((s) => s.enabled && s.priority === 3).length ?? 0,
+		high: schedules?.filter((s: Schedule) => s.enabled && s.priority === 1).length ?? 0,
+		medium: schedules?.filter((s: Schedule) => s.enabled && s.priority === 2).length ?? 0,
+		low: schedules?.filter((s: Schedule) => s.enabled && s.priority === 3).length ?? 0,
 		preemptible:
-			schedules?.filter((s) => s.enabled && s.preemptible).length ?? 0,
+			schedules?.filter((s: Schedule) => s.enabled && s.preemptible).length ?? 0,
 	};
 
-	// Calculate priority queue summary from schedules
-	const priorityQueueSummary = {
-		high: schedules?.filter((s) => s.enabled && s.priority === 1).length ?? 0,
-		medium: schedules?.filter((s) => s.enabled && s.priority === 2).length ?? 0,
-		low: schedules?.filter((s) => s.enabled && s.priority === 3).length ?? 0,
-		preemptible:
-			schedules?.filter((s) => s.enabled && s.preemptible).length ?? 0,
-	};
-
-	const isLoading = dashboardStatsLoading || backupsLoading;
 	// Get favorite items with details
 	const favoriteAgents =
 		favorites
 			?.filter((f) => f.entity_type === 'agent')
-			.map((f) => agents?.find((a) => a.id === f.entity_id))
+			.map((f) => agents?.find((a: Agent) => a.id === f.entity_id))
 			.filter((a): a is Agent => a !== undefined) ?? [];
 	const favoriteSchedules =
 		favorites
 			?.filter((f) => f.entity_type === 'schedule')
-			.map((f) => schedules?.find((s) => s.id === f.entity_id))
+			.map((f) => schedules?.find((s: Schedule) => s.id === f.entity_id))
 			.filter((s): s is Schedule => s !== undefined) ?? [];
 	const favoriteRepos =
 		favorites
 			?.filter((f) => f.entity_type === 'repository')
-			.map((f) => repositories?.find((r) => r.id === f.entity_id))
+			.map((f) => repositories?.find((r: Repository) => r.id === f.entity_id))
 			.filter((r): r is Repository => r !== undefined) ?? [];
 	const hasFavorites =
 		favoriteAgents.length > 0 ||
@@ -139,7 +133,7 @@ export function Dashboard() {
 		favoriteRepos.length > 0;
 
 	const isLoading =
-		agentsLoading || reposLoading || schedulesLoading || backupsLoading;
+		dashboardStatsLoading || agentsLoading || reposLoading || schedulesLoading || backupsLoading;
 
 	return (
 		<div className="space-y-6">
@@ -156,7 +150,6 @@ export function Dashboard() {
 					value={String(activeAgents)}
 					subtitle={t('dashboard.connectedAgents')}
 					isLoading={dashboardStatsLoading}
-					isLoading={agentsLoading}
 					helpContent={dashboardHelp.activeAgents.content}
 					helpTitle={dashboardHelp.activeAgents.title}
 					docsUrl={dashboardHelp.activeAgents.docsUrl}
@@ -182,7 +175,6 @@ export function Dashboard() {
 					value={String(dashboardStats?.repository_count ?? 0)}
 					subtitle={t('dashboard.backupDestinations')}
 					isLoading={dashboardStatsLoading}
-					isLoading={reposLoading}
 					helpContent={dashboardHelp.repositories.content}
 					helpTitle={dashboardHelp.repositories.title}
 					docsUrl={dashboardHelp.repositories.docsUrl}
@@ -208,7 +200,6 @@ export function Dashboard() {
 					value={String(enabledSchedules)}
 					subtitle={t('dashboard.activeSchedules')}
 					isLoading={dashboardStatsLoading}
-					isLoading={schedulesLoading}
 					helpContent={dashboardHelp.scheduledJobs.content}
 					helpTitle={dashboardHelp.scheduledJobs.title}
 					icon={
@@ -233,7 +224,6 @@ export function Dashboard() {
 					value={String(dashboardStats?.backup_total ?? 0)}
 					subtitle={t('dashboard.allTime')}
 					isLoading={dashboardStatsLoading}
-					isLoading={backupsLoading}
 					helpContent={dashboardHelp.totalBackups.content}
 					helpTitle={dashboardHelp.totalBackups.title}
 					icon={

@@ -38,9 +38,7 @@ type NotificationsHandler struct {
 	keyManager *crypto.KeyManager
 	logger     zerolog.Logger
 	env        config.Environment
-	store   NotificationStore
 	service NotificationService
-	logger  zerolog.Logger
 }
 
 // NewNotificationsHandler creates a new NotificationsHandler.
@@ -610,6 +608,8 @@ func (h *NotificationsHandler) validateWebhookConfig(rawConfig json.RawMessage) 
 
 	requireHTTPS := h.env == config.EnvProduction || h.env == config.EnvStaging
 	return notifications.ValidateWebhookURL(webhookConfig.URL, requireHTTPS)
+}
+
 // TestChannel sends a test notification to verify the channel configuration.
 // POST /api/v1/notifications/channels/:id/test
 func (h *NotificationsHandler) TestChannel(c *gin.Context) {
@@ -770,7 +770,6 @@ func (h *NotificationsHandler) ListChannelTypes(c *gin.Context) {
 func isValidChannelType(t models.NotificationChannelType) bool {
 	switch t {
 	case models.ChannelTypeEmail, models.ChannelTypeSlack, models.ChannelTypeWebhook, models.ChannelTypePagerDuty, models.ChannelTypeTeams, models.ChannelTypeDiscord:
-	case models.ChannelTypeEmail, models.ChannelTypeSlack, models.ChannelTypeTeams, models.ChannelTypeDiscord, models.ChannelTypeWebhook, models.ChannelTypePagerDuty:
 		return true
 	default:
 		return false

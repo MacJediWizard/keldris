@@ -26,6 +26,15 @@ type SLAStore interface {
 	GetBackupSuccessRateForOrg(ctx context.Context, orgID uuid.UUID, hours int) (float64, error)
 	GetMaxRPOHoursForOrg(ctx context.Context, orgID uuid.UUID) (float64, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
+	// Tracker methods
+	GetSLADefinitionByID(ctx context.Context, id uuid.UUID) (*models.SLADefinition, error)
+	ListActiveSLADefinitionsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.SLADefinition, error)
+	ListSLAAssignmentsBySLA(ctx context.Context, slaID uuid.UUID) ([]*models.SLAAssignment, error)
+	ListSLAAssignmentsByAgent(ctx context.Context, agentID uuid.UUID) ([]*models.SLAAssignment, error)
+	CreateSLACompliance(ctx context.Context, c *models.SLACompliance) error
+	CreateSLABreach(ctx context.Context, b *models.SLABreach) error
+	ListActiveSLABreachesByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.SLABreach, error)
+	UpdateSLABreach(ctx context.Context, b *models.SLABreach) error
 }
 
 // SLAHandler handles SLA policy HTTP endpoints.

@@ -16,8 +16,6 @@ const (
 	ChannelTypeDiscord   NotificationChannelType = "discord"
 	ChannelTypeWebhook   NotificationChannelType = "webhook"
 	ChannelTypePagerDuty NotificationChannelType = "pagerduty"
-	ChannelTypeTeams     NotificationChannelType = "teams"
-	ChannelTypeDiscord   NotificationChannelType = "discord"
 )
 
 // NotificationEventType represents the type of notification event
@@ -172,31 +170,6 @@ type DiscordChannelConfig struct {
 	Username   string `json:"username,omitempty"`
 	AvatarURL  string `json:"avatar_url,omitempty"`
 }
-
-// PagerDutyChannelConfig represents PagerDuty integration configuration
-type PagerDutyChannelConfig struct {
-	RoutingKey   string `json:"routing_key"`
-	ServiceKey   string `json:"service_key,omitempty"`
-	Severity     string `json:"severity,omitempty"`
-	Component    string `json:"component,omitempty"`
-	Group        string `json:"group,omitempty"`
-	Class        string `json:"class,omitempty"`
-	CustomFields map[string]string `json:"custom_fields,omitempty"`
-}
-
-// WebhookChannelConfig represents generic webhook configuration
-type WebhookChannelConfig struct {
-	URL         string            `json:"url"`
-	Method      string            `json:"method,omitempty"`
-	Headers     map[string]string `json:"headers,omitempty"`
-	AuthType    string            `json:"auth_type,omitempty"`
-	AuthToken   string            `json:"auth_token,omitempty"`
-	BasicUser   string            `json:"basic_user,omitempty"`
-	BasicPass   string            `json:"basic_pass,omitempty"`
-	ContentType string            `json:"content_type,omitempty"`
-	Template    string            `json:"template,omitempty"`
-}
-
 // CreateNotificationChannelRequest represents a request to create a notification channel
 type CreateNotificationChannelRequest struct {
 	Name   string                  `json:"name" binding:"required"`

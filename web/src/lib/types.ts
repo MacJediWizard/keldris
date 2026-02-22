@@ -3416,7 +3416,6 @@ export interface BackupQueueItem {
 }
 
 export interface PriorityQueueSummary {
-export interface BackupQueueSummary {
 	total_pending: number;
 	total_running: number;
 	high_priority: number;
@@ -3425,9 +3424,6 @@ export interface BackupQueueSummary {
 }
 
 export interface PriorityQueueResponse {
-	queue: BackupQueueItem[];
-	summary: PriorityQueueSummary;
-export interface BackupQueueResponse {
 	queue: BackupQueueItem[];
 	summary: PriorityQueueSummary;
 }
