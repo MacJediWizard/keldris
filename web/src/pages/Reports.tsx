@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { UpgradePrompt } from '../components/features/UpgradePrompt';
 import { useNotificationChannels } from '../hooks/useNotifications';
 import { usePlanLimits } from '../hooks/usePlanLimits';
+import { useNotificationChannels } from '../hooks/useNotifications';
 import {
 	useCreateReportSchedule,
 	useDeleteReportSchedule,

@@ -15249,3 +15249,340 @@ func (db *DB) UpdateNotificationLog(ctx context.Context, log *models.Notificatio
 	}
 	return nil
 }
+
+// =============================================================================
+// Report Schedules
+// =============================================================================
+
+// GetEnabledReportSchedules returns all enabled report schedules.
+func (db *DB) GetEnabledReportSchedules(ctx context.Context) ([]*models.ReportSchedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, frequency, recipients, channel_id, timezone,
+		       enabled, last_sent_at, created_at, updated_at
+		FROM report_schedules
+		WHERE enabled = true
+		ORDER BY name
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("get enabled report schedules: %w", err)
+	}
+	defer rows.Close()
+	return scanReportSchedules(rows)
+}
+
+// GetReportSchedulesByOrgID returns all report schedules for an organization.
+func (db *DB) GetReportSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.ReportSchedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, name, frequency, recipients, channel_id, timezone,
+		       enabled, last_sent_at, created_at, updated_at
+		FROM report_schedules
+		WHERE org_id = $1
+		ORDER BY name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get report schedules: %w", err)
+	}
+	defer rows.Close()
+	return scanReportSchedules(rows)
+}
+
+// GetReportScheduleByID returns a report schedule by ID.
+func (db *DB) GetReportScheduleByID(ctx context.Context, id uuid.UUID) (*models.ReportSchedule, error) {
+	var s models.ReportSchedule
+	var frequencyStr string
+	var recipientsBytes []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, name, frequency, recipients, channel_id, timezone,
+		       enabled, last_sent_at, created_at, updated_at
+		FROM report_schedules
+		WHERE id = $1
+	`, id).Scan(
+		&s.ID, &s.OrgID, &s.Name, &frequencyStr, &recipientsBytes, &s.ChannelID,
+		&s.Timezone, &s.Enabled, &s.LastSentAt, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get report schedule: %w", err)
+	}
+	s.Frequency = models.ReportFrequency(frequencyStr)
+	if err := parseStringSlice(recipientsBytes, &s.Recipients); err != nil {
+		db.logger.Warn().Err(err).Str("schedule_id", s.ID.String()).Msg("failed to parse recipients")
+	}
+	return &s, nil
+}
+
+// CreateReportSchedule creates a new report schedule.
+func (db *DB) CreateReportSchedule(ctx context.Context, schedule *models.ReportSchedule) error {
+	recipientsBytes, err := toJSONBytes(schedule.Recipients)
+	if err != nil {
+		return fmt.Errorf("marshal recipients: %w", err)
+	}
+	if recipientsBytes == nil {
+		recipientsBytes = []byte("[]")
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO report_schedules (id, org_id, name, frequency, recipients, channel_id,
+		                               timezone, enabled, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`, schedule.ID, schedule.OrgID, schedule.Name, string(schedule.Frequency),
+		recipientsBytes, schedule.ChannelID, schedule.Timezone, schedule.Enabled,
+		schedule.CreatedAt, schedule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("create report schedule: %w", err)
+	}
+	return nil
+}
+
+// UpdateReportSchedule updates an existing report schedule.
+func (db *DB) UpdateReportSchedule(ctx context.Context, schedule *models.ReportSchedule) error {
+	recipientsBytes, err := toJSONBytes(schedule.Recipients)
+	if err != nil {
+		return fmt.Errorf("marshal recipients: %w", err)
+	}
+	if recipientsBytes == nil {
+		recipientsBytes = []byte("[]")
+	}
+
+	schedule.UpdatedAt = time.Now()
+	_, err = db.Pool.Exec(ctx, `
+		UPDATE report_schedules
+		SET name = $2, frequency = $3, recipients = $4, channel_id = $5,
+		    timezone = $6, enabled = $7, updated_at = $8
+		WHERE id = $1
+	`, schedule.ID, schedule.Name, string(schedule.Frequency), recipientsBytes,
+		schedule.ChannelID, schedule.Timezone, schedule.Enabled, schedule.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update report schedule: %w", err)
+	}
+	return nil
+}
+
+// UpdateReportScheduleLastSent updates the last_sent_at timestamp.
+func (db *DB) UpdateReportScheduleLastSent(ctx context.Context, id uuid.UUID, lastSentAt time.Time) error {
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE report_schedules
+		SET last_sent_at = $2, updated_at = $3
+		WHERE id = $1
+	`, id, lastSentAt, time.Now())
+	if err != nil {
+		return fmt.Errorf("update report schedule last sent: %w", err)
+	}
+	return nil
+}
+
+// DeleteReportSchedule deletes a report schedule by ID.
+func (db *DB) DeleteReportSchedule(ctx context.Context, id uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM report_schedules WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete report schedule: %w", err)
+	}
+	return nil
+}
+
+// scanReportSchedules scans multiple report schedule rows.
+func scanReportSchedules(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+	Close()
+}) ([]*models.ReportSchedule, error) {
+	var schedules []*models.ReportSchedule
+	for rows.Next() {
+		var s models.ReportSchedule
+		var frequencyStr string
+		var recipientsBytes []byte
+		err := rows.Scan(
+			&s.ID, &s.OrgID, &s.Name, &frequencyStr, &recipientsBytes, &s.ChannelID,
+			&s.Timezone, &s.Enabled, &s.LastSentAt, &s.CreatedAt, &s.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan report schedule: %w", err)
+		}
+		s.Frequency = models.ReportFrequency(frequencyStr)
+		_ = json.Unmarshal(recipientsBytes, &s.Recipients)
+		schedules = append(schedules, &s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate report schedules: %w", err)
+	}
+	return schedules, nil
+}
+
+// =============================================================================
+// Report History
+// =============================================================================
+
+// CreateReportHistory creates a new report history entry.
+func (db *DB) CreateReportHistory(ctx context.Context, history *models.ReportHistory) error {
+	recipientsBytes, err := toJSONBytes(history.Recipients)
+	if err != nil {
+		return fmt.Errorf("marshal recipients: %w", err)
+	}
+	if recipientsBytes == nil {
+		recipientsBytes = []byte("[]")
+	}
+
+	var reportDataBytes []byte
+	if history.ReportData != nil {
+		reportDataBytes, err = json.Marshal(history.ReportData)
+		if err != nil {
+			return fmt.Errorf("marshal report data: %w", err)
+		}
+	}
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO report_history (id, org_id, schedule_id, report_type, period_start,
+		                            period_end, recipients, status, error_message,
+		                            report_data, sent_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, history.ID, history.OrgID, history.ScheduleID, history.ReportType,
+		history.PeriodStart, history.PeriodEnd, recipientsBytes, string(history.Status),
+		history.ErrorMessage, reportDataBytes, history.SentAt, history.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create report history: %w", err)
+	}
+	return nil
+}
+
+// GetReportHistoryByOrgID returns report history for an organization.
+func (db *DB) GetReportHistoryByOrgID(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.ReportHistory, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, schedule_id, report_type, period_start, period_end,
+		       recipients, status, error_message, report_data, sent_at, created_at
+		FROM report_history
+		WHERE org_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+	`, orgID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get report history: %w", err)
+	}
+	defer rows.Close()
+	return scanReportHistory(rows)
+}
+
+// GetReportHistoryByID returns a report history entry by ID.
+func (db *DB) GetReportHistoryByID(ctx context.Context, id uuid.UUID) (*models.ReportHistory, error) {
+	var h models.ReportHistory
+	var statusStr string
+	var recipientsBytes, reportDataBytes []byte
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, org_id, schedule_id, report_type, period_start, period_end,
+		       recipients, status, error_message, report_data, sent_at, created_at
+		FROM report_history
+		WHERE id = $1
+	`, id).Scan(
+		&h.ID, &h.OrgID, &h.ScheduleID, &h.ReportType, &h.PeriodStart, &h.PeriodEnd,
+		&recipientsBytes, &statusStr, &h.ErrorMessage, &reportDataBytes, &h.SentAt, &h.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get report history: %w", err)
+	}
+	h.Status = models.ReportStatus(statusStr)
+	_ = json.Unmarshal(recipientsBytes, &h.Recipients)
+	if len(reportDataBytes) > 0 {
+		h.ReportData = &models.ReportData{}
+		_ = json.Unmarshal(reportDataBytes, h.ReportData)
+	}
+	return &h, nil
+}
+
+// scanReportHistory scans multiple report history rows.
+func scanReportHistory(rows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}) ([]*models.ReportHistory, error) {
+	var history []*models.ReportHistory
+	for rows.Next() {
+		var h models.ReportHistory
+		var statusStr string
+		var recipientsBytes, reportDataBytes []byte
+		err := rows.Scan(
+			&h.ID, &h.OrgID, &h.ScheduleID, &h.ReportType, &h.PeriodStart, &h.PeriodEnd,
+			&recipientsBytes, &statusStr, &h.ErrorMessage, &reportDataBytes, &h.SentAt, &h.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan report history: %w", err)
+		}
+		h.Status = models.ReportStatus(statusStr)
+		_ = json.Unmarshal(recipientsBytes, &h.Recipients)
+		if len(reportDataBytes) > 0 {
+			h.ReportData = &models.ReportData{}
+			_ = json.Unmarshal(reportDataBytes, h.ReportData)
+		}
+		history = append(history, &h)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate report history: %w", err)
+	}
+	return history, nil
+}
+
+// =============================================================================
+// Report Data Queries
+// =============================================================================
+
+// GetBackupsByOrgIDAndDateRange returns backups for an org within a date range.
+func (db *DB) GetBackupsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT b.id, b.schedule_id, b.agent_id, b.snapshot_id, b.started_at,
+		       b.completed_at, b.status, b.size_bytes, b.files_new,
+		       b.files_changed, b.error_message,
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error, b.created_at
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND b.started_at >= $2 AND b.started_at <= $3
+		ORDER BY b.started_at DESC
+	`, orgID, start, end)
+	if err != nil {
+		return nil, fmt.Errorf("get backups by date range: %w", err)
+	}
+	defer rows.Close()
+	return scanBackups(rows)
+}
+
+// GetAlertsByOrgIDAndDateRange returns alerts for an org within a date range.
+func (db *DB) GetAlertsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]*models.Alert, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT id, org_id, rule_id, type, severity, status, title, message,
+		       resource_type, resource_id, acknowledged_by, acknowledged_at,
+		       resolved_at, metadata, created_at, updated_at
+		FROM alerts
+		WHERE org_id = $1 AND created_at >= $2 AND created_at <= $3
+		ORDER BY created_at DESC
+	`, orgID, start, end)
+	if err != nil {
+		return nil, fmt.Errorf("get alerts by date range: %w", err)
+	}
+	defer rows.Close()
+	return db.scanAlerts(rows)
+}
+
+// GetEnabledSchedulesByOrgID returns all enabled backup schedules for an org.
+func (db *DB) GetEnabledSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Schedule, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT s.id, s.agent_id, s.repository_id, s.name, s.cron_expression,
+		       s.paths, s.excludes, s.retention_policy, s.enabled,
+		       s.created_at, s.updated_at
+		FROM schedules s
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND s.enabled = true
+		ORDER BY s.name
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("get enabled schedules by org: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []*models.Schedule
+	for rows.Next() {
+		s, err := scanSchedule(rows)
+		if err != nil {
+			return nil, err
+		}
+		schedules = append(schedules, s)
+	}
+	return schedules, nil
+}

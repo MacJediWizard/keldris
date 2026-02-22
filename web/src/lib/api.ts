@@ -545,6 +545,7 @@ import type {
 	UpdatePolicyRequest,
 	UpdateReportScheduleRequest,
 	UpdateRepositoryImmutabilitySettingsRequest,
+	UpdateReportScheduleRequest,
 	UpdateRepositoryRequest,
 	UpdateSLAPolicyRequest,
 	UpdateSLADefinitionRequest,
