@@ -529,6 +529,7 @@ import type {
 	SnapshotCompareResponse,
 	SnapshotFilesResponse,
 	SnapshotsResponse,
+	StorageDefaultSettings,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
 	StorageGrowthTrend,
