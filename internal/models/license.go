@@ -320,9 +320,9 @@ type LicenseValidationResult struct {
 	Tier          LicenseTier   `json:"tier"`
 	Limits        LicenseLimits `json:"limits"`
 	Features      LicenseFeatures `json:"features"`
-	ExpiresAt     time.Time     `json:"expires_at"`
-	DaysRemaining int           `json:"days_remaining"`
-	Message       string        `json:"message,omitempty"`
+	ExpiresAt     time.Time       `json:"expires_at"`
+	DaysRemaining int             `json:"days_remaining"`
+	Message       string          `json:"message,omitempty"`
 }
 
 // CreateLicenseRequest is the request body for creating a license.
@@ -501,4 +501,156 @@ func (l *PortalLicense) ToDownloadResponse() PortalLicenseDownloadResponse {
 	License *License              `json:"license"`
 	Status  LicenseStatus         `json:"status"`
 	Result  *LicenseValidationResult `json:"validation,omitempty"`
+}
+
+// =====================================================================
+// Portal License Types - for customer license management portal
+// =====================================================================
+
+// PortalLicenseType defines the type of license for portal customers.
+type PortalLicenseType string
+
+const (
+	// PortalLicenseTypeTrial is a trial license with limited duration.
+	PortalLicenseTypeTrial PortalLicenseType = "trial"
+	// PortalLicenseTypeStandard is a standard paid license.
+	PortalLicenseTypeStandard PortalLicenseType = "standard"
+	// PortalLicenseTypeProfessional is a professional license with more features.
+	PortalLicenseTypeProfessional PortalLicenseType = "professional"
+	// PortalLicenseTypeEnterprise is an enterprise license with all features.
+	PortalLicenseTypeEnterprise PortalLicenseType = "enterprise"
+)
+
+// PortalLicense represents a product license purchased by a portal customer.
+type PortalLicense struct {
+	ID           uuid.UUID         `json:"id"`
+	CustomerID   uuid.UUID         `json:"customer_id"`
+	LicenseKey   string            `json:"license_key"`
+	LicenseType  PortalLicenseType `json:"license_type"`
+	ProductName  string            `json:"product_name"`
+	Status       LicenseStatus     `json:"status"`
+	MaxAgents    *int              `json:"max_agents,omitempty"`
+	MaxRepos     *int              `json:"max_repos,omitempty"`
+	MaxStorage   *int64            `json:"max_storage_gb,omitempty"`
+	Features     []string          `json:"features,omitempty"`
+	IssuedAt     time.Time         `json:"issued_at"`
+	ExpiresAt    *time.Time        `json:"expires_at,omitempty"`
+	ActivatedAt  *time.Time        `json:"activated_at,omitempty"`
+	LastVerified *time.Time        `json:"last_verified,omitempty"`
+	Notes        string            `json:"notes,omitempty"`
+	CreatedAt    time.Time         `json:"created_at"`
+	UpdatedAt    time.Time         `json:"updated_at"`
+}
+
+// NewPortalLicense creates a new PortalLicense with the given details.
+func NewPortalLicense(customerID uuid.UUID, licenseType PortalLicenseType, productName string) *PortalLicense {
+	now := time.Now()
+	licenseKey, _ := GeneratePortalLicenseKey()
+	return &PortalLicense{
+		ID:          uuid.New(),
+		CustomerID:  customerID,
+		LicenseKey:  licenseKey,
+		LicenseType: licenseType,
+		ProductName: productName,
+		Status:      LicenseStatusActive,
+		IssuedAt:    now,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+}
+
+// GeneratePortalLicenseKey generates a unique license key in format XXXX-XXXX-XXXX-XXXX.
+func GeneratePortalLicenseKey() (string, error) {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	hexStr := hex.EncodeToString(bytes)
+	key := hexStr[0:4] + "-" + hexStr[4:8] + "-" + hexStr[8:12] + "-" + hexStr[12:16]
+	return key, nil
+}
+
+// IsValid returns true if the portal license is currently valid.
+func (l *PortalLicense) IsValid() bool {
+	if l.Status != LicenseStatusActive {
+		return false
+	}
+	if l.ExpiresAt != nil && time.Now().After(*l.ExpiresAt) {
+		return false
+	}
+	return true
+}
+
+// DaysRemaining returns the number of days remaining until expiration.
+// Returns -1 for perpetual licenses.
+func (l *PortalLicense) DaysRemaining() int {
+	if l.ExpiresAt == nil {
+		return -1
+	}
+	duration := time.Until(*l.ExpiresAt)
+	if duration < 0 {
+		return 0
+	}
+	return int(duration.Hours() / 24)
+}
+
+// PortalLicenseWithCustomer includes customer details for display.
+type PortalLicenseWithCustomer struct {
+	PortalLicense
+	CustomerEmail string `json:"customer_email"`
+	CustomerName  string `json:"customer_name"`
+}
+
+// CreatePortalLicenseRequest is the request body for creating a portal license (admin).
+type CreatePortalLicenseRequest struct {
+	CustomerID  uuid.UUID         `json:"customer_id" binding:"required"`
+	LicenseType PortalLicenseType `json:"license_type" binding:"required,oneof=trial standard professional enterprise"`
+	ProductName string            `json:"product_name" binding:"required,min=1,max=255"`
+	MaxAgents   *int              `json:"max_agents,omitempty"`
+	MaxRepos    *int              `json:"max_repos,omitempty"`
+	MaxStorage  *int64            `json:"max_storage_gb,omitempty"`
+	Features    []string          `json:"features,omitempty"`
+	ExpiresAt   *time.Time        `json:"expires_at,omitempty"`
+	Notes       string            `json:"notes,omitempty"`
+}
+
+// UpdatePortalLicenseRequest is the request body for updating a portal license (admin).
+type UpdatePortalLicenseRequest struct {
+	Status     *LicenseStatus `json:"status,omitempty"`
+	MaxAgents  *int           `json:"max_agents,omitempty"`
+	MaxRepos   *int           `json:"max_repos,omitempty"`
+	MaxStorage *int64         `json:"max_storage_gb,omitempty"`
+	Features   []string       `json:"features,omitempty"`
+	ExpiresAt  *time.Time     `json:"expires_at,omitempty"`
+	Notes      *string        `json:"notes,omitempty"`
+}
+
+// PortalLicenseDownloadResponse contains the license key for download.
+type PortalLicenseDownloadResponse struct {
+	LicenseKey  string            `json:"license_key"`
+	LicenseType PortalLicenseType `json:"license_type"`
+	ProductName string            `json:"product_name"`
+	CustomerID  uuid.UUID         `json:"customer_id"`
+	IssuedAt    time.Time         `json:"issued_at"`
+	ExpiresAt   *time.Time        `json:"expires_at,omitempty"`
+	MaxAgents   *int              `json:"max_agents,omitempty"`
+	MaxRepos    *int              `json:"max_repos,omitempty"`
+	MaxStorage  *int64            `json:"max_storage_gb,omitempty"`
+	Features    []string          `json:"features,omitempty"`
+}
+
+// ToDownloadResponse converts a PortalLicense to PortalLicenseDownloadResponse.
+func (l *PortalLicense) ToDownloadResponse() PortalLicenseDownloadResponse {
+	return PortalLicenseDownloadResponse{
+		LicenseKey:  l.LicenseKey,
+		LicenseType: l.LicenseType,
+		ProductName: l.ProductName,
+		CustomerID:  l.CustomerID,
+		IssuedAt:    l.IssuedAt,
+		ExpiresAt:   l.ExpiresAt,
+		MaxAgents:   l.MaxAgents,
+		MaxRepos:    l.MaxRepos,
+		MaxStorage:  l.MaxStorage,
+		Features:    l.Features,
+	}
 }
