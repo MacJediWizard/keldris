@@ -432,6 +432,9 @@ func NewRouter(
 	searchHandler := handlers.NewSearchHandler(database, logger)
 	searchHandler.RegisterRoutes(apiV1)
 
+	dashboardMetricsHandler := handlers.NewDashboardMetricsHandler(database, logger)
+	dashboardMetricsHandler.RegisterRoutes(apiV1)
+
 	// Register verification handler if trigger is available
 	if cfg.VerificationTrigger != nil {
 		verificationsHandler := handlers.NewVerificationsHandler(database, cfg.VerificationTrigger, logger)

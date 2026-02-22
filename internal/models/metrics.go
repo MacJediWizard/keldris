@@ -59,6 +59,12 @@ type MetricsDailySummary struct {
 	TotalSizeBytes    int64 `json:"total_size_bytes"`
 	TotalDurationSecs int64 `json:"total_duration_secs"`
 	AgentsActive      int   `json:"agents_active"`
+	BackupsTotal       int   `json:"backups_total"`
+	BackupsSuccessful  int   `json:"backups_successful"`
+	BackupsFailed      int   `json:"backups_failed"`
+	TotalBackupSize    int64 `json:"total_backup_size"`
+	AvgBackupDuration  int64 `json:"avg_backup_duration_ms"`
+	StorageDelta       int64 `json:"storage_delta"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

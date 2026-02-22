@@ -16594,3 +16594,306 @@ func (db *DB) DeleteDailySummariesBefore(ctx context.Context, orgID uuid.UUID, b
 	}
 	return nil
 }
+
+// Metrics methods
+
+// GetBackupsByOrgIDSince returns backups for an organization since a given time.
+func (db *DB) GetBackupsByOrgIDSince(ctx context.Context, orgID uuid.UUID, since time.Time) ([]*models.Backup, error) {
+	rows, err := db.Pool.Query(ctx, `
+		SELECT b.id, b.schedule_id, b.agent_id, b.snapshot_id, b.started_at, b.completed_at,
+		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error, b.created_at
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND b.started_at >= $2
+		ORDER BY b.started_at DESC
+	`, orgID, since)
+	if err != nil {
+		return nil, fmt.Errorf("get backups since: %w", err)
+	}
+	defer rows.Close()
+
+	return scanBackups(rows)
+}
+
+// GetBackupCountsByOrgID returns backup counts for an organization.
+func (db *DB) GetBackupCountsByOrgID(ctx context.Context, orgID uuid.UUID) (total, running, failed24h int, err error) {
+	// Total backups
+	err = db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1
+	`, orgID).Scan(&total)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("get total backups: %w", err)
+	}
+
+	// Running backups
+	err = db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND b.status = 'running'
+	`, orgID).Scan(&running)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("get running backups: %w", err)
+	}
+
+	// Failed in last 24 hours
+	since24h := time.Now().Add(-24 * time.Hour)
+	err = db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND b.status = 'failed' AND b.started_at >= $2
+	`, orgID, since24h).Scan(&failed24h)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("get failed backups: %w", err)
+	}
+
+	return total, running, failed24h, nil
+}
+
+// CreateMetricsHistory creates a new metrics history record.
+func (db *DB) CreateMetricsHistory(ctx context.Context, metrics *models.MetricsHistory) error {
+	_, err := db.Pool.Exec(ctx, `
+		INSERT INTO metrics_history (
+			id, org_id, backup_count, backup_success_count, backup_failed_count,
+			backup_total_size, backup_total_duration_ms, agent_total_count,
+			agent_online_count, agent_offline_count, storage_used_bytes,
+			storage_raw_bytes, storage_space_saved, repository_count,
+			total_snapshots, collected_at, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+	`, metrics.ID, metrics.OrgID, metrics.BackupCount, metrics.BackupSuccessCount,
+		metrics.BackupFailedCount, metrics.BackupTotalSize, metrics.BackupTotalDuration,
+		metrics.AgentTotalCount, metrics.AgentOnlineCount, metrics.AgentOfflineCount,
+		metrics.StorageUsedBytes, metrics.StorageRawBytes, metrics.StorageSpaceSaved,
+		metrics.RepositoryCount, metrics.TotalSnapshots, metrics.CollectedAt, metrics.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create metrics history: %w", err)
+	}
+	return nil
+}
+
+// GetDashboardStats returns aggregated dashboard statistics for an organization.
+func (db *DB) GetDashboardStats(ctx context.Context, orgID uuid.UUID) (*models.DashboardStats, error) {
+	stats := &models.DashboardStats{}
+
+	// Get agent counts
+	err := db.Pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*) AS total,
+			COUNT(*) FILTER (WHERE status = 'active') AS online,
+			COUNT(*) FILTER (WHERE status = 'offline') AS offline
+		FROM agents
+		WHERE org_id = $1
+	`, orgID).Scan(&stats.AgentTotal, &stats.AgentOnline, &stats.AgentOffline)
+	if err != nil {
+		return nil, fmt.Errorf("get agent counts: %w", err)
+	}
+
+	// Get backup counts
+	since24h := time.Now().Add(-24 * time.Hour)
+	err = db.Pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*) AS total,
+			COUNT(*) FILTER (WHERE b.status = 'running') AS running,
+			COUNT(*) FILTER (WHERE b.status = 'failed' AND b.started_at >= $2) AS failed_24h
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1
+	`, orgID, since24h).Scan(&stats.BackupTotal, &stats.BackupRunning, &stats.BackupFailed24h)
+	if err != nil {
+		return nil, fmt.Errorf("get backup counts: %w", err)
+	}
+
+	// Get repository count
+	err = db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM repositories WHERE org_id = $1
+	`, orgID).Scan(&stats.RepositoryCount)
+	if err != nil {
+		return nil, fmt.Errorf("get repository count: %w", err)
+	}
+
+	// Get schedule counts
+	err = db.Pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*) AS total,
+			COUNT(*) FILTER (WHERE enabled = true) AS enabled
+		FROM schedules s
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1
+	`, orgID).Scan(&stats.ScheduleCount, &stats.ScheduleEnabled)
+	if err != nil {
+		return nil, fmt.Errorf("get schedule counts: %w", err)
+	}
+
+	// Get storage stats summary
+	summary, err := db.GetStorageStatsSummary(ctx, orgID)
+	if err == nil && summary != nil {
+		stats.TotalRawSize = summary.TotalRawSize
+		stats.TotalBackupSize = summary.TotalRestoreSize
+		stats.TotalSpaceSaved = summary.TotalSpaceSaved
+		stats.AvgDedupRatio = summary.AvgDedupRatio
+	}
+
+	return stats, nil
+}
+
+// GetBackupSuccessRates returns backup success rates for 7-day and 30-day periods.
+func (db *DB) GetBackupSuccessRates(ctx context.Context, orgID uuid.UUID) (*models.BackupSuccessRate, *models.BackupSuccessRate, error) {
+	rate7d := &models.BackupSuccessRate{Period: "7d"}
+	rate30d := &models.BackupSuccessRate{Period: "30d"}
+
+	// 7-day success rate
+	since7d := time.Now().Add(-7 * 24 * time.Hour)
+	err := db.Pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*) AS total,
+			COUNT(*) FILTER (WHERE b.status = 'completed') AS successful,
+			COUNT(*) FILTER (WHERE b.status = 'failed') AS failed
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND b.started_at >= $2
+	`, orgID, since7d).Scan(&rate7d.Total, &rate7d.Successful, &rate7d.Failed)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get 7d success rate: %w", err)
+	}
+	if rate7d.Total > 0 {
+		rate7d.SuccessPercent = float64(rate7d.Successful) / float64(rate7d.Total) * 100
+	}
+
+	// 30-day success rate
+	since30d := time.Now().Add(-30 * 24 * time.Hour)
+	err = db.Pool.QueryRow(ctx, `
+		SELECT
+			COUNT(*) AS total,
+			COUNT(*) FILTER (WHERE b.status = 'completed') AS successful,
+			COUNT(*) FILTER (WHERE b.status = 'failed') AS failed
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND b.started_at >= $2
+	`, orgID, since30d).Scan(&rate30d.Total, &rate30d.Successful, &rate30d.Failed)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get 30d success rate: %w", err)
+	}
+	if rate30d.Total > 0 {
+		rate30d.SuccessPercent = float64(rate30d.Successful) / float64(rate30d.Total) * 100
+	}
+
+	return rate7d, rate30d, nil
+}
+
+// GetStorageGrowthTrend returns storage growth over time for an organization.
+func (db *DB) GetStorageGrowthTrend(ctx context.Context, orgID uuid.UUID, days int) ([]*models.StorageGrowthTrend, error) {
+	since := time.Now().Add(-time.Duration(days) * 24 * time.Hour)
+	rows, err := db.Pool.Query(ctx, `
+		SELECT
+			DATE(ss.collected_at) AS date,
+			SUM(ss.total_size) AS total_size,
+			SUM(ss.raw_data_size) AS raw_size,
+			SUM(ss.snapshot_count) AS snapshot_count
+		FROM storage_stats ss
+		JOIN repositories r ON ss.repository_id = r.id
+		WHERE r.org_id = $1 AND ss.collected_at >= $2
+		GROUP BY DATE(ss.collected_at)
+		ORDER BY date ASC
+	`, orgID, since)
+	if err != nil {
+		return nil, fmt.Errorf("get storage growth trend: %w", err)
+	}
+	defer rows.Close()
+
+	var trends []*models.StorageGrowthTrend
+	for rows.Next() {
+		var t models.StorageGrowthTrend
+		err := rows.Scan(&t.Date, &t.TotalSize, &t.RawSize, &t.SnapshotCount)
+		if err != nil {
+			return nil, fmt.Errorf("scan storage growth: %w", err)
+		}
+		trends = append(trends, &t)
+	}
+
+	return trends, nil
+}
+
+// GetBackupDurationTrend returns backup duration trends over time.
+func (db *DB) GetBackupDurationTrend(ctx context.Context, orgID uuid.UUID, days int) ([]*models.BackupDurationTrend, error) {
+	since := time.Now().Add(-time.Duration(days) * 24 * time.Hour)
+	rows, err := db.Pool.Query(ctx, `
+		SELECT
+			DATE(b.started_at) AS date,
+			AVG(EXTRACT(EPOCH FROM (b.completed_at - b.started_at)) * 1000)::BIGINT AS avg_duration_ms,
+			MAX(EXTRACT(EPOCH FROM (b.completed_at - b.started_at)) * 1000)::BIGINT AS max_duration_ms,
+			MIN(EXTRACT(EPOCH FROM (b.completed_at - b.started_at)) * 1000)::BIGINT AS min_duration_ms,
+			COUNT(*) AS backup_count
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1
+		  AND b.started_at >= $2
+		  AND b.completed_at IS NOT NULL
+		  AND b.status = 'completed'
+		GROUP BY DATE(b.started_at)
+		ORDER BY date ASC
+	`, orgID, since)
+	if err != nil {
+		return nil, fmt.Errorf("get backup duration trend: %w", err)
+	}
+	defer rows.Close()
+
+	var trends []*models.BackupDurationTrend
+	for rows.Next() {
+		var t models.BackupDurationTrend
+		err := rows.Scan(&t.Date, &t.AvgDurationMs, &t.MaxDurationMs, &t.MinDurationMs, &t.BackupCount)
+		if err != nil {
+			return nil, fmt.Errorf("scan backup duration: %w", err)
+		}
+		trends = append(trends, &t)
+	}
+
+	return trends, nil
+}
+
+// GetDailyBackupStats returns daily backup statistics.
+func (db *DB) GetDailyBackupStats(ctx context.Context, orgID uuid.UUID, days int) ([]*models.DailyBackupStats, error) {
+	since := time.Now().Add(-time.Duration(days) * 24 * time.Hour)
+	rows, err := db.Pool.Query(ctx, `
+		SELECT
+			DATE(b.started_at) AS date,
+			COUNT(*) AS total,
+			COUNT(*) FILTER (WHERE b.status = 'completed') AS successful,
+			COUNT(*) FILTER (WHERE b.status = 'failed') AS failed,
+			COALESCE(SUM(b.size_bytes) FILTER (WHERE b.status = 'completed'), 0) AS total_size
+		FROM backups b
+		JOIN schedules s ON b.schedule_id = s.id
+		JOIN agents a ON s.agent_id = a.id
+		WHERE a.org_id = $1 AND b.started_at >= $2
+		GROUP BY DATE(b.started_at)
+		ORDER BY date ASC
+	`, orgID, since)
+	if err != nil {
+		return nil, fmt.Errorf("get daily backup stats: %w", err)
+	}
+	defer rows.Close()
+
+	var stats []*models.DailyBackupStats
+	for rows.Next() {
+		var s models.DailyBackupStats
+		err := rows.Scan(&s.Date, &s.Total, &s.Successful, &s.Failed, &s.TotalSize)
+		if err != nil {
+			return nil, fmt.Errorf("scan daily backup stats: %w", err)
+		}
+		stats = append(stats, &s)
+	}
+
+	return stats, nil
+}
