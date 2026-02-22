@@ -39,6 +39,8 @@ import type {
 	BackupCalendarResponse,
 	BackupDurationTrend,
 	BackupDurationTrendResponse,
+	BackupQueueEntryWithDetails,
+	BackupQueueSummary,
 	BackupScript,
 	BackupScriptsResponse,
 	BackupSuccessRate,
@@ -63,6 +65,7 @@ import type {
 	CloneScheduleRequest,
 	CloudRestoreProgress,
 	ComplianceReport,
+	ConcurrencyResponse,
 	ConfigTemplate,
 	ConfigTemplatesResponse,
 	CostAlert,
@@ -207,6 +210,8 @@ import type {
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	RateLimitConfig,
+	RateLimitConfigsResponse,
 	RateLimitDashboardStats,
 	RateLimitConfig,
 	RateLimitConfigsResponse,
@@ -284,6 +289,7 @@ import type {
 	UpdateAnnouncementRequest,
 	UpdateBackupScriptRequest,
 	UpdateBrandingRequest,
+	UpdateConcurrencyRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
 	UpdateExcludePatternRequest,
@@ -2810,6 +2816,24 @@ export const templatesApi = {
 		}),
 };
 
+// Backup Queue API
+export const backupQueueApi = {
+	list: async (): Promise<BackupQueueEntryWithDetails[]> => {
+		const response = await fetchApi<{ queue: BackupQueueEntryWithDetails[] }>(
+			'/backup-queue',
+		);
+		return response.queue ?? [];
+	},
+
+	getSummary: async (): Promise<BackupQueueSummary> =>
+		fetchApi<BackupQueueSummary>('/backup-queue/summary'),
+
+	cancel: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/backup-queue/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
 export const ipAllowlistsApi = {
 	list: async (): Promise<IPAllowlist[]> => {
 		const response = await fetchApi<IPAllowlistsResponse>('/ip-allowlists');
@@ -2922,6 +2946,33 @@ export const ipBansApi = {
 	delete: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/admin/ip-bans/${id}`, {
 			method: 'DELETE',
+		}),
+};
+
+// Concurrency API
+export const concurrencyApi = {
+	getOrgConcurrency: async (orgId: string): Promise<ConcurrencyResponse> =>
+		fetchApi<ConcurrencyResponse>(`/organizations/${orgId}/concurrency`),
+
+	updateOrgConcurrency: async (
+		orgId: string,
+		data: UpdateConcurrencyRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/organizations/${orgId}/concurrency`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	getAgentConcurrency: async (agentId: string): Promise<ConcurrencyResponse> =>
+		fetchApi<ConcurrencyResponse>(`/agents/${agentId}/concurrency`),
+
+	updateAgentConcurrency: async (
+		agentId: string,
+		data: UpdateConcurrencyRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agents/${agentId}/concurrency`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
 		}),
 };
 

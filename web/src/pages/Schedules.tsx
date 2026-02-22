@@ -37,6 +37,7 @@ import type {
 	MountBehavior,
 	Repository,
 	Schedule,
+	SchedulePriority,
 	ScheduleRepositoryRequest,
 } from '../lib/types';
 
@@ -102,6 +103,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	// Exclude patterns state
 	const [excludes, setExcludes] = useState<string[]>([]);
 	const [showPatternLibrary, setShowPatternLibrary] = useState(false);
+	// Priority and preemption state
+	const [priority, setPriority] = useState<SchedulePriority>(2);
+	const [preemptible, setPreemptible] = useState(false);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
@@ -203,6 +207,14 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				data.on_mount_unavailable = onMountUnavailable;
 			}
 
+			// Priority settings
+			if (priority !== 2) {
+				data.priority = priority;
+			}
+			if (preemptible) {
+				data.preemptible = preemptible;
+			}
+
 			await createSchedule.mutateAsync(data);
 			onClose();
 			setName('');
@@ -230,6 +242,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			// Reset exclude patterns state
 			setExcludes([]);
 			setShowPatternLibrary(false);
+			// Reset priority state
+			setPriority(2);
+			setPreemptible(false);
 		} catch {
 			// Error handled by mutation
 		}
@@ -745,6 +760,57 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											backup runs.
 										</p>
 									</div>
+
+									{/* Priority Settings */}
+									<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+										<label
+											htmlFor="schedule-priority"
+											className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+										>
+											Backup Priority
+										</label>
+										<select
+											id="schedule-priority"
+											value={priority}
+											onChange={(e) =>
+												setPriority(Number(e.target.value) as SchedulePriority)
+											}
+											className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										>
+											<option value={1}>
+												High - Runs first, critical backups
+											</option>
+											<option value={2}>Medium - Default priority</option>
+											<option value={3}>Low - Runs last, can be delayed</option>
+										</select>
+										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+											Higher priority backups run before lower priority ones
+											when multiple backups are scheduled.
+										</p>
+									</div>
+
+									{/* Preemptible Setting */}
+									<div className="flex items-start gap-3">
+										<input
+											type="checkbox"
+											id="schedule-preemptible"
+											checked={preemptible}
+											onChange={(e) => setPreemptible(e.target.checked)}
+											className="mt-1 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+										/>
+										<div>
+											<label
+												htmlFor="schedule-preemptible"
+												className="text-sm font-medium text-gray-700 dark:text-gray-300"
+											>
+												Allow preemption
+											</label>
+											<p className="text-xs text-gray-500 dark:text-gray-400">
+												If enabled, this backup can be paused when a higher
+												priority backup needs to run.
+											</p>
+										</div>
+									</div>
 								</div>
 							)}
 						</div>
@@ -1256,7 +1322,10 @@ function ScheduleRow({
 	const hasClassification =
 		schedule.classification_level && schedule.classification_level !== 'public';
 
-	const hasBadges = hasResourceControls || policyName || hasClassification;
+	const hasPriorityBadge = schedule.priority !== 2 || schedule.preemptible;
+
+	const hasBadges =
+		hasResourceControls || policyName || hasClassification || hasPriorityBadge;
 
 	return (
 		<tr
@@ -1275,6 +1344,63 @@ function ScheduleRow({
 				</div>
 				{hasBadges && (
 					<div className="mt-1 flex flex-wrap gap-1.5">
+						{schedule.priority === 1 && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded font-medium">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M5 15l7-7 7 7"
+									/>
+								</svg>
+								High Priority
+							</span>
+						)}
+						{schedule.priority === 3 && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M19 9l-7 7-7-7"
+									/>
+								</svg>
+								Low Priority
+							</span>
+						)}
+						{schedule.preemptible && (
+							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded">
+								<svg
+									className="w-3 h-3"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									aria-hidden="true"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
+								Preemptible
+							</span>
+						)}
 						{hasClassification && (
 							<ClassificationBadge
 								level={schedule.classification_level}

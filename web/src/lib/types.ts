@@ -416,6 +416,8 @@ export interface BackupWindow {
 
 export type CompressionLevel = 'off' | 'auto' | 'max';
 
+export type SchedulePriority = 1 | 2 | 3; // 1=high, 2=medium, 3=low
+
 export interface Schedule {
 	id: string;
 	agent_id: string;
@@ -433,6 +435,8 @@ export interface Schedule {
 	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
 	classification_level?: string; // Data classification level
 	classification_data_types?: string[]; // Data types: pii, phi, pci, proprietary, general
+	priority: SchedulePriority; // Backup priority: 1=high, 2=medium, 3=low
+	preemptible: boolean; // Can be preempted by higher priority backups
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -453,6 +457,8 @@ export interface CreateScheduleRequest {
 	compression_level?: CompressionLevel;
 	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
+	priority?: SchedulePriority;
+	preemptible?: boolean;
 	enabled?: boolean;
 }
 
@@ -469,6 +475,8 @@ export interface UpdateScheduleRequest {
 	compression_level?: CompressionLevel;
 	max_file_size_mb?: number;
 	on_mount_unavailable?: MountBehavior;
+	priority?: SchedulePriority;
+	preemptible?: boolean;
 	enabled?: boolean;
 }
 
@@ -3153,6 +3161,106 @@ export interface UpdateAnnouncementRequest {
 
 export interface AnnouncementsResponse {
 	announcements: Announcement[];
+}
+
+// Backup Queue and Concurrency types
+export type BackupQueueStatus = 'queued' | 'started' | 'canceled';
+
+export interface BackupQueueEntry {
+	id: string;
+	org_id: string;
+	agent_id: string;
+	schedule_id: string;
+	priority: number;
+	queued_at: string;
+	started_at?: string;
+	status: BackupQueueStatus;
+	queue_position: number;
+}
+
+export interface BackupQueueEntryWithDetails extends BackupQueueEntry {
+	schedule_name: string;
+	agent_hostname: string;
+}
+
+export interface ConcurrencyStatus {
+	org_id: string;
+	org_limit?: number;
+	org_running_count: number;
+	org_queued_count: number;
+	agent_id?: string;
+	agent_limit?: number;
+	agent_running_count: number;
+	agent_queued_count: number;
+	can_start_now: boolean;
+	queue_position?: number;
+	estimated_wait_minutes?: number;
+}
+
+export interface BackupQueueSummary {
+	total_queued: number;
+	total_running: number;
+	avg_wait_minutes: number;
+	oldest_queued_at?: string;
+	queued_by_agent?: Record<string, number>;
+}
+
+export interface ConcurrencyResponse {
+	max_concurrent_backups?: number;
+	running_count: number;
+	queued_count: number;
+}
+
+export interface UpdateConcurrencyRequest {
+	max_concurrent_backups?: number;
+}
+
+export interface BackupQueueResponse {
+	queue: BackupQueueEntryWithDetails[];
+}
+
+// Extended Organization with concurrency settings
+export interface OrganizationWithConcurrency extends Organization {
+	max_concurrent_backups?: number;
+}
+
+// Extended Agent with concurrency settings
+export interface AgentWithConcurrency extends Agent {
+	max_concurrent_backups?: number;
+}
+
+// Backup Queue types for priority management
+export interface BackupQueueItem {
+	id: string;
+	schedule_id: string;
+	agent_id: string;
+	priority: SchedulePriority;
+	status:
+		| 'pending'
+		| 'running'
+		| 'completed'
+		| 'failed'
+		| 'preempted'
+		| 'canceled';
+	queued_at: string;
+	started_at?: string;
+	completed_at?: string;
+	preempted_by?: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface PriorityQueueSummary {
+	total_pending: number;
+	total_running: number;
+	high_priority: number;
+	medium_priority: number;
+	low_priority: number;
+}
+
+export interface PriorityQueueResponse {
+	queue: BackupQueueItem[];
+	summary: PriorityQueueSummary;
 }
 
 // IP Allowlist types

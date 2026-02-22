@@ -12,11 +12,12 @@ import (
 // are managed via dedicated methods (GetOrganizationSSOSettings, etc.) rather
 // than being loaded with the core Organization struct.
 type Organization struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Slug      string    `json:"slug"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                   uuid.UUID `json:"id"`
+	Name                 string    `json:"name"`
+	Slug                 string    `json:"slug"`
+	MaxConcurrentBackups *int      `json:"max_concurrent_backups,omitempty"` // nil means unlimited
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }
 
 // NewOrganization creates a new Organization with the given name and slug.

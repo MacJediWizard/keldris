@@ -79,6 +79,7 @@ type Agent struct {
 	DebugModeExpiresAt   *time.Time     `json:"debug_mode_expires_at,omitempty"`
 	DebugModeEnabledAt   *time.Time     `json:"debug_mode_enabled_at,omitempty"`
 	DebugModeEnabledBy   *uuid.UUID     `json:"debug_mode_enabled_by,omitempty"`
+	MaxConcurrentBackups *int           `json:"max_concurrent_backups,omitempty"` // nil means use org default
 	CreatedAt            time.Time      `json:"created_at"`
 	UpdatedAt            time.Time      `json:"updated_at"`
 }

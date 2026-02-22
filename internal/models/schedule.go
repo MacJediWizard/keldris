@@ -23,6 +23,18 @@ type BackupWindow struct {
 	End   string `json:"end,omitempty"`   // HH:MM format (e.g., "06:00")
 }
 
+// SchedulePriority represents the priority level for a backup schedule.
+type SchedulePriority int
+
+const (
+	// PriorityHigh indicates high priority (1) - runs first, can preempt lower priority.
+	PriorityHigh SchedulePriority = 1
+	// PriorityMedium indicates medium priority (2) - default priority level.
+	PriorityMedium SchedulePriority = 2
+	// PriorityLow indicates low priority (3) - runs last, can be preempted.
+	PriorityLow SchedulePriority = 3
+)
+
 // Schedule represents a backup schedule configuration.
 // A schedule can be assigned to either an individual agent (via AgentID)
 // or to an agent group (via AgentGroupID). When AgentGroupID is set,
@@ -47,6 +59,8 @@ type Schedule struct {
 	MaxFileSizeMB           *int                 `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
 	ClassificationLevel     string               `json:"classification_level,omitempty"` // Data classification level: public, internal, confidential, restricted
 	ClassificationDataTypes []string             `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
+	Priority                SchedulePriority     `json:"priority"`                       // Backup priority: 1=high, 2=medium, 3=low
+	Preemptible             bool                 `json:"preemptible"`                    // Can be preempted by higher priority backups
 	Enabled                 bool                 `json:"enabled"`
 	Repositories         []ScheduleRepository `json:"repositories,omitempty"`
 	CreatedAt          time.Time            `json:"created_at"`
@@ -63,10 +77,31 @@ func NewSchedule(agentID uuid.UUID, name, cronExpr string, paths []string) *Sche
 		CronExpression:     cronExpr,
 		Paths:              paths,
 		OnMountUnavailable: MountBehaviorFail,
+		Priority:           PriorityMedium, // Default to medium priority
+		Preemptible:        false,          // Not preemptible by default
 		Enabled:            true,
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}
+}
+
+// PriorityLabel returns a human-readable label for the priority.
+func (s *Schedule) PriorityLabel() string {
+	switch s.Priority {
+	case PriorityHigh:
+		return "high"
+	case PriorityMedium:
+		return "medium"
+	case PriorityLow:
+		return "low"
+	default:
+		return "medium"
+	}
+}
+
+// IsHigherPriorityThan returns true if this schedule has higher priority than other.
+func (s *Schedule) IsHigherPriorityThan(other *Schedule) bool {
+	return s.Priority < other.Priority
 }
 
 // GetPrimaryRepository returns the primary repository (priority 0), or nil if none.
@@ -278,4 +313,61 @@ func (s *Schedule) ClassificationDataTypesJSON() ([]byte, error) {
 		return []byte(`["general"]`), nil
 	}
 	return json.Marshal(s.ClassificationDataTypes)
+}
+
+// BackupQueueStatus represents the status of a backup queue item.
+type BackupQueueStatus string
+
+const (
+	// QueueStatusPending indicates the backup is waiting to run.
+	QueueStatusPending BackupQueueStatus = "pending"
+	// QueueStatusRunning indicates the backup is currently running.
+	QueueStatusRunning BackupQueueStatus = "running"
+	// QueueStatusCompleted indicates the backup completed successfully.
+	QueueStatusCompleted BackupQueueStatus = "completed"
+	// QueueStatusFailed indicates the backup failed.
+	QueueStatusFailed BackupQueueStatus = "failed"
+	// QueueStatusPreempted indicates the backup was preempted by a higher priority backup.
+	QueueStatusPreempted BackupQueueStatus = "preempted"
+	// QueueStatusCanceled indicates the backup was canceled.
+	QueueStatusCanceled BackupQueueStatus = "canceled"
+)
+
+// BackupQueueItem represents a backup in the priority queue.
+type BackupQueueItem struct {
+	ID          uuid.UUID         `json:"id"`
+	ScheduleID  uuid.UUID         `json:"schedule_id"`
+	AgentID     uuid.UUID         `json:"agent_id"`
+	Priority    SchedulePriority  `json:"priority"`
+	Status      BackupQueueStatus `json:"status"`
+	QueuedAt    time.Time         `json:"queued_at"`
+	StartedAt   *time.Time        `json:"started_at,omitempty"`
+	CompletedAt *time.Time        `json:"completed_at,omitempty"`
+	PreemptedBy *uuid.UUID        `json:"preempted_by,omitempty"`
+	CreatedAt   time.Time         `json:"created_at"`
+	UpdatedAt   time.Time         `json:"updated_at"`
+}
+
+// NewBackupQueueItem creates a new backup queue item.
+func NewBackupQueueItem(scheduleID, agentID uuid.UUID, priority SchedulePriority) *BackupQueueItem {
+	now := time.Now()
+	return &BackupQueueItem{
+		ID:         uuid.New(),
+		ScheduleID: scheduleID,
+		AgentID:    agentID,
+		Priority:   priority,
+		Status:     QueueStatusPending,
+		QueuedAt:   now,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+}
+
+// BackupQueueSummary provides a summary of the backup queue for display.
+type BackupQueueSummary struct {
+	TotalPending  int `json:"total_pending"`
+	TotalRunning  int `json:"total_running"`
+	HighPriority  int `json:"high_priority"`
+	MediumPriority int `json:"medium_priority"`
+	LowPriority   int `json:"low_priority"`
 }
