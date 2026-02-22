@@ -147,7 +147,6 @@ func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPay
 			}
 			w.logger.Debug().
 				Int("attempt", attempt+1).
-				Str("url", url).
 				Msg("retrying webhook")
 		}
 
@@ -181,7 +180,6 @@ func (w *WebhookSender) doSend(ctx context.Context, url string, body []byte, sec
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		w.logger.Info().
-			Str("url", url).
 			Int("status", resp.StatusCode).
 			Msg("webhook notification sent")
 		return nil
