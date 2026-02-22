@@ -541,7 +541,7 @@ func (db *DB) GetAgentStats(ctx context.Context, agentID uuid.UUID) (*models.Age
 			COALESCE(SUM(size_bytes) FILTER (WHERE status = 'completed'), 0) as total_size,
 			MAX(completed_at) FILTER (WHERE status = 'completed') as last_backup
 		FROM backups
-		WHERE agent_id = $1
+		WHERE agent_id = $1 AND deleted_at IS NULL
 	`, agentID).Scan(
 		&stats.TotalBackups,
 		&stats.SuccessfulBackups,
@@ -1262,7 +1262,7 @@ func (db *DB) GetBackupsByScheduleID(ctx context.Context, scheduleID uuid.UUID) 
 		       pre_script_output, pre_script_error, post_script_output, post_script_error,
 		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
-		WHERE schedule_id = $1
+		WHERE schedule_id = $1 AND deleted_at IS NULL
 		ORDER BY started_at DESC
 	`, scheduleID)
 	if err != nil {
@@ -1282,7 +1282,7 @@ func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*mo
 		       pre_script_output, pre_script_error, post_script_output, post_script_error,
 		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
-		WHERE agent_id = $1
+		WHERE agent_id = $1 AND deleted_at IS NULL
 		ORDER BY started_at DESC
 	`, agentID)
 	if err != nil {
@@ -1305,7 +1305,7 @@ func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, 
 		       pre_script_output, pre_script_error, post_script_output, post_script_error,
 		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(
 		&b.ID, &b.ScheduleID, &b.AgentID, &b.RepositoryID, &b.SnapshotID, &b.StartedAt,
 		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
@@ -1382,6 +1382,20 @@ func (db *DB) UpdateBackup(ctx context.Context, backup *models.Backup) error {
 		excludedLargeFilesJSON)
 	if err != nil {
 		return fmt.Errorf("update backup: %w", err)
+	}
+	return nil
+}
+
+// DeleteBackup soft-deletes a backup record by setting deleted_at.
+func (db *DB) DeleteBackup(ctx context.Context, id uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE backups SET deleted_at = $2 WHERE id = $1 AND deleted_at IS NULL
+	`, id, time.Now())
+	if err != nil {
+		return fmt.Errorf("soft delete backup: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("backup not found")
 	}
 	return nil
 }
@@ -1595,7 +1609,7 @@ func (db *DB) GetBackupBySnapshotID(ctx context.Context, snapshotID string) (*mo
 		       pre_script_output, pre_script_error, post_script_output, post_script_error,
 		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
 		FROM backups
-		WHERE snapshot_id = $1
+		WHERE snapshot_id = $1 AND deleted_at IS NULL
 	`, snapshotID).Scan(
 		&b.ID, &b.ScheduleID, &b.AgentID, &b.RepositoryID, &b.SnapshotID, &b.StartedAt,
 		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
@@ -2102,7 +2116,7 @@ func (db *DB) GetLatestBackupByScheduleID(ctx context.Context, scheduleID uuid.U
 		SELECT id, schedule_id, agent_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message, created_at
 		FROM backups
-		WHERE schedule_id = $1
+		WHERE schedule_id = $1 AND deleted_at IS NULL
 		ORDER BY started_at DESC
 		LIMIT 1
 	`, scheduleID).Scan(
@@ -2125,7 +2139,7 @@ func (db *DB) GetRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*m
 		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
 		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
 		FROM restores
-		WHERE agent_id = $1
+		WHERE agent_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC
 	`, agentID)
 	if err != nil {
@@ -2145,7 +2159,7 @@ func (db *DB) GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore
 		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
 		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
 		FROM restores
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(
 		&r.ID, &r.AgentID, &r.RepositoryID, &r.SnapshotID, &r.TargetPath,
 		&includePathsBytes, &excludePathsBytes, &statusStr, &r.StartedAt,
@@ -2201,6 +2215,20 @@ func (db *DB) UpdateRestore(ctx context.Context, restore *models.Restore) error 
 		restore.ErrorMessage, restore.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update restore: %w", err)
+	}
+	return nil
+}
+
+// DeleteRestore soft-deletes a restore record by setting deleted_at.
+func (db *DB) DeleteRestore(ctx context.Context, id uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE restores SET deleted_at = $2 WHERE id = $1 AND deleted_at IS NULL
+	`, id, time.Now())
+	if err != nil {
+		return fmt.Errorf("soft delete restore: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("restore not found")
 	}
 	return nil
 }
@@ -3527,7 +3555,7 @@ func (db *DB) GetVerificationsByRepoID(ctx context.Context, repoID uuid.UUID) ([
 		SELECT id, repository_id, type, snapshot_id, started_at, completed_at,
 		       status, duration_ms, error_message, details, created_at
 		FROM verifications
-		WHERE repository_id = $1
+		WHERE repository_id = $1 AND deleted_at IS NULL
 		ORDER BY started_at DESC
 	`, repoID)
 	if err != nil {
@@ -3548,7 +3576,7 @@ func (db *DB) GetLatestVerificationByRepoID(ctx context.Context, repoID uuid.UUI
 		SELECT id, repository_id, type, snapshot_id, started_at, completed_at,
 		       status, duration_ms, error_message, details, created_at
 		FROM verifications
-		WHERE repository_id = $1
+		WHERE repository_id = $1 AND deleted_at IS NULL
 		ORDER BY started_at DESC
 		LIMIT 1
 	`, repoID).Scan(
@@ -3580,7 +3608,7 @@ func (db *DB) GetVerificationByID(ctx context.Context, id uuid.UUID) (*models.Ve
 		SELECT id, repository_id, type, snapshot_id, started_at, completed_at,
 		       status, duration_ms, error_message, details, created_at
 		FROM verifications
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(
 		&v.ID, &v.RepositoryID, &typeStr, &snapshotID, &v.StartedAt,
 		&v.CompletedAt, &statusStr, &v.DurationMs, &v.ErrorMessage,
@@ -3650,13 +3678,27 @@ func (db *DB) UpdateVerification(ctx context.Context, v *models.Verification) er
 	return nil
 }
 
+// DeleteVerification soft-deletes a verification record by setting deleted_at.
+func (db *DB) DeleteVerification(ctx context.Context, id uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE verifications SET deleted_at = $2 WHERE id = $1 AND deleted_at IS NULL
+	`, id, time.Now())
+	if err != nil {
+		return fmt.Errorf("soft delete verification: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("verification not found")
+	}
+	return nil
+}
+
 // GetConsecutiveFailedVerifications returns the count of consecutive failed verifications for a repository.
 func (db *DB) GetConsecutiveFailedVerifications(ctx context.Context, repoID uuid.UUID) (int, error) {
 	// Count consecutive failures from the most recent verification backwards
 	rows, err := db.Pool.Query(ctx, `
 		SELECT status
 		FROM verifications
-		WHERE repository_id = $1
+		WHERE repository_id = $1 AND deleted_at IS NULL
 		ORDER BY started_at DESC
 		LIMIT 10
 	`, repoID)
@@ -4059,6 +4101,23 @@ func (db *DB) DeleteSnapshotComment(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// UpdateSnapshotComment updates a snapshot comment's content.
+func (db *DB) UpdateSnapshotComment(ctx context.Context, comment *models.SnapshotComment) error {
+	comment.UpdatedAt = time.Now()
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE snapshot_comments
+		SET content = $2, updated_at = $3
+		WHERE id = $1
+	`, comment.ID, comment.Content, comment.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update snapshot comment: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("snapshot comment not found")
+	}
+	return nil
+}
+
 // MarkMaintenanceNotificationSent marks a maintenance window's notification as sent.
 func (db *DB) MarkMaintenanceNotificationSent(ctx context.Context, id uuid.UUID) error {
 	_, err := db.Pool.Exec(ctx, `
@@ -4362,7 +4421,7 @@ func (db *DB) GetDRTestsByRunbookID(ctx context.Context, runbookID uuid.UUID) ([
 		       started_at, completed_at, restore_size_bytes, restore_duration_seconds,
 		       verification_passed, notes, error_message, created_at
 		FROM dr_tests
-		WHERE runbook_id = $1
+		WHERE runbook_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC
 	`, runbookID)
 	if err != nil {
@@ -4381,7 +4440,7 @@ func (db *DB) GetDRTestsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models
 		       t.verification_passed, t.notes, t.error_message, t.created_at
 		FROM dr_tests t
 		JOIN dr_runbooks r ON t.runbook_id = r.id
-		WHERE r.org_id = $1
+		WHERE r.org_id = $1 AND t.deleted_at IS NULL
 		ORDER BY t.created_at DESC
 	`, orgID)
 	if err != nil {
@@ -4401,7 +4460,7 @@ func (db *DB) GetDRTestByID(ctx context.Context, id uuid.UUID) (*models.DRTest, 
 		       started_at, completed_at, restore_size_bytes, restore_duration_seconds,
 		       verification_passed, notes, error_message, created_at
 		FROM dr_tests
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(
 		&t.ID, &t.RunbookID, &t.ScheduleID, &t.AgentID, &t.SnapshotID, &statusStr,
 		&t.StartedAt, &t.CompletedAt, &t.RestoreSizeBytes, &t.RestoreDurationSeconds,
@@ -4423,7 +4482,7 @@ func (db *DB) GetLatestDRTestByRunbookID(ctx context.Context, runbookID uuid.UUI
 		       started_at, completed_at, restore_size_bytes, restore_duration_seconds,
 		       verification_passed, notes, error_message, created_at
 		FROM dr_tests
-		WHERE runbook_id = $1
+		WHERE runbook_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC
 		LIMIT 1
 	`, runbookID).Scan(
@@ -4468,6 +4527,20 @@ func (db *DB) UpdateDRTest(ctx context.Context, test *models.DRTest) error {
 		test.Notes, test.ErrorMessage)
 	if err != nil {
 		return fmt.Errorf("update DR test: %w", err)
+	}
+	return nil
+}
+
+// DeleteDRTest soft-deletes a DR test record by setting deleted_at.
+func (db *DB) DeleteDRTest(ctx context.Context, id uuid.UUID) error {
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE dr_tests SET deleted_at = $2 WHERE id = $1 AND deleted_at IS NULL
+	`, id, time.Now())
+	if err != nil {
+		return fmt.Errorf("soft delete DR test: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("DR test not found")
 	}
 	return nil
 }
@@ -4620,7 +4693,7 @@ func (db *DB) GetDRStatus(ctx context.Context, orgID uuid.UUID) (*models.DRStatu
 			COALESCE(AVG(CASE WHEN verification_passed = true THEN 1.0 ELSE 0.0 END) * 100, 0)
 		FROM dr_tests t
 		JOIN dr_runbooks r ON t.runbook_id = r.id
-		WHERE r.org_id = $1 AND t.created_at > NOW() - INTERVAL '30 days'
+		WHERE r.org_id = $1 AND t.deleted_at IS NULL AND t.created_at > NOW() - INTERVAL '30 days'
 	`, orgID).Scan(&status.TestsLast30Days, &status.PassRate)
 	if err != nil {
 		return nil, fmt.Errorf("get test statistics: %w", err)
@@ -4631,7 +4704,7 @@ func (db *DB) GetDRStatus(ctx context.Context, orgID uuid.UUID) (*models.DRStatu
 		SELECT MAX(t.completed_at)
 		FROM dr_tests t
 		JOIN dr_runbooks r ON t.runbook_id = r.id
-		WHERE r.org_id = $1
+		WHERE r.org_id = $1 AND t.deleted_at IS NULL
 	`, orgID).Scan(&status.LastTestAt)
 	if err != nil && err.Error() != "no rows in result set" {
 		return nil, fmt.Errorf("get last test date: %w", err)
@@ -4945,7 +5018,7 @@ func (db *DB) GetBackupsByTagIDs(ctx context.Context, tagIDs []uuid.UUID) ([]*mo
 		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
 		FROM backups b
 		JOIN backup_tags bt ON b.id = bt.backup_id
-		WHERE bt.tag_id = ANY($1)
+		WHERE bt.tag_id = ANY($1) AND b.deleted_at IS NULL
 		ORDER BY b.started_at DESC
 	`, tagIDs)
 	if err != nil {
@@ -5082,7 +5155,7 @@ func (db *DB) searchBackups(ctx context.Context, orgID uuid.UUID, query string, 
 		SELECT b.id, b.snapshot_id, b.status, b.size_bytes, b.started_at
 		FROM backups b
 		JOIN agents a ON b.agent_id = a.id
-		WHERE a.org_id = $1 AND (b.snapshot_id ILIKE $2 OR b.id::text ILIKE $2)
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL AND (b.snapshot_id ILIKE $2 OR b.id::text ILIKE $2)
 	`
 	args := []any{orgID, query}
 	argNum := 3
@@ -5250,7 +5323,7 @@ func (db *DB) GetBackupsByOrgIDSince(ctx context.Context, orgID uuid.UUID, since
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
-		WHERE a.org_id = $1 AND b.started_at >= $2
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL AND b.started_at >= $2
 		ORDER BY b.started_at DESC
 	`, orgID, since)
 	if err != nil {
@@ -5269,7 +5342,7 @@ func (db *DB) GetBackupCountsByOrgID(ctx context.Context, orgID uuid.UUID) (tota
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
-		WHERE a.org_id = $1
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL
 	`, orgID).Scan(&total)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("get total backups: %w", err)
@@ -5281,7 +5354,7 @@ func (db *DB) GetBackupCountsByOrgID(ctx context.Context, orgID uuid.UUID) (tota
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
-		WHERE a.org_id = $1 AND b.status = 'running'
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL AND b.status = 'running'
 	`, orgID).Scan(&running)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("get running backups: %w", err)
@@ -5294,7 +5367,7 @@ func (db *DB) GetBackupCountsByOrgID(ctx context.Context, orgID uuid.UUID) (tota
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
-		WHERE a.org_id = $1 AND b.status = 'failed' AND b.started_at >= $2
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL AND b.status = 'failed' AND b.started_at >= $2
 	`, orgID, since24h).Scan(&failed24h)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("get failed backups: %w", err)
@@ -5351,7 +5424,7 @@ func (db *DB) GetDashboardStats(ctx context.Context, orgID uuid.UUID) (*models.D
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
-		WHERE a.org_id = $1
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL
 	`, orgID, since24h).Scan(&stats.BackupTotal, &stats.BackupRunning, &stats.BackupFailed24h)
 	if err != nil {
 		return nil, fmt.Errorf("get backup counts: %w", err)
@@ -5405,7 +5478,7 @@ func (db *DB) GetBackupSuccessRates(ctx context.Context, orgID uuid.UUID) (*mode
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
-		WHERE a.org_id = $1 AND b.started_at >= $2
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL AND b.started_at >= $2
 	`, orgID, since7d).Scan(&rate7d.Total, &rate7d.Successful, &rate7d.Failed)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get 7d success rate: %w", err)
@@ -5424,7 +5497,7 @@ func (db *DB) GetBackupSuccessRates(ctx context.Context, orgID uuid.UUID) (*mode
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
-		WHERE a.org_id = $1 AND b.started_at >= $2
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL AND b.started_at >= $2
 	`, orgID, since30d).Scan(&rate30d.Total, &rate30d.Successful, &rate30d.Failed)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get 30d success rate: %w", err)
@@ -5482,7 +5555,7 @@ func (db *DB) GetBackupDurationTrend(ctx context.Context, orgID uuid.UUID, days 
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
-		WHERE a.org_id = $1
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL
 		  AND b.started_at >= $2
 		  AND b.completed_at IS NOT NULL
 		  AND b.status = 'completed'
@@ -5520,7 +5593,7 @@ func (db *DB) GetDailyBackupStats(ctx context.Context, orgID uuid.UUID, days int
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
-		WHERE a.org_id = $1 AND b.started_at >= $2
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL AND b.started_at >= $2
 		GROUP BY DATE(b.started_at)
 		ORDER BY date ASC
 	`, orgID, since)
@@ -5821,7 +5894,7 @@ func (db *DB) GetBackupsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
-		WHERE a.org_id = $1 AND b.started_at >= $2 AND b.started_at <= $3
+		WHERE a.org_id = $1 AND b.deleted_at IS NULL AND b.started_at >= $2 AND b.started_at <= $3
 		ORDER BY b.started_at DESC
 	`, orgID, start, end)
 	if err != nil {
