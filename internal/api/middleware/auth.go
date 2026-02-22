@@ -20,6 +20,7 @@ type UserStore interface {
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )

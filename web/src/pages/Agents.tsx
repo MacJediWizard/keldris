@@ -278,10 +278,23 @@ function ApiKeyModal({ apiKey, onClose }: ApiKeyModalProps) {
 interface AgentRowProps {
 	agent: Agent;
 	onDelete: (id: string) => void;
+	onRotateKey: (id: string) => void;
+	onRevokeKey: (id: string) => void;
 	isDeleting: boolean;
+	isRotating: boolean;
+	isRevoking: boolean;
 }
 
-function AgentRow({ agent, onDelete, isDeleting }: AgentRowProps) {
+function AgentRow({
+	agent,
+	onDelete,
+	onRotateKey,
+	onRevokeKey,
+	isDeleting,
+	isRotating,
+	isRevoking,
+}: AgentRowProps) {
+	const [showMenu, setShowMenu] = useState(false);
 	const statusColor = getAgentStatusColor(agent.status);
 
 	return (
@@ -353,6 +366,7 @@ function AgentRow({ agent, onDelete, isDeleting }: AgentRowProps) {
 						type="button"
 						onClick={() => setShowMenu(!showMenu)}
 						className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+						className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
 					>
 						Actions
 						<svg
@@ -378,6 +392,7 @@ function AgentRow({ agent, onDelete, isDeleting }: AgentRowProps) {
 								onKeyDown={(e) => e.key === 'Escape' && setShowMenu(false)}
 							/>
 							<div className="absolute right-0 z-20 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
+							<div className="absolute right-0 z-20 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
 								<button
 									type="button"
 									onClick={() => {
@@ -386,6 +401,7 @@ function AgentRow({ agent, onDelete, isDeleting }: AgentRowProps) {
 									}}
 									disabled={isRotating}
 									className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+									className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
 								>
 									{isRotating ? 'Rotating...' : 'Rotate API Key'}
 								</button>
@@ -401,6 +417,11 @@ function AgentRow({ agent, onDelete, isDeleting }: AgentRowProps) {
 									{isRevoking ? 'Revoking...' : 'Revoke API Key'}
 								</button>
 								<div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+									className="w-full text-left px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 disabled:opacity-50"
+								>
+									{isRevoking ? 'Revoking...' : 'Revoke API Key'}
+								</button>
+								<div className="border-t border-gray-100 my-1" />
 								<button
 									type="button"
 									onClick={() => {
@@ -409,6 +430,7 @@ function AgentRow({ agent, onDelete, isDeleting }: AgentRowProps) {
 									}}
 									disabled={isDeleting}
 									className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
+									className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
 								>
 									{isDeleting ? 'Deleting...' : 'Delete Agent'}
 								</button>
@@ -429,6 +451,8 @@ export function Agents() {
 
 	const { data: agents, isLoading, isError } = useAgents();
 	const deleteAgent = useDeleteAgent();
+	const rotateApiKey = useRotateAgentApiKey();
+	const revokeApiKey = useRevokeAgentApiKey();
 
 	const filteredAgents = agents?.filter((agent) => {
 		const matchesSearch = agent.hostname
@@ -447,6 +471,31 @@ export function Agents() {
 	const handleDelete = (id: string) => {
 		if (confirm('Are you sure you want to delete this agent?')) {
 			deleteAgent.mutate(id);
+		}
+	};
+
+	const handleRotateKey = async (id: string) => {
+		if (
+			confirm(
+				'Are you sure you want to rotate this API key? The old key will be invalidated immediately.',
+			)
+		) {
+			try {
+				const result = await rotateApiKey.mutateAsync(id);
+				setNewApiKey(result.api_key);
+			} catch {
+				// Error handled by mutation
+			}
+		}
+	};
+
+	const handleRevokeKey = (id: string) => {
+		if (
+			confirm(
+				'Are you sure you want to revoke this API key? The agent will no longer be able to authenticate.',
+			)
+		) {
+			revokeApiKey.mutate(id);
 		}
 	};
 
@@ -1898,6 +1947,8 @@ export function Agents() {
 									onToggleSelect={() => bulkSelect.toggle(agent.id)}
 									isFavorite={favoriteIds.has(agent.id)}
 									isDeleting={deleteAgent.isPending}
+									isRotating={rotateApiKey.isPending}
+									isRevoking={revokeApiKey.isPending}
 								/>
 							))}
 						</tbody>

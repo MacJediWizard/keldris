@@ -39,6 +39,9 @@ func (m *mockAgentStore) GetAgentByAPIKeyHash(_ context.Context, hash string) (*
 	return agent, nil
 }
 
+	"testing"
+)
+
 func TestIsValidAPIKeyFormat(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -93,6 +96,7 @@ func TestIsValidAPIKeyFormat(t *testing.T) {
 }
 
 func TestAPIKey_Hash(t *testing.T) {
+func TestHashAPIKey(t *testing.T) {
 	apiKey := "kld_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 	hash := HashAPIKey(apiKey)

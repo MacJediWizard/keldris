@@ -470,6 +470,7 @@ import type {
 	RotateAPIKeyResponse,
 	RotateCredentialsRequest,
 	RunDRTestRequest,
+	RotateAPIKeyResponse,
 	RunScheduleResponse,
 	SLAPoliciesResponse,
 	SLAPolicy,
