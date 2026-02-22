@@ -102,6 +102,8 @@ type Config struct {
 	ReportScheduler *reports.Scheduler
 	// WebhookDispatcher for outbound webhook delivery (optional).
 	WebhookDispatcher *webhooks.Dispatcher
+	// MeteringService for usage tracking and billing (optional).
+	MeteringService *metering.Service
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
