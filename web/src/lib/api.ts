@@ -2966,8 +2966,8 @@ export const backupQueueApi = {
 		return response.queue ?? [];
 	},
 
-	getSummary: async (): Promise<BackupQueueSummary> =>
-		fetchApi<BackupQueueSummary>('/backup-queue/summary'),
+	getSchema: async (id: string): Promise<MetadataSchema> =>
+		fetchApi<MetadataSchema>(`/metadata/schemas/${id}`),
 
 	cancel: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/backup-queue/${id}`, {
@@ -3002,6 +3002,445 @@ export const concurrencyApi = {
 		}),
 };
 
+// IP Allowlists API
+export const ipAllowlistsApi = {
+	list: async (): Promise<IPAllowlist[]> => {
+		const response = await fetchApi<IPAllowlistsResponse>('/ip-allowlists');
+		return response.allowlists ?? [];
+	},
+
+	get: async (id: string): Promise<IPAllowlist> =>
+		fetchApi<IPAllowlist>(`/ip-allowlists/${id}`),
+
+	create: async (data: CreateIPAllowlistRequest): Promise<IPAllowlist> =>
+		fetchApi<IPAllowlist>('/ip-allowlists', {
+	createSchema: async (
+		data: CreateMetadataSchemaRequest,
+	): Promise<MetadataSchema> =>
+		fetchApi<MetadataSchema>('/metadata/schemas', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	updateSchema: async (
+		id: string,
+		data: UpdateMetadataSchemaRequest,
+	): Promise<MetadataSchema> =>
+		fetchApi<MetadataSchema>(`/metadata/schemas/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	deleteSchema: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/metadata/schemas/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getSettings: async (): Promise<IPAllowlistSettings> =>
+		fetchApi<IPAllowlistSettings>('/ip-allowlists/settings'),
+
+	updateSettings: async (
+		data: UpdateIPAllowlistSettingsRequest,
+	): Promise<IPAllowlistSettings> =>
+		fetchApi<IPAllowlistSettings>('/ip-allowlists/settings', {
+	getFieldTypes: async (): Promise<MetadataFieldTypesResponse> =>
+		fetchApi<MetadataFieldTypesResponse>('/metadata/schemas/types'),
+
+	getEntityTypes: async (): Promise<MetadataEntityTypesResponse> =>
+		fetchApi<MetadataEntityTypesResponse>('/metadata/schemas/entities'),
+
+	updateAgentMetadata: async (
+		agentId: string,
+		data: UpdateEntityMetadataRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/agents/${agentId}/metadata`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	listBlockedAttempts: async (
+		limit = 50,
+		offset = 0,
+	): Promise<IPBlockedAttemptsResponse> =>
+		fetchApi<IPBlockedAttemptsResponse>(
+			`/ip-allowlists/blocked?limit=${limit}&offset=${offset}`,
+		),
+};
+
+// Lifecycle Policies API
+export const lifecyclePoliciesApi = {
+	list: async (): Promise<LifecyclePolicy[]> => {
+		const response = await fetchApi<LifecyclePoliciesResponse>(
+			'/lifecycle-policies',
+		);
+		return response.policies ?? [];
+	},
+
+	get: async (id: string): Promise<LifecyclePolicy> =>
+		fetchApi<LifecyclePolicy>(`/lifecycle-policies/${id}`),
+
+	create: async (
+		data: CreateLifecyclePolicyRequest,
+	): Promise<LifecyclePolicy> =>
+		fetchApi<LifecyclePolicy>('/lifecycle-policies', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateLifecyclePolicyRequest,
+	): Promise<LifecyclePolicy> =>
+		fetchApi<LifecyclePolicy>(`/lifecycle-policies/${id}`, {
+	updateRepositoryMetadata: async (
+		repositoryId: string,
+		data: UpdateEntityMetadataRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/repositories/${repositoryId}/metadata`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	updateScheduleMetadata: async (
+		scheduleId: string,
+		data: UpdateEntityMetadataRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/schedules/${scheduleId}/metadata`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/lifecycle-policies/${id}`, {
+			method: 'DELETE',
+		}),
+
+	dryRun: async (id: string): Promise<LifecycleDryRunResult> =>
+		fetchApi<LifecycleDryRunResult>(`/lifecycle-policies/${id}/dry-run`, {
+			method: 'POST',
+		}),
+
+	preview: async (
+		data: LifecycleDryRunRequest,
+	): Promise<LifecycleDryRunResult> =>
+		fetchApi<LifecycleDryRunResult>('/lifecycle-policies/preview', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	listDeletions: async (
+		policyId: string,
+		limit?: number,
+	): Promise<LifecycleDeletionEvent[]> => {
+		const params = new URLSearchParams();
+		if (limit) params.set('limit', limit.toString());
+		const query = params.toString();
+		const response = await fetchApi<LifecycleDeletionEventsResponse>(
+			`/lifecycle-policies/${policyId}/deletions${query ? `?${query}` : ''}`,
+		);
+		return response.events ?? [];
+	},
+
+	listOrgDeletions: async (
+		limit?: number,
+	): Promise<LifecycleDeletionEvent[]> => {
+		const params = new URLSearchParams();
+		if (limit) params.set('limit', limit.toString());
+		const query = params.toString();
+		const response = await fetchApi<LifecycleDeletionEventsResponse>(
+			`/lifecycle-policies/deletions${query ? `?${query}` : ''}`,
+		);
+		return response.events ?? [];
+	},
+};
+
+// Password API
+export const passwordApi = {
+	changePassword: async (
+		data: ChangePasswordRequest,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/auth/password', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	getExpiration: async (): Promise<PasswordExpirationInfo> =>
+		fetchApi<PasswordExpirationInfo>('/auth/password/expiration'),
+};
+
+// Password Policies API
+export const passwordPoliciesApi = {
+	get: async (): Promise<PasswordPolicyResponse> =>
+		fetchApi<PasswordPolicyResponse>('/password-policies'),
+
+	getRequirements: async (): Promise<PasswordRequirements> =>
+		fetchApi<PasswordRequirements>('/password-policies/requirements'),
+
+	update: async (data: UpdatePasswordPolicyRequest): Promise<PasswordPolicy> =>
+		fetchApi<PasswordPolicy>('/password-policies', {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	validatePassword: async (
+		password: string,
+	): Promise<{ valid: boolean; errors?: string[]; warnings?: string[] }> =>
+		fetchApi<{ valid: boolean; errors?: string[]; warnings?: string[] }>(
+			'/password-policies/validate',
+			{
+				method: 'POST',
+				body: JSON.stringify({ password }),
+			},
+		),
+};
+
+// IP Bans API
+export const ipBansApi = {
+	list: async (): Promise<IPBan[]> => {
+		const response = await fetchApi<IPBansResponse>('/ip-bans');
+		return response.bans ?? [];
+	},
+
+	create: async (data: CreateIPBanRequest): Promise<IPBan> =>
+		fetchApi<IPBan>('/ip-bans', {
+	search: async (
+		entityType: MetadataEntityType,
+		key: string,
+		value: string,
+	): Promise<MetadataSearchResponse> =>
+		fetchApi<MetadataSearchResponse>(
+			`/metadata/search?entity_type=${entityType}&key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}`,
+		),
+};
+
+// Agent Import API
+export const agentImportApi = {
+	preview: async (
+		file: File,
+		options?: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+			createMissingGroups?: boolean;
+			tokenExpiryHours?: number;
+		},
+	): Promise<AgentImportPreviewResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options) {
+			formData.append('options', JSON.stringify(options));
+		}
+		const response = await fetch(`${API_BASE}/agents/import/preview`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportPreviewResponse>(response);
+	},
+
+	import: async (
+		file: File,
+		options?: {
+			hasHeader?: boolean;
+			hostnameCol?: number;
+			groupCol?: number;
+			tagsCol?: number;
+			configCol?: number;
+			createMissingGroups?: boolean;
+			tokenExpiryHours?: number;
+		},
+	): Promise<AgentImportResponse> => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (options) {
+			formData.append('options', JSON.stringify(options));
+		}
+		const response = await fetch(`${API_BASE}/agents/import`, {
+			method: 'POST',
+			credentials: 'include',
+			body: formData,
+		});
+		return handleResponse<AgentImportResponse>(response);
+	},
+
+	getTemplate: async (
+		format: 'json' | 'csv' = 'csv',
+	): Promise<AgentImportTemplateResponse> =>
+		fetchApi<AgentImportTemplateResponse>(
+			`/agents/import/template?format=${format}`,
+		),
+
+	downloadTemplate: async (): Promise<Blob> => {
+		const response = await fetch(
+			`${API_BASE}/agents/import/template/download`,
+			{
+				credentials: 'include',
+			},
+		);
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to download template');
+		}
+		return response.blob();
+	},
+
+	generateScript: async (data: {
+		hostname: string;
+		registration_code: string;
+	}): Promise<{ script: string }> =>
+		fetchApi<{ script: string }>('/agents/import/script', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/ip-bans/${id}`, {
+	exportTokens: async (results: AgentImportJobResult[]): Promise<Blob> => {
+		const response = await fetch(`${API_BASE}/agents/import/export-tokens`, {
+			method: 'POST',
+			credentials: 'include',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ results }),
+		});
+		if (!response.ok) {
+			throw new ApiError(response.status, 'Failed to export tokens');
+		}
+		return response.blob();
+	},
+};
+
+// Backup Queue API
+export const backupQueueApi = {
+	list: async (): Promise<BackupQueueResponse['queue']> => {
+		const response = await fetchApi<BackupQueueResponse>('/backup-queue');
+		return response.queue ?? [];
+	},
+
+	getSummary: async (): Promise<BackupQueueSummary> =>
+		fetchApi<BackupQueueSummary>('/backup-queue/summary'),
+
+	cancel: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/backup-queue/${id}`, {
+			method: 'DELETE',
+		}),
+};
+
+// Rate Limit Configs API
+export const rateLimitConfigsApi = {
+	list: async (): Promise<RateLimitConfig[]> => {
+		const response = await fetchApi<RateLimitConfigsResponse>(
+			'/rate-limit-configs',
+		);
+		return response.configs ?? [];
+	},
+
+	get: async (id: string): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>(`/rate-limit-configs/${id}`),
+
+	create: async (
+		data: CreateRateLimitConfigRequest,
+	): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>('/rate-limit-configs', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateRateLimitConfigRequest,
+	): Promise<RateLimitConfig> =>
+		fetchApi<RateLimitConfig>(`/rate-limit-configs/${id}`, {
+	updateOrgConcurrency: async (
+		orgId: string,
+		data: UpdateConcurrencyRequest,
+	): Promise<ConcurrencyResponse> =>
+		fetchApi<ConcurrencyResponse>(`/organizations/${orgId}/concurrency`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	getAgentConcurrency: async (agentId: string): Promise<ConcurrencyResponse> =>
+		fetchApi<ConcurrencyResponse>(`/agents/${agentId}/concurrency`),
+
+	updateAgentConcurrency: async (
+		agentId: string,
+		data: UpdateConcurrencyRequest,
+	): Promise<ConcurrencyResponse> =>
+		fetchApi<ConcurrencyResponse>(`/agents/${agentId}/concurrency`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/rate-limit-configs/${id}`, {
+			method: 'DELETE',
+		}),
+
+	getStats: async (): Promise<RateLimitStatsResponse> =>
+		fetchApi<RateLimitStatsResponse>('/rate-limit-configs/stats'),
+
+	listBlocked: async (): Promise<BlockedRequestsResponse> =>
+		fetchApi<BlockedRequestsResponse>('/rate-limit-configs/blocked'),
+};
+
+// Rate Limits API (Dashboard)
+export const rateLimitsApi = {
+	getDashboardStats: async (): Promise<RateLimitDashboardStats> =>
+		fetchApi<RateLimitDashboardStats>('/admin/rate-limits'),
+};
+
+// User Sessions API
+export const userSessionsApi = {
+	list: async (): Promise<UserSession[]> => {
+		const response = await fetchApi<UserSessionsResponse>('/user-sessions');
+		return response.sessions ?? [];
+	},
+
+	revoke: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/user-sessions/${id}`, {
+			method: 'DELETE',
+		}),
+
+	revokeAll: async (): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>('/user-sessions', {
+			method: 'DELETE',
+		}),
+};
+
+// Saved Filters API
+export const savedFiltersApi = {
+	list: async (entityType?: string): Promise<SavedFilter[]> => {
+		const endpoint = entityType
+			? `/filters?entity_type=${entityType}`
+			: '/filters';
+		const response = await fetchApi<SavedFiltersResponse>(endpoint);
+		return response.filters ?? [];
+	},
+
+	get: async (id: string): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>(`/filters/${id}`),
+
+	create: async (data: CreateSavedFilterRequest): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>('/filters', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateSavedFilterRequest,
+	): Promise<SavedFilter> =>
+		fetchApi<SavedFilter>(`/filters/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/filters/${id}`, {
+			method: 'DELETE',
 // IP Allowlists API
 export const ipAllowlistsApi = {
 	list: async (): Promise<IPAllowlist[]> => {
@@ -3247,110 +3686,4 @@ export const userSessionsApi = {
 		fetchApi<MessageResponse>('/user-sessions', {
 			method: 'DELETE',
 		}),
-};
-
-// Saved Filters API
-export const savedFiltersApi = {
-	list: async (entityType?: string): Promise<SavedFilter[]> => {
-		const endpoint = entityType
-			? `/filters?entity_type=${entityType}`
-			: '/filters';
-		const response = await fetchApi<SavedFiltersResponse>(endpoint);
-		return response.filters ?? [];
-	},
-
-	get: async (id: string): Promise<SavedFilter> =>
-		fetchApi<SavedFilter>(`/filters/${id}`),
-
-	create: async (data: CreateSavedFilterRequest): Promise<SavedFilter> =>
-		fetchApi<SavedFilter>('/filters', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	update: async (
-		id: string,
-		data: UpdateSavedFilterRequest,
-	): Promise<SavedFilter> =>
-		fetchApi<SavedFilter>(`/filters/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	delete: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/filters/${id}`, {
-			method: 'DELETE',
-		}),
-};
-// Lifecycle Policies API
-export const lifecyclePoliciesApi = {
-	list: async (): Promise<LifecyclePolicy[]> => {
-		const response = await fetchApi<LifecyclePoliciesResponse>(
-			'/lifecycle-policies',
-		);
-		return response.policies ?? [];
-	},
-
-	get: async (id: string): Promise<LifecyclePolicy> =>
-		fetchApi<LifecyclePolicy>(`/lifecycle-policies/${id}`),
-
-	create: async (
-		data: CreateLifecyclePolicyRequest,
-	): Promise<LifecyclePolicy> =>
-		fetchApi<LifecyclePolicy>('/lifecycle-policies', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	update: async (
-		id: string,
-		data: UpdateLifecyclePolicyRequest,
-	): Promise<LifecyclePolicy> =>
-		fetchApi<LifecyclePolicy>(`/lifecycle-policies/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	delete: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/lifecycle-policies/${id}`, {
-			method: 'DELETE',
-		}),
-
-	dryRun: async (id: string): Promise<LifecycleDryRunResult> =>
-		fetchApi<LifecycleDryRunResult>(`/lifecycle-policies/${id}/dry-run`, {
-			method: 'POST',
-		}),
-
-	preview: async (
-		data: LifecycleDryRunRequest,
-	): Promise<LifecycleDryRunResult> =>
-		fetchApi<LifecycleDryRunResult>('/lifecycle-policies/preview', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	listDeletions: async (
-		id: string,
-		limit?: number,
-	): Promise<LifecycleDeletionEvent[]> => {
-		const params = new URLSearchParams();
-		if (limit) params.set('limit', limit.toString());
-		const query = params.toString() ? `?${params.toString()}` : '';
-		const response = await fetchApi<LifecycleDeletionEventsResponse>(
-			`/lifecycle-policies/${id}/deletions${query}`,
-		);
-		return response.events ?? [];
-	},
-
-	listOrgDeletions: async (
-		limit?: number,
-	): Promise<LifecycleDeletionEvent[]> => {
-		const params = new URLSearchParams();
-		if (limit) params.set('limit', limit.toString());
-		const query = params.toString() ? `?${params.toString()}` : '';
-		const response = await fetchApi<LifecycleDeletionEventsResponse>(
-			`/lifecycle-deletions${query}`,
-		);
-		return response.events ?? [];
-	},
 };
