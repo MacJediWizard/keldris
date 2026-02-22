@@ -1506,7 +1506,7 @@ export type PlanType = 'free' | 'starter' | 'professional' | 'enterprise';
 export interface BillingSettings {
 	plan_type: PlanType;
 export interface BillingSettings {
-	plan_type: 'free' | 'starter' | 'professional' | 'enterprise';
+	plan_type: PlanType;
 	billing_email?: string;
 	billing_cycle?: 'monthly' | 'annual';
 	next_billing_date?: string;

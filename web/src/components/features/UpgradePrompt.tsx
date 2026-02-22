@@ -92,6 +92,21 @@ import {
 	requiresSales,
 } from '../../lib/upgrade';
 
+import { Link } from 'react-router-dom';
+import {
+	FEATURE_BENEFITS,
+	FEATURE_NAMES,
+	FEATURE_REQUIRED_PLAN,
+} from '../../hooks/usePlanLimits';
+import type { PlanType, UpgradeFeature } from '../../lib/types';
+import {
+	PLAN_NAMES,
+	PLAN_PRICING,
+	generateContactSalesLink,
+	generateUpgradeLink,
+	requiresSales,
+} from '../../lib/upgrade';
+
 export type UpgradePromptVariant = 'inline' | 'banner' | 'card' | 'modal';
 
 interface UpgradePromptProps {

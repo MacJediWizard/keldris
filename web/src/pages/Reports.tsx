@@ -3,6 +3,7 @@ import { UpgradePrompt } from '../components/features/UpgradePrompt';
 import { useNotificationChannels } from '../hooks/useNotifications';
 import { usePlanLimits } from '../hooks/usePlanLimits';
 import { useNotificationChannels } from '../hooks/useNotifications';
+import { usePlanLimits } from '../hooks/usePlanLimits';
 import {
 	useCreateReportSchedule,
 	useDeleteReportSchedule,
