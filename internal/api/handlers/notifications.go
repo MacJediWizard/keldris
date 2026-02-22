@@ -14,8 +14,10 @@ import (
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
+	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -88,6 +90,17 @@ func NewNotificationsHandler(store NotificationStore, keyManager *crypto.KeyMana
 		store:      store,
 		keyManager: keyManager,
 		logger:     logger.With().Str("component", "notifications_handler").Logger(),
+		env:        config.EnvDevelopment,
+	}
+}
+
+// NewNotificationsHandlerWithEnv creates a new NotificationsHandler with an explicit environment.
+func NewNotificationsHandlerWithEnv(store NotificationStore, keyManager *crypto.KeyManager, logger zerolog.Logger, env config.Environment) *NotificationsHandler {
+	return &NotificationsHandler{
+		store:      store,
+		keyManager: keyManager,
+		logger:     logger.With().Str("component", "notifications_handler").Logger(),
+		env:        env,
 	}
 }
 

@@ -136,6 +136,7 @@ func (m *mockNotificationStore) getLogs() []*models.NotificationLog {
 
 // newTestWebhookSenderFactory returns a webhook sender factory that skips URL
 // validation and IP blocking so it can reach local httptest servers on 127.0.0.1.
+// newTestWebhookSenderFactory returns a webhook sender factory that skips URL validation for local test servers.
 func newTestWebhookSenderFactory() func(zerolog.Logger) *WebhookSender {
 	return func(logger zerolog.Logger) *WebhookSender {
 		s := NewWebhookSender(logger)
@@ -461,6 +462,7 @@ func TestService_NotifyBackupComplete_WebhookChannel(t *testing.T) {
 	}
 
 	svc := NewService(store, zerolog.Nop())
+	svc.webhookSenderFunc = newTestWebhookSenderFactory()
 	result := BackupResult{
 		OrgID:        orgID,
 		ScheduleName: "daily",
@@ -992,6 +994,7 @@ func TestService_NotifyAgentOffline_WebhookChannel(t *testing.T) {
 
 	svc := newTestService(t, store, km)
 	svc := NewService(store, km, zerolog.Nop())
+	svc := NewService(store, zerolog.Nop())
 	svc.webhookSenderFunc = newTestWebhookSenderFactory()
 	agent := &models.Agent{ID: uuid.New(), Hostname: "server1"}
 
@@ -1360,6 +1363,7 @@ func TestService_NotifyMaintenanceScheduled_WebhookChannel(t *testing.T) {
 	}
 
 	svc := NewService(store, zerolog.Nop())
+	svc.webhookSenderFunc = newTestWebhookSenderFactory()
 	window := &models.MaintenanceWindow{
 		ID:       uuid.New(),
 		OrgID:    orgID,

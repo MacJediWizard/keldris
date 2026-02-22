@@ -14,6 +14,7 @@ import (
 	"strings"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -27,6 +28,10 @@ func newTestWebhookSender() *WebhookSender {
 	s := NewWebhookSender(zerolog.Nop())
 	s.validateURL = func(_ string) error { return nil }
 	s.client.Transport = http.DefaultTransport
+// newTestWebhookSender creates a webhook sender with URL validation disabled for local test servers.
+func newTestWebhookSender() *WebhookSender {
+	s := NewWebhookSender(zerolog.Nop())
+	s.validateURL = func(_ string) error { return nil }
 	return s
 }
 

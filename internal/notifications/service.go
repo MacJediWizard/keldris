@@ -67,6 +67,7 @@ func (s *Service) decryptConfig(encrypted []byte, dest interface{}) error {
 	logger zerolog.Logger
 	store              NotificationStore
 	keyManager         *crypto.KeyManager
+	store              NotificationStore
 	logger             zerolog.Logger
 	webhookSenderFunc  func(zerolog.Logger) *WebhookSender
 }
@@ -96,6 +97,9 @@ func (s *Service) decryptConfig(encrypted []byte, dest interface{}) error {
 	decrypted, err := s.keyManager.Decrypt(encrypted)
 	if err != nil {
 		return fmt.Errorf("failed to decrypt config: %w", err)
+		store:             store,
+		logger:            logger.With().Str("component", "notification_service").Logger(),
+		webhookSenderFunc: NewWebhookSender,
 	}
 	if err := json.Unmarshal(decrypted, dest); err != nil {
 		return fmt.Errorf("failed to parse config: %w", err)

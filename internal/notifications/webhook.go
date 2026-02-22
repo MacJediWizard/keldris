@@ -131,6 +131,10 @@ func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPay
 
 // Send sends a webhook payload to the given URL with HMAC signature and retry.
 func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPayload, secret string) error {
+	if err := w.validateURL(url); err != nil {
+		return fmt.Errorf("webhook URL blocked: %w", err)
+	}
+
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshal webhook payload: %w", err)

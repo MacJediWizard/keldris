@@ -431,7 +431,7 @@ func NewRouter(
 	notificationsHandler := handlers.NewNotificationsHandler(database, keyManager, logger)
 	notificationsHandler.RegisterRoutes(apiV1)
 	notificationsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureNotificationSlack, logger))
-	notificationsHandler := handlers.NewNotificationsHandler(database, keyManager, logger)
+	notificationsHandler := handlers.NewNotificationsHandlerWithEnv(database, keyManager, logger, cfg.Environment)
 	notificationsHandler.RegisterRoutes(notificationsGroup)
 
 	notificationRulesHandler := handlers.NewNotificationRulesHandler(database, logger)
