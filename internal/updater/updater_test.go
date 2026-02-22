@@ -833,6 +833,9 @@ func TestComputeSHA256(t *testing.T) {
 		hash, err := computeSHA256(path)
 		if err != nil {
 			t.Fatalf("computeSHA256() error = %v", err)
+		hash, err := ComputeSHA256(path)
+		if err != nil {
+			t.Fatalf("ComputeSHA256() error = %v", err)
 		}
 
 		// Compute expected hash
@@ -853,6 +856,9 @@ func TestComputeSHA256(t *testing.T) {
 		hash, err := computeSHA256(path)
 		if err != nil {
 			t.Fatalf("computeSHA256() error = %v", err)
+		hash, err := ComputeSHA256(path)
+		if err != nil {
+			t.Fatalf("ComputeSHA256() error = %v", err)
 		}
 
 		h := sha256.Sum256([]byte{})
@@ -866,6 +872,9 @@ func TestComputeSHA256(t *testing.T) {
 		_, err := computeSHA256("/nonexistent/file/path")
 		if err == nil {
 			t.Fatal("computeSHA256() should return error for nonexistent file")
+		_, err := ComputeSHA256("/nonexistent/file/path")
+		if err == nil {
+			t.Fatal("ComputeSHA256() should return error for nonexistent file")
 		}
 	})
 
@@ -884,6 +893,9 @@ func TestComputeSHA256(t *testing.T) {
 		hash, err := computeSHA256(path)
 		if err != nil {
 			t.Fatalf("computeSHA256() error = %v", err)
+		hash, err := ComputeSHA256(path)
+		if err != nil {
+			t.Fatalf("ComputeSHA256() error = %v", err)
 		}
 
 		h := sha256.Sum256(content)
