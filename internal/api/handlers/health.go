@@ -80,9 +80,11 @@ type HealthHandler struct {
 	logger        zerolog.Logger
 // HealthHandler handles health-related HTTP endpoints.
 type HealthHandler struct {
-	db     DatabaseHealthChecker
-	oidc   OIDCHealthChecker
-	logger zerolog.Logger
+	db            DatabaseHealthChecker
+	oidc          OIDCHealthChecker
+	sessions      *auth.SessionStore
+	backupService *maintenance.DatabaseBackupService
+	logger        zerolog.Logger
 }
 
 // NewHealthHandler creates a new HealthHandler.
@@ -118,6 +120,14 @@ func (h *HealthHandler) RegisterPublicRoutes(r *gin.Engine) {
 		health.GET("/db", h.Database)
 		health.GET("/oidc", h.OIDC)
 		health.GET("/shutdown", h.Shutdown)
+	}
+}
+
+// RegisterRoutes registers authenticated health check routes.
+func (h *HealthHandler) RegisterRoutes(r *gin.RouterGroup) {
+	health := r.Group("/health")
+	{
+		health.GET("/system", h.SystemHealth)
 	}
 }
 

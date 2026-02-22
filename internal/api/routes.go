@@ -184,6 +184,10 @@ func NewRouter(
 	}
 	// Health check endpoints (no auth required)
 	healthHandler := handlers.NewHealthHandler(database, oidc, logger)
+	healthHandler.SetSessionStore(sessions)
+	if cfg.DatabaseBackupService != nil {
+		healthHandler.SetDatabaseBackupService(cfg.DatabaseBackupService)
+	}
 	healthHandler.RegisterPublicRoutes(r.Engine)
 
 	// Prometheus metrics endpoint (no auth required)
