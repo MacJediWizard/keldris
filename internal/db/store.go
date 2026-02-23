@@ -1467,14 +1467,18 @@ func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, 
 	err := db.Pool.QueryRow(ctx, `
 		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
-		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
+		       pre_script_output, pre_script_error, post_script_output, post_script_error,
+		       created_at
 		FROM backups
 		WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(
 		&b.ID, &b.ScheduleID, &b.AgentID, &b.RepositoryID, &b.SnapshotID, &b.StartedAt,
 		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
 		&b.FilesChanged, &b.ErrorMessage,
-		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError, &b.CreatedAt,
+		&b.RetentionApplied, &b.SnapshotsRemoved, &b.SnapshotsKept, &b.RetentionError,
+		&b.PreScriptOutput, &b.PreScriptError, &b.PostScriptOutput, &b.PostScriptError,
+		&b.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get backup: %w", err)
@@ -1488,12 +1492,16 @@ func (db *DB) CreateBackup(ctx context.Context, backup *models.Backup) error {
 	_, err := db.Pool.Exec(ctx, `
 		INSERT INTO backups (id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		                     status, size_bytes, files_new, files_changed, error_message,
-		                     retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+		                     retention_applied, snapshots_removed, snapshots_kept, retention_error,
+		                     pre_script_output, pre_script_error, post_script_output, post_script_error,
+		                     created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 	`, backup.ID, backup.ScheduleID, backup.AgentID, backup.RepositoryID, backup.SnapshotID,
 		backup.StartedAt, backup.CompletedAt, string(backup.Status),
 		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage,
-		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError, backup.CreatedAt)
+		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError,
+		backup.PreScriptOutput, backup.PreScriptError, backup.PostScriptOutput, backup.PostScriptError,
+		backup.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("create backup: %w", err)
 	}
@@ -1506,11 +1514,13 @@ func (db *DB) UpdateBackup(ctx context.Context, backup *models.Backup) error {
 		UPDATE backups
 		SET snapshot_id = $2, completed_at = $3, status = $4, size_bytes = $5,
 		    files_new = $6, files_changed = $7, error_message = $8,
-		    retention_applied = $9, snapshots_removed = $10, snapshots_kept = $11, retention_error = $12
+		    retention_applied = $9, snapshots_removed = $10, snapshots_kept = $11, retention_error = $12,
+		    pre_script_output = $13, pre_script_error = $14, post_script_output = $15, post_script_error = $16
 		WHERE id = $1
 	`, backup.ID, backup.SnapshotID, backup.CompletedAt, string(backup.Status),
 		backup.SizeBytes, backup.FilesNew, backup.FilesChanged, backup.ErrorMessage,
-		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError)
+		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError,
+		backup.PreScriptOutput, backup.PreScriptError, backup.PostScriptOutput, backup.PostScriptError)
 	if err != nil {
 		return fmt.Errorf("update backup: %w", err)
 	}

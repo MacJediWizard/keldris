@@ -750,7 +750,7 @@ func TestStore_Backups(t *testing.T) {
 		err := db.CreateBackup(ctx, backup)
 		require.NoError(t, err)
 
-		backup.Complete("snap-123", 1024000, 10, 5)
+		backup.Complete("snap-123", 10, 5, 1024000)
 		err = db.UpdateBackup(ctx, backup)
 		require.NoError(t, err)
 
@@ -764,7 +764,7 @@ func TestStore_Backups(t *testing.T) {
 
 	t.Run("GetBySnapshotID", func(t *testing.T) {
 		backup := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		backup.Complete("unique-snap-"+uuid.New().String()[:8], 500, 1, 0)
+		backup.Complete("unique-snap-"+uuid.New().String()[:8], 1, 0, 500)
 		err := db.CreateBackup(ctx, backup)
 		require.NoError(t, err)
 
@@ -826,7 +826,7 @@ func TestStore_Backups(t *testing.T) {
 
 	t.Run("WithRetention", func(t *testing.T) {
 		backup := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		backup.Complete("ret-snap", 2048, 5, 2)
+		backup.Complete("ret-snap", 5, 2, 2048)
 		backup.RecordRetention(3, 7, nil)
 		err := db.CreateBackup(ctx, backup)
 		require.NoError(t, err)
@@ -844,7 +844,7 @@ func TestStore_Backups(t *testing.T) {
 		backup := models.NewBackup(sched.ID, agent.ID, &repo.ID)
 		backup.RecordPreScript("pre output", nil)
 		backup.RecordPostScript("post output", fmt.Errorf("post error"))
-		backup.Complete("script-snap", 100, 1, 0)
+		backup.Complete("script-snap", 1, 0, 100)
 		err := db.CreateBackup(ctx, backup)
 		require.NoError(t, err)
 
@@ -2771,7 +2771,7 @@ func TestStore_Onboarding(t *testing.T) {
 
 		got, err := db.GetOnboardingProgress(ctx, org.ID)
 		require.NoError(t, err)
-		assert.Equal(t, models.OnboardingStepOrganization, got.CurrentStep)
+		assert.Equal(t, models.OnboardingStepLicense, got.CurrentStep)
 		assert.Contains(t, got.CompletedSteps, models.OnboardingStepWelcome)
 	})
 
@@ -3575,7 +3575,7 @@ func TestStore_Tags(t *testing.T) {
 		require.NoError(t, db.CreateTag(ctx, tag2))
 
 		backup := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		backup.Complete("snap-tag-1", 1024, 10, 5)
+		backup.Complete("snap-tag-1", 10, 5, 1024)
 		require.NoError(t, db.CreateBackup(ctx, backup))
 
 		err := db.AssignTagToBackup(ctx, backup.ID, tag1.ID)
@@ -3609,7 +3609,7 @@ func TestStore_Tags(t *testing.T) {
 		require.NoError(t, db.CreateTag(ctx, tag3))
 
 		backup := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		backup.Complete("snap-set-tag", 512, 3, 1)
+		backup.Complete("snap-set-tag", 3, 1, 512)
 		require.NoError(t, db.CreateBackup(ctx, backup))
 
 		err := db.SetBackupTags(ctx, backup.ID, []uuid.UUID{tag1.ID, tag2.ID})
@@ -3678,12 +3678,12 @@ func TestStore_Tags(t *testing.T) {
 		require.NoError(t, db.CreateTag(ctx, filterTag))
 
 		backup1 := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		backup1.Complete("snap-filter-1", 100, 1, 0)
+		backup1.Complete("snap-filter-1", 1, 0, 100)
 		require.NoError(t, db.CreateBackup(ctx, backup1))
 		require.NoError(t, db.AssignTagToBackup(ctx, backup1.ID, filterTag.ID))
 
 		backup2 := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		backup2.Complete("snap-filter-2", 200, 2, 0)
+		backup2.Complete("snap-filter-2", 2, 0, 200)
 		require.NoError(t, db.CreateBackup(ctx, backup2))
 
 		backups, err := db.GetBackupsByTagIDs(ctx, []uuid.UUID{filterTag.ID})
@@ -4020,7 +4020,7 @@ func TestStore_SearchBackupsAdvanced(t *testing.T) {
 	require.NoError(t, db.CreateSchedule(ctx, sched))
 
 	backup := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-	backup.Complete("searchable-snap-adv", 2048, 5, 2)
+	backup.Complete("searchable-snap-adv", 5, 2, 2048)
 	require.NoError(t, db.CreateBackup(ctx, backup))
 
 	t.Run("SearchBackupBySnapshotID", func(t *testing.T) {
@@ -4330,7 +4330,7 @@ func TestStore_AgentWithFullStats(t *testing.T) {
 		require.NoError(t, db.CreateSchedule(ctx, sched))
 
 		backup := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		backup.Complete("stats-snap", 4096, 20, 5)
+		backup.Complete("stats-snap", 20, 5, 4096)
 		require.NoError(t, db.CreateBackup(ctx, backup))
 
 		stats, err := db.GetAgentStats(ctx, agent.ID)
@@ -4835,7 +4835,7 @@ func TestStore_AdditionalMethodCoverage(t *testing.T) {
 		repo := createTestRepo(t, db, org.ID, "bkp-sched-id-repo")
 
 		b := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		b.Complete("snap-bsi", 1000, 5, 2)
+		b.Complete("snap-bsi", 5, 2, 1000)
 		require.NoError(t, db.CreateBackup(ctx, b))
 
 		backups, err := db.GetBackupsByScheduleID(ctx, sched.ID)
@@ -4850,7 +4850,7 @@ func TestStore_AdditionalMethodCoverage(t *testing.T) {
 		repo := createTestRepo(t, db, org.ID, "bkp-agent-id-repo")
 
 		b := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		b.Complete("snap-bai", 1000, 5, 2)
+		b.Complete("snap-bai", 5, 2, 1000)
 		require.NoError(t, db.CreateBackup(ctx, b))
 
 		backups, err := db.GetBackupsByAgentID(ctx, agent.ID)
@@ -4865,7 +4865,7 @@ func TestStore_AdditionalMethodCoverage(t *testing.T) {
 		repo := createTestRepo(t, db, org.ID, "latest-bkp-repo")
 
 		b := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		b.Complete("snap-latest", 1000, 5, 2)
+		b.Complete("snap-latest", 5, 2, 1000)
 		require.NoError(t, db.CreateBackup(ctx, b))
 
 		latest, err := db.GetLatestBackupByScheduleID(ctx, sched.ID)
@@ -5054,7 +5054,7 @@ func TestStore_AdditionalMethodCoverage(t *testing.T) {
 		repo := createTestRepo(t, db, org.ID, "set-bkp-tags-repo")
 
 		b := models.NewBackup(schedObj.ID, agent.ID, &repo.ID)
-		b.Complete("snap-set-tags", 1000, 5, 2)
+		b.Complete("snap-set-tags", 5, 2, 1000)
 		require.NoError(t, db.CreateBackup(ctx, b))
 
 		tag := models.NewTag(org.ID, "set-bkp-tag-"+uuid.New().String()[:8], "#FF0000")
@@ -5403,7 +5403,7 @@ func TestStore_AdditionalMethodCoverage(t *testing.T) {
 		repo := createTestRepo(t, db, org.ID, "del-bkp-repo")
 
 		b := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		b.Complete("snap-del-bkp", 1000, 5, 2)
+		b.Complete("snap-del-bkp", 5, 2, 1000)
 		require.NoError(t, db.CreateBackup(ctx, b))
 
 		err := db.DeleteBackup(ctx, b.ID)
@@ -5569,7 +5569,7 @@ func TestStore_AdditionalMethodCoverage(t *testing.T) {
 		b := models.NewBackup(schedObj.ID, agent.ID, &repo.ID)
 		require.NoError(t, db.CreateBackup(ctx, b))
 
-		b.Complete("snap-upd", 2000, 10, 3)
+		b.Complete("snap-upd", 10, 3, 2000)
 		err := db.UpdateBackup(ctx, b)
 		require.NoError(t, err)
 	})
@@ -5688,7 +5688,7 @@ func TestStore_AdditionalMethodCoverage(t *testing.T) {
 		repo := createTestRepo(t, db, org.ID, "bkp-tagids-repo")
 
 		b := models.NewBackup(schedObj.ID, agent.ID, &repo.ID)
-		b.Complete("snap-tagids", 1000, 5, 2)
+		b.Complete("snap-tagids", 5, 2, 1000)
 		require.NoError(t, db.CreateBackup(ctx, b))
 
 		tag := models.NewTag(org.ID, "bkp-tagids-"+uuid.New().String()[:8], "#FF0000")
@@ -5707,7 +5707,7 @@ func TestStore_AdditionalMethodCoverage(t *testing.T) {
 		repo := createTestRepo(t, db, org.ID, "bkpids-tag-repo")
 
 		b := models.NewBackup(schedObj.ID, agent.ID, &repo.ID)
-		b.Complete("snap-bkpids", 1000, 5, 2)
+		b.Complete("snap-bkpids", 5, 2, 1000)
 		require.NoError(t, db.CreateBackup(ctx, b))
 
 		tag := models.NewTag(org.ID, "bkpids-tag-"+uuid.New().String()[:8], "#FF0000")
@@ -5726,7 +5726,7 @@ func TestStore_AdditionalMethodCoverage(t *testing.T) {
 		repo := createTestRepo(t, db, org.ID, "rm-tag-bkp-repo")
 
 		b := models.NewBackup(schedObj.ID, agent.ID, &repo.ID)
-		b.Complete("snap-rm-tag", 1000, 5, 2)
+		b.Complete("snap-rm-tag", 5, 2, 1000)
 		require.NoError(t, db.CreateBackup(ctx, b))
 
 		tag := models.NewTag(org.ID, "rm-tag-bkp-"+uuid.New().String()[:8], "#FF0000")
