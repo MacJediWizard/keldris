@@ -58,12 +58,12 @@ CREATE INDEX IF NOT EXISTS idx_license_audit_logs_license ON license_audit_logs(
 CREATE INDEX IF NOT EXISTS idx_license_audit_logs_action ON license_audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_license_audit_logs_created ON license_audit_logs(created_at DESC);
 
--- Add license configuration to system_settings
-INSERT INTO system_settings (key, value, description) VALUES
-    ('license_public_key', '""', 'Base64-encoded Ed25519 public key for license validation'),
-    ('license_grace_period_days', '30', 'Number of days after license expiry before enforcement'),
-    ('license_warning_days', '30', 'Number of days before expiry to start showing warnings')
-ON CONFLICT (key) DO NOTHING;
+-- Insert default license settings for all existing organizations
+INSERT INTO system_settings (org_id, setting_key, setting_value, description)
+SELECT id, 'license', '{"public_key": "", "grace_period_days": 30, "warning_days": 30}'::jsonb,
+    'License validation configuration'
+FROM organizations
+ON CONFLICT (org_id, setting_key) DO NOTHING;
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_license_updated_at()

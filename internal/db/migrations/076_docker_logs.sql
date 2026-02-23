@@ -1,5 +1,4 @@
 -- Docker container log backup tables
--- +goose Up
 
 -- Docker log backup records
 CREATE TABLE docker_log_backups (
@@ -61,7 +60,3 @@ CREATE INDEX idx_docker_log_settings_agent_id ON docker_log_settings(agent_id);
 
 -- Index for enabled settings (for scheduler)
 CREATE INDEX idx_docker_log_settings_enabled ON docker_log_settings(enabled) WHERE enabled = true;
-
--- +goose Down
-DROP TABLE IF EXISTS docker_log_settings;
-DROP TABLE IF EXISTS docker_log_backups;

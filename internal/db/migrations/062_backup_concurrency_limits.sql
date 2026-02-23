@@ -7,22 +7,12 @@ ALTER TABLE organizations ADD COLUMN IF NOT EXISTS max_concurrent_backups INTEGE
 -- Add max_concurrent_backups to agents
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS max_concurrent_backups INTEGER;
 
--- Create backup queue table to track queued backups when limits are reached
-CREATE TABLE IF NOT EXISTS backup_queue (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-    schedule_id UUID NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
-    priority INTEGER DEFAULT 0, -- Higher values = higher priority
-    queued_at TIMESTAMPTZ DEFAULT NOW(),
-    started_at TIMESTAMPTZ,
-    status VARCHAR(50) DEFAULT 'queued', -- queued, started, canceled
-    queue_position INTEGER, -- Calculated position in queue
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- Add org_id to backup_queue (created in 061 without it) for concurrency limit queries
+ALTER TABLE backup_queue ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE backup_queue ADD COLUMN IF NOT EXISTS queue_position INTEGER;
 
 -- Index for efficient queue queries
-CREATE INDEX IF NOT EXISTS idx_backup_queue_org_status ON backup_queue(org_id, status) WHERE status = 'queued';
+CREATE INDEX IF NOT EXISTS idx_backup_queue_org_status ON backup_queue(org_id, status) WHERE org_id IS NOT NULL AND status = 'queued';
 CREATE INDEX IF NOT EXISTS idx_backup_queue_agent_status ON backup_queue(agent_id, status) WHERE status = 'queued';
 CREATE INDEX IF NOT EXISTS idx_backup_queue_queued_at ON backup_queue(queued_at) WHERE status = 'queued';
 

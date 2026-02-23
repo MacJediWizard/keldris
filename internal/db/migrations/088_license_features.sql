@@ -1,4 +1,3 @@
--- +goose Up
 -- License tiers for organizations
 
 CREATE TABLE IF NOT EXISTS organization_licenses (
@@ -19,24 +18,13 @@ CREATE INDEX IF NOT EXISTS idx_org_licenses_org_id ON organization_licenses(org_
 -- Index for finding expired licenses
 CREATE INDEX IF NOT EXISTS idx_org_licenses_expires_at ON organization_licenses(expires_at) WHERE expires_at IS NOT NULL;
 
--- Audit log for license changes
-CREATE TABLE IF NOT EXISTS license_audit_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    action VARCHAR(50) NOT NULL,
-    old_tier VARCHAR(50),
-    new_tier VARCHAR(50),
-    details JSONB,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
+-- Add org-related columns to license_audit_logs (created in 087 without org_id)
+ALTER TABLE license_audit_logs ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+ALTER TABLE license_audit_logs ADD COLUMN IF NOT EXISTS old_tier VARCHAR(50);
+ALTER TABLE license_audit_logs ADD COLUMN IF NOT EXISTS new_tier VARCHAR(50);
 
 -- Index for audit logs by org
-CREATE INDEX IF NOT EXISTS idx_license_audit_logs_org_id ON license_audit_logs(org_id);
+CREATE INDEX IF NOT EXISTS idx_license_audit_logs_org_id ON license_audit_logs(org_id) WHERE org_id IS NOT NULL;
 
 -- Index for audit logs by time
 CREATE INDEX IF NOT EXISTS idx_license_audit_logs_created_at ON license_audit_logs(created_at);
-
--- +goose Down
-DROP TABLE IF EXISTS license_audit_logs;
-DROP TABLE IF EXISTS organization_licenses;
