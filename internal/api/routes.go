@@ -657,10 +657,3 @@ func NewRouter(
 	return r, nil
 }
 
-// healthCheck returns basic health information.
-func (r *Router) healthCheck(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"status": "healthy",
-		"db":     r.db.Health(),
-	})
-}

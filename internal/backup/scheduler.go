@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -675,12 +675,6 @@ func (s *Scheduler) failBackup(ctx context.Context, backup *models.Backup, errMs
 	logger.Error().Str("error", errMsg).Msg("backup failed")
 }
 
-// failBackupWithSchedule marks a backup as failed, runs post-scripts, and sends notification.
-func (s *Scheduler) failBackupWithSchedule(ctx context.Context, backup *models.Backup, schedule models.Schedule, errMsg string, logger zerolog.Logger) {
-	s.failBackup(ctx, backup, errMsg, logger)
-	s.sendBackupNotification(ctx, schedule, backup, false, errMsg)
-}
-
 // sendBackupNotification sends a notification about a backup result.
 func (s *Scheduler) sendBackupNotification(ctx context.Context, schedule models.Schedule, backup *models.Backup, success bool, errMsg string) {
 	if s.notifier == nil {
@@ -728,7 +722,7 @@ func (s *Scheduler) checkNetworkMounts(ctx context.Context, schedule models.Sche
 	// Check if any backup paths use network mounts
 	for _, backupPath := range schedule.Paths {
 		for _, mount := range agent.NetworkMounts {
-			if filepath.HasPrefix(backupPath, mount.Path) {
+			if strings.HasPrefix(backupPath, mount.Path) {
 				if mount.Status != models.MountStatusConnected {
 					return fmt.Errorf("mount %s is not connected (status: %s)", mount.Path, mount.Status)
 				}

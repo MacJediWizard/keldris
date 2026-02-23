@@ -142,11 +142,6 @@ func GenerateMasterKey() ([]byte, error) {
 	return key, nil
 }
 
-// masterKeyToBase64 encodes a master key to base64 for configuration storage.
-func masterKeyToBase64(key []byte) string {
-	return base64.StdEncoding.EncodeToString(key)
-}
-
 // masterKeyFromBase64 decodes a base64-encoded master key.
 func masterKeyFromBase64(encoded string) ([]byte, error) {
 	key, err := base64.StdEncoding.DecodeString(encoded)

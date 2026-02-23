@@ -17,7 +17,6 @@ import (
 	"syscall"
 	"time"
 
-	agentclient "github.com/MacJediWizard/keldris/internal/agent"
 	"github.com/MacJediWizard/keldris/internal/agent"
 	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
@@ -592,7 +591,7 @@ func newBackupCmd() *cobra.Command {
 }
 
 func runBackup(cfg *config.AgentConfig, scheduleName string) error {
-	client := agentclient.NewClient(cfg.ServerURL, cfg.APIKey)
+	client := agent.NewClient(cfg.ServerURL, cfg.APIKey)
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 
 	fmt.Println("Fetching backup schedules from server...")
@@ -607,7 +606,7 @@ func runBackup(cfg *config.AgentConfig, scheduleName string) error {
 	}
 
 	// Find the schedule to run
-	var sched *agentclient.ScheduleConfig
+	var sched *agent.ScheduleConfig
 	if scheduleName != "" {
 		for i := range schedules {
 			if schedules[i].Name == scheduleName {
@@ -655,7 +654,7 @@ func runBackup(cfg *config.AgentConfig, scheduleName string) error {
 	completedAt := time.Now()
 
 	// Report result to server
-	report := &agentclient.BackupReport{
+	report := &agent.BackupReport{
 		ScheduleID:   sched.ID,
 		RepositoryID: sched.RepositoryID,
 		StartedAt:    startedAt,
@@ -729,7 +728,7 @@ func newRestoreCmd() *cobra.Command {
 }
 
 func runRestore(cfg *config.AgentConfig, latest bool, snapshotID, targetPath string) error {
-	client := agentclient.NewClient(cfg.ServerURL, cfg.APIKey)
+	client := agent.NewClient(cfg.ServerURL, cfg.APIKey)
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 
 	// If --latest, look up the most recent snapshot
@@ -818,7 +817,7 @@ The daemon will:
 
 func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
-	client := agentclient.NewClient(cfg.ServerURL, cfg.APIKey)
+	client := agent.NewClient(cfg.ServerURL, cfg.APIKey)
 	collector := health.NewCollector(cfg.ServerURL, "restic")
 
 	fmt.Printf("Keldris Agent %s starting...\n", Version)
@@ -873,7 +872,7 @@ func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
 }
 
 // refreshSchedules fetches schedules from the server and updates the cron scheduler.
-func refreshSchedules(c *cron.Cron, client *agentclient.Client, cfg *config.AgentConfig, logger *zerolog.Logger) {
+func refreshSchedules(c *cron.Cron, client *agent.Client, cfg *config.AgentConfig, logger *zerolog.Logger) {
 	schedules, err := client.GetSchedules()
 	if err != nil {
 		logger.Warn().Err(err).Msg("failed to fetch schedules")
@@ -903,7 +902,7 @@ func refreshSchedules(c *cron.Cron, client *agentclient.Client, cfg *config.Agen
 	logger.Info().Int("count", len(schedules)).Msg("schedules refreshed")
 }
 
-func sendHeartbeat(client *agentclient.Client, collector *health.Collector, logger *zerolog.Logger) {
+func sendHeartbeat(client *agent.Client, collector *health.Collector, logger *zerolog.Logger) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -916,9 +915,9 @@ func sendHeartbeat(client *agentclient.Client, collector *health.Collector, logg
 	// Get OS info
 	osInfo := health.GetOSInfo()
 
-	req := &agentclient.HeartbeatRequest{
+	req := &agent.HeartbeatRequest{
 		Status: "healthy",
-		OSInfo: &agentclient.OSInfo{
+		OSInfo: &agent.OSInfo{
 			OS:       osInfo["os"],
 			Arch:     osInfo["arch"],
 			Hostname: osInfo["hostname"],
@@ -927,7 +926,7 @@ func sendHeartbeat(client *agentclient.Client, collector *health.Collector, logg
 	}
 
 	if metrics != nil {
-		req.Metrics = &agentclient.HeartbeatMetrics{
+		req.Metrics = &agent.HeartbeatMetrics{
 			CPUUsage:        metrics.CPUUsage,
 			MemoryUsage:     metrics.MemoryUsage,
 			DiskUsage:       metrics.DiskUsage,
