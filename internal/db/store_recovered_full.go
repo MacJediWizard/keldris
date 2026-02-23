@@ -1241,9 +1241,7 @@ func (db *DB) GetBackupsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models
 	rows, err := db.Pool.Query(ctx, `
 		SELECT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at, b.completed_at,
 		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
-		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
-		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
-		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error, b.created_at
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
@@ -1266,9 +1264,7 @@ func (db *DB) GetBackupsByOrgIDSince(ctx context.Context, orgID uuid.UUID, since
 	rows, err := db.Pool.Query(ctx, `
 		SELECT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at, b.completed_at,
 		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
-		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
-		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
-		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error, b.created_at
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
@@ -1293,9 +1289,7 @@ func (db *DB) GetBackupsByTagIDs(ctx context.Context, tagIDs []uuid.UUID) ([]*mo
 	rows, err := db.Pool.Query(ctx, `
 		SELECT DISTINCT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at, b.completed_at,
 		       b.status, b.size_bytes, b.files_new, b.files_changed, b.error_message,
-		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
-		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
-		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error, b.created_at
 		FROM backups b
 		JOIN backup_tags bt ON b.id = bt.backup_id
 		WHERE bt.tag_id = ANY($1)

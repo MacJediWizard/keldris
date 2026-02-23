@@ -737,9 +737,7 @@ func (db *DB) GetAllBackups(ctx context.Context) ([]*models.Backup, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
-		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
-		       pre_script_output, pre_script_error, post_script_output, post_script_error,
-		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
 		ORDER BY started_at DESC
 	`)
@@ -803,9 +801,7 @@ func (db *DB) GetBackupsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID
 		SELECT b.id, b.schedule_id, b.agent_id, b.repository_id, b.snapshot_id, b.started_at,
 		       b.completed_at, b.status, b.size_bytes, b.files_new,
 		       b.files_changed, b.error_message,
-		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error,
-		       b.pre_script_output, b.pre_script_error, b.post_script_output, b.post_script_error,
-		       b.excluded_large_files, b.resumed, b.checkpoint_id, b.original_backup_id, b.created_at
+		       b.retention_applied, b.snapshots_removed, b.snapshots_kept, b.retention_error, b.created_at
 		FROM backups b
 		JOIN schedules s ON b.schedule_id = s.id
 		JOIN agents a ON s.agent_id = a.id
@@ -1358,9 +1354,7 @@ func (db *DB) GetBackupsByStatus(ctx context.Context, status models.BackupStatus
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, schedule_id, agent_id, repository_id, snapshot_id, started_at, completed_at,
 		       status, size_bytes, files_new, files_changed, error_message,
-		       retention_applied, snapshots_removed, snapshots_kept, retention_error,
-		       pre_script_output, pre_script_error, post_script_output, post_script_error,
-		       excluded_large_files, resumed, checkpoint_id, original_backup_id, created_at
+		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
 		WHERE status = $1
 		ORDER BY started_at DESC
