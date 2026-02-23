@@ -18,7 +18,7 @@ CREATE INDEX idx_registration_codes_code ON agent_registration_codes(code);
 CREATE INDEX idx_registration_codes_expires ON agent_registration_codes(expires_at);
 CREATE INDEX idx_registration_codes_created_by ON agent_registration_codes(created_by);
 
--- Add unique constraint on active codes per org
--- This prevents duplicate codes while allowing reuse after expiration
+-- Add unique constraint on unused codes per org
+-- This prevents duplicate codes while allowing reuse after they are consumed
 CREATE UNIQUE INDEX idx_registration_codes_active_code ON agent_registration_codes(org_id, code)
-    WHERE used_at IS NULL AND expires_at > NOW();
+    WHERE used_at IS NULL;
