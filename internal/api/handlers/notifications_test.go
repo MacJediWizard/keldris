@@ -12,6 +12,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/crypto"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -123,11 +124,12 @@ func setupNotificationTestRouter(store NotificationStore, user *auth.SessionUser
 		if user != nil {
 			c.Set(string(middleware.UserContextKey), user)
 		}
+		// Set an enterprise license so feature gate checks pass in tests
+		c.Set("license", &license.License{Tier: license.TierEnterprise})
 		c.Next()
 	})
 	km, _ := crypto.NewKeyManager(make([]byte, 32))
 	handler := NewNotificationsHandler(store, km, zerolog.Nop())
-	handler := NewNotificationsHandler(store, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

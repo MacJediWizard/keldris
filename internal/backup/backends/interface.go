@@ -75,6 +75,20 @@ func ParseBackend(repoType models.RepositoryType, configJSON []byte) (Backend, e
 		}
 		return &b, nil
 
+	case models.RepositoryTypeAzure:
+		var b AzureBackend
+		if err := json.Unmarshal(configJSON, &b); err != nil {
+			return nil, fmt.Errorf("parse azure backend config: %w", err)
+		}
+		return &b, nil
+
+	case models.RepositoryTypeGCS:
+		var b GCSBackend
+		if err := json.Unmarshal(configJSON, &b); err != nil {
+			return nil, fmt.Errorf("parse gcs backend config: %w", err)
+		}
+		return &b, nil
+
 	default:
 		return nil, fmt.Errorf("unsupported repository type: %s", repoType)
 	}

@@ -12,9 +12,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"net/http"
-	"net/http/httptest"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -28,10 +25,6 @@ func newTestWebhookSender() *WebhookSender {
 	s := NewWebhookSender(zerolog.Nop())
 	s.validateURL = func(_ string) error { return nil }
 	s.client.Transport = http.DefaultTransport
-// newTestWebhookSender creates a webhook sender with URL validation disabled for local test servers.
-func newTestWebhookSender() *WebhookSender {
-	s := NewWebhookSender(zerolog.Nop())
-	s.validateURL = func(_ string) error { return nil }
 	return s
 }
 
@@ -68,7 +61,6 @@ func TestWebhookSender_Send(t *testing.T) {
 	defer server.Close()
 
 	sender := newTestWebhookSender()
-	sender := NewWebhookSender(zerolog.Nop())
 	payload := WebhookPayload{
 		EventType: "backup_success",
 		Timestamp: time.Now(),
@@ -99,7 +91,6 @@ func TestWebhookSender_SendNoSecret(t *testing.T) {
 	defer server.Close()
 
 	sender := newTestWebhookSender()
-	sender := NewWebhookSender(zerolog.Nop())
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")
@@ -122,7 +113,6 @@ func TestWebhookSender_Retry(t *testing.T) {
 	defer server.Close()
 
 	sender := newTestWebhookSender()
-	sender := NewWebhookSender(zerolog.Nop())
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")
@@ -144,7 +134,6 @@ func TestWebhookSender_RetryExhausted(t *testing.T) {
 	defer server.Close()
 
 	sender := newTestWebhookSender()
-	sender := NewWebhookSender(zerolog.Nop())
 	payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: nil}
 
 	err := sender.Send(context.Background(), server.URL, payload, "")

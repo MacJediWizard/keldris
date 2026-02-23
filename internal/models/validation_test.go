@@ -18,7 +18,9 @@ func TestRepository_IsValidType(t *testing.T) {
 		{"sftp", RepositoryTypeSFTP, true},
 		{"rest", RepositoryTypeRest, true},
 		{"dropbox", RepositoryTypeDropbox, true},
-		{"invalid type", RepositoryType("azure"), false},
+		{"azure", RepositoryTypeAzure, true},
+		{"gcs", RepositoryTypeGCS, true},
+		{"invalid type", RepositoryType("ftp"), false},
 		{"empty type", RepositoryType(""), false},
 	}
 
@@ -34,8 +36,8 @@ func TestRepository_IsValidType(t *testing.T) {
 
 func TestValidRepositoryTypes(t *testing.T) {
 	types := ValidRepositoryTypes()
-	if len(types) != 6 {
-		t.Errorf("expected 6 valid types, got %d", len(types))
+	if len(types) != 8 {
+		t.Errorf("expected 8 valid types, got %d", len(types))
 	}
 
 	expected := map[RepositoryType]bool{
@@ -45,6 +47,8 @@ func TestValidRepositoryTypes(t *testing.T) {
 		RepositoryTypeSFTP:   true,
 		RepositoryTypeRest:   true,
 		RepositoryTypeDropbox: true,
+		RepositoryTypeAzure:  true,
+		RepositoryTypeGCS:    true,
 	}
 	for _, rt := range types {
 		if !expected[rt] {

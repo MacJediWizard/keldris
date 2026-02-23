@@ -51,7 +51,6 @@ func (h *AgentGroupsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		groups.GET("/:id/agents", h.ListMembers)
 		groups.POST("/:id/agents", h.AddAgent)
 		groups.DELETE("/:id/agents/:agent_id", h.RemoveAgent)
-		groups.DELETE("/:id/agents/:agentId", h.RemoveAgent)
 	}
 
 	// Also add endpoint for listing agents with their groups
@@ -387,7 +386,7 @@ func (h *AgentGroupsHandler) AddAgent(c *gin.Context) {
 }
 
 // RemoveAgent removes an agent from a group.
-// DELETE /api/v1/agent-groups/:id/agents/:agentId
+// DELETE /api/v1/agent-groups/:id/agents/:agent_id
 func (h *AgentGroupsHandler) RemoveAgent(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {

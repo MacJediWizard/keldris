@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
@@ -68,6 +69,18 @@ func (m *mockBackupStore) GetScheduleByID(_ context.Context, id uuid.UUID) (*mod
 		return s, nil
 	}
 	return nil, errors.New("schedule not found")
+}
+
+func (m *mockBackupStore) GetSchedulesByAgentID(_ context.Context, _ uuid.UUID) ([]*models.Schedule, error) {
+	return nil, nil
+}
+
+func (m *mockBackupStore) GetBackupsByOrgIDAndDateRange(_ context.Context, _ uuid.UUID, _, _ time.Time) ([]*models.Backup, error) {
+	return nil, nil
+}
+
+func (m *mockBackupStore) GetBackupValidationByBackupID(_ context.Context, _ uuid.UUID) (*models.BackupValidation, error) {
+	return nil, nil
 }
 
 func setupBackupTestRouter(store BackupStore, user *auth.SessionUser) *gin.Engine {

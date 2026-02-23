@@ -548,6 +548,19 @@ func (db *DB) CreateSnapshotComment(ctx context.Context, comment *models.Snapsho
 	return nil
 }
 
+// UpdateSnapshotComment updates a snapshot comment's content.
+func (db *DB) UpdateSnapshotComment(ctx context.Context, comment *models.SnapshotComment) error {
+	comment.UpdatedAt = time.Now()
+	_, err := db.Pool.Exec(ctx, `
+		UPDATE snapshot_comments SET content = $2, updated_at = $3
+		WHERE id = $1
+	`, comment.ID, comment.Content, comment.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("update snapshot comment: %w", err)
+	}
+	return nil
+}
+
 // CreateSSOGroupMapping creates a new SSO group mapping.
 func (db *DB) CreateSSOGroupMapping(ctx context.Context, m *models.SSOGroupMapping) error {
 	_, err := db.Pool.Exec(ctx, `

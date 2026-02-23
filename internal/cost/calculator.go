@@ -52,6 +52,20 @@ var DefaultPricing = map[models.RepositoryType]StoragePricing{
 		ProviderName:        "Dropbox",
 		ProviderDescription: "Dropbox cloud storage",
 	},
+	models.RepositoryTypeAzure: {
+		StoragePerGBMonth:   0.018, // Azure Blob Storage Hot tier
+		EgressPerGB:         0.087,
+		OperationsPerK:      0.004,
+		ProviderName:        "Azure Blob Storage",
+		ProviderDescription: "Microsoft Azure Blob Storage",
+	},
+	models.RepositoryTypeGCS: {
+		StoragePerGBMonth:   0.020, // GCS Standard storage
+		EgressPerGB:         0.12,
+		OperationsPerK:      0.005,
+		ProviderName:        "Google Cloud Storage",
+		ProviderDescription: "Google Cloud Storage Standard",
+	},
 }
 
 // WasabiPricing represents Wasabi S3-compatible pricing (used via S3 backend).

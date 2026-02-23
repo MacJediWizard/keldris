@@ -9,10 +9,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"fmt"
-	"net"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/MacJediWizard/keldris/internal/models"
@@ -177,10 +173,6 @@ func TestSFTPBackend_KeyAuth(t *testing.T) {
 		}
 
 		err = b.TestConnection()
-			PrivateKey: "not-a-valid-key",
-		}
-
-		err = b.TestConnection()
 		if err == nil {
 			t.Error("TestConnection() expected error with invalid private key, got nil")
 		}
@@ -256,9 +248,6 @@ func TestSFTPBackend_PasswordAuth(t *testing.T) {
 // authentication with the given user/password. Returns the host:port, the
 // base64-encoded host public key, and a cleanup function.
 func startTestSSHServer(t *testing.T, wantUser, wantPass string) (string, string, func()) {
-// authentication with the given user/password. Returns the host:port and a
-// cleanup function.
-func startTestSSHServer(t *testing.T, wantUser, wantPass string) (string, func()) {
 	t.Helper()
 
 	// Generate host key
@@ -315,11 +304,6 @@ func startTestSSHServer(t *testing.T, wantUser, wantPass string) (string, func()
 
 func TestSFTPBackend_TestConnection_PasswordSuccess(t *testing.T) {
 	addr, hostKey, cleanup := startTestSSHServer(t, "testuser", "testpass")
-	return listener.Addr().String(), func() { listener.Close() }
-}
-
-func TestSFTPBackend_TestConnection_PasswordSuccess(t *testing.T) {
-	addr, hostKey, cleanup := startTestSSHServer(t, "testuser", "testpass")
 	defer cleanup()
 
 	host, port, err := net.SplitHostPort(addr)
@@ -346,7 +330,6 @@ func TestSFTPBackend_TestConnection_PasswordSuccess(t *testing.T) {
 
 func TestSFTPBackend_TestConnection_WrongPassword(t *testing.T) {
 	addr, hostKey, cleanup := startTestSSHServer(t, "testuser", "correct-pass")
-	addr, cleanup := startTestSSHServer(t, "testuser", "correct-pass")
 	defer cleanup()
 
 	host, port, err := net.SplitHostPort(addr)

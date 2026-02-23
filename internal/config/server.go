@@ -144,6 +144,9 @@ func LoadServerConfig() ServerConfig {
 	}
 
 	sessionIdleTimeout := getEnvInt("SESSION_IDLE_TIMEOUT", 1800)
+	if sessionIdleTimeout < 0 {
+		sessionIdleTimeout = 1800
+	}
 
 	airGapMode := getEnvBool("AIR_GAP_MODE", false)
 

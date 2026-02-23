@@ -36,9 +36,6 @@ func (m *mockAlertStore) GetAlertsByOrgID(_ context.Context, orgID uuid.UUID) ([
 	if m.listErr != nil {
 		return nil, m.listErr
 	}
-}
-
-func (m *mockAlertStore) GetAlertsByOrgID(_ context.Context, orgID uuid.UUID) ([]*models.Alert, error) {
 	var result []*models.Alert
 	for _, a := range m.alerts {
 		if a.OrgID == orgID {

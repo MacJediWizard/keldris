@@ -1760,7 +1760,7 @@ func (db *DB) GetDRTestByID(ctx context.Context, id uuid.UUID) (*models.DRTest, 
 		       started_at, completed_at, restore_size_bytes, restore_duration_seconds,
 		       verification_passed, notes, error_message, created_at
 		FROM dr_tests
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(
 		&t.ID, &t.RunbookID, &t.ScheduleID, &t.AgentID, &t.SnapshotID, &statusStr,
 		&t.StartedAt, &t.CompletedAt, &t.RestoreSizeBytes, &t.RestoreDurationSeconds,
@@ -1773,6 +1773,21 @@ func (db *DB) GetDRTestByID(ctx context.Context, id uuid.UUID) (*models.DRTest, 
 	return &t, nil
 }
 
+
+// DeleteDRTest soft-deletes a DR test by setting deleted_at.
+func (db *DB) DeleteDRTest(ctx context.Context, id uuid.UUID) error {
+	tag, err := db.Pool.Exec(ctx, `
+		UPDATE dr_tests SET deleted_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete DR test: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("DR test not found")
+	}
+	return nil
+}
 
 // DR Test Schedule methods
 
@@ -4857,7 +4872,7 @@ func (db *DB) GetVerificationByID(ctx context.Context, id uuid.UUID) (*models.Ve
 		SELECT id, repository_id, type, snapshot_id, started_at, completed_at,
 		       status, duration_ms, error_message, details, created_at
 		FROM verifications
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(
 		&v.ID, &v.RepositoryID, &typeStr, &snapshotID, &v.StartedAt,
 		&v.CompletedAt, &statusStr, &v.DurationMs, &v.ErrorMessage,
@@ -4877,6 +4892,21 @@ func (db *DB) GetVerificationByID(ctx context.Context, id uuid.UUID) (*models.Ve
 	return &v, nil
 }
 
+
+// DeleteVerification soft-deletes a verification by setting deleted_at.
+func (db *DB) DeleteVerification(ctx context.Context, id uuid.UUID) error {
+	tag, err := db.Pool.Exec(ctx, `
+		UPDATE verifications SET deleted_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete verification: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("verification not found")
+	}
+	return nil
+}
 
 // GetVerificationScheduleByID returns a verification schedule by ID.
 func (db *DB) GetVerificationScheduleByID(ctx context.Context, id uuid.UUID) (*models.VerificationSchedule, error) {

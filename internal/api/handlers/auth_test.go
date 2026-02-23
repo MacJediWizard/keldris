@@ -130,6 +130,22 @@ func (m *mockUserStore) CreateAuditLog(_ context.Context, _ *models.AuditLog) er
 	return m.createAuditLogErr
 }
 
+func (m *mockUserStore) CreateUserSession(_ context.Context, _ *models.UserSession) error {
+	return nil
+}
+
+func (m *mockUserStore) RevokeUserSession(_ context.Context, _ uuid.UUID, _ uuid.UUID) error {
+	return nil
+}
+
+func (m *mockUserStore) GetUserByEmail(_ context.Context, _ string) (*models.User, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *mockUserStore) GetUserPasswordInfo(_ context.Context, _ uuid.UUID) (*models.UserPasswordInfo, error) {
+	return nil, errors.New("not implemented")
+}
+
 // newMockOIDCServer creates a mock OIDC provider HTTP server for handler testing.
 // Supported authorization codes: "valid-code" returns a valid token; unknown codes return an error.
 func newMockOIDCServer(t *testing.T) *httptest.Server {

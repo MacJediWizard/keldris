@@ -142,6 +142,18 @@ func (m *mockOrgStore) GetUserByID(_ context.Context, id uuid.UUID) (*models.Use
 	return nil, errors.New("user not found")
 }
 
+func (m *mockOrgStore) GetInvitationByID(_ context.Context, _ uuid.UUID) (*models.OrgInvitation, error) {
+	return nil, errors.New("not found")
+}
+
+func (m *mockOrgStore) UpdateInvitationResent(_ context.Context, _ uuid.UUID) error {
+	return nil
+}
+
+func (m *mockOrgStore) GetUserByEmail(_ context.Context, _ string) (*models.User, error) {
+	return nil, errors.New("not found")
+}
+
 func setupOrgTestRouter(store *mockOrgStore, user *auth.SessionUser) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

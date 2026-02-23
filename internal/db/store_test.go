@@ -3748,7 +3748,7 @@ func TestStore_DashboardAndMetrics(t *testing.T) {
 	// Create several completed backups
 	for i := 0; i < 3; i++ {
 		backup := models.NewBackup(sched.ID, agent.ID, &repo.ID)
-		backup.Complete(fmt.Sprintf("snap-metric-%d", i), int64(1024*(i+1)), 10+i, 5+i)
+		backup.Complete(fmt.Sprintf("snap-metric-%d", i), 10+i, 5+i, int64(1024*(i+1)))
 		require.NoError(t, db.CreateBackup(ctx, backup))
 	}
 	// Create a failed backup

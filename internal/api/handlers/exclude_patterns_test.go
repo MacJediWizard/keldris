@@ -87,7 +87,6 @@ func setupExcludePatternsTestRouter(store ExcludePatternStore, user *auth.Sessio
 func TestExcludePatternsList(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 
 	t.Run("success", func(t *testing.T) {
 		p1 := &models.ExcludePattern{ID: uuid.New(), OrgID: &orgID, Name: "Test", Patterns: []string{"*.tmp"}, Category: "temp"}
@@ -128,7 +127,6 @@ func TestExcludePatternsList(t *testing.T) {
 	t.Run("no org", func(t *testing.T) {
 		store := &mockExcludePatternStore{}
 		r := setupExcludePatternsTestRouter(store, testUserNoOrg())
-		r := setupExcludePatternsTestRouter(store, TestUserNoOrg())
 		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/exclude-patterns"))
 		if resp.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d", resp.Code)
@@ -157,7 +155,6 @@ func TestExcludePatternsList(t *testing.T) {
 func TestExcludePatternsLibrary(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 
 	t.Run("success", func(t *testing.T) {
 		store := &mockExcludePatternStore{}
@@ -172,7 +169,6 @@ func TestExcludePatternsLibrary(t *testing.T) {
 func TestExcludePatternsCategories(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 
 	t.Run("success", func(t *testing.T) {
 		store := &mockExcludePatternStore{}
@@ -187,7 +183,6 @@ func TestExcludePatternsCategories(t *testing.T) {
 func TestExcludePatternsGet(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 
 	t.Run("success custom pattern", func(t *testing.T) {
 		p := &models.ExcludePattern{ID: uuid.New(), OrgID: &orgID, Name: "Test", Patterns: []string{"*.log"}, Category: "logs"}
@@ -242,7 +237,6 @@ func TestExcludePatternsGet(t *testing.T) {
 func TestExcludePatternsCreate(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 
 	t.Run("success", func(t *testing.T) {
 		store := &mockExcludePatternStore{}
@@ -277,7 +271,6 @@ func TestExcludePatternsCreate(t *testing.T) {
 	t.Run("no org", func(t *testing.T) {
 		store := &mockExcludePatternStore{}
 		r := setupExcludePatternsTestRouter(store, testUserNoOrg())
-		r := setupExcludePatternsTestRouter(store, TestUserNoOrg())
 		body := `{"name":"Test","patterns":["*.tmp"],"category":"temp"}`
 		resp := DoRequest(r, JSONRequest("POST", "/api/v1/exclude-patterns", body))
 		if resp.Code != http.StatusBadRequest {
@@ -299,7 +292,6 @@ func TestExcludePatternsCreate(t *testing.T) {
 func TestExcludePatternsUpdate(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 	p := &models.ExcludePattern{ID: uuid.New(), OrgID: &orgID, Name: "Test", Patterns: []string{"*.tmp"}, Category: "temp"}
 
 	t.Run("success", func(t *testing.T) {
@@ -359,7 +351,6 @@ func TestExcludePatternsUpdate(t *testing.T) {
 func TestExcludePatternsDelete(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 	p := &models.ExcludePattern{ID: uuid.New(), OrgID: &orgID, Name: "Test", Patterns: []string{"*.tmp"}, Category: "temp"}
 
 	t.Run("success", func(t *testing.T) {

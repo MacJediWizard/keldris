@@ -48,7 +48,7 @@ func TestNewBackup_NilRepo(t *testing.T) {
 func TestBackup_Complete(t *testing.T) {
 	backup := NewBackup(uuid.New(), uuid.New(), nil)
 
-	backup.Complete("snap-123", 1024*1024, 10, 5)
+	backup.Complete("snap-123", 10, 5, 1024*1024)
 
 	if backup.Status != BackupStatusCompleted {
 		t.Errorf("expected Status %s, got %s", BackupStatusCompleted, backup.Status)

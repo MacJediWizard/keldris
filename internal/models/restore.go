@@ -113,6 +113,7 @@ type Restore struct {
 	VerifyUpload        bool                 `json:"verify_upload,omitempty"`
 	CreatedAt           time.Time            `json:"created_at"`
 	UpdatedAt           time.Time            `json:"updated_at"`
+	DeletedAt           *time.Time           `json:"deleted_at,omitempty"`
 }
 
 // IsCloudRestore returns true if this is a cloud restore operation.

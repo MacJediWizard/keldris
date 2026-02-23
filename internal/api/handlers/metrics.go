@@ -33,11 +33,14 @@ type MetricsHandler struct {
 
 // NewMetricsHandler creates a new MetricsHandler.
 func NewMetricsHandler(db MetricsStore, logger zerolog.Logger) *MetricsHandler {
-	return &MetricsHandler{
-		db:                  db,
-		prometheusCollector: metrics.NewPrometheusCollector(db, logger),
-		logger:              logger.With().Str("component", "metrics_handler").Logger(),
+	h := &MetricsHandler{
+		db:     db,
+		logger: logger.With().Str("component", "metrics_handler").Logger(),
 	}
+	if db != nil {
+		h.prometheusCollector = metrics.NewPrometheusCollector(db, logger)
+	}
+	return h
 }
 
 // RegisterPublicRoutes registers metrics routes that don't require authentication.

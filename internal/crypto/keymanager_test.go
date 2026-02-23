@@ -555,12 +555,6 @@ func TestKeyManager_StoreKey(t *testing.T) {
 	}
 
 	// "Store" the key as base64 (simulating config storage)
-	stored := masterKeyToBase64(key)
-
-	// "Retrieve" the key from storage
-	retrieved, err := masterKeyFromBase64(stored)
-	if err != nil {
-		t.Fatalf("masterKeyFromBase64() error = %v", err)
 	stored := MasterKeyToBase64(key)
 
 	// "Retrieve" the key from storage
@@ -590,26 +584,17 @@ func TestKeyManager_RetrieveKey(t *testing.T) {
 	// Test base64 round-trip preserves key identity
 	key, _ := GenerateMasterKey()
 
-	encoded := masterKeyToBase64(key)
 	encoded := MasterKeyToBase64(key)
 
 	// Verify encoded form is valid base64
 	decoded, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
-		t.Fatalf("masterKeyToBase64() produced invalid base64: %v", err)
 		t.Fatalf("MasterKeyToBase64() produced invalid base64: %v", err)
 	}
 	if !bytes.Equal(key, decoded) {
 		t.Error("raw base64 decode doesn't match original key")
 	}
 
-	// Verify masterKeyFromBase64 gives identical result
-	retrieved, err := masterKeyFromBase64(encoded)
-	if err != nil {
-		t.Fatalf("masterKeyFromBase64() error = %v", err)
-	}
-	if !bytes.Equal(key, retrieved) {
-		t.Error("masterKeyFromBase64() result doesn't match original key")
 	// Verify MasterKeyFromBase64 gives identical result
 	retrieved, err := MasterKeyFromBase64(encoded)
 	if err != nil {
@@ -735,17 +720,6 @@ func TestKeyManager_EscrowKey(t *testing.T) {
 	}
 }
 
-func TestMasterKeyBase64(t *testing.T) {
-	key, _ := GenerateMasterKey()
-
-	encoded := masterKeyToBase64(key)
-	decoded, err := masterKeyFromBase64(encoded)
-	if err != nil {
-		t.Fatalf("masterKeyFromBase64() error = %v", err)
-	}
-
-	if !bytes.Equal(key, decoded) {
-		t.Errorf("masterKeyFromBase64() = %v, want %v", decoded, key)
 func TestMasterKeyBase64(t *testing.T) {
 	key, _ := GenerateMasterKey()
 
@@ -916,12 +890,5 @@ func TestKeyManager_CrossKeyIsolation(t *testing.T) {
 				}
 			}
 		}
-	}
-}
-			_, err := MasterKeyFromBase64(tt.encoded)
-			if err == nil {
-				t.Error("MasterKeyFromBase64() expected error, got nil")
-			}
-		})
 	}
 }

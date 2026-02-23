@@ -123,6 +123,40 @@ func NewScheduler(store ScheduleStore, restic *Restic, config SchedulerConfig, n
 	}
 }
 
+// GetActiveSchedules returns the number of active schedules in the cron scheduler.
+func (s *Scheduler) GetActiveSchedules() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.entries)
+}
+
+// GetNextRun returns the next scheduled run time for a given schedule ID.
+func (s *Scheduler) GetNextRun(scheduleID uuid.UUID) (time.Time, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	entryID, exists := s.entries[scheduleID]
+	if !exists {
+		return time.Time{}, false
+	}
+	entry := s.cron.Entry(entryID)
+	return entry.Next, true
+}
+
+// TriggerBackup manually triggers a backup for the given schedule ID.
+func (s *Scheduler) TriggerBackup(ctx context.Context, scheduleID uuid.UUID) error {
+	schedules, err := s.store.GetEnabledSchedules(ctx)
+	if err != nil {
+		return fmt.Errorf("get schedules: %w", err)
+	}
+	for _, sched := range schedules {
+		if sched.ID == scheduleID {
+			go s.executeBackup(sched)
+			return nil
+		}
+	}
+	return fmt.Errorf("schedule not found: %s", scheduleID)
+}
+
 // SetMaintenanceService sets the maintenance service for checking maintenance windows.
 // This should be called before Start() if maintenance mode checking is desired.
 func (s *Scheduler) SetMaintenanceService(maint *maintenance.Service) {
@@ -702,6 +736,16 @@ func (s *Scheduler) checkNetworkMounts(ctx context.Context, schedule models.Sche
 		}
 	}
 
+	return nil
+}
+
+// getScriptsByType returns the first backup script matching the given type, or nil.
+func getScriptsByType(scripts []*models.BackupScript, scriptType models.BackupScriptType) *models.BackupScript {
+	for _, s := range scripts {
+		if s.Type == scriptType {
+			return s
+		}
+	}
 	return nil
 }
 

@@ -23,6 +23,10 @@ const (
 	RepositoryTypeRest RepositoryType = "rest"
 	// RepositoryTypeDropbox is a Dropbox storage repository (via rclone).
 	RepositoryTypeDropbox RepositoryType = "dropbox"
+	// RepositoryTypeAzure is an Azure Blob Storage repository.
+	RepositoryTypeAzure RepositoryType = "azure"
+	// RepositoryTypeGCS is a Google Cloud Storage repository.
+	RepositoryTypeGCS RepositoryType = "gcs"
 )
 
 // Repository represents a backup storage destination.
@@ -60,6 +64,8 @@ func ValidRepositoryTypes() []RepositoryType {
 		RepositoryTypeSFTP,
 		RepositoryTypeRest,
 		RepositoryTypeDropbox,
+		RepositoryTypeAzure,
+		RepositoryTypeGCS,
 	}
 }
 

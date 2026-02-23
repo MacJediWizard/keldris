@@ -86,16 +86,7 @@ func (h *OrganizationsHandler) RegisterMultiOrgRoutes(r *gin.RouterGroup, create
 		orgs.PUT("/:id", h.Update)
 		orgs.DELETE("/:id", h.Delete)
 
-		// Member management (write operations)
-		orgs.POST("", h.Create)
-		orgs.GET("/current", h.GetCurrent)
-		orgs.POST("/switch", h.Switch)
-		orgs.GET("/:id", h.Get)
-		orgs.PUT("/:id", h.Update)
-		orgs.DELETE("/:id", h.Delete)
-
 		// Member management
-		orgs.GET("/:id/members", h.ListMembers)
 		orgs.PUT("/:id/members/:user_id", h.UpdateMember)
 		orgs.DELETE("/:id/members/:user_id", h.RemoveMember)
 

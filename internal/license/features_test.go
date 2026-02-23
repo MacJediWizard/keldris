@@ -87,21 +87,15 @@ func TestFeaturesForTier(t *testing.T) {
 
 	t.Run("pro tier features", func(t *testing.T) {
 		features := FeaturesForTier(TierPro)
-		if len(features) != 12 {
-			t.Errorf("FeaturesForTier(TierPro) returned %d features, want 12", len(features))
-		if len(features) != 2 {
-			t.Errorf("FeaturesForTier(TierPro) returned %d features, want 2", len(features))
+		if len(features) != 14 {
+			t.Errorf("FeaturesForTier(TierPro) returned %d features, want 14", len(features))
 		}
 	})
 
 	t.Run("enterprise tier features", func(t *testing.T) {
 		features := FeaturesForTier(TierEnterprise)
-		if len(features) != 17 {
-			t.Errorf("FeaturesForTier(TierEnterprise) returned %d features, want 17", len(features))
-		if len(features) != 18 {
-			t.Errorf("FeaturesForTier(TierEnterprise) returned %d features, want 18", len(features))
-		if len(features) != 6 {
-			t.Errorf("FeaturesForTier(TierEnterprise) returned %d features, want 6", len(features))
+		if len(features) != 26 {
+			t.Errorf("FeaturesForTier(TierEnterprise) returned %d features, want 26", len(features))
 		}
 	})
 
@@ -150,22 +144,18 @@ func TestFeatures_HasFeature_AllTiers(t *testing.T) {
 
 	t.Run("pro tier has exactly the expected features", func(t *testing.T) {
 		proFeatures := map[Feature]bool{
-			FeatureOIDC:                 true,
-			FeatureAuditLogs:            true,
-			FeatureNotificationSlack:    true,
-			FeatureNotificationTeams:    true,
+			FeatureOIDC:                  true,
+			FeatureAuditLogs:             true,
+			FeatureNotificationSlack:     true,
+			FeatureNotificationTeams:     true,
 			FeatureNotificationPagerDuty: true,
-			FeatureNotificationDiscord:  true,
-			FeatureStorageS3:            true,
-			FeatureStorageB2:            true,
-			FeatureStorageSFTP:          true,
-			FeatureDockerBackup:         true,
-			FeatureMultiRepo:            true,
-			FeatureAPIAccess:            true,
-	t.Run("pro tier has exactly OIDC and audit logs", func(t *testing.T) {
-		proFeatures := map[Feature]bool{
-			FeatureOIDC:     true,
-			FeatureAuditLogs: true,
+			FeatureNotificationDiscord:   true,
+			FeatureStorageS3:             true,
+			FeatureStorageB2:             true,
+			FeatureStorageSFTP:           true,
+			FeatureDockerBackup:          true,
+			FeatureMultiRepo:             true,
+			FeatureAPIAccess:             true,
 		}
 		for _, feature := range allFeatures {
 			got := HasFeature(TierPro, feature)
@@ -230,32 +220,13 @@ func TestFeatures_FreeTierLimits(t *testing.T) {
 		if HasFeature(TierFree, gf.feature) {
 			t.Errorf("free tier should not have %s", gf.name)
 		}
-	if HasFeature(TierFree, FeatureOIDC) {
-		t.Error("free tier should not have OIDC")
-	}
-	if HasFeature(TierFree, FeatureAuditLogs) {
-		t.Error("free tier should not have audit logs")
-	}
-	if HasFeature(TierFree, FeatureMultiOrg) {
-		t.Error("free tier should not have multi-org")
-	}
-	if HasFeature(TierFree, FeatureSLATracking) {
-		t.Error("free tier should not have SLA tracking")
-	}
-	if HasFeature(TierFree, FeatureWhiteLabel) {
-		t.Error("free tier should not have white label")
-	}
-	if HasFeature(TierFree, FeatureAirGap) {
-		t.Error("free tier should not have air gap")
 	}
 }
 
 func TestFeatures_ProTierLimits(t *testing.T) {
 	features := FeaturesForTier(TierPro)
-	if len(features) != 12 {
-		t.Fatalf("pro tier should have 12 features, got %d", len(features))
-	if len(features) != 2 {
-		t.Fatalf("pro tier should have 2 features, got %d", len(features))
+	if len(features) != 14 {
+		t.Fatalf("pro tier should have 14 features, got %d", len(features))
 	}
 
 	// Verify the exact features
@@ -277,6 +248,8 @@ func TestFeatures_ProTierLimits(t *testing.T) {
 		FeatureDockerBackup,
 		FeatureMultiRepo,
 		FeatureAPIAccess,
+		FeatureCustomReports,
+		FeatureCustomRetention,
 	}
 	for _, f := range proExpected {
 		if !featureSet[f] {
@@ -292,41 +265,24 @@ func TestFeatures_ProTierLimits(t *testing.T) {
 		FeatureAirGap,
 		FeatureDRRunbooks,
 		FeatureDRTests,
+		FeatureSSOSync,
+		FeatureRBAC,
+		FeatureGeoReplication,
+		FeatureRansomwareProtect,
+		FeatureLegalHolds,
+		FeaturePrioritySupport,
 	}
 	for _, f := range enterpriseOnly {
 		if featureSet[f] {
 			t.Errorf("pro tier features should not include %s", f)
 		}
-	if !featureSet[FeatureOIDC] {
-		t.Error("pro tier features should include OIDC")
-	}
-	if !featureSet[FeatureAuditLogs] {
-		t.Error("pro tier features should include audit logs")
-	}
-
-	// Verify enterprise-only features are not included
-	if featureSet[FeatureMultiOrg] {
-		t.Error("pro tier features should not include multi-org")
-	}
-	if featureSet[FeatureSLATracking] {
-		t.Error("pro tier features should not include SLA tracking")
-	}
-	if featureSet[FeatureWhiteLabel] {
-		t.Error("pro tier features should not include white label")
-	}
-	if featureSet[FeatureAirGap] {
-		t.Error("pro tier features should not include air gap")
 	}
 }
 
 func TestFeatures_EnterpriseTierLimits(t *testing.T) {
 	features := FeaturesForTier(TierEnterprise)
-	if len(features) != 17 {
-		t.Fatalf("enterprise tier should have 17 features, got %d", len(features))
-	if len(features) != 18 {
-		t.Fatalf("enterprise tier should have 18 features, got %d", len(features))
-	if len(features) != 6 {
-		t.Fatalf("enterprise tier should have 6 features, got %d", len(features))
+	if len(features) != 26 {
+		t.Fatalf("enterprise tier should have 26 features, got %d", len(features))
 	}
 
 	// Verify all features are present
@@ -336,6 +292,7 @@ func TestFeatures_EnterpriseTierLimits(t *testing.T) {
 	}
 
 	expectedFeatures := []Feature{
+		// Pro features (included in Enterprise)
 		FeatureOIDC,
 		FeatureAuditLogs,
 		FeatureNotificationSlack,
@@ -348,17 +305,21 @@ func TestFeatures_EnterpriseTierLimits(t *testing.T) {
 		FeatureDockerBackup,
 		FeatureMultiRepo,
 		FeatureAPIAccess,
+		FeatureCustomReports,
+		FeatureCustomRetention,
+		// Enterprise-only features
 		FeatureMultiOrg,
 		FeatureSLATracking,
 		FeatureWhiteLabel,
-
 		FeatureAirGap,
 		FeatureDRRunbooks,
 		FeatureDRTests,
-		FeatureMultiOrg,
-		FeatureSLATracking,
-		FeatureWhiteLabel,
-		FeatureAirGap,
+		FeatureSSOSync,
+		FeatureRBAC,
+		FeatureGeoReplication,
+		FeatureRansomwareProtect,
+		FeatureLegalHolds,
+		FeaturePrioritySupport,
 	}
 
 	for _, expected := range expectedFeatures {

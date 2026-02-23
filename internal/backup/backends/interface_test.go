@@ -50,6 +50,12 @@ func TestBackendFactory_Create(t *testing.T) {
 			config:   `{"remote_name": "myremote", "path": "/backups"}`,
 			wantType: models.RepositoryTypeDropbox,
 		},
+		{
+			name:     "azure backend",
+			repoType: models.RepositoryTypeAzure,
+			config:   `{"account_name": "myaccount", "account_key": "dGVzdGtleQ==", "container_name": "mycontainer"}`,
+			wantType: models.RepositoryTypeAzure,
+		},
 	}
 
 	for _, tt := range tests {
@@ -109,6 +115,7 @@ func TestBackendFactory_InvalidJSON(t *testing.T) {
 		models.RepositoryTypeSFTP,
 		models.RepositoryTypeRest,
 		models.RepositoryTypeDropbox,
+		models.RepositoryTypeAzure,
 	}
 
 	for _, repoType := range types {
@@ -181,6 +188,16 @@ func TestBackendConfig_RoundTrip(t *testing.T) {
 				RemoteName: "myremote",
 				Path:       "/backups",
 				Token:      "token123",
+			},
+		},
+		{
+			name:     "azure",
+			repoType: models.RepositoryTypeAzure,
+			backend: &AzureBackend{
+				AccountName:   "myaccount",
+				AccountKey:    "dGVzdGtleQ==",
+				ContainerName: "mycontainer",
+				Prefix:        "backups",
 			},
 		},
 	}

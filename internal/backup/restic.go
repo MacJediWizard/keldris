@@ -585,20 +585,6 @@ func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.
 	return result, nil
 }
 
-// PruneOnly runs restic prune without forget to reclaim space from already-removed snapshots.
-func (r *Restic) PruneOnly(ctx context.Context, cfg ResticConfig) error {
-	r.logger.Info().Msg("starting prune-only operation")
-
-	args := []string{"prune", "--repo", cfg.Repository}
-	_, err := r.run(ctx, cfg, args)
-	if err != nil {
-		return fmt.Errorf("prune failed: %w", err)
-	}
-
-	r.logger.Info().Msg("prune completed")
-	return nil
-}
-
 // Copy copies a snapshot from one repository to another.
 func (r *Restic) Copy(ctx context.Context, sourceCfg, targetCfg ResticConfig, snapshotID string) error {
 	r.logger.Info().

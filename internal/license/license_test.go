@@ -8,6 +8,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/MacJediWizard/keldris/internal/models"
+	"github.com/google/uuid"
 )
 
 func TestLicenseTier_IsValid(t *testing.T) {
@@ -645,12 +648,7 @@ func TestLicense_GracePeriod(t *testing.T) {
 			t.Errorf("license expiring in 5 minutes should be valid, got %v", err)
 		}
 	})
-	"testing"
-	"time"
-
-	"github.com/MacJediWizard/keldris/internal/models"
-	"github.com/google/uuid"
-)
+}
 
 func TestKeyPairGeneration(t *testing.T) {
 	kp, err := GenerateKeyPair()
@@ -953,6 +951,7 @@ func TestManagerWithLicense(t *testing.T) {
 	features := manager.GetFeatures()
 	if !features.GeoReplication {
 		t.Error("Expected geo replication to be enabled for Enterprise tier")
+	}
 }
 
 func TestLicense_InvalidSignature(t *testing.T) {

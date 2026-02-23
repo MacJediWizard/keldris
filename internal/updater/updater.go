@@ -287,7 +287,7 @@ func (u *Updater) fetchLatestRelease(ctx context.Context) (*Release, error) {
 
 	resp, err := u.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetch latest release: %w", err)
 	}
 	defer resp.Body.Close()
 

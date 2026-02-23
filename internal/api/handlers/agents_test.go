@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
@@ -110,6 +111,18 @@ func (m *mockAgentStore) GetFleetHealthSummary(_ context.Context, orgID uuid.UUI
 		return m.fleetHealth, nil
 	}
 	return nil, errors.New("no fleet health")
+}
+
+func (m *mockAgentStore) SetAgentDebugMode(_ context.Context, _ uuid.UUID, _ bool, _ *time.Time, _ *uuid.UUID) error {
+	return nil
+}
+
+func (m *mockAgentStore) GetAgentLogs(_ context.Context, _ uuid.UUID, _ *models.AgentLogFilter) ([]*models.AgentLog, int, error) {
+	return nil, 0, nil
+}
+
+func (m *mockAgentStore) GetAgentDockerHealth(_ context.Context, _ uuid.UUID) (*models.AgentDockerHealth, error) {
+	return nil, nil
 }
 
 func setupAgentTestRouter(store AgentStore, user *auth.SessionUser) *gin.Engine {

@@ -104,9 +104,6 @@ func (m *mockScheduleStore) CreateBackup(_ context.Context, _ *models.Backup) er
 	return m.createBackupErr
 }
 
-	return m.replicationStatuses[scheduleID], nil
-}
-
 func setupScheduleTestRouter(store ScheduleStore, user *auth.SessionUser) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

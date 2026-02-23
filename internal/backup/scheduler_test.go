@@ -10,7 +10,6 @@ import (
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/notifications"
-	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )
@@ -57,15 +56,6 @@ type mockStore struct {
 	updateErr         error
 	scriptErr         error
 	replicationStatus *models.ReplicationStatus
-// mockStore implements ScheduleStore for testing.
-type mockStore struct {
-	mu         sync.Mutex
-	schedules  []models.Schedule
-	repos      map[uuid.UUID]*models.Repository
-	backups    []*models.Backup
-	getErr     error
-	createErr  error
-	updateErr  error
 }
 
 func newMockStore() *mockStore {
@@ -138,9 +128,6 @@ func (m *mockStore) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Age
 	if agent, ok := m.agents[id]; ok {
 		return agent, nil
 	}
-func (m *mockStore) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 	return &models.Agent{
 		ID:       id,
 		OrgID:    uuid.New(),
@@ -253,7 +240,6 @@ func TestScheduler_StartStop(t *testing.T) {
 	config.RefreshInterval = 100 * time.Millisecond
 
 	scheduler := NewScheduler(store, restic, config, nil, logger)
-	scheduler := NewScheduler(store, restic, config, logger)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -282,7 +268,6 @@ func TestScheduler_Reload(t *testing.T) {
 	config.RefreshInterval = time.Hour // Prevent auto-refresh during test
 
 	scheduler := NewScheduler(store, restic, config, nil, logger)
-	scheduler := NewScheduler(store, restic, config, logger)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -300,9 +285,6 @@ func TestScheduler_Reload(t *testing.T) {
 
 	// Add a schedule
 	repoID := uuid.New()
-	schedule := models.Schedule{
-		ID:             uuid.New(),
-		AgentID:        uuid.New(),
 	schedule := models.Schedule{
 		ID:             uuid.New(),
 		AgentID:        uuid.New(),
@@ -337,7 +319,6 @@ func TestScheduler_Reload(t *testing.T) {
 	store.mu.Lock()
 	store.schedules = nil
 	store.mu.Unlock()
-	store.schedules = nil
 	if err := scheduler.Reload(ctx); err != nil {
 		t.Fatalf("Reload() error = %v", err)
 	}
@@ -371,7 +352,6 @@ func TestScheduler_GetNextRun_NotFound(t *testing.T) {
 	config := DefaultSchedulerConfig()
 
 	scheduler := NewScheduler(store, restic, config, nil, logger)
-	scheduler := NewScheduler(store, restic, config, logger)
 
 	_, ok := scheduler.GetNextRun(uuid.New())
 	if ok {
@@ -397,12 +377,6 @@ func TestScheduler_InvalidCronExpression(t *testing.T) {
 
 	// Add a schedule with invalid cron expression
 	repoID := uuid.New()
-	schedule := models.Schedule{
-		ID:             uuid.New(),
-		AgentID:        uuid.New(),
-	scheduler := NewScheduler(store, restic, config, logger)
-
-	// Add a schedule with invalid cron expression
 	schedule := models.Schedule{
 		ID:             uuid.New(),
 		AgentID:        uuid.New(),
@@ -906,58 +880,6 @@ func TestScheduler_SetMaintenanceService(t *testing.T) {
 	}
 }
 
-func TestScheduler_GetNextAllowedRun(t *testing.T) {
-	store := newMockStore()
-	logger := zerolog.Nop()
-	restic := NewRestic(logger)
-	config := DefaultSchedulerConfig()
-	config.RefreshInterval = time.Hour
-
-	scheduler := NewScheduler(store, restic, config, nil, logger)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := scheduler.Start(ctx); err != nil {
-		t.Fatalf("Start() error = %v", err)
-	}
-	defer scheduler.Stop()
-
-	t.Run("non-existent schedule", func(t *testing.T) {
-		_, ok := scheduler.GetNextAllowedRun(ctx, uuid.New())
-		if ok {
-			t.Error("GetNextAllowedRun() should return false for non-existent schedule")
-		}
-	})
-
-	t.Run("schedule without window", func(t *testing.T) {
-		scheduleID := uuid.New()
-		store.addSchedule(models.Schedule{
-			ID:             scheduleID,
-			AgentID:        uuid.New(),
-			Name:           "No Window",
-			CronExpression: "0 0 * * * *",
-			Paths:          []string{"/data"},
-			Enabled:        true,
-			Repositories: []models.ScheduleRepository{
-				{ID: uuid.New(), RepositoryID: uuid.New(), Priority: 0, Enabled: true},
-			},
-		})
-
-		if err := scheduler.Reload(ctx); err != nil {
-			t.Fatalf("Reload() error = %v", err)
-		}
-
-		nextAllowed, ok := scheduler.GetNextAllowedRun(ctx, scheduleID)
-		if !ok {
-			t.Fatal("GetNextAllowedRun() should return true")
-		}
-		if nextAllowed.IsZero() {
-			t.Error("GetNextAllowedRun() should return non-zero time")
-		}
-	})
-}
-
 func TestScheduler_RunScript(t *testing.T) {
 	store := newMockStore()
 	logger := zerolog.Nop()
@@ -973,7 +895,7 @@ func TestScheduler_RunScript(t *testing.T) {
 			TimeoutSeconds: 10,
 		}
 
-		output, err := scheduler.runScript(context.Background(), script, logger)
+		output, err := scheduler.executeScript(context.Background(), script)
 		if err != nil {
 			t.Fatalf("runScript() error = %v", err)
 		}
@@ -989,7 +911,7 @@ func TestScheduler_RunScript(t *testing.T) {
 			TimeoutSeconds: 10,
 		}
 
-		_, err := scheduler.runScript(context.Background(), script, logger)
+		_, err := scheduler.executeScript(context.Background(), script)
 		if err == nil {
 			t.Fatal("expected error for failing script")
 		}
@@ -1002,7 +924,7 @@ func TestScheduler_RunScript(t *testing.T) {
 			TimeoutSeconds: 10,
 		}
 
-		output, err := scheduler.runScript(context.Background(), script, logger)
+		output, err := scheduler.executeScript(context.Background(), script)
 		if err != nil {
 			t.Fatalf("runScript() error = %v", err)
 		}
@@ -1018,7 +940,7 @@ func TestScheduler_RunScript(t *testing.T) {
 			TimeoutSeconds: 1,
 		}
 
-		_, err := scheduler.runScript(context.Background(), script, logger)
+		_, err := scheduler.executeScript(context.Background(), script)
 		if err == nil {
 			t.Fatal("expected timeout error")
 		}
@@ -1876,7 +1798,6 @@ func TestScheduler_SendBackupNotification_WithNotifier(t *testing.T) {
 	testKey := make([]byte, crypto.KeySize)
 	km, _ := crypto.NewKeyManager(testKey)
 	notifier := notifications.NewService(notifStore, km, zerolog.Nop())
-	notifier := notifications.NewService(notifStore, zerolog.Nop())
 
 	scheduler := NewScheduler(store, restic, config, notifier, logger)
 
@@ -1922,7 +1843,6 @@ func TestScheduler_SendBackupNotification_WithMinimalBackup(t *testing.T) {
 	testKey := make([]byte, crypto.KeySize)
 	km, _ := crypto.NewKeyManager(testKey)
 	notifier := notifications.NewService(notifStore, km, zerolog.Nop())
-	notifier := notifications.NewService(notifStore, zerolog.Nop())
 
 	scheduler := NewScheduler(store, restic, config, notifier, logger)
 

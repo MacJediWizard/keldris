@@ -53,6 +53,22 @@ const (
 	FeatureDRRunbooks Feature = "dr_runbooks"
 	// FeatureDRTests enables disaster recovery testing (Enterprise).
 	FeatureDRTests Feature = "dr_tests"
+	// FeatureCustomReports enables custom report generation (Pro+).
+	FeatureCustomReports Feature = "custom_reports"
+	// FeatureSSOSync enables SSO directory sync (Enterprise).
+	FeatureSSOSync Feature = "sso_sync"
+	// FeatureRBAC enables role-based access control (Enterprise).
+	FeatureRBAC Feature = "rbac"
+	// FeatureGeoReplication enables cross-region replication (Enterprise).
+	FeatureGeoReplication Feature = "geo_replication"
+	// FeatureRansomwareProtect enables ransomware protection (Enterprise).
+	FeatureRansomwareProtect Feature = "ransomware_protection"
+	// FeatureLegalHolds enables legal hold capabilities (Enterprise).
+	FeatureLegalHolds Feature = "legal_holds"
+	// FeatureCustomRetention enables custom retention policies (Pro+).
+	FeatureCustomRetention Feature = "custom_retention"
+	// FeaturePrioritySupport enables priority support access (Enterprise).
+	FeaturePrioritySupport Feature = "priority_support"
 )
 
 // featureAccess maps each license tier to the features it unlocks.
@@ -71,6 +87,8 @@ var featureAccess = map[LicenseTier][]Feature{
 		FeatureDockerBackup,
 		FeatureMultiRepo,
 		FeatureAPIAccess,
+		FeatureCustomReports,
+		FeatureCustomRetention,
 	},
 	TierEnterprise: {
 		FeatureOIDC,
@@ -85,12 +103,20 @@ var featureAccess = map[LicenseTier][]Feature{
 		FeatureDockerBackup,
 		FeatureMultiRepo,
 		FeatureAPIAccess,
+		FeatureCustomReports,
+		FeatureCustomRetention,
 		FeatureMultiOrg,
 		FeatureSLATracking,
 		FeatureWhiteLabel,
 		FeatureAirGap,
 		FeatureDRRunbooks,
 		FeatureDRTests,
+		FeatureSSOSync,
+		FeatureRBAC,
+		FeatureGeoReplication,
+		FeatureRansomwareProtect,
+		FeatureLegalHolds,
+		FeaturePrioritySupport,
 	},
 }
 
@@ -121,21 +147,67 @@ func FeaturesForTier(tier LicenseTier) []Feature {
 
 // featureTierMap defines which tier is required for each feature.
 var featureTierMap = map[Feature]Tier{
-	FeatureOIDC:        TierPro,
-	FeatureAuditLogs:   TierPro,
-	FeatureMultiOrg:    TierEnterprise,
-	FeatureSLATracking: TierEnterprise,
-	FeatureWhiteLabel:  TierEnterprise,
+	// Pro tier features
+	FeatureOIDC:                 TierPro,
+	FeatureAuditLogs:            TierPro,
+	FeatureNotificationSlack:    TierPro,
+	FeatureNotificationTeams:    TierPro,
+	FeatureNotificationPagerDuty: TierPro,
+	FeatureNotificationDiscord:  TierPro,
+	FeatureStorageS3:            TierPro,
+	FeatureStorageB2:            TierPro,
+	FeatureStorageSFTP:          TierPro,
+	FeatureDockerBackup:         TierPro,
+	FeatureMultiRepo:            TierPro,
+	FeatureAPIAccess:            TierPro,
+	FeatureCustomReports:        TierPro,
+	FeatureCustomRetention:      TierPro,
+	// Enterprise tier features
+	FeatureMultiOrg:          TierEnterprise,
+	FeatureSLATracking:       TierEnterprise,
+	FeatureWhiteLabel:        TierEnterprise,
+	FeatureAirGap:            TierEnterprise,
+	FeatureDRRunbooks:        TierEnterprise,
+	FeatureDRTests:           TierEnterprise,
+	FeatureSSOSync:           TierEnterprise,
+	FeatureRBAC:              TierEnterprise,
+	FeatureGeoReplication:    TierEnterprise,
+	FeatureRansomwareProtect: TierEnterprise,
+	FeatureLegalHolds:        TierEnterprise,
+	FeaturePrioritySupport:   TierEnterprise,
 }
 
 // AllFeatures returns all defined features.
 func AllFeatures() []Feature {
 	return []Feature{
+		// Pro tier features
 		FeatureOIDC,
 		FeatureAuditLogs,
+		FeatureNotificationSlack,
+		FeatureNotificationTeams,
+		FeatureNotificationPagerDuty,
+		FeatureNotificationDiscord,
+		FeatureStorageS3,
+		FeatureStorageB2,
+		FeatureStorageSFTP,
+		FeatureDockerBackup,
+		FeatureMultiRepo,
+		FeatureAPIAccess,
+		FeatureCustomReports,
+		FeatureCustomRetention,
+		// Enterprise tier features
 		FeatureMultiOrg,
 		FeatureSLATracking,
 		FeatureWhiteLabel,
+		FeatureAirGap,
+		FeatureDRRunbooks,
+		FeatureDRTests,
+		FeatureSSOSync,
+		FeatureRBAC,
+		FeatureGeoReplication,
+		FeatureRansomwareProtect,
+		FeatureLegalHolds,
+		FeaturePrioritySupport,
 	}
 }
 
@@ -206,6 +278,42 @@ func GetFeatureInfo(f Feature) FeatureInfo {
 	case FeatureAuditLogs:
 		info.DisplayName = "Audit Logs"
 		info.Description = "Comprehensive logging of all user and system actions"
+	case FeatureNotificationSlack:
+		info.DisplayName = "Slack Notifications"
+		info.Description = "Send backup notifications to Slack channels"
+	case FeatureNotificationTeams:
+		info.DisplayName = "Teams Notifications"
+		info.Description = "Send backup notifications to Microsoft Teams channels"
+	case FeatureNotificationPagerDuty:
+		info.DisplayName = "PagerDuty Notifications"
+		info.Description = "Send backup alerts to PagerDuty for incident management"
+	case FeatureNotificationDiscord:
+		info.DisplayName = "Discord Notifications"
+		info.Description = "Send backup notifications to Discord channels"
+	case FeatureStorageS3:
+		info.DisplayName = "S3 Storage"
+		info.Description = "Use S3-compatible object storage as backup destination"
+	case FeatureStorageB2:
+		info.DisplayName = "Backblaze B2 Storage"
+		info.Description = "Use Backblaze B2 cloud storage as backup destination"
+	case FeatureStorageSFTP:
+		info.DisplayName = "SFTP Storage"
+		info.Description = "Use SFTP servers as backup destination"
+	case FeatureDockerBackup:
+		info.DisplayName = "Docker Backup"
+		info.Description = "Back up Docker containers and volumes"
+	case FeatureMultiRepo:
+		info.DisplayName = "Multiple Repositories"
+		info.Description = "Configure multiple backup repositories for redundancy"
+	case FeatureAPIAccess:
+		info.DisplayName = "API Access"
+		info.Description = "Programmatic access via REST API"
+	case FeatureCustomReports:
+		info.DisplayName = "Custom Reports"
+		info.Description = "Custom report generation and scheduling"
+	case FeatureCustomRetention:
+		info.DisplayName = "Custom Retention"
+		info.Description = "Custom data retention policies and schedules"
 	case FeatureMultiOrg:
 		info.DisplayName = "Multiple Organizations"
 		info.Description = "Manage multiple organizations from a single account"
@@ -215,6 +323,33 @@ func GetFeatureInfo(f Feature) FeatureInfo {
 	case FeatureWhiteLabel:
 		info.DisplayName = "White-Label"
 		info.Description = "Custom branding and white-labeling capabilities"
+	case FeatureAirGap:
+		info.DisplayName = "Air-Gapped Deployment"
+		info.Description = "Deploy in air-gapped environments without internet access"
+	case FeatureDRRunbooks:
+		info.DisplayName = "DR Runbooks"
+		info.Description = "Disaster recovery runbooks and automation workflows"
+	case FeatureDRTests:
+		info.DisplayName = "DR Testing"
+		info.Description = "Automated disaster recovery testing and validation"
+	case FeatureSSOSync:
+		info.DisplayName = "SSO Directory Sync"
+		info.Description = "Synchronize users and groups from SSO directory providers"
+	case FeatureRBAC:
+		info.DisplayName = "Role-Based Access Control"
+		info.Description = "Fine-grained role-based access control for users and teams"
+	case FeatureGeoReplication:
+		info.DisplayName = "Geo-Replication"
+		info.Description = "Cross-region backup replication for disaster recovery"
+	case FeatureRansomwareProtect:
+		info.DisplayName = "Ransomware Protection"
+		info.Description = "Ransomware detection and immutable backup protection"
+	case FeatureLegalHolds:
+		info.DisplayName = "Legal Holds"
+		info.Description = "Place legal holds on backups to prevent deletion"
+	case FeaturePrioritySupport:
+		info.DisplayName = "Priority Support"
+		info.Description = "Priority email and chat support with faster response times"
 	default:
 		info.DisplayName = string(f)
 		info.Description = "Unknown feature"

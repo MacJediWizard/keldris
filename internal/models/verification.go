@@ -46,6 +46,7 @@ type Verification struct {
 	ErrorMessage string             `json:"error_message,omitempty"`
 	Details      *VerificationDetails `json:"details,omitempty"`
 	CreatedAt    time.Time          `json:"created_at"`
+	DeletedAt    *time.Time         `json:"deleted_at,omitempty"`
 }
 
 // VerificationDetails contains additional information about the verification.

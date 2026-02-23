@@ -293,7 +293,9 @@ export type RepositoryType =
 	| 'b2'
 	| 'sftp'
 	| 'rest'
-	| 'dropbox';
+	| 'dropbox'
+	| 'azure'
+	| 'gcs';
 
 // Backend configuration interfaces
 export interface LocalBackendConfig {
@@ -342,13 +344,31 @@ export interface DropboxBackendConfig {
 	app_secret?: string;
 }
 
+export interface AzureBackendConfig {
+	account_name: string;
+	account_key: string;
+	container_name: string;
+	endpoint?: string;
+	prefix?: string;
+}
+
+export interface GCSBackendConfig {
+	bucket_name: string;
+	prefix?: string;
+	project_id: string;
+	credentials_json?: string;
+	credentials_file?: string;
+}
+
 export type BackendConfig =
 	| LocalBackendConfig
 	| S3BackendConfig
 	| B2BackendConfig
 	| SFTPBackendConfig
 	| RestBackendConfig
-	| DropboxBackendConfig;
+	| DropboxBackendConfig
+	| AzureBackendConfig
+	| GCSBackendConfig;
 
 export interface Repository {
 	id: string;

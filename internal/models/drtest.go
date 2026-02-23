@@ -33,6 +33,7 @@ type DRTest struct {
 	Notes                  string       `json:"notes,omitempty"`
 	ErrorMessage           string       `json:"error_message,omitempty"`
 	CreatedAt              time.Time    `json:"created_at"`
+	DeletedAt              *time.Time   `json:"deleted_at,omitempty"`
 }
 
 // NewDRTest creates a new DR test record.

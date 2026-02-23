@@ -151,18 +151,16 @@ type ProFeature struct {
 }
 
 // Feature names for Pro tier trial features.
-// Note: FeatureDRRunbooks and FeatureAPIAccess are defined in features.go.
+// Note: FeatureDRRunbooks, FeatureAPIAccess, FeatureGeoReplication,
+// FeatureCustomReports, and FeaturePrioritySupport are defined in features.go.
 const (
 	FeatureAdvancedScheduling  = "advanced_scheduling"
-	FeatureGeoReplication      = "geo_replication"
 	FeatureStorageTiering      = "storage_tiering"
 	FeatureClassifications     = "classifications"
-	FeatureCustomReports       = "custom_reports"
 	FeatureSLAMonitoring       = "sla_monitoring"
 	FeatureCostEstimation      = "cost_estimation"
 	FeatureRansomwareDetection = "ransomware_detection"
 	FeatureUnlimitedAgents     = "unlimited_agents"
-	FeaturePrioritySupport     = "priority_support"
 )
 
 // StartTrialRequest is the request to start a trial.
@@ -309,17 +307,17 @@ func (m *TrialManager) GetProFeatures(ctx context.Context, orgID uuid.UUID) ([]P
 
 	features := []ProFeature{
 		{Name: FeatureAdvancedScheduling, Description: "Advanced backup scheduling with complex cron patterns", Available: info.HasProFeatures},
-		{Name: FeatureGeoReplication, Description: "Cross-region backup replication", Available: info.HasProFeatures},
+		{Name: string(FeatureGeoReplication), Description: "Cross-region backup replication", Available: info.HasProFeatures},
 		{Name: string(FeatureDRRunbooks), Description: "Disaster recovery runbooks and automation", Available: info.HasProFeatures},
 		{Name: FeatureStorageTiering, Description: "Automatic storage tier management", Available: info.HasProFeatures},
 		{Name: FeatureClassifications, Description: "Data classification and compliance tagging", Available: info.HasProFeatures},
-		{Name: FeatureCustomReports, Description: "Custom report generation and scheduling", Available: info.HasProFeatures},
+		{Name: string(FeatureCustomReports), Description: "Custom report generation and scheduling", Available: info.HasProFeatures},
 		{Name: FeatureSLAMonitoring, Description: "SLA tracking and compliance monitoring", Available: info.HasProFeatures},
 		{Name: FeatureCostEstimation, Description: "Storage cost estimation and forecasting", Available: info.HasProFeatures},
 		{Name: FeatureRansomwareDetection, Description: "Ransomware detection and alerts", Available: info.HasProFeatures},
 		{Name: FeatureUnlimitedAgents, Description: "Unlimited backup agents", Available: info.HasProFeatures},
 		{Name: string(FeatureAPIAccess), Description: "Full REST API access", Available: info.HasProFeatures},
-		{Name: FeaturePrioritySupport, Description: "Priority email and chat support", Available: info.HasProFeatures},
+		{Name: string(FeaturePrioritySupport), Description: "Priority email and chat support", Available: info.HasProFeatures},
 	}
 
 	return features, nil

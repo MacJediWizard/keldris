@@ -1,15 +1,47 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
+
+// mockMetricsStore implements MetricsStore for testing.
+type mockMetricsStore struct {
+	pingErr error
+	health  map[string]any
+}
+
+func (m *mockMetricsStore) Ping(_ context.Context) error {
+	return m.pingErr
+}
+
+func (m *mockMetricsStore) Health() map[string]any {
+	return m.health
+}
+
+func (m *mockMetricsStore) GetAllAgents(_ context.Context) ([]*models.Agent, error) {
+	return nil, nil
+}
+
+func (m *mockMetricsStore) GetAllBackups(_ context.Context) ([]*models.Backup, error) {
+	return nil, nil
+}
+
+func (m *mockMetricsStore) GetBackupsByStatus(_ context.Context, _ models.BackupStatus) ([]*models.Backup, error) {
+	return nil, nil
+}
+
+func (m *mockMetricsStore) GetStorageStatsSummaryGlobal(_ context.Context) (*models.StorageStatsSummary, error) {
+	return nil, nil
+}
 
 func setupMetricsTestRouter(db MetricsStore) *gin.Engine {
 	gin.SetMode(gin.TestMode)
@@ -21,17 +53,17 @@ func setupMetricsTestRouter(db MetricsStore) *gin.Engine {
 
 func TestMetrics(t *testing.T) {
 	t.Run("with healthy db", func(t *testing.T) {
-		db := &mockDatabaseHealthChecker{
+		db := &mockMetricsStore{
 			health: map[string]any{
-				"total_conns":      int32(10),
-				"acquired_conns":   int32(2),
-				"idle_conns":       int32(8),
-				"max_conns":        int32(20),
-				"constructing":     int32(0),
-				"empty_acquire":    int64(0),
-				"canceled_acquire": int64(0),
+				"total_conns":       int32(10),
+				"acquired_conns":    int32(2),
+				"idle_conns":        int32(8),
+				"max_conns":         int32(20),
+				"constructing":      int32(0),
+				"empty_acquire":     int64(0),
+				"canceled_acquire":  int64(0),
 				"max_lifetime_dest": int64(0),
-				"max_idle_dest":    int64(0),
+				"max_idle_dest":     int64(0),
 			},
 		}
 		r := setupMetricsTestRouter(db)
@@ -62,7 +94,7 @@ func TestMetrics(t *testing.T) {
 	})
 
 	t.Run("with unhealthy db", func(t *testing.T) {
-		db := &mockDatabaseHealthChecker{
+		db := &mockMetricsStore{
 			pingErr: errors.New("db down"),
 			health:  map[string]any{},
 		}

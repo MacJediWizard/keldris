@@ -42,6 +42,38 @@ func (m *mockStore) CreateSLAStatusSnapshot(_ context.Context, _ *models.SLAStat
 	return nil
 }
 
+func (m *mockStore) GetSLADefinitionByID(_ context.Context, _ uuid.UUID) (*models.SLADefinition, error) {
+	return nil, nil
+}
+
+func (m *mockStore) ListActiveSLADefinitionsByOrg(_ context.Context, _ uuid.UUID) ([]*models.SLADefinition, error) {
+	return nil, nil
+}
+
+func (m *mockStore) ListSLAAssignmentsBySLA(_ context.Context, _ uuid.UUID) ([]*models.SLAAssignment, error) {
+	return nil, nil
+}
+
+func (m *mockStore) ListSLAAssignmentsByAgent(_ context.Context, _ uuid.UUID) ([]*models.SLAAssignment, error) {
+	return nil, nil
+}
+
+func (m *mockStore) CreateSLACompliance(_ context.Context, _ *models.SLACompliance) error {
+	return nil
+}
+
+func (m *mockStore) CreateSLABreach(_ context.Context, _ *models.SLABreach) error {
+	return nil
+}
+
+func (m *mockStore) ListActiveSLABreachesByOrg(_ context.Context, _ uuid.UUID) ([]*models.SLABreach, error) {
+	return nil, nil
+}
+
+func (m *mockStore) UpdateSLABreach(_ context.Context, _ *models.SLABreach) error {
+	return nil
+}
+
 func TestCheckCompliance(t *testing.T) {
 	policy := &models.SLAPolicy{
 		TargetRPOHours:    24,

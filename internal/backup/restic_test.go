@@ -549,28 +549,6 @@ func TestRestic_Prune(t *testing.T) {
 	})
 }
 
-func TestRestic_PruneOnly(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		r, cleanup := newTestRestic("")
-		defer cleanup()
-
-		err := r.PruneOnly(context.Background(), testResticConfig())
-		if err != nil {
-			t.Fatalf("PruneOnly() error = %v", err)
-		}
-	})
-
-	t.Run("error", func(t *testing.T) {
-		r, cleanup := newTestResticError("prune error")
-		defer cleanup()
-
-		err := r.PruneOnly(context.Background(), testResticConfig())
-		if err == nil {
-			t.Fatal("PruneOnly() expected error")
-		}
-	})
-}
-
 func TestRestic_Copy(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		r, cleanup := newTestRestic(`{"snapshot_id":"abc123"}`)
@@ -1000,9 +978,7 @@ func TestParseBackupOutput_Extended(t *testing.T) {
 			t.Errorf("SnapshotID = %v, want snap1", stats.SnapshotID)
 		}
 	})
-	"testing"
-	"time"
-)
+}
 
 func TestParseBackupOutput(t *testing.T) {
 	tests := []struct {

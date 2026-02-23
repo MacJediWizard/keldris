@@ -136,6 +136,29 @@ func (b *Backup) Fail(errMsg string) {
 	b.ErrorMessage = errMsg
 }
 
+// Cancel marks the backup as canceled.
+func (b *Backup) Cancel() {
+	now := time.Now()
+	b.CompletedAt = &now
+	b.Status = BackupStatusCanceled
+}
+
+// RecordPreScript records the output of a pre-backup script.
+func (b *Backup) RecordPreScript(output string, err error) {
+	b.PreScriptOutput = output
+	if err != nil {
+		b.PreScriptError = err.Error()
+	}
+}
+
+// RecordPostScript records the output of a post-backup script.
+func (b *Backup) RecordPostScript(output string, err error) {
+	b.PostScriptOutput = output
+	if err != nil {
+		b.PostScriptError = err.Error()
+	}
+}
+
 // Complete marks the backup as completed with the given results.
 func (b *Backup) Complete(snapshotID string, filesNew, filesChanged int, sizeBytes int64) {
 	now := time.Now()
@@ -145,6 +168,19 @@ func (b *Backup) Complete(snapshotID string, filesNew, filesChanged int, sizeByt
 	b.FilesNew = &filesNew
 	b.FilesChanged = &filesChanged
 	b.SizeBytes = &sizeBytes
+}
+
+// IsComplete returns true if the backup has a terminal status.
+func (b *Backup) IsComplete() bool {
+	return b.Status == BackupStatusCompleted || b.Status == BackupStatusFailed || b.Status == BackupStatusCanceled
+}
+
+// Duration returns the duration of the backup, or 0 if not completed.
+func (b *Backup) Duration() time.Duration {
+	if b.CompletedAt == nil {
+		return 0
+	}
+	return b.CompletedAt.Sub(b.StartedAt)
 }
 
 // RecordRetention records the results of a retention policy application.

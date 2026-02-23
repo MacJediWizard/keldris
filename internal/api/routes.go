@@ -362,18 +362,20 @@ func NewRouter(
 	alertsHandler := handlers.NewAlertsHandler(database, logger)
 	alertsHandler.RegisterRoutes(apiV1)
 
-	// Notifications (feature gated for Slack)
-	notificationsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureNotificationSlack, logger))
+	// Notifications (per-channel feature gating is handled inside the handler)
 	notificationsHandler := handlers.NewNotificationsHandlerWithEnv(database, keyManager, logger, cfg.Environment)
-	notificationsHandler.RegisterRoutes(notificationsGroup)
+	notificationsHandler.RegisterRoutes(apiV1)
 
+	// Notification rules (feature gated - requires Pro+ for notification automation)
+	notificationRulesGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureNotificationSlack, logger))
 	notificationRulesHandler := handlers.NewNotificationRulesHandler(database, logger)
-	notificationRulesHandler.RegisterRoutes(apiV1)
+	notificationRulesHandler.RegisterRoutes(notificationRulesGroup)
 
-	// Register reports handler if scheduler is available
+	// Reports (feature gated - requires Pro+)
 	if cfg.ReportScheduler != nil {
+		reportsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureCustomReports, logger))
 		reportsHandler := handlers.NewReportsHandler(database, cfg.ReportScheduler, logger)
-		reportsHandler.RegisterRoutes(apiV1)
+		reportsHandler.RegisterRoutes(reportsGroup)
 	}
 
 	// Stats and search
@@ -414,8 +416,10 @@ func NewRouter(
 	usersHandler := handlers.NewUsersHandler(database, sessions, rbac, logger)
 	usersHandler.RegisterRoutes(apiV1)
 
+	// SSO Group Mappings (feature gated - requires Enterprise)
+	ssoGroupMappingsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureSSOSync, logger))
 	ssoGroupMappingsHandler := handlers.NewSSOGroupMappingsHandler(database, rbac, logger)
-	ssoGroupMappingsHandler.RegisterRoutes(apiV1)
+	ssoGroupMappingsHandler.RegisterRoutes(ssoGroupMappingsGroup)
 
 	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
 	maintenanceHandler.RegisterRoutes(apiV1)

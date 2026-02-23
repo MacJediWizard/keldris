@@ -207,10 +207,6 @@ func newTestOIDCProvider(t *testing.T, serverURL string) *OIDC {
 	return oidcProvider
 }
 
-	"strings"
-	"testing"
-)
-
 func TestDefaultOIDCConfig(t *testing.T) {
 	cfg := DefaultOIDCConfig(
 		"https://auth.example.com",

@@ -108,7 +108,6 @@ func setupStatsTestRouter(store StatsStore, user *auth.SessionUser) *gin.Engine 
 func TestStatsGetSummary(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success", func(t *testing.T) {
@@ -154,7 +153,6 @@ func TestStatsGetSummary(t *testing.T) {
 func TestStatsGetGrowth(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 
 	t.Run("success default days", func(t *testing.T) {
@@ -194,7 +192,6 @@ func TestStatsGetGrowth(t *testing.T) {
 func TestStatsListRepositoryStats(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	repo := &models.Repository{ID: uuid.New(), OrgID: orgID, Name: "repo1"}
 
@@ -244,7 +241,6 @@ func TestStatsListRepositoryStats(t *testing.T) {
 func TestStatsGetRepositoryStats(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	repoID := uuid.New()
 	repo := &models.Repository{ID: repoID, OrgID: orgID, Name: "repo1"}
@@ -307,7 +303,6 @@ func TestStatsGetRepositoryStats(t *testing.T) {
 func TestStatsGetRepositoryGrowth(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	repoID := uuid.New()
 	repo := &models.Repository{ID: repoID, OrgID: orgID, Name: "repo1"}
@@ -342,7 +337,6 @@ func TestStatsGetRepositoryGrowth(t *testing.T) {
 func TestStatsGetRepositoryHistory(t *testing.T) {
 	orgID := uuid.New()
 	user := testUser(orgID)
-	user := TestUser(orgID)
 	dbUser := &models.User{ID: user.ID, OrgID: orgID}
 	repoID := uuid.New()
 	repo := &models.Repository{ID: repoID, OrgID: orgID, Name: "repo1"}

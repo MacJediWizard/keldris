@@ -640,11 +640,6 @@ func TestRenderText(t *testing.T) {
 	})
 }
 
-// --- defaultRestoreSteps ---
-
-func TestDefaultRestoreSteps(t *testing.T) {
-	t.Run("generic local type", func(t *testing.T) {
-		steps := defaultRestoreSteps(models.RepositoryTypeLocal)
 // --- DefaultRestoreSteps ---
 
 func TestDefaultRestoreSteps(t *testing.T) {
@@ -689,7 +684,6 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("S3 type", func(t *testing.T) {
-		steps := defaultRestoreSteps(models.RepositoryTypeS3)
 		steps := DefaultRestoreSteps(models.RepositoryTypeS3)
 
 		if len(steps) != 6 {
@@ -719,7 +713,6 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("B2 type", func(t *testing.T) {
-		steps := defaultRestoreSteps(models.RepositoryTypeB2)
 		steps := DefaultRestoreSteps(models.RepositoryTypeB2)
 
 		if len(steps) != 6 {
@@ -745,7 +738,6 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("SFTP type", func(t *testing.T) {
-		steps := defaultRestoreSteps(models.RepositoryTypeSFTP)
 		steps := DefaultRestoreSteps(models.RepositoryTypeSFTP)
 
 		if len(steps) != 6 {
@@ -768,7 +760,6 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("rest type (no special steps)", func(t *testing.T) {
-		steps := defaultRestoreSteps(models.RepositoryTypeRest)
 		steps := DefaultRestoreSteps(models.RepositoryTypeRest)
 
 		if len(steps) != 5 {
@@ -782,7 +773,6 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("dropbox type (no special steps)", func(t *testing.T) {
-		steps := defaultRestoreSteps(models.RepositoryTypeDropbox)
 		steps := DefaultRestoreSteps(models.RepositoryTypeDropbox)
 
 		if len(steps) != 5 {
@@ -791,7 +781,6 @@ func TestDefaultRestoreSteps(t *testing.T) {
 	})
 
 	t.Run("step types are correct", func(t *testing.T) {
-		steps := defaultRestoreSteps(models.RepositoryTypeLocal)
 		steps := DefaultRestoreSteps(models.RepositoryTypeLocal)
 
 		if steps[0].Type != models.DRRunbookStepTypeVerify {

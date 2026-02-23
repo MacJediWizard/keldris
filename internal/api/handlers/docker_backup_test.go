@@ -56,6 +56,22 @@ func (m *mockDockerBackupStore) CreateDockerBackup(_ context.Context, _ uuid.UUI
 	return m.backupResp, nil
 }
 
+func (m *mockDockerBackupStore) GetDockerContainerByID(_ context.Context, _ uuid.UUID) (*models.DockerContainerConfig, error) {
+	return nil, nil
+}
+
+func (m *mockDockerBackupStore) UpdateDockerContainer(_ context.Context, _ *models.DockerContainerConfig) error {
+	return nil
+}
+
+func (m *mockDockerBackupStore) DeleteDockerContainer(_ context.Context, _ uuid.UUID) error {
+	return nil
+}
+
+func (m *mockDockerBackupStore) GetAgentByID(_ context.Context, _ uuid.UUID) (*models.Agent, error) {
+	return nil, nil
+}
+
 func setupDockerBackupTestRouter(store DockerBackupStore, user *auth.SessionUser) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

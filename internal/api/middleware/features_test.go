@@ -36,8 +36,6 @@ func TestLicenseMiddleware(t *testing.T) {
 	}
 }
 
-func TestFeatureMiddleware_Allowed(t *testing.T) {
-	// Pro tier has OIDC feature
 func TestFeatureMiddleware_FeatureAvailable(t *testing.T) {
 	lic := &license.License{Tier: license.TierPro}
 
@@ -57,8 +55,6 @@ func TestFeatureMiddleware_FeatureAvailable(t *testing.T) {
 	}
 }
 
-func TestFeatureMiddleware_Blocked(t *testing.T) {
-	// Free tier does NOT have OIDC
 func TestFeatureMiddleware_FeatureNotAvailable(t *testing.T) {
 	lic := &license.License{Tier: license.TierFree}
 
@@ -297,13 +293,10 @@ func TestFeatureMiddleware_EnterpriseFeature(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/test", nil)
 		r.ServeHTTP(w, req)
 
-	var resp map[string]string
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("failed to unmarshal response: %v", err)
-	}
-	if resp["error"] != "license required" {
-		t.Fatalf("expected error 'license required', got %q", resp["error"])
-	}
+		if w.Code != http.StatusPaymentRequired {
+			t.Fatalf("expected status 402, got %d", w.Code)
+		}
+	})
 }
 
 func TestGetLicense_NoLicense(t *testing.T) {

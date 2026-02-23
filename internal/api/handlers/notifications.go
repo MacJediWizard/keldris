@@ -9,6 +9,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/crypto"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/gin-gonic/gin"
@@ -195,6 +196,34 @@ func (h *NotificationsHandler) CreateChannel(c *gin.Context) {
 	if !isValidChannelType(req.Type) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid channel type"})
 		return
+	}
+
+	// Check feature gate for the channel type (email and webhook are free)
+	if requiredFeature, gated := channelTypeFeature(req.Type); gated {
+		if ent := middleware.GetEntitlement(c); ent != nil {
+			if !ent.HasFeature(requiredFeature) {
+				c.JSON(http.StatusPaymentRequired, gin.H{
+					"error":   fmt.Sprintf("%s notifications require a Pro or Enterprise license", req.Type),
+					"feature": string(requiredFeature),
+				})
+				return
+			}
+		} else if lic := middleware.GetLicense(c); lic != nil {
+			if !license.HasFeature(lic.Tier, requiredFeature) {
+				c.JSON(http.StatusPaymentRequired, gin.H{
+					"error":   fmt.Sprintf("%s notifications require a Pro or Enterprise license", req.Type),
+					"feature": string(requiredFeature),
+					"tier":    string(lic.Tier),
+				})
+				return
+			}
+		} else {
+			c.JSON(http.StatusPaymentRequired, gin.H{
+				"error":   "license required",
+				"feature": string(requiredFeature),
+			})
+			return
+		}
 	}
 
 	// Validate webhook URL for SSRF protection
@@ -763,6 +792,25 @@ func (h *NotificationsHandler) ListChannelTypes(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"channel_types": channelTypes})
+}
+
+// channelTypeFeature returns the license feature required for a channel type.
+// Returns the feature and true if the channel type is gated, or ("", false) if ungated.
+// Email and Webhook channels are free and do not require a feature gate.
+func channelTypeFeature(t models.NotificationChannelType) (license.Feature, bool) {
+	switch t {
+	case models.ChannelTypeSlack:
+		return license.FeatureNotificationSlack, true
+	case models.ChannelTypeTeams:
+		return license.FeatureNotificationTeams, true
+	case models.ChannelTypeDiscord:
+		return license.FeatureNotificationDiscord, true
+	case models.ChannelTypePagerDuty:
+		return license.FeatureNotificationPagerDuty, true
+	default:
+		// Email and Webhook are free
+		return "", false
+	}
 }
 
 // isValidChannelType checks if a channel type is valid.

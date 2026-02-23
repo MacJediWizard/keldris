@@ -1431,7 +1431,7 @@ func (db *DB) GetBackupsByScheduleID(ctx context.Context, scheduleID uuid.UUID) 
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
-		WHERE schedule_id = $1
+		WHERE schedule_id = $1 AND deleted_at IS NULL
 		ORDER BY started_at DESC
 	`, scheduleID)
 	if err != nil {
@@ -1449,7 +1449,7 @@ func (db *DB) GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*mo
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
-		WHERE agent_id = $1
+		WHERE agent_id = $1 AND deleted_at IS NULL
 		ORDER BY started_at DESC
 	`, agentID)
 	if err != nil {
@@ -1469,7 +1469,7 @@ func (db *DB) GetBackupByID(ctx context.Context, id uuid.UUID) (*models.Backup, 
 		       status, size_bytes, files_new, files_changed, error_message,
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(
 		&b.ID, &b.ScheduleID, &b.AgentID, &b.RepositoryID, &b.SnapshotID, &b.StartedAt,
 		&b.CompletedAt, &statusStr, &b.SizeBytes, &b.FilesNew,
@@ -1513,6 +1513,21 @@ func (db *DB) UpdateBackup(ctx context.Context, backup *models.Backup) error {
 		backup.RetentionApplied, backup.SnapshotsRemoved, backup.SnapshotsKept, backup.RetentionError)
 	if err != nil {
 		return fmt.Errorf("update backup: %w", err)
+	}
+	return nil
+}
+
+// DeleteBackup soft-deletes a backup by setting deleted_at.
+func (db *DB) DeleteBackup(ctx context.Context, id uuid.UUID) error {
+	tag, err := db.Pool.Exec(ctx, `
+		UPDATE backups SET deleted_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete backup: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("backup not found")
 	}
 	return nil
 }
@@ -2311,7 +2326,7 @@ func (db *DB) GetRestoreByID(ctx context.Context, id uuid.UUID) (*models.Restore
 		SELECT id, agent_id, repository_id, snapshot_id, target_path, include_paths,
 		       exclude_paths, status, started_at, completed_at, error_message, created_at, updated_at
 		FROM restores
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`, id).Scan(
 		&r.ID, &r.AgentID, &r.RepositoryID, &r.SnapshotID, &r.TargetPath,
 		&includePathsBytes, &excludePathsBytes, &statusStr, &r.StartedAt,
@@ -2367,6 +2382,21 @@ func (db *DB) UpdateRestore(ctx context.Context, restore *models.Restore) error 
 		restore.ErrorMessage, restore.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update restore: %w", err)
+	}
+	return nil
+}
+
+// DeleteRestore soft-deletes a restore by setting deleted_at.
+func (db *DB) DeleteRestore(ctx context.Context, id uuid.UUID) error {
+	tag, err := db.Pool.Exec(ctx, `
+		UPDATE restores SET deleted_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete restore: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("restore not found")
 	}
 	return nil
 }

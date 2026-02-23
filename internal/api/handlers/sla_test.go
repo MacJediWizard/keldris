@@ -99,6 +99,38 @@ func (m *mockSLAStore) GetUserByID(_ context.Context, id uuid.UUID) (*models.Use
 	return nil, errors.New("user not found")
 }
 
+func (m *mockSLAStore) GetSLADefinitionByID(_ context.Context, _ uuid.UUID) (*models.SLADefinition, error) {
+	return nil, errors.New("not found")
+}
+
+func (m *mockSLAStore) ListActiveSLADefinitionsByOrg(_ context.Context, _ uuid.UUID) ([]*models.SLADefinition, error) {
+	return nil, nil
+}
+
+func (m *mockSLAStore) ListSLAAssignmentsBySLA(_ context.Context, _ uuid.UUID) ([]*models.SLAAssignment, error) {
+	return nil, nil
+}
+
+func (m *mockSLAStore) ListSLAAssignmentsByAgent(_ context.Context, _ uuid.UUID) ([]*models.SLAAssignment, error) {
+	return nil, nil
+}
+
+func (m *mockSLAStore) CreateSLACompliance(_ context.Context, _ *models.SLACompliance) error {
+	return nil
+}
+
+func (m *mockSLAStore) CreateSLABreach(_ context.Context, _ *models.SLABreach) error {
+	return nil
+}
+
+func (m *mockSLAStore) ListActiveSLABreachesByOrg(_ context.Context, _ uuid.UUID) ([]*models.SLABreach, error) {
+	return nil, nil
+}
+
+func (m *mockSLAStore) UpdateSLABreach(_ context.Context, _ *models.SLABreach) error {
+	return nil
+}
+
 func setupSLATestRouter(store SLAStore, user *auth.SessionUser) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
