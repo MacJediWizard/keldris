@@ -1,7 +1,8 @@
 -- Migration: Add Docker container backup configuration
 -- Supports label-based backup configuration for Docker containers
 
--- Create docker_containers table
+-- Replace docker_containers from migration 045 with enhanced backup-aware schema
+DROP TABLE IF EXISTS docker_containers CASCADE;
 CREATE TABLE docker_containers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,

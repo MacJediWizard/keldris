@@ -19,7 +19,9 @@ CREATE TABLE customers (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Licenses table for product licenses
+-- Replace licenses table from 087 with portal-aware version
+DROP TABLE IF EXISTS license_activations CASCADE;
+DROP TABLE IF EXISTS licenses CASCADE;
 CREATE TABLE licenses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,

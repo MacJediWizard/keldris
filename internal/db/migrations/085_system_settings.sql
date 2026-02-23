@@ -1,6 +1,7 @@
 -- Migration: Add system settings tables for SMTP, OIDC, storage, and security configuration
 
--- System settings table stores key-value configuration for organizations
+-- Replace global system_settings (from 084) with org-scoped version
+DROP TABLE IF EXISTS system_settings CASCADE;
 CREATE TABLE system_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
