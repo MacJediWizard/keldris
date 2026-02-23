@@ -582,7 +582,7 @@ func (db *DB) GetRepositoryCountByOrgID(ctx context.Context, orgID uuid.UUID) (i
 func (db *DB) GetScheduleCountByOrgID(ctx context.Context, orgID uuid.UUID) (int, error) {
 	var count int
 	err := db.Pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM schedules WHERE org_id = $1
+		SELECT COUNT(*) FROM schedules s JOIN agents a ON a.id = s.agent_id WHERE a.org_id = $1
 	`, orgID).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("count schedules: %w", err)

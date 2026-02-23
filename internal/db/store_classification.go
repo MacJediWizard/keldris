@@ -194,7 +194,7 @@ func (db *DB) UpdateScheduleClassificationLevel(ctx context.Context, scheduleID 
 func (db *DB) GetSchedulesByClassificationLevel(ctx context.Context, orgID uuid.UUID, level string) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression,
-		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kb,
+		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps,
 		       s.backup_window_start, s.backup_window_end, s.excluded_hours,
 		       s.compression_level, s.on_mount_unavailable, s.classification_level,
 		       s.classification_data_types, s.enabled, s.created_at, s.updated_at
@@ -215,7 +215,7 @@ func (db *DB) GetSchedulesByClassificationLevel(ctx context.Context, orgID uuid.
 func (db *DB) GetSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression,
-		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kb,
+		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps,
 		       s.backup_window_start, s.backup_window_end, s.excluded_hours,
 		       s.compression_level, s.on_mount_unavailable, s.classification_level,
 		       s.classification_data_types, s.enabled, s.created_at, s.updated_at

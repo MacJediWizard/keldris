@@ -137,9 +137,9 @@ func (db *DB) searchAgents(ctx context.Context, orgID uuid.UUID, pattern string,
 
 func (db *DB) searchRepositories(ctx context.Context, orgID uuid.UUID, pattern string, filter SearchFilter, limit int) ([]SearchResult, error) {
 	query := `
-		SELECT id, name, COALESCE(description, ''), created_at
+		SELECT id, name, created_at
 		FROM repositories
-		WHERE org_id = $1 AND (name ILIKE $2 OR COALESCE(description, '') ILIKE $2 OR CAST(id AS TEXT) ILIKE $2)
+		WHERE org_id = $1 AND (name ILIKE $2 OR CAST(id AS TEXT) ILIKE $2)
 	`
 	args := []any{orgID, pattern}
 	argIdx := 3
@@ -158,7 +158,7 @@ func (db *DB) searchRepositories(ctx context.Context, orgID uuid.UUID, pattern s
 	var results []SearchResult
 	for rows.Next() {
 		var r SearchResult
-		if err := rows.Scan(&r.ID, &r.Name, &r.Description, &r.CreatedAt); err != nil {
+		if err := rows.Scan(&r.ID, &r.Name, &r.CreatedAt); err != nil {
 			return nil, err
 		}
 		r.Type = "repository"
@@ -169,7 +169,7 @@ func (db *DB) searchRepositories(ctx context.Context, orgID uuid.UUID, pattern s
 
 func (db *DB) searchSchedules(ctx context.Context, orgID uuid.UUID, pattern string, filter SearchFilter, limit int) ([]SearchResult, error) {
 	query := `
-		SELECT s.id, s.name, COALESCE(s.status, ''), s.created_at
+		SELECT s.id, s.name, CASE WHEN s.enabled THEN 'active' ELSE 'disabled' END, s.created_at
 		FROM schedules s
 		JOIN agents a ON a.id = s.agent_id
 		WHERE a.org_id = $1 AND (s.name ILIKE $2 OR CAST(s.id AS TEXT) ILIKE $2)
@@ -178,7 +178,7 @@ func (db *DB) searchSchedules(ctx context.Context, orgID uuid.UUID, pattern stri
 	argIdx := 3
 
 	if filter.Status != "" {
-		query += fmt.Sprintf(" AND s.status = $%d", argIdx)
+		query += fmt.Sprintf(" AND CASE WHEN s.enabled THEN 'active' ELSE 'disabled' END = $%d", argIdx)
 		args = append(args, filter.Status)
 		argIdx++
 	}

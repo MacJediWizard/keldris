@@ -2134,10 +2134,13 @@ func (db *DB) GetEnabledReportSchedules(ctx context.Context) ([]*models.ReportSc
 // GetEnabledSchedulesByOrgID returns all enabled backup schedules for an org.
 func (db *DB) GetEnabledSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.cron_expression,
-		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps, s.backup_window_start, s.backup_window_end,
-		       s.excluded_hours, s.compression_level, s.max_file_size_mb, s.on_mount_unavailable, s.enabled,
-		       s.created_at, s.updated_at
+		SELECT s.id, s.agent_id, s.agent_group_id, s.policy_id, s.name, s.backup_type, s.cron_expression,
+		       s.paths, s.excludes, s.retention_policy, s.bandwidth_limit_kbps,
+		       s.backup_window_start, s.backup_window_end,
+		       s.excluded_hours, s.compression_level, s.max_file_size_mb, s.on_mount_unavailable,
+		       s.priority, s.preemptible, s.classification_level, s.classification_data_types,
+		       s.docker_options, s.pihole_config, s.proxmox_options,
+		       s.enabled, s.created_at, s.updated_at
 		FROM schedules s
 		JOIN agents a ON s.agent_id = a.id
 		WHERE a.org_id = $1 AND s.enabled = true
@@ -3937,9 +3940,12 @@ func (db *DB) GetSavedFiltersByUserAndOrg(ctx context.Context, userID, orgID uui
 // GetSchedulesByAgentGroupID returns all schedules for an agent group.
 func (db *DB) GetSchedulesByAgentGroupID(ctx context.Context, agentGroupID uuid.UUID) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT id, agent_id, agent_group_id, policy_id, name, cron_expression, paths, excludes,
+		SELECT id, agent_id, agent_group_id, policy_id, name, backup_type, cron_expression, paths, excludes,
 		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
-		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable, enabled, created_at, updated_at
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable,
+		       priority, preemptible, classification_level, classification_data_types,
+		       docker_options, pihole_config, proxmox_options,
+		       enabled, created_at, updated_at
 		FROM schedules
 		WHERE agent_group_id = $1
 		ORDER BY name

@@ -2171,11 +2171,15 @@ func (db *DB) GetAllAgents(ctx context.Context) ([]*models.Agent, error) {
 // GetAllSchedules returns all enabled schedules across all organizations (for monitoring).
 func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT s.id, s.agent_id, s.repository_id, s.name, s.cron_expression, s.paths, s.excludes,
-		       s.retention_policy, s.enabled, s.created_at, s.updated_at
-		FROM schedules s
-		WHERE s.enabled = true
-		ORDER BY s.name
+		SELECT id, agent_id, agent_group_id, policy_id, name, backup_type, cron_expression, paths, excludes,
+		       retention_policy, bandwidth_limit_kbps, backup_window_start, backup_window_end,
+		       excluded_hours, compression_level, max_file_size_mb, on_mount_unavailable,
+		       priority, preemptible, classification_level, classification_data_types,
+		       docker_options, pihole_config, proxmox_options,
+		       enabled, created_at, updated_at
+		FROM schedules
+		WHERE enabled = true
+		ORDER BY name
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("list all schedules: %w", err)
