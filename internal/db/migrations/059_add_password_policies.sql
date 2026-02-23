@@ -27,8 +27,9 @@ ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE users
 ALTER COLUMN oidc_subject DROP NOT NULL;
 
--- Create unique index that allows multiple NULLs but unique non-NULL values
-DROP INDEX IF EXISTS users_oidc_subject_key;
+-- Drop the unique constraint so we can replace it with a partial unique index
+-- (allows multiple NULLs for password-only users)
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_oidc_subject_key;
 CREATE UNIQUE INDEX users_oidc_subject_unique ON users(oidc_subject) WHERE oidc_subject IS NOT NULL;
 
 -- Create password history table for tracking previous passwords
