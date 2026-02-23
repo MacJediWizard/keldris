@@ -1397,11 +1397,11 @@ func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([
 		SELECT id, agent_id, agent_group_id, policy_id, name, backup_type, cron_expression,
 		       paths, excludes, retention_policy, bandwidth_limit_kbps,
 		       backup_window_start, backup_window_end, excluded_hours, compression_level,
-		       max_file_size_mb, mount_behavior,
+		       max_file_size_mb, on_mount_unavailable,
 		       priority, preemptible, classification_level, classification_data_types,
 		       docker_options, pihole_config, proxmox_options,
 		       enabled, created_at, updated_at
-		FROM backup_schedules
+		FROM schedules
 		WHERE policy_id = $1
 		ORDER BY name
 	`, policyID)
@@ -2203,7 +2203,7 @@ func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error
 		       priority, preemptible, classification_level, classification_data_types,
 		       docker_options, pihole_config, proxmox_options,
 		       enabled, created_at, updated_at
-		FROM backup_schedules
+		FROM schedules
 		WHERE enabled = true
 		ORDER BY name
 	`)
