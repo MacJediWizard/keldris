@@ -61,7 +61,9 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm ci
+          npm install --no-save @biomejs/cli-linux-x64
 
       - name: Run Biome check
         run: npx @biomejs/biome check .
