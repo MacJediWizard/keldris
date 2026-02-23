@@ -22,8 +22,8 @@ CREATE TABLE database_connections (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT valid_database_type CHECK (type IN ('mysql', 'mariadb')),
-    CONSTRAINT valid_health_status CHECK (health_status IN ('healthy', 'unhealthy', 'unknown')),
-    CONSTRAINT unique_name_per_org UNIQUE (org_id, name)
+    CONSTRAINT valid_db_conn_health_status CHECK (health_status IN ('healthy', 'unhealthy', 'unknown')),
+    CONSTRAINT unique_db_connection_name_per_org UNIQUE (org_id, name)
 );
 
 -- Create indexes for efficient queries
