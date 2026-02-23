@@ -6,9 +6,6 @@ import (
 	"strings"
 
 	"github.com/MacJediWizard/keldris/internal/config"
-	"net/http"
-	"strings"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,8 +20,6 @@ func CORS(allowedOrigins []string, env config.Environment) gin.HandlerFunc {
 		log.Println("WARNING: CORS_ORIGINS is empty, all origins are allowed (not suitable for production)")
 	}
 
-// If allowedOrigins is empty, all origins are allowed (suitable for development).
-func CORS(allowedOrigins []string) gin.HandlerFunc {
 	allowAll := len(allowedOrigins) == 0
 
 	originSet := make(map[string]struct{}, len(allowedOrigins))

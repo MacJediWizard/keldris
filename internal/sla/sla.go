@@ -11,9 +11,6 @@ import (
 
 // Store defines the database operations needed for SLA calculations and tracking.
 type Store interface {
-	// Calculator methods
-// Store defines the database operations needed for SLA calculations.
-type Store interface {
 	GetSLAPolicyByID(ctx context.Context, id uuid.UUID) (*models.SLAPolicy, error)
 	GetBackupSuccessRateForOrg(ctx context.Context, orgID uuid.UUID, hours int) (float64, error)
 	GetMaxRPOHoursForOrg(ctx context.Context, orgID uuid.UUID) (float64, error)

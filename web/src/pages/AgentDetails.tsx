@@ -10,12 +10,6 @@ import {
 	useAgentStats,
 	useCancelAgentCommand,
 	useCreateAgentCommand,
-import {
-	useAgent,
-	useAgentBackups,
-	useAgentHealthHistory,
-	useAgentSchedules,
-	useAgentStats,
 	useDeleteAgent,
 	useRevokeAgentApiKey,
 	useRotateAgentApiKey,
@@ -34,8 +28,6 @@ import type {
 	CommandType,
 	Schedule,
 } from '../lib/types';
-} from '../hooks/useAgents';
-import type { AgentHealthHistory, Backup, Schedule } from '../lib/types';
 import {
 	formatBytes,
 	formatDate,
@@ -43,10 +35,6 @@ import {
 	formatDuration,
 	formatPercent,
 	formatUptime,
-	getAgentStatusColor,
-	getBackupStatusColor,
-	getHealthStatusColor,
-	getHealthStatusLabel,
 	getAgentStatusColor,
 	getBackupStatusColor,
 	getHealthStatusColor,
@@ -390,8 +378,6 @@ export function AgentDetails() {
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState<
 		'overview' | 'backups' | 'schedules' | 'health' | 'logs' | 'commands'
-		'overview' | 'backups' | 'schedules'
-		'overview' | 'backups' | 'schedules' | 'health'
 	>('overview');
 
 	const { data: agent, isLoading: agentLoading } = useAgent(id ?? '');

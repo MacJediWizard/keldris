@@ -8,10 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog"
-)
-
-const pagerDutyEventsURL = "https://events.pagerduty.com/v2/enqueue"
 	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/models"
@@ -19,6 +15,7 @@ const pagerDutyEventsURL = "https://events.pagerduty.com/v2/enqueue"
 )
 
 const (
+	pagerDutyEventsURL = "https://events.pagerduty.com/v2/enqueue"
 	// PagerDuty Events API v2 endpoint
 	pagerDutyEventsAPIURL = "https://events.pagerduty.com/v2/enqueue"
 )
@@ -81,12 +78,31 @@ const (
 // PagerDutySeverity represents the severity of an event.
 type PagerDutySeverity string
 
+const (
+	PagerDutySeverityInfo     PagerDutySeverity = "info"
+	PagerDutySeverityWarning  PagerDutySeverity = "warning"
+	PagerDutySeverityError    PagerDutySeverity = "error"
+	PagerDutySeverityCritical PagerDutySeverity = "critical"
+)
+
+// PagerDutyPayload represents the payload in a PagerDuty event.
+type PagerDutyPayload struct {
+	Summary       string                 `json:"summary"`
+	Source        string                 `json:"source"`
+	Severity      PagerDutySeverity      `json:"severity"`
+	Timestamp     string                 `json:"timestamp,omitempty"`
+	CustomDetails map[string]interface{} `json:"custom_details,omitempty"`
+}
+
 // PagerDutyEvent represents the data needed to create a PagerDuty event.
 type PagerDutyEvent struct {
-	Summary  string
-	Source   string
-	Severity string // info, warning, error, critical
-	Group    string
+	Summary     string // Used by the simple Sender
+	Source      string
+	Severity    string // info, warning, error, critical
+	Group       string
+	EventAction PagerDutyEventAction // Used by the Service
+	DedupKey    string
+	Payload     PagerDutyPayload
 }
 
 // pagerDutyRequest represents a PagerDuty Events API v2 payload.
@@ -119,7 +135,6 @@ func NewPagerDutySender(logger zerolog.Logger) *PagerDutySender {
 				DialContext: ValidatingDialer(),
 			},
 		},
-		client:   &http.Client{},
 		logger:   logger.With().Str("component", "pagerduty_sender").Logger(),
 		eventURL: pagerDutyEventsURL,
 	}
@@ -177,6 +192,50 @@ func (p *PagerDutySender) Send(ctx context.Context, routingKey string, event Pag
 	p.logger.Info().
 		Str("summary", event.Summary).
 		Str("severity", event.Severity).
+		Msg("pagerduty event sent")
+
+	return nil
+}
+
+// Send sends a PagerDuty event via the Events API v2.
+func (s *PagerDutyService) Send(event *PagerDutyEvent) error {
+	payload := struct {
+		RoutingKey  string           `json:"routing_key"`
+		EventAction string           `json:"event_action"`
+		DedupKey    string           `json:"dedup_key,omitempty"`
+		Payload     PagerDutyPayload `json:"payload"`
+	}{
+		RoutingKey:  s.config.RoutingKey,
+		EventAction: string(event.EventAction),
+		DedupKey:    event.DedupKey,
+		Payload:     event.Payload,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal pagerduty event: %w", err)
+	}
+
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, pagerDutyEventsAPIURL, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create pagerduty request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("send pagerduty event: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("pagerduty returned status %d", resp.StatusCode)
+	}
+
+	s.logger.Info().
+		Str("event_action", string(event.EventAction)).
+		Str("summary", event.Payload.Summary).
 		Msg("pagerduty event sent")
 
 	return nil

@@ -191,8 +191,6 @@ func (db *DB) Migrate(ctx context.Context) error {
 
 	// Create migrations tracking table if it doesn't exist
 	_, err = conn.Exec(ctx, `
-	// Create migrations tracking table if it doesn't exist
-	_, err := db.Pool.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version INTEGER PRIMARY KEY,
 			name VARCHAR(255) NOT NULL,

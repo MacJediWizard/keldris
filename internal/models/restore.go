@@ -93,34 +93,26 @@ func (p *CloudRestoreProgress) PercentComplete() float64 {
 
 // Restore represents a restore job execution record.
 type Restore struct {
-	ID           uuid.UUID     `json:"id"`
-	AgentID      uuid.UUID     `json:"agent_id"`                       // Target agent (where restore executes)
-	SourceAgentID *uuid.UUID   `json:"source_agent_id,omitempty"`      // Source agent for cross-agent restores
-)
-
-// Restore represents a restore job execution record.
-type Restore struct {
-	ID           uuid.UUID     `json:"id"`
-	AgentID      uuid.UUID     `json:"agent_id"`
-	RepositoryID uuid.UUID     `json:"repository_id"`
-	SnapshotID   string        `json:"snapshot_id"`
-	TargetPath   string        `json:"target_path"`
-	IncludePaths []string      `json:"include_paths,omitempty"`
-	ExcludePaths []string      `json:"exclude_paths,omitempty"`
-	PathMappings []PathMapping `json:"path_mappings,omitempty"`        // Path remapping for cross-agent restores
-	Status       RestoreStatus `json:"status"`
-	Progress     *RestoreProgress `json:"progress,omitempty"`          // Real-time progress tracking
-	Status       RestoreStatus `json:"status"`
-	StartedAt    *time.Time    `json:"started_at,omitempty"`
-	CompletedAt  *time.Time    `json:"completed_at,omitempty"`
-	ErrorMessage string        `json:"error_message,omitempty"`
-	CreatedAt    time.Time     `json:"created_at"`
-	UpdatedAt    time.Time     `json:"updated_at"`
-	// Cloud restore fields
-	CloudTarget         *CloudRestoreTarget   `json:"cloud_target,omitempty"`
+	ID                  uuid.UUID            `json:"id"`
+	AgentID             uuid.UUID            `json:"agent_id"`                  // Target agent (where restore executes)
+	SourceAgentID       *uuid.UUID           `json:"source_agent_id,omitempty"` // Source agent for cross-agent restores
+	RepositoryID        uuid.UUID            `json:"repository_id"`
+	SnapshotID          string               `json:"snapshot_id"`
+	TargetPath          string               `json:"target_path"`
+	IncludePaths        []string             `json:"include_paths,omitempty"`
+	ExcludePaths        []string             `json:"exclude_paths,omitempty"`
+	Status              RestoreStatus        `json:"status"`
+	StartedAt           *time.Time           `json:"started_at,omitempty"`
+	CompletedAt         *time.Time           `json:"completed_at,omitempty"`
+	ErrorMessage        string               `json:"error_message,omitempty"`
+	Progress            *RestoreProgress     `json:"progress,omitempty"`
+	PathMappings        []PathMapping        `json:"path_mappings,omitempty"`
+	CloudTarget         *CloudRestoreTarget  `json:"cloud_target,omitempty"`
+	CloudTargetLocation string               `json:"cloud_target_location,omitempty"`
 	CloudProgress       *CloudRestoreProgress `json:"cloud_progress,omitempty"`
-	CloudTargetLocation string                `json:"cloud_target_location,omitempty"`
-	VerifyUpload        bool                  `json:"verify_upload,omitempty"`
+	VerifyUpload        bool                 `json:"verify_upload,omitempty"`
+	CreatedAt           time.Time            `json:"created_at"`
+	UpdatedAt           time.Time            `json:"updated_at"`
 }
 
 // IsCloudRestore returns true if this is a cloud restore operation.

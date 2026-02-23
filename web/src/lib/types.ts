@@ -165,35 +165,6 @@ export interface AgentGroupsResponse {
 
 export interface AgentsWithGroupsResponse {
 	agents: AgentWithGroups[];
-export interface AgentHealthHistory {
-	id: string;
-	agent_id: string;
-	org_id: string;
-	health_status: HealthStatus;
-	cpu_usage?: number;
-	memory_usage?: number;
-	disk_usage?: number;
-	disk_free_bytes?: number;
-	disk_total_bytes?: number;
-	network_up: boolean;
-	restic_version?: string;
-	restic_available: boolean;
-	issues?: HealthIssue[];
-	recorded_at: string;
-	created_at: string;
-}
-
-export interface FleetHealthSummary {
-	total_agents: number;
-	healthy_count: number;
-	warning_count: number;
-	critical_count: number;
-	unknown_count: number;
-	active_count: number;
-	offline_count: number;
-	avg_cpu_usage: number;
-	avg_memory_usage: number;
-	avg_disk_usage: number;
 }
 
 export interface CreateAgentRequest {
@@ -355,67 +326,6 @@ export interface SFTPBackendConfig {
 	private_key?: string;
 	host_key?: string;
 	known_hosts_file?: string;
-}
-
-export interface RestBackendConfig {
-	url: string;
-	username?: string;
-	password?: string;
-}
-
-export interface DropboxBackendConfig {
-	remote_name: string;
-	path?: string;
-	token?: string;
-	app_key?: string;
-	app_secret?: string;
-}
-
-export type BackendConfig =
-	| LocalBackendConfig
-	| S3BackendConfig
-	| B2BackendConfig
-	| SFTPBackendConfig
-	| RestBackendConfig
-	| DropboxBackendConfig;
-// Repository types
-export type RepositoryType =
-	| 'local'
-	| 's3'
-	| 'b2'
-	| 'sftp'
-	| 'rest'
-	| 'dropbox';
-
-// Backend configuration interfaces
-export interface LocalBackendConfig {
-	path: string;
-}
-
-export interface S3BackendConfig {
-	endpoint?: string;
-	bucket: string;
-	prefix?: string;
-	region?: string;
-	access_key_id: string;
-	secret_access_key: string;
-	use_ssl?: boolean;
-}
-
-export interface B2BackendConfig {
-	bucket: string;
-	prefix?: string;
-	account_id: string;
-	application_key: string;
-}
-
-export interface SFTPBackendConfig {
-	host: string;
-	port?: number;
-	user: string;
-	path: string;
-	password?: string;
-	private_key?: string;
 }
 
 export interface RestBackendConfig {
@@ -622,12 +532,6 @@ export interface ProxmoxConnection {
 export interface Schedule {
 	id: string;
 	agent_id: string;
-	policy_id?: string; // Policy this schedule was created from
-	name: string;
-	backup_type: BackupType; // Type of backup: file or docker
-export interface Schedule {
-	id: string;
-	agent_id: string;
 	name: string;
 	cron_expression: string;
 	paths: string[];
@@ -646,9 +550,6 @@ export interface Schedule {
 	docker_options?: DockerBackupOptions; // Docker-specific backup options
 	docker_stack_config?: DockerStackScheduleConfig; // Docker stack backup configuration
 	proxmox_options?: ProxmoxBackupOptions; // Proxmox-specific backup options
-	enabled: boolean;
-	repositories?: ScheduleRepository[];
-	on_mount_unavailable?: MountBehavior; // Behavior when network mount unavailable
 	enabled: boolean;
 	repositories?: ScheduleRepository[];
 	created_at: string;
@@ -674,14 +575,6 @@ export interface CreateScheduleRequest {
 	preemptible?: boolean;
 	docker_options?: DockerBackupOptions; // Docker-specific backup options
 	docker_stack_config?: DockerStackScheduleConfig;
-	repository_id: string;
-	name: string;
-	cron_expression: string;
-	paths: string[];
-	excludes?: string[];
-	retention_policy?: RetentionPolicy;
-	proxmox_options?: ProxmoxBackupOptions; // Proxmox-specific backup options
-	on_mount_unavailable?: MountBehavior;
 	proxmox_options?: ProxmoxBackupOptions; // Proxmox-specific backup options
 	enabled?: boolean;
 }
@@ -703,11 +596,6 @@ export interface UpdateScheduleRequest {
 	priority?: SchedulePriority;
 	preemptible?: boolean;
 	docker_options?: DockerBackupOptions;
-	bandwidth_limit_kb?: number;
-	backup_window?: BackupWindow;
-	excluded_hours?: number[];
-	proxmox_options?: ProxmoxBackupOptions;
-	on_mount_unavailable?: MountBehavior;
 	proxmox_options?: ProxmoxBackupOptions;
 	enabled?: boolean;
 }
@@ -727,28 +615,10 @@ export interface ReplicationStatusResponse {
 	replication_status: ReplicationStatus[];
 }
 
-// Backup types
-export type BackupStatus = 'running' | 'completed' | 'failed' | 'canceled';
-
 export interface BulkCloneScheduleRequest {
 	schedule_id: string;
 	target_agent_ids: string[];
 	name_prefix?: string;
-	agent_id: string;
-	repository_id?: string;
-	snapshot_id?: string;
-	started_at: string;
-	completed_at?: string;
-	status: BackupStatus;
-	size_bytes?: number;
-	files_new?: number;
-	files_changed?: number;
-	error_message?: string;
-	retention_applied: boolean;
-	snapshots_removed?: number;
-	snapshots_kept?: number;
-	retention_error?: string;
-	created_at: string;
 }
 
 export interface BulkCloneResponse {
@@ -779,10 +649,6 @@ export interface DryRunResponse {
 	files_to_backup: DryRunFile[];
 	excluded_files: DryRunExcluded[];
 	message: string;
-}
-
-export interface ReplicationStatusResponse {
-	replication_status: ReplicationStatus[];
 }
 
 // Policy types
@@ -849,9 +715,6 @@ export interface ExcludedLargeFile {
 	size_bytes: number;
 	size_mb: number;
 }
-
-// Backup types
-export type BackupStatus = 'running' | 'completed' | 'failed' | 'canceled';
 
 export interface Backup {
 	id: string;
@@ -1008,22 +871,6 @@ export interface BackupHookTemplateVariable {
 	default: string;
 	required: boolean;
 	sensitive?: boolean;
-// Auth types
-export type SupportedLanguage = 'en' | 'es' | 'pt';
-
-export interface User {
-	id: string;
-	email: string;
-	name: string;
-	current_org_id?: string;
-	current_org_role?: string;
-	sso_groups?: string[];
-	sso_groups_synced_at?: string;
-	language?: SupportedLanguage;
-}
-
-export interface UpdateUserPreferencesRequest {
-	language?: SupportedLanguage;
 }
 
 export interface BackupHookTemplateScript {
@@ -1184,84 +1031,8 @@ export interface ContainerHookExecutionsResponse {
 	executions: ContainerHookExecution[];
 }
 
-// Backup Script types
-export type BackupScriptType =
-	| 'pre_backup'
-	| 'post_success'
-	| 'post_failure'
-	| 'post_always';
-
-export interface BackupScript {
-	id: string;
-	schedule_id: string;
-	type: BackupScriptType;
-	script: string;
-	timeout_seconds: number;
-	fail_on_error: boolean;
-	enabled: boolean;
-	created_at: string;
-	updated_at: string;
-}
-
-export interface CreateBackupScriptRequest {
-	type: BackupScriptType;
-	script: string;
-	timeout_seconds?: number;
-	fail_on_error?: boolean;
-	enabled?: boolean;
-}
-
-export interface UpdateBackupScriptRequest {
-	script?: string;
-	timeout_seconds?: number;
-	fail_on_error?: boolean;
-	enabled?: boolean;
-}
-
-export interface BackupScriptsResponse {
-	scripts: BackupScript[];
-}
-
 // Auth types
 export type SupportedLanguage = 'en' | 'es' | 'pt';
-// Snapshot comparison types
-export type SnapshotDiffChangeType = 'added' | 'removed' | 'modified';
-
-export interface SnapshotDiffEntry {
-	path: string;
-	change_type: SnapshotDiffChangeType;
-	type: 'file' | 'dir';
-	old_size?: number;
-	new_size?: number;
-	size_change?: number;
-}
-
-export interface SnapshotDiffStats {
-	files_added: number;
-	files_removed: number;
-	files_modified: number;
-	dirs_added: number;
-	dirs_removed: number;
-	total_size_added: number;
-	total_size_removed: number;
-}
-
-export interface SnapshotCompareResponse {
-	snapshot_id_1: string;
-	snapshot_id_2: string;
-	snapshot_1?: Snapshot;
-	snapshot_2?: Snapshot;
-	stats: SnapshotDiffStats;
-	changes: SnapshotDiffEntry[];
-}
-
-// Restore types
-export type RestoreStatus =
-	| 'pending'
-	| 'running'
-	| 'completed'
-	| 'failed'
-	| 'canceled';
 
 export interface User {
 	id: string;
@@ -1505,8 +1276,6 @@ export type PlanType = 'free' | 'starter' | 'professional' | 'enterprise';
 
 export interface BillingSettings {
 	plan_type: PlanType;
-export interface BillingSettings {
-	plan_type: PlanType;
 	billing_email?: string;
 	billing_cycle?: 'monthly' | 'annual';
 	next_billing_date?: string;
@@ -1554,126 +1323,6 @@ export type UpgradeFeature =
 	| 'geo_replication'
 	| 'lifecycle_policies'
 	| 'legal_holds';
-
-// API response wrappers
-export interface AgentsResponse {
-	agents: Agent[];
-}
-
-export interface RepositoriesResponse {
-	repositories: Repository[];
-}
-
-export interface SchedulesResponse {
-	schedules: Schedule[];
-}
-
-export interface BackupsResponse {
-	backups: Backup[];
-}
-
-export interface ErrorResponse {
-	error: string;
-	created_at: string;
-}
-
-// Auth types
-export interface User {
-	id: string;
-	email: string;
-	name: string;
-	current_org_id?: string;
-	current_org_role?: string;
-}
-
-// Organization types
-export type OrgRole = 'owner' | 'admin' | 'member' | 'readonly';
-
-export interface Organization {
-	id: string;
-	name: string;
-	slug: string;
-	created_at: string;
-	updated_at: string;
-}
-
-export interface OrganizationWithRole {
-	id: string;
-	name: string;
-	slug: string;
-	role: OrgRole;
-	created_at: string;
-	updated_at: string;
-}
-
-export interface OrgMember {
-	id: string;
-	user_id: string;
-	org_id: string;
-	role: OrgRole;
-	email: string;
-	name: string;
-	created_at: string;
-	updated_at: string;
-}
-
-export interface OrgInvitation {
-	id: string;
-	org_id: string;
-	org_name: string;
-	email: string;
-	role: OrgRole;
-	invited_by: string;
-	inviter_name: string;
-	expires_at: string;
-	accepted_at?: string;
-	created_at: string;
-}
-
-export interface CreateOrgRequest {
-	name: string;
-	slug: string;
-}
-
-export interface UpdateOrgRequest {
-	name?: string;
-	slug?: string;
-}
-
-export interface SwitchOrgRequest {
-	org_id: string;
-}
-
-export interface InviteMemberRequest {
-	email: string;
-	role: OrgRole;
-}
-
-export interface UpdateMemberRequest {
-	role: OrgRole;
-}
-
-export interface OrgResponse {
-	organization: Organization;
-	role: string;
-}
-
-export interface OrganizationsResponse {
-	organizations: OrganizationWithRole[];
-}
-
-export interface MembersResponse {
-	members: OrgMember[];
-}
-
-export interface InvitationsResponse {
-	invitations: OrgInvitation[];
-}
-
-export interface InviteResponse {
-	message: string;
-	token: string;
-}
 
 // API response wrappers
 export interface AgentsResponse {
@@ -2654,31 +2303,6 @@ export interface UserSSOGroups {
 	synced_at: string | null;
 }
 
-// Exclude Pattern types
-export type ExcludePatternCategory =
-	| 'os'
-	| 'ide'
-	| 'language'
-	| 'build'
-	| 'cache'
-	| 'temp'
-	| 'logs'
-	| 'security'
-	| 'database'
-	| 'container';
-
-export interface ExcludePattern {
-	id: string;
-	org_id?: string;
-	name: string;
-	description?: string;
-	patterns: string[];
-	category: ExcludePatternCategory;
-	is_builtin: boolean;
-	created_at: string;
-	updated_at: string;
-}
-
 export interface CreateMaintenanceWindowRequest {
 	title: string;
 	message?: string;
@@ -2714,9 +2338,6 @@ export interface ActiveMaintenanceResponse {
 	show_countdown: boolean;
 	countdown_to?: string;
 }
-
-// DR Runbook types
-export type DRRunbookStatus = 'active' | 'draft' | 'archived';
 
 export interface DRRunbookStep {
 	order: number;
@@ -3551,11 +3172,6 @@ export interface AirGapDisabledFeature {
 	reason: string;
 }
 
-export interface AirGapStatus {
-	enabled: boolean;
-	disabled_features: AirGapDisabledFeature[];
-}
-
 export interface DockerDaemonStatus {
 	available: boolean;
 	version: string;
@@ -3577,14 +3193,6 @@ export interface DockerBackupResponse {
 	id: string;
 	status: string;
 	created_at: string;
-}
-
-export interface DockerContainersResponse {
-	containers: DockerContainer[];
-}
-
-export interface DockerVolumesResponse {
-	volumes: DockerVolume[];
 }
 
 // License types
@@ -3725,87 +3333,6 @@ export interface ImportRepositoryResponse {
 	snapshots_imported: number;
 }
 
-export interface DryRunFile {
-	path: string;
-	type: 'file' | 'dir';
-	size: number;
-	action: 'new' | 'changed' | 'unchanged';
-}
-
-export interface DryRunExcluded {
-	path: string;
-	reason: string;
-}
-
-export interface DryRunResponse {
-	schedule_id: string;
-	total_files: number;
-	total_size: number;
-	new_files: number;
-	changed_files: number;
-	unchanged_files: number;
-	files_to_backup: DryRunFile[];
-	excluded_files: DryRunExcluded[];
-	message: string;
-}
-
-export interface UpdateDRTestRequest {
-	status?: DRTestStatus;
-	actual_rto_minutes?: number;
-	actual_rpo_minutes?: number;
-	notes?: string;
-}
-
-// Changelog types
-export interface ChangelogEntry {
-	version: string;
-	date: string;
-	added?: string[];
-	changed?: string[];
-	deprecated?: string[];
-	removed?: string[];
-	fixed?: string[];
-	security?: string[];
-	is_unreleased?: boolean;
-}
-
-export interface ChangelogResponse {
-	entries: ChangelogEntry[];
-	current_version: string;
-}
-
-// Server Log types
-export type ServerLogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
-
-export interface ServerLogEntry {
-	timestamp: string;
-	level: ServerLogLevel;
-	message: string;
-	component?: string;
-	fields?: Record<string, unknown>;
-}
-
-export interface ServerLogFilter {
-	level?: ServerLogLevel;
-	component?: string;
-	search?: string;
-	start_time?: string;
-	end_time?: string;
-	limit?: number;
-	offset?: number;
-}
-
-export interface ServerLogsResponse {
-	logs: ServerLogEntry[];
-	total_count: number;
-	limit: number;
-	offset: number;
-}
-
-export interface ServerLogComponentsResponse {
-	components: string[];
-}
-
 // Classification types
 export type ClassificationLevel =
 	| 'public'
@@ -3908,63 +3435,6 @@ export interface CreatePathClassificationRuleRequest {
 	data_types?: DataType[];
 	description?: string;
 	priority?: number;
-}
-
-export interface UpdatePathClassificationRuleRequest {
-	pattern?: string;
-	level?: ClassificationLevel;
-	data_types?: DataType[];
-	description?: string;
-	priority?: number;
-	enabled?: boolean;
-}
-
-export interface SetScheduleClassificationRequest {
-	level: ClassificationLevel;
-	data_types?: DataType[];
-}
-
-export interface ClassificationSummary {
-	total_schedules: number;
-	total_backups: number;
-	by_level: Record<string, number>;
-	by_data_type: Record<string, number>;
-	restricted_count: number;
-	confidential_count: number;
-	internal_count: number;
-	public_count: number;
-}
-
-export interface ClassificationRulesResponse {
-	rules: PathClassificationRule[];
-}
-
-export interface ClassificationLevelsResponse {
-	levels: ClassificationLevelInfo[];
-}
-
-export interface DataTypesResponse {
-	data_types: DataTypeInfo[];
-}
-
-export interface ScheduleClassificationSummary {
-	id: string;
-	name: string;
-	level: ClassificationLevel;
-	data_types: DataType[];
-	paths: string[];
-	agent_id: string;
-}
-
-export interface ComplianceReport {
-	generated_at: string;
-	org_id: string;
-	summary: ClassificationSummary;
-	schedules_by_level: Record<string, ScheduleClassificationSummary[]>;
-}
-
-export interface CreateLegalHoldRequest {
-	reason: string;
 }
 
 export interface UpdatePathClassificationRuleRequest {
@@ -5881,345 +5351,6 @@ export type RecentItemType =
 	| 'policy'
 	| 'snapshot';
 
-export interface UserWithMembership {
-	id: string;
-	org_id: string;
-	oidc_subject?: string;
-	email: string;
-	name: string;
-	role: string;
-	status: UserStatus;
-	last_login_at?: string;
-	last_login_ip?: string;
-	failed_login_attempts?: number;
-	locked_until?: string;
-	invited_by?: string;
-	invited_at?: string;
-	is_superuser?: boolean;
-	created_at: string;
-	updated_at: string;
-	org_role: OrgRole;
-}
-
-export interface UsersResponse {
-	users: UserWithMembership[];
-}
-
-export interface InviteUserRequest {
-	email: string;
-	name?: string;
-	role: OrgRole;
-}
-
-export interface InviteUserResponse {
-	message: string;
-	token: string;
-}
-
-export interface UpdateUserRequest {
-	name?: string;
-	role?: OrgRole;
-	status?: UserStatus;
-}
-
-export interface ResetPasswordRequest {
-	new_password: string;
-	require_change_on_use?: boolean;
-}
-
-export interface ImpersonateUserRequest {
-	reason: string;
-}
-
-export interface ImpersonateUserResponse {
-	message: string;
-	impersonating: string;
-	impersonated_id: string;
-}
-
-export interface UserActivityLog {
-	id: string;
-	user_id: string;
-	org_id: string;
-	action: string;
-	resource_type?: string;
-	resource_id?: string;
-	ip_address?: string;
-	user_agent?: string;
-	details?: Record<string, unknown>;
-	created_at: string;
-	user_email: string;
-	user_name: string;
-}
-
-export interface UserActivityLogsResponse {
-	activity_logs: UserActivityLog[];
-}
-
-export interface UserImpersonationLog {
-	id: string;
-	admin_user_id: string;
-	target_user_id: string;
-	org_id: string;
-	reason?: string;
-	started_at: string;
-	ended_at?: string;
-	ip_address?: string;
-	user_agent?: string;
-	admin_email: string;
-	admin_name: string;
-	target_email: string;
-	target_name: string;
-}
-
-export interface ImpersonationLogsResponse {
-	impersonation_logs: UserImpersonationLog[];
-}
-
-// Organization System Settings types (SMTP, OIDC, Storage, Security)
-export interface SMTPSettings {
-	host: string;
-	port: number;
-	username?: string;
-	password?: string;
-	from_email: string;
-	from_name?: string;
-	encryption: 'none' | 'tls' | 'starttls';
-	enabled: boolean;
-	skip_tls_verify: boolean;
-	connection_timeout_seconds: number;
-}
-
-export interface OIDCSettings {
-	enabled: boolean;
-	issuer: string;
-	client_id: string;
-	client_secret?: string;
-	redirect_url: string;
-	scopes: string[];
-	auto_create_users: boolean;
-	default_role: 'member' | 'readonly';
-	allowed_domains?: string[];
-	require_email_verification: boolean;
-}
-
-export interface StorageDefaultSettings {
-	default_retention_days: number;
-	max_retention_days: number;
-	default_storage_backend: 'local' | 's3' | 'b2' | 'sftp' | 'rest' | 'dropbox';
-	max_backup_size_gb: number;
-	enable_compression: boolean;
-	compression_level: number;
-	default_encryption_method: 'aes256' | 'none';
-	prune_schedule: string;
-	auto_prune_enabled: boolean;
-}
-
-export interface SecuritySettings {
-	session_timeout_minutes: number;
-	max_concurrent_sessions: number;
-	require_mfa: boolean;
-	mfa_grace_period_days: number;
-	allowed_ip_ranges?: string[];
-	blocked_ip_ranges?: string[];
-	failed_login_lockout_attempts: number;
-	failed_login_lockout_minutes: number;
-	api_key_expiration_days: number;
-	enable_audit_logging: boolean;
-	audit_log_retention_days: number;
-	force_https: boolean;
-	allow_password_login: boolean;
-}
-
-export interface OrgSettingsResponse {
-	smtp: SMTPSettings;
-	oidc: OIDCSettings;
-	storage_defaults: StorageDefaultSettings;
-	security: SecuritySettings;
-	updated_at: string;
-}
-
-export interface UpdateSMTPSettingsRequest {
-	host?: string;
-	port?: number;
-	username?: string;
-	password?: string;
-	from_email?: string;
-	from_name?: string;
-	encryption?: 'none' | 'tls' | 'starttls';
-	enabled?: boolean;
-	skip_tls_verify?: boolean;
-	connection_timeout_seconds?: number;
-}
-
-export interface UpdateOIDCSettingsRequest {
-	enabled?: boolean;
-	issuer?: string;
-	client_id?: string;
-	client_secret?: string;
-	redirect_url?: string;
-	scopes?: string[];
-	auto_create_users?: boolean;
-	default_role?: 'member' | 'readonly';
-	allowed_domains?: string[];
-	require_email_verification?: boolean;
-}
-
-export interface UpdateStorageDefaultsRequest {
-	default_retention_days?: number;
-	max_retention_days?: number;
-	default_storage_backend?: 'local' | 's3' | 'b2' | 'sftp' | 'rest' | 'dropbox';
-	max_backup_size_gb?: number;
-	enable_compression?: boolean;
-	compression_level?: number;
-	default_encryption_method?: 'aes256' | 'none';
-	prune_schedule?: string;
-	auto_prune_enabled?: boolean;
-}
-
-export interface UpdateSecuritySettingsRequest {
-	session_timeout_minutes?: number;
-	max_concurrent_sessions?: number;
-	require_mfa?: boolean;
-	mfa_grace_period_days?: number;
-	allowed_ip_ranges?: string[];
-	blocked_ip_ranges?: string[];
-	failed_login_lockout_attempts?: number;
-	failed_login_lockout_minutes?: number;
-	api_key_expiration_days?: number;
-	enable_audit_logging?: boolean;
-	audit_log_retention_days?: number;
-	force_https?: boolean;
-	allow_password_login?: boolean;
-}
-
-export interface TestSMTPRequest {
-	recipient_email: string;
-}
-
-export interface TestSMTPResponse {
-	success: boolean;
-	message: string;
-}
-
-export interface TestOIDCResponse {
-	success: boolean;
-	message: string;
-	provider_name?: string;
-	auth_url?: string;
-	supported_flow?: string;
-}
-
-export type SettingKey = 'smtp' | 'oidc' | 'storage_defaults' | 'security';
-
-export interface SettingsAuditLog {
-	id: string;
-	org_id: string;
-	setting_key: SettingKey;
-	old_value?: object;
-	new_value: object;
-	changed_by: string;
-	changed_by_email?: string;
-	changed_at: string;
-	ip_address?: string;
-}
-
-export interface SettingsAuditLogsResponse {
-	logs: SettingsAuditLog[];
-	limit: number;
-	offset: number;
-}
-
-// Superuser types
-export type SuperuserAction =
-	| 'view_organizations'
-	| 'view_organization'
-	| 'impersonate_user'
-	| 'end_impersonation'
-	| 'update_system_settings'
-	| 'view_system_settings'
-	| 'grant_superuser'
-	| 'revoke_superuser'
-	| 'view_users'
-	| 'view_superuser_audit_logs';
-
-export interface SuperuserAuditLog {
-	id: string;
-	superuser_id: string;
-	action: SuperuserAction;
-	target_type: string;
-	target_id?: string;
-	target_org_id?: string;
-	impersonated_user_id?: string;
-	ip_address?: string;
-	user_agent?: string;
-	details?: Record<string, unknown>;
-	created_at: string;
-	superuser_email?: string;
-	superuser_name?: string;
-}
-
-export interface SystemSetting {
-	key: string;
-	value: unknown;
-	description?: string;
-	updated_by?: string;
-	updated_at: string;
-}
-
-export interface SuperuserOrganizationsResponse {
-	organizations: Organization[];
-}
-
-export interface SuperuserUsersResponse {
-	users: User[];
-}
-
-export interface SuperusersResponse {
-	superusers: User[];
-}
-
-export interface SuperuserAuditLogsResponse {
-	audit_logs: SuperuserAuditLog[];
-	total: number;
-	limit: number;
-	offset: number;
-}
-
-export interface SystemSettingsResponse {
-	settings: SystemSetting[];
-}
-
-export interface SystemSettingResponse {
-	setting: SystemSetting;
-}
-
-export interface UpdateSystemSettingRequest {
-	value: unknown;
-}
-
-export interface GrantSuperuserRequest {
-	reason?: string;
-}
-
-export interface ImpersonationResponse {
-	message: string;
-	impersonating?: {
-		id: string;
-		email: string;
-		name: string;
-	};
-}
-
-// Recent Items types
-export type RecentItemType =
-	| 'agent'
-	| 'repository'
-	| 'schedule'
-	| 'backup'
-	| 'policy'
-	| 'snapshot';
-
 export interface RecentItem {
 	id: string;
 	org_id: string;
@@ -6345,37 +5476,6 @@ export interface CreateFavoriteRequest {
 
 export interface FavoritesResponse {
 	favorites: Favorite[];
-}
-
-export interface DockerDaemonStatus {
-	available: boolean;
-	version: string;
-	container_count: number;
-	volume_count: number;
-	server_os: string;
-	docker_root_dir: string;
-	storage_driver: string;
-}
-
-export interface DockerBackupRequest {
-	agent_id: string;
-	repository_id: string;
-	container_ids?: string[];
-	volume_names?: string[];
-}
-
-export interface DockerBackupResponse {
-	id: string;
-	status: string;
-	created_at: string;
-}
-
-export interface DockerContainersResponse {
-	containers: DockerContainer[];
-}
-
-export interface DockerVolumesResponse {
-	volumes: DockerVolume[];
 }
 
 // Docker Stack Backup types
@@ -6727,33 +5827,6 @@ export interface DockerRegistryResponse {
 export interface DockerRegistryTypesResponse {
 	types: DockerRegistryTypeInfo[];
 }
-// Snapshot comment types
-export interface SnapshotComment {
-	id: string;
-	snapshot_id: string;
-	user_id: string;
-	user_name: string;
-	user_email: string;
-	content: string;
-	created_at: string;
-	updated_at: string;
-}
-
-export interface CreateSnapshotCommentRequest {
-	content: string;
-}
-
-export interface SnapshotCommentsResponse {
-	comments: SnapshotComment[];
-}
-
-// Restore types
-export type RestoreStatus =
-	| 'pending'
-	| 'running'
-	| 'completed'
-	| 'failed'
-	| 'canceled';
 
 export interface DockerLoginResultResponse {
 	result: DockerLoginResult;
@@ -6964,10 +6037,6 @@ export interface DatabaseTestResponse {
 	message: string;
 }
 
-export interface ActivateLicenseRequest {
-	license_key: string;
-}
-
 export interface ActivateLicenseResponse {
 	license_type: string;
 	expires_at?: string;
@@ -7095,300 +6164,6 @@ export interface SystemHealthHistoryResponse {
 	until: string;
 }
 
-// Server Setup types
-export type ServerSetupStep =
-	| 'database'
-	| 'superuser'
-	| 'smtp'
-	| 'oidc'
-	| 'license'
-	| 'organization'
-	| 'complete';
-
-export interface ServerSetupStatus {
-	needs_setup: boolean;
-	setup_completed: boolean;
-	current_step: ServerSetupStep;
-	completed_steps: ServerSetupStep[];
-	database_ok: boolean;
-	has_superuser: boolean;
-}
-
-export interface CreateSuperuserRequest {
-	email: string;
-	password: string;
-	name: string;
-}
-
-export interface CreateSuperuserResponse {
-	user_id: string;
-	org_id: string;
-	message: string;
-}
-
-export interface DatabaseTestResponse {
-	ok: boolean;
-	message: string;
-}
-
-export interface ActivateLicenseRequest {
-	license_key: string;
-}
-// SSO Group Mapping types
-export interface SSOGroupMapping {
-	id: string;
-	org_id: string;
-	oidc_group_name: string;
-	role: OrgRole;
-	auto_create_org: boolean;
-	created_at: string;
-	updated_at: string;
-}
-
-// Maintenance Window types
-export interface MaintenanceWindow {
-	id: string;
-	org_id: string;
-	title: string;
-	message?: string;
-	starts_at: string;
-	ends_at: string;
-	notify_before_minutes: number;
-	notification_sent: boolean;
-	created_by?: string;
-	created_at: string;
-	updated_at: string;
-}
-
-export interface CreateSSOGroupMappingRequest {
-	oidc_group_name: string;
-	role: OrgRole;
-	auto_create_org?: boolean;
-}
-
-export interface UpdateSSOGroupMappingRequest {
-	role?: OrgRole;
-	auto_create_org?: boolean;
-}
-
-export interface SSOGroupMappingResponse {
-	mapping: SSOGroupMapping;
-}
-
-export interface SSOGroupMappingsResponse {
-	mappings: SSOGroupMapping[];
-}
-
-export interface SSOSettings {
-	default_role: OrgRole | null;
-	auto_create_orgs: boolean;
-}
-
-export interface UpdateSSOSettingsRequest {
-	default_role?: OrgRole | null;
-	auto_create_orgs?: boolean;
-}
-
-export interface UserSSOGroups {
-	user_id: string;
-	oidc_groups: string[];
-	synced_at: string | null;
-}
-
-// Exclude Pattern types
-export type ExcludePatternCategory =
-	| 'os'
-	| 'ide'
-	| 'language'
-	| 'build'
-	| 'cache'
-	| 'temp'
-	| 'logs'
-	| 'security'
-	| 'database'
-	| 'container';
-
-export interface ActivateLicenseResponse {
-	license_type: string;
-	expires_at?: string;
-	message: string;
-}
-
-export interface SetupStartTrialRequest {
-	company_name?: string;
-	contact_email: string;
-}
-export interface CreateMaintenanceWindowRequest {
-	title: string;
-	message?: string;
-	starts_at: string;
-	ends_at: string;
-	notify_before_minutes?: number;
-}
-
-export interface UpdateMaintenanceWindowRequest {
-	title?: string;
-	message?: string;
-	starts_at?: string;
-	ends_at?: string;
-	notify_before_minutes?: number;
-}
-
-export interface MaintenanceWindowsResponse {
-	maintenance_windows: MaintenanceWindow[];
-}
-
-export interface ActiveMaintenanceResponse {
-	active: MaintenanceWindow | null;
-	upcoming: MaintenanceWindow | null;
-}
-
-// DR Runbook types
-export type DRRunbookStatus = 'active' | 'draft' | 'archived';
-
-export interface SetupStartTrialResponse {
-	license_type: string;
-	expires_at: string;
-	message: string;
-}
-
-export interface CreateFirstOrgRequest {
-	name: string;
-}
-
-export interface SetupCompleteResponse {
-	message: string;
-	redirect: string;
-}
-
-export interface SetupLicenseInfo {
-	license_type: 'trial' | 'standard' | 'professional' | 'enterprise';
-	status: string;
-	max_agents?: number;
-	max_repositories?: number;
-	max_storage_gb?: number;
-	expires_at?: string;
-	company_name?: string;
-}
-// Snapshot types
-export interface Snapshot {
-	id: string;
-	short_id: string;
-	time: string;
-	hostname: string;
-	paths: string[];
-	agent_id: string;
-	repository_id: string;
-	backup_id?: string;
-	size_bytes?: number;
-}
-
-export interface SnapshotFile {
-	name: string;
-	path: string;
-	type: 'file' | 'dir';
-	size: number;
-	mod_time: string;
-}
-
-export interface SnapshotsResponse {
-	snapshots: Snapshot[];
-}
-
-export interface SnapshotFilesResponse {
-	files: SnapshotFile[];
-	snapshot_id: string;
-	path: string;
-	message?: string;
-}
-
-// Restore types
-export type RestoreStatus =
-	| 'pending'
-	| 'running'
-	| 'completed'
-	| 'failed'
-	| 'canceled';
-
-export interface Restore {
-	id: string;
-	agent_id: string;
-	repository_id: string;
-	snapshot_id: string;
-	target_path: string;
-	include_paths?: string[];
-	exclude_paths?: string[];
-	status: RestoreStatus;
-	started_at?: string;
-	completed_at?: string;
-	error_message?: string;
-	created_at: string;
-}
-
-export interface CreateRestoreRequest {
-	snapshot_id: string;
-	agent_id: string;
-	repository_id: string;
-	target_path: string;
-	include_paths?: string[];
-	exclude_paths?: string[];
-}
-
-export interface RestoresResponse {
-	restores: Restore[];
-}
-
-// Alert types
-export type AlertType = 'agent_offline' | 'backup_sla' | 'storage_usage';
-export type AlertSeverity = 'info' | 'warning' | 'critical';
-export type AlertStatus = 'active' | 'acknowledged' | 'resolved';
-export type ResourceType = 'agent' | 'schedule' | 'repository';
-
-export interface Alert {
-	id: string;
-	org_id: string;
-	rule_id?: string;
-	type: AlertType;
-	severity: AlertSeverity;
-	status: AlertStatus;
-	title: string;
-	message: string;
-	resource_type?: ResourceType;
-	resource_id?: string;
-	acknowledged_by?: string;
-	acknowledged_at?: string;
-	resolved_at?: string;
-	metadata?: Record<string, unknown>;
-	created_at: string;
-	updated_at: string;
-}
-
-// Notification types
-export type NotificationChannelType =
-	| 'email'
-	| 'slack'
-	| 'webhook'
-	| 'pagerduty';
-export type NotificationEventType =
-	| 'backup_success'
-	| 'backup_failed'
-	| 'agent_offline';
-export type NotificationStatus = 'queued' | 'sent' | 'failed';
-
-export interface RerunStatusResponse {
-	setup_completed: boolean;
-	can_configure: string[];
-	license?: SetupLicenseInfo;
-}
-
-// License types
-export type LicenseTier = 'free' | 'pro' | 'professional' | 'enterprise';
-export type LicenseStatus =
-	| 'active'
-	| 'expiring_soon'
-	| 'expired'
-	| 'grace_period';
-
 export interface LicenseFeatures {
 	max_agents: number;
 	max_repositories: number;
@@ -7459,105 +6234,7 @@ export interface WebhookEndpoint {
 	updated_at: string;
 }
 
-// License types
-export type LicenseTier = 'free' | 'pro' | 'professional' | 'enterprise';
-export type LicenseStatus =
-	| 'active'
-	| 'expiring_soon'
-	| 'expired'
-	| 'grace_period';
-
-export interface LicenseFeatures {
-	max_agents: number;
-	max_repositories: number;
-	max_storage_bytes: number;
-	sso_enabled: boolean;
-	api_access: boolean;
-	advanced_reporting: boolean;
-	custom_branding: boolean;
-	priority_support: boolean;
-	backup_hooks: boolean;
-	multi_destination: boolean;
-export interface AlertRuleConfig {
-	offline_threshold_minutes?: number;
-	max_hours_since_backup?: number;
-	storage_usage_percent?: number;
-	agent_ids?: string[];
-	schedule_ids?: string[];
-	repository_id?: string;
-}
-
-export interface AlertRule {
-	id: string;
-	org_id: string;
-	name: string;
-	type: AlertType;
-	enabled: boolean;
-	config: AlertRuleConfig;
-	created_at: string;
-	updated_at: string;
-}
-
-export interface EmailChannelConfig {
-	host: string;
-	port: number;
-	username: string;
-	password: string;
-	from: string;
-	tls: boolean;
-}
-
-export interface LicenseUsage {
-	agents_used: number;
-	agents_limit: number;
-	repositories_used: number;
-	repositories_limit: number;
-	storage_used_bytes: number;
-	storage_limit_bytes: number;
-}
-
-export interface License {
-	id: string;
-	org_id: string;
-	license_key: string;
-	tier: LicenseTier;
-	status: LicenseStatus;
-	valid_from: string;
-	valid_until: string;
-	grace_period_days: number;
-	features: LicenseFeatures;
-	usage: LicenseUsage;
-	created_at: string;
-	updated_at: string;
-}
-
 export interface LicenseHistory {
-export interface CreateAlertRuleRequest {
-	name: string;
-	type: AlertType;
-	enabled: boolean;
-	config: AlertRuleConfig;
-}
-
-export interface UpdateAlertRuleRequest {
-	name?: string;
-	enabled?: boolean;
-	config?: AlertRuleConfig;
-}
-
-export interface AlertsResponse {
-	alerts: Alert[];
-}
-
-export interface AlertRulesResponse {
-	rules: AlertRule[];
-}
-
-export interface AlertCountResponse {
-	count: number;
-}
-
-export interface NotificationLog {
 	id: string;
 	license_id: string;
 	org_id: string;
@@ -7631,45 +6308,6 @@ export interface LicenseValidateResponse {
 export interface LicenseWarningsResponse {
 	warnings: LicenseWarnings;
 }
-// Server Log types
-export type ServerLogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
-
-export interface ServerLogEntry {
-	timestamp: string;
-	level: ServerLogLevel;
-	message: string;
-	component?: string;
-	fields?: Record<string, unknown>;
-}
-
-export interface ServerLogFilter {
-	level?: ServerLogLevel;
-	component?: string;
-	search?: string;
-	start_time?: string;
-	end_time?: string;
-	limit?: number;
-	offset?: number;
-}
-
-export interface ServerLogsResponse {
-	logs: ServerLogEntry[];
-	total_count: number;
-	limit: number;
-	offset: number;
-}
-
-export interface ServerLogComponentsResponse {
-	components: string[];
-}
-
-// Classification types
-export type ClassificationLevel =
-	| 'public'
-	| 'internal'
-	| 'confidential'
-	| 'restricted';
-export type DataType = 'pii' | 'phi' | 'pci' | 'proprietary' | 'general';
 
 export type ProFeature =
 	| 'sso'
@@ -7684,9 +6322,6 @@ export type ProFeature =
 	| 'unlimited_storage';
 
 // License Feature Flag types
-// License and Feature Flag types
-export type LicenseTier = 'free' | 'pro' | 'enterprise';
-
 export type LicenseFeature =
 	| 'oidc'
 	| 'audit_logs'
@@ -7737,7 +6372,6 @@ export interface TiersResponse {
 }
 
 export interface LicenseInfoResponse {
-export interface LicenseResponse {
 	license: LicenseInfo;
 }
 
@@ -7789,10 +6423,6 @@ export interface TrialProFeature {
 	description: string;
 	available: boolean;
 	limit?: number;
-}
-
-export interface StartTrialRequest {
-	email: string;
 }
 
 export interface ExtendTrialRequest {
@@ -7886,6 +6516,10 @@ export interface MigrationIDMappings {
 	users?: Record<string, string>;
 	agents?: Record<string, string>;
 	repositories?: Record<string, string>;
+	schedules?: Record<string, string>;
+	policies?: Record<string, string>;
+}
+
 export interface AirGapLicenseInfo {
 	customer_id: string;
 	tier: string;
@@ -7900,78 +6534,6 @@ export interface AirGapStatus {
 	license: AirGapLicenseInfo | null;
 }
 
-// Verification types
-export type VerificationStatus = 'pending' | 'running' | 'passed' | 'failed';
-export type VerificationType = 'check' | 'check_read_data' | 'test_restore';
-
-export interface VerificationDetails {
-	errors_found?: string[];
-	files_restored?: number;
-	bytes_restored?: number;
-	read_data_subset?: string;
-}
-
-export interface Verification {
-	id: string;
-	repository_id: string;
-	type: VerificationType;
-	snapshot_id?: string;
-	started_at: string;
-	completed_at?: string;
-	status: VerificationStatus;
-	duration_ms?: number;
-	error_message?: string;
-	details?: VerificationDetails;
-	created_at: string;
-}
-
-// Report types
-export type ReportFrequency = 'daily' | 'weekly' | 'monthly';
-export type ReportStatus = 'sent' | 'failed' | 'preview';
-
-export interface VerificationSchedule {
-	id: string;
-	repository_id: string;
-	type: VerificationType;
-	cron_expression: string;
-	enabled: boolean;
-	read_data_subset?: string;
-	created_at: string;
-	updated_at: string;
-}
-
-export interface VerificationStatusResponse {
-	repository_id: string;
-	last_verification?: Verification;
-	next_scheduled_at?: string;
-	consecutive_fails: number;
-}
-
-export interface TriggerVerificationRequest {
-	type: VerificationType;
-}
-
-export interface CreateVerificationScheduleRequest {
-	type: VerificationType;
-	cron_expression: string;
-	enabled?: boolean;
-	read_data_subset?: string;
-}
-
-export interface UpdateVerificationScheduleRequest {
-	cron_expression?: string;
-	enabled?: boolean;
-	read_data_subset?: string;
-}
-
-export interface VerificationsResponse {
-	verifications: Verification[];
-}
-
-export interface VerificationSchedulesResponse {
-	schedules: VerificationSchedule[];
-}
-
 export interface WebhookDelivery {
 	id: string;
 	org_id: string;
@@ -8036,195 +6598,4 @@ export interface TestWebhookResponse {
 	response_body?: string;
 	error_message?: string;
 	duration_ms: number;
-}
-
-// Onboarding types
-export type OnboardingStep =
-	| 'welcome'
-	| 'organization'
-	| 'smtp'
-	| 'repository'
-	| 'agent'
-	| 'schedule'
-	| 'verify'
-	| 'complete';
-
-export interface OnboardingStatus {
-	needs_onboarding: boolean;
-	current_step: OnboardingStep;
-	completed_steps: OnboardingStep[];
-	skipped: boolean;
-	is_complete: boolean;
-}
-
-export interface WebhookDelivery {
-	id: string;
-	org_id: string;
-	endpoint_id: string;
-	event_type: WebhookEventType;
-	event_id?: string;
-	payload: Record<string, unknown>;
-	request_headers?: Record<string, string>;
-	response_status?: number;
-	response_body?: string;
-	response_headers?: Record<string, string>;
-	attempt_number: number;
-	max_attempts: number;
-	status: WebhookDeliveryStatus;
-	error_message?: string;
-	delivered_at?: string;
-	next_retry_at?: string;
-	created_at: string;
-}
-
-export interface CreateWebhookEndpointRequest {
-	name: string;
-	url: string;
-	secret: string;
-	event_types: WebhookEventType[];
-	headers?: Record<string, string>;
-	retry_count?: number;
-	timeout_seconds?: number;
-}
-
-export interface UpdateWebhookEndpointRequest {
-	name?: string;
-	url?: string;
-	secret?: string;
-	enabled?: boolean;
-	event_types?: WebhookEventType[];
-	headers?: Record<string, string>;
-	retry_count?: number;
-	timeout_seconds?: number;
-}
-
-export interface WebhookEndpointsResponse {
-	endpoints: WebhookEndpoint[];
-}
-
-export interface WebhookDeliveriesResponse {
-	deliveries: WebhookDelivery[];
-	total: number;
-}
-
-export interface WebhookEventTypesResponse {
-	event_types: WebhookEventType[];
-}
-
-export interface TestWebhookRequest {
-	event_type?: WebhookEventType;
-}
-
-export interface TestWebhookResponse {
-	success: boolean;
-	response_status?: number;
-	response_body?: string;
-	error_message?: string;
-	duration_ms: number;
-}
-
-// Storage Stats types
-export interface StorageStats {
-	id: string;
-	repository_id: string;
-	total_size: number;
-	total_file_count: number;
-	raw_data_size: number;
-	restore_size: number;
-	dedup_ratio: number;
-	space_saved: number;
-	space_saved_pct: number;
-	snapshot_count: number;
-	collected_at: string;
-	created_at: string;
-}
-
-export interface StorageStatsSummary {
-	total_raw_size: number;
-	total_restore_size: number;
-	total_space_saved: number;
-	avg_dedup_ratio: number;
-	repository_count: number;
-	total_snapshots: number;
-}
-
-export interface StorageGrowthPoint {
-	date: string;
-	raw_data_size: number;
-	restore_size: number;
-}
-
-export interface RepositoryStatsResponse {
-	stats: StorageStats;
-	repository_name: string;
-}
-
-export interface RepositoryStatsListItem extends StorageStats {
-	repository_name: string;
-}
-
-export interface RepositoryStatsListResponse {
-	stats: RepositoryStatsListItem[];
-}
-
-export interface StorageGrowthResponse {
-	growth: StorageGrowthPoint[];
-}
-
-export interface RepositoryGrowthResponse {
-	repository_id: string;
-	repository_name: string;
-	growth: StorageGrowthPoint[];
-}
-
-export interface RepositoryHistoryResponse {
-	repository_id: string;
-	repository_name: string;
-	history: StorageStats[];
-}
-
-// Audit log types
-export type AuditAction =
-	| 'login'
-	| 'logout'
-	| 'create'
-	| 'read'
-	| 'update'
-	| 'delete'
-	| 'backup'
-	| 'restore';
-
-export type AuditResult = 'success' | 'failure' | 'denied';
-
-export interface AuditLog {
-	id: string;
-	org_id: string;
-	user_id?: string;
-	agent_id?: string;
-	action: AuditAction;
-	resource_type: string;
-	resource_id?: string;
-	result: AuditResult;
-	ip_address?: string;
-	user_agent?: string;
-	details?: string;
-	created_at: string;
-}
-
-export interface AuditLogFilter {
-	action?: string;
-	resource_type?: string;
-	result?: string;
-	start_date?: string;
-	end_date?: string;
-	search?: string;
-	limit?: number;
-	offset?: number;
-}
-
-export interface AuditLogsResponse {
-	audit_logs: AuditLog[];
-	total_count: number;
-	limit: number;
-	offset: number;
 }

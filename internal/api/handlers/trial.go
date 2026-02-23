@@ -116,7 +116,7 @@ func (h *TrialHandler) StartTrial(c *gin.Context) {
 		return
 	}
 
-	info, err := h.manager.StartTrial(c.Request.Context(), user.CurrentOrgID, req.Email)
+	info, err := h.manager.StartTrialForOrg(c.Request.Context(), user.CurrentOrgID, req.Email)
 	if err != nil {
 		h.logger.Warn().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to start trial")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

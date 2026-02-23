@@ -1,11 +1,15 @@
 package license
 
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
+)
+
 // TierLimits defines the resource limits for a license tier.
 // Only tracks resources monitored by the license server via heartbeat.
-type TierLimits struct {
-	MaxAgents int `json:"max_agents"`
-	MaxUsers  int `json:"max_users"`
-	MaxOrgs   int `json:"max_orgs"`
 type TierLimits struct {
 	MaxAgents  int   `json:"max_agents"`
 	MaxUsers   int   `json:"max_users"`
@@ -19,19 +23,6 @@ const Unlimited = -1
 // tierLimits maps each license tier to its resource limits.
 var tierLimits = map[LicenseTier]TierLimits{
 	TierFree: {
-		MaxAgents: 3,
-		MaxUsers:  3,
-		MaxOrgs:   1,
-	},
-	TierPro: {
-		MaxAgents: 25,
-		MaxUsers:  10,
-		MaxOrgs:   3,
-	},
-	TierEnterprise: {
-		MaxAgents: Unlimited,
-		MaxUsers:  Unlimited,
-		MaxOrgs:   Unlimited,
 		MaxAgents:  3,
 		MaxUsers:   3,
 		MaxOrgs:    1,
@@ -64,13 +55,7 @@ func GetLimits(tier LicenseTier) TierLimits {
 // IsUnlimited returns true if the given limit value represents unlimited.
 func IsUnlimited(limit int) bool {
 	return limit == Unlimited
-import (
-	"context"
-	"errors"
-	"fmt"
-
-	"github.com/google/uuid"
-)
+}
 
 var (
 	// ErrAgentLimitExceeded indicates the agent limit has been reached.

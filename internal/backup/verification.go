@@ -371,7 +371,6 @@ func (vs *VerificationScheduler) runTestRestore(ctx context.Context, cfg ResticC
 
 	// Restore to temp directory
 	if err := vs.restic.Restore(ctx, cfg, latestSnapshot.ID, RestoreOptions{TargetPath: tempDir}); err != nil {
-	if err := vs.restic.Restore(ctx, cfg, latestSnapshot.ID, tempDir); err != nil {
 		return details, fmt.Errorf("restore failed: %w", err)
 	}
 

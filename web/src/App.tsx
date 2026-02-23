@@ -6,74 +6,8 @@ import { Layout } from './components/Layout';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { UpgradePromptProvider } from './hooks/useUpgradePrompt';
 import { BrandingProvider } from './contexts/BrandingContext';
-import { Activity } from './pages/Activity';
-import { AdminLogs } from './pages/AdminLogs';
-import { AdminSetup } from './pages/AdminSetup';
-import { AgentDetails } from './pages/AgentDetails';
-import { AgentGroups } from './pages/AgentGroups';
-import { AdminLogs } from './pages/AdminLogs';
-import { AgentDetails } from './pages/AgentDetails';
-import { AgentGroups } from './pages/AgentGroups';
-import { Agents } from './pages/Agents';
-import { Alerts } from './pages/Alerts';
-import { Announcements } from './pages/Announcements';
-import { AuditLogs } from './pages/AuditLogs';
-import { BackupHookTemplates } from './pages/BackupHookTemplates';
-import { AuditLogs } from './pages/AuditLogs';
-import { Backups } from './pages/Backups';
-import { BrandingSettings } from './pages/BrandingSettings';
-import { Changelog } from './pages/Changelog';
-import { Classifications } from './pages/Classifications';
-import { CostEstimation } from './pages/CostEstimation';
-import { DRRunbooks } from './pages/DRRunbooks';
-import { Dashboard } from './pages/Dashboard';
-import { DockerLogs } from './pages/DockerLogs';
-import { DockerRegistries } from './pages/DockerRegistries';
-import { Documentation } from './pages/Documentation';
-import { DowntimeHistory } from './pages/DowntimeHistory';
-import { FileDiff } from './pages/FileDiff';
-import { FileHistory } from './pages/FileHistory';
-import { FileSearch } from './pages/FileSearch';
-import { LegalHolds } from './pages/LegalHolds';
-import { License } from './pages/License';
-import { LifecyclePolicies } from './pages/LifecyclePolicies';
-import { FileHistory } from './pages/FileHistory';
-import { Maintenance } from './pages/Maintenance';
-import { MigrationSettings } from './pages/MigrationSettings';
-import { Maintenance } from './pages/Maintenance';
-import { NewOrganization } from './pages/NewOrganization';
-import { NotFound } from './pages/NotFound';
-import { NotificationRules } from './pages/NotificationRules';
-import { Notifications } from './pages/Notifications';
-import { Onboarding } from './pages/Onboarding';
-import { OrgManagement } from './pages/OrgManagement';
-import { Notifications } from './pages/Notifications';
-import { Onboarding } from './pages/Onboarding';
-import { OrganizationMembers } from './pages/OrganizationMembers';
-import { OrganizationSSOSettings } from './pages/OrganizationSSOSettings';
-import { OrganizationSettings } from './pages/OrganizationSettings';
-import { PasswordPolicies } from './pages/PasswordPolicies';
-import { PasswordReset } from './pages/PasswordReset';
-import { Policies } from './pages/Policies';
-import Reports from './pages/Reports';
-import { NewOrganization } from './pages/NewOrganization';
-import { OrganizationMembers } from './pages/OrganizationMembers';
-import { OrganizationSettings } from './pages/OrganizationSettings';
-import { Repositories } from './pages/Repositories';
-import { RepositoryStatsDetail } from './pages/RepositoryStatsDetail';
-import { Restore } from './pages/Restore';
-import { Schedules } from './pages/Schedules';
-import { Setup } from './pages/Setup';
-import { SnapshotCompare } from './pages/SnapshotCompare';
-import { StorageStats } from './pages/StorageStats';
-import { SystemHealth } from './pages/SystemHealth';
-import { Tags } from './pages/Tags';
-import { Templates } from './pages/Templates';
-import { UserManagement } from './pages/UserManagement';
-import { UserSessions } from './pages/UserSessions';
-import Webhooks from './pages/Webhooks';
-import { LicenseManagement } from './pages/admin/LicenseManagement';
 
+// Lazy-loaded pages with default exports
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Agents = lazy(() => import('./pages/Agents'));
 const AgentDetails = lazy(() => import('./pages/AgentDetails'));
@@ -84,9 +18,6 @@ const Policies = lazy(() => import('./pages/Policies'));
 const Backups = lazy(() => import('./pages/Backups'));
 const DRRunbooks = lazy(() => import('./pages/DRRunbooks'));
 const DRTests = lazy(() => import('./pages/DRTests'));
-const Restore = lazy(() =>
-	import('./pages/Restore').then((m) => ({ default: m.Restore })),
-);
 const Restore = lazy(() => import('./pages/Restore'));
 const FileHistory = lazy(() => import('./pages/FileHistory'));
 const SnapshotCompare = lazy(() => import('./pages/SnapshotCompare'));
@@ -114,6 +45,9 @@ const DockerBackup = lazy(() => import('./pages/DockerBackup'));
 const AirGapLicense = lazy(() => import('./pages/AirGapLicense'));
 const License = lazy(() => import('./pages/License'));
 const Docs = lazy(() => import('./pages/Docs'));
+const Webhooks = lazy(() => import('./pages/Webhooks'));
+
+// Lazy-loaded pages with named exports only
 const AdminLogs = lazy(() =>
 	import('./pages/AdminLogs').then((m) => ({ default: m.AdminLogs })),
 );
@@ -193,32 +127,55 @@ const DockerRegistries = lazy(() =>
 const NotFound = lazy(() =>
 	import('./pages/NotFound').then((m) => ({ default: m.NotFound })),
 );
-const AirGapLicense = lazy(() => import('./pages/AirGapLicense'));
-import { Tags } from './pages/Tags';
-import { Templates } from './pages/Templates';
-
-const queryClient = new QueryClient({
-	defaultOptions: {
-		queries: {
-			retry: (failureCount, error) => {
-				// Don't retry on 4xx errors
-				if (error instanceof Error && 'status' in error) {
-					const status = (error as { status: number }).status;
-					if (status >= 400 && status < 500) return false;
-				}
-				return failureCount < 3;
-			},
-			refetchOnWindowFocus: false,
-		},
-	},
-});
-const Maintenance = lazy(() => import('./pages/Maintenance'));
-const NewOrganization = lazy(() => import('./pages/NewOrganization'));
-const Onboarding = lazy(() => import('./pages/Onboarding'));
-const SLATracking = lazy(() => import('./pages/SLATracking'));
-import { LicenseManagement } from './pages/admin/LicenseManagement';
-import { Schedules } from './pages/Schedules';
-import { StorageStats } from './pages/StorageStats';
+const Setup = lazy(() =>
+	import('./pages/Setup').then((m) => ({ default: m.Setup })),
+);
+const PasswordReset = lazy(() =>
+	import('./pages/PasswordReset').then((m) => ({ default: m.PasswordReset })),
+);
+const BackupHookTemplates = lazy(() =>
+	import('./pages/BackupHookTemplates').then((m) => ({
+		default: m.BackupHookTemplates,
+	})),
+);
+const UserManagement = lazy(() =>
+	import('./pages/UserManagement').then((m) => ({
+		default: m.UserManagement,
+	})),
+);
+const OrgManagement = lazy(() =>
+	import('./pages/OrgManagement').then((m) => ({
+		default: m.OrgManagement,
+	})),
+);
+const BrandingSettings = lazy(() =>
+	import('./pages/BrandingSettings').then((m) => ({
+		default: m.BrandingSettings,
+	})),
+);
+const Documentation = lazy(() =>
+	import('./pages/Documentation').then((m) => ({
+		default: m.Documentation,
+	})),
+);
+const SystemHealth = lazy(() =>
+	import('./pages/SystemHealth').then((m) => ({
+		default: m.SystemHealth,
+	})),
+);
+const MigrationSettings = lazy(() =>
+	import('./pages/MigrationSettings').then((m) => ({
+		default: m.MigrationSettings,
+	})),
+);
+const AdminSetup = lazy(() =>
+	import('./pages/AdminSetup').then((m) => ({ default: m.AdminSetup })),
+);
+const LicenseManagement = lazy(() =>
+	import('./pages/admin/LicenseManagement').then((m) => ({
+		default: m.LicenseManagement,
+	})),
+);
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -238,502 +195,276 @@ const queryClient = new QueryClient({
 
 function App() {
 	return (
-		<QueryClientProvider client={queryClient}>
-			<BrowserRouter>
-				<UpgradePromptProvider>
-					<Suspense fallback={<LoadingSpinner />}>
-						<Routes>
 		<ErrorBoundary>
 			<QueryClientProvider client={queryClient}>
 				<BrandingProvider>
 					<BrowserRouter>
-						<Routes>
-							{/* Public routes - outside Layout, no auth required */}
-							<Route path="/setup" element={<Setup />} />
-							<Route path="/reset-password" element={<PasswordReset />} />
-							<Route path="/" element={<Layout />}>
-								<Route index element={<Dashboard />} />
-								<Route path="agents" element={<Agents />} />
-								<Route path="agents/:id" element={<AgentDetails />} />
-								<Route path="agent-groups" element={<AgentGroups />} />
-								<Route path="repositories" element={<Repositories />} />
-								<Route path="schedules" element={<Schedules />} />
-								<Route path="policies" element={<Policies />} />
-								<Route path="templates" element={<Templates />} />
-								<Route path="backups" element={<Backups />} />
-								<Route path="dr-runbooks" element={<DRRunbooks />} />
-								<Route path="dr-tests" element={<DRTests />} />
-								<Route path="restore" element={<Restore />} />
-								<Route path="file-history" element={<FileHistory />} />
-								<Route path="file-search" element={<FileSearch />} />
-								<Route
-									path="snapshots/compare"
-									element={<SnapshotCompare />}
-								/>
-								<Route
-									path="backup-hook-templates"
-									element={<BackupHookTemplates />}
-								/>
-								<Route path="backups" element={<Backups />} />
-								<Route path="dr-runbooks" element={<DRRunbooks />} />
-								<Route path="restore" element={<Restore />} />
-								<Route path="file-history" element={<FileHistory />} />
-								<Route path="file-search" element={<FileSearch />} />
-								<Route path="snapshots/compare" element={<SnapshotCompare />} />
-								<Route path="snapshots/file-diff" element={<FileDiff />} />
-								<Route path="activity" element={<Activity />} />
-								<Route path="alerts" element={<Alerts />} />
-								<Route path="downtime" element={<DowntimeHistory />} />
-								<Route path="notifications" element={<Notifications />} />
-								<Route
-									path="notification-rules"
-									element={<NotificationRules />}
-								/>
-								<Route path="webhooks" element={<Webhooks />} />
-								<Route path="reports" element={<Reports />} />
-								<Route path="audit-logs" element={<AuditLogs />} />
-								<Route path="legal-holds" element={<LegalHolds />} />
-								<Route
-									path="lifecycle-policies"
-									element={<LifecyclePolicies />}
-								/>
-								<Route path="stats" element={<StorageStats />} />
-								<Route
-									path="stats/:id"
-									element={<RepositoryStatsDetail />}
-								/>
-								<Route path="tags" element={<Tags />} />
-								<Route
-									path="classifications"
-									element={<Classifications />}
-								/>
-								<Route path="costs" element={<CostEstimation />} />
-								<Route path="stats/:id" element={<RepositoryStatsDetail />} />
-								<Route path="tags" element={<Tags />} />
-								<Route path="classifications" element={<Classifications />} />
-								<Route path="costs" element={<CostEstimation />} />
-								<Route path="sla" element={<SLA />} />
-								<Route
-									path="organization/docker-registries"
-									element={<DockerRegistries />}
-								/>
-								<Route
-									path="organization/members"
-									element={<OrganizationMembers />}
-								/>
-								<Route path="organization/users" element={<UserManagement />} />
-								<Route
-									path="organization/settings"
-									element={<OrganizationSettings />}
-								/>
-								<Route
-									path="organization/sso"
-									element={<OrganizationSSOSettings />}
-								/>
-								<Route
-									path="organization/branding"
-									element={<Branding />}
-								/>
-								<Route
-									path="organization/maintenance"
-									element={<Maintenance />}
-								/>
-								<Route
-									path="organization/announcements"
-									element={<Announcements />}
-								/>
-								<Route
-									path="organization/ip-allowlist"
-									element={<IPAllowlistSettings />}
-								/>
-								<Route
-									path="organization/password-policies"
-									element={<PasswordPolicies />}
-								/>
-								<Route
-									path="organization/new"
-									element={<NewOrganization />}
-								/>
-								<Route path="admin/logs" element={<AdminLogs />} />
-								<Route path="organization/license" element={<License />} />
-								<Route
-									path="organization/branding"
-									element={<BrandingSettings />}
-								/>
-								<Route path="organization/new" element={<NewOrganization />} />
-								<Route path="admin/logs" element={<AdminLogs />} />
-								<Route path="admin/docker-logs" element={<DockerLogs />} />
-								<Route path="admin/organizations" element={<OrgManagement />} />
-								<Route
-									path="admin/rate-limits"
-									element={<RateLimitDashboard />}
-								/>
-								<Route
-									path="admin/rate-limit-configs"
-									element={<RateLimits />}
-								/>
-								<Route
-									path="account/sessions"
-									element={<UserSessions />}
-								/>
-								<Route path="docker-backup" element={<DockerBackup />} />
-								<Route path="sla" element={<SLATracking />} />
-								<Route path="sla-tracking" element={<SLA />} />
-								<Route path="onboarding" element={<Onboarding />} />
-								<Route path="changelog" element={<Changelog />} />
-								<Route
-									path="system/airgap"
-									element={<AirGapLicense />}
-								/>
-								<Route path="license" element={<License />} />
-								<Route path="docs/*" element={<Docs />} />
-								<Route
-									path="organization/docker-registries"
-									element={<DockerRegistries />}
-								/>
-								<Route
-									path="admin/docker-logs"
-									element={<DockerLogs />}
-								/>
-								<Route path="*" element={<NotFound />} />
-							</Route>
-						</Routes>
-					</Suspense>
-				</UpgradePromptProvider>
-				<Routes>
-					<Route path="/" element={<Layout />}>
-						<Route index element={<Dashboard />} />
-						<Route path="agents" element={<Agents />} />
-						<Route path="agents/:id" element={<AgentDetails />} />
-						<Route path="agent-groups" element={<AgentGroups />} />
-						<Route path="repositories" element={<Repositories />} />
-						<Route path="schedules" element={<Schedules />} />
-						<Route path="policies" element={<Policies />} />
-						<Route path="templates" element={<Templates />} />
-						<Route path="backups" element={<Backups />} />
-						<Route path="dr-runbooks" element={<DRRunbooks />} />
-						<Route path="restore" element={<Restore />} />
-						<Route path="file-history" element={<FileHistory />} />
-						<Route path="file-search" element={<FileSearch />} />
-						<Route path="snapshots/compare" element={<SnapshotCompare />} />
-						<Route path="snapshots/file-diff" element={<FileDiff />} />
-						<Route path="restore" element={<Restore />} />
-						<Route path="snapshots/compare" element={<SnapshotCompare />} />
-						<Route path="alerts" element={<Alerts />} />
-						<Route path="notifications" element={<Notifications />} />
-						<Route path="reports" element={<Reports />} />
-						<Route path="audit-logs" element={<AuditLogs />} />
-						<Route path="legal-holds" element={<LegalHolds />} />
-						<Route path="stats" element={<StorageStats />} />
-						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
-						<Route path="tags" element={<Tags />} />
-						<Route path="classifications" element={<Classifications />} />
-						<Route path="costs" element={<CostEstimation />} />
-						<Route path="alerts" element={<Alerts />} />
-						<Route path="notifications" element={<Notifications />} />
-						<Route path="costs" element={<CostEstimation />} />
-						<Route path="stats" element={<StorageStats />} />
-						<Route path="stats/:id" element={<RepositoryStatsDetail />} />
-						<Route
-							path="organization/members"
-							element={<OrganizationMembers />}
-						/>
-						<Route
-							path="organization/settings"
-							element={<OrganizationSettings />}
-						/>
-						<Route
-							path="organization/sso"
-							element={<OrganizationSSOSettings />}
-						/>
-						<Route path="organization/maintenance" element={<Maintenance />} />
-						<Route
-							path="organization/announcements"
-							element={<Announcements />}
-						/>
-						<Route path="organization/maintenance" element={<Maintenance />} />
-						<Route path="organization/new" element={<NewOrganization />} />
-						<Route path="admin/logs" element={<AdminLogs />} />
-						<Route path="onboarding" element={<Onboarding />} />
-						<Route path="changelog" element={<Changelog />} />
-					</Route>
-				</Routes>
-				<Suspense fallback={<LoadingSpinner />}>
-		<ErrorBoundary>
-			<QueryClientProvider client={queryClient}>
-				<BrowserRouter>
-				<Suspense fallback={<LoadingSpinner />}>
-					<Routes>
-						<Route path="/" element={<Layout />}>
-							<Route index element={<Dashboard />} />
-							<Route path="agents" element={<Agents />} />
-							<Route path="agents/:id" element={<AgentDetails />} />
-							<Route path="agent-groups" element={<AgentGroups />} />
-							<Route path="repositories" element={<Repositories />} />
-							<Route path="schedules" element={<Schedules />} />
-							<Route path="policies" element={<Policies />} />
-							<Route path="templates" element={<Templates />} />
-							<Route
-								path="backup-hook-templates"
-								element={<BackupHookTemplates />}
-							/>
-							<Route path="backups" element={<Backups />} />
-							<Route path="dr-runbooks" element={<DRRunbooks />} />
-							<Route path="dr-tests" element={<DRTests />} />
-							<Route path="backups" element={<Backups />} />
-							<Route path="dr-runbooks" element={<DRRunbooks />} />
-							<Route path="restore" element={<Restore />} />
-							<Route path="file-history" element={<FileHistory />} />
-							<Route path="snapshots/compare" element={<SnapshotCompare />} />
-							<Route path="alerts" element={<Alerts />} />
-							<Route path="notifications" element={<Notifications />} />
-							<Route path="reports" element={<Reports />} />
-							<Route path="audit-logs" element={<AuditLogs />} />
-							<Route path="stats" element={<StorageStats />} />
-							<Route path="stats/:id" element={<RepositoryStatsDetail />} />
-							<Route path="tags" element={<Tags />} />
-							<Route path="costs" element={<CostEstimation />} />
-							<Route path="file-search" element={<FileSearch />} />
-							<Route path="snapshots/compare" element={<SnapshotCompare />} />
-							<Route path="snapshots/file-diff" element={<FileDiff />} />
-							<Route path="activity" element={<Activity />} />
-							<Route path="alerts" element={<Alerts />} />
-							<Route path="downtime" element={<DowntimeHistory />} />
-							<Route path="notifications" element={<Notifications />} />
-							<Route
-								path="notification-rules"
-								element={<NotificationRules />}
-							/>
-							<Route path="reports" element={<Reports />} />
-							<Route path="audit-logs" element={<AuditLogs />} />
-							<Route path="legal-holds" element={<LegalHolds />} />
-							<Route
-								path="lifecycle-policies"
-								element={<LifecyclePolicies />}
-							/>
-							<Route path="stats" element={<StorageStats />} />
-							<Route path="stats/:id" element={<RepositoryStatsDetail />} />
-							<Route path="tags" element={<Tags />} />
-							<Route path="classifications" element={<Classifications />} />
-							<Route path="costs" element={<CostEstimation />} />
-							<Route path="sla" element={<SLA />} />
-							<Route
-								path="organization/members"
-								element={<OrganizationMembers />}
-							/>
-							<Route path="organization/users" element={<UserManagement />} />
-							<Route
-								path="organization/settings"
-								element={<OrganizationSettings />}
-							/>
-							<Route
-								path="organization/sso"
-								element={<OrganizationSSOSettings />}
-							/>
-							<Route path="organization/branding" element={<Branding />} />
-							<Route
-								path="organization/maintenance"
-								element={<Maintenance />}
-							/>
-							<Route path="organization/new" element={<NewOrganization />} />
-							<Route path="sla" element={<SLATracking />} />
-							<Route path="onboarding" element={<Onboarding />} />
-							<Route path="system/airgap" element={<AirGapLicense />} />
-						</Route>
-					</Routes>
-				</Suspense>
-			</BrowserRouter>
-		</QueryClientProvider>
-								<Route path="admin/health" element={<SystemHealth />} />
-								<Route path="admin/license" element={<LicenseManagement />} />
-								<Route path="admin/setup" element={<AdminSetup />} />
-								<Route path="admin/migration" element={<MigrationSettings />} />
-								<Route path="account/sessions" element={<UserSessions />} />
-								<Route path="onboarding" element={<Onboarding />} />
-								<Route path="changelog" element={<Changelog />} />
-								<Route path="docs" element={<Documentation />} />
-								<Route path="docs/:slug" element={<Documentation />} />
-				<BrandingProvider>
-					<BrowserRouter>
-						<Routes>
-							{/* Setup route - outside Layout, no auth required */}
-							<Route path="/setup" element={<Setup />} />
-							<Route path="/" element={<Layout />}>
-								<Route index element={<Dashboard />} />
-								<Route path="agents" element={<Agents />} />
-								<Route path="agents/:id" element={<AgentDetails />} />
-								<Route path="agent-groups" element={<AgentGroups />} />
-								<Route path="repositories" element={<Repositories />} />
-								<Route path="schedules" element={<Schedules />} />
-								<Route path="policies" element={<Policies />} />
-								<Route path="templates" element={<Templates />} />
-								<Route
-									path="backup-hook-templates"
-									element={<BackupHookTemplates />}
-								/>
-								<Route path="backups" element={<Backups />} />
-								<Route path="dr-runbooks" element={<DRRunbooks />} />
-								<Route path="restore" element={<Restore />} />
-								<Route path="file-history" element={<FileHistory />} />
-								<Route path="file-search" element={<FileSearch />} />
-								<Route path="snapshots/compare" element={<SnapshotCompare />} />
-								<Route path="snapshots/file-diff" element={<FileDiff />} />
-								<Route path="activity" element={<Activity />} />
-								<Route path="alerts" element={<Alerts />} />
-								<Route path="downtime" element={<DowntimeHistory />} />
-								<Route path="notifications" element={<Notifications />} />
-								<Route
-									path="notification-rules"
-									element={<NotificationRules />}
-								/>
-								<Route path="webhooks" element={<Webhooks />} />
-								<Route path="reports" element={<Reports />} />
-								<Route path="audit-logs" element={<AuditLogs />} />
-								<Route path="legal-holds" element={<LegalHolds />} />
-								<Route
-									path="lifecycle-policies"
-									element={<LifecyclePolicies />}
-								/>
-								<Route path="stats" element={<StorageStats />} />
-								<Route path="stats/:id" element={<RepositoryStatsDetail />} />
-								<Route path="tags" element={<Tags />} />
-								<Route path="classifications" element={<Classifications />} />
-								<Route path="costs" element={<CostEstimation />} />
-								<Route path="sla" element={<SLA />} />
-								<Route
-									path="organization/docker-registries"
-									element={<DockerRegistries />}
-								/>
-								<Route
-									path="organization/members"
-									element={<OrganizationMembers />}
-								/>
-								<Route path="organization/users" element={<UserManagement />} />
-								<Route
-									path="organization/settings"
-									element={<OrganizationSettings />}
-								/>
-								<Route
-									path="organization/sso"
-									element={<OrganizationSSOSettings />}
-								/>
-								<Route
-									path="organization/maintenance"
-									element={<Maintenance />}
-								/>
-								<Route
-									path="organization/announcements"
-									element={<Announcements />}
-								/>
-								<Route
-									path="organization/ip-allowlist"
-									element={<IPAllowlistSettings />}
-								/>
-								<Route
-									path="organization/password-policies"
-									element={<PasswordPolicies />}
-								/>
-								<Route path="organization/license" element={<License />} />
-								<Route
-									path="organization/branding"
-									element={<BrandingSettings />}
-								/>
-								<Route path="organization/new" element={<NewOrganization />} />
-								<Route path="admin/logs" element={<AdminLogs />} />
-								<Route path="admin/docker-logs" element={<DockerLogs />} />
-								<Route path="admin/organizations" element={<OrgManagement />} />
-								<Route
-									path="admin/rate-limits"
-									element={<RateLimitDashboard />}
-								/>
-								<Route
-									path="admin/rate-limit-configs"
-									element={<RateLimits />}
-								/>
-								<Route path="admin/license" element={<LicenseManagement />} />
-								<Route path="admin/setup" element={<AdminSetup />} />
-								<Route path="account/sessions" element={<UserSessions />} />
-								<Route path="onboarding" element={<Onboarding />} />
-								<Route path="changelog" element={<Changelog />} />
-								<Route path="*" element={<NotFound />} />
-							</Route>
-						</Routes>
+						<UpgradePromptProvider>
+							<Suspense fallback={<LoadingSpinner />}>
+								<Routes>
+									{/* Public routes - outside Layout, no auth required */}
+									<Route path="/setup" element={<Setup />} />
+									<Route
+										path="/reset-password"
+										element={<PasswordReset />}
+									/>
+									<Route path="/" element={<Layout />}>
+										<Route index element={<Dashboard />} />
+										<Route path="agents" element={<Agents />} />
+										<Route
+											path="agents/:id"
+											element={<AgentDetails />}
+										/>
+										<Route
+											path="agent-groups"
+											element={<AgentGroups />}
+										/>
+										<Route
+											path="repositories"
+											element={<Repositories />}
+										/>
+										<Route
+											path="schedules"
+											element={<Schedules />}
+										/>
+										<Route
+											path="policies"
+											element={<Policies />}
+										/>
+										<Route
+											path="templates"
+											element={<Templates />}
+										/>
+										<Route
+											path="backup-hook-templates"
+											element={<BackupHookTemplates />}
+										/>
+										<Route
+											path="backups"
+											element={<Backups />}
+										/>
+										<Route
+											path="dr-runbooks"
+											element={<DRRunbooks />}
+										/>
+										<Route
+											path="dr-tests"
+											element={<DRTests />}
+										/>
+										<Route
+											path="restore"
+											element={<Restore />}
+										/>
+										<Route
+											path="file-history"
+											element={<FileHistory />}
+										/>
+										<Route
+											path="file-search"
+											element={<FileSearch />}
+										/>
+										<Route
+											path="snapshots/compare"
+											element={<SnapshotCompare />}
+										/>
+										<Route
+											path="snapshots/file-diff"
+											element={<FileDiff />}
+										/>
+										<Route
+											path="activity"
+											element={<Activity />}
+										/>
+										<Route
+											path="alerts"
+											element={<Alerts />}
+										/>
+										<Route
+											path="downtime"
+											element={<DowntimeHistory />}
+										/>
+										<Route
+											path="notifications"
+											element={<Notifications />}
+										/>
+										<Route
+											path="notification-rules"
+											element={<NotificationRules />}
+										/>
+										<Route
+											path="webhooks"
+											element={<Webhooks />}
+										/>
+										<Route
+											path="reports"
+											element={<Reports />}
+										/>
+										<Route
+											path="audit-logs"
+											element={<AuditLogs />}
+										/>
+										<Route
+											path="legal-holds"
+											element={<LegalHolds />}
+										/>
+										<Route
+											path="lifecycle-policies"
+											element={<LifecyclePolicies />}
+										/>
+										<Route
+											path="stats"
+											element={<StorageStats />}
+										/>
+										<Route
+											path="stats/:id"
+											element={<RepositoryStatsDetail />}
+										/>
+										<Route path="tags" element={<Tags />} />
+										<Route
+											path="classifications"
+											element={<Classifications />}
+										/>
+										<Route
+											path="costs"
+											element={<CostEstimation />}
+										/>
+										<Route path="sla" element={<SLA />} />
+										<Route
+											path="sla-tracking"
+											element={<SLATracking />}
+										/>
+										<Route
+											path="organization/docker-registries"
+											element={<DockerRegistries />}
+										/>
+										<Route
+											path="organization/members"
+											element={<OrganizationMembers />}
+										/>
+										<Route
+											path="organization/users"
+											element={<UserManagement />}
+										/>
+										<Route
+											path="organization/settings"
+											element={<OrganizationSettings />}
+										/>
+										<Route
+											path="organization/sso"
+											element={<OrganizationSSOSettings />}
+										/>
+										<Route
+											path="organization/branding"
+											element={<BrandingSettings />}
+										/>
+										<Route
+											path="organization/maintenance"
+											element={<Maintenance />}
+										/>
+										<Route
+											path="organization/announcements"
+											element={<Announcements />}
+										/>
+										<Route
+											path="organization/ip-allowlist"
+											element={<IPAllowlistSettings />}
+										/>
+										<Route
+											path="organization/password-policies"
+											element={<PasswordPolicies />}
+										/>
+										<Route
+											path="organization/license"
+											element={<License />}
+										/>
+										<Route
+											path="organization/new"
+											element={<NewOrganization />}
+										/>
+										<Route
+											path="admin/logs"
+											element={<AdminLogs />}
+										/>
+										<Route
+											path="admin/docker-logs"
+											element={<DockerLogs />}
+										/>
+										<Route
+											path="admin/organizations"
+											element={<OrgManagement />}
+										/>
+										<Route
+											path="admin/rate-limits"
+											element={<RateLimitDashboard />}
+										/>
+										<Route
+											path="admin/rate-limit-configs"
+											element={<RateLimits />}
+										/>
+										<Route
+											path="admin/health"
+											element={<SystemHealth />}
+										/>
+										<Route
+											path="admin/license"
+											element={<LicenseManagement />}
+										/>
+										<Route
+											path="admin/setup"
+											element={<AdminSetup />}
+										/>
+										<Route
+											path="admin/migration"
+											element={<MigrationSettings />}
+										/>
+										<Route
+											path="account/sessions"
+											element={<UserSessions />}
+										/>
+										<Route
+											path="docker-backup"
+											element={<DockerBackup />}
+										/>
+										<Route
+											path="onboarding"
+											element={<Onboarding />}
+										/>
+										<Route
+											path="changelog"
+											element={<Changelog />}
+										/>
+										<Route
+											path="system/airgap"
+											element={<AirGapLicense />}
+										/>
+										<Route
+											path="license"
+											element={<License />}
+										/>
+										<Route
+											path="docs"
+											element={<Documentation />}
+										/>
+										<Route
+											path="docs/:slug"
+											element={<Documentation />}
+										/>
+										<Route
+											path="docs/*"
+											element={<Docs />}
+										/>
+										<Route
+											path="*"
+											element={<NotFound />}
+										/>
+									</Route>
+								</Routes>
+							</Suspense>
+						</UpgradePromptProvider>
 					</BrowserRouter>
 				</BrandingProvider>
-							<Route
-								path="organization/announcements"
-								element={<Announcements />}
-							/>
-							<Route
-								path="organization/ip-allowlist"
-								element={<IPAllowlistSettings />}
-							/>
-							<Route
-								path="organization/password-policies"
-								element={<PasswordPolicies />}
-							/>
-							<Route path="organization/license" element={<License />} />
-							<Route path="organization/new" element={<NewOrganization />} />
-							<Route path="admin/logs" element={<AdminLogs />} />
-							<Route path="admin/docker-logs" element={<DockerLogs />} />
-							<Route path="admin/organizations" element={<OrgManagement />} />
-							<Route
-								path="admin/rate-limits"
-								element={<RateLimitDashboard />}
-							/>
-							<Route path="admin/rate-limit-configs" element={<RateLimits />} />
-							<Route path="account/sessions" element={<UserSessions />} />
-							<Route path="onboarding" element={<Onboarding />} />
-							<Route path="changelog" element={<Changelog />} />
-							<Route path="*" element={<NotFound />} />
-						</Route>
-					</Routes>
-				</BrowserRouter>
 			</QueryClientProvider>
 		</ErrorBoundary>
-						<Route path="repositories" element={<Repositories />} />
-						<Route path="schedules" element={<Schedules />} />
-						<Route path="backups" element={<Backups />} />
-						<Route path="audit-logs" element={<AuditLogs />} />
-						<Route
-							path="organization/members"
-							element={<OrganizationMembers />}
-						/>
-						<Route
-							path="organization/settings"
-							element={<OrganizationSettings />}
-						/>
-						<Route path="organization/new" element={<NewOrganization />} />
-						<Route path="onboarding" element={<Onboarding />} />
-					</Route>
-				</Routes>
-							<Route path="onboarding" element={<Onboarding />} />
-						</Route>
-					</Routes>
-				</Suspense>
-			</BrowserRouter>
-		</QueryClientProvider>
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { Layout } from './components/Layout';
-import { Agents } from './pages/Agents';
-import { Backups } from './pages/Backups';
-import { Dashboard } from './pages/Dashboard';
-import { Repositories } from './pages/Repositories';
-import { Schedules } from './pages/Schedules';
-
-function App() {
-	return (
-		<BrowserRouter>
-			<Routes>
-				<Route path="/" element={<Layout />}>
-					<Route index element={<Dashboard />} />
-					<Route path="agents" element={<Agents />} />
-					<Route path="repositories" element={<Repositories />} />
-					<Route path="schedules" element={<Schedules />} />
-					<Route path="backups" element={<Backups />} />
-				</Route>
-			</Routes>
-		</BrowserRouter>
 	);
 }
 

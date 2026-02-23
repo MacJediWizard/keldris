@@ -1,9 +1,3 @@
-package license
-
-// Feature represents a gated feature that requires a specific license tier.
-// Package license provides feature gating based on license tiers.
-package license
-
 // Package license provides feature gating based on license tiers.
 package license
 
@@ -14,17 +8,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// Tier represents a license tier level.
-type Tier string
-
-const (
-	// TierFree is the free tier with basic features.
-	TierFree Tier = "free"
-	// TierPro is the professional tier with advanced features.
-	TierPro Tier = "pro"
-	// TierEnterprise is the enterprise tier with all features.
-	TierEnterprise Tier = "enterprise"
-)
+// Tier is a type alias for LicenseTier, allowing interchangeable use
+// in the feature gating system. The canonical type is LicenseTier
+// defined in license.go.
+type Tier = LicenseTier
 
 // Feature represents a gated feature name.
 type Feature string
@@ -130,15 +117,7 @@ func FeaturesForTier(tier LicenseTier) []Feature {
 	result := make([]Feature, len(features))
 	copy(result, features)
 	return result
-	// FeatureAuditLogs enables comprehensive audit logging (Pro+).
-	FeatureAuditLogs Feature = "audit_logs"
-	// FeatureMultiOrg enables multiple organizations (Enterprise).
-	FeatureMultiOrg Feature = "multi_org"
-	// FeatureSLATracking enables SLA tracking and compliance (Enterprise).
-	FeatureSLATracking Feature = "sla_tracking"
-	// FeatureWhiteLabel enables white-labeling capabilities (Enterprise).
-	FeatureWhiteLabel Feature = "white_label"
-)
+}
 
 // featureTierMap defines which tier is required for each feature.
 var featureTierMap = map[Feature]Tier{

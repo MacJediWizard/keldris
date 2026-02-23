@@ -349,10 +349,6 @@ type CreateRuleRequest struct {
 	Type    models.AlertType       `json:"type" binding:"required"`
 	Enabled bool                   `json:"enabled"`
 	Config  models.AlertRuleConfig `json:"config" binding:"required"`
-	Name    string                  `json:"name" binding:"required,min=1,max=255"`
-	Type    models.AlertType        `json:"type" binding:"required"`
-	Enabled bool                    `json:"enabled"`
-	Config  models.AlertRuleConfig  `json:"config" binding:"required"`
 }
 
 // CreateRule creates a new alert rule.
@@ -373,7 +369,6 @@ func (h *AlertsHandler) CreateRule(c *gin.Context) {
 	switch req.Type {
 	case models.AlertTypeAgentOffline, models.AlertTypeBackupSLA, models.AlertTypeStorageUsage,
 		models.AlertTypeAgentHealthWarning, models.AlertTypeAgentHealthCritical, models.AlertTypeRansomwareSuspected:
-	case models.AlertTypeAgentOffline, models.AlertTypeBackupSLA, models.AlertTypeStorageUsage:
 		// Valid
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid alert type"})

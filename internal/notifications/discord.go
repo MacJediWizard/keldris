@@ -31,6 +31,9 @@ func NewDiscordSender(logger zerolog.Logger) *DiscordSender {
 			},
 		},
 		logger: logger.With().Str("component", "discord_sender").Logger(),
+	}
+}
+
 // NewDiscordService creates a new Discord notification service.
 func NewDiscordService(cfg models.DiscordChannelConfig, logger zerolog.Logger) (*DiscordService, error) {
 	return NewDiscordServiceWithProxy(cfg, nil, logger)
@@ -61,9 +64,8 @@ func NewDiscordServiceWithProxy(cfg models.DiscordChannelConfig, proxyConfig *co
 func ValidateDiscordConfig(config *models.DiscordChannelConfig) error {
 	if config.WebhookURL == "" {
 		return fmt.Errorf("discord webhook URL is required")
-		client: &http.Client{},
-		logger: logger.With().Str("component", "discord_sender").Logger(),
 	}
+	return nil
 }
 
 // discordWebhookPayload represents a Discord webhook payload with embeds.
@@ -128,6 +130,77 @@ func (d *DiscordSender) Send(ctx context.Context, webhookURL string, msg Notific
 		Msg("discord notification sent")
 
 	return nil
+}
+
+// DiscordService handles sending Discord notifications via webhooks for maintenance, validation, etc.
+type DiscordService struct {
+	config models.DiscordChannelConfig
+	client *http.Client
+	logger zerolog.Logger
+}
+
+// DiscordMessage represents a Discord webhook message with embeds.
+type DiscordMessage struct {
+	Embeds []DiscordEmbed `json:"embeds"`
+}
+
+// DiscordEmbed represents a Discord embed.
+type DiscordEmbed struct {
+	Title       string              `json:"title"`
+	Description string              `json:"description"`
+	Color       int                 `json:"color"`
+	Fields      []DiscordEmbedField `json:"fields,omitempty"`
+	Footer      *DiscordEmbedFooter `json:"footer,omitempty"`
+	Timestamp   string              `json:"timestamp,omitempty"`
+}
+
+// DiscordEmbedField represents a field in a Discord embed.
+type DiscordEmbedField struct {
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Inline bool   `json:"inline,omitempty"`
+}
+
+// DiscordEmbedFooter represents a footer in a Discord embed.
+type DiscordEmbedFooter struct {
+	Text string `json:"text"`
+}
+
+// Discord embed color constants.
+const (
+	DiscordColorGreen  = 0x22c55e
+	DiscordColorRed    = 0xdc2626
+	DiscordColorBlue   = 0x3b82f6
+	DiscordColorAmber  = 0xf59e0b
+)
+
+// Send sends a Discord message via the configured webhook URL.
+func (s *DiscordService) Send(msg *DiscordMessage) error {
+	body, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal discord message: %w", err)
+	}
+
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.config.WebhookURL, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create discord request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("send discord webhook: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("discord webhook returned status %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
 // SendMaintenanceScheduled sends a maintenance scheduled notification to Discord.
 func (s *DiscordService) SendMaintenanceScheduled(data MaintenanceScheduledData) error {
 	msg := &DiscordMessage{
@@ -237,47 +310,6 @@ func (s *DiscordService) SendValidationFailed(data ValidationFailedData) error {
 		Str("schedule", data.ScheduleName).
 		Str("error", data.ErrorMessage).
 		Msg("sending validation failed notification to Discord")
-
-	return s.Send(msg)
-}
-
-// SendTestRestoreFailed sends a test restore failed notification to Discord.
-func (s *DiscordService) SendTestRestoreFailed(data TestRestoreFailedData) error {
-	fields := []DiscordEmbedField{
-		{Name: "Repository", Value: data.RepositoryName, Inline: true},
-		{Name: "Snapshot ID", Value: fmt.Sprintf("`%s`", data.SnapshotID), Inline: true},
-		{Name: "Sample Size", Value: fmt.Sprintf("%d%%", data.SamplePercentage), Inline: true},
-		{Name: "Files Restored", Value: fmt.Sprintf("%d", data.FilesRestored), Inline: true},
-		{Name: "Files Verified", Value: fmt.Sprintf("%d", data.FilesVerified), Inline: true},
-		{Name: "Failed At", Value: data.FailedAt.Format(time.RFC822), Inline: true},
-		{Name: "Error", Value: fmt.Sprintf("```\n%s\n```", data.ErrorMessage), Inline: false},
-	}
-
-	description := "A scheduled test restore has failed"
-	if data.ConsecutiveFails > 1 {
-		description = fmt.Sprintf("**Warning:** %d consecutive test restore failures", data.ConsecutiveFails)
-	}
-
-	msg := &DiscordMessage{
-		Embeds: []DiscordEmbed{
-			{
-				Title:       fmt.Sprintf("Test Restore Failed: %s", data.RepositoryName),
-				Description: description,
-				Color:       DiscordColorRed,
-				Fields:      fields,
-				Footer: &DiscordEmbedFooter{
-					Text: "Keldris Backup",
-				},
-				Timestamp: time.Now().UTC().Format(time.RFC3339),
-			},
-		},
-	}
-
-	s.logger.Debug().
-		Str("repository", data.RepositoryName).
-		Str("error", data.ErrorMessage).
-		Int("consecutive_fails", data.ConsecutiveFails).
-		Msg("sending test restore failed notification to Discord")
 
 	return s.Send(msg)
 }

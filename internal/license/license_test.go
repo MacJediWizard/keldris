@@ -706,9 +706,9 @@ func TestLicenseGenerationAndValidation(t *testing.T) {
 		t.Fatalf("NewGenerator() error = %v", err)
 	}
 
-	validator, err := NewValidator(kp.PublicKey)
+	validator, err := NewKeyValidator(kp.PublicKey)
 	if err != nil {
-		t.Fatalf("NewValidator() error = %v", err)
+		t.Fatalf("NewKeyValidator() error = %v", err)
 	}
 
 	// Create a valid license payload
@@ -762,9 +762,9 @@ func TestExpiredLicenseWithGracePeriod(t *testing.T) {
 		t.Fatalf("NewGenerator() error = %v", err)
 	}
 
-	validator, err := NewValidator(kp.PublicKey)
+	validator, err := NewKeyValidator(kp.PublicKey)
 	if err != nil {
-		t.Fatalf("NewValidator() error = %v", err)
+		t.Fatalf("NewKeyValidator() error = %v", err)
 	}
 
 	// Create an expired license (expired 10 days ago, within grace period)
@@ -808,9 +808,9 @@ func TestFullyExpiredLicense(t *testing.T) {
 		t.Fatalf("NewGenerator() error = %v", err)
 	}
 
-	validator, err := NewValidator(kp.PublicKey)
+	validator, err := NewKeyValidator(kp.PublicKey)
 	if err != nil {
-		t.Fatalf("NewValidator() error = %v", err)
+		t.Fatalf("NewKeyValidator() error = %v", err)
 	}
 
 	// Create a fully expired license (expired 60 days ago, past grace period)
@@ -852,7 +852,7 @@ func TestInvalidSignature(t *testing.T) {
 	generator, _ := NewGenerator(kp1.PrivateKey)
 
 	// Create validator with second key pair (different public key)
-	validator, _ := NewValidator(kp2.PublicKey)
+	validator, _ := NewKeyValidator(kp2.PublicKey)
 
 	payload := &models.LicensePayload{
 		ID:         uuid.New(),
@@ -875,7 +875,7 @@ func TestInvalidSignature(t *testing.T) {
 
 func TestInvalidLicenseKeyFormat(t *testing.T) {
 	kp, _ := GenerateKeyPair()
-	validator, _ := NewValidator(kp.PublicKey)
+	validator, _ := NewKeyValidator(kp.PublicKey)
 
 	testCases := []struct {
 		name       string

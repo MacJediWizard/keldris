@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
@@ -25,10 +26,6 @@ type ScheduleStore interface {
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 	GetReplicationStatusBySchedule(ctx context.Context, scheduleID uuid.UUID) ([]*models.ReplicationStatus, error)
 	CreateBackup(ctx context.Context, backup *models.Backup) error
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
-	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
-	GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error)
-	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 }
 
 // SchedulesHandler handles schedule-related HTTP endpoints.
@@ -59,7 +56,6 @@ func (h *SchedulesHandler) RegisterRoutes(r *gin.RouterGroup) {
 		schedules.GET("/:id/replication", h.GetReplicationStatus)
 		schedules.POST("/:id/clone", h.Clone)
 		schedules.POST("/bulk-clone", h.BulkClone)
-		schedules.GET("/:id/replication", h.GetReplicationStatus)
 	}
 }
 
@@ -72,108 +68,32 @@ type ScheduleRepositoryRequest struct {
 
 // CreateScheduleRequest is the request body for creating a schedule.
 type CreateScheduleRequest struct {
-	AgentID            uuid.UUID                    `json:"agent_id" binding:"required"`
-	Repositories       []ScheduleRepositoryRequest  `json:"repositories" binding:"required,min=1"`
-	Name               string                       `json:"name" binding:"required,min=1,max=255"`
-	BackupType         string                       `json:"backup_type,omitempty"`     // "file" (default) or "docker"
-	CronExpression     string                       `json:"cron_expression" binding:"required"`
-	Paths              []string                     `json:"paths,omitempty"`           // Required for file backups, optional for docker
-	Excludes           []string                     `json:"excludes,omitempty"`
-	RetentionPolicy    *models.RetentionPolicy      `json:"retention_policy,omitempty"`
-	BandwidthLimitKB   *int                         `json:"bandwidth_limit_kb,omitempty"`
-	BackupWindow       *models.BackupWindow         `json:"backup_window,omitempty"`
-	ExcludedHours      []int                        `json:"excluded_hours,omitempty"`
-	CompressionLevel   *string                      `json:"compression_level,omitempty"`
-	MaxFileSizeMB      *int                         `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
-	OnMountUnavailable string                       `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
-	Priority           *int                         `json:"priority,omitempty"`             // 1=high, 2=medium, 3=low
-	Preemptible        *bool                        `json:"preemptible,omitempty"`          // Can be preempted by higher priority
-	DockerOptions      *models.DockerBackupOptions  `json:"docker_options,omitempty"`       // Docker-specific backup options
-	Enabled            *bool                        `json:"enabled,omitempty"`
-	AgentID          uuid.UUID               `json:"agent_id" binding:"required"`
-	RepositoryID     uuid.UUID               `json:"repository_id" binding:"required"`
-	Name             string                  `json:"name" binding:"required,min=1,max=255"`
-	CronExpression   string                  `json:"cron_expression" binding:"required"`
-	Paths            []string                `json:"paths" binding:"required,min=1"`
-	Excludes         []string                `json:"excludes,omitempty"`
-	RetentionPolicy  *models.RetentionPolicy `json:"retention_policy,omitempty"`
-	BandwidthLimitKB *int                    `json:"bandwidth_limit_kb,omitempty"`
-	BackupWindow     *models.BackupWindow    `json:"backup_window,omitempty"`
-	ExcludedHours    []int                   `json:"excluded_hours,omitempty"`
-	Enabled          *bool                   `json:"enabled,omitempty"`
-	AgentID          uuid.UUID                   `json:"agent_id" binding:"required"`
-	Repositories     []ScheduleRepositoryRequest `json:"repositories" binding:"required,min=1"`
-	Name             string                      `json:"name" binding:"required,min=1,max=255"`
-	CronExpression   string                      `json:"cron_expression" binding:"required"`
-	Paths            []string                    `json:"paths" binding:"required,min=1"`
-	Excludes         []string                    `json:"excludes,omitempty"`
-	RetentionPolicy  *models.RetentionPolicy     `json:"retention_policy,omitempty"`
-	BandwidthLimitKB *int                        `json:"bandwidth_limit_kb,omitempty"`
-	BackupWindow     *models.BackupWindow        `json:"backup_window,omitempty"`
-	ExcludedHours    []int                       `json:"excluded_hours,omitempty"`
-	CompressionLevel *string                     `json:"compression_level,omitempty"`
-	Enabled          *bool                       `json:"enabled,omitempty"`
 	AgentID            uuid.UUID                     `json:"agent_id" binding:"required"`
 	Repositories       []ScheduleRepositoryRequest   `json:"repositories" binding:"required,min=1"`
 	Name               string                        `json:"name" binding:"required,min=1,max=255"`
-	BackupType         string                        `json:"backup_type,omitempty"`     // "file" (default), "docker", "pihole", "postgres", or "proxmox"
+	BackupType         string                        `json:"backup_type,omitempty"`                 // "file" (default), "docker", "pihole", "postgres", or "proxmox"
 	CronExpression     string                        `json:"cron_expression" binding:"required"`
-	Paths              []string                      `json:"paths,omitempty"`           // Required for file backups, optional for docker/postgres/proxmox
-	AgentID            uuid.UUID                     `json:"agent_id" binding:"required"`
-	Repositories       []ScheduleRepositoryRequest   `json:"repositories" binding:"required,min=1"`
-	Name               string                        `json:"name" binding:"required,min=1,max=255"`
-	BackupType         string                        `json:"backup_type,omitempty"`     // "file" (default), "docker", "pihole", "postgres", or "proxmox"
-	CronExpression     string                        `json:"cron_expression" binding:"required"`
-	Paths              []string                      `json:"paths,omitempty"`           // Required for file backups, optional for docker/postgres/proxmox
+	Paths              []string                      `json:"paths,omitempty"`                       // Required for file backups, optional for docker/postgres/proxmox
 	Excludes           []string                      `json:"excludes,omitempty"`
 	RetentionPolicy    *models.RetentionPolicy       `json:"retention_policy,omitempty"`
 	BandwidthLimitKB   *int                          `json:"bandwidth_limit_kb,omitempty"`
 	BackupWindow       *models.BackupWindow          `json:"backup_window,omitempty"`
 	ExcludedHours      []int                         `json:"excluded_hours,omitempty"`
 	CompressionLevel   *string                       `json:"compression_level,omitempty"`
-	MaxFileSizeMB      *int                          `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
-	OnMountUnavailable string                        `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
-	Priority           *int                          `json:"priority,omitempty"`             // 1=high, 2=medium, 3=low
-	Preemptible        *bool                         `json:"preemptible,omitempty"`          // Can be preempted by higher priority
-	DockerOptions      *models.DockerBackupOptions   `json:"docker_options,omitempty"`       // Docker-specific backup options
-	PostgresOptions    *models.PostgresBackupConfig  `json:"postgres_options,omitempty"`     // PostgreSQL-specific backup options
-	ProxmoxOptions     *models.ProxmoxBackupOptions  `json:"proxmox_options,omitempty"`      // Proxmox-specific backup options
+	MaxFileSizeMB      *int                          `json:"max_file_size_mb,omitempty"`            // Max file size in MB (0 = disabled)
+	OnMountUnavailable string                        `json:"on_mount_unavailable,omitempty"`        // "skip" or "fail"
+	Priority           *int                          `json:"priority,omitempty"`                    // 1=high, 2=medium, 3=low
+	Preemptible        *bool                         `json:"preemptible,omitempty"`                 // Can be preempted by higher priority
+	DockerOptions      *models.DockerBackupOptions   `json:"docker_options,omitempty"`              // Docker-specific backup options
+	PostgresOptions    *models.PostgresBackupConfig  `json:"postgres_options,omitempty"`            // PostgreSQL-specific backup options
+	ProxmoxOptions     *models.ProxmoxBackupOptions  `json:"proxmox_options,omitempty"`             // Proxmox-specific backup options
 	Enabled            *bool                         `json:"enabled,omitempty"`
-	Enabled          *bool                       `json:"enabled,omitempty"`
-	AgentID            uuid.UUID                   `json:"agent_id" binding:"required"`
-	Repositories       []ScheduleRepositoryRequest `json:"repositories" binding:"required,min=1"`
-	Name               string                      `json:"name" binding:"required,min=1,max=255"`
-	CronExpression     string                      `json:"cron_expression" binding:"required"`
-	Paths              []string                    `json:"paths" binding:"required,min=1"`
-	Excludes           []string                    `json:"excludes,omitempty"`
-	RetentionPolicy    *models.RetentionPolicy     `json:"retention_policy,omitempty"`
-	BandwidthLimitKB   *int                        `json:"bandwidth_limit_kb,omitempty"`
-	BackupWindow       *models.BackupWindow        `json:"backup_window,omitempty"`
-	ExcludedHours      []int                       `json:"excluded_hours,omitempty"`
-	CompressionLevel   *string                     `json:"compression_level,omitempty"`
-	OnMountUnavailable string                      `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
-	Enabled            *bool                       `json:"enabled,omitempty"`
-	Enabled            *bool                         `json:"enabled,omitempty"`
-	}
-}
-
-// CreateScheduleRequest is the request body for creating a schedule.
-type CreateScheduleRequest struct {
-	AgentID         uuid.UUID               `json:"agent_id" binding:"required"`
-	RepositoryID    uuid.UUID               `json:"repository_id" binding:"required"`
-	Name            string                  `json:"name" binding:"required,min=1,max=255"`
-	CronExpression  string                  `json:"cron_expression" binding:"required"`
-	Paths           []string                `json:"paths" binding:"required,min=1"`
-	Excludes        []string                `json:"excludes,omitempty"`
-	RetentionPolicy *models.RetentionPolicy `json:"retention_policy,omitempty"`
-	Enabled         *bool                   `json:"enabled,omitempty"`
 }
 
 // UpdateScheduleRequest is the request body for updating a schedule.
 type UpdateScheduleRequest struct {
 	Name               string                        `json:"name,omitempty"`
 	BackupType         string                        `json:"backup_type,omitempty"` // "file", "docker", "pihole", "postgres", or "proxmox"
-	BackupType         string                        `json:"backup_type,omitempty"` // "file", "docker", "pihole", or "postgres"
 	CronExpression     string                        `json:"cron_expression,omitempty"`
 	Paths              []string                      `json:"paths,omitempty"`
 	Excludes           []string                      `json:"excludes,omitempty"`
@@ -211,38 +131,6 @@ type BulkCloneScheduleRequest struct {
 type BulkCloneResponse struct {
 	Schedules []*models.Schedule `json:"schedules"`
 	Errors    []string           `json:"errors,omitempty"`
-	Name             string                  `json:"name,omitempty"`
-	CronExpression   string                  `json:"cron_expression,omitempty"`
-	Paths            []string                `json:"paths,omitempty"`
-	Excludes         []string                `json:"excludes,omitempty"`
-	RetentionPolicy  *models.RetentionPolicy `json:"retention_policy,omitempty"`
-	BandwidthLimitKB *int                    `json:"bandwidth_limit_kb,omitempty"`
-	BackupWindow     *models.BackupWindow    `json:"backup_window,omitempty"`
-	ExcludedHours    []int                   `json:"excluded_hours,omitempty"`
-	Enabled          *bool                   `json:"enabled,omitempty"`
-	Name             string                      `json:"name,omitempty"`
-	CronExpression   string                      `json:"cron_expression,omitempty"`
-	Paths            []string                    `json:"paths,omitempty"`
-	Excludes         []string                    `json:"excludes,omitempty"`
-	RetentionPolicy  *models.RetentionPolicy     `json:"retention_policy,omitempty"`
-	Repositories     []ScheduleRepositoryRequest `json:"repositories,omitempty"`
-	BandwidthLimitKB *int                        `json:"bandwidth_limit_kb,omitempty"`
-	BackupWindow     *models.BackupWindow        `json:"backup_window,omitempty"`
-	ExcludedHours    []int                       `json:"excluded_hours,omitempty"`
-	CompressionLevel *string                     `json:"compression_level,omitempty"`
-	Enabled          *bool                       `json:"enabled,omitempty"`
-	Name               string                      `json:"name,omitempty"`
-	CronExpression     string                      `json:"cron_expression,omitempty"`
-	Paths              []string                    `json:"paths,omitempty"`
-	Excludes           []string                    `json:"excludes,omitempty"`
-	RetentionPolicy    *models.RetentionPolicy     `json:"retention_policy,omitempty"`
-	Repositories       []ScheduleRepositoryRequest `json:"repositories,omitempty"`
-	BandwidthLimitKB   *int                        `json:"bandwidth_limit_kb,omitempty"`
-	BackupWindow       *models.BackupWindow        `json:"backup_window,omitempty"`
-	ExcludedHours      []int                       `json:"excluded_hours,omitempty"`
-	CompressionLevel   *string                     `json:"compression_level,omitempty"`
-	OnMountUnavailable *string                     `json:"on_mount_unavailable,omitempty"` // "skip" or "fail"
-	Enabled            *bool                       `json:"enabled,omitempty"`
 }
 
 // List returns all schedules for agents in the authenticated user's organization.
@@ -260,17 +148,6 @@ type BulkCloneResponse struct {
 //	@Failure		500			{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/schedules [get]
-	Name            string                  `json:"name,omitempty"`
-	CronExpression  string                  `json:"cron_expression,omitempty"`
-	Paths           []string                `json:"paths,omitempty"`
-	Excludes        []string                `json:"excludes,omitempty"`
-	RetentionPolicy *models.RetentionPolicy `json:"retention_policy,omitempty"`
-	Enabled         *bool                   `json:"enabled,omitempty"`
-}
-
-// List returns all schedules for agents in the authenticated user's organization.
-// GET /api/v1/schedules
-// Optional query param: agent_id to filter by agent
 func (h *SchedulesHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -279,10 +156,6 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
 		return
 	}
 
@@ -302,7 +175,6 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 			return
 		}
 		if agent.OrgID != user.CurrentOrgID {
-		if agent.OrgID != dbUser.OrgID {
 			c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 			return
 		}
@@ -322,9 +194,6 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list agents")
-	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list agents")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list schedules"})
 		return
 	}
@@ -384,7 +253,6 @@ func (h *SchedulesHandler) Get(c *gin.Context) {
 
 	// Verify schedule's agent belongs to user's org
 	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, schedule); err != nil {
-	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
 		return
 	}
 
@@ -423,13 +291,6 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Verify agent belongs to user's org
 	agent, err := h.store.GetAgentByID(c.Request.Context(), req.AgentID)
 	if err != nil {
@@ -437,7 +298,6 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 		return
 	}
 	if agent.OrgID != user.CurrentOrgID {
-	if agent.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "agent not found"})
 		return
 	}
@@ -466,30 +326,11 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 	cronParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	if _, err := cronParser.Parse(req.CronExpression); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cron expression"})
-	if repo.OrgID != user.CurrentOrgID {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "repository not found"})
-		return
-	}
-
-	// Verify repository belongs to user's org
-	repo, err := h.store.GetRepositoryByID(c.Request.Context(), req.RepositoryID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "repository not found"})
-		return
-	}
-	if repo.OrgID != dbUser.OrgID {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "repository not found"})
-		return
-	}
-
-	// TODO: Validate cron expression using robfig/cron parser
-	// For now we accept any string
 		return
 	}
 
 	schedule := models.NewSchedule(req.AgentID, req.Name, req.CronExpression, req.Paths)
 	schedule.Repositories = scheduleRepos
-	schedule := models.NewSchedule(req.AgentID, req.RepositoryID, req.Name, req.CronExpression, req.Paths)
 
 	if req.Excludes != nil {
 		schedule.Excludes = req.Excludes
@@ -637,7 +478,6 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 	}
 
 	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, schedule); err != nil {
-	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
 		return
 	}
 
@@ -798,7 +638,6 @@ func (h *SchedulesHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.verifyScheduleAccess(c, user.CurrentOrgID, schedule); err != nil {
-	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
 		return
 	}
 
@@ -1001,33 +840,6 @@ func formatPaths(paths []string) string {
 // verifyScheduleAccess checks if the user has access to the schedule.
 // Returns nil if access is granted, or sends an error response and returns error.
 func (h *SchedulesHandler) verifyScheduleAccess(c *gin.Context, orgID uuid.UUID, schedule *models.Schedule) error {
-	if err := h.verifyScheduleAccess(c, user.ID, schedule); err != nil {
-		return
-	}
-
-	// TODO: Implement actual backup trigger when backup package is ready
-	// This will create a backup record and dispatch to the agent
-	h.logger.Info().
-		Str("schedule_id", id.String()).
-		Str("agent_id", schedule.AgentID.String()).
-		Msg("manual backup run requested")
-
-	c.JSON(http.StatusAccepted, RunScheduleResponse{
-		BackupID: uuid.New(), // Placeholder - would be actual backup ID
-		Message:  "Backup run not yet implemented. Schedule exists and is accessible.",
-	})
-}
-
-// verifyScheduleAccess checks if the user has access to the schedule.
-// Returns nil if access is granted, or sends an error response and returns error.
-func (h *SchedulesHandler) verifyScheduleAccess(c *gin.Context, userID uuid.UUID, schedule *models.Schedule) error {
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), userID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", userID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return err
-	}
-
 	agent, err := h.store.GetAgentByID(c.Request.Context(), schedule.AgentID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
@@ -1035,9 +847,8 @@ func (h *SchedulesHandler) verifyScheduleAccess(c *gin.Context, userID uuid.UUID
 	}
 
 	if agent.OrgID != orgID {
-	if agent.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
-		return err
+		return errors.New("organization mismatch")
 	}
 
 	return nil

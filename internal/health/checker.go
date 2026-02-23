@@ -261,8 +261,6 @@ func (c *Checker) generateMessage(result *CheckResult) string {
 	}
 }
 
-// getStatusColor returns a color code for the health status.
-func getStatusColor(status HealthStatus) string {
 // GetStatusColor returns a color code for the health status.
 func GetStatusColor(status HealthStatus) string {
 	switch status {

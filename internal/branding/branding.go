@@ -3,9 +3,12 @@ package branding
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/google/uuid"
@@ -77,23 +80,6 @@ func ValidateURL(rawURL string) error {
 	}
 	return nil
 }
-// Package branding provides white-label branding configuration for Enterprise organizations.
-package branding
-
-import (
-// Package branding provides white-label branding configuration for Enterprise organizations.
-package branding
-
-import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"net/url"
-	"regexp"
-	"time"
-
-	"github.com/google/uuid"
-)
 
 // SettingKey is the system settings key for branding configuration.
 const SettingKey = "branding"
@@ -145,9 +131,6 @@ func DefaultBrandingSettings() BrandingSettings {
 		CustomCSS:      "",
 	}
 }
-
-// hexColorRegex validates hex color codes.
-var hexColorRegex = regexp.MustCompile(`^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$`)
 
 // Validate validates the branding settings.
 func (s *BrandingSettings) Validate() error {

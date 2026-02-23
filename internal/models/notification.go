@@ -16,8 +16,6 @@ const (
 	ChannelTypeDiscord   NotificationChannelType = "discord"
 	ChannelTypeWebhook   NotificationChannelType = "webhook"
 	ChannelTypePagerDuty NotificationChannelType = "pagerduty"
-	ChannelTypeTeams     NotificationChannelType = "teams"
-	ChannelTypeDiscord   NotificationChannelType = "discord"
 )
 
 // NotificationEventType represents the type of notification event
@@ -30,9 +28,6 @@ const (
 	EventMaintenanceScheduled NotificationEventType = "maintenance_scheduled"
 	EventTestRestoreFailed    NotificationEventType = "test_restore_failed"
 	EventValidationFailed     NotificationEventType = "validation_failed"
-	EventBackupSuccess NotificationEventType = "backup_success"
-	EventBackupFailed  NotificationEventType = "backup_failed"
-	EventAgentOffline  NotificationEventType = "agent_offline"
 )
 
 // NotificationStatus represents the status of a notification
@@ -161,6 +156,7 @@ type WebhookChannelConfig struct {
 // PagerDutyChannelConfig represents PagerDuty integration configuration
 type PagerDutyChannelConfig struct {
 	RoutingKey string `json:"routing_key"`
+	Severity   string `json:"severity,omitempty"`
 	Channel    string `json:"channel,omitempty"`
 	Username   string `json:"username,omitempty"`
 	IconEmoji  string `json:"icon_emoji,omitempty"`
@@ -176,17 +172,6 @@ type DiscordChannelConfig struct {
 	WebhookURL string `json:"webhook_url"`
 	Username   string `json:"username,omitempty"`
 	AvatarURL  string `json:"avatar_url,omitempty"`
-}
-}
-
-// TeamsChannelConfig represents Microsoft Teams webhook configuration
-type TeamsChannelConfig struct {
-	WebhookURL string `json:"webhook_url"`
-}
-
-// DiscordChannelConfig represents Discord webhook configuration
-type DiscordChannelConfig struct {
-	WebhookURL string `json:"webhook_url"`
 }
 
 // CreateNotificationChannelRequest represents a request to create a notification channel

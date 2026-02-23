@@ -95,18 +95,6 @@ func (h *SnapshotsHandler) buildResticConfig(ctx context.Context, repositoryID u
 	return &cfg, nil
 }
 
-	store  SnapshotStore
-	logger zerolog.Logger
-}
-
-// NewSnapshotsHandler creates a new SnapshotsHandler.
-func NewSnapshotsHandler(store SnapshotStore, logger zerolog.Logger) *SnapshotsHandler {
-	return &SnapshotsHandler{
-		store:  store,
-		logger: logger.With().Str("component", "snapshots_handler").Logger(),
-	}
-}
-
 // RegisterRoutes registers snapshot and restore routes on the given router group.
 func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	snapshots := r.Group("/snapshots")
@@ -137,13 +125,6 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		mounts.GET("", h.ListMounts)
 	}
 
-	// Comments resource for direct access
-	comments := r.Group("/comments")
-	{
-		comments.DELETE("/:id", h.DeleteSnapshotComment)
-		snapshots.GET("/:id1/compare/:id2", h.CompareSnapshots)
-	}
-
 	restores := r.Group("/restores")
 	{
 		restores.GET("", h.ListRestores)
@@ -152,7 +133,6 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		restores.POST("/cloud", h.CreateCloudRestore)
 		restores.GET("/:id", h.GetRestore)
 		restores.GET("/:id/progress", h.GetCloudRestoreProgress)
-		restores.GET("/:id", h.GetRestore)
 	}
 }
 
@@ -259,7 +239,6 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 				}
 				// Check if the backup's repository matches the filter
 				if backup.RepositoryID == nil || *backup.RepositoryID != repoID {
-				if schedule.RepositoryID != repoID {
 					continue
 				}
 			}
@@ -282,7 +261,6 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 				Paths:        schedule.Paths,
 				AgentID:      agent.ID.String(),
 				RepositoryID: repoIDStr,
-				RepositoryID: schedule.RepositoryID.String(),
 				BackupID:     backup.ID.String(),
 				SizeBytes:    backup.SizeBytes,
 			})
@@ -363,7 +341,6 @@ func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 		Paths:        schedule.Paths,
 		AgentID:      agent.ID.String(),
 		RepositoryID: repoIDStr,
-		RepositoryID: schedule.RepositoryID.String(),
 		BackupID:     backup.ID.String(),
 		SizeBytes:    backup.SizeBytes,
 	})
@@ -434,10 +411,6 @@ type SnapshotCompareResponse struct {
 //	@Failure		500		{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/snapshots/{id}/files [get]
-// ListFiles returns files in a snapshot.
-// GET /api/v1/snapshots/:id/files
-// Optional query params:
-//   - path: filter to specific directory (default: root)
 func (h *SnapshotsHandler) ListFiles(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -646,47 +619,6 @@ type RestoreResponse struct {
 	CloudProgress       *CloudRestoreProgressResponse `json:"cloud_progress,omitempty"`
 	CloudTargetLocation string                        `json:"cloud_target_location,omitempty"`
 	VerifyUpload        bool                          `json:"verify_upload,omitempty"`
-	// Note: In a full implementation, this would call the agent to list files
-	// from the actual Restic repository. For now, we return a placeholder response
-	// indicating the functionality is available but requires agent communication.
-	h.logger.Info().
-		Str("snapshot_id", snapshotID).
-		Str("path_prefix", pathPrefix).
-		Msg("file listing requested")
-
-	// Placeholder response - in production this would query the agent
-	c.JSON(http.StatusOK, gin.H{
-		"files":       []SnapshotFileResponse{},
-		"snapshot_id": snapshotID,
-		"path":        pathPrefix,
-		"message":     "File listing requires agent communication. Files will be populated when agent connectivity is implemented.",
-	})
-}
-
-// CreateRestoreRequest is the request body for creating a restore job.
-type CreateRestoreRequest struct {
-	SnapshotID   string   `json:"snapshot_id" binding:"required"`
-	AgentID      string   `json:"agent_id" binding:"required"`
-	RepositoryID string   `json:"repository_id" binding:"required"`
-	TargetPath   string   `json:"target_path" binding:"required"`
-	IncludePaths []string `json:"include_paths,omitempty"`
-	ExcludePaths []string `json:"exclude_paths,omitempty"`
-}
-
-// RestoreResponse represents a restore job in API responses.
-type RestoreResponse struct {
-	ID           string   `json:"id"`
-	AgentID      string   `json:"agent_id"`
-	RepositoryID string   `json:"repository_id"`
-	SnapshotID   string   `json:"snapshot_id"`
-	TargetPath   string   `json:"target_path"`
-	IncludePaths []string `json:"include_paths,omitempty"`
-	ExcludePaths []string `json:"exclude_paths,omitempty"`
-	Status       string   `json:"status"`
-	StartedAt    string   `json:"started_at,omitempty"`
-	CompletedAt  string   `json:"completed_at,omitempty"`
-	ErrorMessage string   `json:"error_message,omitempty"`
-	CreatedAt    string   `json:"created_at"`
 }
 
 func toRestoreResponse(r *models.Restore) RestoreResponse {
@@ -705,9 +637,6 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 	}
 	if r.SourceAgentID != nil {
 		resp.SourceAgentID = r.SourceAgentID.String()
-	}
-		ErrorMessage: r.ErrorMessage,
-		CreatedAt:    r.CreatedAt.Format(time.RFC3339),
 	}
 	if r.StartedAt != nil {
 		resp.StartedAt = r.StartedAt.Format(time.RFC3339)
@@ -770,7 +699,6 @@ func toRestoreResponse(r *models.Restore) RestoreResponse {
 //
 //	@Summary		Create restore
 //	@Description	Creates a new restore job to restore files from a snapshot. Supports cross-agent restores by specifying source_agent_id.
-//	@Description	Creates a new restore job to restore files from a snapshot
 //	@Tags			Restores
 //	@Accept			json
 //	@Produce		json
@@ -797,8 +725,6 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 
 	// Parse target agent ID (where restore will execute)
 	targetAgentID, err := uuid.Parse(req.AgentID)
-	// Parse IDs
-	agentID, err := uuid.Parse(req.AgentID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent_id"})
 		return
@@ -822,7 +748,6 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 	}
 
 	// Verify user access
-	// Verify user access to agent
 	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
@@ -852,15 +777,6 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "source agent not found"})
 			return
 		}
-	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
-		return
-	}
-
-	if agent.OrgID != dbUser.OrgID {
-		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
-		return
 	}
 
 	// Verify repository access
@@ -893,8 +809,6 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 	} else {
 		restore = models.NewRestore(targetAgentID, repositoryID, req.SnapshotID, req.TargetPath, req.IncludePaths, req.ExcludePaths)
 	}
-	// Create restore job
-	restore := models.NewRestore(agentID, repositoryID, req.SnapshotID, req.TargetPath, req.IncludePaths, req.ExcludePaths)
 
 	if err := h.store.CreateRestore(c.Request.Context(), restore); err != nil {
 		h.logger.Error().Err(err).Msg("failed to create restore job")
@@ -912,12 +826,6 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		logEvent = logEvent.Str("source_agent_id", req.SourceAgentID)
 	}
 	logEvent.Msg("restore job created")
-	h.logger.Info().
-		Str("restore_id", restore.ID.String()).
-		Str("snapshot_id", req.SnapshotID).
-		Str("agent_id", req.AgentID).
-		Str("target_path", req.TargetPath).
-		Msg("restore job created")
 
 	c.JSON(http.StatusCreated, toRestoreResponse(restore))
 }
@@ -938,27 +846,6 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 //	@Security		SessionAuth
 //	@Router			/restores/preview [post]
 func (h *SnapshotsHandler) PreviewRestore(c *gin.Context) {
-// ListRestores returns all restore jobs for the authenticated user's organization.
-//
-//	@Summary		List restores
-//	@Description	Returns all restore jobs for the current organization
-//	@Tags			Restores
-//	@Accept			json
-//	@Produce		json
-//	@Param			agent_id	query		string	false	"Filter by agent ID"
-//	@Param			status		query		string	false	"Filter by status"
-//	@Success		200			{object}	map[string][]RestoreResponse
-//	@Failure		400			{object}	map[string]string
-//	@Failure		401			{object}	map[string]string
-//	@Failure		500			{object}	map[string]string
-//	@Security		SessionAuth
-//	@Router			/restores [get]
-// ListRestores returns all restore jobs for the authenticated user's organization.
-// GET /api/v1/restores
-// Optional query params:
-//   - agent_id: filter by agent
-//   - status: filter by status
-func (h *SnapshotsHandler) ListRestores(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -1037,6 +924,7 @@ func (h *SnapshotsHandler) ListRestores(c *gin.Context) {
 		DiskSpaceNeeded: 0,
 	})
 }
+
 // CreateCloudRestore creates a new restore job that uploads to cloud storage.
 //
 //	@Summary		Create cloud restore
@@ -1053,79 +941,6 @@ func (h *SnapshotsHandler) ListRestores(c *gin.Context) {
 //	@Security		SessionAuth
 //	@Router			/restores/cloud [post]
 func (h *SnapshotsHandler) CreateCloudRestore(c *gin.Context) {
-
-// GetRestore returns a specific restore job by ID.
-//
-//	@Summary		Get restore
-//	@Description	Returns a specific restore job by ID
-//	@Tags			Restores
-//	@Accept			json
-//	@Produce		json
-//	@Param			id	path		string	true	"Restore ID"
-//	@Success		200	{object}	RestoreResponse
-//	@Failure		400	{object}	map[string]string
-//	@Failure		401	{object}	map[string]string
-//	@Failure		404	{object}	map[string]string
-//	@Security		SessionAuth
-//	@Router			/restores/{id} [get]
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	// Get all agents in the org
-	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list agents")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list restores"})
-		return
-	}
-
-	// Apply agent_id filter if provided
-	agentIDParam := c.Query("agent_id")
-	if agentIDParam != "" {
-		agentID, err := uuid.Parse(agentIDParam)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent_id"})
-			return
-		}
-		// Filter to just this agent
-		var filtered []*models.Agent
-		for _, a := range agents {
-			if a.ID == agentID {
-				filtered = append(filtered, a)
-				break
-			}
-		}
-		agents = filtered
-	}
-
-	statusFilter := c.Query("status")
-
-	var restores []RestoreResponse
-	for _, agent := range agents {
-		agentRestores, err := h.store.GetRestoresByAgentID(c.Request.Context(), agent.ID)
-		if err != nil {
-			h.logger.Error().Err(err).Str("agent_id", agent.ID.String()).Msg("failed to get restores for agent")
-			continue
-		}
-
-		for _, restore := range agentRestores {
-			if statusFilter != "" && string(restore.Status) != statusFilter {
-				continue
-			}
-			restores = append(restores, toRestoreResponse(restore))
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{"restores": restores})
-}
-
-// GetRestore returns a specific restore job by ID.
-// GET /api/v1/restores/:id
-func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -1189,22 +1004,6 @@ func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid restore ID"})
-		return
-	}
-
-	restore, err := h.store.GetRestoreByID(c.Request.Context(), id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
-		return
-	}
-
-	// Verify access through agent
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
 		return
 	}
@@ -1345,6 +1144,17 @@ func (h *SnapshotsHandler) GetCloudRestoreProgress(c *gin.Context) {
 		VerifiedChecksum: restore.CloudProgress.VerifiedChecksum,
 	})
 }
+
+// ListRestores returns all restore jobs for the authenticated user's organization.
+//
+//	@Summary		List restores
+//	@Description	Returns all restore jobs for the current organization
+//	@Tags			Restores
+//	@Accept			json
+//	@Produce		json
+//	@Param			agent_id	query		string	false	"Filter by agent ID"
+//	@Param			status		query		string	false	"Filter by status"
+//	@Success		200			{object}	map[string][]RestoreResponse
 //	@Failure		400			{object}	map[string]string
 //	@Failure		401			{object}	map[string]string
 //	@Failure		500			{object}	map[string]string
@@ -1451,9 +1261,6 @@ func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 		return
 	}
 
-	agent, err := h.store.GetAgentByID(c.Request.Context(), restore.AgentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
-		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
 	agent, err := h.store.GetAgentByID(c.Request.Context(), restore.AgentID)
 	if err != nil || agent.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
@@ -1695,9 +1502,6 @@ type FileDiffResponse struct {
 //	@Security		SessionAuth
 //	@Router			/snapshots/{id1}/files/diff/{id2} [get]
 func (h *SnapshotsHandler) DiffFile(c *gin.Context) {
-// CompareSnapshots compares two snapshots and returns their differences.
-// GET /api/v1/snapshots/:id1/compare/:id2
-func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -1775,205 +1579,22 @@ func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 	})
 }
 
-// SnapshotCommentResponse represents a comment in API responses.
-type SnapshotCommentResponse struct {
-	ID         string `json:"id"`
-	SnapshotID string `json:"snapshot_id"`
-	UserID     string `json:"user_id"`
-	UserName   string `json:"user_name"`
-	UserEmail  string `json:"user_email"`
-	Content    string `json:"content"`
-	CreatedAt  string `json:"created_at"`
-	UpdatedAt  string `json:"updated_at"`
-}
-
-func toSnapshotCommentResponse(c *models.SnapshotComment, user *models.User) SnapshotCommentResponse {
-	userName := ""
-	userEmail := ""
-	if user != nil {
-		userName = user.Name
-		userEmail = user.Email
-	}
-	return SnapshotCommentResponse{
-		ID:         c.ID.String(),
-		SnapshotID: c.SnapshotID,
-		UserID:     c.UserID.String(),
-		UserName:   userName,
-		UserEmail:  userEmail,
-		Content:    c.Content,
-		CreatedAt:  c.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:  c.UpdatedAt.Format(time.RFC3339),
-	}
-}
-
-// ListSnapshotComments returns all comments for a snapshot.
-// GET /api/v1/snapshots/:id/comments
-func (h *SnapshotsHandler) ListSnapshotComments(c *gin.Context) {
-	user := middleware.RequireUser(c)
-	if user == nil {
-		return
-	}
-
-	snapshotID := c.Param("id")
-	if snapshotID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "snapshot ID required"})
-		return
-	}
-
-	// Verify the snapshot exists and user has access
-	backup, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
-		return
-	}
-
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
-		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
-		return
-	}
-
-	comments, err := h.store.GetSnapshotCommentsBySnapshotID(c.Request.Context(), snapshotID, dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("snapshot_id", snapshotID).Msg("failed to list comments")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list comments"})
-		return
-	}
-
-	// Build user cache for response enrichment
-	userCache := make(map[uuid.UUID]*models.User)
-	var responses []SnapshotCommentResponse
-	for _, comment := range comments {
-		var commentUser *models.User
-		if cached, ok := userCache[comment.UserID]; ok {
-			commentUser = cached
-		} else {
-			commentUser, _ = h.store.GetUserByID(c.Request.Context(), comment.UserID)
-			userCache[comment.UserID] = commentUser
-		}
-		responses = append(responses, toSnapshotCommentResponse(comment, commentUser))
-	}
-
-	c.JSON(http.StatusOK, gin.H{"comments": responses})
-}
-
-// CreateSnapshotComment creates a new comment on a snapshot.
-// POST /api/v1/snapshots/:id/comments
-func (h *SnapshotsHandler) CreateSnapshotComment(c *gin.Context) {
-	user := middleware.RequireUser(c)
-	if user == nil {
-		return
-	}
-
-	snapshotID := c.Param("id")
-	if snapshotID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "snapshot ID required"})
-		return
-	}
-
-	var req models.CreateSnapshotCommentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "content is required"})
-		return
-	}
-
-	// Verify the snapshot exists and user has access
-	backup, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
-		return
-	}
-
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
-		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
-		return
-	}
-
-	comment := models.NewSnapshotComment(dbUser.OrgID, snapshotID, dbUser.ID, req.Content)
-
-	if err := h.store.CreateSnapshotComment(c.Request.Context(), comment); err != nil {
-		h.logger.Error().Err(err).Str("snapshot_id", snapshotID).Msg("failed to create comment")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create comment"})
-		return
-	}
-
-	h.logger.Info().
-		Str("comment_id", comment.ID.String()).
-		Str("snapshot_id", snapshotID).
-		Str("user_id", dbUser.ID.String()).
-		Msg("snapshot comment created")
-
-	c.JSON(http.StatusCreated, toSnapshotCommentResponse(comment, dbUser))
-}
-
-// DeleteSnapshotComment deletes a comment.
-// DELETE /api/v1/comments/:id
-func (h *SnapshotsHandler) DeleteSnapshotComment(c *gin.Context) {
-	user := middleware.RequireUser(c)
-	if user == nil {
-		return
-	}
-
-	idParam := c.Param("id")
-	id, err := uuid.Parse(idParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid comment ID"})
-		return
-	}
-
-	comment, err := h.store.GetSnapshotCommentByID(c.Request.Context(), id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "comment not found"})
-		return
-	}
-
-	// Verify user has access (must be in same org and either own the comment or be admin)
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if comment.OrgID != dbUser.OrgID {
-		c.JSON(http.StatusNotFound, gin.H{"error": "comment not found"})
-		return
-	}
-
-	// Only allow deletion by the comment author or admins
-	if comment.UserID != dbUser.ID && !dbUser.IsAdmin() {
-		c.JSON(http.StatusForbidden, gin.H{"error": "you can only delete your own comments"})
-		return
-	}
-
-	if err := h.store.DeleteSnapshotComment(c.Request.Context(), id); err != nil {
-		h.logger.Error().Err(err).Str("comment_id", id.String()).Msg("failed to delete comment")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete comment"})
-		return
-	}
-
-	h.logger.Info().
-		Str("comment_id", id.String()).
-		Str("deleted_by", dbUser.ID.String()).
-		Msg("snapshot comment deleted")
-
-	c.JSON(http.StatusOK, gin.H{"message": "comment deleted"})
-}
-
 // CompareSnapshots compares two snapshots and returns their differences.
-// GET /api/v1/snapshots/:id1/compare/:id2
+//
+//	@Summary		Compare snapshots
+//	@Description	Compares two snapshots and returns their differences
+//	@Tags			Snapshots
+//	@Accept			json
+//	@Produce		json
+//	@Param			id1	path		string	true	"First snapshot ID"
+//	@Param			id2	path		string	true	"Second snapshot ID"
+//	@Success		200	{object}	SnapshotCompareResponse
+//	@Failure		400	{object}	map[string]string
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Failure		500	{object}	map[string]string
+//	@Security		SessionAuth
+//	@Router			/snapshots/{id1}/compare/{id2} [get]
 func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -1982,15 +1603,9 @@ func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 
 	snapshotID1 := c.Param("id1")
 	snapshotID2 := c.Param("id2")
-	filePath := c.Query("path")
 
 	if snapshotID1 == "" || snapshotID2 == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "both snapshot IDs are required"})
-		return
-	}
-
-	if filePath == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file path is required"})
 		return
 	}
 
@@ -2026,6 +1641,8 @@ func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 	if err != nil || agent2.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "second snapshot not found"})
 		return
+	}
+
 	// Get schedules for paths info
 	schedule1, err := h.store.GetScheduleByID(c.Request.Context(), backup1.ScheduleID)
 	if err != nil {
@@ -2089,26 +1706,29 @@ func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 	h.logger.Info().
 		Str("snapshot_id_1", snapshotID1).
 		Str("snapshot_id_2", snapshotID2).
-		Str("file_path", filePath).
-		Msg("file diff requested")
+		Msg("snapshot comparison requested")
 
-	// Note: In a full implementation, this would call the agent to extract
-	// and diff the file from the actual Restic repository. For now, we return
-	// a placeholder response indicating the functionality is available but
-	// requires agent communication.
-	c.JSON(http.StatusOK, FileDiffResponse{
-		Path:        filePath,
-		IsBinary:    false,
-		ChangeType:  "modified",
+	// Note: In a full implementation, this would call the agent to run restic diff
+	// on the actual repository. For now, we return a placeholder response
+	// indicating the functionality is available but requires agent communication.
+	c.JSON(http.StatusOK, SnapshotCompareResponse{
 		SnapshotID1: snapshotID1,
 		SnapshotID2: snapshotID2,
-		OldSize:     0,
-		NewSize:     0,
-		UnifiedDiff: "",
-		OldContent:  "",
-		NewContent:  "",
+		Snapshot1:   snapshot1Info,
+		Snapshot2:   snapshot2Info,
+		Stats: SnapshotDiffStats{
+			FilesAdded:       0,
+			FilesRemoved:     0,
+			FilesModified:    0,
+			DirsAdded:        0,
+			DirsRemoved:      0,
+			TotalSizeAdded:   0,
+			TotalSizeRemoved: 0,
+		},
+		Changes: []SnapshotDiffEntry{},
 	})
 }
+
 // SnapshotMountResponse represents a snapshot mount in API responses.
 type SnapshotMountResponse struct {
 	ID           string  `json:"id"`
@@ -2469,26 +2089,4 @@ func (h *SnapshotsHandler) ListMounts(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"mounts": responses})
-}
-		Msg("snapshot comparison requested")
-
-	// Note: In a full implementation, this would call the agent to run restic diff
-	// on the actual repository. For now, we return a placeholder response
-	// indicating the functionality is available but requires agent communication.
-	c.JSON(http.StatusOK, SnapshotCompareResponse{
-		SnapshotID1: snapshotID1,
-		SnapshotID2: snapshotID2,
-		Snapshot1:   snapshot1Info,
-		Snapshot2:   snapshot2Info,
-		Stats: SnapshotDiffStats{
-			FilesAdded:       0,
-			FilesRemoved:     0,
-			FilesModified:    0,
-			DirsAdded:        0,
-			DirsRemoved:      0,
-			TotalSizeAdded:   0,
-			TotalSizeRemoved: 0,
-		},
-		Changes: []SnapshotDiffEntry{},
-	})
 }

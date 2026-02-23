@@ -33,6 +33,8 @@ type Volume struct {
 	Labels     map[string]string `json:"labels,omitempty"`
 	Scope      string            `json:"scope"`
 	CreatedAt  string            `json:"created_at"`
+	SizeBytes  int64             `json:"size_bytes,omitempty"`
+	UsedBy     []string          `json:"used_by,omitempty"`
 }
 
 // InspectContainerInfo contains detailed information from docker inspect.

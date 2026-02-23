@@ -89,8 +89,6 @@ export function useUpdatePricing() {
 			id: string;
 			data: UpdateStoragePricingRequest;
 		}) => pricingApi.update(id, data),
-		}: { id: string; data: UpdateStoragePricingRequest }) =>
-			pricingApi.update(id, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['pricing'] });
 			queryClient.invalidateQueries({ queryKey: ['costs'] });

@@ -21,9 +21,14 @@ import (
 
 // WebhookPayload represents the payload sent to generic webhook endpoints.
 type WebhookPayload struct {
-	EventType string      `json:"event_type"`
-	Timestamp time.Time   `json:"timestamp"`
-	Data      interface{} `json:"data"`
+	EventType string                 `json:"event_type"`
+	Timestamp time.Time              `json:"timestamp,omitempty"`
+	EventTime time.Time              `json:"event_time,omitempty"`
+	Data      interface{}            `json:"data,omitempty"`
+	Source    string                 `json:"source,omitempty"`
+	Summary   string                 `json:"summary,omitempty"`
+	Severity  string                 `json:"severity,omitempty"`
+	Details   map[string]interface{} `json:"details,omitempty"`
 }
 
 // ErrAirGapBlocked is returned when webhooks are blocked by air-gap mode.
@@ -36,15 +41,6 @@ type WebhookSender struct {
 	maxRetries  int
 	airGapMode  bool
 	validateURL func(string) error
-	client     *http.Client
-	logger     zerolog.Logger
-	maxRetries int
-	airGapMode bool
-// WebhookSender sends notifications via generic webhooks with HMAC signing and retry.
-type WebhookSender struct {
-	client     *http.Client
-	logger     zerolog.Logger
-	maxRetries int
 }
 
 // NewWebhookSender creates a new webhook sender.
@@ -61,6 +57,16 @@ func NewWebhookSender(logger zerolog.Logger) *WebhookSender {
 		validateURL: func(u string) error {
 			return ValidateWebhookURL(u, false)
 		},
+	}
+}
+
+// WebhookService handles sending webhook notifications for maintenance, validation, etc.
+type WebhookService struct {
+	config models.WebhookChannelConfig
+	client *http.Client
+	logger zerolog.Logger
+}
+
 // NewWebhookService creates a new generic webhook notification service.
 func NewWebhookService(cfg models.WebhookChannelConfig, logger zerolog.Logger) (*WebhookService, error) {
 	return NewWebhookServiceWithProxy(cfg, nil, logger)
@@ -70,14 +76,6 @@ func NewWebhookService(cfg models.WebhookChannelConfig, logger zerolog.Logger) (
 func NewWebhookServiceWithProxy(cfg models.WebhookChannelConfig, proxyConfig *config.ProxyConfig, logger zerolog.Logger) (*WebhookService, error) {
 	if err := ValidateWebhookConfig(&cfg); err != nil {
 		return nil, err
-	}
-
-	// Set defaults
-	if cfg.Method == "" {
-		cfg.Method = http.MethodPost
-	}
-	if cfg.ContentType == "" {
-		cfg.ContentType = "application/json"
 	}
 
 	client, err := httpclient.New(httpclient.Options{
@@ -100,6 +98,39 @@ func ValidateWebhookConfig(config *models.WebhookChannelConfig) error {
 	if config.URL == "" {
 		return fmt.Errorf("webhook URL is required")
 	}
+	return nil
+}
+
+// Send sends a webhook payload via the configured URL.
+func (s *WebhookService) Send(payload *WebhookPayload) error {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal webhook payload: %w", err)
+	}
+
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.config.URL, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create webhook request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	if s.config.Secret != "" {
+		sig := computeHMAC(body, s.config.Secret)
+		req.Header.Set("X-Keldris-Signature", sig)
+	}
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("send webhook: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil
+	}
+
+	return fmt.Errorf("webhook returned status %d", resp.StatusCode)
 }
 
 // SetAirGapMode enables or disables air-gap mode on the webhook sender.
@@ -115,22 +146,6 @@ func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPay
 		return ErrAirGapBlocked
 	}
 
-	if err := w.validateURL(url); err != nil {
-		return fmt.Errorf("webhook URL blocked: %w", err)
-	}
-
-		w.logger.Warn().Str("url", url).Msg("webhook blocked: air-gap mode enabled")
-		return ErrAirGapBlocked
-	}
-
-		client:     &http.Client{Timeout: 30 * time.Second},
-		logger:     logger.With().Str("component", "webhook_sender").Logger(),
-		maxRetries: 3,
-	}
-}
-
-// Send sends a webhook payload to the given URL with HMAC signature and retry.
-func (w *WebhookSender) Send(ctx context.Context, url string, payload WebhookPayload, secret string) error {
 	if err := w.validateURL(url); err != nil {
 		return fmt.Errorf("webhook URL blocked: %w", err)
 	}
@@ -197,6 +212,8 @@ func computeHMAC(payload []byte, secret string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(payload)
 	return "sha256=" + hex.EncodeToString(mac.Sum(nil))
+}
+
 // SendTestRestoreFailed sends a test restore failed notification via webhook.
 func (s *WebhookService) SendTestRestoreFailed(data TestRestoreFailedData) error {
 	severity := "error"
@@ -258,42 +275,6 @@ func (s *WebhookService) SendValidationFailed(data ValidationFailedData) error {
 		Str("schedule", data.ScheduleName).
 		Str("error", data.ErrorMessage).
 		Msg("sending validation failed notification via webhook")
-
-	return s.Send(payload)
-}
-
-// SendTestRestoreFailed sends a test restore failed notification via webhook.
-func (s *WebhookService) SendTestRestoreFailed(data TestRestoreFailedData) error {
-	severity := "error"
-	if data.ConsecutiveFails > 2 {
-		severity = "critical"
-	}
-
-	payload := &WebhookPayload{
-		EventType: "test_restore_failed",
-		EventTime: time.Now().UTC(),
-		Source:    "keldris-backup",
-		Summary:   fmt.Sprintf("Test Restore Failed: %s", data.RepositoryName),
-		Severity:  severity,
-		Details: map[string]interface{}{
-			"repository_name":   data.RepositoryName,
-			"repository_id":     data.RepositoryID,
-			"snapshot_id":       data.SnapshotID,
-			"sample_percentage": data.SamplePercentage,
-			"files_restored":    data.FilesRestored,
-			"files_verified":    data.FilesVerified,
-			"started_at":        data.StartedAt.Format(time.RFC3339),
-			"failed_at":         data.FailedAt.Format(time.RFC3339),
-			"error_message":     data.ErrorMessage,
-			"consecutive_fails": data.ConsecutiveFails,
-		},
-	}
-
-	s.logger.Debug().
-		Str("repository", data.RepositoryName).
-		Str("error", data.ErrorMessage).
-		Int("consecutive_fails", data.ConsecutiveFails).
-		Msg("sending test restore failed notification via webhook")
 
 	return s.Send(payload)
 }

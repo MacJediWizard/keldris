@@ -368,12 +368,6 @@ func (h *SLAHandler) GetHistory(c *gin.Context) {
 
 	if history == nil {
 		history = []*models.SLAStatusSnapshot{}
-	report := models.SLAReport{
-		OrgID:         user.CurrentOrgID,
-		ReportMonth:   reportMonth,
-		GeneratedAt:   time.Now(),
-		TotalBreaches: stats.ActiveBreaches,
-		SLASummaries:  []models.SLAComplianceSummary{},
 	}
 
 	c.JSON(http.StatusOK, gin.H{"history": history})

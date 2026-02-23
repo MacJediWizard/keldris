@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import { ExportImportModal } from '../components/features/ExportImportModal';
 import { ImportAgentsWizard } from '../components/features/ImportAgentsWizard';
-import { UpgradeLimitWarning } from '../components/features/UpgradePrompt';
 import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
 import {
 	BulkOperationProgress,
@@ -14,24 +13,14 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
-import { EmptyStateNoAgents } from '../components/ui/EmptyState';
-import { HelpTooltip } from '../components/ui/HelpTooltip';
-import { AgentRowSkeleton } from '../components/ui/PageSkeletons';
-import { StarButton } from '../components/ui/StarButton';
 import { useAddAgentToGroup, useAgentGroups } from '../hooks/useAgentGroups';
 import {
 	useCreateRegistrationCode,
 	useDeleteRegistrationCode,
 	usePendingRegistrations,
 } from '../hooks/useAgentRegistration';
-import { AgentDownloads } from '../components/features/AgentDownloads';
 import {
 	useAgents,
-import { NetworkMountStatus } from '../components/features/NetworkMountStatus';
-import { useAgentGroups, useAgentsWithGroups } from '../hooks/useAgentGroups';
-import {
-	useAgents,
-	useCreateAgent,
 	useDeleteAgent,
 	useRevokeAgentApiKey,
 	useRotateAgentApiKey,
@@ -39,466 +28,11 @@ import {
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useFavoriteIds } from '../hooks/useFavorites';
 import { useLocale } from '../hooks/useLocale';
-import { usePlanLimits } from '../hooks/usePlanLimits';
-import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
-import { statusHelp } from '../lib/help-content';
-import { useLocale } from '../hooks/useLocale';
 import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
 import { getAgentStatusColor } from '../lib/utils';
-import type { AgentGroup, AgentStatus, AgentWithGroups } from '../lib/types';
-import type { Agent, AgentStatus } from '../lib/types';
-import {
-	formatDate,
-	getAgentStatusColor,
-	getHealthStatusColor,
-	getHealthStatusLabel,
-} from '../lib/utils';
-import { useLocale } from '../hooks/useLocale';
-import type { Agent, AgentStatus } from '../lib/types';
-import { getAgentStatusColor } from '../lib/utils';
 
 function LoadingRow() {
-import { useAgents, useCreateAgent, useDeleteAgent } from '../hooks/useAgents';
-import type { Agent, AgentStatus } from '../lib/types';
-import { formatDate, getAgentStatusColor } from '../lib/utils';
-
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="flex gap-1">
-					<div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-				</div>
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
-
-interface RegisterModalProps {
-	isOpen: boolean;
-	onClose: () => void;
-	onSuccess: (apiKey: string) => void;
-}
-
-function RegisterModal({ isOpen, onClose, onSuccess }: RegisterModalProps) {
-	const [hostname, setHostname] = useState('');
-	const createAgent = useCreateAgent();
-
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		try {
-			const result = await createAgent.mutateAsync({ hostname });
-			onSuccess(result.api_key);
-			setHostname('');
-		} catch {
-			// Error handled by mutation
-		}
-	};
-
-	if (!isOpen) return null;
-
-	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-					Register New Agent
-				</h3>
-				<form onSubmit={handleSubmit}>
-					<div className="mb-4">
-						<label
-							htmlFor="hostname"
-							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-						>
-							Hostname
-						</label>
-						<input
-							type="text"
-							id="hostname"
-							value={hostname}
-							onChange={(e) => setHostname(e.target.value)}
-							placeholder="e.g., server-01"
-							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							required
-						/>
-					</div>
-					{createAgent.isError && (
-						<p className="text-sm text-red-600 dark:text-red-400 mb-4">
-							Failed to create agent. Please try again.
-						</p>
-					)}
-					<div className="flex justify-end gap-3">
-						<button
-							type="button"
-							onClick={onClose}
-							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							disabled={createAgent.isPending}
-							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-						>
-							{createAgent.isPending ? 'Creating...' : 'Register'}
-						</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	);
-}
-
-interface ApiKeyModalProps {
-	apiKey: string;
-	onClose: () => void;
-}
-
-function ApiKeyModal({ apiKey, onClose }: ApiKeyModalProps) {
-	const [copied, setCopied] = useState(false);
-
-	const copyToClipboard = async () => {
-		await navigator.clipboard.writeText(apiKey);
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
-	};
-
-	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4">
-				<div className="flex items-center gap-3 mb-4">
-					<div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-full">
-						<svg
-							aria-hidden="true"
-							className="w-6 h-6 text-green-600 dark:text-green-400"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M5 13l4 4L19 7"
-							/>
-						</svg>
-					</div>
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-						Agent Registered Successfully
-					</h3>
-				</div>
-				<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-					Save this API key now. You won't be able to see it again!
-				</p>
-				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
-					<div className="flex items-center justify-between gap-2">
-						<code className="text-sm font-mono text-gray-800 dark:text-gray-200 break-all">
-							{apiKey}
-						</code>
-						<button
-							type="button"
-							onClick={copyToClipboard}
-							className="flex-shrink-0 p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-						>
-							{copied ? (
-								<svg
-									aria-hidden="true"
-									className="w-5 h-5"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M5 13l4 4L19 7"
-									/>
-								</svg>
-							) : (
-								<svg
-									aria-hidden="true"
-									className="w-5 h-5"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-									/>
-								</svg>
-							)}
-						</button>
-					</div>
-				</div>
-				<div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-4">
-					<p className="text-sm text-yellow-800 dark:text-yellow-300">
-						Use this key to configure your agent:
-					</p>
-					<code className="text-xs text-yellow-700 dark:text-yellow-400 block mt-2">
-						keldris-agent config --api-key {apiKey.substring(0, 20)}...
-					</code>
-				</div>
-				<div className="flex justify-end">
-					<button
-						type="button"
-						onClick={onClose}
-						className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-					>
-						Done
-					</button>
-				</div>
-			</div>
-		</div>
-	);
-}
-
-interface AgentRowProps {
-	agent: Agent;
-	onDelete: (id: string) => void;
-	onRotateKey: (id: string) => void;
-	onRevokeKey: (id: string) => void;
-	isDeleting: boolean;
-	isRotating: boolean;
-	isRevoking: boolean;
-}
-
-function AgentRow({
-	agent,
-	onDelete,
-	onRotateKey,
-	onRevokeKey,
-	isDeleting,
-	isRotating,
-	isRevoking,
-}: AgentRowProps) {
-	const [showMenu, setShowMenu] = useState(false);
-	const statusColor = getAgentStatusColor(agent.status);
-
-	return (
-		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
-			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900">{agent.hostname}</div>
-				<Link
-					to={`/agents/${agent.id}`}
-					className="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
-				>
-					{agent.hostname}
-				</Link>
-				{agent.os_info && (
-					<div className="text-sm text-gray-500 dark:text-gray-400">
-						{agent.os_info.os} {agent.os_info.arch}
-					</div>
-				)}
-			</td>
-			<td className="px-6 py-4">
-				<span
-					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
-				>
-					<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
-					{agent.status}
-				</span>
-			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
-			<td className="px-6 py-4">
-				<span
-					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${healthColor.bg} ${healthColor.text}`}
-					title={
-						agent.health_metrics
-							? `CPU: ${agent.health_metrics.cpu_usage?.toFixed(1)}% | Memory: ${agent.health_metrics.memory_usage?.toFixed(1)}% | Disk: ${agent.health_metrics.disk_usage?.toFixed(1)}%`
-							: 'No health data'
-					}
-				>
-					<span className={`w-1.5 h-1.5 ${healthColor.dot} rounded-full`} />
-					{getHealthStatusLabel(agent.health_status || 'unknown')}
-				</span>
-			</td>
-			<td className="px-6 py-4">
-				{agent.groups && agent.groups.length > 0 ? (
-					<div className="flex flex-wrap gap-1">
-						{agent.groups.map((group) => (
-							<GroupBadge key={group.id} group={group} />
-						))}
-					</div>
-				) : (
-					<span className="text-sm text-gray-400 dark:text-gray-500">-</span>
-				)}
-			</td>
-			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-				{formatDate(agent.last_seen)}
-			</td>
-			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-				{formatDate(agent.created_at)}
-			</td>
-			<td className="px-6 py-4 text-right">
-				<button
-					type="button"
-					onClick={() => onDelete(agent.id)}
-					disabled={isDeleting}
-					className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
-				>
-					Delete
-				</button>
-				<div className="relative inline-block text-left">
-					<button
-						type="button"
-						onClick={() => setShowMenu(!showMenu)}
-						className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-						className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-					>
-						Actions
-						<svg
-							aria-hidden="true"
-							className="w-4 h-4"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M19 9l-7 7-7-7"
-							/>
-						</svg>
-					</button>
-					{showMenu && (
-						<>
-							<div
-								className="fixed inset-0 z-10"
-								onClick={() => setShowMenu(false)}
-								onKeyDown={(e) => e.key === 'Escape' && setShowMenu(false)}
-							/>
-							<div className="absolute right-0 z-20 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
-							<div className="absolute right-0 z-20 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
-								<button
-									type="button"
-									onClick={() => {
-										onRotateKey(agent.id);
-										setShowMenu(false);
-									}}
-									disabled={isRotating}
-									className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-									className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-								>
-									{isRotating ? 'Rotating...' : 'Rotate API Key'}
-								</button>
-								<button
-									type="button"
-									onClick={() => {
-										onRevokeKey(agent.id);
-										setShowMenu(false);
-									}}
-									disabled={isRevoking || agent.status === 'pending'}
-									className="w-full text-left px-4 py-2 text-sm text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 disabled:opacity-50"
-								>
-									{isRevoking ? 'Revoking...' : 'Revoke API Key'}
-								</button>
-								<div className="border-t border-gray-100 dark:border-gray-700 my-1" />
-									className="w-full text-left px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 disabled:opacity-50"
-								>
-									{isRevoking ? 'Revoking...' : 'Revoke API Key'}
-								</button>
-								<div className="border-t border-gray-100 my-1" />
-								<button
-									type="button"
-									onClick={() => {
-										onDelete(agent.id);
-										setShowMenu(false);
-									}}
-									disabled={isDeleting}
-									className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
-									className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
-								>
-									{isDeleting ? 'Deleting...' : 'Delete Agent'}
-								</button>
-							</div>
-						</>
-					)}
-				</div>
-			</td>
-		</tr>
-	);
-}
-
-export function Agents() {
-	const [searchQuery, setSearchQuery] = useState('');
-	const [statusFilter, setStatusFilter] = useState<AgentStatus | 'all'>('all');
-	const [showRegisterModal, setShowRegisterModal] = useState(false);
-	const [newApiKey, setNewApiKey] = useState<string | null>(null);
-
-	const { data: agents, isLoading, isError } = useAgents();
-	const deleteAgent = useDeleteAgent();
-	const rotateApiKey = useRotateAgentApiKey();
-	const revokeApiKey = useRevokeAgentApiKey();
-
-	const filteredAgents = agents?.filter((agent) => {
-		const matchesSearch = agent.hostname
-			.toLowerCase()
-			.includes(searchQuery.toLowerCase());
-		const matchesStatus =
-			statusFilter === 'all' || agent.status === statusFilter;
-		return matchesSearch && matchesStatus;
-	});
-
-	const handleRegisterSuccess = (apiKey: string) => {
-		setShowRegisterModal(false);
-		setNewApiKey(apiKey);
-	};
-
-	const handleDelete = (id: string) => {
-		if (confirm('Are you sure you want to delete this agent?')) {
-			deleteAgent.mutate(id);
-		}
-	};
-
-	const handleRotateKey = async (id: string) => {
-		if (
-			confirm(
-				'Are you sure you want to rotate this API key? The old key will be invalidated immediately.',
-			)
-		) {
-			try {
-				const result = await rotateApiKey.mutateAsync(id);
-				setNewApiKey(result.api_key);
-			} catch {
-				// Error handled by mutation
-			}
-		}
-	};
-
-	const handleRevokeKey = (id: string) => {
-		if (
-			confirm(
-				'Are you sure you want to revoke this API key? The agent will no longer be able to authenticate.',
-			)
-		) {
-			revokeApiKey.mutate(id);
-		}
-	};
-
 	return (
 		<tr className="animate-pulse">
 			<td className="px-6 py-4 w-12">
@@ -506,14 +40,6 @@ export function Agents() {
 			</td>
 			<td className="px-6 py-4">
 				<div className="h-4 w-32 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="flex gap-1">
-					<div className="h-5 w-16 bg-gray-200 rounded-full" />
-				</div>
 			</td>
 			<td className="px-6 py-4">
 				<div className="h-6 w-16 bg-gray-200 rounded-full" />
@@ -532,31 +58,6 @@ export function Agents() {
 }
 
 interface GenerateCodeModalProps {
-interface GroupBadgeProps {
-	group: AgentGroup;
-}
-
-function GroupBadge({ group }: GroupBadgeProps) {
-	const bgColor = group.color ? `${group.color}20` : 'rgba(99, 102, 241, 0.1)';
-	const textColor = group.color || '#6366f1';
-
-	return (
-		<span
-			className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-			style={{ backgroundColor: bgColor, color: textColor }}
-		>
-			{group.color && (
-				<span
-					className="w-1.5 h-1.5 rounded-full"
-					style={{ backgroundColor: textColor }}
-				/>
-			)}
-			{group.name}
-		</span>
-	);
-}
-
-interface RegisterModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	onSuccess: (code: string, expiresAt: string) => void;
@@ -569,7 +70,6 @@ function GenerateCodeModal({
 }: GenerateCodeModalProps) {
 	const [hostname, setHostname] = useState('');
 	const createCode = useCreateRegistrationCode();
-	const createAgent = useCreateAgent();
 	const { t } = useLocale();
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -592,7 +92,6 @@ function GenerateCodeModal({
 			<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
 				<h3 className="text-lg font-semibold text-gray-900 mb-4">
 					Generate Registration Code
-					{t('agents.registerNewAgent')}
 				</h3>
 				<p className="text-sm text-gray-600 mb-4">
 					Generate a one-time code that an agent can use to register. The code
@@ -605,7 +104,6 @@ function GenerateCodeModal({
 							className="block text-sm font-medium text-gray-700 mb-1"
 						>
 							{t('agents.hostname')} (optional)
-							{t('agents.hostname')}
 						</label>
 						<input
 							type="text"
@@ -614,7 +112,6 @@ function GenerateCodeModal({
 							onChange={(e) => setHostname(e.target.value)}
 							placeholder={t('agents.hostnamePlaceholder')}
 							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							required
 						/>
 						<p className="mt-1 text-xs text-gray-500">
 							If provided, the agent must register with this exact hostname.
@@ -623,9 +120,6 @@ function GenerateCodeModal({
 					{createCode.isError && (
 						<p className="text-sm text-red-600 mb-4">
 							Failed to generate code. Please try again.
-					{createAgent.isError && (
-						<p className="text-sm text-red-600 mb-4">
-							{t('agents.failedToCreate')}
 						</p>
 					)}
 					<div className="flex justify-end gap-3">
@@ -642,9 +136,6 @@ function GenerateCodeModal({
 							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 						>
 							{createCode.isPending ? 'Generating...' : 'Generate Code'}
-							{createAgent.isPending
-								? t('agents.creating')
-								: t('agents.register')}
 						</button>
 					</div>
 				</form>
@@ -813,7 +304,6 @@ function ApiKeyModal({ apiKey, onClose }: ApiKeyModalProps) {
 					</div>
 					<h3 className="text-lg font-semibold text-gray-900">
 						New API Key Generated
-						{t('agents.agentRegistered')}
 					</h3>
 				</div>
 				<p className="text-sm text-gray-600 mb-4">
@@ -982,20 +472,6 @@ function PendingRegistrationRow({
 					onClick={() => onDelete(registration.id)}
 					disabled={isDeleting}
 					className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-						Agents
-					</h1>
-					<p className="text-gray-600 dark:text-gray-400 mt-1">
-						Manage backup agents across your infrastructure
-					</p>
-				</div>
-				<button
-					type="button"
-					onClick={() => setShowRegisterModal(true)}
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
 				>
 					{isDeleting ? 'Canceling...' : 'Cancel'}
 				</button>
@@ -1014,7 +490,6 @@ interface AgentRowProps {
 	isRevoking: boolean;
 	isSelected: boolean;
 	onToggleSelect: () => void;
-	isFavorite: boolean;
 }
 
 function AgentRow({
@@ -1027,12 +502,10 @@ function AgentRow({
 	isRevoking,
 	isSelected,
 	onToggleSelect,
-	isFavorite,
 }: AgentRowProps) {
 	const [showMenu, setShowMenu] = useState(false);
 	const statusColor = getAgentStatusColor(agent.status);
 	const { t, formatRelativeTime } = useLocale();
-	const healthColor = getHealthStatusColor(agent.health_status || 'unknown');
 
 	return (
 		<tr className={`hover:bg-gray-50 ${isSelected ? 'bg-indigo-50' : ''}`}>
@@ -1040,88 +513,19 @@ function AgentRow({
 				<BulkSelectCheckbox checked={isSelected} onChange={onToggleSelect} />
 			</td>
 			<td className="px-6 py-4">
-				<div className="flex items-center gap-2">
-					<StarButton
-						entityType="agent"
-						entityId={agent.id}
-						isFavorite={isFavorite}
-						size="sm"
-					/>
-					<div className="font-medium text-gray-900">{agent.hostname}</div>
-				</div>
-				<Link
-					to={`/agents/${agent.id}`}
-					className="font-medium text-indigo-600 hover:text-indigo-700"
-				>
-					{agent.hostname}
-				</Link>
-
-	return (
-		<tr className="hover:bg-gray-50">
-			<td className="px-6 py-4">
 				<div className="font-medium text-gray-900">{agent.hostname}</div>
 				{agent.os_info && (
 					<div className="text-sm text-gray-500">
 						{agent.os_info.os} {agent.os_info.arch}
 					</div>
 				)}
-				{agent.network_mounts && agent.network_mounts.length > 0 && (
-					<div className="mt-1">
-						<NetworkMountStatus mounts={agent.network_mounts} compact />
-					</div>
-				)}
 			</td>
 			<td className="px-6 py-4">
-				<span className="inline-flex items-center gap-1.5">
-					<span
-						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
-					>
-						<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
-						{agent.status}
-					</span>
-					<HelpTooltip
-						content={
-							agent.status === 'active'
-								? statusHelp.agentActive.content
-								: agent.status === 'offline'
-									? statusHelp.agentOffline.content
-									: agent.status === 'pending'
-										? statusHelp.agentPending.content
-										: statusHelp.agentDisabled.content
-						}
-						title={
-							agent.status === 'active'
-								? statusHelp.agentActive.title
-								: agent.status === 'offline'
-									? statusHelp.agentOffline.title
-									: agent.status === 'pending'
-										? statusHelp.agentPending.title
-										: statusHelp.agentDisabled.title
-						}
-						position="right"
-					/>
-				</span>
-			</td>
-			<td className="px-6 py-4">
-				{agent.groups && agent.groups.length > 0 ? (
-					<div className="flex flex-wrap gap-1">
-						{agent.groups.map((group) => (
-							<GroupBadge key={group.id} group={group} />
-						))}
-					</div>
-				) : (
-					<span className="text-sm text-gray-400">-</span>
-				)}
 				<span
-					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${healthColor.bg} ${healthColor.text}`}
-					title={
-						agent.health_metrics
-							? `CPU: ${agent.health_metrics.cpu_usage?.toFixed(1)}% | Memory: ${agent.health_metrics.memory_usage?.toFixed(1)}% | Disk: ${agent.health_metrics.disk_usage?.toFixed(1)}%`
-							: 'No health data'
-					}
+					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
 				>
-					<span className={`w-1.5 h-1.5 ${healthColor.dot} rounded-full`} />
-					{getHealthStatusLabel(agent.health_status || 'unknown')}
+					<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
+					{agent.status}
 				</span>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500">
@@ -1155,13 +559,10 @@ function AgentRow({
 					</button>
 					{showMenu && (
 						<>
-							<button
-								type="button"
-								className="fixed inset-0 z-10 bg-transparent border-none cursor-default"
+							<div
+								className="fixed inset-0 z-10"
 								onClick={() => setShowMenu(false)}
 								onKeyDown={(e) => e.key === 'Escape' && setShowMenu(false)}
-								tabIndex={0}
-								aria-label="Close menu"
 							/>
 							<div className="absolute right-0 z-20 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
 								<button
@@ -1216,8 +617,6 @@ export function Agents() {
 		code: string;
 		expiresAt: string;
 	} | null>(null);
-	const [groupFilter, setGroupFilter] = useState<string>('all');
-	const [showRegisterModal, setShowRegisterModal] = useState(false);
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [showAddToGroupModal, setShowAddToGroupModal] = useState(false);
@@ -1236,9 +635,6 @@ export function Agents() {
 	const { data: agentGroups } = useAgentGroups();
 	const { data: schedules } = useSchedules();
 	const favoriteIds = useFavoriteIds('agent');
-	const { limits, usage } = usePlanLimits();
-	const { data: agents, isLoading, isError } = useAgentsWithGroups();
-	const { data: groups } = useAgentGroups();
 	const deleteAgent = useDeleteAgent();
 	const rotateApiKey = useRotateAgentApiKey();
 	const revokeApiKey = useRevokeAgentApiKey();
@@ -1248,10 +644,6 @@ export function Agents() {
 	const { t } = useLocale();
 
 	const bulkOperation = useBulkOperation();
-	const deleteAgent = useDeleteAgent();
-	const rotateApiKey = useRotateAgentApiKey();
-	const revokeApiKey = useRevokeAgentApiKey();
-	const { t } = useLocale();
 
 	const filteredAgents = agents?.filter((agent) => {
 		const matchesSearch = agent.hostname
@@ -1261,13 +653,6 @@ export function Agents() {
 			statusFilter === 'all' || agent.status === statusFilter;
 		const matchesFavorites = !showFavoritesOnly || favoriteIds.has(agent.id);
 		return matchesSearch && matchesStatus && matchesFavorites;
-		const matchesGroup =
-			groupFilter === 'all' ||
-			(groupFilter === 'none'
-				? !agent.groups || agent.groups.length === 0
-				: agent.groups?.some((g) => g.id === groupFilter));
-		return matchesSearch && matchesStatus && matchesGroup;
-		return matchesSearch && matchesStatus;
 	});
 
 	const agentIds = filteredAgents?.map((a) => a.id) ?? [];
@@ -1443,27 +828,8 @@ export function Agents() {
 
 	return (
 		<div className="space-y-6">
-			{limits.agent_limit && (
-				<UpgradeLimitWarning
-					type="agents"
-					current={agents?.length ?? usage.agentCount}
-					limit={limits.agent_limit}
-					source="agents-page"
-				/>
-			)}
 			<div className="flex items-center justify-between">
 				<div>
-					<div className="flex items-center gap-2">
-						<h1 className="text-2xl font-bold text-gray-900">
-							{t('agents.title')}
-						</h1>
-						<HelpTooltip
-							content="Learn how to install, configure, and manage backup agents across your infrastructure."
-							title="Agent Management"
-							docsUrl="/docs/agent-deployment"
-							size="md"
-						/>
-					</div>
 					<h1 className="text-2xl font-bold text-gray-900">
 						{t('agents.title')}
 					</h1>
@@ -1475,76 +841,6 @@ export function Agents() {
 						onClick={() => setShowBulkImportWizard(true)}
 						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
 						title="Import agents from CSV file"
-						onClick={() => {
-							setSelectedAgentForExport(null);
-							setShowExportModal(true);
-						}}
-						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-				<button
-					type="button"
-					onClick={() => setShowGenerateModal(true)}
-					data-action="register-agent"
-					title={`${t('agents.registerAgent')} (N)`}
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						aria-hidden="true"
-						className="w-5 h-5"
-export function Agents() {
-	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Agents</h1>
-					<p className="text-gray-600 mt-1">
-						Manage backup agents across your infrastructure
-					</p>
-				</div>
-				<button
-					type="button"
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						aria-hidden="true"
-						className="w-5 h-5"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 4v16m8-8H4"
-						/>
-					</svg>
-					Register Agent
-				</button>
-			</div>
-
-			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
-					<div className="flex items-center gap-4">
-						<input
-							type="text"
-							placeholder="Search agents..."
-							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						/>
-						<select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-							<option value="all">All Status</option>
-							<option value="online">Online</option>
-							<option value="offline">Offline</option>
-						</select>
-					</div>
-				</div>
-
-				<div className="p-12 text-center text-gray-500">
-					<svg
-						aria-hidden="true"
-						className="w-16 h-16 mx-auto mb-4 text-gray-300"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
 					>
 						<svg
 							aria-hidden="true"
@@ -1585,10 +881,6 @@ export function Agents() {
 							/>
 						</svg>
 						Import Config
-								d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-							/>
-						</svg>
-						Import
 					</button>
 					<button
 						type="button"
@@ -1706,34 +998,22 @@ export function Agents() {
 			)}
 
 			{/* Registered Agents Section */}
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 4v16m8-8H4"
-						/>
-					</svg>
-					{t('agents.registerAgent')}
-				</button>
-			</div>
-
 			<div className="bg-white rounded-lg border border-gray-200">
 				<div className="p-6 border-b border-gray-200">
 					<div className="flex items-center gap-4">
 						<input
 							type="text"
 							placeholder={t('agents.searchAgents')}
-							placeholder="Search agents..."
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
-							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 						<select
 							value={statusFilter}
 							onChange={(e) =>
 								setStatusFilter(e.target.value as AgentStatus | 'all')
 							}
-							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="all">{t('agents.allStatus')}</option>
 							<option value="active">{t('agents.active')}</option>
@@ -1744,14 +1024,14 @@ export function Agents() {
 						<button
 							type="button"
 							onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-							className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
+							className={`px-3 py-2 border rounded-lg transition-colors ${
 								showFavoritesOnly
 									? 'border-yellow-400 bg-yellow-50 text-yellow-700'
-									: 'border-gray-300 text-gray-700 hover:bg-gray-50'
+									: 'border-gray-300 text-gray-500 hover:bg-gray-50'
 							}`}
+							title={showFavoritesOnly ? 'Show all agents' : 'Show favorites only'}
 						>
 							<svg
-								aria-hidden="true"
 								className={`w-4 h-4 ${showFavoritesOnly ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
 								fill={showFavoritesOnly ? 'currentColor' : 'none'}
 								stroke="currentColor"
@@ -1764,33 +1044,7 @@ export function Agents() {
 									d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
 								/>
 							</svg>
-							Favorites
 						</button>
-						<select
-							value={groupFilter}
-							onChange={(e) => setGroupFilter(e.target.value)}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Groups</option>
-							<option value="none">No Group</option>
-							{groups?.map((group) => (
-								<option key={group.id} value={group.id}>
-									{group.name}
-								</option>
-							))}
-							<option value="all">All Status</option>
-							<option value="active">Active</option>
-							<option value="offline">Offline</option>
-							<option value="pending">Pending</option>
-							<option value="disabled">Disabled</option>
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">{t('agents.allStatus')}</option>
-							<option value="active">{t('agents.active')}</option>
-							<option value="offline">{t('agents.offline')}</option>
-							<option value="pending">{t('agents.pending')}</option>
-							<option value="disabled">{t('agents.disabled')}</option>
-						</select>
 					</div>
 				</div>
 
@@ -1798,53 +1052,12 @@ export function Agents() {
 					<div className="p-12 text-center text-red-500">
 						<p className="font-medium">{t('agents.failedToLoad')}</p>
 						<p className="text-sm">{t('agents.tryRefreshing')}</p>
-					<div className="p-12 text-center text-red-500 dark:text-red-400">
-						<p className="font-medium">Failed to load agents</p>
-						<p className="text-sm">Please try refreshing the page</p>
 					</div>
 				) : isLoading ? (
 					<table className="w-full">
-						<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
 								<th className="px-6 py-3 w-12" />
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									{t('agents.hostname')}
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									{t('common.status')}
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									{t('agents.lastSeen')}
-									Groups
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Hostname
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Status
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Health
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Hostname
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Status
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Groups
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Last Seen
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									{t('agents.registered')}
-								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-									{t('common.actions')}
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Registered
-								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Actions
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									{t('agents.hostname')}
 								</th>
@@ -1863,10 +1076,6 @@ export function Agents() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200">
-							<AgentRowSkeleton />
-							<AgentRowSkeleton />
-							<AgentRowSkeleton />
-						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 							<LoadingRow />
 							<LoadingRow />
 							<LoadingRow />
@@ -1874,7 +1083,7 @@ export function Agents() {
 					</table>
 				) : filteredAgents && filteredAgents.length > 0 ? (
 					<table className="w-full">
-						<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
 								<th className="px-6 py-3 w-12">
 									<BulkSelectHeader
@@ -1893,36 +1102,6 @@ export function Agents() {
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									{t('agents.lastSeen')}
-									Groups
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Hostname
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Status
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Health
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Hostname
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Status
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Groups
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Last Seen
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									{t('agents.registered')}
-								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-									{t('common.actions')}
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Registered
-								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Actions
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									{t('agents.registered')}
@@ -1932,7 +1111,7 @@ export function Agents() {
 								</th>
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+						<tbody className="divide-y divide-gray-200">
 							{filteredAgents.map((agent) => (
 								<AgentRow
 									key={agent.id}
@@ -1945,21 +1124,15 @@ export function Agents() {
 									isRevoking={revokeApiKey.isPending}
 									isSelected={bulkSelect.isSelected(agent.id)}
 									onToggleSelect={() => bulkSelect.toggle(agent.id)}
-									isFavorite={favoriteIds.has(agent.id)}
-									isDeleting={deleteAgent.isPending}
-									isRotating={rotateApiKey.isPending}
-									isRevoking={revokeApiKey.isPending}
 								/>
 							))}
 						</tbody>
 					</table>
 				) : (
 					<div className="p-8 text-center text-gray-500">
-					<div className="p-12 text-center text-gray-500">
-					<div className="p-8 text-center text-gray-500 dark:text-gray-400">
 						<svg
 							aria-hidden="true"
-							className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600"
+							className="w-16 h-16 mx-auto mb-4 text-gray-300"
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
@@ -1973,8 +1146,6 @@ export function Agents() {
 						</svg>
 						<h3 className="text-lg font-medium text-gray-900 mb-2">
 							{t('agents.noAgentsRegistered')}
-						<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-							No agents registered
 						</h3>
 						<p className="mb-6">
 							Generate a registration code to start backing up your systems
@@ -2000,15 +1171,7 @@ export function Agents() {
 							</svg>
 							Generate Registration Code
 						</button>
-							Install and register an agent to start backing up your systems
-						</p>
 					</div>
-					<EmptyStateNoAgents
-						onAddAgent={() => setShowGenerateModal(true)}
-						title={t('agents.noAgentsRegistered')}
-						description="Generate a registration code to start backing up your systems"
-						actionLabel="Generate Registration Code"
-					/>
 				)}
 			</div>
 
@@ -2176,59 +1339,8 @@ export function Agents() {
 					</div>
 				</div>
 			)}
-			{/* Download section - always visible */}
-			<AgentDownloads showInstallCommands={true} />
-							No agents registered
-						</h3>
-						<p className="mb-4">
-							Install and register an agent to start backing up your systems
-						</p>
-						<div className="bg-gray-50 rounded-lg p-4 max-w-md mx-auto text-left">
-							<p className="text-sm font-medium text-gray-700 mb-2">
-								Quick start:
-							</p>
-							<code className="text-sm text-gray-600 block">
-								keldris-agent register --server https://your-server
-							</code>
-						</div>
-						<p className="mb-6">{t('agents.installAndRegister')}</p>
-					</div>
-				)}
-			</div>
-
-			<RegisterModal
-				isOpen={showRegisterModal}
-				onClose={() => setShowRegisterModal(false)}
-				onSuccess={handleRegisterSuccess}
-			/>
-
-			{newApiKey && (
-				<ApiKeyModal apiKey={newApiKey} onClose={() => setNewApiKey(null)} />
-			)}
 		</div>
 	);
 }
 
 export default Agents;
-							d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-						/>
-					</svg>
-					<h3 className="text-lg font-medium text-gray-900 mb-2">
-						No agents registered
-					</h3>
-					<p className="mb-4">
-						Install and register an agent to start backing up your systems
-					</p>
-					<div className="bg-gray-50 rounded-lg p-4 max-w-md mx-auto text-left">
-						<p className="text-sm font-medium text-gray-700 mb-2">
-							Quick start:
-						</p>
-						<code className="text-sm text-gray-600 block">
-							keldris-agent register --server https://your-server
-						</code>
-					</div>
-				</div>
-			</div>
-		</div>
-	);
-}

@@ -407,7 +407,6 @@ func (h *AgentGroupsHandler) RemoveAgent(c *gin.Context) {
 	}
 
 	agentIDParam := c.Param("agent_id")
-	agentIDParam := c.Param("agentId")
 	agentID, err := uuid.Parse(agentIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})

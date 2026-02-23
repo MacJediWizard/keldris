@@ -6,6 +6,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )
 
@@ -14,6 +15,20 @@ const LicenseContextKey ContextKey = "license"
 
 // EntitlementContextKey is the context key for the current entitlement.
 const EntitlementContextKey ContextKey = "entitlement"
+
+// FeatureContextKey is the context key for feature access info.
+const FeatureContextKey ContextKey = "feature_access"
+
+// OrgTierContextKey is the context key for the organization's license tier.
+const OrgTierContextKey ContextKey = "org_tier"
+
+// FeatureAccess contains information about feature access for the current request.
+type FeatureAccess struct {
+	OrgID   uuid.UUID       `json:"org_id"`
+	Tier    license.Tier    `json:"tier"`
+	Feature license.Feature `json:"feature,omitempty"`
+	Enabled bool            `json:"enabled"`
+}
 
 // LicenseMiddleware stores the current license in the Gin context so downstream
 // middleware and handlers can access it.
@@ -83,22 +98,32 @@ func FeatureMiddleware(feature license.Feature, logger zerolog.Logger) gin.Handl
 			c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
 				"error":   "license required",
 				"feature": string(feature),
-	"github.com/google/uuid"
-	"github.com/rs/zerolog"
-)
+			})
+			return
+		}
 
-// FeatureContextKey is the context key for feature access info.
-const FeatureContextKey ContextKey = "feature_access"
+		if !license.HasFeature(lic.Tier, feature) {
+			log.Info().
+				Str("tier", string(lic.Tier)).
+				Str("path", c.Request.URL.Path).
+				Msg("feature not available for tier")
+			c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
+				"error":   "feature not available on your current plan",
+				"feature": string(feature),
+				"tier":    string(lic.Tier),
+			})
+			return
+		}
 
-// OrgTierContextKey is the context key for the organization's license tier.
-const OrgTierContextKey ContextKey = "org_tier"
+		// Track feature usage for telemetry
+		if tracker, exists := c.Get("feature_usage_tracker"); exists {
+			if t, ok := tracker.(*license.FeatureUsageTracker); ok {
+				t.Record(string(feature))
+			}
+		}
 
-// FeatureAccess contains information about feature access for the current request.
-type FeatureAccess struct {
-	OrgID   uuid.UUID       `json:"org_id"`
-	Tier    license.Tier    `json:"tier"`
-	Feature license.Feature `json:"feature,omitempty"`
-	Enabled bool            `json:"enabled"`
+		c.Next()
+	}
 }
 
 // FeatureGateMiddleware returns a Gin middleware that blocks requests if the organization
@@ -144,26 +169,6 @@ func FeatureGateMiddleware(checker *license.FeatureChecker, feature license.Feat
 				"upgrade_info":  result.UpgradeInfo,
 			})
 			return
-		}
-
-		if !license.HasFeature(lic.Tier, feature) {
-			log.Info().
-				Str("tier", string(lic.Tier)).
-				Str("path", c.Request.URL.Path).
-				Msg("feature not available for tier")
-			c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
-				"error":   "feature not available on your current plan",
-				"feature": string(feature),
-				"tier":    string(lic.Tier),
-			})
-			return
-		}
-
-		// Track feature usage for telemetry
-		if tracker, exists := c.Get("feature_usage_tracker"); exists {
-			if t, ok := tracker.(*license.FeatureUsageTracker); ok {
-				t.Record(string(feature))
-			}
 		}
 
 		log.Debug().
@@ -264,6 +269,8 @@ func DynamicLicenseMiddleware(validator *license.Validator, logger zerolog.Logge
 			Msg("dynamic license context set")
 		c.Next()
 	}
+}
+
 // GetOrgTier retrieves the organization's license tier from the Gin context.
 // Returns TierFree if not set.
 func GetOrgTier(c *gin.Context) license.Tier {

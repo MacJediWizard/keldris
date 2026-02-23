@@ -101,13 +101,6 @@ func NewWithProxy(currentVersion string, proxyConfig *config.ProxyConfig) *Updat
 		githubOwner:    GitHubOwner,
 		githubRepo:     GitHubRepo,
 		proxyConfig:    proxyConfig,
-	return &Updater{
-		currentVersion: currentVersion,
-		httpClient: &http.Client{
-			Timeout: DefaultTimeout,
-		},
-		githubOwner: GitHubOwner,
-		githubRepo:  GitHubRepo,
 	}
 }
 
@@ -142,22 +135,9 @@ func (u *Updater) CheckForUpdate(ctx context.Context) (*UpdateInfo, error) {
 		return nil, ErrAirGapMode
 	}
 
-func NewWithConfig(currentVersion, owner, repo string) *Updater {
-	return &Updater{
-		currentVersion: currentVersion,
-		httpClient: &http.Client{
-			Timeout: DefaultTimeout,
-		},
-		githubOwner: owner,
-		githubRepo:  repo,
-	}
-}
-
-// CheckForUpdate checks if a new version is available.
-func (u *Updater) CheckForUpdate(ctx context.Context) (*UpdateInfo, error) {
 	release, err := u.fetchLatestRelease(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("fetch latest release: %w", err)
+		return nil, err
 	}
 
 	latestVersion := normalizeVersion(release.TagName)
@@ -199,7 +179,7 @@ func (u *Updater) Download(ctx context.Context, info *UpdateInfo, progress func(
 	if err != nil {
 		return "", fmt.Errorf("create download client: %w", err)
 	}
-	client := &http.Client{Timeout: DownloadTimeout}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("download: %w", err)
@@ -401,6 +381,9 @@ func parseSemver(version string) [3]int {
 
 // computeSHA256 computes the SHA256 hash of a file.
 func computeSHA256(path string) (string, error) {
+	return ComputeSHA256(path)
+}
+
 // ComputeSHA256 computes the SHA256 hash of a file.
 func ComputeSHA256(path string) (string, error) {
 	f, err := os.Open(path)

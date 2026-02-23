@@ -29,19 +29,6 @@ function LoadingRow() {
 			</td>
 			<td className="px-6 py-4 text-right">
 				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-				<div className="h-4 w-32 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
 			</td>
 		</tr>
 	);
@@ -76,8 +63,6 @@ function InviteModal({ isOpen, onClose, orgId }: InviteModalProps) {
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
 				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-			<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-				<h3 className="text-lg font-semibold text-gray-900 mb-4">
 					Invite Member
 				</h3>
 				<form onSubmit={handleSubmit}>
@@ -85,7 +70,6 @@ function InviteModal({ isOpen, onClose, orgId }: InviteModalProps) {
 						<label
 							htmlFor="email"
 							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-							className="block text-sm font-medium text-gray-700 mb-1"
 						>
 							Email Address
 						</label>
@@ -96,7 +80,6 @@ function InviteModal({ isOpen, onClose, orgId }: InviteModalProps) {
 							onChange={(e) => setEmail(e.target.value)}
 							placeholder="user@example.com"
 							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							required
 						/>
 					</div>
@@ -104,7 +87,6 @@ function InviteModal({ isOpen, onClose, orgId }: InviteModalProps) {
 						<label
 							htmlFor="role"
 							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-							className="block text-sm font-medium text-gray-700 mb-1"
 						>
 							Role
 						</label>
@@ -113,14 +95,12 @@ function InviteModal({ isOpen, onClose, orgId }: InviteModalProps) {
 							value={role}
 							onChange={(e) => setRole(e.target.value as OrgRole)}
 							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="member">Member</option>
 							<option value="admin">Admin</option>
 							<option value="readonly">Read Only</option>
 						</select>
-						<p className="mt-1 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
-						<p className="mt-1 text-xs text-gray-500">
+						<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 							Admin: Can manage members and resources. Member: Can create and
 							manage resources. Read Only: View-only access.
 						</p>
@@ -135,7 +115,6 @@ function InviteModal({ isOpen, onClose, orgId }: InviteModalProps) {
 							type="button"
 							onClick={onClose}
 							className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
 						>
 							Cancel
 						</button>
@@ -163,9 +142,6 @@ function getRoleBadgeColor(role: OrgRole) {
 			return 'bg-green-100 text-green-700';
 		case 'readonly':
 			return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-		default:
-			return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-			return 'bg-gray-100 text-gray-700';
 		default:
 			return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
 	}
@@ -225,15 +201,6 @@ function MemberRow({
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{member.email}
 			</td>
-		<tr className="hover:bg-gray-50">
-			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900 dark:text-white">
-					{member.name || 'No name'}
-				</div>
-			</td>
-			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-				{member.email}
-			</td>
 			<td className="px-6 py-4">
 				{isEditing ? (
 					<div className="flex items-center gap-2">
@@ -251,7 +218,6 @@ function MemberRow({
 							onClick={handleRoleChange}
 							disabled={updateMember.isPending}
 							className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-							className="text-sm text-indigo-600 hover:text-indigo-800"
 						>
 							Save
 						</button>
@@ -262,7 +228,6 @@ function MemberRow({
 								setSelectedRole(member.role);
 							}}
 							className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800"
-							className="text-sm text-gray-600 hover:text-gray-800"
 						>
 							Cancel
 						</button>
@@ -276,7 +241,6 @@ function MemberRow({
 				)}
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-			<td className="px-6 py-4 text-sm text-gray-500">
 				{formatDate(member.created_at)}
 			</td>
 			<td className="px-6 py-4 text-right">
@@ -286,7 +250,6 @@ function MemberRow({
 							type="button"
 							onClick={() => setIsEditing(true)}
 							className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
-							className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
 						>
 							Edit
 						</button>
@@ -329,8 +292,6 @@ function InvitationRow({ invitation, orgId }: InvitationRowProps) {
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{invitation.email}
 			</td>
-		<tr className="hover:bg-gray-50">
-			<td className="px-6 py-4 text-sm text-gray-500">{invitation.email}</td>
 			<td className="px-6 py-4">
 				<span
 					className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getRoleBadgeColor(invitation.role)}`}
@@ -339,15 +300,11 @@ function InvitationRow({ invitation, orgId }: InvitationRowProps) {
 				</span>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-			<td className="px-6 py-4 text-sm text-gray-500">
 				{invitation.inviter_name}
 			</td>
 			<td className="px-6 py-4 text-sm">
 				{isExpired ? (
 					<span className="text-red-600 dark:text-red-400">Expired</span>
-				) : (
-					<span className="text-gray-500 dark:text-gray-400">
-					<span className="text-red-600">Expired</span>
 				) : (
 					<span className="text-gray-500 dark:text-gray-400">
 						Expires {formatDate(invitation.expires_at)}
@@ -396,8 +353,6 @@ export function OrganizationMembers() {
 						Members
 					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
-					<h1 className="text-2xl font-bold text-gray-900">Members</h1>
-					<p className="text-gray-600 mt-1">
 						Manage members of{' '}
 						{currentOrg?.organization.name ?? 'your organization'}
 					</p>
@@ -430,16 +385,12 @@ export function OrganizationMembers() {
 			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
 					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="px-6 py-4 border-b border-gray-200">
-					<h2 className="text-lg font-semibold text-gray-900">
 						Organization Members
 					</h2>
 				</div>
 
 				{membersError ? (
-					<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
-					<div className="p-12 text-center text-red-500">
+					<div className="p-12 text-center text-red-500 dark:text-red-400">
 						<p className="font-medium">Failed to load members</p>
 						<p className="text-sm">Please try refreshing the page</p>
 					</div>
@@ -460,27 +411,11 @@ export function OrganizationMembers() {
 									Joined
 								</th>
 								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-						<thead className="bg-gray-50 border-b border-gray-200">
-							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Name
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Email
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Role
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Joined
-								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-						<tbody className="divide-y divide-gray-200">
 							<LoadingRow />
 							<LoadingRow />
 						</tbody>
@@ -488,21 +423,6 @@ export function OrganizationMembers() {
 				) : members && members.length > 0 ? (
 					<table className="w-full">
 						<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Name
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Email
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Role
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Joined
-								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-						<thead className="bg-gray-50 border-b border-gray-200">
 							<tr>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Name
@@ -525,10 +445,6 @@ export function OrganizationMembers() {
 							{members.map((member) => (
 								<MemberRow
 									key={member.user_id}
-						<tbody className="divide-y divide-gray-200">
-							{members.map((member) => (
-								<MemberRow
-									key={member.id}
 									member={member}
 									currentUserId={user?.id ?? ''}
 									currentUserRole={currentUserRole}
@@ -539,7 +455,6 @@ export function OrganizationMembers() {
 					</table>
 				) : (
 					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
-					<div className="p-12 text-center text-gray-500">
 						<p>No members found</p>
 					</div>
 				)}
@@ -549,9 +464,6 @@ export function OrganizationMembers() {
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 					<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
 						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-				<div className="bg-white rounded-lg border border-gray-200">
-					<div className="px-6 py-4 border-b border-gray-200">
-						<h2 className="text-lg font-semibold text-gray-900">
 							Pending Invitations
 						</h2>
 					</div>
@@ -577,27 +489,11 @@ export function OrganizationMembers() {
 										Status
 									</th>
 									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							<thead className="bg-gray-50 border-b border-gray-200">
-								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Email
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Role
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Invited By
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Status
-									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<tbody className="divide-y divide-gray-200">
 								{invitations.map((invitation) => (
 									<InvitationRow
 										key={invitation.id}
@@ -609,7 +505,6 @@ export function OrganizationMembers() {
 						</table>
 					) : (
 						<div className="p-8 text-center text-gray-500 dark:text-gray-400">
-						<div className="p-8 text-center text-gray-500">
 							<p>No pending invitations</p>
 						</div>
 					)}

@@ -1,13 +1,8 @@
 import { useState } from 'react';
 import { ClassificationBadge } from '../components/ClassificationBadge';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
-import {
-	type DockerStackBackupConfig,
-	DockerStackSelector,
-} from '../components/features/DockerStackSelector';
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
 import { ExportImportModal } from '../components/features/ExportImportModal';
-import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
 import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { PatternLibraryModal } from '../components/features/PatternLibraryModal';
 import { type BulkAction, BulkActions } from '../components/ui/BulkActions';
@@ -21,16 +16,9 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
-import { EmptyStateNoSchedules } from '../components/ui/EmptyState';
-import { FormLabelWithHelp, HelpTooltip } from '../components/ui/HelpTooltip';
-import { ScheduleRowSkeleton } from '../components/ui/PageSkeletons';
-import { StarButton } from '../components/ui/StarButton';
 import { useAgents } from '../hooks/useAgents';
 import { useBulkSelect } from '../hooks/useBulkSelect';
-import { useDockerStacks } from '../hooks/useDockerStacks';
 import { useFavoriteIds } from '../hooks/useFavorites';
-import { useAgents } from '../hooks/useAgents';
-import { useBulkSelect } from '../hooks/useBulkSelect';
 import { usePolicies } from '../hooks/usePolicies';
 import { useRepositories } from '../hooks/useRepositories';
 import {
@@ -39,622 +27,22 @@ import {
 	useCreateSchedule,
 	useDeleteSchedule,
 	useDryRunSchedule,
-import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
-import { useAgents } from '../hooks/useAgents';
-import { useRepositories } from '../hooks/useRepositories';
-import {
-	useCreateSchedule,
-	useDeleteSchedule,
 	useRunSchedule,
 	useSchedules,
 	useUpdateSchedule,
 } from '../hooks/useSchedules';
-import {
-	advancedSettingsHelp,
-	retentionHelp,
-	scheduleHelp,
-} from '../lib/help-content';
 import type {
 	Agent,
-	BackupType,
 	CompressionLevel,
 	DryRunResponse,
 	MountBehavior,
 	Repository,
 	Schedule,
 	SchedulePriority,
-import type {
-	CompressionLevel,
-	MountBehavior,
-	Schedule,
 	ScheduleRepositoryRequest,
 } from '../lib/types';
 
 function LoadingRow() {
-import type { Schedule } from '../lib/types';
-import type { Schedule, ScheduleRepositoryRequest } from '../lib/types';
-
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
-
-interface CreateScheduleModalProps {
-	isOpen: boolean;
-	onClose: () => void;
-}
-
-function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
-	const [name, setName] = useState('');
-	const [agentId, setAgentId] = useState('');
-	const [selectedRepos, setSelectedRepos] = useState<
-		ScheduleRepositoryRequest[]
-	>([]);
-	const [cronExpression, setCronExpression] = useState('0 2 * * *');
-	const [paths, setPaths] = useState('/home');
-	// Policy template state
-	const [selectedPolicyId, setSelectedPolicyId] = useState('');
-	// Retention policy state
-	const [showRetention, setShowRetention] = useState(false);
-	const [keepLast, setKeepLast] = useState(5);
-	const [keepDaily, setKeepDaily] = useState(7);
-	const [keepWeekly, setKeepWeekly] = useState(4);
-	const [keepMonthly, setKeepMonthly] = useState(6);
-	const [keepYearly, setKeepYearly] = useState(0);
-	// Bandwidth control state
-	const [bandwidthLimitKb, setBandwidthLimitKb] = useState('');
-	const [windowStart, setWindowStart] = useState('');
-	const [windowEnd, setWindowEnd] = useState('');
-	const [excludedHours, setExcludedHours] = useState<number[]>([]);
-	const [compressionLevel, setCompressionLevel] = useState<
-		CompressionLevel | ''
-	>('');
-	const [onMountUnavailable, setOnMountUnavailable] =
-		useState<MountBehavior>('fail');
-	const [showAdvanced, setShowAdvanced] = useState(false);
-	// Exclude patterns state
-	const [excludes, setExcludes] = useState<string[]>([]);
-	const [showPatternLibrary, setShowPatternLibrary] = useState(false);
-
-	const { data: agents } = useAgents();
-	const { data: repositories } = useRepositories();
-	const createSchedule = useCreateSchedule();
-
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (selectedRepos.length === 0) {
-			return; // Don't submit without repositories
-		}
-		try {
-			const retentionPolicy = showRetention
-				? {
-						keep_last: keepLast > 0 ? keepLast : undefined,
-						keep_daily: keepDaily > 0 ? keepDaily : undefined,
-						keep_weekly: keepWeekly > 0 ? keepWeekly : undefined,
-						keep_monthly: keepMonthly > 0 ? keepMonthly : undefined,
-						keep_yearly: keepYearly > 0 ? keepYearly : undefined,
-					}
-				: undefined;
-
-			await createSchedule.mutateAsync({
-				name,
-				agent_id: agentId,
-				repositories: selectedRepos,
-				cron_expression: cronExpression,
-				paths: paths.split('\n').filter((p) => p.trim()),
-				retention_policy: retentionPolicy,
-				enabled: true,
-			});
-			};
-
-			if (bandwidthLimitKb && Number.parseInt(bandwidthLimitKb, 10) > 0) {
-				data.bandwidth_limit_kb = Number.parseInt(bandwidthLimitKb, 10);
-			}
-
-			if (windowStart || windowEnd) {
-				data.backup_window = {
-					start: windowStart || undefined,
-					end: windowEnd || undefined,
-				};
-			}
-
-			if (excludedHours.length > 0) {
-				data.excluded_hours = excludedHours;
-			}
-
-			if (compressionLevel) {
-				data.compression_level = compressionLevel;
-			}
-			if (onMountUnavailable !== 'fail') {
-				data.on_mount_unavailable = onMountUnavailable;
-			}
-
-			await createSchedule.mutateAsync(data);
-			onClose();
-			setName('');
-			setAgentId('');
-			setSelectedRepos([]);
-			setCronExpression('0 2 * * *');
-			setPaths('/home');
-			// Reset retention policy state
-			setShowRetention(false);
-			setKeepLast(5);
-			setKeepDaily(7);
-			setKeepWeekly(4);
-			setKeepMonthly(6);
-			setKeepYearly(0);
-			// Reset bandwidth control state
-			setBandwidthLimitKb('');
-			setWindowStart('');
-			setWindowEnd('');
-			setExcludedHours([]);
-			setCompressionLevel('');
-			setOnMountUnavailable('fail');
-			setShowAdvanced(false);
-			// Reset exclude patterns state
-			setExcludes([]);
-			setShowPatternLibrary(false);
-		} catch {
-			// Error handled by mutation
-		}
-	};
-
-	if (!isOpen) return null;
-
-	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-					Create Schedule
-				</h3>
-				<form onSubmit={handleSubmit}>
-					<div className="space-y-4">
-						<div>
-							<label
-								htmlFor="schedule-name"
-								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-							>
-								Name
-							</label>
-							<input
-								type="text"
-								id="schedule-name"
-								value={name}
-								onChange={(e) => setName(e.target.value)}
-								placeholder="e.g., Daily Home Backup"
-								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								required
-							/>
-						</div>
-						<div>
-							<label
-								htmlFor="schedule-agent"
-								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-							>
-								Agent
-							</label>
-							<select
-								id="schedule-agent"
-								value={agentId}
-								onChange={(e) => setAgentId(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								required
-							>
-								<option value="">Select an agent</option>
-								{agents?.map((agent) => (
-									<option key={agent.id} value={agent.id}>
-										{agent.hostname}
-									</option>
-								))}
-							</select>
-						</div>
-						<div>
-							<MultiRepoSelector
-								repositories={repositories ?? []}
-								selectedRepos={selectedRepos}
-								onChange={setSelectedRepos}
-							/>
-						</div>
-						<div>
-							<label
-								htmlFor="schedule-cron"
-								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-							>
-								Schedule (Cron Expression)
-							</label>
-							<input
-								type="text"
-								id="schedule-cron"
-								value={cronExpression}
-								onChange={(e) => setCronExpression(e.target.value)}
-								placeholder="0 2 * * *"
-								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
-								required
-							/>
-							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-								Examples: 0 2 * * * (daily at 2 AM), 0 */6 * * * (every 6 hours)
-							</p>
-						</div>
-						<div>
-							<label
-								htmlFor="schedule-paths"
-								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-							>
-								Paths to Backup (one per line)
-							</label>
-							<textarea
-								id="schedule-paths"
-								value={paths}
-								onChange={(e) => setPaths(e.target.value)}
-								placeholder="/home&#10;/etc&#10;/var/www"
-								rows={3}
-								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
-								required
-							/>
-						</div>
-						<div className="border-t border-gray-200 pt-4">
-
-						{/* Exclude Patterns Section */}
-						<div className="border-t border-gray-200 pt-4">
-							<div className="flex items-center justify-between mb-2">
-								<span className="block text-sm font-medium text-gray-700">
-									Exclude Patterns
-								</span>
-								<button
-									type="button"
-									onClick={() => setShowPatternLibrary(true)}
-									className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-								>
-									<svg
-										className="w-4 h-4"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-										aria-hidden="true"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-										/>
-									</svg>
-									Browse Library
-								</button>
-							</div>
-							{excludes.length > 0 ? (
-								<div className="space-y-2">
-									<div className="flex flex-wrap gap-1.5 p-3 bg-gray-50 rounded-lg max-h-32 overflow-y-auto">
-										{excludes.map((pattern) => (
-											<span
-												key={pattern}
-												className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-200 rounded group"
-											>
-												<code className="text-gray-700">{pattern}</code>
-												<button
-													type="button"
-													onClick={() => handleRemovePattern(pattern)}
-													className="text-gray-400 hover:text-red-500 transition-colors"
-												>
-													<svg
-														className="w-3 h-3"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-														aria-hidden="true"
-													>
-														<path
-															strokeLinecap="round"
-															strokeLinejoin="round"
-															strokeWidth={2}
-															d="M6 18L18 6M6 6l12 12"
-														/>
-													</svg>
-												</button>
-											</span>
-										))}
-									</div>
-									<p className="text-xs text-gray-500">
-										{excludes.length} pattern{excludes.length !== 1 ? 's' : ''}{' '}
-										will be excluded from backup
-									</p>
-								</div>
-							) : (
-								<p className="text-sm text-gray-500">
-									No patterns selected. Click "Browse Library" to add common
-									patterns.
-								</p>
-							)}
-						</div>
-
-						{/* Retention Policy Section */}
-						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-							<div className="flex items-center justify-between mb-3">
-								<span className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
-									Retention Policy
-								</span>
-								<button
-									type="button"
-									onClick={() => setShowRetention(!showRetention)}
-									className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-								>
-									{showRetention ? 'Use defaults' : 'Customize'}
-								</button>
-							</div>
-							{!showRetention ? (
-								<p className="text-sm text-gray-500 dark:text-gray-400">
-									Using default policy: Keep last 5, 7 daily, 4 weekly, 6
-									monthly
-								</p>
-							) : (
-								<div className="grid grid-cols-2 gap-3">
-									<div>
-										<label
-											htmlFor="keep-last"
-											className="block text-xs font-medium text-gray-600 mb-1"
-										>
-											Keep Last
-										</label>
-										<input
-											type="number"
-											id="keep-last"
-											min="0"
-											value={keepLast}
-											onChange={(e) =>
-												setKeepLast(Number.parseInt(e.target.value, 10) || 0)
-											}
-											className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-										/>
-									</div>
-									<div>
-										<label
-											htmlFor="keep-daily"
-											className="block text-xs font-medium text-gray-600 mb-1"
-										>
-											Keep Daily
-										</label>
-										<input
-											type="number"
-											id="keep-daily"
-											min="0"
-											value={keepDaily}
-											onChange={(e) =>
-												setKeepDaily(Number.parseInt(e.target.value, 10) || 0)
-											}
-											className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-										/>
-									</div>
-									<div>
-										<label
-											htmlFor="keep-weekly"
-											className="block text-xs font-medium text-gray-600 mb-1"
-										>
-											Keep Weekly
-										</label>
-										<input
-											type="number"
-											id="keep-weekly"
-											min="0"
-											value={keepWeekly}
-											onChange={(e) =>
-												setKeepWeekly(Number.parseInt(e.target.value, 10) || 0)
-											}
-											className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-										/>
-									</div>
-									<div>
-										<label
-											htmlFor="keep-monthly"
-											className="block text-xs font-medium text-gray-600 mb-1"
-										>
-											Keep Monthly
-										</label>
-										<input
-											type="number"
-											id="keep-monthly"
-											min="0"
-											value={keepMonthly}
-											onChange={(e) =>
-												setKeepMonthly(Number.parseInt(e.target.value, 10) || 0)
-											}
-											className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-										/>
-									</div>
-									<div>
-										<label
-											htmlFor="keep-yearly"
-											className="block text-xs font-medium text-gray-600 mb-1"
-										>
-											Keep Yearly
-										</label>
-										<input
-											type="number"
-											id="keep-yearly"
-											min="0"
-											value={keepYearly}
-											onChange={(e) =>
-												setKeepYearly(Number.parseInt(e.target.value, 10) || 0)
-											}
-											className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-										/>
-									</div>
-								</div>
-							)}
-							<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-								Retention policy automatically removes old backups to save
-								storage space.
-							</p>
-						</div>
-					</div>
-					{createSchedule.isError && (
-						<p className="text-sm text-red-600 mt-4">
-							Failed to create schedule. Please try again.
-						</p>
-					)}
-					<div className="flex justify-end gap-3 mt-6">
-						<button
-							type="button"
-							onClick={onClose}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							disabled={createSchedule.isPending}
-							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-						>
-							{createSchedule.isPending ? 'Creating...' : 'Create Schedule'}
-						</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	);
-}
-
-interface ScheduleRowProps {
-	schedule: Schedule;
-	agentName?: string;
-	repoName?: string;
-	onToggle: (id: string, enabled: boolean) => void;
-	onDelete: (id: string) => void;
-	onRun: (id: string) => void;
-	isUpdating: boolean;
-	isDeleting: boolean;
-	isRunning: boolean;
-}
-
-function ScheduleRow({
-	schedule,
-	agentName,
-	repoName,
-	onToggle,
-	onDelete,
-	onRun,
-	isUpdating,
-	isDeleting,
-	isRunning,
-}: ScheduleRowProps) {
-	return (
-		<tr className="hover:bg-gray-50">
-			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900">{schedule.name}</div>
-				<div className="text-sm text-gray-500">
-					{agentName ?? 'Unknown Agent'} → {repoName ?? 'Unknown Repo'}
-				</div>
-			</td>
-			<td className="px-6 py-4">
-				<code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">
-					{schedule.cron_expression}
-				</code>
-			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
-				{schedule.paths.length} path{schedule.paths.length !== 1 ? 's' : ''}
-			</td>
-			<td className="px-6 py-4">
-				<button
-					type="button"
-					onClick={() => onToggle(schedule.id, !schedule.enabled)}
-					disabled={isUpdating}
-					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${
-						schedule.enabled
-							? 'bg-green-100 text-green-800 hover:bg-green-200'
-							: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-					}`}
-				>
-					<span
-						className={`w-1.5 h-1.5 rounded-full ${
-							schedule.enabled ? 'bg-green-500' : 'bg-gray-400'
-						}`}
-					/>
-					{schedule.enabled ? 'Active' : 'Paused'}
-				</button>
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="flex items-center justify-end gap-2">
-					<button
-						type="button"
-						onClick={() => onRun(schedule.id)}
-						disabled={isRunning}
-						className="text-indigo-600 hover:text-indigo-800 text-sm font-medium disabled:opacity-50"
-					>
-						{isRunning ? 'Running...' : 'Run Now'}
-					</button>
-					<span className="text-gray-300">|</span>
-					<button
-						type="button"
-						onClick={() => onDelete(schedule.id)}
-						disabled={isDeleting}
-						className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
-					>
-						Delete
-					</button>
-				</div>
-			</td>
-		</tr>
-	);
-}
-
-export function Schedules() {
-	const [searchQuery, setSearchQuery] = useState('');
-	const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>(
-		'all',
-	);
-	const [showCreateModal, setShowCreateModal] = useState(false);
-
-	const { data: schedules, isLoading, isError } = useSchedules();
-	const { data: agents } = useAgents();
-	const { data: repositories } = useRepositories();
-	const updateSchedule = useUpdateSchedule();
-	const deleteSchedule = useDeleteSchedule();
-	const runSchedule = useRunSchedule();
-
-	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
-	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
-
-	const filteredSchedules = schedules?.filter((schedule) => {
-		const matchesSearch = schedule.name
-			.toLowerCase()
-			.includes(searchQuery.toLowerCase());
-		const matchesStatus =
-			statusFilter === 'all' ||
-			(statusFilter === 'active' && schedule.enabled) ||
-			(statusFilter === 'paused' && !schedule.enabled);
-		return matchesSearch && matchesStatus;
-	});
-
-	const handleToggle = (id: string, enabled: boolean) => {
-		updateSchedule.mutate({ id, data: { enabled } });
-	};
-
-	const handleDelete = (id: string) => {
-		if (confirm('Are you sure you want to delete this schedule?')) {
-			deleteSchedule.mutate(id);
-		}
-	};
-
-	const handleRun = (id: string) => {
-		runSchedule.mutate(id);
-	};
-
 	return (
 		<tr className="animate-pulse">
 			<td className="px-6 py-4 w-12">
@@ -692,12 +80,6 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	>([]);
 	const [cronExpression, setCronExpression] = useState('0 2 * * *');
 	const [paths, setPaths] = useState('/home');
-	// Backup type state
-	const [backupType, setBackupType] = useState<BackupType>('file');
-	// Docker backup options state
-	const [dockerVolumeIds, setDockerVolumeIds] = useState<string[]>([]);
-	const [dockerPauseContainers, setDockerPauseContainers] = useState(false);
-	const [dockerIncludeConfigs, setDockerIncludeConfigs] = useState(true);
 	// Policy template state
 	const [selectedPolicyId, setSelectedPolicyId] = useState('');
 	// Retention policy state
@@ -725,19 +107,10 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	// Priority and preemption state
 	const [priority, setPriority] = useState<SchedulePriority>(2);
 	const [preemptible, setPreemptible] = useState(false);
-	// Docker stack state
-	const [dockerStackId, setDockerStackId] = useState<string | null>(null);
-	const [dockerStackConfig, setDockerStackConfig] =
-		useState<DockerStackBackupConfig | null>(null);
-	const [showAdvanced, setShowAdvanced] = useState(false);
-	// Exclude patterns state
-	const [excludes, setExcludes] = useState<string[]>([]);
-	const [showPatternLibrary, setShowPatternLibrary] = useState(false);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
 	const { data: policies } = usePolicies();
-	const { data: dockerStacks, isLoading: isLoadingStacks } = useDockerStacks();
 	const createSchedule = useCreateSchedule();
 
 	const handlePolicySelect = (policyId: string) => {
@@ -803,26 +176,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				name,
 				agent_id: agentId,
 				repositories: selectedRepos,
-				backup_type: backupType,
 				cron_expression: cronExpression,
-				paths:
-					backupType === 'file'
-						? paths.split('\n').filter((p) => p.trim())
-						: undefined,
 				paths: paths.split('\n').filter((p) => p.trim()),
 				excludes: excludes.length > 0 ? excludes : undefined,
 				retention_policy: retentionPolicy,
 				enabled: true,
 			};
-
-			// Add Docker-specific options
-			if (backupType === 'docker') {
-				data.docker_options = {
-					volume_ids: dockerVolumeIds.length > 0 ? dockerVolumeIds : undefined,
-					pause_containers: dockerPauseContainers,
-					include_container_configs: dockerIncludeConfigs,
-				};
-			}
 
 			if (bandwidthLimitKb && Number.parseInt(bandwidthLimitKb, 10) > 0) {
 				data.bandwidth_limit_kb = Number.parseInt(bandwidthLimitKb, 10);
@@ -857,16 +216,6 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				data.preemptible = preemptible;
 			}
 
-			// Docker stack config
-			if (dockerStackConfig) {
-				data.docker_stack_config = {
-					stack_id: dockerStackConfig.stack_id,
-					export_images: dockerStackConfig.export_images,
-					include_env_files: dockerStackConfig.include_env_files,
-					stop_for_backup: dockerStackConfig.stop_for_backup,
-				};
-			}
-
 			await createSchedule.mutateAsync(data);
 			onClose();
 			setName('');
@@ -875,11 +224,6 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			setSelectedPolicyId('');
 			setCronExpression('0 2 * * *');
 			setPaths('/home');
-			// Reset backup type state
-			setBackupType('file');
-			setDockerVolumeIds([]);
-			setDockerPauseContainers(false);
-			setDockerIncludeConfigs(true);
 			// Reset retention policy state
 			setShowRetention(false);
 			setKeepLast(5);
@@ -902,13 +246,6 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 			// Reset priority state
 			setPriority(2);
 			setPreemptible(false);
-			// Reset docker stack state
-			setDockerStackId(null);
-			setDockerStackConfig(null);
-			setShowAdvanced(false);
-			// Reset exclude patterns state
-			setExcludes([]);
-			setShowPatternLibrary(false);
 		} catch {
 			// Error handled by mutation
 		}
@@ -936,13 +273,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 				<form onSubmit={handleSubmit}>
 					<div className="space-y-4">
 						<div>
-							<FormLabelWithHelp
+							<label
 								htmlFor="schedule-name"
-								label="Name"
-								helpContent={scheduleHelp.name.content}
-								helpTitle={scheduleHelp.name.title}
-								required
-							/>
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Name
+							</label>
 							<input
 								type="text"
 								id="schedule-name"
@@ -954,14 +290,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 							/>
 						</div>
 						<div>
-							<FormLabelWithHelp
+							<label
 								htmlFor="schedule-agent"
-								label="Agent"
-								helpContent={scheduleHelp.agent.content}
-								helpTitle={scheduleHelp.agent.title}
-								docsUrl={scheduleHelp.agent.docsUrl}
-								required
-							/>
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Agent
+							</label>
 							<select
 								id="schedule-agent"
 								value={agentId}
@@ -984,7 +318,6 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								onChange={setSelectedRepos}
 							/>
 						</div>
-						{/* Backup Type Selector */}
 						{policies && policies.length > 0 && (
 							<div>
 								<label
@@ -1013,81 +346,11 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						)}
 						<div>
 							<label
-								htmlFor="schedule-backup-type"
+								htmlFor="schedule-cron"
 								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
-								Backup Type
+								Schedule (Cron Expression)
 							</label>
-							<div className="flex gap-4">
-								<label className="flex items-center gap-2 cursor-pointer">
-									<input
-										type="radio"
-										name="backup-type"
-										value="file"
-										checked={backupType === 'file'}
-										onChange={() => setBackupType('file')}
-										className="text-indigo-600 focus:ring-indigo-500"
-									/>
-									<span className="text-sm text-gray-700 dark:text-gray-300">
-										File/Directory Backup
-									</span>
-								</label>
-								<label className="flex items-center gap-2 cursor-pointer">
-									<input
-										type="radio"
-										name="backup-type"
-										value="docker"
-										checked={backupType === 'docker'}
-										onChange={() => setBackupType('docker')}
-										className="text-indigo-600 focus:ring-indigo-500"
-									/>
-									<span className="text-sm text-gray-700 dark:text-gray-300">
-										Docker Volumes
-									</span>
-								</label>
-							</div>
-							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-								{backupType === 'file'
-									? 'Back up files and directories from the agent'
-									: 'Back up Docker volumes and container configurations'}
-							</p>
-						</div>
-						{policies && policies.length > 0 && backupType === 'file' && (
-							<div>
-								<FormLabelWithHelp
-									htmlFor="schedule-policy"
-									label="Policy Template (optional)"
-									helpContent={scheduleHelp.policyTemplate.content}
-									helpTitle={scheduleHelp.policyTemplate.title}
-									docsUrl={scheduleHelp.policyTemplate.docsUrl}
-								/>
-								<select
-									id="schedule-policy"
-									value={selectedPolicyId}
-									onChange={(e) => handlePolicySelect(e.target.value)}
-									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								>
-									<option value="">No template - configure manually</option>
-									{policies.map((policy) => (
-										<option key={policy.id} value={policy.id}>
-											{policy.name}
-										</option>
-									))}
-								</select>
-								<p className="text-xs text-gray-500 mt-1">
-									Select a policy to pre-fill the form with template values
-								</p>
-							</div>
-						)}
-						<div>
-							<FormLabelWithHelp
-								htmlFor="schedule-cron"
-								label="Schedule (Cron Expression)"
-								helpContent={scheduleHelp.cronExpression.content}
-								helpTitle={scheduleHelp.cronExpression.title}
-								docsUrl={scheduleHelp.cronExpression.docsUrl}
-								required
-							/>
 							<input
 								type="text"
 								id="schedule-cron"
@@ -1101,194 +364,10 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								Examples: 0 2 * * * (daily at 2 AM), 0 */6 * * * (every 6 hours)
 							</p>
 						</div>
-						{/* File Backup: Paths Section */}
-						{backupType === 'file' && (
-							<div>
-								<FormLabelWithHelp
-									htmlFor="schedule-paths"
-									label="Paths to Backup (one per line)"
-									helpContent={scheduleHelp.paths.content}
-									helpTitle={scheduleHelp.paths.title}
-									required
-								/>
-								<textarea
-									id="schedule-paths"
-									value={paths}
-									onChange={(e) => setPaths(e.target.value)}
-									placeholder="/home&#10;/etc&#10;/var/www"
-									rows={3}
-									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
-									required
-								/>
-							</div>
-						)}
-
-						{/* Docker Backup: Options Section */}
-						{backupType === 'docker' && (
-							<div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-								<div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-									<svg
-										className="w-5 h-5 text-blue-500"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-										aria-hidden="true"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-										/>
-									</svg>
-									Docker Backup Options
-								</div>
-
-								{/* Volume Selection Info */}
-								<div>
-									<p className="text-sm text-gray-600 dark:text-gray-400">
-										All Docker volumes on the selected agent will be backed up.
-										Volume selection will be available once the agent reports
-										Docker information.
-									</p>
-								</div>
-
-								{/* Pause Containers Option */}
-								<div className="flex items-start gap-3">
-									<input
-										type="checkbox"
-										id="docker-pause-containers"
-										checked={dockerPauseContainers}
-										onChange={(e) => setDockerPauseContainers(e.target.checked)}
-										className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-									/>
-									<div>
-										<label
-											htmlFor="docker-pause-containers"
-											className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
-										>
-											Pause containers during backup
-										</label>
-										<p className="text-xs text-gray-500 dark:text-gray-400">
-											Pauses running containers while backing up volumes for
-											data consistency. Containers will be automatically
-											unpaused after backup completes.
-										</p>
-									</div>
-								</div>
-
-								{/* Include Container Configs Option */}
-								<div className="flex items-start gap-3">
-									<input
-										type="checkbox"
-										id="docker-include-configs"
-										checked={dockerIncludeConfigs}
-										onChange={(e) => setDockerIncludeConfigs(e.target.checked)}
-										className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-									/>
-									<div>
-										<label
-											htmlFor="docker-include-configs"
-											className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
-										>
-											Include container configurations
-										</label>
-										<p className="text-xs text-gray-500 dark:text-gray-400">
-											Backs up container configurations (docker inspect) as JSON
-											files for easier restoration.
-										</p>
-									</div>
-								</div>
-							</div>
-						)}
-
-						{/* Exclude Patterns Section (File backups only) */}
-						{backupType === 'file' && (
-							<div className="border-t border-gray-200 pt-4">
-								<div className="flex items-center justify-between mb-2">
-									<span className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-										Exclude Patterns
-										<HelpTooltip
-											content={scheduleHelp.excludePatterns.content}
-											title={scheduleHelp.excludePatterns.title}
-											docsUrl={scheduleHelp.excludePatterns.docsUrl}
-										/>
-									</span>
-									<button
-										type="button"
-										onClick={() => setShowPatternLibrary(true)}
-										className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-									>
-										<svg
-											className="w-4 h-4"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-											aria-hidden="true"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-											/>
-										</svg>
-										Browse Library
-									</button>
-								</div>
-								{excludes.length > 0 ? (
-									<div className="space-y-2">
-										<div className="flex flex-wrap gap-1.5 p-3 bg-gray-50 rounded-lg max-h-32 overflow-y-auto">
-											{excludes.map((pattern) => (
-												<span
-													key={pattern}
-													className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white border border-gray-200 rounded group"
-												>
-													<code className="text-gray-700">{pattern}</code>
-													<button
-														type="button"
-														onClick={() => handleRemovePattern(pattern)}
-														className="text-gray-400 hover:text-red-500 transition-colors"
-													>
-														<svg
-															className="w-3 h-3"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-															aria-hidden="true"
-														>
-															<path
-																strokeLinecap="round"
-																strokeLinejoin="round"
-																strokeWidth={2}
-																d="M6 18L18 6M6 6l12 12"
-															/>
-														</svg>
-													</button>
-												</span>
-											))}
-										</div>
-										<p className="text-xs text-gray-500">
-											{excludes.length} pattern
-											{excludes.length !== 1 ? 's' : ''} will be excluded from
-											backup
-										</p>
-									</div>
-								) : (
-									<p className="text-sm text-gray-500">
-										No patterns selected. Click "Browse Library" to add common
-										patterns.
-									</p>
-								)}
-							</div>
-						)}
-
-						{/* Retention Policy Section */}
-						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
 						<div>
 							<label
 								htmlFor="schedule-paths"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Paths to Backup (one per line)
 							</label>
@@ -1298,7 +377,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								onChange={(e) => setPaths(e.target.value)}
 								placeholder="/home&#10;/etc&#10;/var/www"
 								rows={3}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
 								required
 							/>
 						</div>
@@ -1377,16 +456,10 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						</div>
 
 						{/* Retention Policy Section */}
-						<div className="border-t border-gray-200 pt-4">
+						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
 							<div className="flex items-center justify-between mb-3">
-								<span className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
 								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 									Retention Policy
-									<HelpTooltip
-										content={retentionHelp.overview.content}
-										title={retentionHelp.overview.title}
-										docsUrl={retentionHelp.overview.docsUrl}
-									/>
 								</span>
 								<button
 									type="button"
@@ -1507,47 +580,6 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								type="button"
 								onClick={() => setShowAdvanced(!showAdvanced)}
 								className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900"
-						<div className="border-t border-gray-200 pt-4">
-							<button
-								type="button"
-								onClick={() => setShowAdvanced(!showAdvanced)}
-								className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-							>
-								<svg
-									className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-									aria-hidden="true"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M9 5l7 7-7 7"
-									/>
-								</svg>
-								Advanced Settings
-							</button>
-
-							{showAdvanced && (
-								<div className="mt-4 space-y-4">
-									<div>
-										<FormLabelWithHelp
-											htmlFor="bandwidth-limit"
-											label="Bandwidth Limit (KB/s)"
-											helpContent={advancedSettingsHelp.bandwidthLimit.content}
-											helpTitle={advancedSettingsHelp.bandwidthLimit.title}
-										/>
-										<label
-											htmlFor="bandwidth-limit"
-											className="block text-sm font-medium text-gray-700 mb-1"
-						{/* Advanced Settings Section (Bandwidth Controls) */}
-						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-							<button
-								type="button"
-								onClick={() => setShowAdvanced(!showAdvanced)}
-								className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900"
 							>
 								<svg
 									className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
@@ -1585,22 +617,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 										/>
 										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-										/>
-										<p className="text-xs text-gray-500 mt-1">
 											Limit upload speed during backups. Leave empty for
 											unlimited.
 										</p>
 									</div>
 
 									<fieldset>
-										<legend className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-											Backup Window
-											<HelpTooltip
-												content={advancedSettingsHelp.backupWindow.content}
-												title={advancedSettingsHelp.backupWindow.title}
-											/>
-										<legend className="block text-sm font-medium text-gray-700 mb-1">
 										<legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 											Backup Window
 										</legend>
@@ -1615,22 +637,11 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 											<span className="text-gray-500 dark:text-gray-400">
 												to
 											</span>
-												className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-												aria-label="Window start time"
-											/>
-											<span className="text-gray-500 dark:text-gray-400">
-												to
-											</span>
 											<input
 												type="time"
 												value={windowEnd}
 												onChange={(e) => setWindowEnd(e.target.value)}
 												className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-												aria-label="Window end time"
-											/>
-										</div>
-										<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-												className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 												aria-label="Window end time"
 											/>
 										</div>
@@ -1641,13 +652,6 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 									</fieldset>
 
 									<fieldset>
-										<legend className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											Excluded Hours
-											<HelpTooltip
-												content={advancedSettingsHelp.excludedHours.content}
-												title={advancedSettingsHelp.excludedHours.title}
-											/>
-										<legend className="block text-sm font-medium text-gray-700 mb-2">
 										<legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 											Excluded Hours
 										</legend>
@@ -1674,14 +678,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 									</fieldset>
 
 									<div>
-										<FormLabelWithHelp
+										<label
 											htmlFor="compression-level"
-											label="Compression Level"
-											helpContent={
-												advancedSettingsHelp.compressionLevel.content
-											}
-											helpTitle={advancedSettingsHelp.compressionLevel.title}
-										/>
+											className="block text-sm font-medium text-gray-700 mb-1"
+										>
+											Compression Level
+										</label>
 										<select
 											id="compression-level"
 											value={compressionLevel}
@@ -1714,12 +716,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 
 									{/* Max File Size */}
 									<div>
-										<FormLabelWithHelp
+										<label
 											htmlFor="max-file-size"
-											label="Max File Size (MB)"
-											helpContent={advancedSettingsHelp.maxFileSize.content}
-											helpTitle={advancedSettingsHelp.maxFileSize.title}
-										/>
+											className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+										>
+											Max File Size (MB)
+										</label>
 										<input
 											type="number"
 											id="max-file-size"
@@ -1737,14 +739,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 
 									{/* Network Mount Behavior */}
 									<div>
-										<FormLabelWithHelp
+										<label
 											htmlFor="schedule-mount-behavior"
-											label="On Network Mount Unavailable"
-											helpContent={
-												advancedSettingsHelp.onMountUnavailable.content
-											}
-											helpTitle={advancedSettingsHelp.onMountUnavailable.title}
-										/>
+											className="block text-sm font-medium text-gray-700 mb-1"
+										>
+											On Network Mount Unavailable
+										</label>
 										<select
 											id="schedule-mount-behavior"
 											value={onMountUnavailable}
@@ -1815,87 +815,6 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 								</div>
 							)}
 						</div>
-
-						{/* Docker Stack Backup Section */}
-						<DockerStackSelector
-							stacks={dockerStacks ?? []}
-							selectedStackId={dockerStackId}
-							onChange={(stackId, config) => {
-								setDockerStackId(stackId);
-								setDockerStackConfig(config);
-							}}
-							agentId={agentId}
-							isLoading={isLoadingStacks}
-						/>
-										<p className="text-xs text-gray-500 mt-1">
-											Click to exclude hours when backups should not run.
-										</p>
-									</fieldset>
-
-									<div>
-										<label
-											htmlFor="compression-level"
-											className="block text-sm font-medium text-gray-700 mb-1"
-										>
-											Compression Level
-										</label>
-										<select
-											id="compression-level"
-											value={compressionLevel}
-											onChange={(e) =>
-												setCompressionLevel(
-													e.target.value as CompressionLevel | '',
-												)
-											}
-											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-										>
-											<option value="">Auto (default)</option>
-											<option value="off">
-												Off - No compression (fastest, largest files)
-											</option>
-											<option value="auto">Auto - Balanced compression</option>
-											<option value="max">
-												Max - Maximum compression (slowest, smallest files)
-											</option>
-										</select>
-										<p className="text-xs text-gray-500 mt-1">
-											<strong>Off:</strong> Best for already-compressed data
-											(videos, images, archives).
-											<br />
-											<strong>Auto:</strong> Good balance for most data types.
-											<br />
-											<strong>Max:</strong> Best for text files, logs, and
-											databases.
-										</p>
-									</div>
-
-									{/* Network Mount Behavior */}
-									<div>
-										<label
-											htmlFor="schedule-mount-behavior"
-											className="block text-sm font-medium text-gray-700 mb-1"
-										>
-											On Network Mount Unavailable
-										</label>
-										<select
-											id="schedule-mount-behavior"
-											value={onMountUnavailable}
-											onChange={(e) =>
-												setOnMountUnavailable(e.target.value as MountBehavior)
-											}
-											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-										>
-											<option value="fail">Fail backup</option>
-											<option value="skip">Skip backup</option>
-										</select>
-										<p className="text-xs text-gray-500 mt-1">
-											Choose what happens if a network path is unavailable when
-											backup runs.
-										</p>
-									</div>
-								</div>
-							)}
-						</div>
 					</div>
 					{createSchedule.isError && (
 						<p className="text-sm text-red-600 mt-4">
@@ -1938,10 +857,6 @@ function formatBandwidth(kbps?: number): string {
 	return `${kbps} KB/s`;
 }
 
-function formatBackupWindow(window?: {
-	start?: string;
-	end?: string;
-}): string | null {
 function formatBackupWindow(window?: { start?: string; end?: string }):
 	| string
 	| null {
@@ -1966,22 +881,6 @@ interface CloneScheduleModalProps {
 		};
 	}) => Promise<Schedule>;
 	isCloning: boolean;
-interface ScheduleRowProps {
-	schedule: Schedule;
-	agentName?: string;
-	repoNames: string[];
-	policyName?: string;
-	onToggle: (id: string, enabled: boolean) => void;
-	onDelete: (id: string) => void;
-	onRun: (id: string) => void;
-	onEditScripts: (id: string) => void;
-	onExport: (schedule: Schedule) => void;
-	isUpdating: boolean;
-	isDeleting: boolean;
-	isRunning: boolean;
-	isDryRunning: boolean;
-	isSelected: boolean;
-	onToggleSelect: () => void;
 }
 
 function CloneScheduleModal({
@@ -2039,30 +938,6 @@ function CloneScheduleModal({
 	};
 
 	if (!isOpen || !schedule) return null;
-	agentName,
-	repoNames,
-	policyName,
-	onToggle,
-	onDelete,
-	onRun,
-	onEditScripts,
-	onDryRun,
-	onEditScripts,
-	onExport,
-	isUpdating,
-	isDeleting,
-	isRunning,
-	isDryRunning,
-	isSelected,
-	onToggleSelect,
-}: ScheduleRowProps) {
-	const hasResourceControls =
-		schedule.bandwidth_limit_kb ||
-		schedule.backup_window ||
-		(schedule.excluded_hours && schedule.excluded_hours.length > 0) ||
-		schedule.compression_level;
-
-	const hasBadges = hasResourceControls || policyName;
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2154,7 +1029,6 @@ function CloneScheduleModal({
 							type="button"
 							onClick={onClose}
 							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 						>
 							Cancel
 						</button>
@@ -2417,7 +1291,6 @@ interface ScheduleRowProps {
 	isDryRunning: boolean;
 	isSelected: boolean;
 	onToggleSelect: () => void;
-	isFavorite: boolean;
 }
 
 function ScheduleRow({
@@ -2438,7 +1311,6 @@ function ScheduleRow({
 	isDryRunning,
 	isSelected,
 	onToggleSelect,
-	isFavorite,
 }: ScheduleRowProps) {
 	const hasResourceControls =
 		schedule.bandwidth_limit_kb ||
@@ -2454,8 +1326,6 @@ function ScheduleRow({
 
 	const hasBadges =
 		hasResourceControls || policyName || hasClassification || hasPriorityBadge;
-		(schedule.excluded_hours && schedule.excluded_hours.length > 0);
-	const hasBadges = hasResourceControls || policyName || hasClassification;
 
 	return (
 		<tr
@@ -2464,28 +1334,6 @@ function ScheduleRow({
 			<td className="px-6 py-4 w-12">
 				<BulkSelectCheckbox checked={isSelected} onChange={onToggleSelect} />
 			</td>
-			<td className="px-6 py-4">
-				<div className="flex items-center gap-2">
-					<StarButton
-						entityType="schedule"
-						entityId={schedule.id}
-						isFavorite={isFavorite}
-						size="sm"
-					/>
-					<div className="font-medium text-gray-900 dark:text-white">
-						{schedule.name}
-					</div>
-				</div>
-				<div className="text-sm text-gray-500 dark:text-gray-400">
-		<tr className="hover:bg-gray-50">
-			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900">{schedule.name}</div>
-				<div className="text-sm text-gray-500">
-				<div className="font-medium text-gray-900 dark:text-white">
-					{schedule.name}
-					{agentName ?? 'Unknown Agent'} →{' '}
-					{repoNames.length > 0 ? repoNames.join(', ') : 'No repos'}
-		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
 				<div className="font-medium text-gray-900 dark:text-white">
 					{schedule.name}
@@ -2705,8 +1553,6 @@ function ScheduleRow({
 							? 'bg-green-100 text-green-800 hover:bg-green-200'
 							: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
 					}`}
-					onClick={() => setShowCreateModal(true)}
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
 				>
 					<span
 						className={`w-1.5 h-1.5 rounded-full ${
@@ -2762,14 +1608,6 @@ function ScheduleRow({
 					<span className="text-gray-300 dark:text-gray-600">|</span>
 					<button
 						type="button"
-						onClick={() => onEditScripts(schedule.id)}
-						className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm font-medium"
-					>
-						Scripts
-					</button>
-					<span className="text-gray-300">|</span>
-					<button
-						type="button"
 						onClick={() => onDelete(schedule.id)}
 						disabled={isDeleting}
 						className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
@@ -2819,8 +1657,6 @@ export function Schedules() {
 	const dryRunSchedule = useDryRunSchedule();
 	const cloneSchedule = useCloneSchedule();
 	const bulkCloneSchedule = useBulkCloneSchedule();
-
-	const bulkOperation = useBulkOperation();
 
 	const bulkOperation = useBulkOperation();
 
@@ -3092,17 +1928,9 @@ export function Schedules() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<div className="flex items-center gap-2">
-						<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-							Schedules
-						</h1>
-						<HelpTooltip
-							content="Create and manage automated backup schedules with cron expressions, retention policies, and notification settings."
-							title="Backup Schedules"
-							docsUrl="/docs/configuration#schedule-configuration"
-							size="md"
-						/>
-					</div>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Schedules
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Configure automated backup jobs
 					</p>
@@ -3115,19 +1943,6 @@ export function Schedules() {
 							setShowExportModal(true);
 						}}
 						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-				<button
-					type="button"
-					onClick={() => setShowCreateModal(true)}
-					data-action="create-schedule"
-					title="Create Schedule (N)"
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						aria-hidden="true"
-						className="w-5 h-5"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
 					>
 						<svg
 							aria-hidden="true"
@@ -3190,42 +2005,6 @@ export function Schedules() {
 
 			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
-export function Schedules() {
-	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-						Schedules
-					</h1>
-					<p className="text-gray-600 dark:text-gray-400 mt-1">
-						Configure automated backup jobs
-					</p>
-				</div>
-				<button
-					type="button"
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						aria-hidden="true"
-						className="w-5 h-5"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 4v16m8-8H4"
-						/>
-					</svg>
-					Create Schedule
-				</button>
-			</div>
-
-			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 					<div className="flex items-center gap-4">
 						<input
 							type="text"
@@ -3233,7 +2012,6 @@ export function Schedules() {
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 						<select
 							value={statusFilter}
@@ -3241,11 +2019,7 @@ export function Schedules() {
 								setStatusFilter(e.target.value as 'all' | 'active' | 'paused')
 							}
 							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
-							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						/>
-						<select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
 							<option value="all">All Status</option>
 							<option value="active">Active</option>
 							<option value="paused">Paused</option>
@@ -3253,14 +2027,14 @@ export function Schedules() {
 						<button
 							type="button"
 							onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-							className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
+							className={`px-3 py-2 border rounded-lg transition-colors ${
 								showFavoritesOnly
-									? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-									: 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+									? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
+									: 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
 							}`}
+							title={showFavoritesOnly ? 'Show all schedules' : 'Show favorites only'}
 						>
 							<svg
-								aria-hidden="true"
 								className={`w-4 h-4 ${showFavoritesOnly ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
 								fill={showFavoritesOnly ? 'currentColor' : 'none'}
 								stroke="currentColor"
@@ -3273,15 +2047,12 @@ export function Schedules() {
 									d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
 								/>
 							</svg>
-							Favorites
 						</button>
 					</div>
 				</div>
 
 				{isError ? (
 					<div className="p-12 text-center text-red-500 dark:text-red-400">
-					<div className="p-12 text-center text-red-500">
-					<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
 						<p className="font-medium">Failed to load schedules</p>
 						<p className="text-sm">Please try refreshing the page</p>
 					</div>
@@ -3303,33 +2074,14 @@ export function Schedules() {
 									Status
 								</th>
 								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-						<thead className="bg-gray-50 border-b border-gray-200">
-							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Schedule
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Cron
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Paths
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Status
-								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-						<tbody className="divide-y divide-gray-200">
 							<LoadingRow />
 							<LoadingRow />
 							<LoadingRow />
-							<ScheduleRowSkeleton />
-							<ScheduleRowSkeleton />
-							<ScheduleRowSkeleton />
 						</tbody>
 					</table>
 				) : filteredSchedules && filteredSchedules.length > 0 ? (
@@ -3345,21 +2097,6 @@ export function Schedules() {
 										totalCount={scheduleIds.length}
 									/>
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Schedule
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Cron
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Paths
-								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-									Status
-								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-						<thead className="bg-gray-50 border-b border-gray-200">
-							<tr>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Schedule
 								</th>
@@ -3389,8 +2126,8 @@ export function Schedules() {
 										agentName={agentMap.get(schedule.agent_id)}
 										repoNames={repoNames}
 										policyName={
-											schedule.policy_id
-												? policyMap.get(schedule.policy_id)
+											(schedule as Schedule & { policy_id?: string }).policy_id
+												? policyMap.get((schedule as Schedule & { policy_id?: string }).policy_id!)
 												: undefined
 										}
 										onToggle={handleToggle}
@@ -3403,23 +2140,63 @@ export function Schedules() {
 											setShowExportModal(true);
 										}}
 										onClone={handleClone}
-										onEditScripts={setEditingScriptsScheduleId}
 										isUpdating={updateSchedule.isPending}
 										isDeleting={deleteSchedule.isPending}
 										isRunning={runSchedule.isPending}
 										isDryRunning={dryRunSchedule.isPending}
 										isSelected={bulkSelect.isSelected(schedule.id)}
 										onToggleSelect={() => bulkSelect.toggle(schedule.id)}
-										isFavorite={favoriteIds.has(schedule.id)}
 									/>
 								);
 							})}
 						</tbody>
 					</table>
 				) : (
-					<EmptyStateNoSchedules
-						onCreateSchedule={() => setShowCreateModal(true)}
-					/>
+					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
+						<svg
+							aria-hidden="true"
+							className="w-16 h-16 mx-auto mb-4 text-gray-300"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
+						</svg>
+						<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+							No schedules configured
+						</h3>
+						<p className="mb-4">Create a schedule to automate your backups</p>
+						<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-w-md mx-auto text-left space-y-2">
+							<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+								Common schedules:
+							</p>
+							<div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+								<p>
+									<span className="font-mono bg-gray-200 px-1 rounded">
+										0 2 * * *
+									</span>{' '}
+									— Daily at 2 AM
+								</p>
+								<p>
+									<span className="font-mono bg-gray-200 px-1 rounded">
+										0 */6 * * *
+									</span>{' '}
+									— Every 6 hours
+								</p>
+								<p>
+									<span className="font-mono bg-gray-200 px-1 rounded">
+										0 3 * * 0
+									</span>{' '}
+									— Weekly on Sunday
+								</p>
+							</div>
+						</div>
+					</div>
 				)}
 			</div>
 
@@ -3553,135 +2330,9 @@ export function Schedules() {
 				agents={agents ?? []}
 				onBulkClone={bulkCloneSchedule.mutateAsync}
 				isBulkCloning={bulkCloneSchedule.isPending}
-						<tbody className="divide-y divide-gray-200">
-							{filteredSchedules.map((schedule) => {
-								const repoNames = (schedule.repositories ?? [])
-									.sort((a, b) => a.priority - b.priority)
-									.map((r) => repoMap.get(r.repository_id) ?? 'Unknown');
-								return (
-									<ScheduleRow
-										key={schedule.id}
-										schedule={schedule}
-										agentName={agentMap.get(schedule.agent_id)}
-										repoNames={repoNames}
-										onToggle={handleToggle}
-										onDelete={handleDelete}
-										onRun={handleRun}
-										isUpdating={updateSchedule.isPending}
-										isDeleting={deleteSchedule.isPending}
-										isRunning={runSchedule.isPending}
-									/>
-								);
-							})}
-						</tbody>
-					</table>
-				) : (
-					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
-						<svg
-							aria-hidden="true"
-							className="w-16 h-16 mx-auto mb-4 text-gray-300"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
-						</svg>
-						<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-							No schedules configured
-						</h3>
-						<p className="mb-4">Create a schedule to automate your backups</p>
-						<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-w-md mx-auto text-left space-y-2">
-							<p className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
-								Common schedules:
-							</p>
-							<div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-								<p>
-									<span className="font-mono bg-gray-200 px-1 rounded">
-										0 2 * * *
-									</span>{' '}
-									— Daily at 2 AM
-								</p>
-								<p>
-									<span className="font-mono bg-gray-200 px-1 rounded">
-										0 */6 * * *
-									</span>{' '}
-									— Every 6 hours
-								</p>
-								<p>
-									<span className="font-mono bg-gray-200 px-1 rounded">
-										0 3 * * 0
-									</span>{' '}
-									— Weekly on Sunday
-								</p>
-							</div>
-						</div>
-					</div>
-				)}
-			</div>
-
-			<CreateScheduleModal
-				isOpen={showCreateModal}
-				onClose={() => setShowCreateModal(false)}
 			/>
 		</div>
 	);
 }
 
 export default Schedules;
-					</div>
-				</div>
-
-				<div className="p-12 text-center text-gray-500">
-					<svg
-						aria-hidden="true"
-						className="w-16 h-16 mx-auto mb-4 text-gray-300"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-						/>
-					</svg>
-					<h3 className="text-lg font-medium text-gray-900 mb-2">
-						No schedules configured
-					</h3>
-					<p className="mb-4">Create a schedule to automate your backups</p>
-					<div className="bg-gray-50 rounded-lg p-4 max-w-md mx-auto text-left space-y-2">
-						<p className="text-sm font-medium text-gray-700">
-							Common schedules:
-						</p>
-						<div className="text-sm text-gray-600 space-y-1">
-							<p>
-								<span className="font-mono bg-gray-200 px-1 rounded">
-									0 2 * * *
-								</span>{' '}
-								— Daily at 2 AM
-							</p>
-							<p>
-								<span className="font-mono bg-gray-200 px-1 rounded">
-									0 */6 * * *
-								</span>{' '}
-								— Every 6 hours
-							</p>
-							<p>
-								<span className="font-mono bg-gray-200 px-1 rounded">
-									0 3 * * 0
-								</span>{' '}
-								— Weekly on Sunday
-							</p>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	);
-}

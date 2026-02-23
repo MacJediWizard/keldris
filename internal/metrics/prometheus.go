@@ -1,7 +1,15 @@
 package metrics
 
 import (
+	"context"
+	"fmt"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog"
 )
 
 // PrometheusMetrics holds all Prometheus metric collectors for Keldris.
@@ -87,23 +95,7 @@ func (m *PrometheusMetrics) SetAgentCount(status string, count float64) {
 // SetStorageBytes sets the current storage bytes for a given type.
 func (m *PrometheusMetrics) SetStorageBytes(storageType string, bytes float64) {
 	m.StorageGauge.WithLabelValues(storageType).Set(bytes)
-// Package metrics provides Prometheus metrics collection for Keldris.
-package metrics
-
-import (
-// Package metrics provides Prometheus metrics collection for Keldris.
-package metrics
-
-import (
-	"context"
-	"fmt"
-	"strings"
-	"sync"
-	"time"
-
-	"github.com/MacJediWizard/keldris/internal/models"
-	"github.com/rs/zerolog"
-)
+}
 
 // PrometheusStore defines the interface for retrieving metrics data.
 type PrometheusStore interface {
@@ -126,12 +118,12 @@ type PrometheusCollector struct {
 	// Cached metrics with mutex for thread safety
 	mu               sync.RWMutex
 	lastCollected    time.Time
-	cachedMetrics    *PrometheusMetrics
+	cachedMetrics    *CollectedMetrics
 	cacheExpiry      time.Duration
 }
 
-// PrometheusMetrics holds all collected Prometheus metrics.
-type PrometheusMetrics struct {
+// CollectedMetrics holds all collected Prometheus metrics data.
+type CollectedMetrics struct {
 	// Backup metrics
 	BackupTotal           int64              // Total number of backups
 	BackupByStatus        map[string]int64   // Backups by status (completed, failed, running, canceled)
@@ -158,7 +150,7 @@ func NewPrometheusCollector(store PrometheusStore, logger zerolog.Logger) *Prome
 }
 
 // Collect gathers all metrics from the database.
-func (c *PrometheusCollector) Collect(ctx context.Context) (*PrometheusMetrics, error) {
+func (c *PrometheusCollector) Collect(ctx context.Context) (*CollectedMetrics, error) {
 	// Check cache first
 	c.mu.RLock()
 	if c.cachedMetrics != nil && time.Since(c.lastCollected) < c.cacheExpiry {
@@ -169,7 +161,7 @@ func (c *PrometheusCollector) Collect(ctx context.Context) (*PrometheusMetrics, 
 	c.mu.RUnlock()
 
 	// Collect fresh metrics
-	metrics := &PrometheusMetrics{
+	metrics := &CollectedMetrics{
 		BackupByStatus:        make(map[string]int64),
 		BackupDurationBuckets: make(map[float64]int64),
 	}
@@ -198,7 +190,7 @@ func (c *PrometheusCollector) Collect(ctx context.Context) (*PrometheusMetrics, 
 	return metrics, nil
 }
 
-func (c *PrometheusCollector) collectAgentMetrics(ctx context.Context, metrics *PrometheusMetrics) error {
+func (c *PrometheusCollector) collectAgentMetrics(ctx context.Context, metrics *CollectedMetrics) error {
 	agents, err := c.store.GetAllAgents(ctx)
 	if err != nil {
 		return fmt.Errorf("get agents: %w", err)
@@ -214,7 +206,7 @@ func (c *PrometheusCollector) collectAgentMetrics(ctx context.Context, metrics *
 	return nil
 }
 
-func (c *PrometheusCollector) collectBackupMetrics(ctx context.Context, metrics *PrometheusMetrics) error {
+func (c *PrometheusCollector) collectBackupMetrics(ctx context.Context, metrics *CollectedMetrics) error {
 	backups, err := c.store.GetAllBackups(ctx)
 	if err != nil {
 		return fmt.Errorf("get backups: %w", err)
@@ -256,7 +248,7 @@ func (c *PrometheusCollector) collectBackupMetrics(ctx context.Context, metrics 
 	return nil
 }
 
-func (c *PrometheusCollector) collectStorageMetrics(ctx context.Context, metrics *PrometheusMetrics) error {
+func (c *PrometheusCollector) collectStorageMetrics(ctx context.Context, metrics *CollectedMetrics) error {
 	stats, err := c.store.GetStorageStatsSummaryGlobal(ctx)
 	if err != nil {
 		return fmt.Errorf("get storage stats: %w", err)
@@ -270,7 +262,7 @@ func (c *PrometheusCollector) collectStorageMetrics(ctx context.Context, metrics
 }
 
 // Format returns the metrics in Prometheus exposition format.
-func (c *PrometheusCollector) Format(metrics *PrometheusMetrics) string {
+func (c *PrometheusCollector) Format(metrics *CollectedMetrics) string {
 	var sb strings.Builder
 
 	// backup_total - Counter for total number of backups

@@ -733,9 +733,6 @@ function PolicyRow({
 					</button>
 					{showActions && (
 						<>
-							<button
-								type="button"
-								className="fixed inset-0 z-10 bg-transparent border-none cursor-default"
 							<div
 								className="fixed inset-0 z-10"
 								onClick={() => setShowActions(false)}

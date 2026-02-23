@@ -24,13 +24,6 @@ import type {
 	CloudRestoreTarget,
 	CloudRestoreTargetType,
 	RestorePreview,
-import { useNavigate } from 'react-router-dom';
-import { useAgents } from '../hooks/useAgents';
-import { useRepositories } from '../hooks/useRepositories';
-import { useCreateRestore, useRestores } from '../hooks/useRestore';
-import { useSnapshotComments } from '../hooks/useSnapshotComments';
-import { useSnapshotFiles, useSnapshots } from '../hooks/useSnapshots';
-import type {
 	RestoreStatus,
 	Restore as RestoreType,
 	Snapshot,
@@ -45,23 +38,6 @@ function LoadingRow() {
 				<div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-				<div className="h-4 w-20 bg-gray-200 rounded" />
 				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
@@ -235,15 +211,6 @@ function SnapshotRow({
 					<HoldIndicator hasHold={hasHold} />
 					<CommentIndicator snapshotId={snapshot.id} />
 				</div>
-}: SnapshotRowProps) {
-	return (
-		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
-			<td className="px-6 py-4">
-				<code className="text-sm font-mono text-gray-900">
-					{snapshot.short_id}
-				</code>
-					<CommentIndicator snapshotId={snapshot.id} />
-				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-900">
 				{agentName ?? 'Unknown'}
@@ -295,20 +262,6 @@ function SnapshotRow({
 						Restore
 					</button>
 				</div>
-			<td className="px-6 py-4 text-sm text-gray-500">
-				{formatBytes(snapshot.size_bytes)}
-			</td>
-			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-				{formatDate(snapshot.time)}
-			</td>
-			<td className="px-6 py-4 text-right">
-				<button
-					type="button"
-					onClick={() => onSelect(snapshot)}
-					className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
-				>
-					Restore
-				</button>
 			</td>
 		</tr>
 	);
@@ -322,14 +275,6 @@ interface RestoreRowProps {
 }
 
 function RestoreRow({ restore, agentName, sourceAgentName, onViewDetails }: RestoreRowProps) {
-	const statusColor = getRestoreStatusColor(restore.status);
-
-	return (
-		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
-	onViewDetails: (restore: RestoreType) => void;
-}
-
-function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
 	const statusColor = getRestoreStatusColor(restore.status);
 
 	return (
@@ -376,20 +321,6 @@ function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
 				</div>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-				{agentName ?? 'Unknown'}
-			</td>
-			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
-				{restore.target_path}
-			</td>
-			<td className="px-6 py-4">
-				<span
-					className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
-				>
-					<span className={`w-1.5 h-1.5 ${statusColor.dot} rounded-full`} />
-					{restore.status}
-				</span>
-			</td>
-			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(restore.created_at)}
 			</td>
 			<td className="px-6 py-4 text-right">
@@ -397,7 +328,6 @@ function RestoreRow({ restore, agentName, onViewDetails }: RestoreRowProps) {
 					type="button"
 					onClick={() => onViewDetails(restore)}
 					className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
-					className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
 				>
 					Details
 				</button>
@@ -438,12 +368,6 @@ function RestoreDetailsModal({
 							</span>
 						)}
 					</div>
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
-			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4">
-				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-						Restore Details
-					</h3>
 					<span
 						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
 					>
@@ -499,32 +423,11 @@ function RestoreDetailsModal({
 							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 								Created
 							</p>
-						<p className="text-sm font-medium text-gray-500">Snapshot ID</p>
-						<p className="font-mono text-gray-900">{restore.snapshot_id}</p>
-					</div>
-
-					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-								Agent
-							</p>
-							<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
-						</div>
-						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-								Created
-							</p>
 							<p className="text-gray-900">
 								{formatDateTime(restore.created_at)}
 							</p>
 						</div>
 					)}
-
-					<div>
-						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-							Target Path
-						</p>
-					</div>
 
 					<div>
 						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -554,9 +457,6 @@ function RestoreDetailsModal({
 						</div>
 					)}
 
-					{restore.include_paths && restore.include_paths.length > 0 && (
-						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 					{restore.include_paths && restore.include_paths.length > 0 && (
 						<div>
 							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -619,12 +519,6 @@ function RestoreDetailsModal({
 								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 									Started
 								</p>
-					{restore.started_at && (
-						<div className="grid grid-cols-2 gap-4">
-							<div>
-								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-									Started
-								</p>
 								<p className="text-gray-900">
 									{formatDateTime(restore.started_at)}
 								</p>
@@ -634,7 +528,6 @@ function RestoreDetailsModal({
 									<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 										Completed
 									</p>
-									<p className="text-sm font-medium text-gray-500">Completed</p>
 									<p className="text-gray-900">
 										{formatDateTime(restore.completed_at)}
 									</p>
@@ -648,7 +541,6 @@ function RestoreDetailsModal({
 							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 								Error
 							</p>
-							<p className="text-sm font-medium text-gray-500">Error</p>
 							<p className="text-red-600 bg-red-50 p-3 rounded-lg text-sm">
 								{restore.error_message}
 							</p>
@@ -764,7 +656,6 @@ function RestoreDetailsModal({
 						type="button"
 						onClick={onClose}
 						className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
-						className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
 					>
 						Close
 					</button>
@@ -797,12 +688,6 @@ function FileTreeItem({
 			className={`flex items-center py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors ${
 				isEffectivelySelected ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''
 			}`}
-}: FileTreeItemProps) {
-	const isSelected = selectedPaths.has(file.path);
-
-	return (
-		<div
-			className="flex items-center py-1 hover:bg-gray-50 rounded"
 			style={{ paddingLeft: `${depth * 16 + 8}px` }}
 		>
 			<input
@@ -818,15 +703,6 @@ function FileTreeItem({
 					<svg
 						aria-hidden="true"
 						className="w-4 h-4 text-yellow-500 mr-1.5 flex-shrink-0"
-				checked={isSelected}
-				onChange={() => onToggle(file.path)}
-				className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-			/>
-			<span className="ml-2 flex items-center">
-				{file.type === 'dir' ? (
-					<svg
-						aria-hidden="true"
-						className="w-4 h-4 text-yellow-500 mr-1"
 						fill="currentColor"
 						viewBox="0 0 20 20"
 					>
@@ -836,7 +712,6 @@ function FileTreeItem({
 					<svg
 						aria-hidden="true"
 						className="w-4 h-4 text-gray-400 mr-1.5 flex-shrink-0"
-						className="w-4 h-4 text-gray-400 mr-1"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -854,9 +729,6 @@ function FileTreeItem({
 				</span>
 			</span>
 			<span className="ml-2 text-xs text-gray-500 dark:text-gray-400 tabular-nums flex-shrink-0">
-				<span className="text-sm text-gray-900">{file.name}</span>
-			</span>
-			<span className="ml-auto text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 				{file.type === 'file' ? formatBytes(file.size) : ''}
 			</span>
 		</div>
@@ -1630,9 +1502,6 @@ interface RestoreModalProps {
 	) => void;
 	isSubmitting: boolean;
 	cloudRestoreId?: string;
-	onClose: () => void;
-	onSubmit: (targetPath: string, includePaths: string[]) => void;
-	isSubmitting: boolean;
 }
 
 function RestoreModal({
@@ -1758,36 +1627,11 @@ function RestoreModal({
 	const handleBack = () => {
 		setStep('configure');
 		setPreview(null);
-	onClose,
-	onSubmit,
-	isSubmitting,
-}: RestoreModalProps) {
-	const [targetPath, setTargetPath] = useState('');
-	const [useOriginalPath, setUseOriginalPath] = useState(true);
-	const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
-
-	const { data: filesData } = useSnapshotFiles(snapshot.id);
-
-	const togglePath = (path: string) => {
-		const newSelected = new Set(selectedPaths);
-		if (newSelected.has(path)) {
-			newSelected.delete(path);
-		} else {
-			newSelected.add(path);
-		}
-		setSelectedPaths(newSelected);
-	};
-
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		const finalTargetPath = useOriginalPath ? '/' : targetPath;
-		const includePaths = Array.from(selectedPaths);
-		onSubmit(finalTargetPath, includePaths);
 	};
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+			<div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
 				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 					<div className="flex items-center justify-between">
 						<div>
@@ -1805,7 +1649,7 @@ function RestoreModal({
 									1
 								</span>
 								<span>Configure</span>
-								<span className="mx-1">→</span>
+								<span className="mx-1">{'->'}</span>
 								<span className="w-6 h-6 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs font-medium">
 									2
 								</span>
@@ -1831,7 +1675,7 @@ function RestoreModal({
 									</svg>
 								</span>
 								<span>Configure</span>
-								<span className="mx-1">→</span>
+								<span className="mx-1">{'->'}</span>
 								<span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-medium">
 									2
 								</span>
@@ -2368,173 +2212,6 @@ function RestoreModal({
 						</div>
 					</div>
 				)}
-				<div className="p-6 border-b border-gray-200">
-					<h3 className="text-lg font-semibold text-gray-900">
-	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-						Restore Snapshot
-					</h3>
-					<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-						Snapshot {snapshot.short_id} from {formatDateTime(snapshot.time)}
-					</p>
-				</div>
-
-				<form
-					onSubmit={handleSubmit}
-					className="flex flex-col flex-1 overflow-hidden"
-				>
-					<div className="p-6 space-y-6 overflow-y-auto flex-1">
-						<div className="grid grid-cols-2 gap-4">
-							<div>
-								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-									Agent
-								</p>
-								<p className="text-gray-900">{agentName ?? 'Unknown'}</p>
-							</div>
-							<div>
-								<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-									Repository
-								</p>
-								<p className="text-gray-900">{repoName ?? 'Unknown'}</p>
-							</div>
-						</div>
-
-						<div>
-							<p className="text-sm font-medium text-gray-500 mb-2">
-								Backed up paths
-							</p>
-							<ul className="list-disc list-inside text-sm text-gray-900">
-								{snapshot.paths.map((path) => (
-									<li key={path} className="font-mono">
-										{path}
-									</li>
-								))}
-							</ul>
-						</div>
-
-						<div>
-							<p className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
-								Restore Destination
-							</p>
-							<div className="mt-2 space-y-2">
-								<label className="flex items-center">
-									<input
-										type="radio"
-										checked={useOriginalPath}
-										onChange={() => setUseOriginalPath(true)}
-										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-									/>
-									<span className="ml-2 text-sm text-gray-900">
-										Original location
-									</span>
-								</label>
-								<label className="flex items-center">
-									<input
-										type="radio"
-										checked={!useOriginalPath}
-										onChange={() => setUseOriginalPath(false)}
-										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-									/>
-									<span className="ml-2 text-sm text-gray-900">
-										Custom location
-									</span>
-								</label>
-								{!useOriginalPath && (
-									<input
-										type="text"
-										value={targetPath}
-										onChange={(e) => setTargetPath(e.target.value)}
-										placeholder="/path/to/restore"
-										className="mt-2 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
-									/>
-								)}
-							</div>
-						</div>
-
-						<div>
-							<p className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
-								Select files to restore (optional)
-							</p>
-							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">
-								Leave empty to restore all files
-							</p>
-							<div className="border border-gray-200 rounded-lg p-2 max-h-48 overflow-y-auto bg-gray-50">
-								{filesData?.files && filesData.files.length > 0 ? (
-									filesData.files.map((file) => (
-										<FileTreeItem
-											key={file.path}
-											file={file}
-											selectedPaths={selectedPaths}
-											onToggle={togglePath}
-											depth={0}
-										/>
-									))
-								) : (
-									<p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-										{filesData?.message ||
-											'File listing not available. All files will be restored.'}
-									</p>
-								)}
-							</div>
-							{selectedPaths.size > 0 && (
-								<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-									{selectedPaths.size} item(s) selected
-								</p>
-							)}
-						</div>
-
-						<div className="border-t border-gray-200 pt-6">
-							<SnapshotComments snapshotId={snapshot.id} />
-						</div>
-					</div>
-
-					<div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-						<button
-							type="button"
-							onClick={onClose}
-							disabled={isSubmitting}
-							className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							disabled={isSubmitting || (!useOriginalPath && !targetPath)}
-							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-						>
-							{isSubmitting ? (
-								<>
-									<svg
-										aria-hidden="true"
-										className="animate-spin h-4 w-4"
-										fill="none"
-										viewBox="0 0 24 24"
-									>
-										<circle
-											className="opacity-25"
-											cx="12"
-											cy="12"
-											r="10"
-											stroke="currentColor"
-											strokeWidth="4"
-										/>
-										<path
-											className="opacity-75"
-											fill="currentColor"
-											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-										/>
-									</svg>
-									Starting...
-								</>
-							) : (
-								'Start Restore'
-							)}
-						</button>
-					</div>
-				</form>
 			</div>
 		</div>
 	);
@@ -2617,16 +2294,6 @@ export function Restore() {
 				target_path: targetPath,
 				include_paths: includePaths.length > 0 ? includePaths : undefined,
 				path_mappings: pathMappings && pathMappings.length > 0 ? pathMappings : undefined,
-	const handleRestore = (targetPath: string, includePaths: string[]) => {
-		if (!selectedSnapshot) return;
-
-		createRestore.mutate(
-			{
-				snapshot_id: selectedSnapshot.id,
-				agent_id: selectedSnapshot.agent_id,
-				repository_id: selectedSnapshot.repository_id,
-				target_path: targetPath,
-				include_paths: includePaths.length > 0 ? includePaths : undefined,
 			},
 			{
 				onSuccess: () => {
@@ -2745,14 +2412,6 @@ export function Restore() {
 			</div>
 
 			<div className="border-b border-gray-200 dark:border-gray-700">
-					<h1 className="text-2xl font-bold text-gray-900">Restore</h1>
-					<p className="text-gray-600 mt-1">
-						Browse snapshots and restore files
-					</p>
-				</div>
-			</div>
-
-			<div className="border-b border-gray-200 dark:border-gray-700">
 				<nav className="-mb-px flex space-x-8">
 					<button
 						type="button"
@@ -2840,83 +2499,6 @@ export function Restore() {
 									Compare
 								</button>
 							</div>
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="p-6 border-b border-gray-200">
-					<div className="flex items-center gap-4">
-						<select
-							value={agentFilter}
-							onChange={(e) => setAgentFilter(e.target.value)}
-							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Agents</option>
-							{agents?.map((agent) => (
-								<option key={agent.id} value={agent.id}>
-									{agent.hostname}
-								</option>
-							))}
-						</select>
-						{activeTab === 'snapshots' && (
-							<select
-								value={repoFilter}
-								onChange={(e) => setRepoFilter(e.target.value)}
-								className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							<select
-								value={agentFilter}
-								onChange={(e) => setAgentFilter(e.target.value)}
-								className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							>
-								<option value="all">All Agents</option>
-								{agents?.map((agent) => (
-									<option key={agent.id} value={agent.id}>
-										{agent.hostname}
-									</option>
-								))}
-							</select>
-							{activeTab === 'snapshots' && (
-								<select
-									value={repoFilter}
-									onChange={(e) => setRepoFilter(e.target.value)}
-									className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								>
-									<option value="all">All Repositories</option>
-									{repositories?.map((repo) => (
-										<option key={repo.id} value={repo.id}>
-											{repo.name}
-										</option>
-									))}
-								</select>
-							)}
-						</div>
-						{activeTab === 'snapshots' && (
-							<div className="flex items-center gap-3">
-								{compareSelection.size > 0 && (
-									<span className="text-sm text-gray-500 dark:text-gray-400">
-										{compareSelection.size} selected
-									</span>
-								)}
-								<button
-									type="button"
-									onClick={handleCompare}
-									disabled={compareSelection.size !== 2}
-									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-								>
-									<svg
-										aria-hidden="true"
-										className="w-4 h-4"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-										/>
-									</svg>
-									Compare
-								</button>
-							</div>
 						)}
 					</div>
 				</div>
@@ -2925,8 +2507,6 @@ export function Restore() {
 					{activeTab === 'snapshots' ? (
 						snapshotsError ? (
 							<div className="p-12 text-center text-red-500 dark:text-red-400">
-							<div className="p-12 text-center text-red-500">
-							<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
 								<p className="font-medium">Failed to load snapshots</p>
 								<p className="text-sm">Please try refreshing the page</p>
 							</div>
@@ -2953,30 +2533,11 @@ export function Restore() {
 											Date
 										</th>
 										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-								<thead className="bg-gray-50 border-b border-gray-200">
-									<tr>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Snapshot ID
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Agent
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Repository
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Size
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Date
-										</th>
-										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Actions
 										</th>
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-								<tbody className="divide-y divide-gray-200">
 									<LoadingRow />
 									<LoadingRow />
 									<LoadingRow />
@@ -3005,30 +2566,11 @@ export function Restore() {
 											Date
 										</th>
 										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-								<thead className="bg-gray-50 border-b border-gray-200">
-									<tr>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Snapshot ID
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Agent
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Repository
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Size
-										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											Date
-										</th>
-										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Actions
 										</th>
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-								<tbody className="divide-y divide-gray-200">
 									{snapshots.map((snapshot) => (
 										<SnapshotRow
 											key={snapshot.id}
@@ -3051,7 +2593,6 @@ export function Restore() {
 							</table>
 						) : (
 							<div className="p-12 text-center text-gray-500 dark:text-gray-400">
-							<div className="p-12 text-center text-gray-500">
 								<svg
 									aria-hidden="true"
 									className="w-12 h-12 mx-auto mb-3 text-gray-300"
@@ -3069,15 +2610,13 @@ export function Restore() {
 								<p className="font-medium text-gray-900 dark:text-white">
 									No snapshots found
 								</p>
-								<p className="font-medium text-gray-900">No snapshots found</p>
 								<p className="text-sm">
 									Snapshots will appear here once backups complete
 								</p>
 							</div>
 						)
 					) : restoresError ? (
-						<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
-						<div className="p-12 text-center text-red-500">
+						<div className="p-12 text-center text-red-500 dark:text-red-400">
 							<p className="font-medium">Failed to load restore jobs</p>
 							<p className="text-sm">Please try refreshing the page</p>
 						</div>
@@ -3101,30 +2640,11 @@ export function Restore() {
 										Date
 									</th>
 									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							<thead className="bg-gray-50 border-b border-gray-200">
-								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Snapshot ID
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Agent
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Target Path
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Status
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Date
-									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<tbody className="divide-y divide-gray-200">
 								<LoadingRow />
 								<LoadingRow />
 								<LoadingRow />
@@ -3150,30 +2670,11 @@ export function Restore() {
 										Date
 									</th>
 									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							<thead className="bg-gray-50 border-b border-gray-200">
-								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Snapshot ID
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Agent
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Target Path
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Status
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Date
-									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<tbody className="divide-y divide-gray-200">
 								{restores.map((restore) => (
 									<RestoreRow
 										key={restore.id}
@@ -3187,7 +2688,6 @@ export function Restore() {
 						</table>
 					) : (
 						<div className="p-12 text-center text-gray-500 dark:text-gray-400">
-						<div className="p-12 text-center text-gray-500">
 							<svg
 								aria-hidden="true"
 								className="w-12 h-12 mx-auto mb-3 text-gray-300"
@@ -3205,7 +2705,6 @@ export function Restore() {
 							<p className="font-medium text-gray-900 dark:text-white">
 								No restore jobs
 							</p>
-							<p className="font-medium text-gray-900">No restore jobs</p>
 							<p className="text-sm">
 								Select a snapshot to start a restore operation
 							</p>
@@ -3228,9 +2727,6 @@ export function Restore() {
 					onCloudSubmit={handleCloudRestore}
 					isSubmitting={createRestore.isPending || createCloudRestore.isPending}
 					cloudRestoreId={cloudRestoreId}
-					onClose={() => setSelectedSnapshot(null)}
-					onSubmit={handleRestore}
-					isSubmitting={createRestore.isPending}
 				/>
 			)}
 
@@ -3325,9 +2821,3 @@ export function Restore() {
 }
 
 export default Restore;
-					onClose={() => setSelectedRestore(null)}
-				/>
-			)}
-		</div>
-	);
-}

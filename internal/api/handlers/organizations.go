@@ -6,7 +6,6 @@ import (
 	"encoding/csv"
 	"encoding/hex"
 	"io"
-	"encoding/hex"
 	"net/http"
 	"strings"
 	"time"
@@ -43,7 +42,6 @@ type OrganizationStore interface {
 	UpdateInvitationResent(ctx context.Context, id uuid.UUID) error
 	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
 // OrganizationsHandler handles organization-related HTTP endpoints.
@@ -113,11 +111,6 @@ func (h *OrganizationsHandler) RegisterMultiOrgRoutes(r *gin.RouterGroup, create
 	r.POST("/invitations/accept", h.AcceptInvitation)
 	// Public endpoint to get invitation details by token
 	r.GET("/invitations/:token", h.GetInvitationByToken)
-		orgs.DELETE("/:id/invitations/:invitation_id", h.DeleteInvitation)
-	}
-
-	// Invitation acceptance (public endpoint for accepting invites)
-	r.POST("/invitations/accept", h.AcceptInvitation)
 }
 
 // CreateOrgRequest is the request body for creating an organization.

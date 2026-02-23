@@ -220,18 +220,6 @@ func (db *DB) CreateInvitedUser(ctx context.Context, orgID uuid.UUID, email, nam
 	return user, nil
 }
 
-// DeleteUser deletes a user by ID.
-func (db *DB) DeleteUser(ctx context.Context, userID uuid.UUID) error {
-	result, err := db.Pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
-	if err != nil {
-		return fmt.Errorf("delete user: %w", err)
-	}
-	if result.RowsAffected() == 0 {
-		return fmt.Errorf("user not found")
-	}
-	return nil
-}
-
 // IsSuperuser checks if a user is a superuser.
 func (db *DB) IsSuperuser(ctx context.Context, userID uuid.UUID) (bool, error) {
 	var isSuperuser bool

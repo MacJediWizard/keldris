@@ -145,13 +145,6 @@ export function Maintenance() {
 		emergencyOverride.mutate({ id, override: !currentOverride });
 	};
 
-		});
-	};
-
-	const handleEmergencyOverride = (id: string, currentOverride: boolean) => {
-		emergencyOverride.mutate({ id, override: !currentOverride });
-	};
-
 	const cancelEdit = () => {
 		setEditingId(null);
 		setShowForm(false);
@@ -414,33 +407,6 @@ export function Maintenance() {
 								</label>
 								<p className="ml-6 text-xs text-gray-500">
 									Block write operations during this maintenance window
-							<div>
-								<label
-									htmlFor="notify_before"
-									className="block text-sm font-medium text-gray-700"
-								>
-									Notify Before (minutes)
-								</label>
-								<input
-									type="checkbox"
-									id="read_only"
-									checked={formData.read_only}
-									onChange={(e) =>
-										setFormData({
-											...formData,
-											read_only: e.target.checked,
-										})
-									}
-									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-								/>
-								<label
-									htmlFor="read_only"
-									className="ml-2 block text-sm text-gray-900"
-								>
-									Enable read-only mode
-								</label>
-								<p className="ml-6 text-xs text-gray-500">
-									Block write operations during this maintenance window
 								</p>
 							</div>
 
@@ -512,7 +478,6 @@ export function Maintenance() {
 									<div className="flex items-center justify-between">
 										<div className="flex-1 min-w-0">
 											<div className="flex items-center gap-2 flex-wrap">
-											<div className="flex items-center gap-2">
 												<h3 className="text-sm font-medium text-gray-900 truncate">
 													{w.title}
 												</h3>
@@ -541,38 +506,6 @@ export function Maintenance() {
 													<span className="ml-2 text-gray-400">
 														(Countdown: {w.countdown_start_minutes}m before)
 													</span>
-												)}
-											</div>
-										</div>
-										<div className="flex items-center gap-2 ml-4">
-											{isActiveReadOnly && (
-												<button
-													type="button"
-													onClick={() =>
-														handleEmergencyOverride(w.id, w.emergency_override)
-													}
-													disabled={emergencyOverride.isPending}
-													className="text-amber-600 hover:text-amber-900 text-sm font-medium disabled:opacity-50"
-												>
-													Emergency Override
-												</button>
-											)}
-											{status === 'active' &&
-												w.read_only &&
-												w.emergency_override && (
-													<button
-														type="button"
-														onClick={() =>
-															handleEmergencyOverride(
-																w.id,
-																w.emergency_override,
-															)
-														}
-														disabled={emergencyOverride.isPending}
-														className="text-green-600 hover:text-green-900 text-sm font-medium disabled:opacity-50"
-													>
-														Re-enable Read-only
-													</button>
 												)}
 											</div>
 										</div>

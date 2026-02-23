@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { SaveFilterButton } from '../components/features/SaveFilterButton';
 import { SavedFiltersDropdown } from '../components/features/SavedFiltersDropdown';
-import { useState } from 'react';
 import {
 	useAcknowledgeAlert,
 	useAlerts,
@@ -20,13 +19,6 @@ import {
 function LoadingCard() {
 	return (
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
-			<div className="flex items-start gap-4">
-				<div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
-				<div className="flex-1">
-					<div className="h-5 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-					<div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
-					<div className="h-3 w-1/4 bg-gray-200 dark:bg-gray-700 rounded" />
-		<div className="bg-white rounded-lg border border-gray-200 p-4 animate-pulse">
 			<div className="flex items-start gap-4">
 				<div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
 				<div className="flex-1">
@@ -113,7 +105,6 @@ function AlertCard({
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-2 mb-1">
 						<h3 className="font-medium text-gray-900 dark:text-white truncate">
-						<h3 className="font-medium text-gray-900 truncate">
 							{alert.title}
 						</h3>
 						<span
@@ -126,9 +117,7 @@ function AlertCard({
 					<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
 						{alert.message}
 					</p>
-					<div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
-					<p className="text-sm text-gray-600 mb-2">{alert.message}</p>
-					<div className="flex items-center gap-4 text-xs text-gray-500">
+					<div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
 						<span className="inline-flex items-center gap-1">
 							<svg
 								aria-hidden="true"
@@ -253,8 +242,6 @@ export function Alerts() {
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Monitor and manage system alerts
 					</p>
-					<h1 className="text-2xl font-bold text-gray-900">Alerts</h1>
-					<p className="text-gray-600 mt-1">Monitor and manage system alerts</p>
 				</div>
 			</div>
 
@@ -289,12 +276,6 @@ export function Alerts() {
 						</div>
 						<div className="text-left">
 							<div className="text-2xl font-bold text-gray-900 dark:text-white">
-								{activeCount}
-							</div>
-							<div className="text-sm text-gray-500 dark:text-gray-400">
-								Active
-							</div>
-							<div className="text-2xl font-bold text-gray-900">
 								{activeCount}
 							</div>
 							<div className="text-sm text-gray-500 dark:text-gray-400">
@@ -347,12 +328,6 @@ export function Alerts() {
 							<div className="text-sm text-gray-500 dark:text-gray-400">
 								Acknowledged
 							</div>
-							<div className="text-2xl font-bold text-gray-900">
-								{acknowledgedCount}
-							</div>
-							<div className="text-sm text-gray-500 dark:text-gray-400">
-								Acknowledged
-							</div>
 						</div>
 					</div>
 				</button>
@@ -387,12 +362,6 @@ export function Alerts() {
 						</div>
 						<div className="text-left">
 							<div className="text-2xl font-bold text-gray-900 dark:text-white">
-								{resolvedCount}
-							</div>
-							<div className="text-sm text-gray-500 dark:text-gray-400">
-								Resolved
-							</div>
-							<div className="text-2xl font-bold text-gray-900">
 								{resolvedCount}
 							</div>
 							<div className="text-sm text-gray-500 dark:text-gray-400">
@@ -438,38 +407,12 @@ export function Alerts() {
 							/>
 							<SaveFilterButton entityType="alerts" filters={currentFilters} />
 						</div>
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="p-4 border-b border-gray-200">
-					<div className="flex items-center gap-4">
-						<select
-							value={statusFilter}
-							onChange={(e) =>
-								setStatusFilter(e.target.value as AlertStatus | 'all')
-							}
-							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Status</option>
-							<option value="active">Active</option>
-							<option value="acknowledged">Acknowledged</option>
-							<option value="resolved">Resolved</option>
-						</select>
-						<select
-							value={severityFilter}
-							onChange={(e) => setSeverityFilter(e.target.value)}
-							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						>
-							<option value="all">All Severity</option>
-							<option value="critical">Critical</option>
-							<option value="warning">Warning</option>
-							<option value="info">Info</option>
-						</select>
 					</div>
 				</div>
 
 				<div className="p-4">
 					{isError ? (
-						<div className="py-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
-						<div className="py-12 text-center text-red-500">
+						<div className="py-12 text-center text-red-500 dark:text-red-400">
 							<p className="font-medium">Failed to load alerts</p>
 							<p className="text-sm">Please try refreshing the page</p>
 						</div>
@@ -495,7 +438,6 @@ export function Alerts() {
 						</div>
 					) : (
 						<div className="py-12 text-center text-gray-500 dark:text-gray-400">
-						<div className="py-12 text-center text-gray-500">
 							<svg
 								aria-hidden="true"
 								className="w-16 h-16 mx-auto mb-4 text-gray-300"
@@ -511,7 +453,6 @@ export function Alerts() {
 								/>
 							</svg>
 							<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-							<h3 className="text-lg font-medium text-gray-900 mb-2">
 								{statusFilter === 'all' && severityFilter === 'all'
 									? 'No alerts'
 									: 'No matching alerts'}

@@ -149,8 +149,6 @@ export function useCreateInvitation() {
 			orgId: string;
 			data: InviteMemberRequest;
 		}) => organizationsApi.createInvitation(orgId, data),
-		}: { orgId: string; data: InviteMemberRequest }) =>
-			organizationsApi.createInvitation(orgId, data),
 		onSuccess: (_, { orgId }) => {
 			queryClient.invalidateQueries({
 				queryKey: ['organizations', orgId, 'invitations'],

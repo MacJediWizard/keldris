@@ -36,7 +36,6 @@ type AgentAPIStore interface {
 	CreateBackup(ctx context.Context, backup *models.Backup) error
 	UpdateBackup(ctx context.Context, backup *models.Backup) error
 	GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Backup, error)
-	CreateBackup(ctx context.Context, backup *models.Backup) error
 	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error)
 }
 
@@ -106,17 +105,6 @@ func (h *AgentAPIHandler) ReportHealth(c *gin.Context) {
 			ResticAvailable: req.Metrics.ResticAvailable,
 		}
 		agent.HealthMetrics = healthMetrics
-	}
-
-	// Evaluate health status based on metrics
-	issues := h.evaluateHealth(healthMetrics, req.Status)
-	healthStatus := h.determineHealthStatus(req.Status, issues)
-
-	// Store issues in health metrics for API response
-	if healthMetrics != nil && len(issues) > 0 {
-		healthMetrics.Issues = issues
-	}
-
 	}
 
 	// Evaluate health status based on metrics
@@ -618,9 +606,6 @@ type ScheduleConfigResponse struct {
 
 
 
-// GetSchedules returns backup schedules with decrypted repository credentials for the agent.
-// GET /api/v1/agent/schedules
-func (h *AgentAPIHandler) GetSchedules(c *gin.Context) {
 // QueuedBackupResult represents a backup that was executed while offline.
 type QueuedBackupResult struct {
 	ID           string     `json:"id" binding:"required"`
@@ -650,9 +635,9 @@ type ReportQueuedBackupsResponse struct {
 	Processed    int  `json:"processed"`
 }
 
-// ReportQueuedBackups handles reports of backups executed while offline.
-// POST /api/v1/agent/queued-backups
-func (h *AgentAPIHandler) ReportQueuedBackups(c *gin.Context) {
+// GetSchedules returns backup schedules with decrypted repository credentials for the agent.
+// GET /api/v1/agent/schedules
+func (h *AgentAPIHandler) GetSchedules(c *gin.Context) {
 	agent := middleware.RequireAgent(c)
 	if agent == nil {
 		return
@@ -767,6 +752,28 @@ func (h *AgentAPIHandler) ReportBackup(c *gin.Context) {
 		h.logger.Error().Err(err).Str("agent_id", agent.ID.String()).Msg("failed to create backup record")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to record backup"})
 		return
+	}
+
+	h.logger.Info().
+		Str("agent_id", agent.ID.String()).
+		Str("backup_id", b.ID.String()).
+		Str("status", req.Status).
+		Msg("backup reported by agent")
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":     b.ID,
+		"status": b.Status,
+	})
+}
+
+// ReportQueuedBackups handles reports of backups executed while offline.
+// POST /api/v1/agent/queued-backups
+func (h *AgentAPIHandler) ReportQueuedBackups(c *gin.Context) {
+	agent := middleware.RequireAgent(c)
+	if agent == nil {
+		return
+	}
+
 	var req ReportQueuedBackupsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
@@ -852,13 +859,14 @@ func (h *AgentAPIHandler) ReportBackup(c *gin.Context) {
 
 	h.logger.Info().
 		Str("agent_id", agent.ID.String()).
-		Str("backup_id", b.ID.String()).
-		Str("status", req.Status).
-		Msg("backup reported by agent")
+		Str("hostname", agent.Hostname).
+		Int("received", len(req.Backups)).
+		Int("processed", processed).
+		Msg("queued backups reported")
 
-	c.JSON(http.StatusOK, gin.H{
-		"id":     b.ID,
-		"status": b.Status,
+	c.JSON(http.StatusOK, ReportQueuedBackupsResponse{
+		Acknowledged: true,
+		Processed:    processed,
 	})
 }
 
@@ -915,80 +923,6 @@ func (h *AgentAPIHandler) GetSnapshots(c *gin.Context) {
 	c.JSON(http.StatusOK, snapshots)
 }
 
-import (
-	"context"
-	"net/http"
-	"time"
-
-	"github.com/MacJediWizard/keldris/internal/api/middleware"
-	"github.com/MacJediWizard/keldris/internal/models"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/rs/zerolog"
-)
-
-// AgentAPIStore defines the interface for agent API persistence operations.
-type AgentAPIStore interface {
-	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
-	UpdateAgent(ctx context.Context, agent *models.Agent) error
-}
-
-// AgentAPIHandler handles agent-facing API endpoints (authenticated via API key).
-type AgentAPIHandler struct {
-	store  AgentAPIStore
-	logger zerolog.Logger
-}
-
-// NewAgentAPIHandler creates a new AgentAPIHandler.
-func NewAgentAPIHandler(store AgentAPIStore, logger zerolog.Logger) *AgentAPIHandler {
-	return &AgentAPIHandler{
-		store:  store,
-		logger: logger.With().Str("component", "agent_api_handler").Logger(),
-	}
-}
-
-// RegisterRoutes registers agent API routes on the given router group.
-// This group should have APIKeyMiddleware applied.
-func (h *AgentAPIHandler) RegisterRoutes(r *gin.RouterGroup) {
-	r.POST("/health", h.ReportHealth)
-}
-
-// AgentHealthReport is the request body for agent health reporting.
-type AgentHealthReport struct {
-	Status  string         `json:"status" binding:"required,oneof=healthy unhealthy degraded"`
-	OSInfo  *models.OSInfo `json:"os_info,omitempty"`
-	Metrics *AgentMetrics  `json:"metrics,omitempty"`
-}
-
-// AgentMetrics contains optional metrics from the agent.
-type AgentMetrics struct {
-	CPUUsage    float64 `json:"cpu_usage,omitempty"`
-	MemoryUsage float64 `json:"memory_usage,omitempty"`
-	DiskUsage   float64 `json:"disk_usage,omitempty"`
-	Uptime      int64   `json:"uptime_seconds,omitempty"`
-}
-
-// AgentHealthResponse is the response for agent health reporting.
-type AgentHealthResponse struct {
-	Acknowledged bool      `json:"acknowledged"`
-	ServerTime   time.Time `json:"server_time"`
-	AgentID      string    `json:"agent_id"`
-}
-
-// ReportHealth handles agent health reports.
-// POST /api/v1/agent/health
-func (h *AgentAPIHandler) ReportHealth(c *gin.Context) {
-		Str("hostname", agent.Hostname).
-		Int("received", len(req.Backups)).
-		Int("processed", processed).
-		Msg("queued backups reported")
-
-	c.JSON(http.StatusOK, ReportQueuedBackupsResponse{
-		Acknowledged: true,
-		Processed:    processed,
-	})
-}
-
 // ReconnectionNotification is the request body for reconnection alerts.
 type ReconnectionNotification struct {
 	QueuedCount int `json:"queued_count" binding:"required"`
@@ -1008,44 +942,12 @@ func (h *AgentAPIHandler) NotifyReconnection(c *gin.Context) {
 		return
 	}
 
-	var req AgentHealthReport
 	var req ReconnectionNotification
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
 		return
 	}
 
-	// Update agent's last seen and status
-	agent.MarkSeen()
-	if req.OSInfo != nil {
-		agent.OSInfo = req.OSInfo
-	}
-
-	// Map agent-reported status to internal status
-	switch req.Status {
-	case "healthy":
-		agent.Status = models.AgentStatusActive
-	case "unhealthy", "degraded":
-		// Keep as active since agent is still responding, but could add a separate health field
-		agent.Status = models.AgentStatusActive
-	}
-
-	if err := h.store.UpdateAgent(c.Request.Context(), agent); err != nil {
-		h.logger.Error().Err(err).Str("agent_id", agent.ID.String()).Msg("failed to update agent health")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update agent health"})
-		return
-	}
-
-	h.logger.Debug().
-		Str("agent_id", agent.ID.String()).
-		Str("hostname", agent.Hostname).
-		Str("status", req.Status).
-		Msg("agent health report received")
-
-	c.JSON(http.StatusOK, AgentHealthResponse{
-		Acknowledged: true,
-		ServerTime:   time.Now().UTC(),
-		AgentID:      agent.ID.String(),
 	ctx := c.Request.Context()
 	alertCreated := false
 
@@ -1060,8 +962,8 @@ func (h *AgentAPIHandler) NotifyReconnection(c *gin.Context) {
 		)
 		alert.SetResource(models.ResourceTypeAgent, agent.ID)
 		alert.Metadata = map[string]any{
-			"hostname":      agent.Hostname,
-			"queued_count":  req.QueuedCount,
+			"hostname":       agent.Hostname,
+			"queued_count":   req.QueuedCount,
 			"reconnected_at": time.Now().Format(time.RFC3339),
 		}
 

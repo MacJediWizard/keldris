@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { brandingApi } from '../lib/api';
-import type { UpdateBrandingRequest } from '../lib/types';
+import type { UpdateBrandingSettingsRequest } from '../lib/types';
 
+// Get branding settings (requires auth)
 export function useBranding() {
 	return useQuery({
 		queryKey: ['branding'],
 		queryFn: () => brandingApi.get(),
-		staleTime: 60 * 1000,
+		staleTime: 60 * 1000, // 1 minute
 		retry: (failureCount, error) => {
 			// Don't retry on 402 (feature not available)
 			if (error instanceof Error && 'status' in error) {
@@ -18,26 +19,8 @@ export function useBranding() {
 	});
 }
 
-export function useUpdateBranding() {
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: (data: UpdateBrandingRequest) => brandingApi.update(data),
-import type { UpdateBrandingSettingsRequest } from '../lib/types';
-
-import type { UpdateBrandingSettingsRequest } from '../lib/types';
-
-// Get branding settings (requires auth)
-export function useBrandingSettings() {
-	return useQuery({
-		queryKey: ['branding'],
-		queryFn: () => brandingApi.get(),
-		staleTime: 60 * 1000, // 1 minute
-	});
-}
-
 // Update branding settings
-export function useUpdateBrandingSettings() {
+export function useUpdateBranding() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
@@ -57,6 +40,9 @@ export function useResetBranding() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['branding'] });
 		},
+	});
+}
+
 // Get public branding settings (no auth required, for login page)
 export function usePublicBrandingSettings(orgSlug: string) {
 	return useQuery({

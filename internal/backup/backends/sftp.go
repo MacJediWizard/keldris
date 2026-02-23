@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"errors"
-	"fmt"
-	"net"
 	"path/filepath"
 	"time"
 
@@ -27,12 +24,6 @@ type SFTPBackend struct {
 	PrivateKey     string `json:"private_key,omitempty"`
 	HostKey        string `json:"host_key,omitempty"`         // Base64-encoded SSH public key
 	KnownHostsFile string `json:"known_hosts_file,omitempty"` // Path to known_hosts file
-	Host       string `json:"host"`
-	Port       int    `json:"port,omitempty"`
-	User       string `json:"user"`
-	Path       string `json:"path"`
-	Password   string `json:"password,omitempty"`
-	PrivateKey string `json:"private_key,omitempty"`
 }
 
 // Type returns the repository type.
@@ -144,10 +135,6 @@ func (b *SFTPBackend) TestConnection() error {
 		User:            b.User,
 		Auth:            authMethods,
 		HostKeyCallback: hostKeyCallback,
-	config := &ssh.ClientConfig{
-		User:            b.User,
-		Auth:            authMethods,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         30 * time.Second,
 	}
 

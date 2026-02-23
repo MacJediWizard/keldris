@@ -1,8 +1,11 @@
 package license
 
 import (
+	"context"
 	"errors"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // DefaultTrialDuration is the default trial period (14 days).
@@ -74,20 +77,7 @@ func (t *Trial) Convert(tier LicenseTier) (*License, error) {
 		IssuedAt:   now,
 		Limits:     GetLimits(tier),
 	}, nil
-// Package license provides trial and subscription management for Keldris.
-package license
-
-import (
-// Package license provides trial and subscription management for Keldris.
-package license
-
-import (
-	"context"
-	"errors"
-	"time"
-
-	"github.com/google/uuid"
-)
+}
 
 // DefaultTrialDays is the standard trial period duration.
 const DefaultTrialDays = 30
@@ -160,11 +150,11 @@ type ProFeature struct {
 	Limit       *int   `json:"limit,omitempty"` // nil means unlimited
 }
 
-// Feature names for Pro tier.
+// Feature names for Pro tier trial features.
+// Note: FeatureDRRunbooks and FeatureAPIAccess are defined in features.go.
 const (
 	FeatureAdvancedScheduling  = "advanced_scheduling"
 	FeatureGeoReplication      = "geo_replication"
-	FeatureDRRunbooks          = "dr_runbooks"
 	FeatureStorageTiering      = "storage_tiering"
 	FeatureClassifications     = "classifications"
 	FeatureCustomReports       = "custom_reports"
@@ -172,7 +162,6 @@ const (
 	FeatureCostEstimation      = "cost_estimation"
 	FeatureRansomwareDetection = "ransomware_detection"
 	FeatureUnlimitedAgents     = "unlimited_agents"
-	FeatureAPIAccess           = "api_access"
 	FeaturePrioritySupport     = "priority_support"
 )
 
@@ -227,8 +216,8 @@ func (m *TrialManager) GetTrialInfo(ctx context.Context, orgID uuid.UUID) (*Tria
 	return info, nil
 }
 
-// StartTrial begins a new trial for an organization.
-func (m *TrialManager) StartTrial(ctx context.Context, orgID uuid.UUID, email string) (*TrialInfo, error) {
+// StartTrialForOrg begins a new trial for an organization.
+func (m *TrialManager) StartTrialForOrg(ctx context.Context, orgID uuid.UUID, email string) (*TrialInfo, error) {
 	// Check if already has trial or is paid
 	info, err := m.store.GetTrialInfo(ctx, orgID)
 	if err != nil {
@@ -321,7 +310,7 @@ func (m *TrialManager) GetProFeatures(ctx context.Context, orgID uuid.UUID) ([]P
 	features := []ProFeature{
 		{Name: FeatureAdvancedScheduling, Description: "Advanced backup scheduling with complex cron patterns", Available: info.HasProFeatures},
 		{Name: FeatureGeoReplication, Description: "Cross-region backup replication", Available: info.HasProFeatures},
-		{Name: FeatureDRRunbooks, Description: "Disaster recovery runbooks and automation", Available: info.HasProFeatures},
+		{Name: string(FeatureDRRunbooks), Description: "Disaster recovery runbooks and automation", Available: info.HasProFeatures},
 		{Name: FeatureStorageTiering, Description: "Automatic storage tier management", Available: info.HasProFeatures},
 		{Name: FeatureClassifications, Description: "Data classification and compliance tagging", Available: info.HasProFeatures},
 		{Name: FeatureCustomReports, Description: "Custom report generation and scheduling", Available: info.HasProFeatures},
@@ -329,7 +318,7 @@ func (m *TrialManager) GetProFeatures(ctx context.Context, orgID uuid.UUID) ([]P
 		{Name: FeatureCostEstimation, Description: "Storage cost estimation and forecasting", Available: info.HasProFeatures},
 		{Name: FeatureRansomwareDetection, Description: "Ransomware detection and alerts", Available: info.HasProFeatures},
 		{Name: FeatureUnlimitedAgents, Description: "Unlimited backup agents", Available: info.HasProFeatures},
-		{Name: FeatureAPIAccess, Description: "Full REST API access", Available: info.HasProFeatures},
+		{Name: string(FeatureAPIAccess), Description: "Full REST API access", Available: info.HasProFeatures},
 		{Name: FeaturePrioritySupport, Description: "Priority email and chat support", Available: info.HasProFeatures},
 	}
 

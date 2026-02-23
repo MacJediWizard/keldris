@@ -2,9 +2,9 @@
 package license
 
 import (
-	"errors"
-	"fmt"
+	"crypto/ed25519"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -12,6 +12,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/MacJediWizard/keldris/internal/models"
+	"github.com/google/uuid"
 )
 
 // LicenseTier represents the subscription level.
@@ -22,7 +25,6 @@ const (
 	TierFree LicenseTier = "free"
 	// TierPro unlocks advanced features like OIDC and audit logs.
 	TierPro LicenseTier = "pro"
-	// TierEnterprise unlocks all features including multi-org.
 	// TierEnterprise unlocks all features including multi-org and air-gap.
 	TierEnterprise LicenseTier = "enterprise"
 )
@@ -97,26 +99,7 @@ func FreeLicense() *License {
 		IssuedAt:   time.Now(),
 		Limits:     GetLimits(TierFree),
 	}
-// Package license provides license key generation and validation for Keldris.
-package license
-
-import (
-// Package license provides license key generation and validation for Keldris.
-package license
-
-import (
-	"crypto/ed25519"
-	"crypto/rand"
-	"encoding/base64"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"strings"
-	"time"
-
-	"github.com/MacJediWizard/keldris/internal/models"
-	"github.com/google/uuid"
-)
+}
 
 const (
 	// LicenseKeyPrefix is the prefix for all license keys.
@@ -245,30 +228,30 @@ func (g *Generator) Generate(payload *models.LicensePayload) (string, error) {
 	return licenseKey, nil
 }
 
-// Validator validates license keys offline.
-type Validator struct {
+// KeyValidator validates license keys offline using Ed25519 signatures.
+type KeyValidator struct {
 	publicKey ed25519.PublicKey
 }
 
-// NewValidator creates a new license key validator with the given public key.
-func NewValidator(publicKey ed25519.PublicKey) (*Validator, error) {
+// NewKeyValidator creates a new license key validator with the given public key.
+func NewKeyValidator(publicKey ed25519.PublicKey) (*KeyValidator, error) {
 	if len(publicKey) != ed25519.PublicKeySize {
 		return nil, ErrInvalidPublicKey
 	}
-	return &Validator{publicKey: publicKey}, nil
+	return &KeyValidator{publicKey: publicKey}, nil
 }
 
-// NewValidatorFromBase64 creates a validator from a base64-encoded public key.
-func NewValidatorFromBase64(encodedKey string) (*Validator, error) {
+// NewKeyValidatorFromBase64 creates a key validator from a base64-encoded public key.
+func NewKeyValidatorFromBase64(encodedKey string) (*KeyValidator, error) {
 	publicKey, err := PublicKeyFromBase64(encodedKey)
 	if err != nil {
 		return nil, err
 	}
-	return NewValidator(publicKey)
+	return NewKeyValidator(publicKey)
 }
 
 // Validate validates a license key and returns the payload if valid.
-func (v *Validator) Validate(licenseKey string) (*models.LicenseValidationResult, error) {
+func (v *KeyValidator) Validate(licenseKey string) (*models.LicenseValidationResult, error) {
 	result := &models.LicenseValidationResult{
 		Valid:  false,
 		Status: models.LicenseStatusInvalid,
@@ -313,12 +296,12 @@ func (v *Validator) Validate(licenseKey string) (*models.LicenseValidationResult
 
 // ParsePayload extracts the payload from a license key without validating signature.
 // Use Validate for full validation.
-func (v *Validator) ParsePayload(licenseKey string) (*models.LicensePayload, error) {
+func (v *KeyValidator) ParsePayload(licenseKey string) (*models.LicensePayload, error) {
 	return v.parseAndVerify(licenseKey)
 }
 
 // parseAndVerify parses and verifies the license key signature.
-func (v *Validator) parseAndVerify(licenseKey string) (*models.LicensePayload, error) {
+func (v *KeyValidator) parseAndVerify(licenseKey string) (*models.LicensePayload, error) {
 	// Check prefix
 	if !strings.HasPrefix(licenseKey, LicenseKeyPrefix+"-") {
 		return nil, ErrInvalidLicenseKey
@@ -363,10 +346,10 @@ func (v *Validator) parseAndVerify(licenseKey string) (*models.LicensePayload, e
 	return &payload, nil
 }
 
-// ValidateLicenseKey validates a license key without requiring a Validator instance.
+// ValidateLicenseKey validates a license key without requiring a KeyValidator instance.
 // This is a convenience function for simple validation scenarios.
 func ValidateLicenseKey(licenseKey string, publicKey ed25519.PublicKey) (*models.LicenseValidationResult, error) {
-	validator, err := NewValidator(publicKey)
+	validator, err := NewKeyValidator(publicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -375,14 +358,14 @@ func ValidateLicenseKey(licenseKey string, publicKey ed25519.PublicKey) (*models
 
 // Manager handles license validation and caching.
 type Manager struct {
-	validator     *Validator
+	validator     *KeyValidator
 	currentLicense *models.License
 	lastValidated  time.Time
 }
 
 // NewManager creates a new license manager.
 func NewManager(publicKey ed25519.PublicKey) (*Manager, error) {
-	validator, err := NewValidator(publicKey)
+	validator, err := NewKeyValidator(publicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -463,11 +446,6 @@ func (m *Manager) GetTier() models.LicenseTier {
 		return models.LicenseTierCommunity
 	}
 	return m.currentLicense.Tier
-	Tier       LicenseTier `json:"tier"`
-	CustomerID string      `json:"customer_id"`
-	ExpiresAt  time.Time   `json:"expires_at"`
-	IssuedAt   time.Time   `json:"issued_at"`
-	Limits     TierLimits  `json:"limits"`
 }
 
 // licensePayload is the JSON structure encoded in a license key.
@@ -536,36 +514,4 @@ func ParseLicense(key string) (*License, error) {
 	}
 
 	return license, nil
-}
-
-// ValidateLicense checks that a license is still valid (not expired).
-func ValidateLicense(license *License) error {
-	if license == nil {
-		return errors.New("nil license")
-	}
-
-	if !license.Tier.IsValid() {
-		return fmt.Errorf("unknown license tier: %s", license.Tier)
-	}
-
-	if time.Now().After(license.ExpiresAt) {
-		return errors.New("license has expired")
-	}
-
-	if license.CustomerID == "" {
-		return errors.New("missing customer ID")
-	}
-
-	return nil
-}
-
-// FreeLicense returns a default free-tier license with no expiry constraint.
-func FreeLicense() *License {
-	return &License{
-		Tier:       TierFree,
-		CustomerID: "free",
-		ExpiresAt:  time.Date(2099, 12, 31, 23, 59, 59, 0, time.UTC),
-		IssuedAt:   time.Now(),
-		Limits:     GetLimits(TierFree),
-	}
 }

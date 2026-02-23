@@ -221,93 +221,13 @@ type Schedule struct {
 	CreatedAt          time.Time            `json:"created_at"`
 	UpdatedAt          time.Time            `json:"updated_at"`
 	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker
-	ID                      uuid.UUID              `json:"id"`
-	AgentID                 uuid.UUID              `json:"agent_id"`
-	AgentGroupID            *uuid.UUID             `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
-	PolicyID                *uuid.UUID             `json:"policy_id,omitempty"`      // Policy this schedule was created from
-	Name                    string                 `json:"name"`
-	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker, pihole, mysql
-	BackupType              BackupType             `json:"backup_type"`              // Type of backup: file, docker, pihole
-	CronExpression          string                 `json:"cron_expression"`
-	Paths                   []string               `json:"paths"`
-	Excludes                []string               `json:"excludes,omitempty"`
-	RetentionPolicy         *RetentionPolicy       `json:"retention_policy,omitempty"`
-	BandwidthLimitKB        *int                   `json:"bandwidth_limit_kb,omitempty"`   // Upload limit in KB/s
-	BackupWindow            *BackupWindow          `json:"backup_window,omitempty"`        // Allowed backup time window
-	ExcludedHours           []int                  `json:"excluded_hours,omitempty"`       // Hours (0-23) when backups should not run
-	CompressionLevel        *string                `json:"compression_level,omitempty"`    // Compression level: off, auto, max
-	MaxFileSizeMB           *int                   `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
-	OnMountUnavailable      MountBehavior          `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
-	ClassificationLevel     string                 `json:"classification_level,omitempty"` // Data classification level: public, internal, confidential, restricted
-	ClassificationDataTypes []string               `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
-	Priority                SchedulePriority       `json:"priority"`                       // Backup priority: 1=high, 2=medium, 3=low
-	Preemptible             bool                   `json:"preemptible"`                    // Can be preempted by higher priority backups
 	DockerOptions           *DockerBackupOptions   `json:"docker_options,omitempty"`       // Docker-specific backup options
 	PiholeConfig            *PiholeBackupConfig    `json:"pihole_config,omitempty"`        // Pi-hole specific backup configuration
 	MySQLConfig             *MySQLBackupConfig     `json:"mysql_config,omitempty"`         // MySQL/MariaDB specific backup configuration
 	PostgresConfig          *PostgresBackupConfig  `json:"postgres_config,omitempty"`      // PostgreSQL specific backup configuration
 	ProxmoxOptions          *ProxmoxBackupOptions  `json:"proxmox_options,omitempty"`      // Proxmox-specific backup options
 	Metadata                map[string]interface{} `json:"metadata,omitempty"`
-	ID               uuid.UUID            `json:"id"`
-	AgentID          uuid.UUID            `json:"agent_id"`
-	AgentGroupID     *uuid.UUID           `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
-	PolicyID         *uuid.UUID           `json:"policy_id,omitempty"`      // Policy this schedule was created from
-	PolicyID         *uuid.UUID           `json:"policy_id,omitempty"` // Policy this schedule was created from
-	ID               uuid.UUID            `json:"id"`
-	AgentID          uuid.UUID            `json:"agent_id"`
-	Name             string               `json:"name"`
-	CronExpression   string               `json:"cron_expression"`
-	Paths            []string             `json:"paths"`
-	Excludes         []string             `json:"excludes,omitempty"`
-	RetentionPolicy  *RetentionPolicy     `json:"retention_policy,omitempty"`
-	BandwidthLimitKB *int                 `json:"bandwidth_limit_kb,omitempty"` // Upload limit in KB/s
-	BackupWindow     *BackupWindow        `json:"backup_window,omitempty"`      // Allowed backup time window
-	ExcludedHours    []int                `json:"excluded_hours,omitempty"`     // Hours (0-23) when backups should not run
-	CompressionLevel *string              `json:"compression_level,omitempty"`  // Compression level: off, auto, max
-	Enabled          bool                 `json:"enabled"`
-	Repositories     []ScheduleRepository `json:"repositories,omitempty"`
-	CreatedAt        time.Time            `json:"created_at"`
-	UpdatedAt        time.Time            `json:"updated_at"`
-	ID               uuid.UUID        `json:"id"`
-	AgentID          uuid.UUID        `json:"agent_id"`
 	RepositoryID     uuid.UUID        `json:"repository_id"`
-	Name             string           `json:"name"`
-	CronExpression   string           `json:"cron_expression"`
-	Paths            []string         `json:"paths"`
-	Excludes         []string         `json:"excludes,omitempty"`
-	RetentionPolicy  *RetentionPolicy `json:"retention_policy,omitempty"`
-	BandwidthLimitKB *int             `json:"bandwidth_limit_kb,omitempty"` // Upload limit in KB/s
-	BackupWindow     *BackupWindow    `json:"backup_window,omitempty"`      // Allowed backup time window
-	ExcludedHours    []int            `json:"excluded_hours,omitempty"`     // Hours (0-23) when backups should not run
-	Enabled          bool             `json:"enabled"`
-	CreatedAt        time.Time        `json:"created_at"`
-	UpdatedAt        time.Time        `json:"updated_at"`
-	ID                      uuid.UUID            `json:"id"`
-	AgentID                 uuid.UUID            `json:"agent_id"`
-	AgentGroupID            *uuid.UUID           `json:"agent_group_id,omitempty"` // If set, applies to all agents in the group
-	PolicyID                *uuid.UUID           `json:"policy_id,omitempty"`      // Policy this schedule was created from
-	Name                    string               `json:"name"`
-	CronExpression          string               `json:"cron_expression"`
-	Paths                   []string             `json:"paths"`
-	Excludes                []string             `json:"excludes,omitempty"`
-	RetentionPolicy         *RetentionPolicy     `json:"retention_policy,omitempty"`
-	BandwidthLimitKB        *int                 `json:"bandwidth_limit_kb,omitempty"`   // Upload limit in KB/s
-	BackupWindow            *BackupWindow        `json:"backup_window,omitempty"`        // Allowed backup time window
-	ExcludedHours           []int                `json:"excluded_hours,omitempty"`       // Hours (0-23) when backups should not run
-	CompressionLevel        *string              `json:"compression_level,omitempty"`    // Compression level: off, auto, max
-	MaxFileSizeMB           *int                 `json:"max_file_size_mb,omitempty"`     // Max file size in MB (0 = disabled)
-	OnMountUnavailable      MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
-	ClassificationLevel     string               `json:"classification_level,omitempty"` // Data classification level: public, internal, confidential, restricted
-	ClassificationDataTypes []string             `json:"classification_data_types,omitempty"` // Data types: pii, phi, pci, proprietary, general
-	Enabled                 bool                 `json:"enabled"`
-	Repositories            []ScheduleRepository `json:"repositories,omitempty"`
-	CreatedAt               time.Time            `json:"created_at"`
-	UpdatedAt               time.Time            `json:"updated_at"`
-	OnMountUnavailable MountBehavior        `json:"on_mount_unavailable,omitempty"` // Behavior when network mount unavailable
-	Enabled            bool                 `json:"enabled"`
-	Repositories       []ScheduleRepository `json:"repositories,omitempty"`
-	CreatedAt          time.Time            `json:"created_at"`
-	UpdatedAt          time.Time            `json:"updated_at"`
 }
 
 // NewSchedule creates a new Schedule with the given details.
@@ -471,44 +391,6 @@ func (s *Schedule) PriorityLabel() string {
 func (s *Schedule) IsHigherPriorityThan(other *Schedule) bool {
 	return s.Priority < other.Priority
 }
-
-// Schedule represents a backup schedule configuration.
-type Schedule struct {
-	ID              uuid.UUID        `json:"id"`
-	AgentID         uuid.UUID        `json:"agent_id"`
-	RepositoryID    uuid.UUID        `json:"repository_id"`
-	Name            string           `json:"name"`
-	CronExpression  string           `json:"cron_expression"`
-	Paths           []string         `json:"paths"`
-	Excludes        []string         `json:"excludes,omitempty"`
-	RetentionPolicy *RetentionPolicy `json:"retention_policy,omitempty"`
-	Enabled         bool             `json:"enabled"`
-	CreatedAt       time.Time        `json:"created_at"`
-	UpdatedAt       time.Time        `json:"updated_at"`
-}
-
-// NewSchedule creates a new Schedule with the given details.
-func NewSchedule(agentID, repositoryID uuid.UUID, name, cronExpr string, paths []string) *Schedule {
-	now := time.Now()
-	return &Schedule{
-		ID:             uuid.New(),
-		AgentID:        agentID,
-		RepositoryID:   repositoryID,
-		Name:           name,
-		CronExpression: cronExpr,
-		Paths:          paths,
-		Enabled:        true,
-		CreatedAt:      now,
-		UpdatedAt:      now,
-		CronExpression:     cronExpr,
-		Paths:              paths,
-		OnMountUnavailable: MountBehaviorFail,
-		Enabled:            true,
-		CreatedAt:          now,
-		UpdatedAt:          now,
-	}
-}
-
 // GetPrimaryRepository returns the primary repository (priority 0), or nil if none.
 func (s *Schedule) GetPrimaryRepository() *ScheduleRepository {
 	for i := range s.Repositories {
@@ -536,9 +418,6 @@ func (s *Schedule) GetEnabledRepositories() []ScheduleRepository {
 		}
 	}
 	return enabled
-}
-
-	}
 }
 
 // SetPaths sets the paths from JSON bytes.

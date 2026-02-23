@@ -1,28 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAirGapStatus } from '../hooks/useAirGap';
 import { useBranding } from '../contexts/BrandingContext';
-import { useEffect, useRef, useState } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useBranding } from '../contexts/BrandingContext';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
-import { useBranding } from '../hooks/useBranding';
-import { useLicense } from '../hooks/useLicense';
 import {
 	useLatestChanges,
 	useNewVersionAvailable,
 } from '../hooks/useChangelog';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-import { useLocale } from '../hooks/useLocale';
-import { useTheme } from '../hooks/useTheme';
-import { useVersion } from '../hooks/useVersion';
-import { useOnboardingStatus } from '../hooks/useOnboarding';
-import { useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { useAlertCount } from '../hooks/useAlerts';
-import { useLogout, useMe } from '../hooks/useAuth';
-import { useBranding } from '../hooks/useBranding';
+import { useLicense } from '../hooks/useLicense';
 import { useLocale } from '../hooks/useLocale';
 import { useOnboardingStatus } from '../hooks/useOnboarding';
 import {
@@ -33,38 +20,23 @@ import {
 	ReadOnlyModeContext,
 	useReadOnlyModeValue,
 } from '../hooks/useReadOnlyMode';
+import { useSearch } from '../hooks/useSearch';
+import { useTheme } from '../hooks/useTheme';
+import { useVersion } from '../hooks/useVersion';
+import type { SearchResult, SearchResultType } from '../lib/types';
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AirGapIndicator } from './features/AirGapIndicator';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { GlobalSearchBar } from './features/GlobalSearchBar';
-import { AnnouncementBanner } from './features/AnnouncementBanner';
 import { LanguageSelector } from './features/LanguageSelector';
-import { TierBadge } from './features/TierBadge';
 import { LicenseBanner } from './features/LicenseBanner';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { RecentItemsDropdown } from './features/RecentItems';
-import { AnnouncementBanner } from './features/AnnouncementBanner';
-import { LanguageSelector } from './features/LanguageSelector';
-import { MaintenanceCountdown } from './features/MaintenanceCountdown';
 import { ShortcutHelpModal } from './features/ShortcutHelpModal';
+import { TierBadge } from './features/TierBadge';
 import { TrialBanner } from './features/TrialBanner';
 import { WhatsNewModal } from './features/WhatsNewModal';
 import { Breadcrumbs } from './ui/Breadcrumbs';
-import { useSearch } from '../hooks/useSearch';
-import { useTheme } from '../hooks/useTheme';
-import type { SearchResult, SearchResultType } from '../lib/types';
-import { WhatsNewModal } from './features/WhatsNewModal';
-import { useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { useLogout, useMe } from '../hooks/useAuth';
-import { LanguageSelector } from './features/LanguageSelector';
-import { ToastProvider } from './ui/Toast';
-import { ShortcutHelpModal } from './features/ShortcutHelpModal';
-import { MaintenanceBanner } from './features/MaintenanceBanner';
-import {
-	useOrganizations,
-	useSwitchOrganization,
-} from '../hooks/useOrganizations';
 import { ToastProvider } from './ui/Toast';
 
 interface NavItem {
@@ -72,12 +44,6 @@ interface NavItem {
 	labelKey: string;
 	icon: React.ReactNode;
 	shortcut?: string;
-import { Link, Outlet, useLocation } from 'react-router-dom';
-
-interface NavItem {
-	path: string;
-	label: string;
-	icon: React.ReactNode;
 }
 
 const navItems: NavItem[] = [
@@ -85,7 +51,6 @@ const navItems: NavItem[] = [
 		path: '/',
 		labelKey: 'nav.dashboard',
 		shortcut: 'G D',
-		label: 'Dashboard',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -107,7 +72,6 @@ const navItems: NavItem[] = [
 		path: '/agents',
 		labelKey: 'nav.agents',
 		shortcut: 'G A',
-		label: 'Agents',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -129,7 +93,6 @@ const navItems: NavItem[] = [
 		path: '/repositories',
 		labelKey: 'nav.repositories',
 		shortcut: 'G R',
-		label: 'Repositories',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -151,7 +114,6 @@ const navItems: NavItem[] = [
 		path: '/schedules',
 		labelKey: 'nav.schedules',
 		shortcut: 'G S',
-		label: 'Schedules',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -173,7 +135,6 @@ const navItems: NavItem[] = [
 		path: '/backups',
 		labelKey: 'nav.backups',
 		shortcut: 'G B',
-		label: 'Backups',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -195,7 +156,6 @@ const navItems: NavItem[] = [
 		path: '/restore',
 		labelKey: 'nav.restore',
 		shortcut: 'G E',
-		label: 'Restore',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -257,8 +217,6 @@ const navItems: NavItem[] = [
 		path: '/alerts',
 		labelKey: 'nav.alerts',
 		shortcut: 'G L',
-		path: '/alerts',
-		label: 'Alerts',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -299,8 +257,6 @@ const navItems: NavItem[] = [
 	{
 		path: '/notifications',
 		labelKey: 'nav.notifications',
-		path: '/notifications',
-		labelKey: 'nav.notifications',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -321,7 +277,6 @@ const navItems: NavItem[] = [
 	{
 		path: '/audit-logs',
 		labelKey: 'nav.auditLogs',
-		label: 'Audit Logs',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -342,7 +297,6 @@ const navItems: NavItem[] = [
 	{
 		path: '/stats',
 		labelKey: 'nav.storageStats',
-		label: 'Storage Stats',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -363,8 +317,6 @@ const navItems: NavItem[] = [
 	{
 		path: '/classifications',
 		labelKey: 'nav.classifications',
-		path: '/tags',
-		label: 'Tags',
 		icon: (
 			<svg
 				aria-hidden="true"
@@ -377,7 +329,7 @@ const navItems: NavItem[] = [
 					strokeLinecap="round"
 					strokeLinejoin="round"
 					strokeWidth={2}
-					d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+					d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
 				/>
 			</svg>
 		),
@@ -398,7 +350,6 @@ const navItems: NavItem[] = [
 					strokeLinejoin="round"
 					strokeWidth={2}
 					d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-					d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
 				/>
 			</svg>
 		),
@@ -415,13 +366,6 @@ function Sidebar() {
 	const { data: versionInfo } = useVersion();
 	const { theme, toggleTheme } = useTheme();
 	const { hasNewVersion, latestVersion } = useNewVersionAvailable();
-	const { productName, logoUrl, branding } = useBranding();
-	const { hasNewVersion, latestVersion } = useNewVersionAvailable();
-	const { productName, logoUrl, branding } = useBranding();
-	const isAdmin =
-		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
-
-	const displayName = brandingData?.product_name || t('common.appName');
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
@@ -438,18 +382,8 @@ function Sidebar() {
 					/>
 				) : (
 					<h1 className="text-2xl font-bold">{displayName}</h1>
-				{logoUrl && branding?.enabled ? (
-					<img src={logoUrl} alt={productName} className="h-8 mb-2" />
-				) : (
-					<h1 className="text-2xl font-bold">
-						{branding?.enabled ? productName : t('common.appName')}
-					</h1>
-				)}
-				<h1 className="text-2xl font-bold">{t('common.appName')}</h1>
 				)}
 				<p className="text-gray-400 text-sm">{t('common.tagline')}</p>
-				<h1 className="text-2xl font-bold">Keldris</h1>
-				<p className="text-gray-400 text-sm">Keeper of your data</p>
 			</div>
 			<nav className="flex-1 px-4">
 				<ul className="space-y-1">
@@ -624,7 +558,6 @@ function Sidebar() {
 											strokeLinecap="round"
 											strokeLinejoin="round"
 											strokeWidth={2}
-											d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
 											d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
 										/>
 									</svg>
@@ -707,32 +640,6 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Password Policy</span>
-								</Link>
-							</li>
-							<li>
-								<Link
-									to="/organization/branding"
-									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-										location.pathname === '/organization/branding'
-											? 'bg-indigo-600 text-white'
-											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
-									}`}
-								>
-									<svg
-										aria-hidden="true"
-										className="w-5 h-5"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-										/>
-									</svg>
-									<span>Branding</span>
 								</Link>
 							</li>
 							<li>
@@ -905,8 +812,6 @@ function Sidebar() {
 									to="/admin/organizations"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/admin/organizations'
-									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-										isActive
 											? 'bg-indigo-600 text-white'
 											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
 									}`}
@@ -928,30 +833,11 @@ function Sidebar() {
 									<span>Organizations</span>
 								</Link>
 							</li>
-									{item.icon}
-									<span>{t(item.labelKey)}</span>
-									{item.icon}
-									<span>{item.label}</span>
-								</Link>
-							</li>
-						);
-					})}
-				</ul>
-				{isAdmin && (
-					<>
-						<div className="mt-6 mb-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-							{t('nav.organization')}
-							Organization
-						</div>
-						<ul className="space-y-1">
 							<li>
 								<Link
 									to="/admin/license"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/admin/license'
-									to="/organization/members"
-									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-										location.pathname === '/organization/members'
 											? 'bg-indigo-600 text-white'
 											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
 									}`}
@@ -971,11 +857,6 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>License</span>
-									<span>{t('nav.members')}</span>
-											d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-										/>
-									</svg>
-									<span>Members</span>
 								</Link>
 							</li>
 							<li>
@@ -983,9 +864,6 @@ function Sidebar() {
 									to="/admin/setup"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/admin/setup'
-									to="/organization/settings"
-									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-										location.pathname === '/organization/settings'
 											? 'bg-indigo-600 text-white'
 											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
 									}`}
@@ -1037,7 +915,6 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Migration</span>
-									<span>{t('nav.settings')}</span>
 								</Link>
 							</li>
 							<li>
@@ -1045,9 +922,6 @@ function Sidebar() {
 									to="/organization/maintenance"
 									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
 										location.pathname === '/organization/maintenance'
-									to="/organization/sso"
-									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-										location.pathname === '/organization/sso'
 											? 'bg-indigo-600 text-white'
 											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
 									}`}
@@ -1067,43 +941,6 @@ function Sidebar() {
 										/>
 									</svg>
 									<span>Maintenance</span>
-									<span>Settings</span>
-											d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-										/>
-									</svg>
-									<span>SSO Group Sync</span>
-								</Link>
-							</li>
-							<li>
-								<Link
-									to="/admin/setup"
-									className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-										location.pathname === '/admin/setup'
-											? 'bg-indigo-600 text-white'
-											: 'text-gray-300 hover:bg-gray-800 hover:text-white'
-									}`}
-								>
-									<svg
-										aria-hidden="true"
-										className="w-5 h-5"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-										/>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-										/>
-									</svg>
-									<span>Server Setup</span>
 								</Link>
 							</li>
 						</ul>
@@ -1163,41 +1000,17 @@ function Sidebar() {
 						)}
 					</button>
 				</div>
-				<p className="text-xs text-gray-500">
-					{t('common.version', { version: versionInfo?.version ?? '...' })}
-				</p>
-			</nav>
-			<div className="p-4 border-t border-gray-800">
 				<Link
 					to="/changelog"
 					className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
 				>
-					<span>{t('common.version', { version: '0.0.1' })}</span>
+					<span>{t('common.version', { version: versionInfo?.version ?? '...' })}</span>
 					{hasNewVersion && (
 						<span className="px-1.5 py-0.5 text-[10px] font-medium bg-indigo-600 text-white rounded-full">
 							v{latestVersion} available
 						</span>
 					)}
 				</Link>
-			<div className="p-4 border-t border-gray-800">
-				<p className="text-xs text-gray-500">
-					{t('common.version', { version: '0.0.1' })}
-				</p>
-			<div className="p-4 border-t border-gray-800">
-				<p className="text-xs text-gray-500">
-					{t('common.version', { version: '0.0.1' })}
-				</p>
-			</nav>
-			<div className="p-4 border-t border-gray-800">
-				<p className="text-xs text-gray-500">v0.0.1</p>
-						</ul>
-					</>
-				)}
-			</nav>
-			<div className="p-4 border-t border-gray-800">
-				<p className="text-xs text-gray-500">
-					{t('common.version', { version: '0.0.1' })}
-				</p>
 			</div>
 		</aside>
 	);
@@ -1230,18 +1043,11 @@ function OrgSwitcher() {
 			<button
 				type="button"
 				onClick={() => setShowDropdown(!showDropdown)}
-				className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700"
-				className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-				className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
+				className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
 			>
 				<svg
 					aria-hidden="true"
 					className="w-4 h-4 text-gray-500 dark:text-gray-400"
-				className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-			>
-				<svg
-					aria-hidden="true"
-					className="w-4 h-4 text-gray-500"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -1255,15 +1061,10 @@ function OrgSwitcher() {
 				</svg>
 				<span className="max-w-32 truncate">
 					{currentOrg?.name ?? t('common.selectOrg')}
-					{currentOrg?.name ?? 'Select org'}
 				</span>
 				<svg
 					aria-hidden="true"
 					className="w-4 h-4 text-gray-400 dark:text-gray-500"
-				</span>
-				<svg
-					aria-hidden="true"
-					className="w-4 h-4 text-gray-400"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -1278,21 +1079,7 @@ function OrgSwitcher() {
 			</button>
 			{showDropdown && (
 				<div className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-						{t('org.organizations')}
-				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-						Organizations
-				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-						{t('org.organizations')}
-				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
 					<div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
-						Organizations
-				<div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-					<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
 						{t('org.organizations')}
 					</div>
 					{organizations.map((org) => (
@@ -1302,22 +1089,12 @@ function OrgSwitcher() {
 							onClick={() => handleSwitch(org.id)}
 							className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
 								org.id === user?.current_org_id
-									? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+									? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
 									: 'text-gray-700 dark:text-gray-200'
-							className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center justify-between ${
-								org.id === user?.current_org_id
-									? 'bg-indigo-50 text-indigo-700'
-									: 'text-gray-700'
-									? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
-									: 'text-gray-700 dark:text-gray-300'
 							}`}
 						>
 							<span className="truncate">{org.name}</span>
 							<span className="text-xs text-gray-400 dark:text-gray-500 capitalize">
-							}`}
-						>
-							<span className="truncate">{org.name}</span>
-							<span className="text-xs text-gray-400 capitalize">
 								{org.role}
 							</span>
 						</button>
@@ -1326,12 +1103,6 @@ function OrgSwitcher() {
 						<Link
 							to="/organization/new"
 							onClick={() => setShowDropdown(false)}
-							className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-gray-100 dark:text-indigo-400 dark:hover:bg-gray-700 flex items-center gap-2"
-					<div className="border-t border-gray-100 mt-1 pt-1">
-						<Link
-							to="/organization/new"
-							onClick={() => setShowDropdown(false)}
-							className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-gray-100 flex items-center gap-2"
 							className="w-full text-left px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
 						>
 							<svg
@@ -1349,7 +1120,6 @@ function OrgSwitcher() {
 								/>
 							</svg>
 							{t('org.createOrganization')}
-							Create organization
 						</Link>
 					</div>
 				</div>
@@ -1358,38 +1128,6 @@ function OrgSwitcher() {
 	);
 }
 
-function AirGapIndicator() {
-	const { data: status } = useAirGapStatus();
-	const { t } = useLocale();
-
-	if (!status?.enabled) return null;
-
-	return (
-		<Link
-			to="/system/airgap"
-			className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors dark:text-amber-300 dark:bg-amber-900/30 dark:border-amber-700 dark:hover:bg-amber-900/50"
-			className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors"
-		>
-			<svg
-				aria-hidden="true"
-				className="w-3.5 h-3.5"
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-			>
-				<path
-					strokeLinecap="round"
-					strokeLinejoin="round"
-					strokeWidth={2}
-					d="M18.364 5.636a9 9 0 010 12.728M5.636 5.636a9 9 0 000 12.728M12 12h.01"
-				/>
-			</svg>
-			{t('airGap.indicator')}
-		</Link>
-	);
-}
-
-function Header() {
 function HelpMenu({ onShowShortcuts }: { onShowShortcuts: () => void }) {
 	const [showDropdown, setShowDropdown] = useState(false);
 	const { t } = useLocale();
@@ -1413,6 +1151,79 @@ function HelpMenu({ onShowShortcuts }: { onShowShortcuts: () => void }) {
 				<svg
 					aria-hidden="true"
 					className="w-5 h-5"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+					/>
+				</svg>
+			</button>
+			{showDropdown && (
+				<div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+					<div className="px-4 py-2 border-b border-gray-100">
+						<p className="text-sm font-semibold text-gray-900">
+							{t('help.title')}
+						</p>
+					</div>
+					<div className="py-1">
+						{helpLinks.map((link) => (
+							<Link
+								key={link.path}
+								to={link.path}
+								onClick={() => setShowDropdown(false)}
+								className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+							>
+								{link.label}
+							</Link>
+						))}
+					</div>
+					<div className="border-t border-gray-100 py-1">
+						<button
+							type="button"
+							onClick={() => {
+								setShowDropdown(false);
+								onShowShortcuts();
+							}}
+							className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
+						>
+							<span>{t('help.keyboardShortcuts')}</span>
+							<span className="text-xs text-gray-400 font-mono">?</span>
+						</button>
+						<a
+							href="/api/docs"
+							target="_blank"
+							rel="noopener noreferrer"
+							onClick={() => setShowDropdown(false)}
+							className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+						>
+							{t('help.swaggerDocs')}
+							<svg
+								aria-hidden="true"
+								className="w-3 h-3 text-gray-400"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+								/>
+							</svg>
+						</a>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
 function getSearchResultIcon(type: SearchResultType) {
 	switch (type) {
 		case 'agent':
@@ -1578,65 +1389,6 @@ function GlobalSearch() {
 						strokeLinecap="round"
 						strokeLinejoin="round"
 						strokeWidth={2}
-						d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
-			</button>
-			{showDropdown && (
-				<div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-					<div className="px-4 py-2 border-b border-gray-100">
-						<p className="text-sm font-semibold text-gray-900">
-							{t('help.title')}
-						</p>
-					</div>
-					<div className="py-1">
-						{helpLinks.map((link) => (
-							<Link
-								key={link.path}
-								to={link.path}
-								onClick={() => setShowDropdown(false)}
-								className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-							>
-								{link.label}
-							</Link>
-						))}
-					</div>
-					<div className="border-t border-gray-100 py-1">
-						<button
-							type="button"
-							onClick={() => {
-								setShowDropdown(false);
-								onShowShortcuts();
-							}}
-							className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
-						>
-							<span>{t('help.keyboardShortcuts')}</span>
-							<span className="text-xs text-gray-400 font-mono">?</span>
-						</button>
-						<a
-							href="/api/docs"
-							target="_blank"
-							rel="noopener noreferrer"
-							onClick={() => setShowDropdown(false)}
-							className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-						>
-							{t('help.swaggerDocs')}
-							<svg
-								aria-hidden="true"
-								className="w-3 h-3 text-gray-400"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-								/>
-							</svg>
-						</a>
-					</div>
 						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 					/>
 				</svg>
@@ -1699,91 +1451,11 @@ function GlobalSearch() {
 }
 
 function Header({ onShowShortcuts }: { onShowShortcuts: () => void }) {
-function ThemeToggle() {
-	const { theme, toggleTheme } = useTheme();
-
-	const getIcon = () => {
-		if (theme === 'light') {
-			return (
-				<svg
-					aria-hidden="true"
-					className="w-5 h-5"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-						d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-					/>
-				</svg>
-			);
-		}
-		if (theme === 'dark') {
-			return (
-				<svg
-					aria-hidden="true"
-					className="w-5 h-5"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-						d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-					/>
-				</svg>
-			);
-		}
-		// System theme
-		return (
-			<svg
-				aria-hidden="true"
-				className="w-5 h-5"
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-			>
-				<path
-					strokeLinecap="round"
-					strokeLinejoin="round"
-					strokeWidth={2}
-					d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-				/>
-			</svg>
-		);
-	};
-
-	const getLabel = () => {
-		if (theme === 'light') return 'Light mode';
-		if (theme === 'dark') return 'Dark mode';
-		return 'System theme';
-	};
-
-	return (
-		<button
-			type="button"
-			onClick={toggleTheme}
-			aria-label={getLabel()}
-			title={getLabel()}
-			className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-		>
-			{getIcon()}
-		</button>
-	);
-}
-
-function Header() {
 	const [showDropdown, setShowDropdown] = useState(false);
 	const { data: user } = useMe();
 	const { data: alertCount } = useAlertCount();
 	const logout = useLogout();
 	const { t } = useLocale();
-	const logout = useLogout();
 
 	const userInitial =
 		user?.name?.charAt(0).toUpperCase() ??
@@ -1795,15 +1467,6 @@ function Header() {
 
 	return (
 		<header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
-	return (
-		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-			<div className="flex items-center gap-4">
-				<OrgSwitcher />
-				<AirGapIndicator />
-			</div>
-			<div className="flex-1 max-w-xl mx-4">
-				<GlobalSearchBar placeholder={t('common.search')} />
-		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
 			<div className="flex items-center gap-4">
 				<OrgSwitcher />
 				{isImpersonating && (
@@ -1833,9 +1496,10 @@ function Header() {
 						</span>
 					</div>
 				)}
+				<AirGapIndicator />
 			</div>
 			<div className="flex-1 max-w-xl mx-4">
-				<GlobalSearchBar placeholder={t('common.search')} />
+				<GlobalSearch />
 			</div>
 			<div className="flex items-center gap-4">
 				{isSuperuser && (
@@ -1862,59 +1526,12 @@ function Header() {
 						</span>
 					</div>
 				)}
-				<AirGapIndicator showDetails />
 				<LanguageSelector />
 				<RecentItemsDropdown />
 				<HelpMenu onShowShortcuts={onShowShortcuts} />
 				<Link
 					to="/alerts"
 					aria-label={t('nav.alerts')}
-					className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
-			<div className="flex items-center gap-4">
-				<LanguageSelector />
-				<Link
-					to="/alerts"
-					aria-label={t('nav.alerts')}
-				<GlobalSearch />
-			</div>
-			<div className="flex items-center gap-4">
-				<ThemeToggle />
-				<Link
-					to="/alerts"
-					aria-label="Alerts"
-	return (
-		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-			<div className="flex items-center gap-4">
-				<OrgSwitcher />
-			</div>
-			<div className="flex items-center gap-4">
-				<LanguageSelector />
-				<Link
-					to="/alerts"
-					aria-label={t('nav.alerts')}
-				<Link
-					to="/alerts"
-					aria-label="Alerts"
-					className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-function Header() {
-	return (
-		<header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-			<div className="flex items-center gap-4">
-				<h2 className="text-lg font-semibold text-gray-900">
-					Backup Management
-				</h2>
-			</div>
-			<div className="flex items-center gap-4">
-				<button
-					type="button"
-					aria-label="Notifications"
-					className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-				<LanguageSelector />
-				<RecentItemsDropdown />
-				<Link
-					to="/alerts"
-					aria-label={t('nav.alerts')}
-					className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
 					className="relative p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
 				>
 					<svg
@@ -1937,7 +1554,6 @@ function Header() {
 						</span>
 					)}
 				</Link>
-				</button>
 				<div className="relative">
 					<button
 						type="button"
@@ -1949,23 +1565,15 @@ function Header() {
 								isSuperuser ? 'bg-purple-600' : 'bg-indigo-600'
 							}`}
 						>
-						<div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
 							{userInitial}
 						</div>
 					</button>
 					{showDropdown && (
-						<div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+						<div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
 							{user && (
-								<div className="px-4 py-2 border-b border-gray-100">
-									<p className="text-sm font-medium text-gray-900 truncate">
-										{user.name}
-									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
-						<div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-							{user && (
-								<div className="px-4 py-2 border-b border-gray-100">
+								<div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
 									<div className="flex items-center gap-2">
-										<p className="text-sm font-medium text-gray-900 truncate">
+										<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
 											{user.name}
 										</p>
 										{isSuperuser && (
@@ -1974,7 +1582,7 @@ function Header() {
 											</span>
 										)}
 									</div>
-									<p className="text-xs text-gray-500 truncate">{user.email}</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
 								</div>
 							)}
 							{isSuperuser && (
@@ -2006,7 +1614,7 @@ function Header() {
 							<Link
 								to="/account/sessions"
 								onClick={() => setShowDropdown(false)}
-								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+								className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
 							>
 								<svg
 									aria-hidden="true"
@@ -2029,7 +1637,7 @@ function Header() {
 								target="_blank"
 								rel="noopener noreferrer"
 								onClick={() => setShowDropdown(false)}
-								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+								className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
 							>
 								<svg
 									aria-hidden="true"
@@ -2050,47 +1658,12 @@ function Header() {
 							<button
 								type="button"
 								onClick={() => logout.mutate()}
-								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
-							>
-								{t('common.signOut')}
-						<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-						<div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-							{user && (
-								<div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-									<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-										{user.name}
-									</p>
-									<p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-										{user.email}
-									</p>
-								</div>
-							)}
-							<button
-								type="button"
-								onClick={() => logout.mutate()}
-									<p className="text-xs text-gray-500 truncate">{user.email}</p>
-								</div>
-							)}
-							<a
-								href="/api/docs/index.html"
-								target="_blank"
-								rel="noopener noreferrer"
-								className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-							>
-								API Documentation
-							</a>
-							<button
-								type="button"
-								onClick={() => logout.mutate()}
-								className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+								className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
 							>
 								{t('common.signOut')}
 							</button>
 						</div>
 					)}
-				</button>
-				<div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-					U
 				</div>
 			</div>
 		</header>
@@ -2100,18 +1673,10 @@ function Header() {
 function LoadingScreen() {
 	const { t } = useLocale();
 	return (
-		<div className="min-h-screen bg-gray-50 flex items-center justify-center">
-			<div className="text-center">
-				<div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
-				<p className="text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
-	return (
 		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
 			<div className="text-center">
-				<div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
-				<p className="text-gray-600">Loading...</p>
-				<p className="text-gray-600">{t('common.loading')}</p>
 				<div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-800 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin mx-auto mb-4" />
-				<p className="text-gray-600 dark:text-gray-400">Loading...</p>
+				<p className="text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
 			</div>
 		</div>
 	);
@@ -2124,6 +1689,16 @@ export function Layout() {
 	const { data: onboardingStatus, isLoading: onboardingLoading } =
 		useOnboardingStatus();
 	const { data: brandingData } = useBranding();
+	const { latestEntry, currentVersion } = useLatestChanges();
+	const [showWhatsNew, setShowWhatsNew] = useState(true);
+	const readOnlyModeValue = useReadOnlyModeValue();
+	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+
+	const { shortcuts } = useKeyboardShortcuts({
+		onShowHelp: () => setShowShortcutHelp(true),
+		onCloseModal: () => setShowShortcutHelp(false),
+		enabled: !isLoading && !isError,
+	});
 
 	// Apply branding CSS variables and custom CSS
 	useEffect(() => {
@@ -2175,24 +1750,6 @@ export function Layout() {
 			root.style.removeProperty('--brand-secondary');
 		};
 	}, [brandingData]);
-	const { latestEntry, currentVersion } = useLatestChanges();
-	const [showWhatsNew, setShowWhatsNew] = useState(true);
-	const readOnlyModeValue = useReadOnlyModeValue();
-	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
-	const readOnlyModeValue = useReadOnlyModeValue();
-	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
-
-	const { shortcuts } = useKeyboardShortcuts({
-		onShowHelp: () => setShowShortcutHelp(true),
-		onCloseModal: () => setShowShortcutHelp(false),
-		enabled: !isLoading && !isError,
-	});
-
-	const { shortcuts } = useKeyboardShortcuts({
-		onShowHelp: () => setShowShortcutHelp(true),
-		onCloseModal: () => setShowShortcutHelp(false),
-		enabled: !isLoading && !isError,
-	});
 
 	// Redirect to onboarding if needed (only from dashboard)
 	// Allow access to all other pages so users can complete onboarding steps
@@ -2202,28 +1759,6 @@ export function Layout() {
 			!onboardingLoading &&
 			onboardingStatus?.needs_onboarding &&
 			location.pathname === '/'
-		) {
-			navigate('/onboarding');
-		}
-	}, [
-		onboardingLoading,
-		onboardingStatus?.needs_onboarding,
-		location.pathname,
-		navigate,
-	]);
-
-	// Show loading state while checking auth
-	if (isLoading || onboardingLoading) {
-	const { isLoading, isError } = useMe();
-	const { data: onboardingStatus, isLoading: onboardingLoading } =
-		useOnboardingStatus();
-
-	// Redirect to onboarding if needed (but not if already on onboarding page)
-	useEffect(() => {
-		if (
-			!onboardingLoading &&
-			onboardingStatus?.needs_onboarding &&
-			location.pathname !== '/onboarding'
 		) {
 			navigate('/onboarding');
 		}
@@ -2246,24 +1781,9 @@ export function Layout() {
 	}
 
 	return (
-		<ReadOnlyModeContext.Provider value={readOnlyModeValue}>
-			<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-				<MaintenanceCountdown />
-				<AnnouncementBanner />
-				<LicenseBanner />
-				<PasswordExpirationBanner />
-				<TrialBanner />
-				<div className="flex flex-1">
-					<Sidebar />
-					<div className="flex-1 flex flex-col">
-						<Header onShowShortcuts={() => setShowShortcutHelp(true)} />
-						<main className="flex-1 p-6">
-							<Breadcrumbs />
-							<Outlet />
-						</main>
 		<ToastProvider>
 			<ReadOnlyModeContext.Provider value={readOnlyModeValue}>
-				<div className="min-h-screen bg-gray-50 flex flex-col">
+				<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
 					<MaintenanceCountdown />
 					<AnnouncementBanner />
 					<LicenseBanner />
@@ -2278,66 +1798,6 @@ export function Layout() {
 								<Outlet />
 							</main>
 						</div>
-					</div>
-					<ShortcutHelpModal
-						isOpen={showShortcutHelp}
-						onClose={() => setShowShortcutHelp(false)}
-						shortcuts={shortcuts}
-					/>
-				)}
-		<div className="min-h-screen bg-gray-50 flex">
-		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
-			<Sidebar />
-			<div className="flex-1 flex flex-col">
-				<AnnouncementBanner />
-				<Header />
-				<MaintenanceBanner />
-export function Layout() {
-	return (
-		<div className="min-h-screen bg-gray-50 flex">
-			<Sidebar />
-			<div className="flex-1 flex flex-col">
-				<Header />
-				<main className="flex-1 p-6">
-					<Outlet />
-				</main>
-			</div>
-		</ReadOnlyModeContext.Provider>
-					{showWhatsNew && (
-						<WhatsNewModal
-							entry={latestEntry ?? null}
-							currentVersion={currentVersion}
-							onDismiss={() => setShowWhatsNew(false)}
-						/>
-					)}
-				</div>
-			</ReadOnlyModeContext.Provider>
-		</ToastProvider>
-			<ShortcutHelpModal
-				isOpen={showShortcutHelp}
-				onClose={() => setShowShortcutHelp(false)}
-				shortcuts={shortcuts}
-			/>
-		</div>
-			<div className="min-h-screen bg-gray-50 flex flex-col">
-				<MaintenanceCountdown />
-				<AnnouncementBanner />
-				<div className="flex flex-1">
-					<Sidebar />
-					<div className="flex-1 flex flex-col">
-						<Header />
-						<main className="flex-1 p-6">
-							<Outlet />
-						</main>
-					</div>
-				</div>
-				<ShortcutHelpModal
-					isOpen={showShortcutHelp}
-					onClose={() => setShowShortcutHelp(false)}
-					shortcuts={shortcuts}
-				/>
-			</div>
-		</ReadOnlyModeContext.Provider>
 					</div>
 					<ShortcutHelpModal
 						isOpen={showShortcutHelp}

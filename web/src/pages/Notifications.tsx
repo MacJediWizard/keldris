@@ -33,16 +33,6 @@ function LoadingRow() {
 			</td>
 			<td className="px-6 py-4 text-right">
 				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-				<div className="h-4 w-32 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
 			</td>
 		</tr>
 	);
@@ -103,8 +93,6 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-				<h3 className="text-lg font-semibold text-gray-900 mb-4">
 					Add Email Notification Channel
 				</h3>
 				<form onSubmit={handleSubmit}>
@@ -113,7 +101,6 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 							<label
 								htmlFor="name"
 								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-								className="block text-sm font-medium text-gray-700 mb-1"
 							>
 								Channel Name
 							</label>
@@ -124,7 +111,6 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 								onChange={(e) => setName(e.target.value)}
 								placeholder="e.g., Primary Email"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								required
 							/>
 						</div>
@@ -133,7 +119,6 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 								<label
 									htmlFor="host"
 									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-									className="block text-sm font-medium text-gray-700 mb-1"
 								>
 									SMTP Host
 								</label>
@@ -144,7 +129,6 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 									onChange={(e) => setHost(e.target.value)}
 									placeholder="smtp.example.com"
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 									required
 								/>
 							</div>
@@ -152,7 +136,6 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 								<label
 									htmlFor="port"
 									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-									className="block text-sm font-medium text-gray-700 mb-1"
 								>
 									Port
 								</label>
@@ -162,7 +145,6 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 									value={port}
 									onChange={(e) => setPort(e.target.value)}
 									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 									required
 								/>
 							</div>
@@ -171,7 +153,6 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 							<label
 								htmlFor="username"
 								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-								className="block text-sm font-medium text-gray-700 mb-1"
 							>
 								Username
 							</label>
@@ -182,14 +163,12 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 								onChange={(e) => setUsername(e.target.value)}
 								placeholder="user@example.com"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							/>
 						</div>
 						<div>
 							<label
 								htmlFor="password"
 								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-								className="block text-sm font-medium text-gray-700 mb-1"
 							>
 								Password
 							</label>
@@ -199,14 +178,12 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							/>
 						</div>
 						<div>
 							<label
 								htmlFor="from"
 								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-								className="block text-sm font-medium text-gray-700 mb-1"
 							>
 								From Address
 							</label>
@@ -217,7 +194,6 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 								onChange={(e) => setFrom(e.target.value)}
 								placeholder="notifications@example.com"
 								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								required
 							/>
 						</div>
@@ -231,9 +207,8 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 							/>
 							<label
 								htmlFor="tls"
-								className="ml-2 text-sm text-gray-700 dark:text-gray-300 dark:text-gray-600"
+								className="ml-2 text-sm text-gray-700 dark:text-gray-300"
 							>
-							<label htmlFor="tls" className="ml-2 text-sm text-gray-700">
 								Use TLS
 							</label>
 						</div>
@@ -251,7 +226,6 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 								onClose();
 							}}
 							className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
 						>
 							Cancel
 						</button>
@@ -322,7 +296,6 @@ function ChannelRow({
 
 	return (
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
-		<tr className="hover:bg-gray-50">
 			<td className="px-6 py-4">
 				<div className="flex items-center gap-3">
 					<div className="p-2 bg-indigo-100 rounded-lg">
@@ -348,8 +321,6 @@ function ChannelRow({
 						<p className="text-sm text-gray-500 dark:text-gray-400">
 							{channel.type}
 						</p>
-						<p className="font-medium text-gray-900">{channel.name}</p>
-						<p className="text-sm text-gray-500">{channel.type}</p>
 					</div>
 				</div>
 			</td>
@@ -430,13 +401,6 @@ function LogRow({ log }: { log: NotificationLog }) {
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{log.recipient}
 			</td>
-		<tr className="hover:bg-gray-50">
-			<td className="px-6 py-4 text-sm text-gray-900">
-				{log.subject || log.event_type}
-			</td>
-			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-				{log.recipient}
-			</td>
 			<td className="px-6 py-4">
 				<span
 					className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}
@@ -445,10 +409,6 @@ function LogRow({ log }: { log: NotificationLog }) {
 				</span>
 			</td>
 			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-				{formatDate(log.sent_at || log.created_at)}
-			</td>
-			<td className="px-6 py-4 text-sm text-red-500 dark:text-red-400">
-			<td className="px-6 py-4 text-sm text-gray-500">
 				{formatDate(log.sent_at || log.created_at)}
 			</td>
 			<td className="px-6 py-4 text-sm text-red-500 dark:text-red-400">
@@ -491,7 +451,6 @@ export function Notifications() {
 					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 						Notifications
 					</h1>
-					<h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
 					<p className="text-gray-500 mt-1">
 						Configure email notifications for backup events
 					</p>
@@ -521,7 +480,6 @@ export function Notifications() {
 
 			{/* Tabs */}
 			<div className="border-b border-gray-200 dark:border-gray-700">
-			<div className="border-b border-gray-200">
 				<nav className="-mb-px flex space-x-8">
 					<button
 						type="button"
@@ -551,10 +509,7 @@ export function Notifications() {
 			{activeTab === 'channels' && (
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 					{channelsError ? (
-						<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
-				<div className="bg-white rounded-lg border border-gray-200">
-					{channelsError ? (
-						<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
+						<div className="p-12 text-center text-red-500 dark:text-red-400">
 							<p className="font-medium">
 								Failed to load notification channels
 							</p>
@@ -574,24 +529,11 @@ export function Notifications() {
 										Events
 									</th>
 									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							<thead className="bg-gray-50 border-b border-gray-200">
-								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Channel
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Enabled
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Events
-									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<tbody className="divide-y divide-gray-200">
 								{[1, 2, 3].map((i) => (
 									<LoadingRow key={i} />
 								))}
@@ -611,24 +553,11 @@ export function Notifications() {
 										Events
 									</th>
 									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							<thead className="bg-gray-50 border-b border-gray-200">
-								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Channel
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Enabled
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Events
-									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<tbody className="divide-y divide-gray-200">
 								{channels.map((channel) => (
 									<ChannelRow
 										key={channel.id}
@@ -642,7 +571,6 @@ export function Notifications() {
 						</table>
 					) : (
 						<div className="p-12 text-center text-gray-500 dark:text-gray-400">
-						<div className="p-12 text-center text-gray-500">
 							<div className="inline-flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full mb-4">
 								<svg
 									className="w-6 h-6 text-gray-400"
@@ -678,10 +606,7 @@ export function Notifications() {
 			{activeTab === 'logs' && (
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 					{logsError ? (
-						<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
-				<div className="bg-white rounded-lg border border-gray-200">
-					{logsError ? (
-						<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
+						<div className="p-12 text-center text-red-500 dark:text-red-400">
 							<p className="font-medium">Failed to load notification history</p>
 							<p className="text-sm mt-1">Please try refreshing the page</p>
 						</div>
@@ -702,27 +627,11 @@ export function Notifications() {
 										Sent
 									</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							<thead className="bg-gray-50 border-b border-gray-200">
-								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Subject
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Recipient
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Status
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Sent
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Error
 									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<tbody className="divide-y divide-gray-200">
 								{[1, 2, 3].map((i) => (
 									<LoadingRow key={i} />
 								))}
@@ -745,27 +654,11 @@ export function Notifications() {
 										Sent
 									</th>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							<thead className="bg-gray-50 border-b border-gray-200">
-								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Subject
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Recipient
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Status
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-										Sent
-									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Error
 									</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<tbody className="divide-y divide-gray-200">
 								{logs.map((log) => (
 									<LogRow key={log.id} log={log} />
 								))}
@@ -773,7 +666,6 @@ export function Notifications() {
 						</table>
 					) : (
 						<div className="p-12 text-center text-gray-500 dark:text-gray-400">
-						<div className="p-12 text-center text-gray-500">
 							<div className="inline-flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full mb-4">
 								<svg
 									className="w-6 h-6 text-gray-400"

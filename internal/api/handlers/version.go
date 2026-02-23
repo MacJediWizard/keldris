@@ -12,9 +12,6 @@ type VersionInfo struct {
 	Version   string `json:"version" example:"1.0.0"`
 	Commit    string `json:"commit,omitempty" example:"abc1234"`
 	BuildDate string `json:"build_date,omitempty" example:"2024-01-15T10:30:00Z"`
-	Version   string `json:"version"`
-	Commit    string `json:"commit,omitempty"`
-	BuildDate string `json:"build_date,omitempty"`
 }
 
 // VersionHandler handles version-related HTTP endpoints.

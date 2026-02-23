@@ -18,10 +18,6 @@ import type {
 	AgentBackupsResponse,
 	AgentCommand,
 	AgentCommandsResponse,
-	ActiveMaintenanceResponse,
-	AddAgentToGroupRequest,
-	Agent,
-	AgentBackupsResponse,
 	AgentGroup,
 	AgentGroupsResponse,
 	AgentHealthHistoryResponse,
@@ -29,12 +25,6 @@ import type {
 	AgentImportPreviewResponse,
 	AgentImportResponse,
 	AgentImportTemplateResponse,
-	AgentLogFilter,
-	AgentLogsResponse,
-	AgentSchedulesResponse,
-	AgentStatsResponse,
-	AgentWithGroups,
-	AgentHealthHistoryResponse,
 	AgentLogFilter,
 	AgentLogsResponse,
 	AgentSchedulesResponse,
@@ -56,8 +46,6 @@ import type {
 	ApplyPolicyRequest,
 	ApplyPolicyResponse,
 	AssignSLARequest,
-	ApplyPolicyRequest,
-	ApplyPolicyResponse,
 	AssignTagsRequest,
 	AuditLog,
 	AuditLogFilter,
@@ -72,12 +60,9 @@ import type {
 	BackupQueueSummary,
 	BackupScript,
 	BackupScriptsResponse,
-	BackupDurationTrend,
-	BackupDurationTrendResponse,
 	BackupSuccessRate,
 	BackupSuccessRatesResponse,
 	BackupsResponse,
-	BrandingSettings,
 	BlockedRequestsResponse,
 	BrandingSettings,
 	BuiltInPattern,
@@ -107,27 +92,12 @@ import type {
 	ContainerHookTemplateInfo,
 	ContainerHookTemplatesResponse,
 	ConvertTrialRequest,
-	ClassificationLevelsResponse,
-	ClassificationRulesResponse,
-	ClassificationSummary,
-	ComplianceReport,
-	ConfigTemplate,
-	ConfigTemplatesResponse,
 	CostAlert,
 	CostAlertsResponse,
 	CostForecastResponse,
 	CostHistoryResponse,
 	CostSummary,
 	CreateAgentCommandRequest,
-	BuiltInPattern,
-	BuiltInPatternsResponse,
-	CategoriesResponse,
-	CategoryInfo,
-	CostAlert,
-	CostAlertsResponse,
-	CostForecastResponse,
-	CostHistoryResponse,
-	CostSummary,
 	CreateAgentGroupRequest,
 	CreateAgentRequest,
 	CreateAgentResponse,
@@ -138,7 +108,6 @@ import type {
 	CreateCloudRestoreRequest,
 	CreateContainerBackupHookRequest,
 	CreateCostAlertRequest,
-	CreateBackupScriptRequest,
 	CreateDRRunbookRequest,
 	CreateDRTestScheduleRequest,
 	CreateDockerRegistryRequest,
@@ -158,40 +127,28 @@ import type {
 	CreateLifecyclePolicyRequest,
 	CreateMaintenanceWindowRequest,
 	CreateMetadataSchemaRequest,
-	CreateCostAlertRequest,
-	CreateDRRunbookRequest,
-	CreateDRTestScheduleRequest,
-	CreateExcludePatternRequest,
-	CreateMaintenanceWindowRequest,
 	CreateNotificationChannelRequest,
 	CreateNotificationPreferenceRequest,
 	CreateNotificationRuleRequest,
-	CreateNotificationChannelRequest,
-	CreateNotificationPreferenceRequest,
 	CreateOrgRequest,
 	CreatePathClassificationRuleRequest,
 	CreatePolicyRequest,
 	CreateRateLimitConfigRequest,
 	CreateRegistrationCodeRequest,
 	CreateRegistrationCodeResponse,
-	CreatePolicyRequest,
 	CreateReportScheduleRequest,
-	CreateOrgRequest,
 	CreateRepositoryRequest,
 	CreateRepositoryResponse,
 	CreateRestoreRequest,
-	CreateSLAPolicyRequest,
 	CreateSLADefinitionRequest,
+	CreateSLAPolicyRequest,
 	CreateSSOGroupMappingRequest,
 	CreateSavedFilterRequest,
-	CreateSSOGroupMappingRequest,
 	CreateScheduleRequest,
 	CreateSnapshotCommentRequest,
 	CreateStoragePricingRequest,
 	CreateSuperuserRequest,
 	CreateSuperuserResponse,
-	CreateTagRequest,
-	CreateTemplateRequest,
 	CreateTagRequest,
 	CreateTemplateRequest,
 	CreateVerificationScheduleRequest,
@@ -204,21 +161,20 @@ import type {
 	DRTestSchedule,
 	DRTestSchedulesResponse,
 	DRTestsResponse,
-	DryRunResponse,
 	DailyBackupStats,
 	DailyBackupStatsResponse,
 	DashboardStats,
 	DataTypesResponse,
 	DatabaseTestResponse,
 	DefaultPricingResponse,
+	DiscoverDockerStacksRequest,
+	DiscoverDockerStacksResponse,
+	DiscoveredDockerStack,
 	DockerBackupRequest,
 	DockerBackupResponse,
 	DockerContainer,
 	DockerContainersResponse,
 	DockerDaemonStatus,
-	DiscoverDockerStacksRequest,
-	DiscoverDockerStacksResponse,
-	DiscoveredDockerStack,
 	DockerHealthCheckAllResponse,
 	DockerHealthCheckResponse,
 	DockerLogBackup,
@@ -253,19 +209,7 @@ import type {
 	DowntimeAlertsResponse,
 	DowntimeEvent,
 	DowntimeEventsResponse,
-	CreateVerificationScheduleRequest,
-	DRRunbook,
-	DRRunbookRenderResponse,
-	DRRunbooksResponse,
-	DRStatus,
-	DRTest,
-	DRTestSchedule,
-	DRTestSchedulesResponse,
-	DRTestsResponse,
-	DailyBackupStats,
-	DailyBackupStatsResponse,
-	DashboardStats,
-	DefaultPricingResponse,
+	DryRunResponse,
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
@@ -316,21 +260,12 @@ import type {
 	ImportRepositoryRequest,
 	ImportRepositoryResponse,
 	ImportResult,
-	FileHistoryParams,
-	FileHistoryResponse,
-	FleetHealthSummary,
 	InvitationsResponse,
 	InviteMemberRequest,
 	InviteResponse,
 	InviteUserRequest,
 	InviteUserResponse,
 	KeyRecoveryResponse,
-	LicenseInfo,
-	ActivateLicenseResponse,
-	PricingPlan,
-	StartTrialRequest,
-	StartTrialResponse,
-	TrialCheckResponse,
 	KomodoConnectionTestResponse,
 	KomodoContainer,
 	KomodoContainersResponse,
@@ -354,14 +289,6 @@ import type {
 	LicenseValidateResponse,
 	LicenseWarningsResponse,
 	LicensesResponse,
-	LicenseFeature,
-	LicenseHistoryResponse,
-	LicenseInfo,
-	LicenseInfoResponse,
-	LicenseResponse,
-	LicenseValidateResponse,
-	LicenseWarningsResponse,
-	LicensesResponse,
 	LifecycleDeletionEvent,
 	LifecycleDeletionEventsResponse,
 	LifecycleDryRunRequest,
@@ -370,7 +297,6 @@ import type {
 	LifecyclePolicy,
 	MaintenanceWindow,
 	MaintenanceWindowsResponse,
-	KeyRecoveryResponse,
 	MembersResponse,
 	MessageResponse,
 	MetadataEntityType,
@@ -412,6 +338,7 @@ import type {
 	PendingRegistrationsResponse,
 	PoliciesResponse,
 	Policy,
+	PricingPlan,
 	PublicBrandingSettings,
 	RateLimitConfig,
 	RateLimitConfigsResponse,
@@ -420,8 +347,6 @@ import type {
 	RecentItem,
 	RecentItemsResponse,
 	RecentSearchesResponse,
-	PoliciesResponse,
-	Policy,
 	ReplicationStatus,
 	ReplicationStatusResponse,
 	ReportFrequency,
@@ -430,18 +355,6 @@ import type {
 	ReportPreviewResponse,
 	ReportSchedule,
 	ReportSchedulesResponse,
-	InvitationsResponse,
-	InviteMemberRequest,
-	InviteResponse,
-	MembersResponse,
-	MessageResponse,
-	OrgInvitation,
-	OrgMember,
-	OrgResponse,
-	OrganizationWithRole,
-	OrganizationsResponse,
-	ReplicationStatus,
-	ReplicationStatusResponse,
 	RepositoriesResponse,
 	Repository,
 	RepositoryCostResponse,
@@ -460,23 +373,11 @@ import type {
 	RestoreDockerStackRequest,
 	RestorePreview,
 	RestorePreviewRequest,
-	Restore,
 	RestoresResponse,
-	RepositoryGrowthResponse,
-	RepositoryHistoryResponse,
-	RepositoryStatsListItem,
-	RepositoryStatsListResponse,
-	RepositoryStatsResponse,
 	RotateAPIKeyResponse,
 	RotateCredentialsRequest,
 	RunDRTestRequest,
-	RotateAPIKeyResponse,
 	RunScheduleResponse,
-	SLAPoliciesResponse,
-	SLAPolicy,
-	SLAStatus,
-	SLAStatusHistoryResponse,
-	SLAStatusSnapshot,
 	SLAAssignment,
 	SLAAssignmentsResponse,
 	SLABreach,
@@ -486,8 +387,13 @@ import type {
 	SLADashboardResponse,
 	SLADashboardStats,
 	SLADefinitionsResponse,
+	SLAPoliciesResponse,
+	SLAPolicy,
 	SLAReport,
 	SLAReportResponse,
+	SLAStatus,
+	SLAStatusHistoryResponse,
+	SLAStatusSnapshot,
 	SLAWithAssignments,
 	SMTPSettings,
 	SSOGroupMapping,
@@ -501,13 +407,13 @@ import type {
 	SchedulesResponse,
 	SearchFilter,
 	SearchResponse,
-	ServerVersion,
 	SearchSuggestionsResponse,
 	SecuritySettings,
 	ServerLogComponentsResponse,
 	ServerLogFilter,
 	ServerLogsResponse,
 	ServerSetupStatus,
+	ServerVersion,
 	SetDebugModeRequest,
 	SetDebugModeResponse,
 	SetScheduleClassificationRequest,
@@ -515,10 +421,6 @@ import type {
 	SetupCompleteResponse,
 	SetupStartTrialRequest,
 	SetupStartTrialResponse,
-	ServerLogComponentsResponse,
-	ServerLogFilter,
-	ServerLogsResponse,
-	SetScheduleClassificationRequest,
 	Snapshot,
 	SnapshotComment,
 	SnapshotCommentsResponse,
@@ -528,11 +430,7 @@ import type {
 	SnapshotMountsResponse,
 	SnapshotsResponse,
 	StartTrialRequest,
-	StorageDefaultSettings,
-	Snapshot,
-	SnapshotCompareResponse,
-	SnapshotFilesResponse,
-	SnapshotsResponse,
+	StartTrialResponse,
 	StorageDefaultSettings,
 	StorageGrowthPoint,
 	StorageGrowthResponse,
@@ -546,10 +444,6 @@ import type {
 	SystemHealthResponse,
 	Tag,
 	TagsResponse,
-	StorageGrowthPoint,
-	StorageGrowthResponse,
-	StorageStatsSummary,
-	SwitchOrgRequest,
 	TestConnectionRequest,
 	TestNotificationRuleRequest,
 	TestNotificationRuleResponse,
@@ -564,6 +458,7 @@ import type {
 	TrackRecentItemRequest,
 	TransferOwnershipRequest,
 	TrialActivityResponse,
+	TrialCheckResponse,
 	TrialExtension,
 	TrialExtensionsResponse,
 	TrialFeaturesResponse,
@@ -571,7 +466,6 @@ import type {
 	TriggerDockerStackBackupRequest,
 	TriggerVerificationRequest,
 	UpdateAgentGroupRequest,
-	TriggerVerificationRequest,
 	UpdateAlertRuleRequest,
 	UpdateAnnouncementRequest,
 	UpdateBackupHookTemplateRequest,
@@ -580,9 +474,6 @@ import type {
 	UpdateBrandingSettingsRequest,
 	UpdateConcurrencyRequest,
 	UpdateContainerBackupHookRequest,
-	UpdateCostAlertRequest,
-	UpdateBackupScriptRequest,
-	UpdateBrandingRequest,
 	UpdateCostAlertRequest,
 	UpdateDRRunbookRequest,
 	UpdateDockerRegistryRequest,
@@ -598,37 +489,26 @@ import type {
 	UpdateLicenseRequest,
 	UpdateLifecyclePolicyRequest,
 	UpdateMaintenanceWindowRequest,
-	UpdateDRRunbookRequest,
-	UpdateExcludePatternRequest,
-	UpdateMaintenanceWindowRequest,
-	UpdateAlertRuleRequest,
 	UpdateMemberRequest,
 	UpdateMetadataSchemaRequest,
 	UpdateNotificationChannelRequest,
 	UpdateNotificationPreferenceRequest,
 	UpdateNotificationRuleRequest,
 	UpdateOIDCSettingsRequest,
-	UpdateNotificationChannelRequest,
-	UpdateNotificationPreferenceRequest,
 	UpdateOrgRequest,
 	UpdatePasswordPolicyRequest,
 	UpdatePathClassificationRuleRequest,
 	UpdatePolicyRequest,
 	UpdateRateLimitConfigRequest,
-	UpdatePathClassificationRuleRequest,
-	UpdatePolicyRequest,
 	UpdateReportScheduleRequest,
 	UpdateRepositoryImmutabilitySettingsRequest,
-	UpdateReportScheduleRequest,
 	UpdateRepositoryRequest,
-	UpdateSLAPolicyRequest,
 	UpdateSLADefinitionRequest,
+	UpdateSLAPolicyRequest,
 	UpdateSMTPSettingsRequest,
 	UpdateSSOGroupMappingRequest,
 	UpdateSSOSettingsRequest,
 	UpdateSavedFilterRequest,
-	UpdateSSOGroupMappingRequest,
-	UpdateSSOSettingsRequest,
 	UpdateScheduleRequest,
 	UpdateSecuritySettingsRequest,
 	UpdateStorageDefaultsRequest,
@@ -637,8 +517,6 @@ import type {
 	UpdateTemplateRequest,
 	UpdateUserPreferencesRequest,
 	UpdateUserRequest,
-	UpdateTagRequest,
-	UpdateUserPreferencesRequest,
 	UpdateVerificationScheduleRequest,
 	UpdateWebhookEndpointRequest,
 	UptimeBadge,
@@ -656,11 +534,6 @@ import type {
 	UsersResponse,
 	ValidateImportRequest,
 	ValidationResult,
-	UpdateVerificationScheduleRequest,
-	User,
-	ValidateImportRequest,
-	ValidationResult,
-	UserSSOGroups,
 	Verification,
 	VerificationSchedule,
 	VerificationSchedulesResponse,
@@ -668,28 +541,6 @@ import type {
 	VerificationsResponse,
 	VerifyImportAccessRequest,
 	VerifyImportAccessResponse,
-	Agent,
-	AgentsResponse,
-	Backup,
-	BackupsResponse,
-	CreateAgentRequest,
-	CreateAgentResponse,
-	CreateRepositoryRequest,
-	CreateScheduleRequest,
-	ErrorResponse,
-	MessageResponse,
-	RepositoriesResponse,
-	Repository,
-	RunScheduleResponse,
-	Schedule,
-	SchedulesResponse,
-	TestConnectionRequest,
-	TestRepositoryResponse,
-	UpdateMemberRequest,
-	UpdateOrgRequest,
-	UpdateRepositoryRequest,
-	UpdateScheduleRequest,
-	User,
 	WebhookDeliveriesResponse,
 	WebhookDelivery,
 	WebhookEndpoint,
@@ -757,10 +608,6 @@ async function handleResponse<T>(response: Response): Promise<T> {
 			throw err;
 		}
 		throw new ApiError(response.status, (errorData as ErrorResponse).error);
-		const errorData = (await response.json().catch(() => ({
-			error: 'Unknown error',
-		}))) as ErrorResponse;
-		throw new ApiError(response.status, errorData.error);
 	}
 
 	return response.json() as Promise<T>;
@@ -868,7 +715,6 @@ export const authApi = {
 	getLoginUrl: () => '/auth/login',
 };
 
-// Agents API
 export const agentsApi = {
 	list: async (): Promise<Agent[]> => {
 		const response = await fetchApi<AgentsResponse>('/agents');
@@ -983,7 +829,6 @@ export const agentsApi = {
 		}),
 };
 
-// Agent Groups API
 export const agentGroupsApi = {
 	list: async (): Promise<AgentGroup[]> => {
 		const response = await fetchApi<AgentGroupsResponse>('/agent-groups');
@@ -1038,7 +883,6 @@ export const agentGroupsApi = {
 		}),
 };
 
-// Agent Registration Codes API
 export const agentRegistrationApi = {
 	createCode: async (
 		data: CreateRegistrationCodeRequest,
@@ -1069,14 +913,12 @@ export const repositoriesApi = {
 	},
 
 	get: async (id: string): Promise<Repository> =>
-		fetchApi<Repository>(`/repositories/${id}`),
+		fetchApi<Repository>(`/repositories/\${id}`),
 
 	create: async (
 		data: CreateRepositoryRequest,
 	): Promise<CreateRepositoryResponse> =>
 		fetchApi<CreateRepositoryResponse>('/repositories', {
-	create: async (data: CreateRepositoryRequest): Promise<Repository> =>
-		fetchApi<Repository>('/repositories', {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
@@ -1085,18 +927,18 @@ export const repositoriesApi = {
 		id: string,
 		data: UpdateRepositoryRequest,
 	): Promise<Repository> =>
-		fetchApi<Repository>(`/repositories/${id}`, {
+		fetchApi<Repository>(`/repositories/\${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
 
 	delete: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/repositories/${id}`, {
+		fetchApi<MessageResponse>(`/repositories/\${id}`, {
 			method: 'DELETE',
 		}),
 
 	test: async (id: string): Promise<TestRepositoryResponse> =>
-		fetchApi<TestRepositoryResponse>(`/repositories/${id}/test`, {
+		fetchApi<TestRepositoryResponse>(`/repositories/\${id}/test`, {
 			method: 'POST',
 		}),
 
@@ -1109,13 +951,13 @@ export const repositoriesApi = {
 		}),
 
 	recoverKey: async (id: string): Promise<KeyRecoveryResponse> =>
-		fetchApi<KeyRecoveryResponse>(`/repositories/${id}/key/recover`),
+		fetchApi<KeyRecoveryResponse>(`/repositories/\${id}/key/recover`),
 
 	clone: async (
 		id: string,
 		data: CloneRepositoryRequest,
 	): Promise<CloneRepositoryResponse> =>
-		fetchApi<CloneRepositoryResponse>(`/repositories/${id}/clone`, {
+		fetchApi<CloneRepositoryResponse>(`/repositories/\${id}/clone`, {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
@@ -1250,50 +1092,6 @@ export const policiesApi = {
 		}),
 };
 
-// Policies API
-export const policiesApi = {
-	list: async (): Promise<Policy[]> => {
-		const response = await fetchApi<PoliciesResponse>('/policies');
-		return response.policies ?? [];
-	},
-
-	get: async (id: string): Promise<Policy> =>
-		fetchApi<Policy>(`/policies/${id}`),
-
-	create: async (data: CreatePolicyRequest): Promise<Policy> =>
-		fetchApi<Policy>('/policies', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	update: async (id: string, data: UpdatePolicyRequest): Promise<Policy> =>
-		fetchApi<Policy>(`/policies/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	delete: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/policies/${id}`, {
-			method: 'DELETE',
-		}),
-
-	listSchedules: async (id: string): Promise<Schedule[]> => {
-		const response = await fetchApi<SchedulesResponse>(
-			`/policies/${id}/schedules`,
-		);
-		return response.schedules ?? [];
-	},
-
-	apply: async (
-		id: string,
-		data: ApplyPolicyRequest,
-	): Promise<ApplyPolicyResponse> =>
-		fetchApi<ApplyPolicyResponse>(`/policies/${id}/apply`, {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-};
-
 // Backups API
 export const backupsApi = {
 	list: async (params?: {
@@ -1318,320 +1116,6 @@ export const backupsApi = {
 
 	getCalendar: async (month: string): Promise<BackupCalendarResponse> =>
 		fetchApi<BackupCalendarResponse>(`/backups/calendar?month=${month}`),
-};
-
-// Backup Scripts API
-export const backupScriptsApi = {
-	list: async (scheduleId: string): Promise<BackupScript[]> => {
-		const response = await fetchApi<BackupScriptsResponse>(
-			`/schedules/${scheduleId}/scripts`,
-		);
-		return response.scripts ?? [];
-// Snapshots API
-export const snapshotsApi = {
-	list: async (params?: {
-		agent_id?: string;
-		repository_id?: string;
-	}): Promise<Snapshot[]> => {
-		const searchParams = new URLSearchParams();
-		if (params?.agent_id) searchParams.set('agent_id', params.agent_id);
-		if (params?.repository_id)
-			searchParams.set('repository_id', params.repository_id);
-
-		const query = searchParams.toString();
-		const endpoint = query ? `/snapshots?${query}` : '/snapshots';
-		const response = await fetchApi<SnapshotsResponse>(endpoint);
-		return response.snapshots ?? [];
-	},
-
-	get: async (id: string): Promise<Snapshot> =>
-		fetchApi<Snapshot>(`/snapshots/${id}`),
-
-	listFiles: async (
-		id: string,
-		path?: string,
-	): Promise<SnapshotFilesResponse> => {
-		const endpoint = path
-			? `/snapshots/${id}/files?path=${encodeURIComponent(path)}`
-			: `/snapshots/${id}/files`;
-		return fetchApi<SnapshotFilesResponse>(endpoint);
-	},
-
-	compare: async (id1: string, id2: string): Promise<SnapshotCompareResponse> =>
-		fetchApi<SnapshotCompareResponse>(`/snapshots/${id1}/compare/${id2}`),
-};
-
-// Snapshot Comments API
-export const snapshotCommentsApi = {
-	list: async (snapshotId: string): Promise<SnapshotComment[]> => {
-		const response = await fetchApi<SnapshotCommentsResponse>(
-			`/snapshots/${snapshotId}/comments`,
-		);
-		return response.comments ?? [];
-	},
-
-	create: async (
-		snapshotId: string,
-		data: CreateSnapshotCommentRequest,
-	): Promise<SnapshotComment> =>
-		fetchApi<SnapshotComment>(`/snapshots/${snapshotId}/comments`, {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	delete: async (commentId: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/comments/${commentId}`, {
-			method: 'DELETE',
-		}),
-};
-
-// Restores API
-export const restoresApi = {
-	list: async (params?: {
-		agent_id?: string;
-		status?: string;
-	}): Promise<Restore[]> => {
-		const searchParams = new URLSearchParams();
-		if (params?.agent_id) searchParams.set('agent_id', params.agent_id);
-		if (params?.status) searchParams.set('status', params.status);
-
-		const query = searchParams.toString();
-		const endpoint = query ? `/restores?${query}` : '/restores';
-		const response = await fetchApi<RestoresResponse>(endpoint);
-		return response.restores ?? [];
-	},
-
-	get: async (id: string): Promise<Restore> =>
-		fetchApi<Restore>(`/restores/${id}`),
-
-	create: async (data: CreateRestoreRequest): Promise<Restore> =>
-		fetchApi<Restore>('/restores', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-};
-
-// Alerts API
-export const alertsApi = {
-	list: async (): Promise<Alert[]> => {
-		const response = await fetchApi<AlertsResponse>('/alerts');
-		return response.alerts ?? [];
-	},
-
-	listActive: async (): Promise<Alert[]> => {
-		const response = await fetchApi<AlertsResponse>('/alerts/active');
-		return response.alerts ?? [];
-	},
-
-	count: async (): Promise<number> => {
-		const response = await fetchApi<AlertCountResponse>('/alerts/count');
-		return response.count;
-	},
-
-	get: async (id: string): Promise<Alert> => fetchApi<Alert>(`/alerts/${id}`),
-
-	acknowledge: async (id: string): Promise<Alert> =>
-		fetchApi<Alert>(`/alerts/${id}/actions/acknowledge`, {
-			method: 'POST',
-		}),
-
-	resolve: async (id: string): Promise<Alert> =>
-		fetchApi<Alert>(`/alerts/${id}/actions/resolve`, {
-			method: 'POST',
-		}),
-};
-
-// Alert Rules API
-export const alertRulesApi = {
-	list: async (): Promise<AlertRule[]> => {
-		const response = await fetchApi<AlertRulesResponse>('/alert-rules');
-		return response.rules ?? [];
-	},
-
-	get: async (id: string): Promise<AlertRule> =>
-		fetchApi<AlertRule>(`/alert-rules/${id}`),
-
-	create: async (data: CreateAlertRuleRequest): Promise<AlertRule> =>
-		fetchApi<AlertRule>('/alert-rules', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	update: async (
-		id: string,
-		data: UpdateAlertRuleRequest,
-	): Promise<AlertRule> =>
-		fetchApi<AlertRule>(`/alert-rules/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	delete: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/alert-rules/${id}`, {
-			method: 'DELETE',
-		}),
-};
-
-// Organizations API
-export const organizationsApi = {
-	list: async (): Promise<OrganizationWithRole[]> => {
-		const response = await fetchApi<OrganizationsResponse>('/organizations');
-		return response.organizations ?? [];
-	},
-
-	get: async (scheduleId: string, id: string): Promise<BackupScript> =>
-		fetchApi<BackupScript>(`/schedules/${scheduleId}/scripts/${id}`),
-
-	create: async (
-		scheduleId: string,
-		data: CreateBackupScriptRequest,
-	): Promise<BackupScript> =>
-		fetchApi<BackupScript>(`/schedules/${scheduleId}/scripts`, {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	update: async (
-		scheduleId: string,
-		id: string,
-		data: UpdateBackupScriptRequest,
-	): Promise<BackupScript> =>
-		fetchApi<BackupScript>(`/schedules/${scheduleId}/scripts/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	delete: async (scheduleId: string, id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/schedules/${scheduleId}/scripts/${id}`, {
-			method: 'DELETE',
-		}),
-};
-
-// Backup Hook Templates API
-export const backupHookTemplatesApi = {
-	list: async (params?: {
-		service_type?: string;
-		visibility?: string;
-		tag?: string;
-	}): Promise<BackupHookTemplate[]> => {
-		const searchParams = new URLSearchParams();
-		if (params?.service_type)
-			searchParams.set('service_type', params.service_type);
-		if (params?.visibility) searchParams.set('visibility', params.visibility);
-		if (params?.tag) searchParams.set('tag', params.tag);
-
-		const query = searchParams.toString();
-		const endpoint = query
-			? `/backup-hook-templates?${query}`
-			: '/backup-hook-templates';
-		const response = await fetchApi<BackupHookTemplatesResponse>(endpoint);
-		return response.templates ?? [];
-	},
-
-	listBuiltIn: async (): Promise<BackupHookTemplate[]> => {
-		const response = await fetchApi<BackupHookTemplatesResponse>(
-			'/backup-hook-templates/built-in',
-		);
-		return response.templates ?? [];
-	},
-
-	get: async (id: string): Promise<BackupHookTemplate> =>
-		fetchApi<BackupHookTemplate>(`/backup-hook-templates/${id}`),
-
-	create: async (
-		data: CreateBackupHookTemplateRequest,
-	): Promise<BackupHookTemplate> =>
-		fetchApi<BackupHookTemplate>('/backup-hook-templates', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	update: async (
-		id: string,
-		data: UpdateBackupHookTemplateRequest,
-	): Promise<BackupHookTemplate> =>
-		fetchApi<BackupHookTemplate>(`/backup-hook-templates/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	delete: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/backup-hook-templates/${id}`, {
-			method: 'DELETE',
-		}),
-
-	apply: async (
-		id: string,
-		data: ApplyBackupHookTemplateRequest,
-	): Promise<ApplyBackupHookTemplateResponse> =>
-		fetchApi<ApplyBackupHookTemplateResponse>(
-			`/backup-hook-templates/${id}/apply`,
-			{
-				method: 'POST',
-				body: JSON.stringify(data),
-			},
-		),
-};
-
-// Container Backup Hooks API
-export const containerHooksApi = {
-	list: async (scheduleId: string): Promise<ContainerBackupHook[]> => {
-		const response = await fetchApi<ContainerBackupHooksResponse>(
-			`/schedules/${scheduleId}/container-hooks`,
-		);
-		return response.hooks ?? [];
-	},
-
-	get: async (scheduleId: string, id: string): Promise<ContainerBackupHook> =>
-		fetchApi<ContainerBackupHook>(
-			`/schedules/${scheduleId}/container-hooks/${id}`,
-		),
-
-	create: async (
-		scheduleId: string,
-		data: CreateContainerBackupHookRequest,
-	): Promise<ContainerBackupHook> =>
-		fetchApi<ContainerBackupHook>(`/schedules/${scheduleId}/container-hooks`, {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	update: async (
-		scheduleId: string,
-		id: string,
-		data: UpdateContainerBackupHookRequest,
-	): Promise<ContainerBackupHook> =>
-		fetchApi<ContainerBackupHook>(
-			`/schedules/${scheduleId}/container-hooks/${id}`,
-			{
-				method: 'PUT',
-				body: JSON.stringify(data),
-			},
-		),
-
-	delete: async (scheduleId: string, id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(
-			`/schedules/${scheduleId}/container-hooks/${id}`,
-			{
-				method: 'DELETE',
-			},
-		),
-
-	listTemplates: async (): Promise<ContainerHookTemplateInfo[]> => {
-		const response = await fetchApi<ContainerHookTemplatesResponse>(
-			'/container-hook-templates',
-		);
-		return response.templates ?? [];
-	},
-
-	listExecutions: async (
-		backupId: string,
-	): Promise<ContainerHookExecution[]> => {
-		const response = await fetchApi<ContainerHookExecutionsResponse>(
-			`/backups/${backupId}/container-hook-executions`,
-		);
-		return response.executions ?? [];
-	},
 };
 
 // Backup Scripts API
@@ -3066,23 +2550,6 @@ export const onboardingApi = {
 		}),
 };
 
-// Branding API
-export const brandingApi = {
-	get: async (): Promise<BrandingSettings> =>
-		fetchApi<BrandingSettings>('/branding'),
-
-	update: async (data: UpdateBrandingRequest): Promise<BrandingSettings> =>
-		fetchApi<BrandingSettings>('/branding', {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	reset: async (): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>('/branding', {
-			method: 'DELETE',
-		}),
-};
-
 // Cost Estimation API
 export const costsApi = {
 	getSummary: async (): Promise<CostSummary> =>
@@ -3606,28 +3073,6 @@ export const geoReplicationApi = {
 		summary: GeoReplicationSummary;
 		regions: GeoRegion[];
 	}> => fetchApi<GeoReplicationSummaryResponse>('/geo-replication/summary'),
-};
-
-export const licenseApi = {
-	getInfo: async (): Promise<LicenseInfo> => fetchApi<LicenseInfo>('/license'),
-	activate: async (licenseKey: string): Promise<ActivateLicenseResponse> =>
-		fetchApi<ActivateLicenseResponse>('/system/license/activate', {
-			method: 'POST',
-			body: JSON.stringify({ license_key: licenseKey }),
-		}),
-	deactivate: async (): Promise<{ status: string; tier: string }> =>
-		fetchApi<{ status: string; tier: string }>('/system/license/deactivate', {
-			method: 'POST',
-		}),
-	getPlans: async (): Promise<PricingPlan[]> =>
-		fetchApi<PricingPlan[]>('/system/license/plans'),
-	startTrial: async (data: StartTrialRequest): Promise<StartTrialResponse> =>
-		fetchApi<StartTrialResponse>('/system/license/trial/start', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-	checkTrial: async (email: string): Promise<TrialCheckResponse> =>
-		fetchApi<TrialCheckResponse>(`/system/license/trial/check?email=${encodeURIComponent(email)}`),
 };
 
 export const versionApi = {
@@ -4603,48 +4048,6 @@ export const trialApi = {
 		fetchApi<TrialExtensionsResponse>('/trial/extensions'),
 };
 
-// Branding Settings API (Enterprise)
-export const brandingApi = {
-	// Get branding settings
-	get: async (): Promise<BrandingSettings> =>
-		fetchApi<BrandingSettings>('/branding'),
-
-	// Update branding settings
-	update: async (
-		data: UpdateBrandingSettingsRequest,
-	): Promise<BrandingSettings> =>
-		fetchApi<BrandingSettings>('/branding', {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	// Get public branding settings (no auth required, for login page)
-	getPublic: async (orgSlug: string): Promise<PublicBrandingSettings> =>
-		fetch(`/api/public/branding/${orgSlug}`).then((res) => {
-			if (!res.ok) {
-				// Return default branding on error
-				return {
-					enabled: false,
-					product_name: 'Keldris',
-					logo_url: '',
-					logo_dark_url: '',
-					favicon_url: '',
-					primary_color: '#4f46e5',
-					secondary_color: '#64748b',
-					accent_color: '#06b6d4',
-					support_url: '',
-					privacy_url: '',
-					terms_url: '',
-					login_title: '',
-					login_subtitle: '',
-					login_bg_url: '',
-					hide_powered_by: false,
-				};
-			}
-			return res.json();
-		}),
-};
-
 // Docker Container Logs API
 export const dockerLogsApi = {
 	// List all backups
@@ -5378,18 +4781,18 @@ export const licensesApi = {
 // License and Feature Flags API
 export const licenseApi = {
 	// Get current organization's license info
-	getLicense: async (): Promise<LicenseInfo> => {
-		const response = await fetchApi<LicenseInfoResponse>('/license');
-		const response = await fetchApi<LicenseResponse>('/license');
-		return response.license;
-	},
+	getLicense: async (): Promise<LicenseInfoResponse> =>
+		fetchApi<LicenseInfoResponse>('/license'),
+
+	// Alias for backward compatibility
+	getInfo: async (): Promise<LicenseInfo> => fetchApi<LicenseInfo>('/license'),
 
 	// Check if a specific feature is enabled
 	checkFeature: async (
 		feature: LicenseFeature,
 	): Promise<FeatureCheckResult> => {
 		const response = await fetchApi<FeatureCheckResponse>(
-			`/license/features/${feature}/check`,
+			`/license/features/\${feature}/check`,
 		);
 		return response.result;
 	},
@@ -5412,408 +4815,35 @@ export const licenseApi = {
 			headers: { 'Content-Type': 'application/octet-stream' },
 			body: licenseData,
 		}),
+
+	activate: async (licenseKey: string): Promise<ActivateLicenseResponse> =>
+		fetchApi<ActivateLicenseResponse>('/system/license/activate', {
+			method: 'POST',
+			body: JSON.stringify({ license_key: licenseKey }),
+		}),
+	deactivate: async (): Promise<{ status: string; tier: string }> =>
+		fetchApi<{ status: string; tier: string }>('/system/license/deactivate', {
+			method: 'POST',
+		}),
+	getPlans: async (): Promise<PricingPlan[]> =>
+		fetchApi<PricingPlan[]>('/system/license/plans'),
+	startTrial: async (data: StartTrialRequest): Promise<StartTrialResponse> =>
+		fetchApi<StartTrialResponse>('/system/license/trial/start', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+	checkTrial: async (email: string): Promise<TrialCheckResponse> =>
+		fetchApi<TrialCheckResponse>(`/system/license/trial/check?email=\${encodeURIComponent(email)}`),
 };
 
-// Notifications API
-export const notificationsApi = {
-	// Channels
-	listChannels: async (): Promise<NotificationChannel[]> => {
-		const response = await fetchApi<NotificationChannelsResponse>(
-			'/notifications/channels',
-		);
-		return response.channels ?? [];
-	},
-
-	getChannel: async (
-		id: string,
-	): Promise<NotificationChannelWithPreferencesResponse> =>
-		fetchApi<NotificationChannelWithPreferencesResponse>(
-			`/notifications/channels/${id}`,
-		),
-
-	createChannel: async (
-		data: CreateNotificationChannelRequest,
-	): Promise<NotificationChannel> =>
-		fetchApi<NotificationChannel>('/notifications/channels', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	updateChannel: async (
-		id: string,
-		data: UpdateNotificationChannelRequest,
-	): Promise<NotificationChannel> =>
-		fetchApi<NotificationChannel>(`/notifications/channels/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	deleteChannel: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/notifications/channels/${id}`, {
-			method: 'DELETE',
-		}),
-
-	// Preferences
-	listPreferences: async (): Promise<NotificationPreference[]> => {
-		const response = await fetchApi<NotificationPreferencesResponse>(
-			'/notifications/preferences',
-		);
-		return response.preferences ?? [];
-	},
-// Server Logs API (Admin only)
-export const serverLogsApi = {
-	list: async (filter?: ServerLogFilter): Promise<ServerLogsResponse> => {
-		const searchParams = new URLSearchParams();
-		if (filter?.level) searchParams.set('level', filter.level);
-		if (filter?.component) searchParams.set('component', filter.component);
-		if (filter?.search) searchParams.set('search', filter.search);
-		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
-		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
-		if (filter?.limit) searchParams.set('limit', filter.limit.toString());
-		if (filter?.offset) searchParams.set('offset', filter.offset.toString());
-
-		const query = searchParams.toString();
-		const endpoint = query ? `/admin/logs?${query}` : '/admin/logs';
-		return fetchApi<ServerLogsResponse>(endpoint);
-	},
-
-	getComponents: async (): Promise<string[]> => {
-		const response = await fetchApi<ServerLogComponentsResponse>(
-			'/admin/logs/components',
-		);
-		return response.components ?? [];
-	},
-
-	exportCsv: async (filter?: ServerLogFilter): Promise<Blob> => {
-		const searchParams = new URLSearchParams();
-		if (filter?.level) searchParams.set('level', filter.level);
-		if (filter?.component) searchParams.set('component', filter.component);
-		if (filter?.search) searchParams.set('search', filter.search);
-		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
-		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
-
-		const query = searchParams.toString();
-		const endpoint = query
-			? `/admin/logs/export/csv?${query}`
-			: '/admin/logs/export/csv';
-		const response = await fetch(`${API_BASE}${endpoint}`, {
-			credentials: 'include',
-		});
-		if (!response.ok) {
-			throw new ApiError(response.status, 'Failed to export server logs');
-		}
-		return response.blob();
-	},
-
-	exportJson: async (filter?: ServerLogFilter): Promise<Blob> => {
-		const searchParams = new URLSearchParams();
-		if (filter?.level) searchParams.set('level', filter.level);
-		if (filter?.component) searchParams.set('component', filter.component);
-		if (filter?.search) searchParams.set('search', filter.search);
-		if (filter?.start_time) searchParams.set('start_time', filter.start_time);
-		if (filter?.end_time) searchParams.set('end_time', filter.end_time);
-
-		const query = searchParams.toString();
-		const endpoint = query
-			? `/admin/logs/export/json?${query}`
-			: '/admin/logs/export/json';
-		const response = await fetch(`${API_BASE}${endpoint}`, {
-			credentials: 'include',
-		});
-		if (!response.ok) {
-			throw new ApiError(response.status, 'Failed to export server logs');
-		}
-		return response.blob();
-	},
-
-	clear: async (): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>('/admin/logs', {
-			method: 'DELETE',
-		}),
-};
-
-// Classification API
-export const classificationsApi = {
-	// Reference data
-	getLevels: async (): Promise<ClassificationLevelsResponse> =>
-		fetchApi<ClassificationLevelsResponse>('/classifications/levels'),
-
-	createPreference: async (
-		data: CreateNotificationPreferenceRequest,
-	): Promise<NotificationPreference> =>
-		fetchApi<NotificationPreference>('/notifications/preferences', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	updatePreference: async (
-		id: string,
-		data: UpdateNotificationPreferenceRequest,
-	): Promise<NotificationPreference> =>
-		fetchApi<NotificationPreference>(`/notifications/preferences/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	deletePreference: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/notifications/preferences/${id}`, {
-			method: 'DELETE',
-		}),
-
-	// Logs
-	listLogs: async (): Promise<NotificationLog[]> => {
-		const response = await fetchApi<NotificationLogsResponse>(
-			'/notifications/logs',
-		);
-		return response.logs ?? [];
-	},
-};
-
-export const webhooksApi = {
-	// Event types
-	listEventTypes: async (): Promise<WebhookEventTypesResponse> =>
-		fetchApi<WebhookEventTypesResponse>('/webhooks/event-types'),
-
-	// Endpoints
-	listEndpoints: async (): Promise<WebhookEndpoint[]> => {
-		const response = await fetchApi<WebhookEndpointsResponse>(
-			'/webhooks/endpoints',
-		);
-		return response.endpoints ?? [];
-	},
-
-	getEndpoint: async (id: string): Promise<WebhookEndpoint> =>
-		fetchApi<WebhookEndpoint>(`/webhooks/endpoints/${id}`),
-
-	createEndpoint: async (
-		data: CreateWebhookEndpointRequest,
-	): Promise<WebhookEndpoint> =>
-		fetchApi<WebhookEndpoint>('/webhooks/endpoints', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	updateEndpoint: async (
-		id: string,
-		data: UpdateWebhookEndpointRequest,
-	): Promise<WebhookEndpoint> =>
-		fetchApi<WebhookEndpoint>(`/webhooks/endpoints/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	deleteEndpoint: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/webhooks/endpoints/${id}`, {
-			method: 'DELETE',
-		}),
-
-	testEndpoint: async (
-		id: string,
-		data?: TestWebhookRequest,
-	): Promise<TestWebhookResponse> =>
-		fetchApi<TestWebhookResponse>(`/webhooks/endpoints/${id}/test`, {
-			method: 'POST',
-			body: JSON.stringify(data ?? {}),
-		}),
-
-	// Deliveries
-	listDeliveries: async (
-		limit = 50,
-		offset = 0,
-	): Promise<WebhookDeliveriesResponse> =>
-		fetchApi<WebhookDeliveriesResponse>(
-			`/webhooks/deliveries?limit=${limit}&offset=${offset}`,
-		),
-
-	listEndpointDeliveries: async (
-		endpointId: string,
-		limit = 50,
-		offset = 0,
-	): Promise<WebhookDeliveriesResponse> =>
-		fetchApi<WebhookDeliveriesResponse>(
-			`/webhooks/endpoints/${endpointId}/deliveries?limit=${limit}&offset=${offset}`,
-		),
-
-	getDelivery: async (id: string): Promise<WebhookDelivery> =>
-		fetchApi<WebhookDelivery>(`/webhooks/deliveries/${id}`),
-
-	retryDelivery: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/webhooks/deliveries/${id}/retry`, {
-			method: 'POST',
-		}),
-};
-
-// Dashboard Metrics API
-export const metricsApi = {
-	getDashboardStats: async (): Promise<DashboardStats> =>
-		fetchApi<DashboardStats>('/dashboard-metrics/stats'),
-
-	getBackupSuccessRates: async (): Promise<{
-		rate_7d: BackupSuccessRate;
-		rate_30d: BackupSuccessRate;
-	}> =>
-		fetchApi<BackupSuccessRatesResponse>('/dashboard-metrics/success-rates'),
-
-	getStorageGrowthTrend: async (days = 30): Promise<StorageGrowthTrend[]> => {
-		const response = await fetchApi<StorageGrowthTrendResponse>(
-			`/dashboard-metrics/storage-growth?days=${days}`,
-		);
-		return response.trend ?? [];
-	},
-
-	getBackupDurationTrend: async (days = 30): Promise<BackupDurationTrend[]> => {
-		const response = await fetchApi<BackupDurationTrendResponse>(
-			`/dashboard-metrics/backup-duration?days=${days}`,
-		);
-		return response.trend ?? [];
-	},
-
-	getDailyBackupStats: async (days = 30): Promise<DailyBackupStats[]> => {
-		const response = await fetchApi<DailyBackupStatsResponse>(
-			`/dashboard-metrics/daily-backups?days=${days}`,
-		);
-		return response.stats ?? [];
-	},
-};
-
-// Organizations API
-export const organizationsApi = {
-	list: async (): Promise<OrganizationWithRole[]> => {
-		const response = await fetchApi<OrganizationsResponse>('/organizations');
-		return response.organizations ?? [];
-	},
-
-	get: async (id: string): Promise<OrgResponse> =>
-		fetchApi<OrgResponse>(`/organizations/${id}`),
-
-	getCurrent: async (): Promise<OrgResponse> =>
-		fetchApi<OrgResponse>('/organizations/current'),
-
-	create: async (data: CreateOrgRequest): Promise<OrgResponse> =>
-		fetchApi<OrgResponse>('/organizations', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	update: async (id: string, data: UpdateOrgRequest): Promise<OrgResponse> =>
-		fetchApi<OrgResponse>(`/organizations/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	delete: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/organizations/${id}`, {
-			method: 'DELETE',
-		}),
-
-	switch: async (data: SwitchOrgRequest): Promise<OrgResponse> =>
-		fetchApi<OrgResponse>('/organizations/switch', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	// Members
-	listMembers: async (orgId: string): Promise<OrgMember[]> => {
-		const response = await fetchApi<MembersResponse>(
-			`/organizations/${orgId}/members`,
-		);
-		return response.members ?? [];
-	},
-
-	updateMember: async (
-		orgId: string,
-		userId: string,
-		data: UpdateMemberRequest,
-	): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/organizations/${orgId}/members/${userId}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	removeMember: async (
-		orgId: string,
-		userId: string,
-	): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/organizations/${orgId}/members/${userId}`, {
-			method: 'DELETE',
-		}),
-
-	// Invitations
-	listInvitations: async (orgId: string): Promise<OrgInvitation[]> => {
-		const response = await fetchApi<InvitationsResponse>(
-			`/organizations/${orgId}/invitations`,
-		);
-		return response.invitations ?? [];
-	},
-
-	createInvitation: async (
-		orgId: string,
-		data: InviteMemberRequest,
-	): Promise<InviteResponse> =>
-		fetchApi<InviteResponse>(`/organizations/${orgId}/invitations`, {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	deleteInvitation: async (
-		orgId: string,
-		invitationId: string,
-	): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(
-			`/organizations/${orgId}/invitations/${invitationId}`,
-			{
-				method: 'DELETE',
-			},
-		),
-
-	acceptInvitation: async (token: string): Promise<OrgResponse> =>
-		fetchApi<OrgResponse>('/invitations/accept', {
-			method: 'POST',
-			body: JSON.stringify({ token }),
-		}),
-};
-// Onboarding API
-export const onboardingApi = {
-	getStatus: async (): Promise<OnboardingStatus> =>
-		fetchApi<OnboardingStatus>('/onboarding/status'),
-
-	completeStep: async (step: OnboardingStep): Promise<OnboardingStatus> =>
-		fetchApi<OnboardingStatus>(`/onboarding/step/${step}`, {
-			method: 'POST',
-		}),
-
-	skip: async (): Promise<OnboardingStatus> =>
-		fetchApi<OnboardingStatus>('/onboarding/skip', {
-			method: 'POST',
-		}),
-};
-
-export const webhooksApi = {
-	// Event types
-	listEventTypes: async (): Promise<WebhookEventTypesResponse> =>
-		fetchApi<WebhookEventTypesResponse>('/webhooks/event-types'),
-
-	// Endpoints
-	listEndpoints: async (): Promise<WebhookEndpoint[]> => {
-		const response = await fetchApi<WebhookEndpointsResponse>(
-			'/webhooks/endpoints',
-		);
-		return response.endpoints ?? [];
-	},
-
-	getEndpoint: async (id: string): Promise<WebhookEndpoint> =>
-		fetchApi<WebhookEndpoint>(`/webhooks/endpoints/${id}`),
-
-	createEndpoint: async (
-		data: CreateWebhookEndpointRequest,
-	): Promise<WebhookEndpoint> =>
-		fetchApi<WebhookEndpoint>('/webhooks/endpoints', {
-// Branding API
+// Branding Settings API
 export const brandingApi = {
 	get: async (): Promise<BrandingSettings> =>
 		fetchApi<BrandingSettings>('/branding'),
 
-	update: async (data: UpdateBrandingRequest): Promise<BrandingSettings> =>
+	update: async (
+		data: UpdateBrandingSettingsRequest,
+	): Promise<BrandingSettings> =>
 		fetchApi<BrandingSettings>('/branding', {
 			method: 'PUT',
 			body: JSON.stringify(data),
@@ -5823,38 +4853,54 @@ export const brandingApi = {
 		fetchApi<MessageResponse>('/branding', {
 			method: 'DELETE',
 		}),
+
+	// Get public branding settings (no auth required, for login page)
+	getPublic: async (orgSlug: string): Promise<PublicBrandingSettings> =>
+		fetch(`/api/public/branding/\${orgSlug}`).then((res) => {
+			if (!res.ok) {
+				// Return default branding on error
+				return {
+					enabled: false,
+					product_name: 'Keldris',
+					logo_url: '',
+					logo_dark_url: '',
+					favicon_url: '',
+					primary_color: '#4f46e5',
+					secondary_color: '#64748b',
+					accent_color: '#06b6d4',
+					support_url: '',
+					privacy_url: '',
+					terms_url: '',
+					login_title: '',
+					login_subtitle: '',
+					login_bg_url: '',
+					hide_powered_by: false,
+				};
+			}
+			return res.json();
+		}),
 };
 
-// Cost Estimation API
-export const costsApi = {
-	getSummary: async (): Promise<CostSummary> =>
-		fetchApi<CostSummary>('/costs/summary'),
+export const webhooksApi = {
+	// Event types
+	listEventTypes: async (): Promise<WebhookEventTypesResponse> =>
+		fetchApi<WebhookEventTypesResponse>('/webhooks/event-types'),
 
-	listRepositoryCosts: async (): Promise<RepositoryCostsResponse> =>
-		fetchApi<RepositoryCostsResponse>('/costs/repositories'),
-
-	getRepositoryCost: async (id: string): Promise<RepositoryCostResponse> =>
-		fetchApi<RepositoryCostResponse>(`/costs/repositories/${id}`),
-
-	getForecast: async (days = 30): Promise<CostForecastResponse> =>
-		fetchApi<CostForecastResponse>(`/costs/forecast?days=${days}`),
-
-	getHistory: async (days = 30): Promise<CostHistoryResponse> =>
-		fetchApi<CostHistoryResponse>(`/costs/history?days=${days}`),
-};
-
-// Pricing API
-export const pricingApi = {
-	list: async (): Promise<StoragePricing[]> => {
-		const response = await fetchApi<StoragePricingResponse>('/pricing');
-		return response.pricing ?? [];
+	// Endpoints
+	listEndpoints: async (): Promise<WebhookEndpoint[]> => {
+		const response = await fetchApi<WebhookEndpointsResponse>(
+			'/webhooks/endpoints',
+		);
+		return response.endpoints ?? [];
 	},
 
-	getDefaults: async (): Promise<DefaultPricingResponse> =>
-		fetchApi<DefaultPricingResponse>('/pricing/defaults'),
+	getEndpoint: async (id: string): Promise<WebhookEndpoint> =>
+		fetchApi<WebhookEndpoint>(`/webhooks/endpoints/${id}`),
 
-	create: async (data: CreateStoragePricingRequest): Promise<StoragePricing> =>
-		fetchApi<StoragePricing>('/pricing', {
+	createEndpoint: async (
+		data: CreateWebhookEndpointRequest,
+	): Promise<WebhookEndpoint> =>
+		fetchApi<WebhookEndpoint>('/webhooks/endpoints', {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
@@ -5864,11 +4910,6 @@ export const pricingApi = {
 		data: UpdateWebhookEndpointRequest,
 	): Promise<WebhookEndpoint> =>
 		fetchApi<WebhookEndpoint>(`/webhooks/endpoints/${id}`, {
-	update: async (
-		id: string,
-		data: UpdateStoragePricingRequest,
-	): Promise<StoragePricing> =>
-		fetchApi<StoragePricing>(`/pricing/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
@@ -5911,147 +4952,5 @@ export const pricingApi = {
 	retryDelivery: async (id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/webhooks/deliveries/${id}/retry`, {
 			method: 'POST',
-	delete: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/pricing/${id}`, {
-			method: 'DELETE',
 		}),
-};
-
-// Cost Alerts API
-export const costAlertsApi = {
-	list: async (): Promise<CostAlert[]> => {
-		const response = await fetchApi<CostAlertsResponse>('/cost-alerts');
-		return response.alerts ?? [];
-	},
-
-	get: async (id: string): Promise<CostAlert> =>
-		fetchApi<CostAlert>(`/cost-alerts/${id}`),
-
-	create: async (data: CreateCostAlertRequest): Promise<CostAlert> =>
-		fetchApi<CostAlert>('/cost-alerts', {
-			method: 'POST',
-			body: JSON.stringify(data),
-		}),
-
-	update: async (
-		id: string,
-		data: UpdateCostAlertRequest,
-	): Promise<CostAlert> =>
-		fetchApi<CostAlert>(`/cost-alerts/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(data),
-		}),
-
-	delete: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/cost-alerts/${id}`, {
-			method: 'DELETE',
-		}),
-};
-
-// Storage Stats API
-export const statsApi = {
-	getSummary: async (): Promise<StorageStatsSummary> =>
-		fetchApi<StorageStatsSummary>('/stats/summary'),
-
-	getGrowth: async (days = 30): Promise<StorageGrowthPoint[]> => {
-		const response = await fetchApi<StorageGrowthResponse>(
-			`/stats/growth?days=${days}`,
-		);
-		return response.growth ?? [];
-	},
-
-	listRepositoryStats: async (): Promise<RepositoryStatsListItem[]> => {
-		const response = await fetchApi<RepositoryStatsListResponse>(
-			'/stats/repositories',
-		);
-		return response.stats ?? [];
-	},
-
-	getRepositoryStats: async (id: string): Promise<RepositoryStatsResponse> =>
-		fetchApi<RepositoryStatsResponse>(`/stats/repositories/${id}`),
-
-	getRepositoryGrowth: async (
-		id: string,
-		days = 30,
-	): Promise<RepositoryGrowthResponse> =>
-		fetchApi<RepositoryGrowthResponse>(
-			`/stats/repositories/${id}/growth?days=${days}`,
-		),
-
-	getRepositoryHistory: async (
-		id: string,
-		limit = 30,
-	): Promise<RepositoryHistoryResponse> =>
-		fetchApi<RepositoryHistoryResponse>(
-			`/stats/repositories/${id}/history?limit=${limit}`,
-		),
-};
-
-// Audit Logs API
-export const auditLogsApi = {
-	list: async (filter?: AuditLogFilter): Promise<AuditLogsResponse> => {
-		const searchParams = new URLSearchParams();
-		if (filter?.action) searchParams.set('action', filter.action);
-		if (filter?.resource_type)
-			searchParams.set('resource_type', filter.resource_type);
-		if (filter?.result) searchParams.set('result', filter.result);
-		if (filter?.start_date) searchParams.set('start_date', filter.start_date);
-		if (filter?.end_date) searchParams.set('end_date', filter.end_date);
-		if (filter?.search) searchParams.set('search', filter.search);
-		if (filter?.limit) searchParams.set('limit', filter.limit.toString());
-		if (filter?.offset) searchParams.set('offset', filter.offset.toString());
-
-		const query = searchParams.toString();
-		const endpoint = query ? `/audit-logs?${query}` : '/audit-logs';
-		return fetchApi<AuditLogsResponse>(endpoint);
-	},
-
-	get: async (id: string): Promise<AuditLog> =>
-		fetchApi<AuditLog>(`/audit-logs/${id}`),
-
-	exportCsv: async (filter?: AuditLogFilter): Promise<Blob> => {
-		const searchParams = new URLSearchParams();
-		if (filter?.action) searchParams.set('action', filter.action);
-		if (filter?.resource_type)
-			searchParams.set('resource_type', filter.resource_type);
-		if (filter?.result) searchParams.set('result', filter.result);
-		if (filter?.start_date) searchParams.set('start_date', filter.start_date);
-		if (filter?.end_date) searchParams.set('end_date', filter.end_date);
-		if (filter?.search) searchParams.set('search', filter.search);
-
-		const query = searchParams.toString();
-		const endpoint = query
-			? `/audit-logs/export/csv?${query}`
-			: '/audit-logs/export/csv';
-		const response = await fetch(`${API_BASE}${endpoint}`, {
-			credentials: 'include',
-		});
-		if (!response.ok) {
-			throw new ApiError(response.status, 'Failed to export audit logs');
-		}
-		return response.blob();
-	},
-
-	exportJson: async (filter?: AuditLogFilter): Promise<Blob> => {
-		const searchParams = new URLSearchParams();
-		if (filter?.action) searchParams.set('action', filter.action);
-		if (filter?.resource_type)
-			searchParams.set('resource_type', filter.resource_type);
-		if (filter?.result) searchParams.set('result', filter.result);
-		if (filter?.start_date) searchParams.set('start_date', filter.start_date);
-		if (filter?.end_date) searchParams.set('end_date', filter.end_date);
-		if (filter?.search) searchParams.set('search', filter.search);
-
-		const query = searchParams.toString();
-		const endpoint = query
-			? `/audit-logs/export/json?${query}`
-			: '/audit-logs/export/json';
-		const response = await fetch(`${API_BASE}${endpoint}`, {
-			credentials: 'include',
-		});
-		if (!response.ok) {
-			throw new ApiError(response.status, 'Failed to export audit logs');
-		}
-		return response.blob();
-	},
 };

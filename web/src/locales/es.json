@@ -427,7 +427,7 @@
   "shortcuts": {
     "title": "Atajos de teclado",
     "navigation": "Navegación",
-    "actions": "Acciones",
+    "actionsSection": "Acciones",
     "general": "General",
     "hint": "Presiona ? en cualquier momento para mostrar esta ayuda",
     "customizeTitle": "Personalizar atajos",

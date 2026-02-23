@@ -25,8 +25,6 @@ import (
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/MacJediWizard/keldris/internal/telemetry"
 	"github.com/MacJediWizard/keldris/internal/updates"
-	"github.com/MacJediWizard/keldris/internal/logs"
-	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/MacJediWizard/keldris/internal/webhooks"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -34,12 +32,6 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "github.com/MacJediWizard/keldris/docs/api"
-	"github.com/MacJediWizard/keldris/internal/api/handlers"
-	"github.com/MacJediWizard/keldris/internal/api/middleware"
-	"github.com/MacJediWizard/keldris/internal/auth"
-	"github.com/MacJediWizard/keldris/internal/db"
-	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
 )
 
 // Config holds configuration for the API router.
@@ -98,17 +90,12 @@ type Config struct {
 	// AirGapPublicKey is the Ed25519 public key for validating offline licenses (optional).
 	AirGapPublicKey []byte
 	// VerificationTrigger for manually triggering verifications (optional).
-	VerificationTrigger handlers.VerificationTrigger
 	// ReportScheduler for report generation and sending (optional).
-	ReportScheduler *reports.Scheduler
 	// WebhookDispatcher for outbound webhook delivery (optional).
 	WebhookDispatcher *webhooks.Dispatcher
 	// MeteringService for usage tracking and billing (optional).
-	MeteringService *metering.Service
 	// DRTestRunner for triggering DR test execution (optional).
-	DRTestRunner handlers.DRTestRunner
 	// LogBuffer for server log capture and viewing (optional).
-	LogBuffer *logs.LogBuffer
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -137,9 +124,6 @@ func ProductionConfig() Config {
 		Commit:            "unknown",
 		BuildDate:         "unknown",
 		SecurityHeaders:   &prodSecurityHeaders,
-		Version:           "dev",
-		Commit:            "unknown",
-		BuildDate:         "unknown",
 	}
 }
 
@@ -150,10 +134,6 @@ type Router struct {
 	sessions   *auth.SessionStore
 	db         *db.DB
 	keyManager *crypto.KeyManager
-	Engine   *gin.Engine
-	logger   zerolog.Logger
-	sessions *auth.SessionStore
-	db       *db.DB
 }
 
 // NewRouter creates a new Router with the given dependencies.
@@ -171,22 +151,12 @@ func NewRouter(
 		sessions:   sessions,
 		db:         database,
 		keyManager: keyManager,
-	logger zerolog.Logger,
-) (*Router, error) {
-	r := &Router{
-		Engine:   gin.New(),
-		logger:   logger.With().Str("component", "router").Logger(),
-		sessions: sessions,
-		db:       database,
 	}
 
 	// Global middleware
 	r.Engine.Use(gin.Recovery())
 	r.Engine.Use(middleware.BodyLimitMiddleware(10 << 20)) // 10 MB default body limit
 	r.Engine.Use(middleware.RequestLogger(logger))
-	r.Engine.Use(middleware.SecurityHeaders(cfg.Environment))
-	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins, cfg.Environment))
-	r.Engine.Use(middleware.SecurityHeaders())
 	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins, cfg.Environment))
 
 	// Security headers middleware
@@ -198,30 +168,12 @@ func NewRouter(
 
 	// Rate limiting
 	rateLimiter, err := middleware.NewRateLimiter(cfg.RateLimitRequests, cfg.RateLimitPeriod, cfg.RedisURL)
-	r.Engine.Use(middleware.RequestLogger(logger))
-	r.Engine.Use(middleware.CORS(cfg.AllowedOrigins))
-
-	// Security headers middleware
-	securityHeadersConfig := middleware.DefaultSecurityHeadersConfig()
-	if cfg.SecurityHeaders != nil {
-		securityHeadersConfig = *cfg.SecurityHeaders
-	}
-	r.Engine.Use(middleware.SecurityHeaders(securityHeadersConfig))
-
-	// Rate limiting
-	rateLimiter, err := middleware.NewRateLimiter(cfg.RateLimitRequests, cfg.RateLimitPeriod)
 	if err != nil {
 		return nil, err
 	}
 	r.Engine.Use(rateLimiter)
 
 	// Health check endpoints (no auth required for basic checks)
-	healthHandler := handlers.NewHealthHandler(database, oidc, logger)
-	healthHandler.SetSessionStore(sessions)
-	if cfg.DatabaseBackupService != nil {
-		healthHandler.SetDatabaseBackupService(cfg.DatabaseBackupService)
-	}
-	// Health check endpoints (no auth required)
 	healthHandler := handlers.NewHealthHandler(database, oidc, logger)
 	healthHandler.SetSessionStore(sessions)
 	if cfg.DatabaseBackupService != nil {
@@ -242,12 +194,6 @@ func NewRouter(
 	} else {
 		r.logger.Info().Msg("Swagger UI disabled in production for security")
 	}
-
-	// Swagger API documentation (no auth required)
-	r.Engine.GET("/api/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler,
-		ginSwagger.URL("/api/docs/doc.json"),
-		ginSwagger.DefaultModelsExpandDepth(-1),
-	))
 
 	// Version endpoint (no auth required)
 	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)
@@ -278,12 +224,6 @@ func NewRouter(
 	// Update checker endpoint (no auth required for banner display)
 	updatesHandler := handlers.NewUpdatesHandler(cfg.UpdateChecker, logger)
 	updatesHandler.RegisterPublicRoutes(r.Engine)
-	// Health check endpoint (no auth required)
-	r.Engine.GET("/health", r.healthCheck)
-
-	// Version endpoint (no auth required)
-	versionHandler := handlers.NewVersionHandler(cfg.Version, cfg.Commit, cfg.BuildDate, logger)
-	versionHandler.RegisterPublicRoutes(r.Engine)
 
 	// Auth routes (no auth required)
 	authGroup := r.Engine.Group("/auth")
@@ -312,18 +252,10 @@ func NewRouter(
 		}
 		apiV1.Use(middleware.LicenseMiddleware(lic, logger))
 	}
+
 	// Create IP filter for IP-based access control
 	ipFilter := middleware.NewIPFilter(database, logger)
 	apiV1.Use(middleware.IPFilterMiddleware(ipFilter, logger))
-	lic := cfg.License
-	if lic == nil {
-		lic = license.FreeLicense()
-	}
-	apiV1.Use(middleware.LicenseMiddleware(lic, logger))
-
-	// Create RBAC for permission checks
-	rbac := auth.NewRBAC(database)
-	apiV1.Use(middleware.AuditMiddleware(database, logger))
 
 	// Create RBAC for permission checks
 	rbac := auth.NewRBAC(database)
@@ -340,7 +272,6 @@ func NewRouter(
 		docsHandler := handlers.NewDocsHandler(cfg.DocsFS, logger)
 		docsHandler.RegisterRoutes(apiV1)
 	}
-	securityHandler.RegisterRoutes(apiV1)
 
 	// License info endpoint
 	licenseInfoHandler := handlers.NewLicenseInfoHandler(cfg.Validator, logger)
@@ -352,27 +283,18 @@ func NewRouter(
 		licenseManageHandler.RegisterRoutes(apiV1)
 	}
 
-	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
-	// Documentation routes (authenticated)
-	if cfg.DocsFS != nil {
-		docsHandler := handlers.NewDocsHandler(cfg.DocsFS, logger)
-		docsHandler.RegisterRoutes(apiV1)
-	}
-
 	// Register air-gap protected routes (after auth middleware is applied)
 	if airGapHandler != nil {
 		airGapHandler.RegisterRoutes(apiV1, nil)
 	}
 
+	// Organizations
 	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
 	orgsHandler.RegisterRoutes(apiV1)
 	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
 	orgsHandler.RegisterMultiOrgRoutes(orgsGroup, middleware.LimitMiddleware(database, "organizations", logger))
-	orgsHandler.RegisterRoutes(orgsGroup)
 
-	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
-	orgsHandler.RegisterRoutes(apiV1)
-
+	// Agents
 	agentsHandler := handlers.NewAgentsHandler(database, logger)
 	agentsHandler.RegisterRoutes(apiV1, middleware.LimitMiddleware(database, "agents", logger))
 
@@ -391,15 +313,14 @@ func NewRouter(
 	agentImportHandler := handlers.NewAgentImportHandler(database, cfg.ServerURL, logger)
 	agentImportHandler.RegisterRoutes(apiV1)
 
-	agentGroupsHandler := handlers.NewAgentGroupsHandler(database, logger)
-	agentGroupsHandler.RegisterRoutes(apiV1)
-
+	// Repositories
 	reposHandler := handlers.NewRepositoriesHandler(database, keyManager, logger)
 	reposHandler.RegisterRoutes(apiV1)
 
 	repoImportHandler := handlers.NewRepositoryImportHandler(database, keyManager, logger)
 	repoImportHandler.RegisterRoutes(apiV1)
 
+	// Schedules
 	schedulesHandler := handlers.NewSchedulesHandler(database, logger)
 	schedulesHandler.RegisterRoutes(apiV1)
 
@@ -412,9 +333,11 @@ func NewRouter(
 	backupHookTemplatesHandler := handlers.NewBackupHookTemplatesHandler(database, logger)
 	backupHookTemplatesHandler.RegisterRoutes(apiV1)
 
+	// Policies
 	policiesHandler := handlers.NewPoliciesHandler(database, logger)
 	policiesHandler.RegisterRoutes(apiV1)
 
+	// Backups and snapshots
 	backupsHandler := handlers.NewBackupsHandler(database, logger)
 	backupsHandler.RegisterRoutes(apiV1)
 
@@ -427,25 +350,19 @@ func NewRouter(
 	fileHistoryHandler := handlers.NewFileHistoryHandler(database, logger)
 	fileHistoryHandler.RegisterRoutes(apiV1)
 
-	auditLogsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureAuditLogs, logger))
 	fileSearchHandler := handlers.NewFileSearchHandler(database, keyManager, logger)
 	fileSearchHandler.RegisterRoutes(apiV1)
 
-	fileHistoryHandler := handlers.NewFileHistoryHandler(database, logger)
-	fileHistoryHandler.RegisterRoutes(apiV1)
-
-	snapshotsHandler := handlers.NewSnapshotsHandler(database, logger)
-	snapshotsHandler.RegisterRoutes(apiV1)
-
+	// Audit logs (feature gated)
+	auditLogsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureAuditLogs, logger))
 	auditLogsHandler := handlers.NewAuditLogsHandler(database, logger)
 	auditLogsHandler.RegisterRoutes(auditLogsGroup)
 
+	// Alerts
 	alertsHandler := handlers.NewAlertsHandler(database, logger)
 	alertsHandler.RegisterRoutes(apiV1)
 
-	notificationsHandler := handlers.NewNotificationsHandlerWithEnv(database, keyManager, logger, cfg.Environment)
-	notificationsHandler := handlers.NewNotificationsHandler(database, keyManager, logger)
-	notificationsHandler.RegisterRoutes(apiV1)
+	// Notifications (feature gated for Slack)
 	notificationsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureNotificationSlack, logger))
 	notificationsHandler := handlers.NewNotificationsHandlerWithEnv(database, keyManager, logger, cfg.Environment)
 	notificationsHandler.RegisterRoutes(notificationsGroup)
@@ -459,12 +376,7 @@ func NewRouter(
 		reportsHandler.RegisterRoutes(apiV1)
 	}
 
-	// Register reports handler if scheduler is available
-	if cfg.ReportScheduler != nil {
-		reportsHandler := handlers.NewReportsHandler(database, cfg.ReportScheduler, logger)
-		reportsHandler.RegisterRoutes(apiV1)
-	}
-
+	// Stats and search
 	statsHandler := handlers.NewStatsHandler(database, logger)
 	statsHandler.RegisterRoutes(apiV1)
 
@@ -492,28 +404,14 @@ func NewRouter(
 	costHandler := handlers.NewCostEstimationHandler(database, logger)
 	costHandler.RegisterRoutes(apiV1)
 
-	tagsHandler := handlers.NewTagsHandler(database, logger)
-	tagsHandler.RegisterRoutes(apiV1)
-
-	searchHandler := handlers.NewSearchHandler(database, logger)
-	searchHandler.RegisterRoutes(apiV1)
-
-	dashboardMetricsHandler := handlers.NewDashboardMetricsHandler(database, logger)
-	dashboardMetricsHandler.RegisterRoutes(apiV1)
-
-	onboardingHandler := handlers.NewOnboardingHandler(database, logger)
-	onboardingHandler.RegisterRoutes(apiV1)
-
-	costHandler := handlers.NewCostEstimationHandler(database, logger)
-	costHandler.RegisterRoutes(apiV1)
-
 	// Register verification handler if trigger is available
 	if cfg.VerificationTrigger != nil {
 		verificationsHandler := handlers.NewVerificationsHandler(database, cfg.VerificationTrigger, logger)
 		verificationsHandler.RegisterRoutes(apiV1)
 	}
 
-	usersHandler := handlers.NewUsersHandler(database, rbac, logger)
+	// User management
+	usersHandler := handlers.NewUsersHandler(database, sessions, rbac, logger)
 	usersHandler.RegisterRoutes(apiV1)
 
 	ssoGroupMappingsHandler := handlers.NewSSOGroupMappingsHandler(database, rbac, logger)
@@ -529,22 +427,13 @@ func NewRouter(
 	dockerBackupHandler := handlers.NewDockerBackupHandler(database, dockerBackupDiscoveryService, logger)
 	dockerBackupHandler.RegisterRoutes(dockerBackupGroup)
 
-	// Branding routes (Enterprise - White Label)
-	brandingGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureWhiteLabel, logger))
-	brandingHandler := handlers.NewBrandingHandler(database, logger)
-	brandingHandler.RegisterRoutes(brandingGroup)
-
-	// DR Runbook routes (Enterprise)
-	drRunbooksGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDRRunbooks, logger))
+	// Announcements
 	announcementsHandler := handlers.NewAnnouncementsHandler(database, logger)
 	announcementsHandler.RegisterRoutes(apiV1)
 
 	// Password policies handler for non-OIDC authentication
 	passwordPoliciesHandler := handlers.NewPasswordPoliciesHandler(database, logger)
 	passwordPoliciesHandler.RegisterRoutes(apiV1)
-
-	announcementsHandler := handlers.NewAnnouncementsHandler(database, logger)
-	announcementsHandler.RegisterRoutes(apiV1)
 
 	// Server logs handler for admin (requires LogBuffer)
 	if cfg.LogBuffer != nil {
@@ -562,7 +451,6 @@ func NewRouter(
 	dockerRestoreHandler := handlers.NewDockerRestoreHandler(database, logger)
 	dockerRestoreHandler.RegisterRoutes(apiV1)
 
-	// DR Runbook routes
 	// DR Runbook routes (Enterprise)
 	drRunbooksGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDRRunbooks, logger))
 	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
@@ -578,9 +466,11 @@ func NewRouter(
 	slaHandler := handlers.NewSLAHandler(database, logger)
 	slaHandler.RegisterRoutes(slaGroup)
 
-	// Air-gap routes (available to all tiers — air-gap is a deployment mode, not a premium feature)
-	airGapHandler := handlers.NewAirGapHandler(logger)
-	airGapHandler.RegisterRoutes(apiV1)
+	// Branding routes (Enterprise - White Label)
+	brandingGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureWhiteLabel, logger))
+	brandingHandler := handlers.NewBrandingHandler(database, logger)
+	brandingHandler.RegisterRoutes(brandingGroup)
+	brandingHandler.RegisterPublicRoutes(r.Engine.Group("/api/public"))
 
 	// Geo-Replication routes
 	geoReplicationHandler := handlers.NewGeoReplicationHandler(database, logger)
@@ -590,7 +480,7 @@ func NewRouter(
 	classificationsHandler := handlers.NewClassificationsHandler(database, logger)
 	classificationsHandler.RegisterRoutes(apiV1)
 
-	// Storage Tiering routes (scheduler is nil for now, will be set up when tiering scheduler is integrated)
+	// Storage Tiering routes
 	storageTiersHandler := handlers.NewStorageTiersHandler(database, nil, logger)
 	storageTiersHandler.RegisterRoutes(apiV1)
 
@@ -611,22 +501,16 @@ func NewRouter(
 	ipAllowlistsHandler := handlers.NewIPAllowlistsHandler(database, ipFilter, logger)
 	ipAllowlistsHandler.RegisterRoutes(apiV1)
 
-	// Rate limit dashboard routes (admin only)
+	// Rate limit routes
 	rateLimitHandler := handlers.NewRateLimitHandler(database, logger)
 	rateLimitHandler.RegisterRoutes(apiV1)
 
-	// Rate limit config management routes
 	rateLimitsHandler := handlers.NewRateLimitsHandler(database, logger)
 	rateLimitsHandler.RegisterRoutes(apiV1)
 
 	// User sessions management routes
 	userSessionsHandler := handlers.NewUserSessionsHandler(database, logger)
 	userSessionsHandler.RegisterRoutes(apiV1)
-
-	// User management routes (admin)
-// User management routes (admin)
-	usersHandler := handlers.NewUsersHandler(database, sessions, rbac, logger)
-	usersHandler.RegisterRoutes(apiV1)
 
 	// Recent items tracking routes
 	recentItemsHandler := handlers.NewRecentItemsHandler(database, logger)
@@ -653,11 +537,6 @@ func NewRouter(
 	trialHandler := handlers.NewTrialHandler(database, logger)
 	trialHandler.RegisterRoutes(apiV1)
 
-	// Branding settings routes (Enterprise only)
-	brandingHandler := handlers.NewBrandingHandler(database, logger)
-	brandingHandler.RegisterRoutes(apiV1)
-	brandingHandler.RegisterPublicRoutes(r.Engine.Group("/api/public"))
-
 	// Superuser routes (requires superuser privileges)
 	superuserHandler := handlers.NewSuperuserHandler(database, sessions, logger)
 	superuserHandler.RegisterRoutes(apiV1)
@@ -675,12 +554,6 @@ func NewRouter(
 	// System health routes (requires superuser privileges)
 	systemHealthHandler := handlers.NewSystemHealthHandler(database, sessions, logger)
 	systemHealthHandler.RegisterRoutes(apiV1)
-
-	// Docker backup routes
-	dockerDiscoveryConfig := docker.DefaultDiscoveryConfig()
-	dockerDiscoveryService := docker.NewDiscoveryService(database, dockerDiscoveryConfig, logger)
-	dockerBackupHandler := handlers.NewDockerBackupHandler(database, dockerDiscoveryService, logger)
-	dockerBackupHandler.RegisterRoutes(apiV1)
 
 	// Docker container logs backup routes
 	dockerLogBackupService := docker.NewLogBackupService(docker.DefaultLogBackupConfig(), logger)
@@ -720,19 +593,11 @@ func NewRouter(
 		usageHandler := handlers.NewUsageHandler(database, cfg.MeteringService, logger)
 		usageHandler.RegisterRoutes(apiV1)
 	}
-	// Air-gap routes (Enterprise)
-	airGapGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureAirGap, logger))
-	airGapHandler := handlers.NewAirGapHandler(database, cfg.AirGapPublicKey, logger)
-	airGapHandler.RegisterRoutes(airGapGroup)
 
-	// Classification routes
-	classificationsHandler := handlers.NewClassificationsHandler(database, logger)
-	classificationsHandler.RegisterRoutes(apiV1)
-
-	// Outbound webhooks routes
-	if cfg.WebhookDispatcher != nil {
-		webhooksHandler := handlers.NewWebhooksHandler(database, keyManager, cfg.WebhookDispatcher, logger)
-		webhooksHandler.RegisterRoutes(apiV1)
+	// Air-gap routes (Enterprise) - register protected admin endpoints
+	if airGapHandler != nil {
+		airGapGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureAirGap, logger))
+		airGapHandler.RegisterRoutes(airGapGroup, nil)
 	}
 
 	// Outbound webhooks routes
@@ -742,7 +607,6 @@ func NewRouter(
 	}
 
 	// Agent API routes (API key auth required)
-	// These endpoints are for agents to communicate with the server
 	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
 	agentAPI := r.Engine.Group("/api/v1/agent")
 	agentAPI.Use(middleware.APIKeyMiddleware(apiKeyValidator, logger))
@@ -757,8 +621,6 @@ func NewRouter(
 	}
 	agentAPI.Use(middleware.FeatureMiddleware(license.FeatureAPIAccess, logger))
 	agentAPI.Use(middleware.IPFilterAgentMiddleware(ipFilter, logger))
-	agentAPI.Use(middleware.LicenseMiddleware(lic, logger))
-	agentAPI.Use(middleware.FeatureMiddleware(license.FeatureAPIAccess, logger))
 
 	agentAPIHandler := handlers.NewAgentAPIHandler(database, keyManager, logger)
 	agentAPIHandler.RegisterRoutes(agentAPI)
@@ -786,58 +648,6 @@ func NewRouter(
 			r.logger.Warn().Str("dir", cfg.WebDir).Msg("web directory not found, SPA not served")
 		}
 	}
-	ssoGroupMappingsHandler := handlers.NewSSOGroupMappingsHandler(database, rbac, logger)
-	ssoGroupMappingsHandler.RegisterRoutes(apiV1)
-
-	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
-	maintenanceHandler.RegisterRoutes(apiV1)
-
-	// DR Runbook routes
-	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
-	drRunbooksHandler.RegisterRoutes(apiV1)
-
-	// DR Test routes
-	drTestsHandler := handlers.NewDRTestsHandler(database, cfg.DRTestRunner, logger)
-	drTestsHandler.RegisterRoutes(apiV1)
-	auditLogsHandler := handlers.NewAuditLogsHandler(database, logger)
-	auditLogsHandler.RegisterRoutes(apiV1)
-
-	alertsHandler := handlers.NewAlertsHandler(database, logger)
-	alertsHandler.RegisterRoutes(apiV1)
-
-	notificationsHandler := handlers.NewNotificationsHandler(database, logger)
-	notificationsHandler.RegisterRoutes(apiV1)
-
-	// Agent API routes (API key auth required)
-	// These endpoints are for agents to communicate with the server
-	apiKeyValidator := auth.NewAPIKeyValidator(database, logger)
-	agentAPI := r.Engine.Group("/api/v1/agent")
-	agentAPI.Use(middleware.APIKeyMiddleware(apiKeyValidator, logger))
-
-	agentAPIHandler := handlers.NewAgentAPIHandler(database, logger)
-	agentAPIHandler.RegisterRoutes(agentAPI)
-
-	r.logger.Info().Msg("API router initialized")
-	return r, nil
-}
-	// API v1 routes (auth required)
-	apiV1 := r.Engine.Group("/api/v1")
-	apiV1.Use(middleware.AuthMiddleware(sessions, logger))
-
-	// Register API handlers
-	agentsHandler := handlers.NewAgentsHandler(database, logger)
-	agentsHandler.RegisterRoutes(apiV1)
-
-	reposHandler := handlers.NewRepositoriesHandler(database, logger)
-	reposHandler.RegisterRoutes(apiV1)
-
-	schedulesHandler := handlers.NewSchedulesHandler(database, logger)
-	schedulesHandler.RegisterRoutes(apiV1)
-
-	backupsHandler := handlers.NewBackupsHandler(database, logger)
-	backupsHandler.RegisterRoutes(apiV1)
-	statsHandler := handlers.NewStatsHandler(database, logger)
-	statsHandler.RegisterRoutes(apiV1)
 
 	r.logger.Info().Msg("API router initialized")
 	return r, nil

@@ -35,13 +35,6 @@ type Repository struct {
 	Metadata        map[string]interface{} `json:"metadata,omitempty"`
 	CreatedAt       time.Time              `json:"created_at"`
 	UpdatedAt       time.Time              `json:"updated_at"`
-	ID              uuid.UUID      `json:"id"`
-	OrgID           uuid.UUID      `json:"org_id"`
-	Name            string         `json:"name"`
-	Type            RepositoryType `json:"type"`
-	ConfigEncrypted []byte         `json:"-"` // Encrypted, never expose in JSON
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
 }
 
 // NewRepository creates a new Repository with the given details.

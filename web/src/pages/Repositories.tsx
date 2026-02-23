@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ImportRepositoryWizard } from '../components/features/ImportRepositoryWizard';
-import { HelpTooltip } from '../components/ui/HelpTooltip';
-import { StarButton } from '../components/ui/StarButton';
 import { useMe } from '../hooks/useAuth';
 import { useFavoriteIds } from '../hooks/useFavorites';
-import { useMe } from '../hooks/useAuth';
 import { useOrganizations } from '../hooks/useOrganizations';
 import {
 	useCloneRepository,
@@ -34,34 +31,11 @@ import type {
 	VerificationStatus,
 	VerificationType,
 } from '../lib/types';
-import { useState } from 'react';
-import {
-	useCreateRepository,
-	useDeleteRepository,
-	useRepositories,
-	useTestConnection,
-	useTestRepository,
-} from '../hooks/useRepositories';
-import type {
-	B2BackendConfig,
-	DropboxBackendConfig,
-	LocalBackendConfig,
-	Repository,
-	RepositoryType,
-	RestBackendConfig,
-	S3BackendConfig,
-	SFTPBackendConfig,
-	TestRepositoryResponse,
-} from '../lib/types';
 import { formatDate, getRepositoryTypeBadge } from '../lib/utils';
 
 function LoadingCard() {
 	return (
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
-			<div className="flex items-start justify-between mb-4">
-				<div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-				<div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded-full" />
-		<div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
 			<div className="flex items-start justify-between mb-4">
 				<div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
 				<div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded-full" />
@@ -97,7 +71,6 @@ function FormField({
 			<label
 				htmlFor={id}
 				className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-				className="block text-sm font-medium text-gray-700 mb-1"
 			>
 				{label}
 				{required && <span className="text-red-500 ml-1">*</span>}
@@ -109,14 +82,6 @@ function FormField({
 				onChange={(e) => onChange(e.target.value)}
 				placeholder={placeholder}
 				className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-				required={required}
-			/>
-			{helpText && (
-				<p className="mt-1 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
-					{helpText}
-				</p>
-			)}
-				className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 				required={required}
 			/>
 			{helpText && (
@@ -225,110 +190,10 @@ function PasswordModal({
 	);
 }
 
-interface PasswordModalProps {
-	isOpen: boolean;
-	onClose: () => void;
-	repositoryName: string;
-	password: string;
-}
-
-function PasswordModal({
-	isOpen,
-	onClose,
-	repositoryName,
-	password,
-}: PasswordModalProps) {
-	const [copied, setCopied] = useState(false);
-
-	const handleCopy = async () => {
-		await navigator.clipboard.writeText(password);
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
-	};
-
-	if (!isOpen) return null;
-
-	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
-				<div className="flex items-center gap-3 mb-4">
-					<div className="flex-shrink-0 w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-						<svg
-							aria-hidden="true"
-							className="w-5 h-5 text-yellow-600"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-							/>
-						</svg>
-					</div>
-					<div>
-						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-							Repository Password
-						</h3>
-						<p className="text-sm text-gray-500 dark:text-gray-400">
-							Save this password - it will only be shown once
-						</p>
-					</div>
-				</div>
-
-				<div className="mb-4">
-					<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-						Repository <span className="font-medium">{repositoryName}</span> has
-						been created. Use this password to access your Restic repository:
-					</p>
-				</div>
-
-				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
-					<div className="flex items-center justify-between gap-4">
-						<code className="text-sm font-mono break-all flex-1">
-							{password}
-						</code>
-						<button
-							type="button"
-							onClick={handleCopy}
-							className="flex-shrink-0 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
-						>
-							{copied ? 'Copied!' : 'Copy'}
-						</button>
-					</div>
-				</div>
-
-				<div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-					<p className="text-sm text-amber-800">
-						<strong>Important:</strong> This password is required to decrypt
-						your backups. Store it securely - without it, your backup data
-						cannot be recovered.
-					</p>
-				</div>
-
-				<div className="flex justify-end">
-					<button
-						type="button"
-						onClick={onClose}
-						className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-					>
-						I've saved the password
-					</button>
-				</div>
-			</div>
-		</div>
-	);
-}
-
 interface AddRepositoryModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	onSuccess: (response: CreateRepositoryResponse) => void;
-interface AddRepositoryModalProps {
-	isOpen: boolean;
-	onClose: () => void;
 	initialType?: RepositoryType;
 }
 
@@ -503,124 +368,6 @@ function AddRepositoryModal({
 				return { path: localPath };
 		}
 	};
-	const [path, setPath] = useState('');
-	const createRepository = useCreateRepository();
-	const testConnection = useTestConnection();
-
-	useEffect(() => {
-		if (initialType) {
-			setType(initialType);
-		}
-	}, [initialType]);
-
-	// Reset test result when type changes
-	// biome-ignore lint/correctness/useExhaustiveDependencies: intentionally reset when type changes
-	useEffect(() => {
-		setTestResult(null);
-	}, [type]);
-
-	const resetForm = () => {
-		setName('');
-		setType('local');
-		setLocalPath('');
-		setS3Endpoint('');
-		setS3Bucket('');
-		setS3Prefix('');
-		setS3Region('');
-		setS3AccessKey('');
-		setS3SecretKey('');
-		setS3UseSsl(true);
-		setB2Bucket('');
-		setB2Prefix('');
-		setB2AccountId('');
-		setB2AppKey('');
-		setSftpHost('');
-		setSftpPort('22');
-		setSftpUser('');
-		setSftpPath('');
-		setSftpPassword('');
-		setSftpPrivateKey('');
-		setRestUrl('');
-		setRestUsername('');
-		setRestPassword('');
-		setDropboxRemoteName('');
-		setDropboxPath('');
-		setDropboxToken('');
-		setDropboxAppKey('');
-		setDropboxAppSecret('');
-		setTestResult(null);
-	};
-
-	const handleTestConnection = async () => {
-		setTestResult(null);
-		try {
-			const result = await testConnection.mutateAsync({
-				type,
-				config: buildConfig(),
-			});
-			setTestResult(result);
-		} catch {
-			setTestResult({
-				success: false,
-				message: 'Failed to test connection',
-			});
-		}
-	};
-
-	const buildConfig = ():
-		| LocalBackendConfig
-		| S3BackendConfig
-		| B2BackendConfig
-		| SFTPBackendConfig
-		| RestBackendConfig
-		| DropboxBackendConfig => {
-		switch (type) {
-			case 'local':
-				return { path: localPath };
-			case 's3':
-				return {
-					endpoint: s3Endpoint || undefined,
-					bucket: s3Bucket,
-					prefix: s3Prefix || undefined,
-					region: s3Region || undefined,
-					access_key_id: s3AccessKey,
-					secret_access_key: s3SecretKey,
-					use_ssl: s3UseSsl,
-				};
-			case 'b2':
-				return {
-					bucket: b2Bucket,
-					prefix: b2Prefix || undefined,
-					account_id: b2AccountId,
-					application_key: b2AppKey,
-				};
-			case 'sftp':
-				return {
-					host: sftpHost,
-					port: sftpPort ? Number.parseInt(sftpPort, 10) : undefined,
-					user: sftpUser,
-					path: sftpPath,
-					password: sftpPassword || undefined,
-					private_key: sftpPrivateKey || undefined,
-				};
-			case 'rest':
-				return {
-					url: restUrl,
-					username: restUsername || undefined,
-					password: restPassword || undefined,
-				};
-			case 'dropbox':
-				return {
-					remote_name: dropboxRemoteName,
-					path: dropboxPath || undefined,
-					token: dropboxToken || undefined,
-					app_key: dropboxAppKey || undefined,
-					app_secret: dropboxAppSecret || undefined,
-				};
-			default:
-				return { path: localPath };
-		}
-	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -632,13 +379,6 @@ function AddRepositoryModal({
 				escrow_enabled: escrowEnabled,
 			});
 			onSuccess(response);
-			resetForm();
-			await createRepository.mutateAsync({
-				name,
-				type,
-				config: buildConfig(),
-			});
-			onClose();
 			resetForm();
 		} catch {
 			// Error handled by mutation
@@ -725,7 +465,6 @@ function AddRepositoryModal({
 								htmlFor="s3-use-ssl"
 								className="text-sm text-gray-700 dark:text-gray-300 dark:text-gray-600"
 							>
-							<label htmlFor="s3-use-ssl" className="text-sm text-gray-700">
 								Use SSL/TLS
 							</label>
 						</div>
@@ -930,10 +669,6 @@ function AddRepositoryModal({
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-				<h3 className="text-lg font-semibold text-gray-900 mb-4">
 					Add Repository
 				</h3>
 				<form onSubmit={handleSubmit}>
@@ -950,134 +685,6 @@ function AddRepositoryModal({
 							<label
 								htmlFor="repo-type"
 								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-						<div>
-							<label
-								htmlFor="sftp-private-key"
-								className="block text-sm font-medium text-gray-700 mb-1"
-							>
-								Private Key
-							</label>
-							<textarea
-								id="sftp-private-key"
-								value={sftpPrivateKey}
-								onChange={(e) => setSftpPrivateKey(e.target.value)}
-								placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-xs"
-								rows={4}
-							/>
-							<p className="mt-1 text-xs text-gray-500">
-								Paste your SSH private key (PEM format)
-							</p>
-						</div>
-					</>
-				);
-
-			case 'rest':
-				return (
-					<>
-						<FormField
-							label="URL"
-							id="rest-url"
-							value={restUrl}
-							onChange={setRestUrl}
-							placeholder="https://backup.example.com:8000"
-							required
-							helpText="URL of the Restic REST server"
-						/>
-						<FormField
-							label="Username"
-							id="rest-username"
-							value={restUsername}
-							onChange={setRestUsername}
-							placeholder="backup"
-							helpText="Optional authentication"
-						/>
-						<FormField
-							label="Password"
-							id="rest-password"
-							value={restPassword}
-							onChange={setRestPassword}
-							type="password"
-						/>
-					</>
-				);
-
-			case 'dropbox':
-				return (
-					<>
-						<FormField
-							label="Remote Name"
-							id="dropbox-remote-name"
-							value={dropboxRemoteName}
-							onChange={setDropboxRemoteName}
-							placeholder="dropbox"
-							required
-							helpText="Name for the rclone remote configuration"
-						/>
-						<FormField
-							label="Path"
-							id="dropbox-path"
-							value={dropboxPath}
-							onChange={setDropboxPath}
-							placeholder="/Backups/server1"
-							helpText="Path within your Dropbox"
-						/>
-						<FormField
-							label="Token"
-							id="dropbox-token"
-							value={dropboxToken}
-							onChange={setDropboxToken}
-							type="password"
-							helpText="OAuth token from rclone config (optional if rclone is pre-configured)"
-						/>
-						<FormField
-							label="App Key"
-							id="dropbox-app-key"
-							value={dropboxAppKey}
-							onChange={setDropboxAppKey}
-							helpText="Your Dropbox App Key (optional)"
-						/>
-						<FormField
-							label="App Secret"
-							id="dropbox-app-secret"
-							value={dropboxAppSecret}
-							onChange={setDropboxAppSecret}
-							type="password"
-							helpText="Your Dropbox App Secret (optional)"
-						/>
-						<p className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-							Dropbox backend requires rclone to be installed on the agent. You
-							can either pre-configure rclone with `rclone config` or provide
-							the OAuth token here.
-						</p>
-					</>
-				);
-
-			default:
-				return null;
-		}
-	};
-
-	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-				<h3 className="text-lg font-semibold text-gray-900 mb-4">
-					Add Repository
-				</h3>
-				<form onSubmit={handleSubmit}>
-					<div className="space-y-4">
-						<FormField
-							label="Name"
-							id="repo-name"
-							value={name}
-							onChange={setName}
-							placeholder="e.g., primary-backup"
-							required
-						/>
-						<div>
-							<label
-								htmlFor="repo-type"
-								className="block text-sm font-medium text-gray-700 mb-1"
 							>
 								Type
 							</label>
@@ -1109,11 +716,6 @@ function AddRepositoryModal({
 								<label
 									htmlFor="escrow-enabled"
 									className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-								>
-									Enable key escrow
-								</label>
-								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
-									className="block text-sm font-medium text-gray-700"
 								>
 									Enable key escrow
 								</label>
@@ -1164,19 +766,6 @@ function AddRepositoryModal({
 							</div>
 						</div>
 					)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							>
-								<option value="local">Local Filesystem</option>
-								<option value="s3">Amazon S3 / MinIO / Wasabi</option>
-								<option value="b2">Backblaze B2</option>
-								<option value="sftp">SFTP</option>
-								<option value="rest">Restic REST Server</option>
-								<option value="dropbox">Dropbox (via rclone)</option>
-							</select>
-						</div>
-						<hr className="my-4" />
-						{renderBackendFields()}
-					</div>
 					{createRepository.isError && (
 						<p className="text-sm text-red-600 mt-4">
 							Failed to create repository. Please try again.
@@ -1210,21 +799,6 @@ function AddRepositoryModal({
 								{createRepository.isPending ? 'Creating...' : 'Add Repository'}
 							</button>
 						</div>
-					<div className="flex justify-end gap-3 mt-6">
-						<button
-							type="button"
-							onClick={onClose}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-						>
-							Cancel
-						</button>
-						<button
-							type="submit"
-							disabled={createRepository.isPending}
-							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-						>
-							{createRepository.isPending ? 'Creating...' : 'Add Repository'}
-						</button>
 					</div>
 				</form>
 			</div>
@@ -1274,12 +848,6 @@ interface RepositoryCardProps {
 	isVerifying: boolean;
 	isRecovering: boolean;
 	testResult?: { success: boolean; message: string };
-	isFavorite: boolean;
-	onRecoverKey: (id: string) => void;
-	isDeleting: boolean;
-	isTesting: boolean;
-	isRecovering: boolean;
-	testResult?: { success: boolean; message: string };
 }
 
 function RepositoryCard({
@@ -1294,7 +862,6 @@ function RepositoryCard({
 	isVerifying,
 	isRecovering,
 	testResult,
-	isFavorite,
 }: RepositoryCardProps) {
 	const typeBadge = getRepositoryTypeBadge(repository.type);
 	const { data: verificationStatus } = useVerificationStatus(repository.id);
@@ -1308,19 +875,6 @@ function RepositoryCard({
 	return (
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-start justify-between mb-4">
-				<div className="flex items-start gap-2">
-					<StarButton
-						entityType="repository"
-						entityId={repository.id}
-						isFavorite={isFavorite}
-						size="sm"
-					/>
-					<div>
-						<h3 className="font-semibold text-gray-900">{repository.name}</h3>
-						<p className="text-sm text-gray-500 dark:text-gray-400">
-							Created {formatDate(repository.created_at)}
-						</p>
-					</div>
 				<div>
 					<h3 className="font-semibold text-gray-900">{repository.name}</h3>
 					<p className="text-sm text-gray-500 dark:text-gray-400">
@@ -1344,11 +898,6 @@ function RepositoryCard({
 			{/* Verification Status */}
 			<div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
 				<div className="flex items-center justify-between mb-2">
-					<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-						Integrity
-					</span>
-			<div className="mb-4 p-3 bg-gray-50 rounded-lg">
-				<div className="flex items-center justify-between mb-2">
 					<span className="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 dark:text-gray-600">
 						Integrity
 					</span>
@@ -1359,8 +908,6 @@ function RepositoryCard({
 					</span>
 				</div>
 				{lastVerification && (
-					<p className="text-xs text-gray-500 dark:text-gray-400">
-					<p className="text-xs text-gray-500">
 					<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 						Last checked: {formatRelativeTime(lastVerification.started_at)}
 						{lastVerification.status === 'failed' &&
@@ -1382,42 +929,11 @@ function RepositoryCard({
 				)}
 				{verificationStatus?.next_scheduled_at && (
 					<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-					<p className="text-xs text-gray-500 mt-1">
 						Next: {formatRelativeTime(verificationStatus.next_scheduled_at)}
 					</p>
 				)}
 			</div>
 
-	onRecoverKey,
-	isDeleting,
-	isTesting,
-	isRecovering,
-	testResult,
-}: RepositoryCardProps) {
-	const typeBadge = getRepositoryTypeBadge(repository.type);
-
-	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6">
-			<div className="flex items-start justify-between mb-4">
-				<div>
-					<h3 className="font-semibold text-gray-900">{repository.name}</h3>
-					<p className="text-sm text-gray-500">
-						Created {formatDate(repository.created_at)}
-					</p>
-				</div>
-				<div className="flex items-center gap-2">
-					{repository.escrow_enabled && (
-						<span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-							Escrow
-						</span>
-					)}
-					<span
-						className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${typeBadge.className}`}
-					>
-						{typeBadge.label}
-					</span>
-				</div>
-			</div>
 			{testResult && (
 				<div
 					className={`mb-4 p-3 rounded-lg text-sm ${
@@ -1439,8 +955,6 @@ function RepositoryCard({
 					{isVerifying ? 'Verifying...' : 'Verify'}
 				</button>
 				<span className="text-gray-300 dark:text-gray-600">|</span>
-				<span className="text-gray-300">|</span>
-			<div className="flex items-center gap-2">
 				<button
 					type="button"
 					onClick={() => onTest(repository.id)}
@@ -1470,24 +984,6 @@ function RepositoryCard({
 				>
 					Clone
 				</button>
-				<span className="text-gray-300 dark:text-gray-600">|</span>
-					className="text-sm text-indigo-600 hover:text-indigo-800 font-medium disabled:opacity-50"
-				>
-					{isTesting ? 'Testing...' : 'Test Connection'}
-				</button>
-				{repository.escrow_enabled && (
-					<>
-						<span className="text-gray-300">|</span>
-						<button
-							type="button"
-							onClick={() => onRecoverKey(repository.id)}
-							disabled={isRecovering}
-							className="text-sm text-amber-600 hover:text-amber-800 font-medium disabled:opacity-50"
-						>
-							{isRecovering ? 'Recovering...' : 'Recover Key'}
-						</button>
-					</>
-				)}
 				<span className="text-gray-300 dark:text-gray-600">|</span>
 				<button
 					type="button"
@@ -1524,142 +1020,6 @@ function RecoveredKeyModal({
 	};
 
 	if (!isOpen) return null;
-
-	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4">
-				<div className="flex items-center gap-3 mb-4">
-					<div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-						<svg
-							aria-hidden="true"
-							className="w-5 h-5 text-green-600"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-							/>
-						</svg>
-					</div>
-					<div>
-						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-							Recovered Password
-						</h3>
-						<p className="text-sm text-gray-500 dark:text-gray-400">
-							Password for repository: {repositoryName}
-						</p>
-					</div>
-				</div>
-
-				<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
-					<div className="flex items-center justify-between gap-4">
-						<code className="text-sm font-mono break-all flex-1">
-							{password}
-						</code>
-						<button
-							type="button"
-							onClick={handleCopy}
-							className="flex-shrink-0 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
-						>
-							{copied ? 'Copied!' : 'Copy'}
-						</button>
-					</div>
-				</div>
-
-				<div className="flex justify-end">
-					<button
-						type="button"
-						onClick={onClose}
-						className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-					>
-						Close
-					</button>
-				</div>
-			</div>
-		</div>
-	);
-}
-
-export function Repositories() {
-	const [searchQuery, setSearchQuery] = useState('');
-	const [typeFilter, setTypeFilter] = useState<RepositoryType | 'all'>('all');
-	const [showAddModal, setShowAddModal] = useState(false);
-	const [selectedType, setSelectedType] = useState<RepositoryType | undefined>(
-		undefined,
-	);
-	const [testResults, setTestResults] = useState<
-		Record<string, { success: boolean; message: string }>
-	>({});
-	const [passwordModal, setPasswordModal] = useState<{
-		isOpen: boolean;
-		repositoryName: string;
-		password: string;
-	}>({ isOpen: false, repositoryName: '', password: '' });
-	const [recoveredKeyModal, setRecoveredKeyModal] = useState<{
-		isOpen: boolean;
-		repositoryName: string;
-		password: string;
-	}>({ isOpen: false, repositoryName: '', password: '' });
-
-	const { data: repositories, isLoading, isError } = useRepositories();
-	const deleteRepository = useDeleteRepository();
-	const testRepository = useTestRepository();
-	const recoverKey = useRecoverRepositoryKey();
-
-	const filteredRepositories = repositories?.filter((repo) => {
-		const matchesSearch = repo.name
-			.toLowerCase()
-			.includes(searchQuery.toLowerCase());
-		const matchesType = typeFilter === 'all' || repo.type === typeFilter;
-		return matchesSearch && matchesType;
-	});
-
-function RecoveredKeyModal({
-	isOpen,
-	onClose,
-	repositoryName,
-	password,
-}: RecoveredKeyModalProps) {
-	const [copied, setCopied] = useState(false);
-
-	const handleCopy = async () => {
-		await navigator.clipboard.writeText(password);
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
-	};
-
-	if (!isOpen) return null;
-	const handleRecoverKey = async (id: string) => {
-		try {
-			const result = await recoverKey.mutateAsync(id);
-			setRecoveredKeyModal({
-				isOpen: true,
-				repositoryName: result.repository_name,
-				password: result.password,
-			});
-		} catch {
-			alert('Failed to recover key. You may not have permission.');
-		}
-	};
-
-	const handleTypeClick = (type: RepositoryType) => {
-		setSelectedType(type);
-		setShowAddModal(true);
-	};
-
-	const handleCreateSuccess = (response: CreateRepositoryResponse) => {
-		setShowAddModal(false);
-		setSelectedType(undefined);
-		setPasswordModal({
-			isOpen: true,
-			repositoryName: response.repository.name,
-			password: response.password,
-		});
-	};
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2031,47 +1391,6 @@ function CloneRepositoryModal({
 					</div>
 
 					{cloneRepository.isError && (
-					{testResult && (
-						<div
-							className={`mt-4 p-3 rounded-lg text-sm ${
-								testResult.success
-									? 'bg-green-50 text-green-800 border border-green-200'
-									: 'bg-red-50 text-red-800 border border-red-200'
-							}`}
-						>
-							<div className="flex items-center gap-2">
-								{testResult.success ? (
-									<svg
-										aria-hidden="true"
-										className="w-5 h-5"
-										fill="currentColor"
-										viewBox="0 0 20 20"
-									>
-										<path
-											fillRule="evenodd"
-											d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-											clipRule="evenodd"
-										/>
-									</svg>
-								) : (
-									<svg
-										aria-hidden="true"
-										className="w-5 h-5"
-										fill="currentColor"
-										viewBox="0 0 20 20"
-									>
-										<path
-											fillRule="evenodd"
-											d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-											clipRule="evenodd"
-										/>
-									</svg>
-								)}
-								<span>{testResult.message}</span>
-							</div>
-						</div>
-					)}
-					{createRepository.isError && (
 						<p className="text-sm text-red-600 mt-4">
 							Failed to clone repository. Please check your credentials and try
 							again.
@@ -2092,34 +1411,7 @@ function CloneRepositoryModal({
 							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 						>
 							{cloneRepository.isPending ? 'Cloning...' : 'Clone Repository'}
-					<div className="flex justify-between items-center mt-6">
-						<button
-							type="button"
-							onClick={handleTestConnection}
-							disabled={testConnection.isPending}
-							className="px-4 py-2 text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 transition-colors disabled:opacity-50"
-						>
-							{testConnection.isPending ? 'Testing...' : 'Test Connection'}
 						</button>
-						<div className="flex gap-3">
-							<button
-								type="button"
-								onClick={() => {
-									onClose();
-									resetForm();
-								}}
-								className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-							>
-								Cancel
-							</button>
-							<button
-								type="submit"
-								disabled={createRepository.isPending}
-								className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-							>
-								{createRepository.isPending ? 'Creating...' : 'Add Repository'}
-							</button>
-						</div>
 					</div>
 				</form>
 			</div>
@@ -2131,9 +1423,6 @@ export function Repositories() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [typeFilter, setTypeFilter] = useState<RepositoryType | 'all'>('all');
 	const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-export function Repositories() {
-	const [searchQuery, setSearchQuery] = useState('');
-	const [typeFilter, setTypeFilter] = useState<RepositoryType | 'all'>('all');
 	const [showAddModal, setShowAddModal] = useState(false);
 	const [selectedType, setSelectedType] = useState<RepositoryType | undefined>(
 		undefined,
@@ -2173,10 +1462,6 @@ export function Repositories() {
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
 
-	const { data: repositories, isLoading, isError } = useRepositories();
-	const deleteRepository = useDeleteRepository();
-	const testRepository = useTestRepository();
-
 	const filteredRepositories = repositories?.filter((repo) => {
 		const matchesSearch = repo.name
 			.toLowerCase()
@@ -2184,7 +1469,6 @@ export function Repositories() {
 		const matchesType = typeFilter === 'all' || repo.type === typeFilter;
 		const matchesFavorites = !showFavoritesOnly || favoriteIds.has(repo.id);
 		return matchesSearch && matchesType && matchesFavorites;
-		return matchesSearch && matchesType;
 	});
 
 	const handleDelete = (id: string) => {
@@ -2266,20 +1550,6 @@ export function Repositories() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<div className="flex items-center gap-2">
-						<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-							Repositories
-						</h1>
-						<HelpTooltip
-							content="Configure storage backends for your backups. Supports S3, B2, SFTP, local storage, and more."
-							title="Repository Configuration"
-							docsUrl="/docs/configuration#storage-backend-configuration"
-							size="md"
-						/>
-					</div>
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div>
 					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 						Repositories
 					</h1>
@@ -2292,20 +1562,6 @@ export function Repositories() {
 						type="button"
 						onClick={() => setShowImportWizard(true)}
 						className="inline-flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
-				<button
-					type="button"
-					onClick={() => {
-						setSelectedType(undefined);
-						setShowAddModal(true);
-					}}
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						aria-hidden="true"
-						className="w-5 h-5"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
 					>
 						<svg
 							aria-hidden="true"
@@ -2354,40 +1610,6 @@ export function Repositories() {
 
 			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
-export function Repositories() {
-	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Repositories</h1>
-					<p className="text-gray-600 mt-1">
-						Configure backup storage destinations
-					</p>
-				</div>
-				<button
-					type="button"
-					className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-				>
-					<svg
-						aria-hidden="true"
-						className="w-5 h-5"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M12 4v16m8-8H4"
-						/>
-					</svg>
-					Add Repository
-				</button>
-			</div>
-
-			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 					<div className="flex items-center gap-4">
 						<input
 							type="text"
@@ -2395,7 +1617,6 @@ export function Repositories() {
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 						<select
 							value={typeFilter}
@@ -2403,11 +1624,7 @@ export function Repositories() {
 								setTypeFilter(e.target.value as RepositoryType | 'all')
 							}
 							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
-							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						/>
-						<select className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
 							<option value="all">All Types</option>
 							<option value="local">Local</option>
 							<option value="s3">Amazon S3</option>
@@ -2419,14 +1636,14 @@ export function Repositories() {
 						<button
 							type="button"
 							onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-							className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
+							className={`px-3 py-2 border rounded-lg transition-colors ${
 								showFavoritesOnly
-									? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-									: 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+									? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
+									: 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
 							}`}
+							title={showFavoritesOnly ? 'Show all repositories' : 'Show favorites only'}
 						>
 							<svg
-								aria-hidden="true"
 								className={`w-4 h-4 ${showFavoritesOnly ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
 								fill={showFavoritesOnly ? 'currentColor' : 'none'}
 								stroke="currentColor"
@@ -2439,14 +1656,12 @@ export function Repositories() {
 									d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
 								/>
 							</svg>
-							Favorites
 						</button>
 					</div>
 				</div>
 
 				{isError ? (
 					<div className="p-12 text-center text-red-500 dark:text-red-400 dark:text-red-400">
-					<div className="p-12 text-center text-red-500">
 						<p className="font-medium">Failed to load repositories</p>
 						<p className="text-sm">Please try refreshing the page</p>
 					</div>
@@ -2472,18 +1687,11 @@ export function Repositories() {
 								isVerifying={triggerVerification.isPending}
 								isRecovering={recoverKey.isPending}
 								testResult={testResults[repo.id]}
-								isFavorite={favoriteIds.has(repo.id)}
-								onRecoverKey={handleRecoverKey}
-								isDeleting={deleteRepository.isPending}
-								isTesting={testRepository.isPending}
-								isRecovering={recoverKey.isPending}
-								testResult={testResults[repo.id]}
 							/>
 						))}
 					</div>
 				) : (
 					<div className="p-12 text-center text-gray-500 dark:text-gray-400">
-					<div className="p-12 text-center text-gray-500">
 						<svg
 							aria-hidden="true"
 							className="w-16 h-16 mx-auto mb-4 text-gray-300"
@@ -2503,11 +1711,6 @@ export function Repositories() {
 						</h3>
 						<p className="mb-4">Add a repository to store your backup data</p>
 						<div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-						<h3 className="text-lg font-medium text-gray-900 mb-2">
-							No repositories configured
-						</h3>
-						<p className="mb-4">Add a repository to store your backup data</p>
-						<div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
 							<button
 								type="button"
 								onClick={() => handleTypeClick('local')}
@@ -2519,8 +1722,6 @@ export function Repositories() {
 								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 									Filesystem path
 								</p>
-								<p className="font-medium text-gray-900">Local</p>
-								<p className="text-xs text-gray-500">Filesystem path</p>
 							</button>
 							<button
 								type="button"
@@ -2531,8 +1732,6 @@ export function Repositories() {
 								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 									AWS / MinIO / Wasabi
 								</p>
-								<p className="font-medium text-gray-900">S3</p>
-								<p className="text-xs text-gray-500">AWS / MinIO / Wasabi</p>
 							</button>
 							<button
 								type="button"
@@ -2543,8 +1742,6 @@ export function Repositories() {
 								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
 									Backblaze
 								</p>
-								<p className="font-medium text-gray-900">B2</p>
-								<p className="text-xs text-gray-500">Backblaze</p>
 							</button>
 							<button
 								type="button"
@@ -2694,117 +1891,8 @@ export function Repositories() {
 					</div>
 				</div>
 			)}
-								<p className="font-medium text-gray-900">SFTP</p>
-								<p className="text-xs text-gray-500">Remote server</p>
-							</button>
-							<button
-								type="button"
-								onClick={() => handleTypeClick('rest')}
-								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
-							>
-								<p className="font-medium text-gray-900 dark:text-white">
-									REST
-								</p>
-								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
-									Restic REST server
-								</p>
-							</button>
-							<button
-								type="button"
-								onClick={() => handleTypeClick('dropbox')}
-								className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors text-left"
-							>
-								<p className="font-medium text-gray-900 dark:text-white">
-									Dropbox
-								</p>
-								<p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
-									Via rclone
-								</p>
-							</button>
-						</div>
-					</div>
-				)}
-			</div>
-
-			<AddRepositoryModal
-				isOpen={showAddModal}
-				onClose={() => {
-					setShowAddModal(false);
-					setSelectedType(undefined);
-				}}
-				onSuccess={handleCreateSuccess}
-				initialType={selectedType}
-			/>
-
-			<PasswordModal
-				isOpen={passwordModal.isOpen}
-				onClose={() =>
-					setPasswordModal({ isOpen: false, repositoryName: '', password: '' })
-				}
-				repositoryName={passwordModal.repositoryName}
-				password={passwordModal.password}
-			/>
-
-			<RecoveredKeyModal
-				isOpen={recoveredKeyModal.isOpen}
-				onClose={() =>
-					setRecoveredKeyModal({
-						isOpen: false,
-						repositoryName: '',
-						password: '',
-					})
-				}
-				repositoryName={recoveredKeyModal.repositoryName}
-				password={recoveredKeyModal.password}
-			/>
 		</div>
 	);
 }
 
 export default Repositories;
-						</select>
-					</div>
-				</div>
-
-				<div className="p-12 text-center text-gray-500">
-					<svg
-						aria-hidden="true"
-						className="w-16 h-16 mx-auto mb-4 text-gray-300"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-						/>
-					</svg>
-					<h3 className="text-lg font-medium text-gray-900 mb-2">
-						No repositories configured
-					</h3>
-					<p className="mb-4">Add a repository to store your backup data</p>
-					<div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
-						<div className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors">
-							<p className="font-medium text-gray-900">Local</p>
-							<p className="text-xs text-gray-500">Filesystem path</p>
-						</div>
-						<div className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors">
-							<p className="font-medium text-gray-900">S3</p>
-							<p className="text-xs text-gray-500">AWS / MinIO</p>
-						</div>
-						<div className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors">
-							<p className="font-medium text-gray-900">B2</p>
-							<p className="text-xs text-gray-500">Backblaze</p>
-						</div>
-						<div className="p-4 border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors">
-							<p className="font-medium text-gray-900">SFTP</p>
-							<p className="text-xs text-gray-500">Remote server</p>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	);
-}

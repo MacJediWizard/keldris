@@ -255,7 +255,7 @@ export function KeyboardShortcutsSettings({
 					{/* Action Shortcuts */}
 					<div className="mb-6">
 						<h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-							{t('shortcuts.actions')}
+							{t('shortcuts.actionsSection')}
 						</h3>
 						<div>
 							{actionShortcuts.map((shortcut) => (

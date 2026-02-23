@@ -31,6 +31,107 @@ func NewTeamsSender(logger zerolog.Logger) *TeamsSender {
 			},
 		},
 		logger: logger.With().Str("component", "teams_sender").Logger(),
+	}
+}
+
+// TeamsService handles sending Microsoft Teams notifications via webhooks.
+type TeamsService struct {
+	config models.TeamsChannelConfig
+	client *http.Client
+	logger zerolog.Logger
+}
+
+// TeamsMessage represents a Teams webhook message using Adaptive Cards.
+type TeamsMessage struct {
+	Type        string              `json:"type"`
+	Attachments []TeamsAttachment   `json:"attachments"`
+}
+
+// TeamsAttachment represents an attachment in a Teams message.
+type TeamsAttachment struct {
+	ContentType string            `json:"contentType"`
+	ContentURL  *string           `json:"contentUrl"`
+	Content     TeamsCardContent  `json:"content"`
+}
+
+// TeamsCardContent represents the Adaptive Card content.
+type TeamsCardContent struct {
+	Schema  string          `json:"$schema"`
+	Type    string          `json:"type"`
+	Version string          `json:"version"`
+	Body    []TeamsCardBody `json:"body"`
+}
+
+// TeamsCardBody represents a body element in an Adaptive Card.
+type TeamsCardBody struct {
+	Type   string          `json:"type"`
+	Text   string          `json:"text,omitempty"`
+	Size   string          `json:"size,omitempty"`
+	Weight string          `json:"weight,omitempty"`
+	Color  string          `json:"color,omitempty"`
+	Wrap   bool            `json:"wrap,omitempty"`
+	Facts  []TeamsCardFact `json:"facts,omitempty"`
+}
+
+// TeamsCardFact represents a fact in a FactSet.
+type TeamsCardFact struct {
+	Title string `json:"title"`
+	Value string `json:"value"`
+}
+
+// NewTeamsMessage creates a new Teams message with Adaptive Card structure.
+func NewTeamsMessage() *TeamsMessage {
+	return &TeamsMessage{
+		Type: "message",
+		Attachments: []TeamsAttachment{
+			{
+				ContentType: "application/vnd.microsoft.card.adaptive",
+				ContentURL:  nil,
+				Content: TeamsCardContent{
+					Schema:  "http://adaptivecards.io/schemas/adaptive-card.json",
+					Type:    "AdaptiveCard",
+					Version: "1.4",
+					Body:    []TeamsCardBody{},
+				},
+			},
+		},
+	}
+}
+
+// AddHeader adds a header text block to the message.
+func (m *TeamsMessage) AddHeader(text, color string) {
+	if len(m.Attachments) > 0 {
+		m.Attachments[0].Content.Body = append(m.Attachments[0].Content.Body, TeamsCardBody{
+			Type:   "TextBlock",
+			Text:   text,
+			Size:   "Medium",
+			Weight: "Bolder",
+			Color:  color,
+		})
+	}
+}
+
+// AddText adds a text block to the message.
+func (m *TeamsMessage) AddText(text string, wrap bool) {
+	if len(m.Attachments) > 0 {
+		m.Attachments[0].Content.Body = append(m.Attachments[0].Content.Body, TeamsCardBody{
+			Type: "TextBlock",
+			Text: text,
+			Wrap: wrap,
+		})
+	}
+}
+
+// AddFactSet adds a fact set to the message.
+func (m *TeamsMessage) AddFactSet(facts []TeamsCardFact) {
+	if len(m.Attachments) > 0 {
+		m.Attachments[0].Content.Body = append(m.Attachments[0].Content.Body, TeamsCardBody{
+			Type:  "FactSet",
+			Facts: facts,
+		})
+	}
+}
+
 // NewTeamsService creates a new Microsoft Teams notification service.
 func NewTeamsService(cfg models.TeamsChannelConfig, logger zerolog.Logger) (*TeamsService, error) {
 	return NewTeamsServiceWithProxy(cfg, nil, logger)
@@ -61,9 +162,8 @@ func NewTeamsServiceWithProxy(cfg models.TeamsChannelConfig, proxyConfig *config
 func ValidateTeamsConfig(config *models.TeamsChannelConfig) error {
 	if config.WebhookURL == "" {
 		return fmt.Errorf("teams webhook URL is required")
-		client: &http.Client{},
-		logger: logger.With().Str("component", "teams_sender").Logger(),
 	}
+	return nil
 }
 
 // teamsAdaptiveCard represents a Teams webhook payload using Adaptive Cards.
@@ -163,6 +263,35 @@ func (t *TeamsSender) Send(ctx context.Context, webhookURL string, msg Notificat
 		Msg("teams notification sent")
 
 	return nil
+}
+
+// Send sends a Teams message via the configured webhook URL.
+func (s *TeamsService) Send(msg *TeamsMessage) error {
+	body, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal teams message: %w", err)
+	}
+
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.config.WebhookURL, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create teams request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("send teams webhook: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("teams webhook returned status %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
 // SendMaintenanceScheduled sends a maintenance scheduled notification to Teams.
 func (s *TeamsService) SendMaintenanceScheduled(data MaintenanceScheduledData) error {
 	msg := NewTeamsMessage()
@@ -239,38 +368,6 @@ func (s *TeamsService) SendValidationFailed(data ValidationFailedData) error {
 		Str("schedule", data.ScheduleName).
 		Str("error", data.ErrorMessage).
 		Msg("sending validation failed notification to Teams")
-
-	return s.Send(msg)
-}
-
-// SendTestRestoreFailed sends a test restore failed notification to Teams.
-func (s *TeamsService) SendTestRestoreFailed(data TestRestoreFailedData) error {
-	msg := NewTeamsMessage()
-	msg.AddHeader(fmt.Sprintf("Test Restore Failed: %s", data.RepositoryName), "Attention")
-
-	facts := []TeamsCardFact{
-		{Title: "Repository", Value: data.RepositoryName},
-		{Title: "Snapshot ID", Value: data.SnapshotID},
-		{Title: "Sample Size", Value: fmt.Sprintf("%d%%", data.SamplePercentage)},
-		{Title: "Files Restored", Value: fmt.Sprintf("%d", data.FilesRestored)},
-		{Title: "Files Verified", Value: fmt.Sprintf("%d", data.FilesVerified)},
-		{Title: "Failed At", Value: data.FailedAt.Format(time.RFC822)},
-	}
-
-	if data.ConsecutiveFails > 1 {
-		facts = append([]TeamsCardFact{
-			{Title: "Consecutive Failures", Value: fmt.Sprintf("%d", data.ConsecutiveFails)},
-		}, facts...)
-	}
-
-	msg.AddFactSet(facts)
-	msg.AddText(fmt.Sprintf("**Error:** %s", data.ErrorMessage), true)
-
-	s.logger.Debug().
-		Str("repository", data.RepositoryName).
-		Str("error", data.ErrorMessage).
-		Int("consecutive_fails", data.ConsecutiveFails).
-		Msg("sending test restore failed notification to Teams")
 
 	return s.Send(msg)
 }

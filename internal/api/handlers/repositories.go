@@ -8,10 +8,6 @@ import (
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/crypto"
-	"net/http"
-
-	"github.com/MacJediWizard/keldris/internal/api/middleware"
-	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -45,15 +41,6 @@ func NewRepositoriesHandler(store RepositoryStore, keyManager *crypto.KeyManager
 		store:      store,
 		keyManager: keyManager,
 		logger:     logger.With().Str("component", "repositories_handler").Logger(),
-	store  RepositoryStore
-	logger zerolog.Logger
-}
-
-// NewRepositoriesHandler creates a new RepositoriesHandler.
-func NewRepositoriesHandler(store RepositoryStore, logger zerolog.Logger) *RepositoriesHandler {
-	return &RepositoriesHandler{
-		store:  store,
-		logger: logger.With().Str("component", "repositories_handler").Logger(),
 	}
 }
 
@@ -70,7 +57,6 @@ func (h *RepositoriesHandler) RegisterRoutes(r *gin.RouterGroup) {
 		repos.POST("/:id/clone", h.Clone)
 		repos.POST("/test-connection", h.TestConnection)
 		repos.GET("/:id/key/recover", h.RecoverKey)
-		repos.POST("/test-connection", h.TestConnection)
 	}
 }
 
@@ -80,13 +66,6 @@ type CreateRepositoryRequest struct {
 	Type          models.RepositoryType `json:"type" binding:"required" example:"s3"`
 	Config        map[string]any        `json:"config" binding:"required"`
 	EscrowEnabled bool                  `json:"escrow_enabled" example:"true"`
-	Name          string                `json:"name" binding:"required,min=1,max=255"`
-	Type          models.RepositoryType `json:"type" binding:"required"`
-	Config        map[string]any        `json:"config" binding:"required"`
-	EscrowEnabled bool                  `json:"escrow_enabled"`
-	Name   string                `json:"name" binding:"required,min=1,max=255"`
-	Type   models.RepositoryType `json:"type" binding:"required"`
-	Config map[string]any        `json:"config" binding:"required"`
 }
 
 // UpdateRepositoryRequest is the request body for updating a repository.
@@ -132,7 +111,7 @@ type CloneRepositoryResponse struct {
 	Password   string             `json:"password"`
 }
 
-// toResponse converts a Repository model to a RepositoryResponse.
+// toRepositoryResponse converts a Repository model to a RepositoryResponse.
 func toRepositoryResponse(r *models.Repository, escrowEnabled bool) RepositoryResponse {
 	return RepositoryResponse{
 		ID:            r.ID,
@@ -141,21 +120,6 @@ func toRepositoryResponse(r *models.Repository, escrowEnabled bool) RepositoryRe
 		EscrowEnabled: escrowEnabled,
 		CreatedAt:     r.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:     r.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-	ID        uuid.UUID             `json:"id"`
-	Name      string                `json:"name"`
-	Type      models.RepositoryType `json:"type"`
-	CreatedAt string                `json:"created_at"`
-	UpdatedAt string                `json:"updated_at"`
-}
-
-// toResponse converts a Repository model to a RepositoryResponse.
-func toRepositoryResponse(r *models.Repository) RepositoryResponse {
-	return RepositoryResponse{
-		ID:        r.ID,
-		Name:      r.Name,
-		Type:      r.Type,
-		CreatedAt: r.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt: r.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
 
@@ -187,16 +151,6 @@ func (h *RepositoriesHandler) List(c *gin.Context) {
 	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list repositories")
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list repositories")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list repositories"})
 		return
 	}
@@ -210,7 +164,6 @@ func (h *RepositoriesHandler) List(c *gin.Context) {
 			escrowEnabled = repoKey.EscrowEnabled
 		}
 		responses[i] = toRepositoryResponse(r, escrowEnabled)
-		responses[i] = toRepositoryResponse(r)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"repositories": responses})
@@ -285,23 +238,6 @@ func (h *RepositoriesHandler) Get(c *gin.Context) {
 //	@Failure		500		{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/repositories [post]
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if repo.OrgID != dbUser.OrgID {
-		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
-		return
-	}
-
-	c.JSON(http.StatusOK, toRepositoryResponse(repo))
-}
-
-// Create creates a new repository.
-// POST /api/v1/repositories
 func (h *RepositoriesHandler) Create(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -347,20 +283,8 @@ func (h *RepositoriesHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encrypt config"})
 		return
 	}
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	// TODO: Encrypt config using internal/crypto package (AES-256-GCM)
-	// For now, we store an empty config. Encryption will be added when
-	// the crypto package is implemented.
-	var configEncrypted []byte
 
 	repo := models.NewRepository(user.CurrentOrgID, req.Name, req.Type, configEncrypted)
-	repo := models.NewRepository(dbUser.OrgID, req.Name, req.Type, configEncrypted)
 
 	if err := h.store.CreateRepository(c.Request.Context(), repo); err != nil {
 		h.logger.Error().Err(err).Str("name", req.Name).Msg("failed to create repository")
@@ -431,13 +355,6 @@ func (h *RepositoriesHandler) Create(c *gin.Context) {
 //	@Failure		500		{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/repositories/{id} [put]
-		Msg("repository created")
-
-	c.JSON(http.StatusCreated, toRepositoryResponse(repo))
-}
-
-// Update updates an existing repository.
-// PUT /api/v1/repositories/:id
 func (h *RepositoriesHandler) Update(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -469,14 +386,6 @@ func (h *RepositoriesHandler) Update(c *gin.Context) {
 	}
 
 	if repo.OrgID != user.CurrentOrgID {
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if repo.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -538,12 +447,6 @@ func (h *RepositoriesHandler) Update(c *gin.Context) {
 //	@Failure		500	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/repositories/{id} [delete]
-	h.logger.Info().Str("repo_id", id.String()).Msg("repository updated")
-	c.JSON(http.StatusOK, toRepositoryResponse(repo))
-}
-
-// Delete removes a repository.
-// DELETE /api/v1/repositories/:id
 func (h *RepositoriesHandler) Delete(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
@@ -569,14 +472,6 @@ func (h *RepositoriesHandler) Delete(c *gin.Context) {
 	}
 
 	if repo.OrgID != user.CurrentOrgID {
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if repo.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -671,7 +566,6 @@ func (h *RepositoriesHandler) Test(c *gin.Context) {
 		h.logger.Warn().Err(err).Str("repo_id", id.String()).Msg("repository connection test failed")
 		c.JSON(http.StatusOK, TestRepositoryResponse{
 			Success: false,
-			Message: "Connection test failed",
 			Message: "Connection failed: " + err.Error(),
 		})
 		return
@@ -1053,83 +947,4 @@ func isCredentialField(field string) bool {
 		"application_secret": true,
 	}
 	return credentialFields[field]
-}
-	// TODO: Implement actual repository connection test using Restic
-	// This will be implemented when the backup package is created.
-	// For now, return a placeholder response.
-	// TODO: Implement decryption of config and test using backend.TestConnection()
-	// For now, return a message indicating test is not fully implemented.
-	h.logger.Info().Str("repo_id", id.String()).Msg("repository test requested")
-
-	c.JSON(http.StatusOK, TestRepositoryResponse{
-		Success: true,
-		Message: "Repository exists. Full connection test requires config decryption (not yet implemented).",
-	})
-}
-
-// TestConnection tests a backend configuration without saving.
-// POST /api/v1/repositories/test-connection
-func (h *RepositoriesHandler) TestConnection(c *gin.Context) {
-	user := middleware.RequireUser(c)
-	if user == nil {
-		return
-	}
-
-	var req TestConnectionRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
-		return
-	}
-
-	// Validate repository type
-	validTypes := models.ValidRepositoryTypes()
-	valid := false
-	for _, t := range validTypes {
-		if req.Type == t {
-			valid = true
-			break
-		}
-	}
-	if !valid {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid repository type", "valid_types": validTypes})
-		return
-	}
-
-	// Convert config map to JSON
-	configJSON, err := json.Marshal(req.Config)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid config format"})
-		return
-	}
-
-	// Parse the backend from config
-	backend, err := backends.ParseBackend(req.Type, configJSON)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid backend config: " + err.Error()})
-		return
-	}
-
-	// Validate the backend configuration
-	if err := backend.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Test the connection
-	h.logger.Info().Str("type", string(req.Type)).Msg("testing backend connection")
-
-	if err := backend.TestConnection(); err != nil {
-		h.logger.Warn().Err(err).Str("type", string(req.Type)).Msg("backend connection test failed")
-		c.JSON(http.StatusOK, TestRepositoryResponse{
-			Success: false,
-			Message: "Connection failed: " + err.Error(),
-		})
-		return
-	}
-
-	h.logger.Info().Str("type", string(req.Type)).Msg("backend connection test successful")
-	c.JSON(http.StatusOK, TestRepositoryResponse{
-		Success: true,
-		Message: "Connection successful",
-	})
 }

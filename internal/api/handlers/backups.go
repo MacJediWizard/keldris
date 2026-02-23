@@ -25,10 +25,6 @@ type BackupStore interface {
 	GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Schedule, error)
 	GetBackupsByOrgIDAndDateRange(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]*models.Backup, error)
 	GetBackupValidationByBackupID(ctx context.Context, backupID uuid.UUID) (*models.BackupValidation, error)
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
-	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
-	GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Agent, error)
-	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error)
 }
 
 // BackupsHandler handles backup-related HTTP endpoints.
@@ -53,7 +49,6 @@ func (h *BackupsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		backups.GET("/calendar", h.Calendar)
 		backups.GET("/:id", h.Get)
 		backups.GET("/:id/validation", h.GetValidation)
-		backups.GET("/:id", h.Get)
 	}
 }
 
@@ -87,10 +82,6 @@ func (h *BackupsHandler) List(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
 		return
 	}
 
@@ -112,7 +103,6 @@ func (h *BackupsHandler) List(c *gin.Context) {
 
 		agent, err := h.store.GetAgentByID(c.Request.Context(), schedule.AgentID)
 		if err != nil || agent.OrgID != user.CurrentOrgID {
-		if err != nil || agent.OrgID != dbUser.OrgID {
 			c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 			return
 		}
@@ -140,7 +130,6 @@ func (h *BackupsHandler) List(c *gin.Context) {
 		// Verify agent belongs to user's org
 		agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
 		if err != nil || agent.OrgID != user.CurrentOrgID {
-		if err != nil || agent.OrgID != dbUser.OrgID {
 			c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 			return
 		}
@@ -160,9 +149,6 @@ func (h *BackupsHandler) List(c *gin.Context) {
 	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list agents")
-	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list agents")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list backups"})
 		return
 	}
@@ -276,13 +262,6 @@ func (h *BackupsHandler) GetValidation(c *gin.Context) {
 	}
 
 	// Verify backup's agent belongs to user's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "backup not found"})
@@ -290,7 +269,6 @@ func (h *BackupsHandler) GetValidation(c *gin.Context) {
 	}
 
 	if agent.OrgID != user.CurrentOrgID {
-	if agent.OrgID != dbUser.OrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "backup not found"})
 		return
 	}
@@ -304,7 +282,6 @@ func (h *BackupsHandler) GetValidation(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, validation)
-	c.JSON(http.StatusOK, backup)
 }
 
 // filterByStatus filters backups by status if status param is provided.

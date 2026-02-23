@@ -1,16 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { airGapApi } from '../lib/api';
-
-export function useAirGapStatus() {
-	return useQuery({
-		queryKey: ['airgap-status'],
-		queryFn: airGapApi.getStatus,
-		staleTime: 60 * 1000,
-	});
-}
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_BASE = '/api/v1';
@@ -201,9 +188,6 @@ export function useUploadLicense() {
 		mutationFn: uploadLicense,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['license-status'] });
-		mutationFn: (licenseData: ArrayBuffer) =>
-			airGapApi.uploadLicense(licenseData),
-		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['airgap-status'] });
 		},
 	});

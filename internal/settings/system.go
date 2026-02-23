@@ -250,19 +250,6 @@ type SecuritySettings struct {
 	RequireEmailVerification     bool     `json:"require_email_verification"`      // Require email verification for non-OIDC users
 	EmailVerificationTokenHours  int      `json:"email_verification_token_hours"`  // How long verification tokens are valid (default 24)
 	AllowAdminVerificationBypass bool     `json:"allow_admin_verification_bypass"` // Allow admins to manually verify users
-	SessionTimeoutMinutes      int      `json:"session_timeout_minutes"`
-	MaxConcurrentSessions      int      `json:"max_concurrent_sessions"`
-	RequireMFA                 bool     `json:"require_mfa"`
-	MFAGracePeriodDays         int      `json:"mfa_grace_period_days"`
-	AllowedIPRanges            []string `json:"allowed_ip_ranges,omitempty"` // CIDR format
-	BlockedIPRanges            []string `json:"blocked_ip_ranges,omitempty"` // CIDR format
-	FailedLoginLockoutAttempts int      `json:"failed_login_lockout_attempts"`
-	FailedLoginLockoutMinutes  int      `json:"failed_login_lockout_minutes"`
-	APIKeyExpirationDays       int      `json:"api_key_expiration_days"` // 0 means no expiration
-	EnableAuditLogging         bool     `json:"enable_audit_logging"`
-	AuditLogRetentionDays      int      `json:"audit_log_retention_days"`
-	ForceHTTPS                 bool     `json:"force_https"`
-	AllowPasswordLogin         bool     `json:"allow_password_login"`
 }
 
 // DefaultSecuritySettings returns SecuritySettings with sensible defaults.
@@ -282,17 +269,6 @@ func DefaultSecuritySettings() SecuritySettings {
 		RequireEmailVerification:     true,  // Require email verification by default
 		EmailVerificationTokenHours:  24,    // 24 hours
 		AllowAdminVerificationBypass: true,  // Allow admins to manually verify users
-		SessionTimeoutMinutes:      480, // 8 hours
-		MaxConcurrentSessions:      5,
-		RequireMFA:                 false,
-		MFAGracePeriodDays:         7,
-		FailedLoginLockoutAttempts: 5,
-		FailedLoginLockoutMinutes:  30,
-		APIKeyExpirationDays:       0, // No expiration
-		EnableAuditLogging:         true,
-		AuditLogRetentionDays:      90,
-		ForceHTTPS:                 true,
-		AllowPasswordLogin:         true,
 	}
 }
 
@@ -403,19 +379,6 @@ type UpdateSecuritySettingsRequest struct {
 	RequireEmailVerification     *bool    `json:"require_email_verification,omitempty"`
 	EmailVerificationTokenHours  *int     `json:"email_verification_token_hours,omitempty" binding:"omitempty,min=1,max=168"`
 	AllowAdminVerificationBypass *bool    `json:"allow_admin_verification_bypass,omitempty"`
-	SessionTimeoutMinutes      *int     `json:"session_timeout_minutes,omitempty" binding:"omitempty,min=5,max=10080"`
-	MaxConcurrentSessions      *int     `json:"max_concurrent_sessions,omitempty" binding:"omitempty,min=1,max=100"`
-	RequireMFA                 *bool    `json:"require_mfa,omitempty"`
-	MFAGracePeriodDays         *int     `json:"mfa_grace_period_days,omitempty" binding:"omitempty,min=0,max=30"`
-	AllowedIPRanges            []string `json:"allowed_ip_ranges,omitempty"`
-	BlockedIPRanges            []string `json:"blocked_ip_ranges,omitempty"`
-	FailedLoginLockoutAttempts *int     `json:"failed_login_lockout_attempts,omitempty" binding:"omitempty,min=1,max=20"`
-	FailedLoginLockoutMinutes  *int     `json:"failed_login_lockout_minutes,omitempty" binding:"omitempty,min=1,max=1440"`
-	APIKeyExpirationDays       *int     `json:"api_key_expiration_days,omitempty" binding:"omitempty,min=0,max=365"`
-	EnableAuditLogging         *bool    `json:"enable_audit_logging,omitempty"`
-	AuditLogRetentionDays      *int     `json:"audit_log_retention_days,omitempty" binding:"omitempty,min=7,max=3650"`
-	ForceHTTPS                 *bool    `json:"force_https,omitempty"`
-	AllowPasswordLogin         *bool    `json:"allow_password_login,omitempty"`
 }
 
 // SystemSettingsResponse is the response containing all system settings.

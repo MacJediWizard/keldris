@@ -5,7 +5,6 @@ import type {
 	CreateRestoreRequest,
 	RestorePreviewRequest,
 } from '../lib/types';
-import type { CreateRestoreRequest } from '../lib/types';
 
 export interface RestoresFilter {
 	agent_id?: string;
@@ -34,7 +33,6 @@ export function useRestore(id: string) {
 				data?.status === 'uploading' ||
 				data?.status === 'verifying'
 			) {
-			if (data?.status === 'pending' || data?.status === 'running') {
 				return 5000;
 			}
 			return false;

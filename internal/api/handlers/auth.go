@@ -82,17 +82,6 @@ func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
 //	@Success		307	"Redirect to OIDC provider"
 //	@Failure		500	{object}	map[string]string
 //	@Router			/auth/login [get]
-}
-
-// Login initiates the OIDC authentication flow.
-//
-//	@Summary		Initiate login
-//	@Description	Redirects to the OIDC provider for authentication. After successful authentication, user is redirected to /auth/callback.
-//	@Tags			Auth
-//	@Produce		html
-//	@Success		307	"Redirect to OIDC provider"
-//	@Failure		500	{object}	map[string]string
-//	@Router			/auth/login [get]
 func (h *AuthHandler) Login(c *gin.Context) {
 	state, err := auth.GenerateState()
 	if err != nil {
@@ -316,10 +305,6 @@ func (h *AuthHandler) findOrCreateUser(ctx context.Context, claims *auth.IDToken
 		Str("email", user.Email).
 		Str("org_id", org.ID.String()).
 		Msg("created new user with org membership")
-	h.logger.Info().
-		Str("user_id", user.ID.String()).
-		Str("email", user.Email).
-		Msg("created new user")
 
 	return user, nil
 }
@@ -380,16 +365,6 @@ type MeResponse struct {
 	IsSuperuser       bool       `json:"is_superuser"`
 	IsImpersonating   bool       `json:"is_impersonating,omitempty"`
 	ImpersonatingID   *uuid.UUID `json:"impersonating_id,omitempty"`
-	ID             uuid.UUID `json:"id"`
-	Email          string    `json:"email"`
-	Name           string    `json:"name"`
-	CurrentOrgID   uuid.UUID `json:"current_org_id,omitempty"`
-	CurrentOrgRole string    `json:"current_org_role,omitempty"`
-	ID             uuid.UUID `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
-	Email          string    `json:"email" example:"user@example.com"`
-	Name           string    `json:"name" example:"John Doe"`
-	CurrentOrgID   uuid.UUID `json:"current_org_id,omitempty" example:"550e8400-e29b-41d4-a716-446655440001"`
-	CurrentOrgRole string    `json:"current_org_role,omitempty" example:"admin"`
 }
 
 // Me returns the current authenticated user.
@@ -403,15 +378,6 @@ type MeResponse struct {
 //	@Failure		401	{object}	map[string]string
 //	@Security		SessionAuth
 //	@Router			/auth/me [get]
-// MeResponse is the response for the /auth/me endpoint.
-type MeResponse struct {
-	ID    uuid.UUID `json:"id"`
-	Email string    `json:"email"`
-	Name  string    `json:"name"`
-}
-
-// Me returns the current authenticated user.
-// GET /auth/me
 func (h *AuthHandler) Me(c *gin.Context) {
 	sessionUser, err := h.sessions.GetUser(c.Request)
 	if err != nil {
@@ -420,7 +386,6 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	}
 
 	response := MeResponse{
-	c.JSON(http.StatusOK, MeResponse{
 		ID:             sessionUser.ID,
 		Email:          sessionUser.Email,
 		Name:           sessionUser.Name,
@@ -579,9 +544,5 @@ func (h *AuthHandler) PasswordLogin(c *gin.Context) {
 		PasswordExpired:    passwordExpired,
 		MustChangePassword: passwordInfo.MustChangePassword,
 		ExpiresAt:          passwordInfo.PasswordExpiresAt,
-	c.JSON(http.StatusOK, MeResponse{
-		ID:    sessionUser.ID,
-		Email: sessionUser.Email,
-		Name:  sessionUser.Name,
 	})
 }

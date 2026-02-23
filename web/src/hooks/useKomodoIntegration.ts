@@ -55,8 +55,6 @@ export function useUpdateKomodoIntegration() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: UpdateKomodoIntegrationRequest }) =>
-			komodoApi.updateIntegration(id, data),
 		}: {
 			id: string;
 			data: UpdateKomodoIntegrationRequest;
@@ -139,8 +137,6 @@ export function useUpdateKomodoContainer() {
 		mutationFn: ({
 			id,
 			data,
-		}: { id: string; data: UpdateKomodoContainerRequest }) =>
-			komodoApi.updateContainer(id, data),
 		}: {
 			id: string;
 			data: UpdateKomodoContainerRequest;

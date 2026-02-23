@@ -39,6 +39,40 @@ func NewSlackSender(logger zerolog.Logger) *SlackSender {
 			},
 		},
 		logger: logger.With().Str("component", "slack_sender").Logger(),
+	}
+}
+
+// SlackService handles sending Slack notifications via webhooks for maintenance, validation, etc.
+type SlackService struct {
+	config models.SlackChannelConfig
+	client *http.Client
+	logger zerolog.Logger
+}
+
+// SlackMessage represents a Slack webhook message with attachments.
+type SlackMessage struct {
+	Text        string            `json:"text,omitempty"`
+	Attachments []SlackAttachment `json:"attachments,omitempty"`
+}
+
+// SlackAttachment represents a Slack message attachment.
+type SlackAttachment struct {
+	Color     string       `json:"color,omitempty"`
+	Title     string       `json:"title,omitempty"`
+	Fallback  string       `json:"fallback,omitempty"`
+	Text      string       `json:"text,omitempty"`
+	Fields    []SlackField `json:"fields,omitempty"`
+	Footer    string       `json:"footer,omitempty"`
+	Timestamp int64        `json:"ts,omitempty"`
+}
+
+// SlackField represents a field in a Slack attachment.
+type SlackField struct {
+	Title string `json:"title"`
+	Value string `json:"value"`
+	Short bool   `json:"short,omitempty"`
+}
+
 // NewSlackService creates a new Slack notification service.
 func NewSlackService(cfg models.SlackChannelConfig, logger zerolog.Logger) (*SlackService, error) {
 	return NewSlackServiceWithProxy(cfg, nil, logger)
@@ -69,9 +103,8 @@ func NewSlackServiceWithProxy(cfg models.SlackChannelConfig, proxyConfig *config
 func ValidateSlackConfig(config *models.SlackChannelConfig) error {
 	if config.WebhookURL == "" {
 		return fmt.Errorf("slack webhook URL is required")
-		client: &http.Client{},
-		logger: logger.With().Str("component", "slack_sender").Logger(),
 	}
+	return nil
 }
 
 // slackMessage represents a Slack webhook payload with Block Kit.
@@ -152,6 +185,61 @@ func (s *SlackSender) Send(ctx context.Context, webhookURL string, msg Notificat
 		Msg("slack notification sent")
 
 	return nil
+}
+
+// Send sends a Slack message via the configured webhook URL.
+func (s *SlackService) Send(msg *SlackMessage) error {
+	body, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal slack message: %w", err)
+	}
+
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.config.WebhookURL, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create slack request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("send slack webhook: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("slack webhook returned status %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+// SendBackupSuccess sends a backup success notification to Slack.
+func (s *SlackService) SendBackupSuccess(data BackupSuccessData) error {
+	msg := &SlackMessage{
+		Attachments: []SlackAttachment{
+			{
+				Color:    "#28a745", // Green
+				Title:    fmt.Sprintf("Backup Successful: %s", data.Hostname),
+				Fallback: fmt.Sprintf("Backup succeeded for %s - %s", data.Hostname, data.ScheduleName),
+				Fields: []SlackField{
+					{Title: "Host", Value: data.Hostname, Short: true},
+					{Title: "Schedule", Value: data.ScheduleName, Short: true},
+					{Title: "Snapshot ID", Value: data.SnapshotID, Short: true},
+					{Title: "Duration", Value: data.Duration, Short: true},
+					{Title: "Size", Value: FormatBytes(data.SizeBytes), Short: true},
+				},
+				Footer:    "Keldris Backup",
+				Timestamp: time.Now().Unix(),
+			},
+		},
+	}
+
+	s.logger.Debug().
+		Str("hostname", data.Hostname).
+		Str("schedule", data.ScheduleName).
+		Msg("sending backup success notification to Slack")
+
 	return s.Send(msg)
 }
 

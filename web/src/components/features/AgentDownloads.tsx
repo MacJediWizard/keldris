@@ -61,7 +61,6 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
 			type="button"
 			onClick={handleCopy}
 			className={`p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors ${className}`}
-			className={`p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors ${className}`}
 			title={copied ? 'Copied!' : 'Copy to clipboard'}
 		>
 			{copied ? (
@@ -111,7 +110,6 @@ export function AgentDownloads({
 	];
 
 	const getDownloadUrl = (filename: string) =>
-		`${AGENT_DOWNLOADS.baseUrl}/${filename}`;
 		`${AGENT_DOWNLOADS.baseUrl}/${AGENT_DOWNLOADS.version}/${filename}`;
 
 	const filteredPlatforms = AGENT_DOWNLOADS.platforms.filter((p) => {
@@ -128,17 +126,12 @@ export function AgentDownloads({
 					Download Agent
 				</h3>
 				<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-		<div className="bg-white rounded-lg border border-gray-200">
-			<div className="p-4 border-b border-gray-200">
-				<h3 className="text-lg font-semibold text-gray-900">Download Agent</h3>
-				<p className="text-sm text-gray-500 mt-1">
 					Install the Keldris agent on your systems to enable backups
 				</p>
 			</div>
 
 			{/* Platform tabs */}
 			<div className="flex border-b border-gray-200 dark:border-gray-700">
-			<div className="flex border-b border-gray-200">
 				{platformTabs.map((tab) => (
 					<button
 						key={tab.key}
@@ -148,8 +141,6 @@ export function AgentDownloads({
 							selectedPlatform === tab.key
 								? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 -mb-px'
 								: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-								? 'text-indigo-600 border-b-2 border-indigo-600 -mb-px'
-								: 'text-gray-500 hover:text-gray-700'
 						}`}
 					>
 						<PlatformIcon platform={tab.icon} />
@@ -163,7 +154,6 @@ export function AgentDownloads({
 				{showInstallCommands && (
 					<div>
 						<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-						<span className="block text-sm font-medium text-gray-700 mb-2">
 							Quick Install
 						</span>
 						<div className="flex items-center gap-2 bg-gray-900 rounded-lg p-3">
@@ -176,7 +166,6 @@ export function AgentDownloads({
 							/>
 						</div>
 						<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-						<p className="text-xs text-gray-500 mt-1">
 							{selectedPlatform === 'windows'
 								? 'Run in PowerShell as Administrator'
 								: selectedPlatform === 'linux'
@@ -189,7 +178,6 @@ export function AgentDownloads({
 				{/* Direct downloads */}
 				<div>
 					<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-					<span className="block text-sm font-medium text-gray-700 mb-2">
 						Direct Download
 					</span>
 					<div className="space-y-2">
@@ -198,16 +186,11 @@ export function AgentDownloads({
 								key={platform.filename}
 								href={getDownloadUrl(platform.filename)}
 								className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors group"
-								className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
 							>
 								<div className="flex items-center gap-3">
 									<PlatformIcon platform={platform.icon} />
 									<div>
 										<div className="font-medium text-gray-900 dark:text-white">
-											{platform.os} ({platform.arch})
-										</div>
-										<div className="text-sm text-gray-500 dark:text-gray-400">
-										<div className="font-medium text-gray-900">
 											{platform.os} ({platform.arch})
 										</div>
 										<div className="text-sm text-gray-500 dark:text-gray-400">
@@ -218,7 +201,6 @@ export function AgentDownloads({
 								<svg
 									aria-hidden="true"
 									className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"
-									className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors"
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
@@ -241,10 +223,6 @@ export function AgentDownloads({
 						href="/docs/agent-installation"
 						target="_blank"
 						rel="noopener noreferrer"
-						className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
-				<div className="pt-2 border-t border-gray-200">
-					<a
-						href="/docs/agent-installation"
 						className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
 					>
 						View full installation guide

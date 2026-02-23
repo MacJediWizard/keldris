@@ -2,11 +2,12 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
-)
-import "os"
+	"time"
 )
 
 // Environment represents the deployment environment.
@@ -39,114 +40,11 @@ type ServerConfig struct {
 	LicenseKey       string // Ed25519-signed license key (base64 payload.signature)
 	LicensePublicKey string // hex-encoded Ed25519 public key for license verification
 	LicenseServerURL string // license server URL for phone-home (default: production)
-// ServerConfig holds server-level configuration loaded from environment variables.
-type ServerConfig struct {
-	Environment        Environment
-	SessionMaxAge      int // session lifetime in seconds (default: 86400)
-	SessionIdleTimeout int // idle timeout in seconds, 0 to disable (default: 1800)
-}
 
-// LoadServerConfig reads server configuration from environment variables.
-func LoadServerConfig() ServerConfig {
-	env := Environment(os.Getenv("ENV"))
-	switch env {
-	case EnvDevelopment, EnvStaging, EnvProduction:
-		// valid
-	default:
-		env = EnvDevelopment
-	}
-
-	sessionMaxAge := getEnvInt("SESSION_MAX_AGE", 86400)
-	if sessionMaxAge < 0 {
-		sessionMaxAge = 86400
-	}
-
-	sessionIdleTimeout := getEnvInt("SESSION_IDLE_TIMEOUT", 1800)
-	if sessionIdleTimeout < 0 {
-		sessionIdleTimeout = 1800
-	}
-
-	airGapMode := getEnvBool("AIR_GAP_MODE", false)
-
-	retentionDays := getEnvInt("RETENTION_DAYS", 90)
-	if retentionDays < 1 {
-		retentionDays = 90
-	}
-
-	licenseServerURL := os.Getenv("LICENSE_SERVER_URL")
-	if licenseServerURL == "" {
-		licenseServerURL = DefaultLicenseServerURL
-	}
-
-	return ServerConfig{
-		Environment:        env,
-		SessionMaxAge:      sessionMaxAge,
-		SessionIdleTimeout: sessionIdleTimeout,
-		AirGapMode:         airGapMode,
-		RetentionDays:      retentionDays,
-		LicenseKey:       os.Getenv("LICENSE_KEY"),
-		LicensePublicKey: getEnvDefault("AIRGAP_PUBLIC_KEY", DefaultLicensePublicKey),
-		LicenseServerURL:   licenseServerURL,
-	}
-}
-
-// getEnvDefault reads a string from an environment variable, returning the default if unset or empty.
-func getEnvDefault(key, defaultVal string) string {
-	val := os.Getenv(key)
-	if val == "" {
-		return defaultVal
-	}
-	return val
-}
-
-	}
-}
-
-// getEnvBool reads a boolean from an environment variable, returning the default if unset or invalid.
-func getEnvBool(key string, defaultVal bool) bool {
-	val := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
-	switch val {
-	case "true", "1", "yes":
-		return true
-	case "false", "0", "no":
-		return false
-	default:
-		return defaultVal
-	}
-}
-
-// getEnvInt reads an integer from an environment variable, returning the default if unset or invalid.
-func getEnvInt(key string, defaultVal int) int {
-	val := os.Getenv(key)
-	if val == "" {
-		return defaultVal
-	}
-	n, err := strconv.Atoi(val)
-	if err != nil {
-		return defaultVal
-	}
-	return n
-	"errors"
-	"fmt"
-	"os"
-	"time"
-
-	"gopkg.in/yaml.v3"
-)
-
-// ServerConfig holds the server's configuration.
-type ServerConfig struct {
-	// HTTPAddr is the address to listen on for HTTP connections.
-	HTTPAddr string `yaml:"http_addr,omitempty"`
-
-	// DatabaseURL is the PostgreSQL connection string.
-	DatabaseURL string `yaml:"database_url,omitempty"`
-
-	// Shutdown configuration
-	Shutdown ShutdownConfig `yaml:"shutdown,omitempty"`
-
-	// OIDC configuration
-	OIDC OIDCConfig `yaml:"oidc,omitempty"`
+	HTTPAddr    string         `yaml:"http_addr,omitempty"`
+	DatabaseURL string         `yaml:"database_url,omitempty"`
+	Shutdown    ShutdownConfig `yaml:"shutdown,omitempty"`
+	OIDC        OIDCConfig     `yaml:"oidc,omitempty"`
 }
 
 // ShutdownConfig holds graceful shutdown configuration.
@@ -230,24 +128,42 @@ func (c *ShutdownConfig) Validate() error {
 	return nil
 }
 
-// LoadServerConfig reads the server configuration from the given path.
-// If the file does not exist, default config is returned.
-func LoadServerConfig(path string) (*ServerConfig, error) {
-	cfg := DefaultServerConfig()
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return &cfg, nil
-		}
-		return nil, fmt.Errorf("read config file: %w", err)
+// LoadServerConfig reads server configuration from environment variables.
+func LoadServerConfig() ServerConfig {
+	env := Environment(os.Getenv("ENV"))
+	switch env {
+	case EnvDevelopment, EnvStaging, EnvProduction:
+		// valid
+	default:
+		env = EnvDevelopment
 	}
 
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parse config file: %w", err)
+	sessionMaxAge := getEnvInt("SESSION_MAX_AGE", 86400)
+	if sessionMaxAge < 0 {
+		sessionMaxAge = 86400
 	}
 
-	return &cfg, nil
+	sessionIdleTimeout := getEnvInt("SESSION_IDLE_TIMEOUT", 1800)
+
+	airGapMode := getEnvBool("AIR_GAP_MODE", false)
+
+	retentionDays := getEnvInt("RETENTION_DAYS", 90)
+
+	licenseServerURL := os.Getenv("LICENSE_SERVER_URL")
+	if licenseServerURL == "" {
+		licenseServerURL = DefaultLicenseServerURL
+	}
+
+	return ServerConfig{
+		Environment:        env,
+		SessionMaxAge:      sessionMaxAge,
+		SessionIdleTimeout: sessionIdleTimeout,
+		AirGapMode:         airGapMode,
+		RetentionDays:      retentionDays,
+		LicenseKey:         os.Getenv("LICENSE_KEY"),
+		LicensePublicKey:   getEnvDefault("LICENSE_PUBLIC_KEY", DefaultLicensePublicKey),
+		LicenseServerURL:   licenseServerURL,
+	}
 }
 
 // LoadServerConfigFromEnv loads server configuration from environment variables.
@@ -281,10 +197,28 @@ func LoadServerConfigFromEnv(cfg *ServerConfig) {
 	}
 	if redirectURL := os.Getenv("KELDRIS_OIDC_REDIRECT_URL"); redirectURL != "" {
 		cfg.OIDC.RedirectURL = redirectURL
-	return ServerConfig{
-		Environment:        env,
-		SessionMaxAge:      sessionMaxAge,
-		SessionIdleTimeout: sessionIdleTimeout,
+	}
+}
+
+// getEnvDefault reads a string from an environment variable, returning the default if unset or empty.
+func getEnvDefault(key, defaultVal string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		return defaultVal
+	}
+	return val
+}
+
+// getEnvBool reads a boolean from an environment variable, returning the default if unset or invalid.
+func getEnvBool(key string, defaultVal bool) bool {
+	val := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	switch val {
+	case "true", "1", "yes":
+		return true
+	case "false", "0", "no":
+		return false
+	default:
+		return defaultVal
 	}
 }
 

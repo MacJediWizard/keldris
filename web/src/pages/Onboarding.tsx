@@ -78,7 +78,6 @@ function WelcomeStep({ onComplete, onSkip, isLoading }: StepProps) {
 	return (
 		<div className="text-center py-8">
 			<div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-			<div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
 				<svg
 					aria-hidden="true"
 					className="w-10 h-10 text-indigo-600"
@@ -100,11 +99,6 @@ function WelcomeStep({ onComplete, onSkip, isLoading }: StepProps) {
 			</h2>
 
 			<p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-8">
-			<h2 className="text-2xl font-bold text-gray-900 mb-4">
-				Welcome to Keldris
-			</h2>
-
-			<p className="text-gray-600 max-w-md mx-auto mb-8">
 				Keldris is your self-hosted backup solution. This wizard will guide you
 				through setting up your first backup in just a few minutes.
 			</p>
@@ -114,11 +108,6 @@ function WelcomeStep({ onComplete, onSkip, isLoading }: StepProps) {
 					What you'll set up:
 				</h3>
 				<ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
-			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 max-w-md mx-auto text-left">
-				<h3 className="text-sm font-semibold text-blue-900 mb-2">
-					What you'll set up:
-				</h3>
-				<ul className="text-sm text-blue-700 space-y-1">
 					<li className="flex items-center gap-2">
 						<svg
 							aria-hidden="true"
@@ -187,7 +176,6 @@ function WelcomeStep({ onComplete, onSkip, isLoading }: StepProps) {
 					type="button"
 					onClick={onSkip}
 					className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-					className="px-4 py-2 text-gray-600 hover:text-gray-900"
 				>
 					Skip for now
 				</button>
@@ -373,18 +361,12 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 				Create Your Organization
 			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
-				Create Your Organization
-			</h2>
-			<p className="text-gray-600 mb-6">
 				Organizations help you manage backup resources and team access.
 			</p>
 
 			{hasOrganization ? (
 				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
 					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-					<div className="flex items-center gap-2 text-green-800">
 						<svg
 							aria-hidden="true"
 							className="w-5 h-5"
@@ -410,14 +392,6 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 			) : (
 				<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
 					<p className="text-sm text-yellow-800 dark:text-yellow-300">
-					<p className="mt-1 text-sm text-green-700">
-						You're part of {organizations.length} organization(s). You can
-						continue to the next step.
-					</p>
-				</div>
-			) : (
-				<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-					<p className="text-sm text-yellow-800">
 						You need to create an organization to continue. This is typically
 						done automatically when you first sign in.
 					</p>
@@ -430,7 +404,6 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 					target="_blank"
 					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-					className="text-sm text-indigo-600 hover:text-indigo-700"
 				>
 					Learn more about organizations
 				</a>
@@ -454,10 +427,6 @@ function SMTPStep({ onComplete, onSkip, isLoading }: StepProps) {
 				Configure Email Notifications
 			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
-				Configure Email Notifications
-			</h2>
-			<p className="text-gray-600 mb-6">
 				Set up email notifications to stay informed about your backups. This
 				step is optional and can be configured later.
 			</p>
@@ -467,11 +436,6 @@ function SMTPStep({ onComplete, onSkip, isLoading }: StepProps) {
 					Email notifications can alert you when:
 				</h3>
 				<ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-			<div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-				<h3 className="font-medium text-gray-900 mb-2">
-					Email notifications can alert you when:
-				</h3>
-				<ul className="text-sm text-gray-600 space-y-1">
 					<li>- Backups complete successfully</li>
 					<li>- Backups fail or encounter errors</li>
 					<li>- Agents go offline</li>
@@ -486,14 +450,12 @@ function SMTPStep({ onComplete, onSkip, isLoading }: StepProps) {
 						target="_blank"
 						rel="noopener noreferrer"
 						className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-						className="text-sm text-indigo-600 hover:text-indigo-700"
 					>
 						Learn about email setup
 					</a>
 					<Link
 						to="/notifications"
 						className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-						className="text-sm text-indigo-600 hover:text-indigo-700"
 					>
 						Configure email now
 					</Link>
@@ -503,7 +465,6 @@ function SMTPStep({ onComplete, onSkip, isLoading }: StepProps) {
 						type="button"
 						onClick={onSkip}
 						className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-						className="px-4 py-2 text-gray-600 hover:text-gray-900"
 					>
 						Skip for now
 					</button>
@@ -531,10 +492,6 @@ function RepositoryStep({ onComplete, isLoading }: StepProps) {
 				Create a Backup Repository
 			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
-				Create a Backup Repository
-			</h2>
-			<p className="text-gray-600 mb-6">
 				Repositories are where your backups are stored. Create one using local
 				storage, S3, or other supported backends.
 			</p>
@@ -542,8 +499,6 @@ function RepositoryStep({ onComplete, isLoading }: StepProps) {
 			{hasRepository ? (
 				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
 					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-					<div className="flex items-center gap-2 text-green-800">
 						<svg
 							aria-hidden="true"
 							className="w-5 h-5"
@@ -559,21 +514,17 @@ function RepositoryStep({ onComplete, isLoading }: StepProps) {
 						<span className="font-medium">Repository configured!</span>
 					</div>
 					<p className="mt-1 text-sm text-green-700 dark:text-green-400">
-					<p className="mt-1 text-sm text-green-700">
 						You have {repositories.length} repository(s) set up.
 					</p>
 				</div>
 			) : (
 				<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
 					<p className="text-sm text-yellow-800 dark:text-yellow-300 mb-2">
-				<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-					<p className="text-sm text-yellow-800 mb-2">
 						You need to create a repository to store your backups.
 					</p>
 					<Link
 						to="/repositories"
 						className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-						className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700"
 					>
 						<svg
 							aria-hidden="true"
@@ -600,7 +551,6 @@ function RepositoryStep({ onComplete, isLoading }: StepProps) {
 					target="_blank"
 					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-					className="text-sm text-indigo-600 hover:text-indigo-700"
 				>
 					Learn about repository types
 				</a>
@@ -629,18 +579,12 @@ function AgentStep({ onComplete, isLoading }: StepProps) {
 				Install a Backup Agent
 			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
-				Install a Backup Agent
-			</h2>
-			<p className="text-gray-600 mb-6">
 				Install the Keldris agent on the systems you want to back up.
 			</p>
 
 			{hasActiveAgent ? (
 				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
 					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-					<div className="flex items-center gap-2 text-green-800">
 						<svg
 							aria-hidden="true"
 							className="w-5 h-5"
@@ -656,7 +600,6 @@ function AgentStep({ onComplete, isLoading }: StepProps) {
 						<span className="font-medium">Agent installed!</span>
 					</div>
 					<p className="mt-1 text-sm text-green-700 dark:text-green-400">
-					<p className="mt-1 text-sm text-green-700">
 						You have {agents?.length} agent(s) registered.
 					</p>
 				</div>
@@ -672,7 +615,6 @@ function AgentStep({ onComplete, isLoading }: StepProps) {
 					target="_blank"
 					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-					className="text-sm text-indigo-600 hover:text-indigo-700"
 				>
 					View installation guide
 				</a>
@@ -699,10 +641,6 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 				Create a Backup Schedule
 			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
-				Create a Backup Schedule
-			</h2>
-			<p className="text-gray-600 mb-6">
 				Schedules define when and what to back up. Set up automated backups to
 				protect your data.
 			</p>
@@ -710,8 +648,6 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 			{hasSchedule ? (
 				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
 					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-					<div className="flex items-center gap-2 text-green-800">
 						<svg
 							aria-hidden="true"
 							className="w-5 h-5"
@@ -727,21 +663,17 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 						<span className="font-medium">Schedule created!</span>
 					</div>
 					<p className="mt-1 text-sm text-green-700 dark:text-green-400">
-					<p className="mt-1 text-sm text-green-700">
 						You have {schedules?.length} backup schedule(s) configured.
 					</p>
 				</div>
 			) : (
 				<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
 					<p className="text-sm text-yellow-800 dark:text-yellow-300 mb-2">
-				<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-					<p className="text-sm text-yellow-800 mb-2">
 						Create a schedule to start automated backups.
 					</p>
 					<Link
 						to="/schedules"
 						className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-						className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700"
 					>
 						<svg
 							aria-hidden="true"
@@ -768,7 +700,6 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 					target="_blank"
 					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-					className="text-sm text-indigo-600 hover:text-indigo-700"
 				>
 					Learn about backup schedules
 				</a>
@@ -800,18 +731,6 @@ function VerifyStep({ onComplete, isLoading }: StepProps) {
 					To verify your backup:
 				</h3>
 				<ol className="text-sm text-blue-700 dark:text-blue-400 space-y-2 list-decimal list-inside">
-			<h2 className="text-xl font-semibold text-gray-900 mb-2">
-				Verify Your Backup Works
-			</h2>
-			<p className="text-gray-600 mb-6">
-				Run a test backup to make sure everything is configured correctly.
-			</p>
-
-			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-				<h3 className="font-medium text-blue-900 mb-2">
-					To verify your backup:
-				</h3>
-				<ol className="text-sm text-blue-700 space-y-2 list-decimal list-inside">
 					<li>Go to the Schedules page</li>
 					<li>Click "Run Now" on your schedule to trigger a manual backup</li>
 					<li>Check the Backups page to see the backup status</li>
@@ -823,14 +742,12 @@ function VerifyStep({ onComplete, isLoading }: StepProps) {
 				<Link
 					to="/schedules"
 					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-400 dark:hover:bg-indigo-900/30"
-					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50"
 				>
 					Go to Schedules
 				</Link>
 				<Link
 					to="/backups"
 					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
-					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
 				>
 					View Backups
 				</Link>
@@ -842,7 +759,6 @@ function VerifyStep({ onComplete, isLoading }: StepProps) {
 					target="_blank"
 					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-					className="text-sm text-indigo-600 hover:text-indigo-700"
 				>
 					Learn about backup verification
 				</a>
@@ -872,7 +788,6 @@ function CompleteStep() {
 			{showConfetti && <Confetti />}
 
 			<div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-			<div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
 				<svg
 					aria-hidden="true"
 					className="w-10 h-10 text-green-600"
@@ -892,9 +807,6 @@ function CompleteStep() {
 			<h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Setup Complete!</h2>
 
 			<p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-8">
-			<h2 className="text-2xl font-bold text-gray-900 mb-4">Setup Complete!</h2>
-
-			<p className="text-gray-600 max-w-md mx-auto mb-8">
 				Congratulations! You've successfully set up Keldris. Your backups are
 				now configured and ready to protect your data.
 			</p>
@@ -904,11 +816,6 @@ function CompleteStep() {
 					What's next?
 				</h3>
 				<ul className="text-sm text-green-700 dark:text-green-400 space-y-1">
-			<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8 max-w-md mx-auto text-left">
-				<h3 className="text-sm font-semibold text-green-900 mb-2">
-					What's next?
-				</h3>
-				<ul className="text-sm text-green-700 space-y-1">
 					<li>- Monitor your backups on the Dashboard</li>
 					<li>- Add more agents to back up additional systems</li>
 					<li>- Configure alerts for backup failures</li>
@@ -1097,8 +1004,6 @@ export function Onboarding() {
 				<div className="mb-8">
 					<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Getting Started</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
-					<h1 className="text-2xl font-bold text-gray-900">Getting Started</h1>
-					<p className="text-gray-600 mt-1">
 						Complete these steps to set up your first backup
 					</p>
 				</div>
@@ -1115,13 +1020,11 @@ export function Onboarding() {
 
 							{currentStep !== 'complete' && (
 								<div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
-								<div className="mt-8 pt-4 border-t border-gray-200">
 									<button
 										type="button"
 										onClick={handleSkip}
 										disabled={skipOnboarding.isPending}
 										className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-										className="text-sm text-gray-500 hover:text-gray-700"
 									>
 										{skipOnboarding.isPending
 											? 'Skipping...'
@@ -1135,7 +1038,6 @@ export function Onboarding() {
 					{/* Main Content */}
 					<div className="flex-1">
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
 							{renderStep()}
 						</div>
 					</div>
