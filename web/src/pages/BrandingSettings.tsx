@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useMe } from '../hooks/useAuth';
 import {
-	useBrandingSettings,
-	useUpdateBrandingSettings,
+	useBranding,
+	useUpdateBranding,
 } from '../hooks/useBranding';
 import type {
 	BrandingSettings as BrandingSettingsType,
@@ -14,11 +14,13 @@ export function BrandingSettings() {
 	const currentUserRole = (user?.current_org_role ?? 'member') as OrgRole;
 	const canEdit = currentUserRole === 'owner' || currentUserRole === 'admin';
 
-	const { data: branding, isLoading, isError, error } = useBrandingSettings();
-	const updateBranding = useUpdateBrandingSettings();
+	const { data: branding, isLoading, isError, error } = useBranding();
+	const updateBranding = useUpdateBranding();
 
 	const [isEditing, setIsEditing] = useState(false);
 	const [form, setForm] = useState<BrandingSettingsType>({
+		id: '',
+		org_id: '',
 		enabled: false,
 		product_name: 'Keldris',
 		company_name: '',
@@ -38,6 +40,8 @@ export function BrandingSettings() {
 		login_bg_url: '',
 		hide_powered_by: false,
 		custom_css: '',
+		created_at: '',
+		updated_at: '',
 	});
 
 	useEffect(() => {

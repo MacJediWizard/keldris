@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useSearchParams } from 'react-router-dom';
 import { useAgents } from '../hooks/useAgents';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSnapshotCompare, useSnapshots } from '../hooks/useSnapshots';
@@ -159,10 +158,6 @@ function DiffEntryRow({ entry, snapshot1Id, snapshot2Id }: DiffEntryRowProps) {
 	const diffUrl = isFile
 		? `/snapshots/file-diff?snapshot1=${snapshot1Id}&snapshot2=${snapshot2Id}&path=${encodeURIComponent(entry.path)}`
 		: undefined;
-}
-
-function DiffEntryRow({ entry }: DiffEntryRowProps) {
-	const color = getChangeTypeColor(entry.change_type);
 
 	return (
 		<tr className="hover:bg-gray-50">
@@ -215,9 +210,6 @@ function DiffEntryRow({ entry }: DiffEntryRowProps) {
 							{entry.path}
 						</span>
 					)}
-					<span className="font-mono text-sm text-gray-900 break-all">
-						{entry.path}
-					</span>
 				</div>
 			</td>
 			<td className="px-6 py-3 text-sm text-gray-500">

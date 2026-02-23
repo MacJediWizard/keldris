@@ -7,9 +7,6 @@ import {
 	useOrgInvitations,
 	useResendInvitation,
 } from '../hooks/useOrganizations';
-import { useState } from 'react';
-import { useMe } from '../hooks/useAuth';
-import { useCurrentOrganization } from '../hooks/useOrganizations';
 import {
 	useDeleteUser,
 	useDisableUser,

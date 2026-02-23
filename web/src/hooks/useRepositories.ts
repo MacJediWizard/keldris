@@ -4,8 +4,6 @@ import type {
 	CloneRepositoryRequest,
 	CreateRepositoryRequest,
 	TestConnectionRequest,
-	CreateRepositoryRequest,
-	TestConnectionRequest,
 	UpdateRepositoryRequest,
 } from '../lib/types';
 
@@ -85,13 +83,6 @@ export function useCloneRepository() {
 	return useMutation({
 		mutationFn: ({ id, data }: { id: string; data: CloneRepositoryRequest }) =>
 			repositoriesApi.clone(id, data),
-		mutationFn: ({
-			id,
-			data,
-		}: {
-			id: string;
-			data: CloneRepositoryRequest;
-		}) => repositoriesApi.clone(id, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['repositories'] });
 		},

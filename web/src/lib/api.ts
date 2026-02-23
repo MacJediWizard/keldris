@@ -470,7 +470,6 @@ import type {
 	UpdateAnnouncementRequest,
 	UpdateBackupHookTemplateRequest,
 	UpdateBackupScriptRequest,
-	UpdateBrandingRequest,
 	UpdateBrandingSettingsRequest,
 	UpdateConcurrencyRequest,
 	UpdateContainerBackupHookRequest,
@@ -913,7 +912,7 @@ export const repositoriesApi = {
 	},
 
 	get: async (id: string): Promise<Repository> =>
-		fetchApi<Repository>(`/repositories/\${id}`),
+		fetchApi<Repository>(`/repositories/${id}`),
 
 	create: async (
 		data: CreateRepositoryRequest,
@@ -927,18 +926,18 @@ export const repositoriesApi = {
 		id: string,
 		data: UpdateRepositoryRequest,
 	): Promise<Repository> =>
-		fetchApi<Repository>(`/repositories/\${id}`, {
+		fetchApi<Repository>(`/repositories/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(data),
 		}),
 
 	delete: async (id: string): Promise<MessageResponse> =>
-		fetchApi<MessageResponse>(`/repositories/\${id}`, {
+		fetchApi<MessageResponse>(`/repositories/${id}`, {
 			method: 'DELETE',
 		}),
 
 	test: async (id: string): Promise<TestRepositoryResponse> =>
-		fetchApi<TestRepositoryResponse>(`/repositories/\${id}/test`, {
+		fetchApi<TestRepositoryResponse>(`/repositories/${id}/test`, {
 			method: 'POST',
 		}),
 
@@ -951,13 +950,13 @@ export const repositoriesApi = {
 		}),
 
 	recoverKey: async (id: string): Promise<KeyRecoveryResponse> =>
-		fetchApi<KeyRecoveryResponse>(`/repositories/\${id}/key/recover`),
+		fetchApi<KeyRecoveryResponse>(`/repositories/${id}/key/recover`),
 
 	clone: async (
 		id: string,
 		data: CloneRepositoryRequest,
 	): Promise<CloneRepositoryResponse> =>
-		fetchApi<CloneRepositoryResponse>(`/repositories/\${id}/clone`, {
+		fetchApi<CloneRepositoryResponse>(`/repositories/${id}/clone`, {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),
@@ -4792,7 +4791,7 @@ export const licenseApi = {
 		feature: LicenseFeature,
 	): Promise<FeatureCheckResult> => {
 		const response = await fetchApi<FeatureCheckResponse>(
-			`/license/features/\${feature}/check`,
+			`/license/features/${feature}/check`,
 		);
 		return response.result;
 	},
@@ -4833,7 +4832,7 @@ export const licenseApi = {
 			body: JSON.stringify(data),
 		}),
 	checkTrial: async (email: string): Promise<TrialCheckResponse> =>
-		fetchApi<TrialCheckResponse>(`/system/license/trial/check?email=\${encodeURIComponent(email)}`),
+		fetchApi<TrialCheckResponse>(`/system/license/trial/check?email=${encodeURIComponent(email)}`),
 };
 
 // Branding Settings API
@@ -4856,7 +4855,7 @@ export const brandingApi = {
 
 	// Get public branding settings (no auth required, for login page)
 	getPublic: async (orgSlug: string): Promise<PublicBrandingSettings> =>
-		fetch(`/api/public/branding/\${orgSlug}`).then((res) => {
+		fetch(`/api/public/branding/${orgSlug}`).then((res) => {
 			if (!res.ok) {
 				// Return default branding on error
 				return {
@@ -4953,4 +4952,128 @@ export const webhooksApi = {
 		fetchApi<MessageResponse>(`/webhooks/deliveries/${id}/retry`, {
 			method: 'POST',
 		}),
+};
+
+// Backup Hook Templates API
+export const backupHookTemplatesApi = {
+	list: async (params?: {
+		service_type?: string;
+		visibility?: string;
+		tag?: string;
+	}): Promise<BackupHookTemplate[]> => {
+		const searchParams = new URLSearchParams();
+		if (params?.service_type)
+			searchParams.set('service_type', params.service_type);
+		if (params?.visibility) searchParams.set('visibility', params.visibility);
+		if (params?.tag) searchParams.set('tag', params.tag);
+		const query = searchParams.toString();
+		const endpoint = query
+			? `/backup-hook-templates?${query}`
+			: '/backup-hook-templates';
+		const response = await fetchApi<BackupHookTemplatesResponse>(endpoint);
+		return response.templates ?? [];
+	},
+
+	listBuiltIn: async (): Promise<BackupHookTemplate[]> => {
+		const response = await fetchApi<BackupHookTemplatesResponse>(
+			'/backup-hook-templates/built-in',
+		);
+		return response.templates ?? [];
+	},
+
+	get: async (id: string): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>(`/backup-hook-templates/${id}`),
+
+	create: async (
+		data: CreateBackupHookTemplateRequest,
+	): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>('/backup-hook-templates', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		id: string,
+		data: UpdateBackupHookTemplateRequest,
+	): Promise<BackupHookTemplate> =>
+		fetchApi<BackupHookTemplate>(`/backup-hook-templates/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (id: string): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/backup-hook-templates/${id}`, {
+			method: 'DELETE',
+		}),
+
+	apply: async (
+		templateId: string,
+		data: ApplyBackupHookTemplateRequest,
+	): Promise<ApplyBackupHookTemplateResponse> =>
+		fetchApi<ApplyBackupHookTemplateResponse>(
+			`/backup-hook-templates/${templateId}/apply`,
+			{
+				method: 'POST',
+				body: JSON.stringify(data),
+			},
+		),
+};
+
+// Container Backup Hooks API
+export const containerHooksApi = {
+	list: async (scheduleId: string): Promise<ContainerBackupHook[]> => {
+		const response = await fetchApi<ContainerBackupHooksResponse>(
+			`/schedules/${scheduleId}/hooks`,
+		);
+		return response.hooks ?? [];
+	},
+
+	get: async (
+		scheduleId: string,
+		id: string,
+	): Promise<ContainerBackupHook> =>
+		fetchApi<ContainerBackupHook>(`/schedules/${scheduleId}/hooks/${id}`),
+
+	create: async (
+		scheduleId: string,
+		data: CreateContainerBackupHookRequest,
+	): Promise<ContainerBackupHook> =>
+		fetchApi<ContainerBackupHook>(`/schedules/${scheduleId}/hooks`, {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	update: async (
+		scheduleId: string,
+		id: string,
+		data: UpdateContainerBackupHookRequest,
+	): Promise<ContainerBackupHook> =>
+		fetchApi<ContainerBackupHook>(`/schedules/${scheduleId}/hooks/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(data),
+		}),
+
+	delete: async (
+		scheduleId: string,
+		id: string,
+	): Promise<MessageResponse> =>
+		fetchApi<MessageResponse>(`/schedules/${scheduleId}/hooks/${id}`, {
+			method: 'DELETE',
+		}),
+
+	listTemplates: async (): Promise<ContainerHookTemplateInfo[]> => {
+		const response = await fetchApi<ContainerHookTemplatesResponse>(
+			'/container-hook-templates',
+		);
+		return response.templates ?? [];
+	},
+
+	listExecutions: async (
+		backupId: string,
+	): Promise<ContainerHookExecution[]> => {
+		const response = await fetchApi<ContainerHookExecutionsResponse>(
+			`/backups/${backupId}/hook-executions`,
+		);
+		return response.executions ?? [];
+	},
 };

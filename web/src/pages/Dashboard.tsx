@@ -95,17 +95,6 @@ function StatCard({
 	);
 }
 
-function LoadingRow() {
-	return (
-		<div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-			<div className="space-y-2">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-				<div className="h-3 w-24 bg-gray-100 dark:bg-gray-600 rounded animate-pulse" />
-			</div>
-			<div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
-		</div>
-	);
-}
 
 function SuccessRateWidget({
 	rate7d,
@@ -618,8 +607,8 @@ function FleetHealthWidget({
 export function Dashboard() {
 	const { data: dashboardStats, isLoading: dashboardStatsLoading } =
 		useDashboardStats();
-	const { data: agents, isLoading: agentsLoading } = useAgents();
-	const { data: repositories, isLoading: reposLoading } = useRepositories();
+	const { data: agents } = useAgents();
+	const { data: repositories } = useRepositories();
 	const { data: schedules, isLoading: schedulesLoading } = useSchedules();
 	const { data: backups, isLoading: backupsLoading } = useBackups();
 	const { data: dailyStats, isLoading: dailyStatsLoading } =
@@ -636,7 +625,6 @@ export function Dashboard() {
 		useFleetHealth();
 	const { t, formatRelativeTime, formatBytes: localFormatBytes, formatPercent: localFormatPercent } = useLocale();
 
-	const activeAgents = dashboardStats?.agent_online ?? 0;
 	const enabledSchedules = dashboardStats?.schedule_enabled ?? 0;
 	const recentBackups = backups?.slice(0, 5) ?? [];
 	const runningBackups = backups?.filter((b) => b.status === 'running') ?? [];
@@ -670,9 +658,6 @@ export function Dashboard() {
 		favoriteAgents.length > 0 ||
 		favoriteSchedules.length > 0 ||
 		favoriteRepos.length > 0;
-
-	const isLoading =
-		dashboardStatsLoading || agentsLoading || reposLoading || schedulesLoading || backupsLoading;
 
 	return (
 		<div className="space-y-6">

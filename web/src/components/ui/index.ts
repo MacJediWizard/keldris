@@ -14,5 +14,5 @@ export { Pagination } from './Pagination';
 export { Select } from './Select';
 export { Stepper, VerticalStepper } from './Stepper';
 export { Tabs, TabList, Tab, TabPanel } from './Tabs';
-export { Toast } from './Toast';
+export { ToastContainer, ToastProvider } from './Toast';
 export { Tooltip } from './Tooltip';

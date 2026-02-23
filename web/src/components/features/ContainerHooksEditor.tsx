@@ -599,7 +599,7 @@ export function ContainerHooksEditor({
 
 						{hooks && hooks.length > 0 && (
 							<div className="space-y-3 mb-4">
-								{hooks.map((hook) => (
+								{hooks.map((hook: ContainerBackupHook) => (
 									<HookCard
 										key={hook.id}
 										hook={hook}

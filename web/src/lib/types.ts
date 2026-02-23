@@ -3167,6 +3167,33 @@ export interface ChangelogResponse {
 // Server Log types
 export type ServerLogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
+export interface ServerLogEntry {
+	timestamp: string;
+	level: ServerLogLevel;
+	component?: string;
+	message: string;
+	fields?: Record<string, unknown>;
+}
+
+export interface ServerLogFilter {
+	level?: string;
+	component?: string;
+	search?: string;
+	start_time?: string;
+	end_time?: string;
+	limit?: number;
+	offset?: number;
+}
+
+export interface ServerLogsResponse {
+	logs: ServerLogEntry[];
+	total_count: number;
+}
+
+export interface ServerLogComponentsResponse {
+	components: string[];
+}
+
 export interface AirGapDisabledFeature {
 	name: string;
 	reason: string;
@@ -3196,7 +3223,6 @@ export interface DockerBackupResponse {
 }
 
 // License types
-export type LicenseTier = 'free' | 'pro' | 'enterprise';
 
 export interface LicenseInfo {
 	tier: LicenseTier;
@@ -3216,11 +3242,13 @@ export interface ActivateLicenseRequest {
 }
 
 export interface ActivateLicenseResponse {
-	status: string;
-	tier: LicenseTier;
-	expires_at: string;
-	features: string[];
-	limits: LicenseLimits;
+	status?: string;
+	tier?: LicenseTier;
+	expires_at?: string;
+	features?: string[];
+	limits?: LicenseLimits;
+	license_type?: string;
+	message?: string;
 }
 
 export interface PricingPlan {
@@ -6037,12 +6065,6 @@ export interface DatabaseTestResponse {
 	message: string;
 }
 
-export interface ActivateLicenseResponse {
-	license_type: string;
-	expires_at?: string;
-	message: string;
-}
-
 export interface SetupStartTrialRequest {
 	company_name?: string;
 	contact_email: string;
@@ -6357,7 +6379,7 @@ export interface FeatureCheckResult {
 	upgrade_info?: UpgradeInfo;
 }
 
-export interface LicenseInfo {
+export interface LicenseInfoSummary {
 	org_id: string;
 	tier: LicenseTier;
 	features: LicenseFeature[];
@@ -6372,7 +6394,7 @@ export interface TiersResponse {
 }
 
 export interface LicenseInfoResponse {
-	license: LicenseInfo;
+	license: LicenseInfoSummary;
 }
 
 export interface FeatureCheckResponse {

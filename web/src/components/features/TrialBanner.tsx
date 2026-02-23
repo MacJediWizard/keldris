@@ -157,7 +157,7 @@ function StartTrialBanner() {
 	const handleStartTrial = (e: React.FormEvent) => {
 		e.preventDefault();
 		if (email) {
-			startTrialMutation.mutate({ email });
+			startTrialMutation.mutate({ email, tier: 'pro' });
 		}
 	};
 

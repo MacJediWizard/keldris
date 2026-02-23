@@ -6,8 +6,6 @@ import type {
 	CreateAgentRequest,
 	SetDebugModeRequest,
 } from '../lib/types';
-import { agentsApi } from '../lib/api';
-import type { CreateAgentRequest } from '../lib/types';
 
 export function useAgents() {
 	return useQuery({

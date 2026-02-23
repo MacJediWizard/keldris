@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { searchApi } from '../lib/api';
 import type { SaveRecentSearchRequest, SearchFilter } from '../lib/types';
-import { useQuery } from '@tanstack/react-query';
-import { searchApi } from '../lib/api';
-import type { SearchFilter } from '../lib/types';
 
 export function useSearch(filter: SearchFilter | null) {
 	return useQuery({

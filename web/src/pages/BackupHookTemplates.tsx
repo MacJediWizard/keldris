@@ -577,7 +577,6 @@ function CreateTemplateModal({
 														type,
 														'timeout_seconds',
 														Number.parseInt(e.target.value, 10),
-														Number.parseInt(e.target.value),
 													)
 												}
 												min={1}
@@ -764,15 +763,15 @@ export function BackupHookTemplates() {
 	const deleteTemplate = useDeleteBackupHookTemplate();
 
 	// Get unique service types and tags for filters
-	const serviceTypes = Array.from(
-		new Set(templates?.map((t) => t.service_type) || []),
+	const serviceTypes: string[] = Array.from(
+		new Set(templates?.map((t: BackupHookTemplate) => t.service_type) || []),
 	);
-	const allTags = Array.from(
-		new Set(templates?.flatMap((t) => t.tags || []) || []),
+	const allTags: string[] = Array.from(
+		new Set(templates?.flatMap((t: BackupHookTemplate) => t.tags || []) || []),
 	);
 
 	// Filter templates
-	const filteredTemplates = templates?.filter((t) => {
+	const filteredTemplates = templates?.filter((t: BackupHookTemplate) => {
 		if (filter === 'built_in' && t.visibility !== 'built_in') return false;
 		if (filter === 'custom' && t.visibility === 'built_in') return false;
 		if (serviceTypeFilter && t.service_type !== serviceTypeFilter) return false;
@@ -911,7 +910,7 @@ export function BackupHookTemplates() {
 				</div>
 			) : filteredTemplates && filteredTemplates.length > 0 ? (
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{filteredTemplates.map((template) => (
+					{filteredTemplates.map((template: BackupHookTemplate) => (
 						<TemplateCard
 							key={template.id}
 							template={template}

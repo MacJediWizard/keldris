@@ -5,7 +5,7 @@ import {
 	useEffect,
 	useMemo,
 } from 'react';
-import { useBrandingSettings } from '../hooks/useBranding';
+import { useBranding as useBrandingSettings } from '../hooks/useBranding';
 import type { BrandingSettings } from '../lib/types';
 
 interface BrandingContextValue {
@@ -17,6 +17,8 @@ interface BrandingContextValue {
 }
 
 const defaultBranding: BrandingSettings = {
+	id: '',
+	org_id: '',
 	enabled: false,
 	product_name: 'Keldris',
 	company_name: '',
@@ -36,6 +38,8 @@ const defaultBranding: BrandingSettings = {
 	login_bg_url: '',
 	hide_powered_by: false,
 	custom_css: '',
+	created_at: '',
+	updated_at: '',
 };
 
 const BrandingContext = createContext<BrandingContextValue>({

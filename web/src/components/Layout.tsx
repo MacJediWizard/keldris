@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAirGapStatus } from '../hooks/useAirGap';
 import { useBranding } from '../contexts/BrandingContext';
 import { useAlertCount } from '../hooks/useAlerts';
 import { useLogout, useMe } from '../hooks/useAuth';
@@ -27,7 +26,6 @@ import type { SearchResult, SearchResultType } from '../lib/types';
 import { PasswordExpirationBanner } from './PasswordExpirationBanner';
 import { AirGapIndicator } from './features/AirGapIndicator';
 import { AnnouncementBanner } from './features/AnnouncementBanner';
-import { GlobalSearchBar } from './features/GlobalSearchBar';
 import { LanguageSelector } from './features/LanguageSelector';
 import { LicenseBanner } from './features/LicenseBanner';
 import { MaintenanceCountdown } from './features/MaintenanceCountdown';
@@ -360,7 +358,7 @@ function Sidebar() {
 	const location = useLocation();
 	const { data: user } = useMe();
 	const { t } = useLocale();
-	const { data: brandingData } = useBranding();
+	const { branding: brandingData } = useBranding();
 	const { data: onboardingStatus } = useOnboardingStatus();
 	const { data: license } = useLicense();
 	const { data: versionInfo } = useVersion();
@@ -1688,7 +1686,7 @@ export function Layout() {
 	const { isLoading, isError } = useMe();
 	const { data: onboardingStatus, isLoading: onboardingLoading } =
 		useOnboardingStatus();
-	const { data: brandingData } = useBranding();
+	const { branding: brandingData } = useBranding();
 	const { latestEntry, currentVersion } = useLatestChanges();
 	const [showWhatsNew, setShowWhatsNew] = useState(true);
 	const readOnlyModeValue = useReadOnlyModeValue();
