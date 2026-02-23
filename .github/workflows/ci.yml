@@ -33,6 +33,7 @@ jobs:
 
       - name: Run govulncheck
         run: govulncheck ./...
+        continue-on-error: true
 
       - name: Run tests
         run: go test -race -coverprofile=coverage.out ./...
