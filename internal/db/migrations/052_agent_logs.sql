@@ -37,6 +37,5 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create a partial index for recent logs (last 24 hours) for faster real-time queries
-CREATE INDEX idx_agent_logs_recent ON agent_logs(agent_id, timestamp DESC)
-WHERE timestamp > NOW() - INTERVAL '24 hours';
+-- Note: A time-based partial index is not possible because NOW() is not IMMUTABLE.
+-- The idx_agent_logs_agent_timestamp index already covers recent log queries efficiently.
