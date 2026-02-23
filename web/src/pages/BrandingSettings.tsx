@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMe } from '../hooks/useAuth';
-import {
-	useBranding,
-	useUpdateBranding,
-} from '../hooks/useBranding';
+import { useBranding, useUpdateBranding } from '../hooks/useBranding';
 import type {
 	BrandingSettings as BrandingSettingsType,
 	OrgRole,

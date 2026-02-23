@@ -2032,7 +2032,9 @@ export function Schedules() {
 									? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
 									: 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
 							}`}
-							title={showFavoritesOnly ? 'Show all schedules' : 'Show favorites only'}
+							title={
+								showFavoritesOnly ? 'Show all schedules' : 'Show favorites only'
+							}
 						>
 							<svg
 								className={`w-4 h-4 ${showFavoritesOnly ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
@@ -2127,7 +2129,10 @@ export function Schedules() {
 										repoNames={repoNames}
 										policyName={
 											(schedule as Schedule & { policy_id?: string }).policy_id
-												? policyMap.get((schedule as Schedule & { policy_id?: string }).policy_id!)
+												? policyMap.get(
+														(schedule as Schedule & { policy_id?: string })
+															.policy_id!,
+													)
 												: undefined
 										}
 										onToggle={handleToggle}

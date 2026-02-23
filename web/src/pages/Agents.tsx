@@ -1029,7 +1029,9 @@ export function Agents() {
 									? 'border-yellow-400 bg-yellow-50 text-yellow-700'
 									: 'border-gray-300 text-gray-500 hover:bg-gray-50'
 							}`}
-							title={showFavoritesOnly ? 'Show all agents' : 'Show favorites only'}
+							title={
+								showFavoritesOnly ? 'Show all agents' : 'Show favorites only'
+							}
 						>
 							<svg
 								className={`w-4 h-4 ${showFavoritesOnly ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}

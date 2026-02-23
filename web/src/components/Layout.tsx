@@ -984,16 +984,49 @@ function Sidebar() {
 						className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
 					>
 						{theme === 'light' ? (
-							<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+								/>
 							</svg>
 						) : theme === 'dark' ? (
-							<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+								/>
 							</svg>
 						) : (
-							<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+								/>
 							</svg>
 						)}
 					</button>
@@ -1002,7 +1035,9 @@ function Sidebar() {
 					to="/changelog"
 					className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
 				>
-					<span>{t('common.version', { version: versionInfo?.version ?? '...' })}</span>
+					<span>
+						{t('common.version', { version: versionInfo?.version ?? '...' })}
+					</span>
 					{hasNewVersion && (
 						<span className="px-1.5 py-0.5 text-[10px] font-medium bg-indigo-600 text-white rounded-full">
 							v{latestVersion} available
@@ -1580,7 +1615,9 @@ function Header({ onShowShortcuts }: { onShowShortcuts: () => void }) {
 											</span>
 										)}
 									</div>
-									<p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+										{user.email}
+									</p>
 								</div>
 							)}
 							{isSuperuser && (
@@ -1674,7 +1711,9 @@ function LoadingScreen() {
 		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
 			<div className="text-center">
 				<div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-800 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin mx-auto mb-4" />
-				<p className="text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
+				<p className="text-gray-600 dark:text-gray-400">
+					{t('common.loading')}
+				</p>
 			</div>
 		</div>
 	);

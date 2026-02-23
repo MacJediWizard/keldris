@@ -7,8 +7,7 @@
 			"portal/src/**/*.ts",
 			"portal/src/**/*.tsx",
 			"*.css"
-		]
-	},
+		],
 		"ignore": ["node_modules", "dist", "*.json", "*.config.js", "*.config.ts"]
 	},
 	"organizeImports": { "enabled": true },
@@ -16,7 +15,17 @@
 		"enabled": true,
 		"rules": {
 			"recommended": true,
-			"suspicious": { "noExplicitAny": "error" },
+			"suspicious": {
+				"noExplicitAny": "error",
+				"noArrayIndexKey": "warn"
+			},
+			"a11y": {
+				"noSvgWithoutTitle": "warn",
+				"noLabelWithoutControl": "warn"
+			},
+			"style": {
+				"noNonNullAssertion": "warn"
+			},
 			"correctness": {
 				"noUnusedImports": "error",
 				"noUnusedVariables": "error"
@@ -35,12 +44,6 @@
 			}
 		}
 	],
-	"formatter": { "indentStyle": "tab" },
-	"javascript": {
-		"formatter": { "quoteStyle": "single", "semicolons": "always" }
-	},
-	"organizeImports": {
-		"enabled": true
 	"formatter": { "indentStyle": "tab" },
 	"javascript": {
 		"formatter": { "quoteStyle": "single", "semicolons": "always" }

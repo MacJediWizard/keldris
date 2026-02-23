@@ -15,6 +15,7 @@ import {
 import { StarButton } from '../components/ui/StarButton';
 import { useAgents, useFleetHealth } from '../hooks/useAgents';
 import { useBackups } from '../hooks/useBackups';
+import { useDRStatus } from '../hooks/useDRRunbooks';
 import { useFavorites } from '../hooks/useFavorites';
 import { useLocale } from '../hooks/useLocale';
 import {
@@ -23,12 +24,16 @@ import {
 	useDashboardStats,
 	useStorageGrowthTrend,
 } from '../hooks/useMetrics';
-import { useDRStatus } from '../hooks/useDRRunbooks';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
 import { useStorageStatsSummary } from '../hooks/useStorageStats';
 import { dashboardHelp } from '../lib/help-content';
-import type { Agent, FleetHealthSummary, Repository, Schedule } from '../lib/types';
+import type {
+	Agent,
+	FleetHealthSummary,
+	Repository,
+	Schedule,
+} from '../lib/types';
 import {
 	formatBytes,
 	formatDedupRatio,
@@ -94,7 +99,6 @@ function StatCard({
 		</div>
 	);
 }
-
 
 function SuccessRateWidget({
 	rate7d,
@@ -623,7 +627,12 @@ export function Dashboard() {
 	const { data: favorites, isLoading: favoritesLoading } = useFavorites();
 	const { data: fleetHealthResponse, isLoading: fleetHealthLoading } =
 		useFleetHealth();
-	const { t, formatRelativeTime, formatBytes: localFormatBytes, formatPercent: localFormatPercent } = useLocale();
+	const {
+		t,
+		formatRelativeTime,
+		formatBytes: localFormatBytes,
+		formatPercent: localFormatPercent,
+	} = useLocale();
 
 	const enabledSchedules = dashboardStats?.schedule_enabled ?? 0;
 	const recentBackups = backups?.slice(0, 5) ?? [];
@@ -631,11 +640,18 @@ export function Dashboard() {
 
 	// Calculate priority queue summary from schedules
 	const priorityQueueSummary = {
-		high: schedules?.filter((s: Schedule) => s.enabled && s.priority === 1).length ?? 0,
-		medium: schedules?.filter((s: Schedule) => s.enabled && s.priority === 2).length ?? 0,
-		low: schedules?.filter((s: Schedule) => s.enabled && s.priority === 3).length ?? 0,
+		high:
+			schedules?.filter((s: Schedule) => s.enabled && s.priority === 1)
+				.length ?? 0,
+		medium:
+			schedules?.filter((s: Schedule) => s.enabled && s.priority === 2)
+				.length ?? 0,
+		low:
+			schedules?.filter((s: Schedule) => s.enabled && s.priority === 3)
+				.length ?? 0,
 		preemptible:
-			schedules?.filter((s: Schedule) => s.enabled && s.preemptible).length ?? 0,
+			schedules?.filter((s: Schedule) => s.enabled && s.preemptible).length ??
+			0,
 	};
 
 	// Get favorite items with details

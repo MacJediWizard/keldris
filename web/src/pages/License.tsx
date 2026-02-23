@@ -1,15 +1,15 @@
 import { useRef, useState } from 'react';
 import { TierBadge } from '../components/features/TierBadge';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { useLicense, useActivateLicense, useDeactivateLicense, usePricingPlans, useStartTrial } from '../hooks/useLicense';
 import {
-	useCurrentLicense,
-	useLicenseHistory,
-} from '../hooks/useLicenses';
-import type {
-	LicenseHistory,
-	ProFeature,
-} from '../lib/types';
+	useActivateLicense,
+	useDeactivateLicense,
+	useLicense,
+	usePricingPlans,
+	useStartTrial,
+} from '../hooks/useLicense';
+import { useCurrentLicense, useLicenseHistory } from '../hooks/useLicenses';
+import type { LicenseHistory, ProFeature } from '../lib/types';
 
 function formatDate(dateStr: string): string {
 	if (!dateStr) return 'N/A';
@@ -214,7 +214,9 @@ export default function License() {
 	if (error) {
 		return (
 			<div className="rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20">
-				<p className="text-red-700 dark:text-red-400">Failed to load license information.</p>
+				<p className="text-red-700 dark:text-red-400">
+					Failed to load license information.
+				</p>
 			</div>
 		);
 	}
@@ -224,8 +226,12 @@ export default function License() {
 	const isExpired =
 		license.expires_at && new Date(license.expires_at) < new Date();
 	const canManageFromGUI = license.license_key_source !== 'env';
-	const showActivateForm = license.license_key_source === 'none' || license.tier === 'free';
-	const showTrialStart = license.tier === 'free' && license.license_key_source === 'none' && !license.is_trial;
+	const showActivateForm =
+		license.license_key_source === 'none' || license.tier === 'free';
+	const showTrialStart =
+		license.tier === 'free' &&
+		license.license_key_source === 'none' &&
+		!license.is_trial;
 	const isTrialExpired = license.is_trial && isExpired;
 
 	const handleStartTrial = async () => {
@@ -234,7 +240,9 @@ export default function License() {
 			await startTrialMutation.mutateAsync({ email: trialEmail, tier: 'pro' });
 			setTrialEmail('');
 		} catch (err) {
-			setTrialError(err instanceof Error ? err.message : 'Failed to start trial');
+			setTrialError(
+				err instanceof Error ? err.message : 'Failed to start trial',
+			);
 		}
 	};
 
@@ -244,12 +252,18 @@ export default function License() {
 			await activateMutation.mutateAsync(licenseKey);
 			setLicenseKey('');
 		} catch (err) {
-			setActivateError(err instanceof Error ? err.message : 'Activation failed');
+			setActivateError(
+				err instanceof Error ? err.message : 'Activation failed',
+			);
 		}
 	};
 
 	const handleDeactivate = async () => {
-		if (!confirm('Are you sure you want to deactivate your license? You will revert to the Free tier.')) {
+		if (
+			!confirm(
+				'Are you sure you want to deactivate your license? You will revert to the Free tier.',
+			)
+		) {
 			return;
 		}
 		try {
@@ -262,7 +276,9 @@ export default function License() {
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
-				<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">License</h1>
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+					License
+				</h1>
 				<div className="flex items-center gap-2">
 					{license.is_trial && (
 						<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
@@ -279,15 +295,19 @@ export default function License() {
 					<div className="flex items-center justify-between">
 						<div>
 							<p className="font-medium text-amber-800 dark:text-amber-300">
-								Trial &mdash; {license.trial_days_left} day{license.trial_days_left !== 1 ? 's' : ''} remaining
+								Trial &mdash; {license.trial_days_left} day
+								{license.trial_days_left !== 1 ? 's' : ''} remaining
 							</p>
 							<p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
-								Upgrade to keep your {license.tier} features after the trial ends.
+								Upgrade to keep your {license.tier} features after the trial
+								ends.
 							</p>
 						</div>
 						<button
 							type="button"
-							onClick={() => activateFormRef.current?.scrollIntoView({ behavior: 'smooth' })}
+							onClick={() =>
+								activateFormRef.current?.scrollIntoView({ behavior: 'smooth' })
+							}
 							className="rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
 						>
 							Upgrade Now
@@ -305,12 +325,15 @@ export default function License() {
 								Trial expired
 							</p>
 							<p className="mt-1 text-sm text-red-700 dark:text-red-400">
-								Your trial has ended. Enter a license key to continue with Pro or Enterprise features.
+								Your trial has ended. Enter a license key to continue with Pro
+								or Enterprise features.
 							</p>
 						</div>
 						<button
 							type="button"
-							onClick={() => activateFormRef.current?.scrollIntoView({ behavior: 'smooth' })}
+							onClick={() =>
+								activateFormRef.current?.scrollIntoView({ behavior: 'smooth' })
+							}
 							className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
 						>
 							Upgrade Now
@@ -342,18 +365,25 @@ export default function License() {
 							disabled={!trialEmail.trim() || startTrialMutation.isPending}
 							className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
 						>
-							{startTrialMutation.isPending ? 'Starting...' : 'Start 14-Day Trial'}
+							{startTrialMutation.isPending
+								? 'Starting...'
+								: 'Start 14-Day Trial'}
 						</button>
 					</div>
 					{trialError && (
-						<p className="mt-2 text-sm text-red-600 dark:text-red-400">{trialError}</p>
+						<p className="mt-2 text-sm text-red-600 dark:text-red-400">
+							{trialError}
+						</p>
 					)}
 				</div>
 			)}
 
 			{/* License Key Entry Form */}
 			{showActivateForm && (
-				<div ref={activateFormRef} className="rounded-lg border border-indigo-200 bg-indigo-50 p-6 dark:border-indigo-800 dark:bg-indigo-900/20">
+				<div
+					ref={activateFormRef}
+					className="rounded-lg border border-indigo-200 bg-indigo-50 p-6 dark:border-indigo-800 dark:bg-indigo-900/20"
+				>
 					<h2 className="text-lg font-semibold text-indigo-900 dark:text-indigo-300">
 						Activate License
 					</h2>
@@ -378,7 +408,9 @@ export default function License() {
 						</button>
 					</div>
 					{activateError && (
-						<p className="mt-2 text-sm text-red-600 dark:text-red-400">{activateError}</p>
+						<p className="mt-2 text-sm text-red-600 dark:text-red-400">
+							{activateError}
+						</p>
 					)}
 				</div>
 			)}
@@ -389,38 +421,50 @@ export default function License() {
 					<h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
 						License Details
 					</h2>
-					{canManageFromGUI && license.license_key_source === 'database' && license.tier !== 'free' && (
-						<button
-							type="button"
-							onClick={handleDeactivate}
-							disabled={deactivateMutation.isPending}
-							className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
-						>
-							{deactivateMutation.isPending ? 'Deactivating...' : 'Deactivate'}
-						</button>
-					)}
+					{canManageFromGUI &&
+						license.license_key_source === 'database' &&
+						license.tier !== 'free' && (
+							<button
+								type="button"
+								onClick={handleDeactivate}
+								disabled={deactivateMutation.isPending}
+								className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+							>
+								{deactivateMutation.isPending
+									? 'Deactivating...'
+									: 'Deactivate'}
+							</button>
+						)}
 				</div>
 				<dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<div>
-						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Tier</dt>
+						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Tier
+						</dt>
 						<dd className="mt-1 text-sm text-gray-900 dark:text-gray-100 capitalize">
 							{license.tier}
 						</dd>
 					</div>
 					<div>
-						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer</dt>
+						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Customer
+						</dt>
 						<dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">
 							{license.customer_name || license.customer_id || 'N/A'}
 						</dd>
 					</div>
 					<div>
-						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Issued</dt>
+						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Issued
+						</dt>
 						<dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">
 							{formatDate(license.issued_at)}
 						</dd>
 					</div>
 					<div>
-						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Expires</dt>
+						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Expires
+						</dt>
 						<dd
 							className={`mt-1 text-sm ${isExpired ? 'text-red-600 font-medium dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}
 						>
@@ -429,9 +473,13 @@ export default function License() {
 						</dd>
 					</div>
 					<div>
-						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Key Source</dt>
+						<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Key Source
+						</dt>
 						<dd className="mt-1 text-sm text-gray-900 dark:text-gray-100 capitalize">
-							{license.license_key_source === 'none' ? 'Not configured' : license.license_key_source}
+							{license.license_key_source === 'none'
+								? 'Not configured'
+								: license.license_key_source}
 						</dd>
 					</div>
 				</dl>
@@ -444,19 +492,25 @@ export default function License() {
 				</h2>
 				<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
 					<div className="rounded-lg border border-gray-200 p-4 dark:border-dark-border">
-						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Agents</p>
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Agents
+						</p>
 						<p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
 							{formatLimit(license.limits.max_agents)}
 						</p>
 					</div>
 					<div className="rounded-lg border border-gray-200 p-4 dark:border-dark-border">
-						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Users</p>
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Users
+						</p>
 						<p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
 							{formatLimit(license.limits.max_users)}
 						</p>
 					</div>
 					<div className="rounded-lg border border-gray-200 p-4 dark:border-dark-border">
-						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Organizations</p>
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Organizations
+						</p>
 						<p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
 							{formatLimit(license.limits.max_orgs)}
 						</p>
@@ -507,7 +561,8 @@ export default function License() {
 						Available Plans
 					</h2>
 					<p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-						Purchase a plan to get a license key, then enter it above to activate.
+						Purchase a plan to get a license key, then enter it above to
+						activate.
 					</p>
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 						{plans.map((plan) => (
@@ -520,7 +575,9 @@ export default function License() {
 								</h3>
 								<p className="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">
 									{formatPrice(plan.base_price_cents)}
-									<span className="text-sm font-normal text-gray-500 dark:text-gray-400">/mo</span>
+									<span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+										/mo
+									</span>
 								</p>
 								<ul className="mt-3 space-y-1 text-sm text-gray-600 dark:text-gray-400">
 									<li>{plan.included_agents} agents included</li>
@@ -531,7 +588,11 @@ export default function License() {
 								</ul>
 								<button
 									type="button"
-									onClick={() => activateFormRef.current?.scrollIntoView({ behavior: 'smooth' })}
+									onClick={() =>
+										activateFormRef.current?.scrollIntoView({
+											behavior: 'smooth',
+										})
+									}
 									className="mt-4 w-full rounded-md border border-indigo-300 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-600 dark:text-indigo-400 dark:hover:bg-indigo-900/20"
 								>
 									Enter License Key
@@ -546,8 +607,10 @@ export default function License() {
 			{license.license_key_source === 'env' && (
 				<div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
 					<p className="text-sm text-amber-700 dark:text-amber-400">
-						Your license key is configured via the <code className="font-mono text-xs">LICENSE_KEY</code> environment variable.
-						To manage your license from this page, remove the environment variable and restart.
+						Your license key is configured via the{' '}
+						<code className="font-mono text-xs">LICENSE_KEY</code> environment
+						variable. To manage your license from this page, remove the
+						environment variable and restart.
 					</p>
 				</div>
 			)}

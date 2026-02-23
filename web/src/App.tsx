@@ -4,8 +4,8 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
-import { UpgradePromptProvider } from './hooks/useUpgradePrompt';
 import { BrandingProvider } from './contexts/BrandingContext';
+import { UpgradePromptProvider } from './hooks/useUpgradePrompt';
 
 // Lazy-loaded pages with default exports
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -112,9 +112,7 @@ const LifecyclePolicies = lazy(() =>
 		default: m.LifecyclePolicies,
 	})),
 );
-const SLA = lazy(() =>
-	import('./pages/SLA').then((m) => ({ default: m.SLA })),
-);
+const SLA = lazy(() => import('./pages/SLA').then((m) => ({ default: m.SLA })));
 const DockerLogs = lazy(() =>
 	import('./pages/DockerLogs').then((m) => ({ default: m.DockerLogs })),
 );
@@ -203,117 +201,48 @@ function App() {
 								<Routes>
 									{/* Public routes - outside Layout, no auth required */}
 									<Route path="/setup" element={<Setup />} />
-									<Route
-										path="/reset-password"
-										element={<PasswordReset />}
-									/>
+									<Route path="/reset-password" element={<PasswordReset />} />
 									<Route path="/" element={<Layout />}>
 										<Route index element={<Dashboard />} />
 										<Route path="agents" element={<Agents />} />
-										<Route
-											path="agents/:id"
-											element={<AgentDetails />}
-										/>
-										<Route
-											path="agent-groups"
-											element={<AgentGroups />}
-										/>
-										<Route
-											path="repositories"
-											element={<Repositories />}
-										/>
-										<Route
-											path="schedules"
-											element={<Schedules />}
-										/>
-										<Route
-											path="policies"
-											element={<Policies />}
-										/>
-										<Route
-											path="templates"
-											element={<Templates />}
-										/>
+										<Route path="agents/:id" element={<AgentDetails />} />
+										<Route path="agent-groups" element={<AgentGroups />} />
+										<Route path="repositories" element={<Repositories />} />
+										<Route path="schedules" element={<Schedules />} />
+										<Route path="policies" element={<Policies />} />
+										<Route path="templates" element={<Templates />} />
 										<Route
 											path="backup-hook-templates"
 											element={<BackupHookTemplates />}
 										/>
-										<Route
-											path="backups"
-											element={<Backups />}
-										/>
-										<Route
-											path="dr-runbooks"
-											element={<DRRunbooks />}
-										/>
-										<Route
-											path="dr-tests"
-											element={<DRTests />}
-										/>
-										<Route
-											path="restore"
-											element={<Restore />}
-										/>
-										<Route
-											path="file-history"
-											element={<FileHistory />}
-										/>
-										<Route
-											path="file-search"
-											element={<FileSearch />}
-										/>
+										<Route path="backups" element={<Backups />} />
+										<Route path="dr-runbooks" element={<DRRunbooks />} />
+										<Route path="dr-tests" element={<DRTests />} />
+										<Route path="restore" element={<Restore />} />
+										<Route path="file-history" element={<FileHistory />} />
+										<Route path="file-search" element={<FileSearch />} />
 										<Route
 											path="snapshots/compare"
 											element={<SnapshotCompare />}
 										/>
-										<Route
-											path="snapshots/file-diff"
-											element={<FileDiff />}
-										/>
-										<Route
-											path="activity"
-											element={<Activity />}
-										/>
-										<Route
-											path="alerts"
-											element={<Alerts />}
-										/>
-										<Route
-											path="downtime"
-											element={<DowntimeHistory />}
-										/>
-										<Route
-											path="notifications"
-											element={<Notifications />}
-										/>
+										<Route path="snapshots/file-diff" element={<FileDiff />} />
+										<Route path="activity" element={<Activity />} />
+										<Route path="alerts" element={<Alerts />} />
+										<Route path="downtime" element={<DowntimeHistory />} />
+										<Route path="notifications" element={<Notifications />} />
 										<Route
 											path="notification-rules"
 											element={<NotificationRules />}
 										/>
-										<Route
-											path="webhooks"
-											element={<Webhooks />}
-										/>
-										<Route
-											path="reports"
-											element={<Reports />}
-										/>
-										<Route
-											path="audit-logs"
-											element={<AuditLogs />}
-										/>
-										<Route
-											path="legal-holds"
-											element={<LegalHolds />}
-										/>
+										<Route path="webhooks" element={<Webhooks />} />
+										<Route path="reports" element={<Reports />} />
+										<Route path="audit-logs" element={<AuditLogs />} />
+										<Route path="legal-holds" element={<LegalHolds />} />
 										<Route
 											path="lifecycle-policies"
 											element={<LifecyclePolicies />}
 										/>
-										<Route
-											path="stats"
-											element={<StorageStats />}
-										/>
+										<Route path="stats" element={<StorageStats />} />
 										<Route
 											path="stats/:id"
 											element={<RepositoryStatsDetail />}
@@ -323,15 +252,9 @@ function App() {
 											path="classifications"
 											element={<Classifications />}
 										/>
-										<Route
-											path="costs"
-											element={<CostEstimation />}
-										/>
+										<Route path="costs" element={<CostEstimation />} />
 										<Route path="sla" element={<SLA />} />
-										<Route
-											path="sla-tracking"
-											element={<SLATracking />}
-										/>
+										<Route path="sla-tracking" element={<SLATracking />} />
 										<Route
 											path="organization/docker-registries"
 											element={<DockerRegistries />}
@@ -372,22 +295,13 @@ function App() {
 											path="organization/password-policies"
 											element={<PasswordPolicies />}
 										/>
-										<Route
-											path="organization/license"
-											element={<License />}
-										/>
+										<Route path="organization/license" element={<License />} />
 										<Route
 											path="organization/new"
 											element={<NewOrganization />}
 										/>
-										<Route
-											path="admin/logs"
-											element={<AdminLogs />}
-										/>
-										<Route
-											path="admin/docker-logs"
-											element={<DockerLogs />}
-										/>
+										<Route path="admin/logs" element={<AdminLogs />} />
+										<Route path="admin/docker-logs" element={<DockerLogs />} />
 										<Route
 											path="admin/organizations"
 											element={<OrgManagement />}
@@ -400,62 +314,26 @@ function App() {
 											path="admin/rate-limit-configs"
 											element={<RateLimits />}
 										/>
-										<Route
-											path="admin/health"
-											element={<SystemHealth />}
-										/>
+										<Route path="admin/health" element={<SystemHealth />} />
 										<Route
 											path="admin/license"
 											element={<LicenseManagement />}
 										/>
-										<Route
-											path="admin/setup"
-											element={<AdminSetup />}
-										/>
+										<Route path="admin/setup" element={<AdminSetup />} />
 										<Route
 											path="admin/migration"
 											element={<MigrationSettings />}
 										/>
-										<Route
-											path="account/sessions"
-											element={<UserSessions />}
-										/>
-										<Route
-											path="docker-backup"
-											element={<DockerBackup />}
-										/>
-										<Route
-											path="onboarding"
-											element={<Onboarding />}
-										/>
-										<Route
-											path="changelog"
-											element={<Changelog />}
-										/>
-										<Route
-											path="system/airgap"
-											element={<AirGapLicense />}
-										/>
-										<Route
-											path="license"
-											element={<License />}
-										/>
-										<Route
-											path="docs"
-											element={<Documentation />}
-										/>
-										<Route
-											path="docs/:slug"
-											element={<Documentation />}
-										/>
-										<Route
-											path="docs/*"
-											element={<Docs />}
-										/>
-										<Route
-											path="*"
-											element={<NotFound />}
-										/>
+										<Route path="account/sessions" element={<UserSessions />} />
+										<Route path="docker-backup" element={<DockerBackup />} />
+										<Route path="onboarding" element={<Onboarding />} />
+										<Route path="changelog" element={<Changelog />} />
+										<Route path="system/airgap" element={<AirGapLicense />} />
+										<Route path="license" element={<License />} />
+										<Route path="docs" element={<Documentation />} />
+										<Route path="docs/:slug" element={<Documentation />} />
+										<Route path="docs/*" element={<Docs />} />
+										<Route path="*" element={<NotFound />} />
 									</Route>
 								</Routes>
 							</Suspense>

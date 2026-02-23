@@ -3,7 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import { VerticalStepper } from '../components/ui/Stepper';
 import { useAgents } from '../hooks/useAgents';
-import { useActivateLicense, useLicense, useStartTrial } from '../hooks/useLicense';
+import {
+	useActivateLicense,
+	useLicense,
+	useStartTrial,
+} from '../hooks/useLicense';
 import {
 	useCompleteOnboardingStep,
 	useOnboardingStatus,
@@ -209,7 +213,9 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 			await startTrialMutation.mutateAsync({ email: trialEmail, tier: 'pro' });
 			setTrialEmail('');
 		} catch (err) {
-			setTrialError(err instanceof Error ? err.message : 'Failed to start trial');
+			setTrialError(
+				err instanceof Error ? err.message : 'Failed to start trial',
+			);
 		}
 	};
 
@@ -219,7 +225,9 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 			await activateMutation.mutateAsync(licenseKey);
 			setLicenseKey('');
 		} catch (err) {
-			setActivateError(err instanceof Error ? err.message : 'Activation failed');
+			setActivateError(
+				err instanceof Error ? err.message : 'Activation failed',
+			);
 		}
 	};
 
@@ -229,8 +237,8 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 				Activate Your License
 			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
-				Enter your license key to unlock Pro or Enterprise features. You can also
-				skip this step and use the free tier.
+				Enter your license key to unlock Pro or Enterprise features. You can
+				also skip this step and use the free tier.
 			</p>
 
 			{isActivated ? (
@@ -274,7 +282,9 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 							</button>
 						</div>
 						{activateError && (
-							<p className="mt-2 text-sm text-red-600 dark:text-red-400">{activateError}</p>
+							<p className="mt-2 text-sm text-red-600 dark:text-red-400">
+								{activateError}
+							</p>
 						)}
 					</div>
 
@@ -301,7 +311,9 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 							</button>
 						</div>
 						{trialError && (
-							<p className="mt-2 text-sm text-red-600 dark:text-red-400">{trialError}</p>
+							<p className="mt-2 text-sm text-red-600 dark:text-red-400">
+								{trialError}
+							</p>
 						)}
 					</div>
 
@@ -310,9 +322,17 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 							Available tiers:
 						</h3>
 						<ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-							<li><strong>Free</strong> — Basic backups with limited agents and storage</li>
-							<li><strong>Pro</strong> — More agents, users, and advanced features</li>
-							<li><strong>Enterprise</strong> — Unlimited resources with SSO, audit logs, and more</li>
+							<li>
+								<strong>Free</strong> — Basic backups with limited agents and
+								storage
+							</li>
+							<li>
+								<strong>Pro</strong> — More agents, users, and advanced features
+							</li>
+							<li>
+								<strong>Enterprise</strong> — Unlimited resources with SSO,
+								audit logs, and more
+							</li>
 						</ul>
 					</div>
 				</div>
@@ -804,7 +824,9 @@ function CompleteStep() {
 				</svg>
 			</div>
 
-			<h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Setup Complete!</h2>
+			<h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+				Setup Complete!
+			</h2>
 
 			<p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-8">
 				Congratulations! You've successfully set up Keldris. Your backups are
@@ -1002,7 +1024,9 @@ export function Onboarding() {
 			<div className="max-w-4xl mx-auto">
 				{/* Header */}
 				<div className="mb-8">
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Getting Started</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+						Getting Started
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Complete these steps to set up your first backup
 					</p>

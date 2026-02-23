@@ -4832,7 +4832,9 @@ export const licenseApi = {
 			body: JSON.stringify(data),
 		}),
 	checkTrial: async (email: string): Promise<TrialCheckResponse> =>
-		fetchApi<TrialCheckResponse>(`/system/license/trial/check?email=${encodeURIComponent(email)}`),
+		fetchApi<TrialCheckResponse>(
+			`/system/license/trial/check?email=${encodeURIComponent(email)}`,
+		),
 };
 
 // Branding Settings API
@@ -5028,10 +5030,7 @@ export const containerHooksApi = {
 		return response.hooks ?? [];
 	},
 
-	get: async (
-		scheduleId: string,
-		id: string,
-	): Promise<ContainerBackupHook> =>
+	get: async (scheduleId: string, id: string): Promise<ContainerBackupHook> =>
 		fetchApi<ContainerBackupHook>(`/schedules/${scheduleId}/hooks/${id}`),
 
 	create: async (
@@ -5053,10 +5052,7 @@ export const containerHooksApi = {
 			body: JSON.stringify(data),
 		}),
 
-	delete: async (
-		scheduleId: string,
-		id: string,
-	): Promise<MessageResponse> =>
+	delete: async (scheduleId: string, id: string): Promise<MessageResponse> =>
 		fetchApi<MessageResponse>(`/schedules/${scheduleId}/hooks/${id}`, {
 			method: 'DELETE',
 		}),
