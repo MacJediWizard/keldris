@@ -28,4 +28,5 @@ CREATE INDEX idx_snapshot_immutability_repo ON snapshot_immutability(repository_
 CREATE INDEX idx_snapshot_immutability_org ON snapshot_immutability(org_id);
 CREATE INDEX idx_snapshot_immutability_snapshot ON snapshot_immutability(snapshot_id);
 CREATE INDEX idx_snapshot_immutability_locked_until ON snapshot_immutability(locked_until);
-CREATE INDEX idx_snapshot_immutability_active ON snapshot_immutability(locked_until) WHERE locked_until > NOW();
+-- Partial index for non-null locked_until (expiration checked at query time)
+CREATE INDEX idx_snapshot_immutability_active ON snapshot_immutability(locked_until) WHERE locked_until IS NOT NULL;
