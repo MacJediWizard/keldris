@@ -105,8 +105,8 @@ func (h *SnapshotsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		snapshots.GET("/:id/comments", h.ListSnapshotComments)
 		snapshots.POST("/:id/comments", h.CreateSnapshotComment)
 		snapshots.GET("/compare", h.CompareSnapshots)
-		snapshots.GET("/:id1/compare/:id2", h.CompareSnapshots)
-		snapshots.GET("/:id1/files/diff/:id2", h.DiffFile)
+		snapshots.GET("/:id/compare/:compare_id", h.CompareSnapshots)
+		snapshots.GET("/:id/files/diff/:compare_id", h.DiffFile)
 		// Mount endpoints
 		snapshots.POST("/:id/mount", h.MountSnapshot)
 		snapshots.DELETE("/:id/mount", h.UnmountSnapshot)
@@ -1484,31 +1484,31 @@ type FileDiffResponse struct {
 }
 
 // DiffFile returns the diff of a specific file between two snapshots.
-// GET /api/v1/snapshots/:id1/files/diff/:id2?path=<file_path>
+// GET /api/v1/snapshots/:id/files/diff/:compare_id?path=<file_path>
 //
 //	@Summary		Get file diff between snapshots
 //	@Description	Returns the diff of a specific file between two snapshots
 //	@Tags			Snapshots
 //	@Accept			json
 //	@Produce		json
-//	@Param			id1		path		string	true	"First snapshot ID"
-//	@Param			id2		path		string	true	"Second snapshot ID"
-//	@Param			path	query		string	true	"File path to diff"
-//	@Success		200		{object}	FileDiffResponse
-//	@Failure		400		{object}	map[string]string
-//	@Failure		401		{object}	map[string]string
-//	@Failure		404		{object}	map[string]string
-//	@Failure		500		{object}	map[string]string
+//	@Param			id			path		string	true	"First snapshot ID"
+//	@Param			compare_id	path		string	true	"Second snapshot ID"
+//	@Param			path		query		string	true	"File path to diff"
+//	@Success		200			{object}	FileDiffResponse
+//	@Failure		400			{object}	map[string]string
+//	@Failure		401			{object}	map[string]string
+//	@Failure		404			{object}	map[string]string
+//	@Failure		500			{object}	map[string]string
 //	@Security		SessionAuth
-//	@Router			/snapshots/{id1}/files/diff/{id2} [get]
+//	@Router			/snapshots/{id}/files/diff/{compare_id} [get]
 func (h *SnapshotsHandler) DiffFile(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
 	}
 
-	snapshotID1 := c.Param("id1")
-	snapshotID2 := c.Param("id2")
+	snapshotID1 := c.Param("id")
+	snapshotID2 := c.Param("compare_id")
 	filePath := c.Query("path")
 
 	if snapshotID1 == "" || snapshotID2 == "" {
@@ -1586,23 +1586,31 @@ func (h *SnapshotsHandler) DiffFile(c *gin.Context) {
 //	@Tags			Snapshots
 //	@Accept			json
 //	@Produce		json
-//	@Param			id1	path		string	true	"First snapshot ID"
-//	@Param			id2	path		string	true	"Second snapshot ID"
-//	@Success		200	{object}	SnapshotCompareResponse
-//	@Failure		400	{object}	map[string]string
-//	@Failure		401	{object}	map[string]string
-//	@Failure		404	{object}	map[string]string
-//	@Failure		500	{object}	map[string]string
+//	@Param			id			path		string	true	"First snapshot ID"
+//	@Param			compare_id	path		string	true	"Second snapshot ID"
+//	@Success		200			{object}	SnapshotCompareResponse
+//	@Failure		400			{object}	map[string]string
+//	@Failure		401			{object}	map[string]string
+//	@Failure		404			{object}	map[string]string
+//	@Failure		500			{object}	map[string]string
 //	@Security		SessionAuth
-//	@Router			/snapshots/{id1}/compare/{id2} [get]
+//	@Router			/snapshots/{id}/compare/{compare_id} [get]
 func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
 	}
 
-	snapshotID1 := c.Param("id1")
-	snapshotID2 := c.Param("id2")
+	snapshotID1 := c.Param("id")
+	snapshotID2 := c.Param("compare_id")
+
+	// Fallback to query params for /snapshots/compare?id1=...&id2=... route
+	if snapshotID1 == "" {
+		snapshotID1 = c.Query("id1")
+	}
+	if snapshotID2 == "" {
+		snapshotID2 = c.Query("id2")
+	}
 
 	if snapshotID1 == "" || snapshotID2 == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "both snapshot IDs are required"})

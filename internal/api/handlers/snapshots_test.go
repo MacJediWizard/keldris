@@ -222,8 +222,7 @@ func (m *mockSnapshotStore) DeleteSnapshotMount(_ context.Context, _ uuid.UUID) 
 	return nil
 }
 
-// setupSnapshotsRouter registers all snapshot/restore routes except CompareSnapshots
-// to avoid the gin wildcard param conflict between :id and :id1.
+// setupSnapshotsRouter registers all snapshot/restore routes for testing.
 func setupSnapshotsRouter(store SnapshotStore, user *auth.SessionUser) *gin.Engine {
 	r := SetupTestRouter(user)
 	handler := NewSnapshotsHandler(store, nil, zerolog.Nop())
@@ -235,6 +234,9 @@ func setupSnapshotsRouter(store SnapshotStore, user *auth.SessionUser) *gin.Engi
 	snapshots.GET("/:id/files", handler.ListFiles)
 	snapshots.GET("/:id/comments", handler.ListSnapshotComments)
 	snapshots.POST("/:id/comments", handler.CreateSnapshotComment)
+	snapshots.GET("/compare", handler.CompareSnapshots)
+	snapshots.GET("/:id/compare/:compare_id", handler.CompareSnapshots)
+	snapshots.GET("/:id/files/diff/:compare_id", handler.DiffFile)
 
 	comments := api.Group("/comments")
 	comments.DELETE("/:id", handler.DeleteSnapshotComment)
@@ -247,8 +249,7 @@ func setupSnapshotsRouter(store SnapshotStore, user *auth.SessionUser) *gin.Engi
 	return r
 }
 
-// setupCompareRouter registers only the CompareSnapshots route
-// to avoid the gin wildcard param conflict with :id routes.
+// setupCompareRouter registers only the CompareSnapshots route for isolated compare tests.
 func setupCompareRouter(store SnapshotStore, user *auth.SessionUser) *gin.Engine {
 	r := SetupTestRouter(user)
 	handler := NewSnapshotsHandler(store, nil, zerolog.Nop())
@@ -256,7 +257,7 @@ func setupCompareRouter(store SnapshotStore, user *auth.SessionUser) *gin.Engine
 
 	snapshots := api.Group("/snapshots")
 	snapshots.GET("/compare", handler.CompareSnapshots)
-	snapshots.GET("/:id1/compare/:id2", handler.CompareSnapshots)
+	snapshots.GET("/:id/compare/:compare_id", handler.CompareSnapshots)
 	return r
 }
 
