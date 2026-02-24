@@ -302,3 +302,55 @@ All features merged — 46 original PRs + ~196 feature branches consolidated
 - 293 local branches (all merged)
 - Go build: passes
 - TypeScript: 0 errors
+
+---
+
+## 2026-02-22 to 2026-02-23 - CI Pipeline Fixes & Dead Code Removal
+
+### What
+Fixed all CI pipeline failures introduced by the union merge consolidation, and removed all disconnected/dead code from both Keldris and license-server repos.
+
+### CI Fixes
+
+**SQL Column Mismatches (store files)**
+- `store_search.go`: Removed non-existent `description` column from repositories search; replaced non-existent `status` column on schedules with `CASE WHEN s.enabled THEN 'active' ELSE 'disabled' END`
+- `store_recovered_full.go`: Fixed schedule queries selecting 19 columns when `scanSchedule` expects 27 (added backup_type, priority, classification fields, docker/pihole/proxmox options); fixed 3 backup queries selecting 25 columns when `scanBackups` expects 17
+- `store_recovered.go`: Fixed 3 more backup queries (25→17 columns); added RowsAffected check to `UpdateSnapshotComment`
+- `store_classification.go`: Fixed `bandwidth_limit_kb` → `bandwidth_limit_kbps` (2 places)
+- `store_usage_metrics.go`: Fixed `schedules.org_id` reference — schedules has no org_id, must JOIN through agents
+
+**Test Failures (5 distinct issues)**
+- `Complete()` argument order: Fixed ~38 calls across store_test.go and store_integration_test.go — signature is `(snapshotID, filesNew, filesChanged, sizeBytes)`, tests had sizeBytes and filesNew swapped
+- Script fields: Expanded `CreateBackup`, `UpdateBackup`, and `GetBackupByID` in store.go to include pre/post script output/error columns
+- Onboarding step: Fixed test expectation from `OnboardingStepOrganization` to `OnboardingStepLicense` (step after "welcome" is "license")
+- `UpdateSnapshotComment`: Added RowsAffected check to return error for non-existent comments
+
+**Docker Build**
+- Removed duplicate `FROM` lines in both Dockerfiles (union merge artifacts)
+- Added `@rollup/rollup-linux-x64-musl` and `@esbuild/linux-x64` to Dockerfile.server for Alpine musl libc compatibility
+- Consolidated both Dockerfiles to Alpine 3.21
+
+### Dead Code Removal (Plan: Parts A-E)
+
+**Keldris Backend (Part A)**
+- Removed `PruneOnly()` from backup/restic.go
+- Removed `GetActiveWindowFromDB()`, `GetUpcomingWindowFromDB()`, `LastRefresh()` from maintenance/maintenance.go + ~12 associated tests
+- Removed `GetNextAllowedRun()`, `GetActiveDRSchedules()` from backup/scheduler.go
+- Removed `DiffCompact()` from backup/compare.go + test
+- Removed `DeleteDailySummariesBefore()` from db/store.go + test
+- Removed `SessionOrAPIKeyMiddleware`, `OptionalAuthMiddleware` from middleware/auth.go + 4 tests
+
+**Keldris Frontend (Part B)**
+- Wired `useDashboardStats` hook to Dashboard.tsx for aggregated stat cards
+
+**License Server (Parts C-E)**
+- Added migration 007 to drop unused `admin_api_keys` table
+- Added configurable function fields to mock store for 3 methods
+- Removed 5 unused API methods from web/src/lib/api.ts
+
+### Result
+- CI: All 3 jobs green (Go tests, Frontend build, Docker build)
+- `go vet ./...`: clean
+- `staticcheck ./...`: clean
+- `npx tsc --noEmit`: clean (both repos)
+- License server: builds, tests pass, types check
