@@ -41,17 +41,17 @@ func NewContainerHooksHandler(store ContainerHookStore, logger zerolog.Logger) *
 // RegisterRoutes registers container hook routes on the given router group.
 func (h *ContainerHooksHandler) RegisterRoutes(r *gin.RouterGroup) {
 	// Hooks are managed under schedules
-	r.GET("/schedules/:schedule_id/container-hooks", h.List)
-	r.POST("/schedules/:schedule_id/container-hooks", h.Create)
-	r.GET("/schedules/:schedule_id/container-hooks/:id", h.Get)
-	r.PUT("/schedules/:schedule_id/container-hooks/:id", h.Update)
-	r.DELETE("/schedules/:schedule_id/container-hooks/:id", h.Delete)
+	r.GET("/schedules/:id/container-hooks", h.List)
+	r.POST("/schedules/:id/container-hooks", h.Create)
+	r.GET("/schedules/:id/container-hooks/:hook_id", h.Get)
+	r.PUT("/schedules/:id/container-hooks/:hook_id", h.Update)
+	r.DELETE("/schedules/:id/container-hooks/:hook_id", h.Delete)
 
 	// Templates endpoint
 	r.GET("/container-hook-templates", h.ListTemplates)
 
 	// Executions by backup
-	r.GET("/backups/:backup_id/container-hook-executions", h.ListExecutions)
+	r.GET("/backups/:id/container-hook-executions", h.ListExecutions)
 }
 
 // List returns all container backup hooks for a schedule.
@@ -67,7 +67,7 @@ func (h *ContainerHooksHandler) List(c *gin.Context) {
 		return
 	}
 
-	scheduleIDParam := c.Param("schedule_id")
+	scheduleIDParam := c.Param("id")
 	scheduleID, err := uuid.Parse(scheduleIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
@@ -102,14 +102,14 @@ func (h *ContainerHooksHandler) Get(c *gin.Context) {
 		return
 	}
 
-	scheduleIDParam := c.Param("schedule_id")
+	scheduleIDParam := c.Param("id")
 	scheduleID, err := uuid.Parse(scheduleIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
 		return
 	}
 
-	idParam := c.Param("id")
+	idParam := c.Param("hook_id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid hook ID"})
@@ -149,7 +149,7 @@ func (h *ContainerHooksHandler) Create(c *gin.Context) {
 		return
 	}
 
-	scheduleIDParam := c.Param("schedule_id")
+	scheduleIDParam := c.Param("id")
 	scheduleID, err := uuid.Parse(scheduleIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
@@ -251,14 +251,14 @@ func (h *ContainerHooksHandler) Update(c *gin.Context) {
 		return
 	}
 
-	scheduleIDParam := c.Param("schedule_id")
+	scheduleIDParam := c.Param("id")
 	scheduleID, err := uuid.Parse(scheduleIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
 		return
 	}
 
-	idParam := c.Param("id")
+	idParam := c.Param("hook_id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid hook ID"})
@@ -348,14 +348,14 @@ func (h *ContainerHooksHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	scheduleIDParam := c.Param("schedule_id")
+	scheduleIDParam := c.Param("id")
 	scheduleID, err := uuid.Parse(scheduleIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid schedule ID"})
 		return
 	}
 
-	idParam := c.Param("id")
+	idParam := c.Param("hook_id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid hook ID"})
@@ -414,7 +414,7 @@ func (h *ContainerHooksHandler) ListExecutions(c *gin.Context) {
 		return
 	}
 
-	backupIDParam := c.Param("backup_id")
+	backupIDParam := c.Param("id")
 	backupID, err := uuid.Parse(backupIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid backup ID"})
