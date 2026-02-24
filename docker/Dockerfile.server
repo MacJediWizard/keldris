@@ -2,13 +2,11 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app/web
 COPY web/package*.json ./
-RUN npm ci
+RUN npm ci && npm install --no-save @rollup/rollup-linux-x64-musl @esbuild/linux-x64
 COPY web/ ./
 RUN npm run build
 
 # SECURITY: Requires Go 1.25.7+ for stdlib vulnerability fixes
-# Build Go server
-FROM golang:1.25.7-alpine AS go-builder
 # Build Go server
 FROM golang:1.25.7-alpine AS go-builder
 RUN apk add --no-cache git ca-certificates
@@ -26,7 +24,6 @@ RUN CGO_ENABLED=0 go build \
 
 # Final image
 FROM alpine:3.21
-FROM alpine:3.19
 RUN apk add --no-cache ca-certificates tzdata
 RUN adduser -D -u 1000 keldris
 WORKDIR /app
