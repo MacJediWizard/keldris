@@ -3,11 +3,11 @@ FROM node:20-alpine AS frontend-builder
 WORKDIR /app/web
 COPY web/package*.json ./
 ARG TARGETARCH=amd64
-RUN npm ci && \
+RUN npm ci --ignore-scripts && \
     if [ "$TARGETARCH" = "arm64" ]; then \
-      npm install --no-save @rollup/rollup-linux-arm64-musl @esbuild/linux-arm64; \
+      npm install --no-save --force @rollup/rollup-linux-arm64-musl @esbuild/linux-arm64; \
     else \
-      npm install --no-save @rollup/rollup-linux-x64-musl @esbuild/linux-x64; \
+      npm install --no-save --force @rollup/rollup-linux-x64-musl @esbuild/linux-x64; \
     fi
 COPY web/ ./
 RUN npm run build
