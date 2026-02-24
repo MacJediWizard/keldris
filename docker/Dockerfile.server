@@ -2,7 +2,13 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app/web
 COPY web/package*.json ./
-RUN npm ci && npm install --no-save @rollup/rollup-linux-x64-musl @esbuild/linux-x64
+ARG TARGETARCH=amd64
+RUN npm ci && \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+      npm install --no-save @rollup/rollup-linux-arm64-musl @esbuild/linux-arm64; \
+    else \
+      npm install --no-save @rollup/rollup-linux-x64-musl @esbuild/linux-x64; \
+    fi
 COPY web/ ./
 RUN npm run build
 
