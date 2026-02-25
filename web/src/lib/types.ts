@@ -1332,17 +1332,42 @@ export interface OrganizationPlanInfo {
 }
 
 export type UpgradeFeature =
+	// Frontend-only (limit-based gating)
 	| 'agents'
 	| 'storage'
-	| 'sso'
+	// Pro tier features (backend feature names)
+	| 'oidc'
 	| 'api_access'
-	| 'advanced_reporting'
 	| 'audit_logs'
-	| 'custom_branding'
-	| 'priority_support'
+	| 'notification_slack'
+	| 'notification_teams'
+	| 'notification_pagerduty'
+	| 'notification_discord'
+	| 'storage_s3'
+	| 'storage_b2'
+	| 'storage_sftp'
+	| 'docker_backup'
+	| 'multi_repo'
+	| 'custom_reports'
+	| 'custom_retention'
+	// Enterprise tier features (backend feature names)
+	| 'white_label'
+	| 'multi_org'
+	| 'sla_tracking'
+	| 'air_gap'
+	| 'dr_runbooks'
+	| 'dr_tests'
+	| 'sso_sync'
+	| 'rbac'
 	| 'geo_replication'
-	| 'lifecycle_policies'
-	| 'legal_holds';
+	| 'ransomware_protection'
+	| 'legal_holds'
+	| 'priority_support'
+	// Frontend aliases (kept for backward compat)
+	| 'sso'
+	| 'advanced_reporting'
+	| 'custom_branding'
+	| 'lifecycle_policies';
 
 // API response wrappers
 export interface AgentsResponse {

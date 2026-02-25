@@ -10,29 +10,29 @@ function getTrialBannerStyles(daysRemaining: number): {
 } {
 	if (daysRemaining <= 0) {
 		return {
-			bg: 'bg-red-50',
-			borderColor: 'border-red-200',
-			textColor: 'text-red-800',
+			bg: 'bg-red-50 dark:bg-red-900/20',
+			borderColor: 'border-red-200 dark:border-red-800',
+			textColor: 'text-red-800 dark:text-red-200',
 		};
 	}
 	if (daysRemaining <= 3) {
 		return {
-			bg: 'bg-amber-50',
-			borderColor: 'border-amber-200',
-			textColor: 'text-amber-800',
+			bg: 'bg-amber-50 dark:bg-amber-900/20',
+			borderColor: 'border-amber-200 dark:border-amber-800',
+			textColor: 'text-amber-800 dark:text-amber-200',
 		};
 	}
 	if (daysRemaining <= 7) {
 		return {
-			bg: 'bg-yellow-50',
-			borderColor: 'border-yellow-200',
-			textColor: 'text-yellow-800',
+			bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+			borderColor: 'border-yellow-200 dark:border-yellow-800',
+			textColor: 'text-yellow-800 dark:text-yellow-200',
 		};
 	}
 	return {
-		bg: 'bg-blue-50',
-		borderColor: 'border-blue-200',
-		textColor: 'text-blue-800',
+		bg: 'bg-blue-50 dark:bg-blue-900/20',
+		borderColor: 'border-blue-200 dark:border-blue-800',
+		textColor: 'text-blue-800 dark:text-blue-200',
 	};
 }
 
