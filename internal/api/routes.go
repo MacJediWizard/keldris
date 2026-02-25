@@ -104,7 +104,7 @@ func DefaultConfig() Config {
 	return Config{
 		Environment:       config.EnvDevelopment,
 		AllowedOrigins:    []string{},
-		RateLimitRequests: 100,
+		RateLimitRequests: 300,
 		RateLimitPeriod:   "1m",
 		Version:           "dev",
 		Commit:            "unknown",
@@ -118,7 +118,7 @@ func ProductionConfig() Config {
 	prodSecurityHeaders := middleware.DefaultSecurityHeadersConfig()
 	return Config{
 		AllowedOrigins:    []string{},
-		RateLimitRequests: 100,
+		RateLimitRequests: 300,
 		RateLimitPeriod:   "1m",
 		Version:           "unknown",
 		Commit:            "unknown",

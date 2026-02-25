@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -202,6 +203,17 @@ func (m *RateLimitManager) GetDashboardStats() RateLimitDashboardStats {
 // rateLimitMiddleware creates the actual middleware handler.
 func rateLimitMiddleware(manager *RateLimitManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Skip rate limiting for static assets and health checks.
+		// These are cache-busted files or infrastructure probes that
+		// should not consume the user's API rate limit budget.
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/assets/") ||
+			path == "/health" ||
+			path == "/favicon.ico" {
+			c.Next()
+			return
+		}
+
 		// Get client IP
 		key := c.ClientIP()
 
