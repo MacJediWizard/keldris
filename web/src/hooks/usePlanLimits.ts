@@ -28,24 +28,28 @@ function tierToPlan(tier: LicenseTier | undefined): PlanType {
 const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 	free: {
 		agent_limit: 3,
+		server_limit: 1,
 		storage_quota_bytes: 10 * 1024 * 1024 * 1024, // 10 GB
 		backup_retention_days: 30,
 		concurrent_backups: 1,
 	},
 	starter: {
 		agent_limit: 10,
+		server_limit: 3,
 		storage_quota_bytes: 100 * 1024 * 1024 * 1024, // 100 GB
 		backup_retention_days: 90,
 		concurrent_backups: 3,
 	},
 	professional: {
 		agent_limit: 100,
+		server_limit: 10,
 		storage_quota_bytes: 1024 * 1024 * 1024 * 1024, // 1 TB
 		backup_retention_days: 365,
 		concurrent_backups: 10,
 	},
 	enterprise: {
 		agent_limit: undefined, // Unlimited
+		server_limit: undefined, // Unlimited
 		storage_quota_bytes: undefined, // Unlimited
 		backup_retention_days: undefined, // Unlimited
 		concurrent_backups: undefined, // Unlimited

@@ -1304,6 +1304,7 @@ export interface BillingSettings {
 
 export interface PlanLimits {
 	agent_limit?: number;
+	server_limit?: number;
 	storage_quota_bytes?: number;
 	backup_retention_days?: number;
 	concurrent_backups?: number;
