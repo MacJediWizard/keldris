@@ -133,11 +133,11 @@ export function PasswordReset() {
 	// Show token validation loading
 	if (token && validating) {
 		return (
-			<div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+			<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
 				<div className="sm:mx-auto sm:w-full sm:max-w-md">
 					<div className="text-center">
 						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
-						<p className="mt-4 text-gray-600">Validating reset link...</p>
+						<p className="mt-4 text-gray-600 dark:text-gray-400">Validating reset link...</p>
 					</div>
 				</div>
 			</div>
@@ -149,16 +149,16 @@ export function PasswordReset() {
 		// Show success message after reset
 		if (resetSubmitted) {
 			return (
-				<div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+				<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
 					<div className="sm:mx-auto sm:w-full sm:max-w-md">
-						<h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+						<h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
 							Password Reset Complete
 						</h2>
 					</div>
 
 					<div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-						<div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-							<div className="rounded-md bg-green-50 p-4 mb-6">
+						<div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
+							<div className="rounded-md bg-green-50 dark:bg-green-900/30 p-4 mb-6">
 								<div className="flex">
 									<div className="flex-shrink-0">
 										<svg
@@ -175,7 +175,7 @@ export function PasswordReset() {
 										</svg>
 									</div>
 									<div className="ml-3">
-										<p className="text-sm text-green-700">
+										<p className="text-sm text-green-700 dark:text-green-400">
 											Your password has been reset successfully. You can now log
 											in with your new password.
 										</p>
@@ -197,16 +197,16 @@ export function PasswordReset() {
 		// Show invalid token error
 		if (tokenValid === false) {
 			return (
-				<div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+				<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
 					<div className="sm:mx-auto sm:w-full sm:max-w-md">
-						<h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+						<h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
 							Invalid Reset Link
 						</h2>
 					</div>
 
 					<div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-						<div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-							<div className="rounded-md bg-red-50 p-4 mb-6">
+						<div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
+							<div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4 mb-6">
 								<div className="flex">
 									<div className="flex-shrink-0">
 										<svg
@@ -223,7 +223,7 @@ export function PasswordReset() {
 										</svg>
 									</div>
 									<div className="ml-3">
-										<p className="text-sm text-red-700">{resetError}</p>
+										<p className="text-sm text-red-700 dark:text-red-400">{resetError}</p>
 									</div>
 								</div>
 							</div>
@@ -241,23 +241,23 @@ export function PasswordReset() {
 
 		// Show reset form
 		return (
-			<div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+			<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
 				<div className="sm:mx-auto sm:w-full sm:max-w-md">
-					<h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+					<h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
 						Reset Your Password
 					</h2>
 					{tokenEmail && (
-						<p className="mt-2 text-center text-sm text-gray-600">
+						<p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
 							for {tokenEmail}
 						</p>
 					)}
 				</div>
 
 				<div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-					<div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+					<div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
 						<form onSubmit={handleResetSubmit} className="space-y-6">
 							{resetError && (
-								<div className="rounded-md bg-red-50 p-4">
+								<div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4">
 									<div className="flex">
 										<div className="flex-shrink-0">
 											<svg
@@ -274,7 +274,7 @@ export function PasswordReset() {
 											</svg>
 										</div>
 										<div className="ml-3">
-											<p className="text-sm text-red-700">{resetError}</p>
+											<p className="text-sm text-red-700 dark:text-red-400">{resetError}</p>
 										</div>
 									</div>
 								</div>
@@ -283,7 +283,7 @@ export function PasswordReset() {
 							<div>
 								<label
 									htmlFor="newPassword"
-									className="block text-sm font-medium text-gray-700"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 								>
 									New Password
 								</label>
@@ -297,7 +297,7 @@ export function PasswordReset() {
 										minLength={8}
 										value={newPassword}
 										onChange={(e) => setNewPassword(e.target.value)}
-										className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+										className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:text-white"
 									/>
 								</div>
 							</div>
@@ -305,7 +305,7 @@ export function PasswordReset() {
 							<div>
 								<label
 									htmlFor="confirmPassword"
-									className="block text-sm font-medium text-gray-700"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 								>
 									Confirm Password
 								</label>
@@ -319,7 +319,7 @@ export function PasswordReset() {
 										minLength={8}
 										value={confirmPassword}
 										onChange={(e) => setConfirmPassword(e.target.value)}
-										className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+										className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:text-white"
 									/>
 								</div>
 							</div>
@@ -343,16 +343,16 @@ export function PasswordReset() {
 	// Show success message after request
 	if (requestSubmitted) {
 		return (
-			<div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+			<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
 				<div className="sm:mx-auto sm:w-full sm:max-w-md">
-					<h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+					<h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
 						Check Your Email
 					</h2>
 				</div>
 
 				<div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-					<div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-						<div className="rounded-md bg-blue-50 p-4 mb-6">
+					<div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
+						<div className="rounded-md bg-blue-50 dark:bg-blue-900/30 p-4 mb-6">
 							<div className="flex">
 								<div className="flex-shrink-0">
 									<svg
@@ -366,7 +366,7 @@ export function PasswordReset() {
 									</svg>
 								</div>
 								<div className="ml-3">
-									<p className="text-sm text-blue-700">
+									<p className="text-sm text-blue-700 dark:text-blue-400">
 										If an account exists with that email, you will receive a
 										password reset link shortly. The link will expire in 1 hour.
 									</p>
@@ -375,7 +375,7 @@ export function PasswordReset() {
 						</div>
 						<Link
 							to="/"
-							className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+							className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
 						>
 							Return to Login
 						</Link>
@@ -387,22 +387,22 @@ export function PasswordReset() {
 
 	// Show request form
 	return (
-		<div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
 			<div className="sm:mx-auto sm:w-full sm:max-w-md">
-				<h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+				<h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
 					Reset Your Password
 				</h2>
-				<p className="mt-2 text-center text-sm text-gray-600">
+				<p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
 					Enter your email address and we'll send you a link to reset your
 					password.
 				</p>
 			</div>
 
 			<div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-				<div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+				<div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
 					<form onSubmit={handleRequestSubmit} className="space-y-6">
 						{requestError && (
-							<div className="rounded-md bg-red-50 p-4">
+							<div className="rounded-md bg-red-50 dark:bg-red-900/30 p-4">
 								<div className="flex">
 									<div className="flex-shrink-0">
 										<svg
@@ -419,7 +419,7 @@ export function PasswordReset() {
 										</svg>
 									</div>
 									<div className="ml-3">
-										<p className="text-sm text-red-700">{requestError}</p>
+										<p className="text-sm text-red-700 dark:text-red-400">{requestError}</p>
 									</div>
 								</div>
 							</div>
@@ -428,7 +428,7 @@ export function PasswordReset() {
 						<div>
 							<label
 								htmlFor="email"
-								className="block text-sm font-medium text-gray-700"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 							>
 								Email address
 							</label>
@@ -441,7 +441,7 @@ export function PasswordReset() {
 									required
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
-									className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+									className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-800 dark:text-white"
 								/>
 							</div>
 						</div>
@@ -460,17 +460,17 @@ export function PasswordReset() {
 					<div className="mt-6">
 						<div className="relative">
 							<div className="absolute inset-0 flex items-center">
-								<div className="w-full border-t border-gray-300" />
+								<div className="w-full border-t border-gray-300 dark:border-gray-600" />
 							</div>
 							<div className="relative flex justify-center text-sm">
-								<span className="px-2 bg-white text-gray-500">Or</span>
+								<span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or</span>
 							</div>
 						</div>
 
 						<div className="mt-6">
 							<Link
 								to="/"
-								className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+								className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
 							>
 								Return to Login
 							</Link>

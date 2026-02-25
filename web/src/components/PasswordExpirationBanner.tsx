@@ -28,9 +28,9 @@ export function PasswordExpirationBanner() {
 	// If password is expired or must change, show blocking modal
 	if (expirationInfo.is_expired || expirationInfo.must_change_now) {
 		return (
-			<div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-				<div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
-					<div className="flex items-center gap-3 text-red-600 mb-4">
+			<div className="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75 flex items-center justify-center z-50">
+				<div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
+					<div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
 						<svg
 							className="w-8 h-8"
 							fill="none"
@@ -52,7 +52,7 @@ export function PasswordExpirationBanner() {
 						</h2>
 					</div>
 
-					<p className="text-gray-600 mb-6">
+					<p className="text-gray-600 dark:text-gray-400 mb-6">
 						{expirationInfo.is_expired
 							? 'Your password has expired. You must change your password before continuing.'
 							: 'An administrator requires you to change your password before continuing.'}
@@ -73,14 +73,14 @@ export function PasswordExpirationBanner() {
 	// Show warning banner for passwords expiring soon
 	if (showChangePassword) {
 		return (
-			<div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-				<div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
+			<div className="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75 flex items-center justify-center z-50">
+				<div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
 					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-xl font-bold text-gray-900">Change Password</h2>
+						<h2 className="text-xl font-bold text-gray-900 dark:text-white">Change Password</h2>
 						<button
 							type="button"
 							onClick={() => setShowChangePassword(false)}
-							className="text-gray-400 hover:text-gray-600"
+							className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
 						>
 							<svg
 								className="w-6 h-6"
@@ -113,11 +113,11 @@ export function PasswordExpirationBanner() {
 	}
 
 	return (
-		<div className="bg-amber-50 border-b border-amber-200">
+		<div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800">
 			<div className="max-w-7xl mx-auto py-3 px-4 sm:px-6 lg:px-8">
 				<div className="flex items-center justify-between flex-wrap">
 					<div className="flex-1 flex items-center">
-						<span className="flex p-2 rounded-lg bg-amber-100">
+						<span className="flex p-2 rounded-lg bg-amber-100 dark:bg-amber-800">
 							<svg
 								className="w-5 h-5 text-amber-600"
 								fill="none"
@@ -133,7 +133,7 @@ export function PasswordExpirationBanner() {
 								/>
 							</svg>
 						</span>
-						<p className="ml-3 font-medium text-amber-700">
+						<p className="ml-3 font-medium text-amber-700 dark:text-amber-200">
 							<span>
 								Your password will expire in {expirationInfo.days_until_expiry}{' '}
 								{expirationInfo.days_until_expiry === 1 ? 'day' : 'days'}.

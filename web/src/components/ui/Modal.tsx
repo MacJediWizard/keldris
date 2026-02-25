@@ -36,14 +36,14 @@ export function Modal({ open, onClose, children }: ModalProps) {
 				data-testid="modal-overlay"
 			/>
 			<dialog
-				className="relative z-10 w-full max-w-lg rounded-lg bg-white shadow-xl"
+				className="relative z-10 w-full max-w-lg rounded-lg bg-white dark:bg-gray-800 shadow-xl"
 				open
 				aria-modal="true"
 			>
 				<button
 					type="button"
 					onClick={onClose}
-					className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+					className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
 					aria-label="Close"
 				>
 					<svg
@@ -73,8 +73,8 @@ interface ModalHeaderProps {
 
 export function ModalHeader({ children }: ModalHeaderProps) {
 	return (
-		<div className="border-b border-gray-200 px-6 py-4">
-			<h3 className="text-lg font-semibold text-gray-900">{children}</h3>
+		<div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+			<h3 className="text-lg font-semibold text-gray-900 dark:text-white">{children}</h3>
 		</div>
 	);
 }
@@ -93,7 +93,7 @@ interface ModalFooterProps {
 
 export function ModalFooter({ children }: ModalFooterProps) {
 	return (
-		<div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+		<div className="flex justify-end gap-3 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
 			{children}
 		</div>
 	);

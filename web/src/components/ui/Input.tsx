@@ -21,7 +21,7 @@ export function Input({
 			{label && (
 				<label
 					htmlFor={inputId}
-					className="mb-1 block text-sm font-medium text-gray-700"
+					className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
 				>
 					{label}
 				</label>
@@ -30,8 +30,8 @@ export function Input({
 				id={inputId}
 				className={`block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-0 ${
 					error
-						? 'border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:ring-red-500'
-						: 'border-gray-300 text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-indigo-500'
+						? 'border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:ring-red-500 dark:border-red-600 dark:text-red-400 dark:placeholder-red-500 dark:bg-gray-800'
+						: 'border-gray-300 text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500'
 				} ${className}`}
 				aria-invalid={error ? 'true' : undefined}
 				aria-describedby={
@@ -44,12 +44,12 @@ export function Input({
 				{...props}
 			/>
 			{error && (
-				<p id={`${inputId}-error`} className="mt-1 text-sm text-red-600">
+				<p id={`${inputId}-error`} className="mt-1 text-sm text-red-600 dark:text-red-400">
 					{error}
 				</p>
 			)}
 			{!error && helperText && (
-				<p id={`${inputId}-helper`} className="mt-1 text-sm text-gray-500">
+				<p id={`${inputId}-helper`} className="mt-1 text-sm text-gray-500 dark:text-gray-400">
 					{helperText}
 				</p>
 			)}

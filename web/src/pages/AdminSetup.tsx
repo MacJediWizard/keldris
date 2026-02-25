@@ -25,27 +25,27 @@ export function AdminSetup() {
 		<div>
 			{/* Header */}
 			<div className="mb-8">
-				<h1 className="text-2xl font-bold text-gray-900">Server Setup</h1>
-				<p className="text-gray-600 mt-1">
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Server Setup</h1>
+				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Reconfigure server settings. These changes apply to the entire server.
 				</p>
 			</div>
 
 			{/* License Status */}
 			{status?.license && (
-				<div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 						Current License
 					</h2>
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 						<div>
-							<dt className="text-sm text-gray-500">Type</dt>
-							<dd className="text-sm font-medium text-gray-900 capitalize">
+							<dt className="text-sm text-gray-500 dark:text-gray-400">Type</dt>
+							<dd className="text-sm font-medium text-gray-900 dark:text-white capitalize">
 								{status.license.license_type}
 							</dd>
 						</div>
 						<div>
-							<dt className="text-sm text-gray-500">Status</dt>
+							<dt className="text-sm text-gray-500 dark:text-gray-400">Status</dt>
 							<dd
 								className={`text-sm font-medium capitalize ${
 									status.license.status === 'active'
@@ -58,16 +58,16 @@ export function AdminSetup() {
 						</div>
 						{status.license.expires_at && (
 							<div>
-								<dt className="text-sm text-gray-500">Expires</dt>
-								<dd className="text-sm font-medium text-gray-900">
+								<dt className="text-sm text-gray-500 dark:text-gray-400">Expires</dt>
+								<dd className="text-sm font-medium text-gray-900 dark:text-white">
 									{new Date(status.license.expires_at).toLocaleDateString()}
 								</dd>
 							</div>
 						)}
 						{status.license.company_name && (
 							<div>
-								<dt className="text-sm text-gray-500">Company</dt>
-								<dd className="text-sm font-medium text-gray-900">
+								<dt className="text-sm text-gray-500 dark:text-gray-400">Company</dt>
+								<dd className="text-sm font-medium text-gray-900 dark:text-white">
 									{status.license.company_name}
 								</dd>
 							</div>
@@ -131,19 +131,19 @@ function ConfigCard({
 	children,
 }: ConfigCardProps) {
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
 			<button
 				type="button"
 				onClick={onToggle}
-				className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+				className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 			>
 				<div>
-					<h3 className="text-lg font-medium text-gray-900">{title}</h3>
-					<p className="text-sm text-gray-500">{description}</p>
+					<h3 className="text-lg font-medium text-gray-900 dark:text-white">{title}</h3>
+					<p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
 				</div>
 				<svg
 					aria-hidden="true"
-					className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+					className={`w-5 h-5 text-gray-400 dark:text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -157,7 +157,7 @@ function ConfigCard({
 				</svg>
 			</button>
 			{isOpen && (
-				<div className="px-6 pb-6 border-t border-gray-200 pt-4">
+				<div className="px-6 pb-6 border-t border-gray-200 dark:border-gray-700 pt-4">
 					{children}
 				</div>
 			)}
@@ -191,7 +191,7 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 				<div>
 					<label
 						htmlFor="admin-smtp-host"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						SMTP Host
 					</label>
@@ -200,14 +200,14 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 						type="text"
 						value={settings.host}
 						onChange={(e) => setSettings({ ...settings, host: e.target.value })}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
 						placeholder="smtp.example.com"
 					/>
 				</div>
 				<div>
 					<label
 						htmlFor="admin-smtp-port"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						Port
 					</label>
@@ -221,7 +221,7 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 								port: Number.parseInt(e.target.value, 10),
 							})
 						}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
 					/>
 				</div>
 			</div>
@@ -230,7 +230,7 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 				<div>
 					<label
 						htmlFor="admin-smtp-username"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						Username
 					</label>
@@ -241,13 +241,13 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 						onChange={(e) =>
 							setSettings({ ...settings, username: e.target.value })
 						}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
 					/>
 				</div>
 				<div>
 					<label
 						htmlFor="admin-smtp-password"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						Password
 					</label>
@@ -258,7 +258,7 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 						onChange={(e) =>
 							setSettings({ ...settings, password: e.target.value })
 						}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
 					/>
 				</div>
 			</div>
@@ -267,7 +267,7 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 				<div>
 					<label
 						htmlFor="admin-smtp-from-email"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						From Email
 					</label>
@@ -278,14 +278,14 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 						onChange={(e) =>
 							setSettings({ ...settings, from_email: e.target.value })
 						}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
 						placeholder="noreply@example.com"
 					/>
 				</div>
 				<div>
 					<label
 						htmlFor="admin-smtp-from-name"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						From Name
 					</label>
@@ -296,7 +296,7 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 						onChange={(e) =>
 							setSettings({ ...settings, from_name: e.target.value })
 						}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
 						placeholder="Keldris Backups"
 					/>
 				</div>
@@ -305,7 +305,7 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 			<div>
 				<label
 					htmlFor="admin-smtp-encryption"
-					className="block text-sm font-medium text-gray-700 mb-1"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 				>
 					Encryption
 				</label>
@@ -318,7 +318,7 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 							encryption: e.target.value as 'none' | 'tls' | 'starttls',
 						})
 					}
-					className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+					className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
 				>
 					<option value="starttls">STARTTLS</option>
 					<option value="tls">TLS</option>
@@ -327,7 +327,7 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 			</div>
 
 			{configureSMTP.isError && (
-				<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+				<div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
 					{configureSMTP.error instanceof Error
 						? configureSMTP.error.message
 						: 'Failed to configure SMTP'}
@@ -335,7 +335,7 @@ function SMTPConfigForm({ onSuccess }: { onSuccess: () => void }) {
 			)}
 
 			{configureSMTP.isSuccess && (
-				<div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+				<div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
 					SMTP settings saved successfully
 				</div>
 			)}
@@ -378,7 +378,7 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 			<div>
 				<label
 					htmlFor="admin-oidc-issuer"
-					className="block text-sm font-medium text-gray-700 mb-1"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 				>
 					Issuer URL
 				</label>
@@ -387,7 +387,7 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 					type="url"
 					value={settings.issuer}
 					onChange={(e) => setSettings({ ...settings, issuer: e.target.value })}
-					className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+					className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
 					placeholder="https://auth.example.com"
 				/>
 			</div>
@@ -396,7 +396,7 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 				<div>
 					<label
 						htmlFor="admin-oidc-client-id"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						Client ID
 					</label>
@@ -407,13 +407,13 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 						onChange={(e) =>
 							setSettings({ ...settings, client_id: e.target.value })
 						}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
 					/>
 				</div>
 				<div>
 					<label
 						htmlFor="admin-oidc-client-secret"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						Client Secret
 					</label>
@@ -424,7 +424,7 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 						onChange={(e) =>
 							setSettings({ ...settings, client_secret: e.target.value })
 						}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
 					/>
 				</div>
 			</div>
@@ -432,7 +432,7 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 			<div>
 				<label
 					htmlFor="admin-oidc-redirect"
-					className="block text-sm font-medium text-gray-700 mb-1"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 				>
 					Redirect URL
 				</label>
@@ -443,7 +443,7 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 					onChange={(e) =>
 						setSettings({ ...settings, redirect_url: e.target.value })
 					}
-					className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+					className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
 					placeholder="https://your-domain.com/auth/callback"
 				/>
 			</div>
@@ -456,18 +456,18 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 					onChange={(e) =>
 						setSettings({ ...settings, auto_create_users: e.target.checked })
 					}
-					className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+					className="w-4 h-4 text-indigo-600 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:bg-gray-800"
 				/>
 				<label
 					htmlFor="admin-oidc-auto-create"
-					className="text-sm text-gray-700"
+					className="text-sm text-gray-700 dark:text-gray-300"
 				>
 					Auto-create users on first login
 				</label>
 			</div>
 
 			{configureOIDC.isError && (
-				<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+				<div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
 					{configureOIDC.error instanceof Error
 						? configureOIDC.error.message
 						: 'Failed to configure OIDC'}
@@ -475,7 +475,7 @@ function OIDCConfigForm({ onSuccess }: { onSuccess: () => void }) {
 			)}
 
 			{configureOIDC.isSuccess && (
-				<div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+				<div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
 					OIDC settings saved successfully
 				</div>
 			)}
@@ -507,7 +507,7 @@ function LicenseConfigForm({ onSuccess }: { onSuccess: () => void }) {
 			<div>
 				<label
 					htmlFor="admin-license-key"
-					className="block text-sm font-medium text-gray-700 mb-1"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 				>
 					License Key
 				</label>
@@ -517,13 +517,13 @@ function LicenseConfigForm({ onSuccess }: { onSuccess: () => void }) {
 					value={licenseKey}
 					onChange={(e) => setLicenseKey(e.target.value)}
 					required
-					className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+					className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 font-mono"
 					placeholder="XXXX-XXXX-XXXX-XXXX"
 				/>
 			</div>
 
 			{updateLicense.isError && (
-				<div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+				<div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
 					{updateLicense.error instanceof Error
 						? updateLicense.error.message
 						: 'Failed to update license'}
@@ -531,7 +531,7 @@ function LicenseConfigForm({ onSuccess }: { onSuccess: () => void }) {
 			)}
 
 			{updateLicense.isSuccess && (
-				<div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+				<div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
 					License updated successfully
 				</div>
 			)}
