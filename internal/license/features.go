@@ -35,6 +35,10 @@ const (
 	FeatureStorageB2 Feature = "storage_b2"
 	// FeatureStorageSFTP enables SFTP storage backend (Pro+).
 	FeatureStorageSFTP Feature = "storage_sftp"
+	// FeatureStorageDropbox enables Dropbox storage backend (Pro+).
+	FeatureStorageDropbox Feature = "storage_dropbox"
+	// FeatureStorageRest enables REST server storage backend (Pro+).
+	FeatureStorageRest Feature = "storage_rest"
 	// FeatureDockerBackup enables Docker container backups (Pro+).
 	FeatureDockerBackup Feature = "docker_backup"
 	// FeatureMultiRepo enables multiple backup repositories (Pro+).
@@ -84,6 +88,8 @@ var featureAccess = map[LicenseTier][]Feature{
 		FeatureStorageS3,
 		FeatureStorageB2,
 		FeatureStorageSFTP,
+		FeatureStorageDropbox,
+		FeatureStorageRest,
 		FeatureDockerBackup,
 		FeatureMultiRepo,
 		FeatureAPIAccess,
@@ -100,6 +106,8 @@ var featureAccess = map[LicenseTier][]Feature{
 		FeatureStorageS3,
 		FeatureStorageB2,
 		FeatureStorageSFTP,
+		FeatureStorageDropbox,
+		FeatureStorageRest,
 		FeatureDockerBackup,
 		FeatureMultiRepo,
 		FeatureAPIAccess,
@@ -157,6 +165,8 @@ var featureTierMap = map[Feature]Tier{
 	FeatureStorageS3:            TierPro,
 	FeatureStorageB2:            TierPro,
 	FeatureStorageSFTP:          TierPro,
+	FeatureStorageDropbox:       TierPro,
+	FeatureStorageRest:          TierPro,
 	FeatureDockerBackup:         TierPro,
 	FeatureMultiRepo:            TierPro,
 	FeatureAPIAccess:            TierPro,
@@ -190,6 +200,8 @@ func AllFeatures() []Feature {
 		FeatureStorageS3,
 		FeatureStorageB2,
 		FeatureStorageSFTP,
+		FeatureStorageDropbox,
+		FeatureStorageRest,
 		FeatureDockerBackup,
 		FeatureMultiRepo,
 		FeatureAPIAccess,
@@ -299,6 +311,12 @@ func GetFeatureInfo(f Feature) FeatureInfo {
 	case FeatureStorageSFTP:
 		info.DisplayName = "SFTP Storage"
 		info.Description = "Use SFTP servers as backup destination"
+	case FeatureStorageDropbox:
+		info.DisplayName = "Dropbox Storage"
+		info.Description = "Use Dropbox as backup destination"
+	case FeatureStorageRest:
+		info.DisplayName = "REST Server Storage"
+		info.Description = "Use restic REST server as backup destination"
 	case FeatureDockerBackup:
 		info.DisplayName = "Docker Backup"
 		info.Description = "Back up Docker containers and volumes"

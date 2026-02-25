@@ -39,7 +39,7 @@ const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 		concurrent_backups: 3,
 	},
 	professional: {
-		agent_limit: 50,
+		agent_limit: 100,
 		storage_quota_bytes: 1024 * 1024 * 1024 * 1024, // 1 TB
 		backup_retention_days: 365,
 		concurrent_backups: 10,
@@ -80,7 +80,7 @@ const PLAN_FEATURES: Record<PlanType, PlanFeatures> = {
 		api_access: true,
 		advanced_reporting: true,
 		audit_logs: true,
-		custom_branding: true,
+		custom_branding: false,
 		priority_support: false,
 		geo_replication: false,
 		lifecycle_policies: true,
@@ -116,6 +116,8 @@ export const FEATURE_NAMES: Record<UpgradeFeature, string> = {
 	storage_s3: 'S3 Storage',
 	storage_b2: 'Backblaze B2 Storage',
 	storage_sftp: 'SFTP Storage',
+	storage_dropbox: 'Dropbox Storage',
+	storage_rest: 'REST Server Storage',
 	docker_backup: 'Docker Backup',
 	multi_repo: 'Multiple Repositories',
 	custom_reports: 'Custom Reports',
@@ -203,6 +205,16 @@ export const FEATURE_BENEFITS: Record<UpgradeFeature, string[]> = {
 		'SFTP server destinations',
 		'Remote backup storage',
 		'Flexible storage options',
+	],
+	storage_dropbox: [
+		'Dropbox cloud storage',
+		'Automatic sync and versioning',
+		'Easy file sharing',
+	],
+	storage_rest: [
+		'Restic REST server backend',
+		'High-performance transfers',
+		'Self-hosted storage endpoint',
 	],
 	docker_backup: [
 		'Docker container backups',
@@ -325,6 +337,8 @@ export const FEATURE_REQUIRED_PLAN: Record<UpgradeFeature, PlanType> = {
 	storage_s3: 'professional',
 	storage_b2: 'professional',
 	storage_sftp: 'professional',
+	storage_dropbox: 'professional',
+	storage_rest: 'professional',
 	docker_backup: 'professional',
 	multi_repo: 'professional',
 	custom_reports: 'professional',

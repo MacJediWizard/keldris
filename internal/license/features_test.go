@@ -87,15 +87,15 @@ func TestFeaturesForTier(t *testing.T) {
 
 	t.Run("pro tier features", func(t *testing.T) {
 		features := FeaturesForTier(TierPro)
-		if len(features) != 14 {
-			t.Errorf("FeaturesForTier(TierPro) returned %d features, want 14", len(features))
+		if len(features) != 16 {
+			t.Errorf("FeaturesForTier(TierPro) returned %d features, want 16", len(features))
 		}
 	})
 
 	t.Run("enterprise tier features", func(t *testing.T) {
 		features := FeaturesForTier(TierEnterprise)
-		if len(features) != 26 {
-			t.Errorf("FeaturesForTier(TierEnterprise) returned %d features, want 26", len(features))
+		if len(features) != 28 {
+			t.Errorf("FeaturesForTier(TierEnterprise) returned %d features, want 28", len(features))
 		}
 	})
 
@@ -225,8 +225,8 @@ func TestFeatures_FreeTierLimits(t *testing.T) {
 
 func TestFeatures_ProTierLimits(t *testing.T) {
 	features := FeaturesForTier(TierPro)
-	if len(features) != 14 {
-		t.Fatalf("pro tier should have 14 features, got %d", len(features))
+	if len(features) != 16 {
+		t.Fatalf("pro tier should have 16 features, got %d", len(features))
 	}
 
 	// Verify the exact features
@@ -245,6 +245,8 @@ func TestFeatures_ProTierLimits(t *testing.T) {
 		FeatureStorageS3,
 		FeatureStorageB2,
 		FeatureStorageSFTP,
+		FeatureStorageDropbox,
+		FeatureStorageRest,
 		FeatureDockerBackup,
 		FeatureMultiRepo,
 		FeatureAPIAccess,
@@ -281,8 +283,8 @@ func TestFeatures_ProTierLimits(t *testing.T) {
 
 func TestFeatures_EnterpriseTierLimits(t *testing.T) {
 	features := FeaturesForTier(TierEnterprise)
-	if len(features) != 26 {
-		t.Fatalf("enterprise tier should have 26 features, got %d", len(features))
+	if len(features) != 28 {
+		t.Fatalf("enterprise tier should have 28 features, got %d", len(features))
 	}
 
 	// Verify all features are present
@@ -302,6 +304,8 @@ func TestFeatures_EnterpriseTierLimits(t *testing.T) {
 		FeatureStorageS3,
 		FeatureStorageB2,
 		FeatureStorageSFTP,
+		FeatureStorageDropbox,
+		FeatureStorageRest,
 		FeatureDockerBackup,
 		FeatureMultiRepo,
 		FeatureAPIAccess,

@@ -1346,6 +1346,8 @@ export type UpgradeFeature =
 	| 'storage_s3'
 	| 'storage_b2'
 	| 'storage_sftp'
+	| 'storage_dropbox'
+	| 'storage_rest'
 	| 'docker_backup'
 	| 'multi_repo'
 	| 'custom_reports'
