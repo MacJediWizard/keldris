@@ -33,10 +33,10 @@ func NewLicenseHandler(store LicenseStore, checker *license.FeatureChecker, logg
 }
 
 // RegisterRoutes registers license routes on the given router group.
+// Note: GET /license is handled by LicenseInfoHandler (registered separately).
 func (h *LicenseHandler) RegisterRoutes(r *gin.RouterGroup) {
 	lic := r.Group("/license")
 	{
-		lic.GET("", h.GetLicense)
 		lic.GET("/features", h.ListFeatures)
 		lic.GET("/features/:feature/check", h.CheckFeature)
 		lic.GET("/tiers", h.ListTiers)
