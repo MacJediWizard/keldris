@@ -15,6 +15,17 @@ import {
 
 export type UpgradePromptVariant = 'inline' | 'banner' | 'card' | 'modal';
 
+// Safely resolve feature properties with fallbacks for unknown feature strings
+// (e.g. backend sends "white_label" but frontend maps use "custom_branding").
+function resolveFeature(feature: UpgradeFeature) {
+	const name =
+		FEATURE_NAMES[feature] ||
+		feature.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+	const plan = FEATURE_REQUIRED_PLAN[feature] || ('professional' as PlanType);
+	const benefits = FEATURE_BENEFITS[feature] || [];
+	return { name, plan, benefits };
+}
+
 interface UpgradePromptProps {
 	feature: UpgradeFeature;
 	variant?: UpgradePromptVariant;
@@ -124,8 +135,7 @@ export function UpgradePromptInline({
 	source,
 	className = '',
 }: Omit<UpgradePromptProps, 'variant'>) {
-	const targetPlan = FEATURE_REQUIRED_PLAN[feature];
-	const featureName = FEATURE_NAMES[feature];
+	const { name: featureName, plan: targetPlan } = resolveFeature(feature);
 
 	return (
 		<span
@@ -151,8 +161,7 @@ export function UpgradePromptBanner({
 	onDismiss,
 	className = '',
 }: Omit<UpgradePromptProps, 'variant'>) {
-	const targetPlan = FEATURE_REQUIRED_PLAN[feature];
-	const featureName = FEATURE_NAMES[feature];
+	const { name: featureName, plan: targetPlan } = resolveFeature(feature);
 
 	return (
 		<div
@@ -199,9 +208,11 @@ export function UpgradePromptCard({
 	showBenefits = true,
 	className = '',
 }: Omit<UpgradePromptProps, 'variant'>) {
-	const targetPlan = FEATURE_REQUIRED_PLAN[feature];
-	const featureName = FEATURE_NAMES[feature];
-	const benefits = FEATURE_BENEFITS[feature];
+	const {
+		name: featureName,
+		plan: targetPlan,
+		benefits,
+	} = resolveFeature(feature);
 	const isSales = requiresSales(targetPlan);
 
 	return (
@@ -267,9 +278,11 @@ export function UpgradePromptModal({
 	onDismiss,
 	showBenefits = true,
 }: Omit<UpgradePromptProps, 'variant'>) {
-	const targetPlan = FEATURE_REQUIRED_PLAN[feature];
-	const featureName = FEATURE_NAMES[feature];
-	const benefits = FEATURE_BENEFITS[feature];
+	const {
+		name: featureName,
+		plan: targetPlan,
+		benefits,
+	} = resolveFeature(feature);
 	const isSales = requiresSales(targetPlan);
 
 	return (
