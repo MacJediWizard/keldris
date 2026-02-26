@@ -129,7 +129,7 @@ function DowntimeEventCard({
 
 	return (
 		<div
-			className={`bg-white rounded-lg border ${isActive ? severityColor.border : 'border-gray-200'} p-4 hover:shadow-sm transition-shadow`}
+			className={`bg-white dark:bg-gray-800 rounded-lg border ${isActive ? severityColor.border : 'border-gray-200 dark:border-gray-700'} p-4 hover:shadow-sm transition-shadow`}
 		>
 			<div className="flex items-start gap-4">
 				<div
@@ -391,7 +391,7 @@ export function DowntimeHistory() {
 						className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
 							viewMode === 'list'
 								? 'bg-indigo-600 text-white'
-								: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+								: 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
 						}`}
 					>
 						List View
@@ -402,7 +402,7 @@ export function DowntimeHistory() {
 						className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
 							viewMode === 'timeline'
 								? 'bg-indigo-600 text-white'
-								: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+								: 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
 						}`}
 					>
 						Timeline
@@ -451,7 +451,7 @@ export function DowntimeHistory() {
 					className={`p-4 rounded-lg border transition-colors ${
 						statusFilter === 'active'
 							? 'bg-red-50 border-red-200'
-							: 'bg-white border-gray-200 hover:bg-gray-50'
+							: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
 					}`}
 				>
 					<div className="flex items-center gap-3">
@@ -490,7 +490,7 @@ export function DowntimeHistory() {
 					className={`p-4 rounded-lg border transition-colors ${
 						statusFilter === 'resolved'
 							? 'bg-green-50 border-green-200'
-							: 'bg-white border-gray-200 hover:bg-gray-50'
+							: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
 					}`}
 				>
 					<div className="flex items-center gap-3">
@@ -521,7 +521,7 @@ export function DowntimeHistory() {
 					</div>
 				</button>
 
-				<div className="p-4 rounded-lg border border-gray-200 bg-white">
+				<div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
 					<div className="flex items-center gap-3">
 						<div className="p-2 bg-blue-100 rounded-lg">
 							<svg

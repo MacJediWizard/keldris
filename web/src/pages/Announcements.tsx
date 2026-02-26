@@ -41,10 +41,10 @@ function StatusBadge({
 	status: 'active' | 'scheduled' | 'ended' | 'inactive';
 }) {
 	const colors = {
-		active: 'bg-green-100 text-green-800',
-		scheduled: 'bg-blue-100 text-blue-800',
-		ended: 'bg-gray-100 text-gray-800',
-		inactive: 'bg-yellow-100 text-yellow-800',
+		active: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
+		scheduled: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
+		ended: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200',
+		inactive: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
 	};
 
 	const labels = {
@@ -65,9 +65,9 @@ function StatusBadge({
 
 function TypeBadge({ type }: { type: AnnouncementType }) {
 	const colors = {
-		info: 'bg-blue-100 text-blue-800',
-		warning: 'bg-amber-100 text-amber-800',
-		critical: 'bg-red-100 text-red-800',
+		info: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
+		warning: 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200',
+		critical: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
 	};
 
 	return (
@@ -184,13 +184,13 @@ export function Announcements() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Announcements</h1>
-					<p className="text-gray-600 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Announcements</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Manage system-wide announcements for your organization
 					</p>
 				</div>
-				<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-					<p className="text-amber-800">
+				<div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+					<p className="text-amber-800 dark:text-amber-300">
 						Only administrators can manage announcements.
 					</p>
 				</div>
@@ -202,13 +202,13 @@ export function Announcements() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-					<div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
+					<div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+					<div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2" />
 				</div>
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 					<div className="space-y-4">
 						{[1, 2, 3].map((i) => (
-							<div key={i} className="h-16 bg-gray-200 rounded animate-pulse" />
+							<div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
 						))}
 					</div>
 				</div>
@@ -220,10 +220,10 @@ export function Announcements() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Announcements</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Announcements</h1>
 				</div>
-				<div className="bg-red-50 border border-red-200 rounded-lg p-4">
-					<p className="text-red-800">Failed to load announcements</p>
+				<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+					<p className="text-red-800 dark:text-red-300">Failed to load announcements</p>
 				</div>
 			</div>
 		);
@@ -238,8 +238,8 @@ export function Announcements() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Announcements</h1>
-					<p className="text-gray-600 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Announcements</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Manage system-wide announcements for your organization
 					</p>
 				</div>
@@ -269,8 +269,8 @@ export function Announcements() {
 			</div>
 
 			{(showForm || editingId) && (
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-medium text-gray-900 mb-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+					<h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
 						{editingId ? 'Edit Announcement' : 'Create Announcement'}
 					</h2>
 					<form onSubmit={editingId ? handleUpdate : handleCreate}>
@@ -278,7 +278,7 @@ export function Announcements() {
 							<div>
 								<label
 									htmlFor="title"
-									className="block text-sm font-medium text-gray-700"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 								>
 									Title
 								</label>
@@ -290,7 +290,7 @@ export function Announcements() {
 										setFormData({ ...formData, title: e.target.value })
 									}
 									required
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+									className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 									placeholder="Important system update"
 								/>
 							</div>
@@ -298,7 +298,7 @@ export function Announcements() {
 							<div>
 								<label
 									htmlFor="message"
-									className="block text-sm font-medium text-gray-700"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 								>
 									Message (optional)
 								</label>
@@ -309,7 +309,7 @@ export function Announcements() {
 										setFormData({ ...formData, message: e.target.value })
 									}
 									rows={2}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+									className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 									placeholder="Additional details about the announcement..."
 								/>
 							</div>
@@ -318,7 +318,7 @@ export function Announcements() {
 								<div>
 									<label
 										htmlFor="type"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										Type
 									</label>
@@ -331,7 +331,7 @@ export function Announcements() {
 												type: e.target.value as AnnouncementType,
 											})
 										}
-										className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+										className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 									>
 										<option value="info">Info</option>
 										<option value="warning">Warning</option>
@@ -351,9 +351,9 @@ export function Announcements() {
 														dismissible: e.target.checked,
 													})
 												}
-												className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+												className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 											/>
-											<span className="ml-2 text-sm text-gray-700">
+											<span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
 												Allow users to dismiss
 											</span>
 										</label>
@@ -365,7 +365,7 @@ export function Announcements() {
 								<div>
 									<label
 										htmlFor="starts_at"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										Start Time (optional)
 									</label>
@@ -376,9 +376,9 @@ export function Announcements() {
 										onChange={(e) =>
 											setFormData({ ...formData, starts_at: e.target.value })
 										}
-										className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+										className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 									/>
-									<p className="mt-1 text-xs text-gray-500">
+									<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 										Leave empty to show immediately
 									</p>
 								</div>
@@ -386,7 +386,7 @@ export function Announcements() {
 								<div>
 									<label
 										htmlFor="ends_at"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										End Time (optional)
 									</label>
@@ -397,9 +397,9 @@ export function Announcements() {
 										onChange={(e) =>
 											setFormData({ ...formData, ends_at: e.target.value })
 										}
-										className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+										className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 									/>
-									<p className="mt-1 text-xs text-gray-500">
+									<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 										Leave empty to show indefinitely
 									</p>
 								</div>
@@ -416,9 +416,9 @@ export function Announcements() {
 												active: e.target.checked,
 											})
 										}
-										className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+										className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 									/>
-									<span className="ml-2 text-sm text-gray-700">
+									<span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
 										Active (show to users)
 									</span>
 								</label>
@@ -428,7 +428,7 @@ export function Announcements() {
 								<button
 									type="button"
 									onClick={cancelEdit}
-									className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+									className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
 								>
 									Cancel
 								</button>
@@ -451,7 +451,7 @@ export function Announcements() {
 				</div>
 			)}
 
-			<div className="bg-white rounded-lg border border-gray-200">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				{sortedAnnouncements.length === 0 ? (
 					<div className="p-8 text-center">
 						<svg
@@ -468,39 +468,39 @@ export function Announcements() {
 								d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
 							/>
 						</svg>
-						<h3 className="mt-2 text-sm font-medium text-gray-900">
+						<h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
 							No announcements
 						</h3>
-						<p className="mt-1 text-sm text-gray-500">
+						<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
 							Create an announcement to notify users of important information.
 						</p>
 					</div>
 				) : (
-					<ul className="divide-y divide-gray-200">
+					<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 						{sortedAnnouncements.map((a) => {
 							const status = getAnnouncementStatus(a);
 							return (
-								<li key={a.id} className="p-4 hover:bg-gray-50">
+								<li key={a.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
 									<div className="flex items-center justify-between">
 										<div className="flex-1 min-w-0">
 											<div className="flex items-center gap-2 flex-wrap">
-												<h3 className="text-sm font-medium text-gray-900 truncate">
+												<h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
 													{a.title}
 												</h3>
 												<TypeBadge type={a.type} />
 												<StatusBadge status={status} />
 												{!a.dismissible && (
-													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
 														Non-dismissible
 													</span>
 												)}
 											</div>
 											{a.message && (
-												<p className="mt-1 text-sm text-gray-500 truncate">
+												<p className="mt-1 text-sm text-gray-500 dark:text-gray-400 truncate">
 													{a.message}
 												</p>
 											)}
-											<div className="mt-1 text-xs text-gray-500 space-x-4">
+											<div className="mt-1 text-xs text-gray-500 dark:text-gray-400 space-x-4">
 												<span>Created: {formatDateTime(a.created_at)}</span>
 												{a.starts_at && (
 													<span>Starts: {formatDateTime(a.starts_at)}</span>

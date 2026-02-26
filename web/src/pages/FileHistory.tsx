@@ -53,14 +53,14 @@ function VersionRow({
 		<div className="relative">
 			{/* Timeline line */}
 			{index < total - 1 && (
-				<div className="absolute left-4 top-10 bottom-0 w-0.5 bg-gray-200" />
+				<div className="absolute left-4 top-10 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
 			)}
 
 			<div className="flex items-start gap-4 py-4">
 				{/* Timeline dot */}
 				<div
 					className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center ${
-						isLatest ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'
+						isLatest ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
 					}`}
 				>
 					<svg
@@ -82,16 +82,16 @@ function VersionRow({
 				{/* Version info */}
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-2">
-						<span className="font-medium text-gray-900">
+						<span className="font-medium text-gray-900 dark:text-white">
 							{formatDateTime(version.snapshot_time)}
 						</span>
 						{isLatest && (
-							<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+							<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
 								Latest
 							</span>
 						)}
 					</div>
-					<div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
+					<div className="mt-1 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
 						<span className="font-mono">{version.short_id}</span>
 						<span>{formatBytes(version.size)}</span>
 						{version.mod_time && (
@@ -105,7 +105,7 @@ function VersionRow({
 					<button
 						type="button"
 						onClick={() => onRestore(version)}
-						className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors"
+						className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
 					>
 						<svg
 							aria-hidden="true"
@@ -157,37 +157,37 @@ function RestoreVersionModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg max-w-lg w-full mx-4">
-				<div className="p-6 border-b border-gray-200">
-					<h3 className="text-lg font-semibold text-gray-900">
+			<div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full mx-4">
+				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Restore File Version
 					</h3>
-					<p className="text-sm text-gray-500 mt-1">
+					<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 						Restore file from snapshot {version.short_id}
 					</p>
 				</div>
 
 				<form onSubmit={handleSubmit} className="p-6 space-y-4">
 					<div>
-						<p className="text-sm font-medium text-gray-500">File</p>
-						<p className="font-mono text-gray-900 break-all">{filePath}</p>
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">File</p>
+						<p className="font-mono text-gray-900 dark:text-white break-all">{filePath}</p>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<p className="text-sm font-medium text-gray-500">Snapshot Time</p>
-							<p className="text-gray-900">
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Snapshot Time</p>
+							<p className="text-gray-900 dark:text-white">
 								{formatDateTime(version.snapshot_time)}
 							</p>
 						</div>
 						<div>
-							<p className="text-sm font-medium text-gray-500">Size</p>
-							<p className="text-gray-900">{formatBytes(version.size)}</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Size</p>
+							<p className="text-gray-900 dark:text-white">{formatBytes(version.size)}</p>
 						</div>
 					</div>
 
 					<div>
-						<p className="text-sm font-medium text-gray-700">
+						<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
 							Restore Destination
 						</p>
 						<div className="mt-2 space-y-2">
@@ -198,7 +198,7 @@ function RestoreVersionModal({
 									onChange={() => setUseOriginalPath(true)}
 									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
 								/>
-								<span className="ml-2 text-sm text-gray-900">
+								<span className="ml-2 text-sm text-gray-900 dark:text-white">
 									Original location
 								</span>
 							</label>
@@ -209,7 +209,7 @@ function RestoreVersionModal({
 									onChange={() => setUseOriginalPath(false)}
 									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
 								/>
-								<span className="ml-2 text-sm text-gray-900">
+								<span className="ml-2 text-sm text-gray-900 dark:text-white">
 									Custom location
 								</span>
 							</label>
@@ -219,7 +219,7 @@ function RestoreVersionModal({
 									value={targetPath}
 									onChange={(e) => setTargetPath(e.target.value)}
 									placeholder="/path/to/restore"
-									className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+									className="mt-2 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
 								/>
 							)}
 						</div>
@@ -230,7 +230,7 @@ function RestoreVersionModal({
 							type="button"
 							onClick={onClose}
 							disabled={isSubmitting}
-							className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+							className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
 						>
 							Cancel
 						</button>
@@ -346,20 +346,20 @@ export function FileHistory() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900">File History</h1>
-				<p className="text-gray-600 mt-1">
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">File History</h1>
+				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Browse all versions of a file across backup snapshots
 				</p>
 			</div>
 
 			{/* Search form */}
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 				<form onSubmit={handleSearch} className="space-y-4">
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 						<div>
 							<label
 								htmlFor="agent"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Agent
 							</label>
@@ -367,7 +367,7 @@ export function FileHistory() {
 								id="agent"
 								value={selectedAgentId}
 								onChange={(e) => setSelectedAgentId(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							>
 								<option value="">Select agent...</option>
 								{agents?.map((agent) => (
@@ -381,7 +381,7 @@ export function FileHistory() {
 						<div>
 							<label
 								htmlFor="repository"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Repository
 							</label>
@@ -389,7 +389,7 @@ export function FileHistory() {
 								id="repository"
 								value={selectedRepoId}
 								onChange={(e) => setSelectedRepoId(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							>
 								<option value="">Select repository...</option>
 								{repositories?.map((repo) => (
@@ -403,7 +403,7 @@ export function FileHistory() {
 						<div>
 							<label
 								htmlFor="filePath"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								File Path
 							</label>
@@ -413,7 +413,7 @@ export function FileHistory() {
 								value={filePath}
 								onChange={(e) => setFilePath(e.target.value)}
 								placeholder="/path/to/file"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
 							/>
 						</div>
 					</div>
@@ -446,7 +446,7 @@ export function FileHistory() {
 
 			{/* Results */}
 			{queryParams && (
-				<div className="bg-white rounded-lg border border-gray-200">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 					{isLoading ? (
 						<LoadingSpinner />
 					) : isError ? (
@@ -457,21 +457,21 @@ export function FileHistory() {
 					) : historyData ? (
 						<>
 							{/* Header */}
-							<div className="p-6 border-b border-gray-200">
+							<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 								<div className="flex items-start justify-between">
 									<div>
-										<h2 className="text-lg font-semibold text-gray-900">
+										<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 											Version History
 										</h2>
-										<p className="font-mono text-sm text-gray-500 mt-1 break-all">
+										<p className="font-mono text-sm text-gray-500 dark:text-gray-400 mt-1 break-all">
 											{historyData.file_path}
 										</p>
-										<div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+										<div className="flex items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
 											<span>Agent: {historyData.agent_name}</span>
 											<span>Repository: {historyData.repo_name}</span>
 										</div>
 									</div>
-									<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+									<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
 										{historyData.versions.length} version
 										{historyData.versions.length !== 1 ? 's' : ''}
 									</span>
@@ -481,7 +481,7 @@ export function FileHistory() {
 							{/* Timeline */}
 							<div className="p-6">
 								{historyData.message && (
-									<div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+									<div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
 										<div className="flex">
 											<svg
 												aria-hidden="true"
@@ -495,7 +495,7 @@ export function FileHistory() {
 													clipRule="evenodd"
 												/>
 											</svg>
-											<p className="ml-3 text-sm text-yellow-700">
+											<p className="ml-3 text-sm text-yellow-700 dark:text-yellow-300">
 												{historyData.message}
 											</p>
 										</div>
@@ -516,10 +516,10 @@ export function FileHistory() {
 										))}
 									</div>
 								) : (
-									<div className="text-center py-12 text-gray-500">
+									<div className="text-center py-12 text-gray-500 dark:text-gray-400">
 										<svg
 											aria-hidden="true"
-											className="w-12 h-12 mx-auto mb-3 text-gray-300"
+											className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
 											fill="none"
 											stroke="currentColor"
 											viewBox="0 0 24 24"
@@ -531,7 +531,7 @@ export function FileHistory() {
 												d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
 											/>
 										</svg>
-										<p className="font-medium text-gray-900">
+										<p className="font-medium text-gray-900 dark:text-white">
 											No versions found
 										</p>
 										<p className="text-sm">
@@ -547,10 +547,10 @@ export function FileHistory() {
 
 			{/* Empty state before search */}
 			{!queryParams && (
-				<div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-500">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-500 dark:text-gray-400">
 					<svg
 						aria-hidden="true"
-						className="w-12 h-12 mx-auto mb-3 text-gray-300"
+						className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -562,7 +562,7 @@ export function FileHistory() {
 							d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
 						/>
 					</svg>
-					<p className="font-medium text-gray-900">Search for file history</p>
+					<p className="font-medium text-gray-900 dark:text-white">Search for file history</p>
 					<p className="text-sm">
 						Select an agent, repository, and enter a file path to view all
 						versions

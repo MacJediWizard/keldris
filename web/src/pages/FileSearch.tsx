@@ -47,7 +47,7 @@ function FileResultRow({ file, onRestore }: FileResultRowProps) {
 	const isDirectory = file.file_type === 'dir';
 
 	return (
-		<tr className="hover:bg-gray-50">
+		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-4 py-3">
 				<div className="flex items-center gap-2">
 					{isDirectory ? (
@@ -76,19 +76,19 @@ function FileResultRow({ file, onRestore }: FileResultRowProps) {
 						</svg>
 					)}
 					<div className="min-w-0">
-						<p className="font-medium text-gray-900 truncate">
+						<p className="font-medium text-gray-900 dark:text-white truncate">
 							{file.file_name}
 						</p>
-						<p className="text-xs text-gray-500 font-mono truncate">
+						<p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">
 							{file.file_path}
 						</p>
 					</div>
 				</div>
 			</td>
-			<td className="px-4 py-3 text-sm text-gray-500 text-right">
+			<td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-right">
 				{isDirectory ? '-' : formatBytes(file.file_size)}
 			</td>
-			<td className="px-4 py-3 text-sm text-gray-500">
+			<td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
 				{formatDateTime(file.mod_time)}
 			</td>
 			<td className="px-4 py-3 text-right">
@@ -139,25 +139,25 @@ function SnapshotGroupCard({
 			: group.snapshot_id;
 
 	return (
-		<div className="border border-gray-200 rounded-lg overflow-hidden">
+		<div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
 			<button
 				type="button"
 				onClick={onToggle}
-				className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between transition-colors"
+				className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition-colors"
 			>
 				<div className="flex items-center gap-4">
 					<span className="font-mono text-sm font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
 						{shortId}
 					</span>
 					<div className="text-left">
-						<p className="font-medium text-gray-900">
+						<p className="font-medium text-gray-900 dark:text-white">
 							{formatDateTime(group.snapshot_time)}
 						</p>
-						<p className="text-sm text-gray-500">{group.hostname}</p>
+						<p className="text-sm text-gray-500 dark:text-gray-400">{group.hostname}</p>
 					</div>
 				</div>
 				<div className="flex items-center gap-4">
-					<span className="text-sm text-gray-500">
+					<span className="text-sm text-gray-500 dark:text-gray-400">
 						{group.file_count} file{group.file_count !== 1 ? 's' : ''}
 					</span>
 					<svg
@@ -180,23 +180,23 @@ function SnapshotGroupCard({
 			{isExpanded && (
 				<div className="overflow-x-auto">
 					<table className="w-full">
-						<thead className="bg-gray-50 border-t border-gray-200">
+						<thead className="bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
 							<tr>
-								<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									File
 								</th>
-								<th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Size
 								</th>
-								<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Modified
 								</th>
-								<th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-gray-200">
+						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 							{group.files.map((file, index) => (
 								<FileResultRow
 									key={`${file.file_path}-${index}`}
@@ -242,9 +242,9 @@ function RestoreFileModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg max-w-lg w-full mx-4">
-				<div className="p-6 border-b border-gray-200">
-					<h3 className="text-lg font-semibold text-gray-900">Restore File</h3>
+			<div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full mx-4">
+				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">Restore File</h3>
 					<p className="text-sm text-gray-500 mt-1">
 						Restore file from snapshot {shortId}
 					</p>
@@ -252,27 +252,27 @@ function RestoreFileModal({
 
 				<form onSubmit={handleSubmit} className="p-6 space-y-4">
 					<div>
-						<p className="text-sm font-medium text-gray-500">File</p>
-						<p className="font-mono text-gray-900 break-all">
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">File</p>
+						<p className="font-mono text-gray-900 dark:text-white break-all">
 							{file.file_path}
 						</p>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<p className="text-sm font-medium text-gray-500">Snapshot Time</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Snapshot Time</p>
 							<p className="text-gray-900">
 								{formatDateTime(file.snapshot_time)}
 							</p>
 						</div>
 						<div>
-							<p className="text-sm font-medium text-gray-500">Size</p>
-							<p className="text-gray-900">{formatBytes(file.file_size)}</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Size</p>
+							<p className="text-gray-900 dark:text-white">{formatBytes(file.file_size)}</p>
 						</div>
 					</div>
 
 					<div>
-						<p className="text-sm font-medium text-gray-700">
+						<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
 							Restore Destination
 						</p>
 						<div className="mt-2 space-y-2">
@@ -283,7 +283,7 @@ function RestoreFileModal({
 									onChange={() => setUseOriginalPath(true)}
 									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
 								/>
-								<span className="ml-2 text-sm text-gray-900">
+								<span className="ml-2 text-sm text-gray-900 dark:text-white">
 									Original location
 								</span>
 							</label>
@@ -294,7 +294,7 @@ function RestoreFileModal({
 									onChange={() => setUseOriginalPath(false)}
 									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
 								/>
-								<span className="ml-2 text-sm text-gray-900">
+								<span className="ml-2 text-sm text-gray-900 dark:text-white">
 									Custom location
 								</span>
 							</label>
@@ -315,7 +315,7 @@ function RestoreFileModal({
 							type="button"
 							onClick={onClose}
 							disabled={isSubmitting}
-							className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+							className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
 						>
 							Cancel
 						</button>
@@ -463,20 +463,20 @@ export function FileSearch() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900">File Search</h1>
-				<p className="text-gray-600 mt-1">
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">File Search</h1>
+				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Search for files by name across all backup snapshots
 				</p>
 			</div>
 
 			{/* Search form */}
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 p-6">
 				<form onSubmit={handleSearch} className="space-y-4">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label
 								htmlFor="agent"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Agent
 							</label>
@@ -484,7 +484,7 @@ export function FileSearch() {
 								id="agent"
 								value={selectedAgentId}
 								onChange={(e) => setSelectedAgentId(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							>
 								<option value="">Select agent...</option>
 								{agents?.map((agent) => (
@@ -498,7 +498,7 @@ export function FileSearch() {
 						<div>
 							<label
 								htmlFor="repository"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Repository
 							</label>
@@ -506,7 +506,7 @@ export function FileSearch() {
 								id="repository"
 								value={selectedRepoId}
 								onChange={(e) => setSelectedRepoId(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							>
 								<option value="">Select repository...</option>
 								{repositories?.map((repo) => (
@@ -522,7 +522,7 @@ export function FileSearch() {
 						<div>
 							<label
 								htmlFor="searchQuery"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								File Name
 							</label>
@@ -532,9 +532,9 @@ export function FileSearch() {
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
 								placeholder="config.json, *.log, my-file*"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							/>
-							<p className="mt-1 text-xs text-gray-500">
+							<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 								Supports wildcards: * matches any characters
 							</p>
 						</div>
@@ -542,7 +542,7 @@ export function FileSearch() {
 						<div>
 							<label
 								htmlFor="pathFilter"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Path Filter (Optional)
 							</label>
@@ -554,7 +554,7 @@ export function FileSearch() {
 								placeholder="/home/user/documents"
 								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
 							/>
-							<p className="mt-1 text-xs text-gray-500">
+							<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 								Limit search to files under this path
 							</p>
 						</div>
@@ -588,7 +588,7 @@ export function FileSearch() {
 
 			{/* Results */}
 			{queryParams && (
-				<div className="bg-white rounded-lg border border-gray-200">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200">
 					{isLoading ? (
 						<LoadingSpinner />
 					) : isError ? (
@@ -599,10 +599,10 @@ export function FileSearch() {
 					) : searchData ? (
 						<>
 							{/* Header */}
-							<div className="p-6 border-b border-gray-200">
+							<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 								<div className="flex items-start justify-between">
 									<div>
-										<h2 className="text-lg font-semibold text-gray-900">
+										<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 											Search Results
 										</h2>
 										<p className="text-sm text-gray-500 mt-1">
@@ -645,7 +645,7 @@ export function FileSearch() {
 							{/* Results grouped by snapshot */}
 							<div className="p-6">
 								{searchData.message && (
-									<div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+									<div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
 										<div className="flex">
 											<svg
 												aria-hidden="true"
@@ -659,7 +659,7 @@ export function FileSearch() {
 													clipRule="evenodd"
 												/>
 											</svg>
-											<p className="ml-3 text-sm text-yellow-700">
+											<p className="ml-3 text-sm text-yellow-700 dark:text-yellow-300">
 												{searchData.message}
 											</p>
 										</div>
@@ -694,7 +694,7 @@ export function FileSearch() {
 												d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 											/>
 										</svg>
-										<p className="font-medium text-gray-900">No files found</p>
+										<p className="font-medium text-gray-900 dark:text-white">No files found</p>
 										<p className="text-sm">
 											No files matching "{searchData.query}" were found in any
 											snapshot
@@ -709,7 +709,7 @@ export function FileSearch() {
 
 			{/* Empty state before search */}
 			{!queryParams && (
-				<div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-500">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 p-12 text-center text-gray-500">
 					<svg
 						aria-hidden="true"
 						className="w-12 h-12 mx-auto mb-3 text-gray-300"
@@ -724,7 +724,7 @@ export function FileSearch() {
 							d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 						/>
 					</svg>
-					<p className="font-medium text-gray-900">
+					<p className="font-medium text-gray-900 dark:text-white">
 						Search for files across snapshots
 					</p>
 					<p className="text-sm">

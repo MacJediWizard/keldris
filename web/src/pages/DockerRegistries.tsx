@@ -81,10 +81,10 @@ function RegistryCard({
 	const healthColor = getHealthStatusColor(registry.health_status);
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-sm transition-shadow">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-sm transition-shadow">
 			<div className="flex items-start justify-between mb-4">
 				<div className="flex items-center gap-3">
-					<div className="p-2 bg-indigo-100 rounded-lg">
+					<div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
 						<svg
 							aria-hidden="true"
 							className="w-6 h-6 text-indigo-600"
@@ -102,19 +102,19 @@ function RegistryCard({
 					</div>
 					<div>
 						<div className="flex items-center gap-2">
-							<h3 className="font-semibold text-gray-900">{registry.name}</h3>
+							<h3 className="font-semibold text-gray-900 dark:text-white">{registry.name}</h3>
 							{registry.is_default && (
-								<span className="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded-full">
+								<span className="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">
 									Default
 								</span>
 							)}
 							{!registry.enabled && (
-								<span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+								<span className="px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
 									Disabled
 								</span>
 							)}
 						</div>
-						<p className="text-sm text-gray-500">
+						<p className="text-sm text-gray-500 dark:text-gray-400">
 							{getRegistryTypeLabel(registry.type)}
 						</p>
 					</div>
@@ -130,12 +130,12 @@ function RegistryCard({
 			</div>
 
 			<div className="space-y-2 mb-4">
-				<div className="flex items-center text-sm text-gray-600">
-					<span className="w-24 text-gray-500">URL:</span>
+				<div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+					<span className="w-24 text-gray-500 dark:text-gray-400">URL:</span>
 					<span className="truncate">{registry.url}</span>
 				</div>
-				<div className="flex items-center text-sm text-gray-600">
-					<span className="w-24 text-gray-500">Last Check:</span>
+				<div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+					<span className="w-24 text-gray-500 dark:text-gray-400">Last Check:</span>
 					<span>{formatDate(registry.last_health_check)}</span>
 				</div>
 				{registry.credentials_expires_at && (
@@ -153,13 +153,13 @@ function RegistryCard({
 					</div>
 				)}
 				{registry.last_health_error && (
-					<div className="mt-2 p-2 bg-red-50 rounded text-sm text-red-700">
+					<div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-sm text-red-700 dark:text-red-300">
 						{registry.last_health_error}
 					</div>
 				)}
 			</div>
 
-			<div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
+			<div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100 dark:border-gray-700">
 				<button
 					type="button"
 					onClick={() => onLogin(registry.id)}
@@ -267,7 +267,7 @@ function RegistryForm({
 			if (field === 'gcr_key_json') {
 				return (
 					<div key={field}>
-						<label className="block text-sm font-medium text-gray-700 mb-1">
+						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 							{label}
 							<textarea
 								value={
@@ -281,7 +281,7 @@ function RegistryForm({
 									})
 								}
 								rows={6}
-								className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+								className="mt-1 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
 								placeholder="Paste your GCP service account JSON key here..."
 							/>
 						</label>
@@ -291,7 +291,7 @@ function RegistryForm({
 
 			return (
 				<div key={field}>
-					<label className="block text-sm font-medium text-gray-700 mb-1">
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 						{label}
 						<input
 							type={isPassword ? 'password' : 'text'}
@@ -304,7 +304,7 @@ function RegistryForm({
 									[field]: e.target.value,
 								})
 							}
-							className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="mt-1 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 					</label>
 				</div>
@@ -315,21 +315,21 @@ function RegistryForm({
 	return (
 		<form onSubmit={handleSubmit} className="space-y-4">
 			<div>
-				<label className="block text-sm font-medium text-gray-700 mb-1">
+				<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 					Name
 					<input
 						type="text"
 						value={name}
 						onChange={(e) => setName(e.target.value)}
 						required
-						className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="mt-1 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						placeholder="My Registry"
 					/>
 				</label>
 			</div>
 
 			<div>
-				<label className="block text-sm font-medium text-gray-700 mb-1">
+				<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 					Registry Type
 					<select
 						value={type}
@@ -341,7 +341,7 @@ function RegistryForm({
 								setUrl(newType.default_url);
 							}
 						}}
-						className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="mt-1 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					>
 						{types.map((t) => (
 							<option key={t.type} value={t.type}>
@@ -351,34 +351,34 @@ function RegistryForm({
 					</select>
 				</label>
 				{selectedType && (
-					<p className="mt-1 text-sm text-gray-500">
+					<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
 						{selectedType.description}
 					</p>
 				)}
 			</div>
 
 			<div>
-				<label className="block text-sm font-medium text-gray-700 mb-1">
+				<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 					URL
 					<input
 						type="url"
 						value={url}
 						onChange={(e) => setUrl(e.target.value)}
-						className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="mt-1 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						placeholder={
 							selectedType?.default_url || 'https://registry.example.com'
 						}
 					/>
 				</label>
 				{selectedType?.default_url && (
-					<p className="mt-1 text-sm text-gray-500">
+					<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
 						Leave empty to use: {selectedType.default_url}
 					</p>
 				)}
 			</div>
 
-			<div className="border-t border-gray-200 pt-4">
-				<h4 className="font-medium text-gray-900 mb-3">Credentials</h4>
+			<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+				<h4 className="font-medium text-gray-900 dark:text-white mb-3">Credentials</h4>
 				<div className="space-y-3">{renderCredentialFields()}</div>
 			</div>
 
@@ -388,9 +388,9 @@ function RegistryForm({
 					id="isDefault"
 					checked={isDefault}
 					onChange={(e) => setIsDefault(e.target.checked)}
-					className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+					className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 				/>
-				<label htmlFor="isDefault" className="text-sm text-gray-700">
+				<label htmlFor="isDefault" className="text-sm text-gray-700 dark:text-gray-300">
 					Set as default registry
 				</label>
 			</div>
@@ -399,7 +399,7 @@ function RegistryForm({
 				<button
 					type="button"
 					onClick={onCancel}
-					className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+					className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 				>
 					Cancel
 				</button>
@@ -464,7 +464,7 @@ function RotateCredentialsModal({
 			if (field === 'gcr_key_json') {
 				return (
 					<div key={field}>
-						<label className="block text-sm font-medium text-gray-700 mb-1">
+						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 							{label}
 							<textarea
 								value={
@@ -478,7 +478,7 @@ function RotateCredentialsModal({
 									})
 								}
 								rows={6}
-								className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+								className="mt-1 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
 								placeholder="Paste your GCP service account JSON key here..."
 							/>
 						</label>
@@ -488,7 +488,7 @@ function RotateCredentialsModal({
 
 			return (
 				<div key={field}>
-					<label className="block text-sm font-medium text-gray-700 mb-1">
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 						{label}
 						<input
 							type={isPassword ? 'password' : 'text'}
@@ -501,7 +501,7 @@ function RotateCredentialsModal({
 									[field]: e.target.value,
 								})
 							}
-							className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="mt-1 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 					</label>
 				</div>
@@ -511,25 +511,25 @@ function RotateCredentialsModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+			<div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="p-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 						Rotate Credentials - {registry.name}
 					</h2>
 					<form onSubmit={handleSubmit} className="space-y-4">
 						<div className="space-y-3">{renderCredentialFields()}</div>
 
 						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">
+							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 								Expires At (Optional)
 								<input
 									type="datetime-local"
 									value={expiresAt}
 									onChange={(e) => setExpiresAt(e.target.value)}
-									className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									className="mt-1 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								/>
 							</label>
-							<p className="mt-1 text-sm text-gray-500">
+							<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
 								Set a reminder for when these credentials expire
 							</p>
 						</div>
@@ -538,7 +538,7 @@ function RotateCredentialsModal({
 							<button
 								type="button"
 								onClick={onCancel}
-								className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+								className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 							>
 								Cancel
 							</button>
@@ -651,10 +651,10 @@ export function DockerRegistries() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 						Docker Registries
 					</h1>
-					<p className="text-gray-600 mt-1">
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Manage private Docker registry credentials with encryption and
 						auto-login
 					</p>
@@ -688,7 +688,7 @@ export function DockerRegistries() {
 
 			{/* Expiring Credentials Warning */}
 			{expiringRegistries.length > 0 && (
-				<div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+				<div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
 					<div className="flex items-start gap-3">
 						<svg
 							aria-hidden="true"
@@ -728,8 +728,8 @@ export function DockerRegistries() {
 
 			{/* Add/Edit Form */}
 			{(showForm || editingRegistry) && types && (
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 						{editingRegistry ? 'Edit Registry' : 'Add New Registry'}
 					</h2>
 					<RegistryForm
@@ -747,7 +747,7 @@ export function DockerRegistries() {
 
 			{/* Registries List */}
 			{isError ? (
-				<div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+				<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
 					<p className="text-red-700 font-medium">
 						Failed to load Docker registries
 					</p>
@@ -760,13 +760,13 @@ export function DockerRegistries() {
 					{[1, 2, 3].map((i) => (
 						<div
 							key={i}
-							className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse"
+							className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse"
 						>
 							<div className="flex items-start gap-3">
-								<div className="w-10 h-10 bg-gray-200 rounded-lg" />
+								<div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg" />
 								<div className="flex-1">
-									<div className="h-5 w-32 bg-gray-200 rounded mb-2" />
-									<div className="h-4 w-24 bg-gray-200 rounded" />
+									<div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+									<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 								</div>
 							</div>
 						</div>
@@ -789,7 +789,7 @@ export function DockerRegistries() {
 					))}
 				</div>
 			) : (
-				<div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center">
 					<svg
 						aria-hidden="true"
 						className="w-16 h-16 mx-auto mb-4 text-gray-300"
@@ -804,10 +804,10 @@ export function DockerRegistries() {
 							d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
 						/>
 					</svg>
-					<h3 className="text-lg font-medium text-gray-900 mb-2">
+					<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
 						No Docker Registries
 					</h3>
-					<p className="text-gray-500 mb-4">
+					<p className="text-gray-500 dark:text-gray-400 mb-4">
 						Add a Docker registry to enable automatic authentication for image
 						pulls and pushes.
 					</p>

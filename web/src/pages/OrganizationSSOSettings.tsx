@@ -121,10 +121,10 @@ export function OrganizationSSOSettings() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 						SSO Group Sync Settings
 					</h1>
-					<p className="text-gray-600 mt-1">
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Map OIDC groups from your identity provider to Keldris organization
 						roles
 					</p>
@@ -143,15 +143,15 @@ export function OrganizationSSOSettings() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-					<div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
+					<div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+					<div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2" />
 				</div>
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 					<div className="space-y-4">
 						{[1, 2, 3].map((i) => (
 							<div
 								key={i}
-								className="h-12 w-full bg-gray-200 rounded animate-pulse"
+								className="h-12 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
 							/>
 						))}
 					</div>
@@ -163,19 +163,19 @@ export function OrganizationSSOSettings() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900">
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 					SSO Group Sync Settings
 				</h1>
-				<p className="text-gray-600 mt-1">
+				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Map OIDC groups from your identity provider to Keldris organization
 					roles
 				</p>
 			</div>
 
 			{/* SSO Settings */}
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-					<h2 className="text-lg font-semibold text-gray-900">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Default Settings
 					</h2>
 					{canEdit && !settingsEditing && (
@@ -194,7 +194,7 @@ export function OrganizationSSOSettings() {
 							<div>
 								<label
 									htmlFor="defaultRole"
-									className="block text-sm font-medium text-gray-700 mb-1"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 								>
 									Default Role for Unmapped Groups
 								</label>
@@ -204,7 +204,7 @@ export function OrganizationSSOSettings() {
 									onChange={(e) =>
 										setDefaultRole(e.target.value as OrgRole | '')
 									}
-									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								>
 									<option value="">
 										No default (require explicit mapping)
@@ -215,7 +215,7 @@ export function OrganizationSSOSettings() {
 										</option>
 									))}
 								</select>
-								<p className="mt-1 text-xs text-gray-500">
+								<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 									Users with unmapped OIDC groups will be assigned this role
 								</p>
 							</div>
@@ -225,11 +225,11 @@ export function OrganizationSSOSettings() {
 									id="autoCreateOrgs"
 									checked={autoCreateOrgs}
 									onChange={(e) => setAutoCreateOrgs(e.target.checked)}
-									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 								/>
 								<label
 									htmlFor="autoCreateOrgs"
-									className="text-sm text-gray-700"
+									className="text-sm text-gray-700 dark:text-gray-300"
 								>
 									Auto-create organizations from OIDC groups
 								</label>
@@ -238,7 +238,7 @@ export function OrganizationSSOSettings() {
 								<button
 									type="button"
 									onClick={() => setSettingsEditing(false)}
-									className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+									className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 								>
 									Cancel
 								</button>
@@ -255,26 +255,26 @@ export function OrganizationSSOSettings() {
 					) : (
 						<dl className="space-y-4">
 							<div>
-								<dt className="text-sm font-medium text-gray-500">
+								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
 									Default Role for Unmapped Groups
 								</dt>
-								<dd className="mt-1 text-sm text-gray-900">
+								<dd className="mt-1 text-sm text-gray-900 dark:text-white">
 									{settings?.default_role ? (
-										<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize bg-indigo-100 text-indigo-700">
+										<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
 											{settings.default_role}
 										</span>
 									) : (
-										<span className="text-gray-500">
+										<span className="text-gray-500 dark:text-gray-400">
 											No default (require explicit mapping)
 										</span>
 									)}
 								</dd>
 							</div>
 							<div>
-								<dt className="text-sm font-medium text-gray-500">
+								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
 									Auto-create Organizations
 								</dt>
-								<dd className="mt-1 text-sm text-gray-900">
+								<dd className="mt-1 text-sm text-gray-900 dark:text-white">
 									{settings?.auto_create_orgs ? 'Enabled' : 'Disabled'}
 								</dd>
 							</div>
@@ -284,9 +284,9 @@ export function OrganizationSSOSettings() {
 			</div>
 
 			{/* Group Mappings */}
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-					<h2 className="text-lg font-semibold text-gray-900">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Group Mappings
 					</h2>
 					{canEdit && (
@@ -303,7 +303,7 @@ export function OrganizationSSOSettings() {
 					{mappings && mappings.length > 0 ? (
 						<table className="w-full">
 							<thead>
-								<tr className="text-left text-sm text-gray-500 border-b border-gray-200">
+								<tr className="text-left text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
 									<th className="pb-3 font-medium">OIDC Group Name</th>
 									<th className="pb-3 font-medium">Role</th>
 									<th className="pb-3 font-medium">Auto Create Org</th>
@@ -314,16 +314,16 @@ export function OrganizationSSOSettings() {
 							</thead>
 							<tbody>
 								{mappings.map((mapping) => (
-									<tr key={mapping.id} className="border-b border-gray-100">
-										<td className="py-3 text-sm text-gray-900">
+									<tr key={mapping.id} className="border-b border-gray-100 dark:border-gray-700">
+										<td className="py-3 text-sm text-gray-900 dark:text-white">
 											{mapping.oidc_group_name}
 										</td>
 										<td className="py-3">
-											<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize bg-indigo-100 text-indigo-700">
+											<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
 												{mapping.role}
 											</span>
 										</td>
-										<td className="py-3 text-sm text-gray-600">
+										<td className="py-3 text-sm text-gray-600 dark:text-gray-400">
 											{mapping.auto_create_org ? 'Yes' : 'No'}
 										</td>
 										{canEdit && (
@@ -350,7 +350,7 @@ export function OrganizationSSOSettings() {
 						</table>
 					) : (
 						<div className="text-center py-8">
-							<p className="text-gray-500">No group mappings configured yet</p>
+							<p className="text-gray-500 dark:text-gray-400">No group mappings configured yet</p>
 							{canEdit && (
 								<button
 									type="button"
@@ -368,15 +368,15 @@ export function OrganizationSSOSettings() {
 			{/* Add Mapping Modal */}
 			{showAddModal && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+					<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 							Add Group Mapping
 						</h3>
 						<form onSubmit={handleAddMapping} className="space-y-4">
 							<div>
 								<label
 									htmlFor="groupName"
-									className="block text-sm font-medium text-gray-700 mb-1"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 								>
 									OIDC Group Name
 								</label>
@@ -386,17 +386,17 @@ export function OrganizationSSOSettings() {
 									value={newGroupName}
 									onChange={(e) => setNewGroupName(e.target.value)}
 									placeholder="e.g., engineering, admins"
-									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 									required
 								/>
-								<p className="mt-1 text-xs text-gray-500">
+								<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 									The exact group name as it appears in your OIDC provider
 								</p>
 							</div>
 							<div>
 								<label
 									htmlFor="role"
-									className="block text-sm font-medium text-gray-700 mb-1"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 								>
 									Keldris Role
 								</label>
@@ -404,7 +404,7 @@ export function OrganizationSSOSettings() {
 									id="role"
 									value={newRole}
 									onChange={(e) => setNewRole(e.target.value as OrgRole)}
-									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								>
 									{roleOptions.map((role) => (
 										<option key={role} value={role}>
@@ -419,9 +419,9 @@ export function OrganizationSSOSettings() {
 									id="autoCreate"
 									checked={newAutoCreate}
 									onChange={(e) => setNewAutoCreate(e.target.checked)}
-									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 								/>
-								<label htmlFor="autoCreate" className="text-sm text-gray-700">
+								<label htmlFor="autoCreate" className="text-sm text-gray-700 dark:text-gray-300">
 									Auto-create organization for this group
 								</label>
 							</div>
@@ -439,7 +439,7 @@ export function OrganizationSSOSettings() {
 										setNewRole('member');
 										setNewAutoCreate(false);
 									}}
-									className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+									className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 								>
 									Cancel
 								</button>
@@ -459,23 +459,23 @@ export function OrganizationSSOSettings() {
 			{/* Edit Mapping Modal */}
 			{editingMapping && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+					<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 							Edit Group Mapping
 						</h3>
 						<form onSubmit={handleUpdateMapping} className="space-y-4">
 							<div>
-								<span className="block text-sm font-medium text-gray-700 mb-1">
+								<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 									OIDC Group Name
 								</span>
-								<p className="text-sm text-gray-900 py-2">
+								<p className="text-sm text-gray-900 dark:text-white py-2">
 									{editingMapping.oidc_group_name}
 								</p>
 							</div>
 							<div>
 								<label
 									htmlFor="editRole"
-									className="block text-sm font-medium text-gray-700 mb-1"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 								>
 									Keldris Role
 								</label>
@@ -488,7 +488,7 @@ export function OrganizationSSOSettings() {
 											role: e.target.value as OrgRole,
 										})
 									}
-									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 								>
 									{roleOptions.map((role) => (
 										<option key={role} value={role}>
@@ -508,11 +508,11 @@ export function OrganizationSSOSettings() {
 											auto_create_org: e.target.checked,
 										})
 									}
-									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 								/>
 								<label
 									htmlFor="editAutoCreate"
-									className="text-sm text-gray-700"
+									className="text-sm text-gray-700 dark:text-gray-300"
 								>
 									Auto-create organization for this group
 								</label>
@@ -526,7 +526,7 @@ export function OrganizationSSOSettings() {
 								<button
 									type="button"
 									onClick={() => setEditingMapping(null)}
-									className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+									className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 								>
 									Cancel
 								</button>
@@ -546,9 +546,9 @@ export function OrganizationSSOSettings() {
 			{/* Delete Confirmation Modal */}
 			{deleteConfirm && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+					<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
 						<div className="flex items-center gap-3 mb-4">
-							<div className="p-2 bg-red-100 rounded-full">
+							<div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full">
 								<svg
 									aria-hidden="true"
 									className="w-6 h-6 text-red-600"
@@ -564,11 +564,11 @@ export function OrganizationSSOSettings() {
 									/>
 								</svg>
 							</div>
-							<h3 className="text-lg font-semibold text-gray-900">
+							<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 								Delete Mapping
 							</h3>
 						</div>
-						<p className="text-sm text-gray-600 mb-4">
+						<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
 							Are you sure you want to delete this group mapping? Users in this
 							OIDC group will no longer be automatically assigned to this
 							organization.
@@ -582,7 +582,7 @@ export function OrganizationSSOSettings() {
 							<button
 								type="button"
 								onClick={() => setDeleteConfirm(null)}
-								className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+								className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 							>
 								Cancel
 							</button>

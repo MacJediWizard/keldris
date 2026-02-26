@@ -11,10 +11,10 @@ function ColorPreview({ color, label }: { color: string; label: string }) {
 	return (
 		<div className="flex items-center gap-2">
 			<div
-				className="w-8 h-8 rounded border border-gray-300"
+				className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600"
 				style={{ backgroundColor: color || '#e5e7eb' }}
 			/>
-			<span className="text-sm text-gray-600">{color || label}</span>
+			<span className="text-sm text-gray-600 dark:text-gray-400">{color || label}</span>
 		</div>
 	);
 }
@@ -91,10 +91,10 @@ export function Branding() {
 		if (isFeatureGated) {
 			return (
 				<div className="p-6">
-					<h1 className="text-2xl font-bold text-gray-900 mb-4">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
 						White Label Branding
 					</h1>
-					<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+					<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
 						<svg
 							aria-hidden="true"
 							className="w-12 h-12 text-yellow-500 mx-auto mb-3"
@@ -109,10 +109,10 @@ export function Branding() {
 								d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
 							/>
 						</svg>
-						<h2 className="text-lg font-semibold text-yellow-800">
+						<h2 className="text-lg font-semibold text-yellow-800 dark:text-yellow-300">
 							Enterprise Feature
 						</h2>
-						<p className="text-yellow-700 mt-1">
+						<p className="text-yellow-700 dark:text-yellow-300 mt-1">
 							White label branding is available on the Enterprise plan. Upgrade
 							to customize your branding.
 						</p>
@@ -122,10 +122,10 @@ export function Branding() {
 		}
 		return (
 			<div className="p-6">
-				<h1 className="text-2xl font-bold text-gray-900 mb-4">
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
 					White Label Branding
 				</h1>
-				<div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+				<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-300">
 					Failed to load branding settings.
 				</div>
 			</div>
@@ -136,10 +136,10 @@ export function Branding() {
 		<div className="p-6 max-w-4xl">
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 						White Label Branding
 					</h1>
-					<p className="text-gray-500 mt-1">
+					<p className="text-gray-500 dark:text-gray-400 mt-1">
 						Customize the appearance of your Keldris instance.
 					</p>
 				</div>
@@ -147,7 +147,7 @@ export function Branding() {
 					<button
 						type="button"
 						onClick={() => setShowResetConfirm(true)}
-						className="px-4 py-2 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50"
+						className="px-4 py-2 text-sm text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
 					>
 						Reset to Defaults
 					</button>
@@ -156,15 +156,15 @@ export function Branding() {
 
 			<form onSubmit={handleSave} className="space-y-8">
 				{/* Product Identity */}
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 						Product Identity
 					</h2>
 					<div className="space-y-4">
 						<div>
 							<label
 								htmlFor="productName"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Product Name
 							</label>
@@ -175,16 +175,16 @@ export function Branding() {
 								onChange={(e) => setProductName(e.target.value)}
 								disabled={!canEdit}
 								placeholder="Keldris"
-								className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
-							<p className="text-xs text-gray-500 mt-1">
+							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 								Replaces the app name throughout the interface.
 							</p>
 						</div>
 						<div>
 							<label
 								htmlFor="supportUrl"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Support URL
 							</label>
@@ -195,22 +195,22 @@ export function Branding() {
 								onChange={(e) => setSupportUrl(e.target.value)}
 								disabled={!canEdit}
 								placeholder="https://support.example.com"
-								className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
 						</div>
 					</div>
 				</div>
 
 				{/* Logo & Favicon */}
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 						Logo & Favicon
 					</h2>
 					<div className="space-y-4">
 						<div>
 							<label
 								htmlFor="logoUrl"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Logo URL
 							</label>
@@ -221,10 +221,10 @@ export function Branding() {
 								onChange={(e) => setLogoUrl(e.target.value)}
 								disabled={!canEdit}
 								placeholder="https://example.com/logo.png"
-								className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
 							{logoUrl && (
-								<div className="mt-2 p-2 bg-gray-50 rounded border">
+								<div className="mt-2 p-2 bg-gray-50 dark:bg-gray-900 rounded border dark:border-gray-700">
 									<img
 										src={logoUrl}
 										alt="Logo preview"
@@ -239,7 +239,7 @@ export function Branding() {
 						<div>
 							<label
 								htmlFor="faviconUrl"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Favicon URL
 							</label>
@@ -250,22 +250,22 @@ export function Branding() {
 								onChange={(e) => setFaviconUrl(e.target.value)}
 								disabled={!canEdit}
 								placeholder="https://example.com/favicon.ico"
-								className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+								className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800"
 							/>
 						</div>
 					</div>
 				</div>
 
 				{/* Colors */}
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 						Brand Colors
 					</h2>
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label
 								htmlFor="primaryColor"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Primary Color
 							</label>
@@ -278,14 +278,14 @@ export function Branding() {
 									disabled={!canEdit}
 									placeholder="#4F46E5"
 									pattern="^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
-									className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+									className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800"
 								/>
 								<input
 									type="color"
 									value={primaryColor || '#4F46E5'}
 									onChange={(e) => setPrimaryColor(e.target.value)}
 									disabled={!canEdit}
-									className="w-10 h-10 rounded border border-gray-300 cursor-pointer disabled:cursor-not-allowed"
+									className="w-10 h-10 rounded border border-gray-300 dark:border-gray-600 cursor-pointer disabled:cursor-not-allowed"
 								/>
 							</div>
 							<ColorPreview color={primaryColor} label="Default (Indigo)" />
@@ -293,7 +293,7 @@ export function Branding() {
 						<div>
 							<label
 								htmlFor="secondaryColor"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Secondary Color
 							</label>
@@ -306,14 +306,14 @@ export function Branding() {
 									disabled={!canEdit}
 									placeholder="#6366F1"
 									pattern="^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
-									className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
+									className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800"
 								/>
 								<input
 									type="color"
 									value={secondaryColor || '#6366F1'}
 									onChange={(e) => setSecondaryColor(e.target.value)}
 									disabled={!canEdit}
-									className="w-10 h-10 rounded border border-gray-300 cursor-pointer disabled:cursor-not-allowed"
+									className="w-10 h-10 rounded border border-gray-300 dark:border-gray-600 cursor-pointer disabled:cursor-not-allowed"
 								/>
 							</div>
 							<ColorPreview
@@ -325,14 +325,14 @@ export function Branding() {
 				</div>
 
 				{/* Custom CSS */}
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 						Custom CSS
 					</h2>
 					<div>
 						<label
 							htmlFor="customCss"
-							className="block text-sm font-medium text-gray-700 mb-1"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 						>
 							Additional CSS
 						</label>
@@ -343,9 +343,9 @@ export function Branding() {
 							disabled={!canEdit}
 							rows={6}
 							placeholder=":root { --custom-var: #000; }"
-							className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 font-mono text-sm"
+							className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 font-mono text-sm"
 						/>
-						<p className="text-xs text-gray-500 mt-1">
+						<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 							Custom CSS injected into the application. Use CSS variables to
 							override colors.
 						</p>
@@ -366,13 +366,13 @@ export function Branding() {
 				)}
 
 				{updateBranding.isSuccess && (
-					<div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-700 text-sm">
+					<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-green-700 dark:text-green-300 text-sm">
 						Branding settings saved successfully.
 					</div>
 				)}
 
 				{updateBranding.isError && (
-					<div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+					<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-red-700 dark:text-red-300 text-sm">
 						Failed to save branding settings. Please check your input and try
 						again.
 					</div>
@@ -382,11 +382,11 @@ export function Branding() {
 			{/* Reset Confirmation Modal */}
 			{showResetConfirm && (
 				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-						<h3 className="text-lg font-semibold text-gray-900 mb-2">
+					<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-4">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
 							Reset Branding
 						</h3>
-						<p className="text-gray-600 mb-4">
+						<p className="text-gray-600 dark:text-gray-400 mb-4">
 							This will remove all custom branding and revert to the default
 							Keldris appearance. This action cannot be undone.
 						</p>
@@ -394,7 +394,7 @@ export function Branding() {
 							<button
 								type="button"
 								onClick={() => setShowResetConfirm(false)}
-								className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+								className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
 							>
 								Cancel
 							</button>

@@ -137,7 +137,7 @@ export function AuditLogs() {
 						type="button"
 						onClick={handleExportCsv}
 						disabled={exportCsv.isPending}
-						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
 					>
 						<svg
 							aria-hidden="true"
@@ -159,7 +159,7 @@ export function AuditLogs() {
 						type="button"
 						onClick={handleExportJson}
 						disabled={exportJson.isPending}
-						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+						className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
 					>
 						<svg
 							aria-hidden="true"
@@ -330,7 +330,7 @@ export function AuditLogs() {
 												key={log.id}
 												className="hover:bg-gray-50 dark:hover:bg-gray-700"
 											>
-												<td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
+												<td className="px-6 py-4 text-sm text-gray-900 dark:text-white whitespace-nowrap">
 													{formatDateTime(log.created_at)}
 												</td>
 												<td className="px-6 py-4">
@@ -340,7 +340,7 @@ export function AuditLogs() {
 														{formatAuditAction(log.action)}
 													</span>
 												</td>
-												<td className="px-6 py-4 text-sm text-gray-900">
+												<td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
 													<div>{formatResourceType(log.resource_type)}</div>
 													{log.resource_id && (
 														<div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
@@ -389,7 +389,7 @@ export function AuditLogs() {
 										)
 									}
 									disabled={currentPage === 1}
-									className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+									className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Previous
 								</button>
@@ -404,7 +404,7 @@ export function AuditLogs() {
 										)
 									}
 									disabled={currentPage >= totalPages}
-									className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+									className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									Next
 								</button>

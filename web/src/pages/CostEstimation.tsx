@@ -31,23 +31,23 @@ function StatCard({
 	subtitle,
 	icon,
 	isLoading,
-	valueClassName = 'text-gray-900',
+	valueClassName = 'text-gray-900 dark:text-white',
 }: StatCardProps) {
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<p className="text-sm font-medium text-gray-600">{title}</p>
+					<p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
 					<p className={`text-2xl font-bold mt-1 ${valueClassName}`}>
 						{isLoading ? (
-							<span className="inline-block w-16 h-7 bg-gray-200 rounded animate-pulse" />
+							<span className="inline-block w-16 h-7 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
 						) : (
 							value
 						)}
 					</p>
-					<p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+					<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
 				</div>
-				<div className="p-3 bg-indigo-50 rounded-lg text-indigo-600">
+				<div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
 					{icon}
 				</div>
 			</div>
@@ -72,7 +72,7 @@ function CostForecastChart() {
 				<div className="text-center">
 					<svg
 						aria-hidden="true"
-						className="w-12 h-12 mx-auto mb-3 text-gray-300"
+						className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -98,7 +98,7 @@ function CostForecastChart() {
 
 	return (
 		<div className="space-y-4">
-			<div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+			<div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
 				<span>Current: {formatCurrency(data.current_monthly_cost)}/mo</span>
 				<span>
 					Growth Rate: {((data.monthly_growth_rate || 0) * 100).toFixed(1)}%/mo
@@ -112,17 +112,17 @@ function CostForecastChart() {
 						<div key={forecast.period}>
 							<div className="flex justify-between text-sm mb-1">
 								<span className="font-medium">{forecast.period}</span>
-								<span className="text-gray-600">
+								<span className="text-gray-600 dark:text-gray-400">
 									{formatCurrency(forecast.projected_cost)}/mo
 								</span>
 							</div>
-							<div className="h-4 bg-gray-100 rounded-full overflow-hidden">
+							<div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
 								<div
 									className="h-full bg-indigo-500 rounded-full transition-all duration-500"
 									style={{ width: `${widthPercent}%` }}
 								/>
 							</div>
-							<div className="text-xs text-gray-500 mt-1">
+							<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 								{forecast.projected_size_gb.toFixed(1)} GB projected
 							</div>
 						</div>
@@ -137,7 +137,7 @@ function CostBreakdownByType({ byType }: { byType: Record<string, number> }) {
 	const entries = Object.entries(byType).filter(([, cost]) => cost > 0);
 
 	if (entries.length === 0) {
-		return <p className="text-gray-500 text-sm">No cost data available</p>;
+		return <p className="text-gray-500 dark:text-gray-400 text-sm">No cost data available</p>;
 	}
 
 	const total = entries.reduce((sum, [, cost]) => sum + cost, 0);
@@ -157,13 +157,13 @@ function CostBreakdownByType({ byType }: { byType: Record<string, number> }) {
 							</span>
 						</div>
 						<div className="flex items-center gap-4">
-							<div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+							<div className="w-24 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
 								<div
 									className="h-full bg-indigo-500 rounded-full"
 									style={{ width: `${percent}%` }}
 								/>
 							</div>
-							<span className="text-sm font-medium text-gray-900 w-20 text-right">
+							<span className="text-sm font-medium text-gray-900 dark:text-white w-20 text-right">
 								{formatCurrency(cost)}
 							</span>
 						</div>
@@ -215,7 +215,7 @@ function CostAlertForm({
 			<div>
 				<label
 					htmlFor="alert-name"
-					className="block text-sm font-medium text-gray-700 mb-1"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 				>
 					Alert Name
 				</label>
@@ -224,7 +224,7 @@ function CostAlertForm({
 					type="text"
 					value={name}
 					onChange={(e) => setName(e.target.value)}
-					className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+					className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
 					placeholder="e.g., Monthly Cost Limit"
 					required
 				/>
@@ -232,7 +232,7 @@ function CostAlertForm({
 			<div>
 				<label
 					htmlFor="monthly-threshold"
-					className="block text-sm font-medium text-gray-700 mb-1"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 				>
 					Monthly Threshold ($)
 				</label>
@@ -241,7 +241,7 @@ function CostAlertForm({
 					type="number"
 					value={threshold}
 					onChange={(e) => setThreshold(e.target.value)}
-					className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+					className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
 					min="0"
 					step="0.01"
 					required
@@ -253,18 +253,18 @@ function CostAlertForm({
 						type="checkbox"
 						checked={enabled}
 						onChange={(e) => setEnabled(e.target.checked)}
-						className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+						className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 					/>
-					<span className="text-sm text-gray-700">Enabled</span>
+					<span className="text-sm text-gray-700 dark:text-gray-300">Enabled</span>
 				</label>
 				<label className="flex items-center gap-2">
 					<input
 						type="checkbox"
 						checked={notifyOnExceed}
 						onChange={(e) => setNotifyOnExceed(e.target.checked)}
-						className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+						className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 					/>
-					<span className="text-sm text-gray-700">
+					<span className="text-sm text-gray-700 dark:text-gray-300">
 						Notify when current cost exceeds threshold
 					</span>
 				</label>
@@ -273,9 +273,9 @@ function CostAlertForm({
 						type="checkbox"
 						checked={notifyOnForecast}
 						onChange={(e) => setNotifyOnForecast(e.target.checked)}
-						className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+						className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 					/>
-					<span className="text-sm text-gray-700">
+					<span className="text-sm text-gray-700 dark:text-gray-300">
 						Notify when forecasted cost exceeds threshold
 					</span>
 				</label>
@@ -284,7 +284,7 @@ function CostAlertForm({
 				<div>
 					<label
 						htmlFor="forecast-period"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						Forecast Period (months)
 					</label>
@@ -292,7 +292,7 @@ function CostAlertForm({
 						id="forecast-period"
 						value={forecastMonths}
 						onChange={(e) => setForecastMonths(e.target.value)}
-						className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+						className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
 					>
 						<option value="3">3 months</option>
 						<option value="6">6 months</option>
@@ -304,7 +304,7 @@ function CostAlertForm({
 				<button
 					type="button"
 					onClick={onCancel}
-					className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+					className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
 				>
 					Cancel
 				</button>
@@ -347,8 +347,8 @@ function CostAlertsSection() {
 
 	if (showForm || editingAlert) {
 		return (
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
-				<h2 className="text-lg font-semibold text-gray-900 mb-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+				<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 					{editingAlert ? 'Edit Cost Alert' : 'New Cost Alert'}
 				</h2>
 				<CostAlertForm
@@ -364,9 +364,9 @@ function CostAlertsSection() {
 	}
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-center justify-between mb-4">
-				<h2 className="text-lg font-semibold text-gray-900">Cost Alerts</h2>
+				<h2 className="text-lg font-semibold text-gray-900 dark:text-white">Cost Alerts</h2>
 				<button
 					type="button"
 					onClick={() => setShowForm(true)}
@@ -378,14 +378,14 @@ function CostAlertsSection() {
 			{isLoading ? (
 				<div className="space-y-3">
 					{[1, 2].map((i) => (
-						<div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />
+						<div key={i} className="h-16 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
 					))}
 				</div>
 			) : !alerts || alerts.length === 0 ? (
-				<div className="text-center py-8 text-gray-500">
+				<div className="text-center py-8 text-gray-500 dark:text-gray-400">
 					<svg
 						aria-hidden="true"
-						className="w-12 h-12 mx-auto mb-3 text-gray-300"
+						className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -407,24 +407,24 @@ function CostAlertsSection() {
 					{alerts.map((alert) => (
 						<div
 							key={alert.id}
-							className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+							className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-lg"
 						>
 							<div>
 								<div className="flex items-center gap-2">
-									<span className="font-medium text-gray-900">
+									<span className="font-medium text-gray-900 dark:text-white">
 										{alert.name}
 									</span>
 									<span
 										className={`px-2 py-0.5 text-xs rounded-full ${
 											alert.enabled
-												? 'bg-green-100 text-green-800'
-												: 'bg-gray-100 text-gray-600'
+												? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+												: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
 										}`}
 									>
 										{alert.enabled ? 'Active' : 'Disabled'}
 									</span>
 								</div>
-								<p className="text-sm text-gray-500 mt-1">
+								<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 									Alert when cost exceeds{' '}
 									{formatCurrency(alert.monthly_threshold)}/mo
 									{alert.notify_on_forecast &&
@@ -500,8 +500,8 @@ export function CostEstimation() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900">Cost Estimation</h1>
-				<p className="text-gray-600 mt-1">
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Cost Estimation</h1>
+				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Monitor and forecast your cloud storage costs
 				</p>
 			</div>
@@ -599,17 +599,17 @@ export function CostEstimation() {
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-lg font-semibold text-gray-900">
+						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Cost Forecast
 						</h2>
 					</div>
 					<CostForecastChart />
 				</div>
 
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-semibold text-gray-900 mb-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 						Cost by Storage Type
 					</h2>
 					{summaryLoading ? (
@@ -617,7 +617,7 @@ export function CostEstimation() {
 							{[1, 2, 3].map((i) => (
 								<div
 									key={i}
-									className="h-8 bg-gray-100 rounded animate-pulse"
+									className="h-8 bg-gray-100 dark:bg-gray-700 rounded animate-pulse"
 								/>
 							))}
 						</div>
@@ -627,9 +627,9 @@ export function CostEstimation() {
 				</div>
 			</div>
 
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-lg font-semibold text-gray-900">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Cost per Repository
 					</h2>
 					<Link
@@ -642,14 +642,14 @@ export function CostEstimation() {
 				{summaryLoading ? (
 					<div className="space-y-3">
 						{[1, 2, 3].map((i) => (
-							<div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />
+							<div key={i} className="h-16 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
 						))}
 					</div>
 				) : !summary?.repositories || summary.repositories.length === 0 ? (
-					<div className="text-center py-8 text-gray-500">
+					<div className="text-center py-8 text-gray-500 dark:text-gray-400">
 						<svg
 							aria-hidden="true"
-							className="w-12 h-12 mx-auto mb-3 text-gray-300"
+							className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
@@ -670,23 +670,23 @@ export function CostEstimation() {
 					<div className="overflow-x-auto">
 						<table className="min-w-full">
 							<thead>
-								<tr className="border-b border-gray-200">
-									<th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
+								<tr className="border-b border-gray-200 dark:border-gray-700">
+									<th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
 										Repository
 									</th>
 									<th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
 										Type
 									</th>
-									<th className="text-right py-3 px-4 text-sm font-medium text-gray-500">
+									<th className="text-right py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
 										Storage
 									</th>
-									<th className="text-right py-3 px-4 text-sm font-medium text-gray-500">
+									<th className="text-right py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
 										Cost/GB
 									</th>
-									<th className="text-right py-3 px-4 text-sm font-medium text-gray-500">
+									<th className="text-right py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
 										Monthly
 									</th>
-									<th className="text-right py-3 px-4 text-sm font-medium text-gray-500">
+									<th className="text-right py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
 										Yearly
 									</th>
 								</tr>
@@ -699,10 +699,10 @@ export function CostEstimation() {
 									return (
 										<tr
 											key={repo.repository_id}
-											className="border-b border-gray-100 hover:bg-gray-50"
+											className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
 										>
 											<td className="py-3 px-4">
-												<span className="font-medium text-gray-900">
+												<span className="font-medium text-gray-900 dark:text-white">
 													{repo.repository_name}
 												</span>
 											</td>
@@ -713,16 +713,16 @@ export function CostEstimation() {
 													{typeBadge.label}
 												</span>
 											</td>
-											<td className="py-3 px-4 text-right text-gray-600">
+											<td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
 												{formatBytes(repo.storage_size_bytes)}
 											</td>
-											<td className="py-3 px-4 text-right text-gray-600">
+											<td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
 												{formatCurrency(repo.cost_per_gb)}
 											</td>
-											<td className="py-3 px-4 text-right font-medium text-gray-900">
+											<td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
 												{formatCurrency(repo.monthly_cost)}
 											</td>
-											<td className="py-3 px-4 text-right text-gray-600">
+											<td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400">
 												{formatCurrency(repo.yearly_cost)}
 											</td>
 										</tr>
@@ -730,17 +730,17 @@ export function CostEstimation() {
 								})}
 							</tbody>
 							<tfoot>
-								<tr className="bg-gray-50">
+								<tr className="bg-gray-50 dark:bg-gray-900">
 									<td
 										colSpan={4}
-										className="py-3 px-4 font-medium text-gray-900"
+										className="py-3 px-4 font-medium text-gray-900 dark:text-white"
 									>
 										Total
 									</td>
 									<td className="py-3 px-4 text-right font-bold text-indigo-600">
 										{formatCurrency(summary.total_monthly_cost)}
 									</td>
-									<td className="py-3 px-4 text-right font-medium text-gray-900">
+									<td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
 										{formatCurrency(summary.total_yearly_cost)}
 									</td>
 								</tr>

@@ -77,13 +77,13 @@ export function PasswordPolicies() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Password Policy</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Password Policy</h1>
 					<p className="text-gray-600 mt-1">
 						Configure password requirements for non-OIDC users
 					</p>
 				</div>
-				<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-					<p className="text-amber-800">
+				<div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+					<p className="text-amber-800 dark:text-amber-300">
 						Only administrators can manage password policies.
 					</p>
 				</div>
@@ -95,13 +95,13 @@ export function PasswordPolicies() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-					<div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
+					<div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+					<div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2" />
 				</div>
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 					<div className="space-y-4">
 						{[1, 2, 3, 4, 5].map((i) => (
-							<div key={i} className="h-10 bg-gray-200 rounded animate-pulse" />
+							<div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
 						))}
 					</div>
 				</div>
@@ -113,10 +113,10 @@ export function PasswordPolicies() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Password Policy</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Password Policy</h1>
 				</div>
-				<div className="bg-red-50 border border-red-200 rounded-lg p-4">
-					<p className="text-red-800">Failed to load password policy</p>
+				<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+					<p className="text-red-800 dark:text-red-300">Failed to load password policy</p>
 				</div>
 			</div>
 		);
@@ -125,31 +125,31 @@ export function PasswordPolicies() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900">Password Policy</h1>
-				<p className="text-gray-600 mt-1">
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Password Policy</h1>
+				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Configure password requirements for non-OIDC users
 				</p>
 			</div>
 
 			{policyResponse?.requirements && (
-				<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-					<h3 className="text-sm font-medium text-blue-800 mb-2">
+				<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+					<h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
 						Current Requirements
 					</h3>
-					<p className="text-sm text-blue-700">
+					<p className="text-sm text-blue-700 dark:text-blue-300">
 						{policyResponse.requirements.description}
 					</p>
 				</div>
 			)}
 
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 				<form onSubmit={handleSubmit}>
 					<div className="space-y-6">
 						{/* Password Length */}
 						<div>
 							<label
 								htmlFor="min_length"
-								className="block text-sm font-medium text-gray-700"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 							>
 								Minimum Password Length
 							</label>
@@ -166,9 +166,9 @@ export function PasswordPolicies() {
 									}
 									min={6}
 									max={128}
-									className="block w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+									className="block w-24 rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 								/>
-								<span className="text-sm text-gray-500">
+								<span className="text-sm text-gray-500 dark:text-gray-400">
 									characters (6-128)
 								</span>
 							</div>
@@ -188,11 +188,11 @@ export function PasswordPolicies() {
 										onChange={(e) =>
 											handleChange('require_uppercase', e.target.checked)
 										}
-										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 									/>
 									<label
 										htmlFor="require_uppercase"
-										className="ml-3 text-sm text-gray-900"
+										className="ml-3 text-sm text-gray-900 dark:text-white"
 									>
 										Require uppercase letter (A-Z)
 									</label>
@@ -206,11 +206,11 @@ export function PasswordPolicies() {
 										onChange={(e) =>
 											handleChange('require_lowercase', e.target.checked)
 										}
-										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 									/>
 									<label
 										htmlFor="require_lowercase"
-										className="ml-3 text-sm text-gray-900"
+										className="ml-3 text-sm text-gray-900 dark:text-white"
 									>
 										Require lowercase letter (a-z)
 									</label>
@@ -224,11 +224,11 @@ export function PasswordPolicies() {
 										onChange={(e) =>
 											handleChange('require_number', e.target.checked)
 										}
-										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 									/>
 									<label
 										htmlFor="require_number"
-										className="ml-3 text-sm text-gray-900"
+										className="ml-3 text-sm text-gray-900 dark:text-white"
 									>
 										Require number (0-9)
 									</label>
@@ -242,11 +242,11 @@ export function PasswordPolicies() {
 										onChange={(e) =>
 											handleChange('require_special', e.target.checked)
 										}
-										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+										className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 									/>
 									<label
 										htmlFor="require_special"
-										className="ml-3 text-sm text-gray-900"
+										className="ml-3 text-sm text-gray-900 dark:text-white"
 									>
 										Require special character (!@#$%^&amp;*...)
 									</label>
@@ -258,7 +258,7 @@ export function PasswordPolicies() {
 						<div>
 							<label
 								htmlFor="max_age_days"
-								className="block text-sm font-medium text-gray-700"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 							>
 								Password Expiration
 							</label>
@@ -277,13 +277,13 @@ export function PasswordPolicies() {
 									min={0}
 									max={365}
 									placeholder="Never"
-									className="block w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+									className="block w-24 rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 								/>
-								<span className="text-sm text-gray-500">
+								<span className="text-sm text-gray-500 dark:text-gray-400">
 									days (leave empty for no expiration)
 								</span>
 							</div>
-							<p className="mt-1 text-xs text-gray-500">
+							<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 								Users will be prompted to change their password when it expires.
 							</p>
 						</div>
@@ -292,7 +292,7 @@ export function PasswordPolicies() {
 						<div>
 							<label
 								htmlFor="history_count"
-								className="block text-sm font-medium text-gray-700"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 							>
 								Password History
 							</label>
@@ -309,25 +309,25 @@ export function PasswordPolicies() {
 									}
 									min={0}
 									max={24}
-									className="block w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+									className="block w-24 rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
 								/>
-								<span className="text-sm text-gray-500">
+								<span className="text-sm text-gray-500 dark:text-gray-400">
 									previous passwords to remember (0-24)
 								</span>
 							</div>
-							<p className="mt-1 text-xs text-gray-500">
+							<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 								Prevents users from reusing recent passwords. Set to 0 to
 								disable.
 							</p>
 						</div>
 
 						{/* Actions */}
-						<div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+						<div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
 							{hasChanges && (
 								<button
 									type="button"
 									onClick={handleReset}
-									className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+									className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
 								>
 									Reset
 								</button>
@@ -345,11 +345,11 @@ export function PasswordPolicies() {
 			</div>
 
 			{/* Information Section */}
-			<div className="bg-gray-50 rounded-lg border border-gray-200 p-6">
-				<h3 className="text-sm font-medium text-gray-900 mb-3">
+			<div className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+				<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
 					About Password Policies
 				</h3>
-				<ul className="text-sm text-gray-600 space-y-2">
+				<ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
 					<li className="flex items-start gap-2">
 						<svg
 							className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0"
