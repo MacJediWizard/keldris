@@ -471,9 +471,9 @@ function RestoreDetailsModal({
 								Path Mappings
 							</p>
 							<div className="mt-1 space-y-1">
-								{restore.path_mappings.map((mapping, idx) => (
+								{restore.path_mappings.map((mapping) => (
 									<div
-										key={idx}
+										key={`${mapping.source_path}-${mapping.target_path}`}
 										className="flex items-center gap-2 text-sm font-mono"
 									>
 										<span className="text-gray-600">{mapping.source_path}</span>
@@ -1800,10 +1800,14 @@ function RestoreModal({
 									{enableCrossAgent && (
 										<div className="mt-3 space-y-3">
 											<div>
-												<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+												<label
+													htmlFor="target-agent-select"
+													className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+												>
 													Target Agent
 												</label>
 												<select
+													id="target-agent-select"
 													value={targetAgentId}
 													onChange={(e) => setTargetAgentId(e.target.value)}
 													className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -1822,9 +1826,9 @@ function RestoreModal({
 											{isCrossAgent && (
 												<div>
 													<div className="flex items-center justify-between mb-2">
-														<label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+														<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 															Path Mappings (optional)
-														</label>
+														</span>
 														<button
 															type="button"
 															onClick={addPathMapping}
@@ -1838,7 +1842,7 @@ function RestoreModal({
 													</p>
 													{pathMappings.map((mapping, idx) => (
 														<div
-															key={idx}
+															key={`mapping-${idx}-${mapping.source_path}`}
 															className="flex items-center gap-2 mb-2"
 														>
 															<input

@@ -1648,6 +1648,7 @@ export function Repositories() {
 							}
 						>
 							<svg
+								aria-hidden="true"
 								className={`w-4 h-4 ${showFavoritesOnly ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
 								fill={showFavoritesOnly ? 'currentColor' : 'none'}
 								stroke="currentColor"

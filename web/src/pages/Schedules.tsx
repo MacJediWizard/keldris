@@ -2037,6 +2037,7 @@ export function Schedules() {
 							}
 						>
 							<svg
+								aria-hidden="true"
 								className={`w-4 h-4 ${showFavoritesOnly ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
 								fill={showFavoritesOnly ? 'currentColor' : 'none'}
 								stroke="currentColor"
@@ -2131,7 +2132,7 @@ export function Schedules() {
 											(schedule as Schedule & { policy_id?: string }).policy_id
 												? policyMap.get(
 														(schedule as Schedule & { policy_id?: string })
-															.policy_id!,
+															.policy_id as string,
 													)
 												: undefined
 										}
