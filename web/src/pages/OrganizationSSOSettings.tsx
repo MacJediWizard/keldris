@@ -314,7 +314,10 @@ export function OrganizationSSOSettings() {
 							</thead>
 							<tbody>
 								{mappings.map((mapping) => (
-									<tr key={mapping.id} className="border-b border-gray-100 dark:border-gray-700">
+									<tr
+										key={mapping.id}
+										className="border-b border-gray-100 dark:border-gray-700"
+									>
 										<td className="py-3 text-sm text-gray-900 dark:text-white">
 											{mapping.oidc_group_name}
 										</td>
@@ -350,7 +353,9 @@ export function OrganizationSSOSettings() {
 						</table>
 					) : (
 						<div className="text-center py-8">
-							<p className="text-gray-500 dark:text-gray-400">No group mappings configured yet</p>
+							<p className="text-gray-500 dark:text-gray-400">
+								No group mappings configured yet
+							</p>
 							{canEdit && (
 								<button
 									type="button"
@@ -421,7 +426,10 @@ export function OrganizationSSOSettings() {
 									onChange={(e) => setNewAutoCreate(e.target.checked)}
 									className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 								/>
-								<label htmlFor="autoCreate" className="text-sm text-gray-700 dark:text-gray-300">
+								<label
+									htmlFor="autoCreate"
+									className="text-sm text-gray-700 dark:text-gray-300"
+								>
 									Auto-create organization for this group
 								</label>
 							</div>

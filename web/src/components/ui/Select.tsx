@@ -61,7 +61,10 @@ export function Select({
 				))}
 			</select>
 			{error && (
-				<p id={`${selectId}-error`} className="mt-1 text-sm text-red-600 dark:text-red-400">
+				<p
+					id={`${selectId}-error`}
+					className="mt-1 text-sm text-red-600 dark:text-red-400"
+				>
 					{error}
 				</p>
 			)}

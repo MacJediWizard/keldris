@@ -74,7 +74,9 @@ interface ModalHeaderProps {
 export function ModalHeader({ children }: ModalHeaderProps) {
 	return (
 		<div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-			<h3 className="text-lg font-semibold text-gray-900 dark:text-white">{children}</h3>
+			<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+				{children}
+			</h3>
 		</div>
 	);
 }

@@ -77,7 +77,9 @@ export function PasswordPolicies() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Password Policy</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Password Policy
+					</h1>
 					<p className="text-gray-600 mt-1">
 						Configure password requirements for non-OIDC users
 					</p>
@@ -101,7 +103,10 @@ export function PasswordPolicies() {
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 					<div className="space-y-4">
 						{[1, 2, 3, 4, 5].map((i) => (
-							<div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+							<div
+								key={i}
+								className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+							/>
 						))}
 					</div>
 				</div>
@@ -113,10 +118,14 @@ export function PasswordPolicies() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Password Policy</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Password Policy
+					</h1>
 				</div>
 				<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-					<p className="text-red-800 dark:text-red-300">Failed to load password policy</p>
+					<p className="text-red-800 dark:text-red-300">
+						Failed to load password policy
+					</p>
 				</div>
 			</div>
 		);
@@ -125,7 +134,9 @@ export function PasswordPolicies() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Password Policy</h1>
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+					Password Policy
+				</h1>
 				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Configure password requirements for non-OIDC users
 				</p>

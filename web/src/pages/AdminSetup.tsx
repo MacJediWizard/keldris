@@ -25,7 +25,9 @@ export function AdminSetup() {
 		<div>
 			{/* Header */}
 			<div className="mb-8">
-				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Server Setup</h1>
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+					Server Setup
+				</h1>
 				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Reconfigure server settings. These changes apply to the entire server.
 				</p>
@@ -45,7 +47,9 @@ export function AdminSetup() {
 							</dd>
 						</div>
 						<div>
-							<dt className="text-sm text-gray-500 dark:text-gray-400">Status</dt>
+							<dt className="text-sm text-gray-500 dark:text-gray-400">
+								Status
+							</dt>
 							<dd
 								className={`text-sm font-medium capitalize ${
 									status.license.status === 'active'
@@ -58,7 +62,9 @@ export function AdminSetup() {
 						</div>
 						{status.license.expires_at && (
 							<div>
-								<dt className="text-sm text-gray-500 dark:text-gray-400">Expires</dt>
+								<dt className="text-sm text-gray-500 dark:text-gray-400">
+									Expires
+								</dt>
 								<dd className="text-sm font-medium text-gray-900 dark:text-white">
 									{new Date(status.license.expires_at).toLocaleDateString()}
 								</dd>
@@ -66,7 +72,9 @@ export function AdminSetup() {
 						)}
 						{status.license.company_name && (
 							<div>
-								<dt className="text-sm text-gray-500 dark:text-gray-400">Company</dt>
+								<dt className="text-sm text-gray-500 dark:text-gray-400">
+									Company
+								</dt>
 								<dd className="text-sm font-medium text-gray-900 dark:text-white">
 									{status.license.company_name}
 								</dd>
@@ -138,8 +146,12 @@ function ConfigCard({
 				className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 			>
 				<div>
-					<h3 className="text-lg font-medium text-gray-900 dark:text-white">{title}</h3>
-					<p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
+					<h3 className="text-lg font-medium text-gray-900 dark:text-white">
+						{title}
+					</h3>
+					<p className="text-sm text-gray-500 dark:text-gray-400">
+						{description}
+					</p>
 				</div>
 				<svg
 					aria-hidden="true"

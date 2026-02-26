@@ -401,7 +401,9 @@ function PendingRegistrationRow({
 	};
 
 	return (
-		<tr className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isExpired ? 'opacity-50' : ''}`}>
+		<tr
+			className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isExpired ? 'opacity-50' : ''}`}
+		>
 			<td className="px-6 py-4">
 				<div className="flex items-center gap-2">
 					<code className="text-lg font-mono font-bold tracking-wider">
@@ -508,12 +510,16 @@ function AgentRow({
 	const { t, formatRelativeTime } = useLocale();
 
 	return (
-		<tr className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}>
+		<tr
+			className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}
+		>
 			<td className="px-6 py-4 w-12">
 				<BulkSelectCheckbox checked={isSelected} onChange={onToggleSelect} />
 			</td>
 			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900 dark:text-white">{agent.hostname}</div>
+				<div className="font-medium text-gray-900 dark:text-white">
+					{agent.hostname}
+				</div>
 				{agent.os_info && (
 					<div className="text-sm text-gray-500 dark:text-gray-400">
 						{agent.os_info.os} {agent.os_info.arch}
@@ -833,7 +839,9 @@ export function Agents() {
 					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 						{t('agents.title')}
 					</h1>
-					<p className="text-gray-600 dark:text-gray-400 mt-1">{t('agents.subtitle')}</p>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						{t('agents.subtitle')}
+					</p>
 				</div>
 				<div className="flex items-center gap-3">
 					<button

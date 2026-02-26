@@ -388,7 +388,8 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 			o.name === 'default',
 	);
 	const licenseOrgName = license?.customer_name;
-	const canRename = defaultOrg && licenseOrgName && defaultOrg.name !== licenseOrgName;
+	const canRename =
+		defaultOrg && licenseOrgName && defaultOrg.name !== licenseOrgName;
 
 	const [orgName, setOrgName] = useState('');
 	const [renameError, setRenameError] = useState('');
@@ -440,9 +441,7 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 									clipRule="evenodd"
 								/>
 							</svg>
-							<span className="font-medium">
-								Organization ready!
-							</span>
+							<span className="font-medium">Organization ready!</span>
 						</div>
 						<p className="mt-1 text-sm text-green-700 dark:text-green-400">
 							You're part of{' '}
@@ -456,7 +455,8 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 								Update organization name
 							</p>
 							<p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
-								Your organization is currently named "{defaultOrg.name}". Would you like to rename it?
+								Your organization is currently named "{defaultOrg.name}". Would
+								you like to rename it?
 							</p>
 							<div className="flex gap-3">
 								<input

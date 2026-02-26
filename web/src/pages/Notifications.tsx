@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLicense } from '../hooks/useLicense';
 import {
 	useCreateNotificationChannel,
 	useCreateNotificationPreference,
@@ -9,7 +10,6 @@ import {
 	useUpdateNotificationChannel,
 	useUpdateNotificationPreference,
 } from '../hooks/useNotifications';
-import { useLicense } from '../hooks/useLicense';
 import type {
 	DiscordChannelConfig,
 	EmailChannelConfig,
@@ -288,9 +288,7 @@ function EmailConfigForm({
 						type="text"
 						id="email-host"
 						value={config.host}
-						onChange={(e) =>
-							onChange({ ...config, host: e.target.value })
-						}
+						onChange={(e) => onChange({ ...config, host: e.target.value })}
 						placeholder="smtp.example.com"
 						className={inputCls}
 						required
@@ -323,9 +321,7 @@ function EmailConfigForm({
 					type="text"
 					id="email-username"
 					value={config.username}
-					onChange={(e) =>
-						onChange({ ...config, username: e.target.value })
-					}
+					onChange={(e) => onChange({ ...config, username: e.target.value })}
 					placeholder="user@example.com"
 					className={inputCls}
 				/>
@@ -338,9 +334,7 @@ function EmailConfigForm({
 					type="password"
 					id="email-password"
 					value={config.password}
-					onChange={(e) =>
-						onChange({ ...config, password: e.target.value })
-					}
+					onChange={(e) => onChange({ ...config, password: e.target.value })}
 					className={inputCls}
 				/>
 			</div>
@@ -352,9 +346,7 @@ function EmailConfigForm({
 					type="email"
 					id="email-from"
 					value={config.from}
-					onChange={(e) =>
-						onChange({ ...config, from: e.target.value })
-					}
+					onChange={(e) => onChange({ ...config, from: e.target.value })}
 					placeholder="notifications@example.com"
 					className={inputCls}
 					required
@@ -365,9 +357,7 @@ function EmailConfigForm({
 					type="checkbox"
 					id="email-tls"
 					checked={config.tls}
-					onChange={(e) =>
-						onChange({ ...config, tls: e.target.checked })
-					}
+					onChange={(e) => onChange({ ...config, tls: e.target.checked })}
 					className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
 				/>
 				<label
@@ -403,9 +393,7 @@ function SlackConfigForm({
 					type="url"
 					id="slack-webhook"
 					value={config.webhook_url}
-					onChange={(e) =>
-						onChange({ ...config, webhook_url: e.target.value })
-					}
+					onChange={(e) => onChange({ ...config, webhook_url: e.target.value })}
 					placeholder="https://hooks.slack.com/services/..."
 					className={inputCls}
 					required
@@ -419,9 +407,7 @@ function SlackConfigForm({
 					type="text"
 					id="slack-channel"
 					value={config.channel}
-					onChange={(e) =>
-						onChange({ ...config, channel: e.target.value })
-					}
+					onChange={(e) => onChange({ ...config, channel: e.target.value })}
 					placeholder="#alerts"
 					className={inputCls}
 					required
@@ -430,9 +416,7 @@ function SlackConfigForm({
 			<div>
 				<label htmlFor="slack-username" className={labelCls}>
 					Bot Username{' '}
-					<span className="text-gray-400 dark:text-gray-500">
-						(optional)
-					</span>
+					<span className="text-gray-400 dark:text-gray-500">(optional)</span>
 				</label>
 				<input
 					type="text"
@@ -448,9 +432,7 @@ function SlackConfigForm({
 			<div>
 				<label htmlFor="slack-emoji" className={labelCls}>
 					Icon Emoji{' '}
-					<span className="text-gray-400 dark:text-gray-500">
-						(optional)
-					</span>
+					<span className="text-gray-400 dark:text-gray-500">(optional)</span>
 				</label>
 				<input
 					type="text"
@@ -492,9 +474,7 @@ function TeamsConfigForm({
 					type="url"
 					id="teams-webhook"
 					value={config.webhook_url}
-					onChange={(e) =>
-						onChange({ ...config, webhook_url: e.target.value })
-					}
+					onChange={(e) => onChange({ ...config, webhook_url: e.target.value })}
 					placeholder="https://outlook.office.com/webhook/..."
 					className={inputCls}
 					required
@@ -526,9 +506,7 @@ function DiscordConfigForm({
 					type="url"
 					id="discord-webhook"
 					value={config.webhook_url}
-					onChange={(e) =>
-						onChange({ ...config, webhook_url: e.target.value })
-					}
+					onChange={(e) => onChange({ ...config, webhook_url: e.target.value })}
 					placeholder="https://discord.com/api/webhooks/..."
 					className={inputCls}
 					required
@@ -537,9 +515,7 @@ function DiscordConfigForm({
 			<div>
 				<label htmlFor="discord-username" className={labelCls}>
 					Bot Username{' '}
-					<span className="text-gray-400 dark:text-gray-500">
-						(optional)
-					</span>
+					<span className="text-gray-400 dark:text-gray-500">(optional)</span>
 				</label>
 				<input
 					type="text"
@@ -555,9 +531,7 @@ function DiscordConfigForm({
 			<div>
 				<label htmlFor="discord-avatar" className={labelCls}>
 					Avatar URL{' '}
-					<span className="text-gray-400 dark:text-gray-500">
-						(optional)
-					</span>
+					<span className="text-gray-400 dark:text-gray-500">(optional)</span>
 				</label>
 				<input
 					type="url"
@@ -601,9 +575,7 @@ function PagerDutyConfigForm({
 					type="text"
 					id="pd-routing-key"
 					value={config.routing_key}
-					onChange={(e) =>
-						onChange({ ...config, routing_key: e.target.value })
-					}
+					onChange={(e) => onChange({ ...config, routing_key: e.target.value })}
 					placeholder="Integration or routing key"
 					className={inputCls}
 					required
@@ -616,9 +588,7 @@ function PagerDutyConfigForm({
 				<select
 					id="pd-severity"
 					value={config.severity ?? 'error'}
-					onChange={(e) =>
-						onChange({ ...config, severity: e.target.value })
-					}
+					onChange={(e) => onChange({ ...config, severity: e.target.value })}
 					className={selectCls}
 				>
 					<option value="critical">Critical</option>
@@ -630,9 +600,7 @@ function PagerDutyConfigForm({
 			<div>
 				<label htmlFor="pd-component" className={labelCls}>
 					Component{' '}
-					<span className="text-gray-400 dark:text-gray-500">
-						(optional)
-					</span>
+					<span className="text-gray-400 dark:text-gray-500">(optional)</span>
 				</label>
 				<input
 					type="text"
@@ -651,9 +619,7 @@ function PagerDutyConfigForm({
 			<div>
 				<label htmlFor="pd-group" className={labelCls}>
 					Group{' '}
-					<span className="text-gray-400 dark:text-gray-500">
-						(optional)
-					</span>
+					<span className="text-gray-400 dark:text-gray-500">(optional)</span>
 				</label>
 				<input
 					type="text"
@@ -672,9 +638,7 @@ function PagerDutyConfigForm({
 			<div>
 				<label htmlFor="pd-class" className={labelCls}>
 					Class{' '}
-					<span className="text-gray-400 dark:text-gray-500">
-						(optional)
-					</span>
+					<span className="text-gray-400 dark:text-gray-500">(optional)</span>
 				</label>
 				<input
 					type="text"
@@ -718,9 +682,7 @@ function WebhookConfigForm({
 					type="url"
 					id="wh-url"
 					value={config.url}
-					onChange={(e) =>
-						onChange({ ...config, url: e.target.value })
-					}
+					onChange={(e) => onChange({ ...config, url: e.target.value })}
 					placeholder="https://api.example.com/webhook"
 					className={inputCls}
 					required
@@ -734,9 +696,7 @@ function WebhookConfigForm({
 					<select
 						id="wh-method"
 						value={config.method ?? 'POST'}
-						onChange={(e) =>
-							onChange({ ...config, method: e.target.value })
-						}
+						onChange={(e) => onChange({ ...config, method: e.target.value })}
 						className={selectCls}
 					>
 						<option value="GET">GET</option>
@@ -776,9 +736,7 @@ function WebhookConfigForm({
 							...config,
 							auth_type: e.target.value,
 							auth_token:
-								e.target.value === 'none'
-									? undefined
-									: config.auth_token,
+								e.target.value === 'none' ? undefined : config.auth_token,
 						})
 					}
 					className={selectCls}
@@ -821,7 +779,14 @@ function WebhookConfigForm({
 
 // Default config factories
 function defaultEmailConfig(): EmailChannelConfig {
-	return { host: '', port: 587, username: '', password: '', from: '', tls: true };
+	return {
+		host: '',
+		port: 587,
+		username: '',
+		password: '',
+		from: '',
+		tls: true,
+	};
 }
 function defaultSlackConfig(): SlackChannelConfig {
 	return { webhook_url: '', channel: '' };
@@ -836,7 +801,12 @@ function defaultPagerDutyConfig(): PagerDutyChannelConfig {
 	return { routing_key: '', severity: 'error' };
 }
 function defaultWebhookConfig(): WebhookChannelConfig {
-	return { url: '', method: 'POST', auth_type: 'none', content_type: 'application/json' };
+	return {
+		url: '',
+		method: 'POST',
+		auth_type: 'none',
+		content_type: 'application/json',
+	};
 }
 
 function defaultConfigForType(
@@ -1040,9 +1010,8 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 							</div>
 							<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 								Add{' '}
-								{CHANNEL_TYPE_OPTIONS.find(
-									(o) => o.type === selectedType,
-								)?.label ?? selectedType}{' '}
+								{CHANNEL_TYPE_OPTIONS.find((o) => o.type === selectedType)
+									?.label ?? selectedType}{' '}
 								Channel
 							</h3>
 						</div>
@@ -1061,9 +1030,8 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 										value={name}
 										onChange={(e) => setName(e.target.value)}
 										placeholder={`e.g., Primary ${
-											CHANNEL_TYPE_OPTIONS.find(
-												(o) => o.type === selectedType,
-											)?.label ?? ''
+											CHANNEL_TYPE_OPTIONS.find((o) => o.type === selectedType)
+												?.label ?? ''
 										}`}
 										className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 										required
@@ -1074,9 +1042,7 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 									<EmailConfigForm
 										config={config as unknown as EmailChannelConfig}
 										onChange={(c) =>
-											setConfig(
-												c as unknown as Record<string, unknown>,
-											)
+											setConfig(c as unknown as Record<string, unknown>)
 										}
 									/>
 								)}
@@ -1084,9 +1050,7 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 									<SlackConfigForm
 										config={config as unknown as SlackChannelConfig}
 										onChange={(c) =>
-											setConfig(
-												c as unknown as Record<string, unknown>,
-											)
+											setConfig(c as unknown as Record<string, unknown>)
 										}
 									/>
 								)}
@@ -1094,9 +1058,7 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 									<TeamsConfigForm
 										config={config as unknown as TeamsChannelConfig}
 										onChange={(c) =>
-											setConfig(
-												c as unknown as Record<string, unknown>,
-											)
+											setConfig(c as unknown as Record<string, unknown>)
 										}
 									/>
 								)}
@@ -1104,33 +1066,23 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 									<DiscordConfigForm
 										config={config as unknown as DiscordChannelConfig}
 										onChange={(c) =>
-											setConfig(
-												c as unknown as Record<string, unknown>,
-											)
+											setConfig(c as unknown as Record<string, unknown>)
 										}
 									/>
 								)}
 								{selectedType === 'pagerduty' && (
 									<PagerDutyConfigForm
-										config={
-											config as unknown as PagerDutyChannelConfig
-										}
+										config={config as unknown as PagerDutyChannelConfig}
 										onChange={(c) =>
-											setConfig(
-												c as unknown as Record<string, unknown>,
-											)
+											setConfig(c as unknown as Record<string, unknown>)
 										}
 									/>
 								)}
 								{selectedType === 'webhook' && (
 									<WebhookConfigForm
-										config={
-											config as unknown as WebhookChannelConfig
-										}
+										config={config as unknown as WebhookChannelConfig}
 										onChange={(c) =>
-											setConfig(
-												c as unknown as Record<string, unknown>,
-											)
+											setConfig(c as unknown as Record<string, unknown>)
 										}
 									/>
 								)}
@@ -1153,9 +1105,7 @@ function AddChannelModal({ isOpen, onClose }: AddChannelModalProps) {
 									disabled={createChannel.isPending}
 									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 								>
-									{createChannel.isPending
-										? 'Creating...'
-										: 'Create Channel'}
+									{createChannel.isPending ? 'Creating...' : 'Create Channel'}
 								</button>
 							</div>
 						</form>
@@ -1221,9 +1171,7 @@ function ChannelRow({
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
 				<div className="flex items-center gap-3">
-					<div
-						className={`p-2 rounded-lg ${channelIconBgColor(channel.type)}`}
-					>
+					<div className={`p-2 rounded-lg ${channelIconBgColor(channel.type)}`}>
 						<ChannelTypeIcon
 							type={channel.type}
 							className={`w-5 h-5 ${channelIconTextColor(channel.type)}`}

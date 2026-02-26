@@ -60,7 +60,9 @@ function VersionRow({
 				{/* Timeline dot */}
 				<div
 					className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center ${
-						isLatest ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+						isLatest
+							? 'bg-indigo-600 text-white'
+							: 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
 					}`}
 				>
 					<svg
@@ -169,20 +171,30 @@ function RestoreVersionModal({
 
 				<form onSubmit={handleSubmit} className="p-6 space-y-4">
 					<div>
-						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">File</p>
-						<p className="font-mono text-gray-900 dark:text-white break-all">{filePath}</p>
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							File
+						</p>
+						<p className="font-mono text-gray-900 dark:text-white break-all">
+							{filePath}
+						</p>
 					</div>
 
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Snapshot Time</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Snapshot Time
+							</p>
 							<p className="text-gray-900 dark:text-white">
 								{formatDateTime(version.snapshot_time)}
 							</p>
 						</div>
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Size</p>
-							<p className="text-gray-900 dark:text-white">{formatBytes(version.size)}</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Size
+							</p>
+							<p className="text-gray-900 dark:text-white">
+								{formatBytes(version.size)}
+							</p>
 						</div>
 					</div>
 
@@ -346,7 +358,9 @@ export function FileHistory() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">File History</h1>
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+					File History
+				</h1>
 				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Browse all versions of a file across backup snapshots
 				</p>
@@ -562,7 +576,9 @@ export function FileHistory() {
 							d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
 						/>
 					</svg>
-					<p className="font-medium text-gray-900 dark:text-white">Search for file history</p>
+					<p className="font-medium text-gray-900 dark:text-white">
+						Search for file history
+					</p>
 					<p className="text-sm">
 						Select an agent, repository, and enter a file path to view all
 						versions

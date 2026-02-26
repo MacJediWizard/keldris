@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { ApiError } from '../lib/api';
 import {
 	useClearServerLogs,
 	useExportServerLogsCsv,
@@ -7,6 +6,7 @@ import {
 	useServerLogComponents,
 	useServerLogs,
 } from '../hooks/useServerLogs';
+import { ApiError } from '../lib/api';
 import type { ServerLogFilter, ServerLogLevel } from '../lib/types';
 
 function formatDateTime(dateStr: string): string {
@@ -360,16 +360,23 @@ export function AdminLogs() {
 										d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
 									/>
 								</svg>
-								<p className="font-medium text-gray-900 dark:text-white">Server Logs Unavailable</p>
+								<p className="font-medium text-gray-900 dark:text-white">
+									Server Logs Unavailable
+								</p>
 								<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-									The server log buffer is not configured. To enable server logs, set the{' '}
-									<code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">LOG_BUFFER_SIZE</code>{' '}
+									The server log buffer is not configured. To enable server
+									logs, set the{' '}
+									<code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">
+										LOG_BUFFER_SIZE
+									</code>{' '}
 									environment variable and restart the server.
 								</p>
 							</>
 						) : (
 							<>
-								<p className="font-medium text-red-500 dark:text-red-400">Failed to load server logs</p>
+								<p className="font-medium text-red-500 dark:text-red-400">
+									Failed to load server logs
+								</p>
 								<p className="text-sm text-red-500 dark:text-red-400">
 									You may not have admin access to view this page
 								</p>

@@ -76,7 +76,9 @@ function DatabaseStep({ onComplete, isLoading }: StepProps) {
 			{testDatabase.isPending && (
 				<div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
 					<div className="w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-					<span className="text-blue-800 dark:text-blue-300">Testing database connection...</span>
+					<span className="text-blue-800 dark:text-blue-300">
+						Testing database connection...
+					</span>
 				</div>
 			)}
 
@@ -673,7 +675,9 @@ function LicenseStep({ onComplete, isLoading }: StepProps) {
 
 	return (
 		<div className="py-4">
-			<h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">License</h2>
+			<h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+				License
+			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
 				Enter your license key or start a 14-day free trial.
 			</p>
@@ -742,7 +746,9 @@ function LicenseStep({ onComplete, isLoading }: StepProps) {
 					</div>
 
 					<div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-						<h4 className="font-medium text-blue-900 dark:text-blue-200 mb-2">Trial includes:</h4>
+						<h4 className="font-medium text-blue-900 dark:text-blue-200 mb-2">
+							Trial includes:
+						</h4>
 						<ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
 							<li>Up to 5 agents</li>
 							<li>Up to 2 repositories</li>
@@ -914,7 +920,9 @@ function CompleteSetupStep() {
 				</svg>
 			</div>
 
-			<h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Setup Complete!</h2>
+			<h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+				Setup Complete!
+			</h2>
 
 			<p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-8">
 				Your Keldris server is now configured and ready to use. Click the button

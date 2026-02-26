@@ -102,7 +102,9 @@ function RegistryCard({
 					</div>
 					<div>
 						<div className="flex items-center gap-2">
-							<h3 className="font-semibold text-gray-900 dark:text-white">{registry.name}</h3>
+							<h3 className="font-semibold text-gray-900 dark:text-white">
+								{registry.name}
+							</h3>
 							{registry.is_default && (
 								<span className="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">
 									Default
@@ -135,7 +137,9 @@ function RegistryCard({
 					<span className="truncate">{registry.url}</span>
 				</div>
 				<div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-					<span className="w-24 text-gray-500 dark:text-gray-400">Last Check:</span>
+					<span className="w-24 text-gray-500 dark:text-gray-400">
+						Last Check:
+					</span>
 					<span>{formatDate(registry.last_health_check)}</span>
 				</div>
 				{registry.credentials_expires_at && (
@@ -378,7 +382,9 @@ function RegistryForm({
 			</div>
 
 			<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-				<h4 className="font-medium text-gray-900 dark:text-white mb-3">Credentials</h4>
+				<h4 className="font-medium text-gray-900 dark:text-white mb-3">
+					Credentials
+				</h4>
 				<div className="space-y-3">{renderCredentialFields()}</div>
 			</div>
 
@@ -390,7 +396,10 @@ function RegistryForm({
 					onChange={(e) => setIsDefault(e.target.checked)}
 					className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 				/>
-				<label htmlFor="isDefault" className="text-sm text-gray-700 dark:text-gray-300">
+				<label
+					htmlFor="isDefault"
+					className="text-sm text-gray-700 dark:text-gray-300"
+				>
 					Set as default registry
 				</label>
 			</div>

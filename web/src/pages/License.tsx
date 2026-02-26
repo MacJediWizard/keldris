@@ -528,7 +528,9 @@ export default function License() {
 							Storage
 						</p>
 						<p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-							{license.limits.max_storage_bytes > 0 ? formatBytes(license.limits.max_storage_bytes) : 'Unlimited'}
+							{license.limits.max_storage_bytes > 0
+								? formatBytes(license.limits.max_storage_bytes)
+								: 'Unlimited'}
 						</p>
 					</div>
 				</div>

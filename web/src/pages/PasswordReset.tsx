@@ -137,7 +137,9 @@ export function PasswordReset() {
 				<div className="sm:mx-auto sm:w-full sm:max-w-md">
 					<div className="text-center">
 						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
-						<p className="mt-4 text-gray-600 dark:text-gray-400">Validating reset link...</p>
+						<p className="mt-4 text-gray-600 dark:text-gray-400">
+							Validating reset link...
+						</p>
 					</div>
 				</div>
 			</div>
@@ -223,7 +225,9 @@ export function PasswordReset() {
 										</svg>
 									</div>
 									<div className="ml-3">
-										<p className="text-sm text-red-700 dark:text-red-400">{resetError}</p>
+										<p className="text-sm text-red-700 dark:text-red-400">
+											{resetError}
+										</p>
 									</div>
 								</div>
 							</div>
@@ -274,7 +278,9 @@ export function PasswordReset() {
 											</svg>
 										</div>
 										<div className="ml-3">
-											<p className="text-sm text-red-700 dark:text-red-400">{resetError}</p>
+											<p className="text-sm text-red-700 dark:text-red-400">
+												{resetError}
+											</p>
 										</div>
 									</div>
 								</div>
@@ -419,7 +425,9 @@ export function PasswordReset() {
 										</svg>
 									</div>
 									<div className="ml-3">
-										<p className="text-sm text-red-700 dark:text-red-400">{requestError}</p>
+										<p className="text-sm text-red-700 dark:text-red-400">
+											{requestError}
+										</p>
 									</div>
 								</div>
 							</div>
@@ -463,7 +471,9 @@ export function PasswordReset() {
 								<div className="w-full border-t border-gray-300 dark:border-gray-600" />
 							</div>
 							<div className="relative flex justify-center text-sm">
-								<span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Or</span>
+								<span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+									Or
+								</span>
 							</div>
 						</div>
 

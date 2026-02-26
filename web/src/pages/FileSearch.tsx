@@ -153,7 +153,9 @@ function SnapshotGroupCard({
 						<p className="font-medium text-gray-900 dark:text-white">
 							{formatDateTime(group.snapshot_time)}
 						</p>
-						<p className="text-sm text-gray-500 dark:text-gray-400">{group.hostname}</p>
+						<p className="text-sm text-gray-500 dark:text-gray-400">
+							{group.hostname}
+						</p>
 					</div>
 				</div>
 				<div className="flex items-center gap-4">
@@ -244,7 +246,9 @@ function RestoreFileModal({
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 			<div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full mx-4">
 				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
-					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">Restore File</h3>
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+						Restore File
+					</h3>
 					<p className="text-sm text-gray-500 mt-1">
 						Restore file from snapshot {shortId}
 					</p>
@@ -252,7 +256,9 @@ function RestoreFileModal({
 
 				<form onSubmit={handleSubmit} className="p-6 space-y-4">
 					<div>
-						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">File</p>
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							File
+						</p>
 						<p className="font-mono text-gray-900 dark:text-white break-all">
 							{file.file_path}
 						</p>
@@ -260,14 +266,20 @@ function RestoreFileModal({
 
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Snapshot Time</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Snapshot Time
+							</p>
 							<p className="text-gray-900">
 								{formatDateTime(file.snapshot_time)}
 							</p>
 						</div>
 						<div>
-							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">Size</p>
-							<p className="text-gray-900 dark:text-white">{formatBytes(file.file_size)}</p>
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+								Size
+							</p>
+							<p className="text-gray-900 dark:text-white">
+								{formatBytes(file.file_size)}
+							</p>
 						</div>
 					</div>
 
@@ -463,7 +475,9 @@ export function FileSearch() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">File Search</h1>
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+					File Search
+				</h1>
 				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Search for files by name across all backup snapshots
 				</p>
@@ -694,7 +708,9 @@ export function FileSearch() {
 												d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 											/>
 										</svg>
-										<p className="font-medium text-gray-900 dark:text-white">No files found</p>
+										<p className="font-medium text-gray-900 dark:text-white">
+											No files found
+										</p>
 										<p className="text-sm">
 											No files matching "{searchData.query}" were found in any
 											snapshot

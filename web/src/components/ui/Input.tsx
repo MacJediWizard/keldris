@@ -44,12 +44,18 @@ export function Input({
 				{...props}
 			/>
 			{error && (
-				<p id={`${inputId}-error`} className="mt-1 text-sm text-red-600 dark:text-red-400">
+				<p
+					id={`${inputId}-error`}
+					className="mt-1 text-sm text-red-600 dark:text-red-400"
+				>
 					{error}
 				</p>
 			)}
 			{!error && helperText && (
-				<p id={`${inputId}-helper`} className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+				<p
+					id={`${inputId}-helper`}
+					className="mt-1 text-sm text-gray-500 dark:text-gray-400"
+				>
 					{helperText}
 				</p>
 			)}

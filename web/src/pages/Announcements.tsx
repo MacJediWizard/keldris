@@ -44,7 +44,8 @@ function StatusBadge({
 		active: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
 		scheduled: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
 		ended: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200',
-		inactive: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
+		inactive:
+			'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
 	};
 
 	const labels = {
@@ -66,7 +67,8 @@ function StatusBadge({
 function TypeBadge({ type }: { type: AnnouncementType }) {
 	const colors = {
 		info: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
-		warning: 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200',
+		warning:
+			'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200',
 		critical: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
 	};
 
@@ -184,7 +186,9 @@ export function Announcements() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Announcements</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Announcements
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Manage system-wide announcements for your organization
 					</p>
@@ -208,7 +212,10 @@ export function Announcements() {
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 					<div className="space-y-4">
 						{[1, 2, 3].map((i) => (
-							<div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+							<div
+								key={i}
+								className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+							/>
 						))}
 					</div>
 				</div>
@@ -220,10 +227,14 @@ export function Announcements() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Announcements</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Announcements
+					</h1>
 				</div>
 				<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-					<p className="text-red-800 dark:text-red-300">Failed to load announcements</p>
+					<p className="text-red-800 dark:text-red-300">
+						Failed to load announcements
+					</p>
 				</div>
 			</div>
 		);
@@ -238,7 +249,9 @@ export function Announcements() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Announcements</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Announcements
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Manage system-wide announcements for your organization
 					</p>
@@ -480,7 +493,10 @@ export function Announcements() {
 						{sortedAnnouncements.map((a) => {
 							const status = getAnnouncementStatus(a);
 							return (
-								<li key={a.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
+								<li
+									key={a.id}
+									className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
+								>
 									<div className="flex items-center justify-between">
 										<div className="flex-1 min-w-0">
 											<div className="flex items-center gap-2 flex-wrap">

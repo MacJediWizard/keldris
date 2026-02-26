@@ -14,7 +14,9 @@ function ColorPreview({ color, label }: { color: string; label: string }) {
 				className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600"
 				style={{ backgroundColor: color || '#e5e7eb' }}
 			/>
-			<span className="text-sm text-gray-600 dark:text-gray-400">{color || label}</span>
+			<span className="text-sm text-gray-600 dark:text-gray-400">
+				{color || label}
+			</span>
 		</div>
 	);
 }

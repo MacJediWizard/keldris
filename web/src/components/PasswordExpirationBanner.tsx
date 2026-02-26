@@ -76,7 +76,9 @@ export function PasswordExpirationBanner() {
 			<div className="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75 flex items-center justify-center z-50">
 				<div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
 					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-xl font-bold text-gray-900 dark:text-white">Change Password</h2>
+						<h2 className="text-xl font-bold text-gray-900 dark:text-white">
+							Change Password
+						</h2>
 						<button
 							type="button"
 							onClick={() => setShowChangePassword(false)}

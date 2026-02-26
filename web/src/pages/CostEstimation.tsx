@@ -37,7 +37,9 @@ function StatCard({
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
+					<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+						{title}
+					</p>
 					<p className={`text-2xl font-bold mt-1 ${valueClassName}`}>
 						{isLoading ? (
 							<span className="inline-block w-16 h-7 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -45,7 +47,9 @@ function StatCard({
 							value
 						)}
 					</p>
-					<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+					<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+						{subtitle}
+					</p>
 				</div>
 				<div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
 					{icon}
@@ -137,7 +141,11 @@ function CostBreakdownByType({ byType }: { byType: Record<string, number> }) {
 	const entries = Object.entries(byType).filter(([, cost]) => cost > 0);
 
 	if (entries.length === 0) {
-		return <p className="text-gray-500 dark:text-gray-400 text-sm">No cost data available</p>;
+		return (
+			<p className="text-gray-500 dark:text-gray-400 text-sm">
+				No cost data available
+			</p>
+		);
 	}
 
 	const total = entries.reduce((sum, [, cost]) => sum + cost, 0);
@@ -255,7 +263,9 @@ function CostAlertForm({
 						onChange={(e) => setEnabled(e.target.checked)}
 						className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 					/>
-					<span className="text-sm text-gray-700 dark:text-gray-300">Enabled</span>
+					<span className="text-sm text-gray-700 dark:text-gray-300">
+						Enabled
+					</span>
 				</label>
 				<label className="flex items-center gap-2">
 					<input
@@ -366,7 +376,9 @@ function CostAlertsSection() {
 	return (
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-center justify-between mb-4">
-				<h2 className="text-lg font-semibold text-gray-900 dark:text-white">Cost Alerts</h2>
+				<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+					Cost Alerts
+				</h2>
 				<button
 					type="button"
 					onClick={() => setShowForm(true)}
@@ -378,7 +390,10 @@ function CostAlertsSection() {
 			{isLoading ? (
 				<div className="space-y-3">
 					{[1, 2].map((i) => (
-						<div key={i} className="h-16 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+						<div
+							key={i}
+							className="h-16 bg-gray-100 dark:bg-gray-700 rounded animate-pulse"
+						/>
 					))}
 				</div>
 			) : !alerts || alerts.length === 0 ? (
@@ -500,7 +515,9 @@ export function CostEstimation() {
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Cost Estimation</h1>
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+					Cost Estimation
+				</h1>
 				<p className="text-gray-600 dark:text-gray-400 mt-1">
 					Monitor and forecast your cloud storage costs
 				</p>
@@ -642,7 +659,10 @@ export function CostEstimation() {
 				{summaryLoading ? (
 					<div className="space-y-3">
 						{[1, 2, 3].map((i) => (
-							<div key={i} className="h-16 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+							<div
+								key={i}
+								className="h-16 bg-gray-100 dark:bg-gray-700 rounded animate-pulse"
+							/>
 						))}
 					</div>
 				) : !summary?.repositories || summary.repositories.length === 0 ? (
