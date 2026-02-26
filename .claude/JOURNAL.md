@@ -354,3 +354,41 @@ Fixed all CI pipeline failures introduced by the union merge consolidation, and 
 - `staticcheck ./...`: clean
 - `npx tsc --noEmit`: clean (both repos)
 - License server: builds, tests pass, types check
+
+---
+
+## 2026-02-25 - Post-Deploy v0.0.30 Bug Fixes (Issues #256-#264)
+
+### What
+Fixed 20+ UI/functionality issues discovered after v0.0.30 deployment.
+
+### Crash & Load Fixes
+- Docker Logs page crash: null guard on `data.backups` filter (#256)
+- Legal Holds page: added loading state guard before feature gate check (#257)
+- Lifecycle Policies page: same loading state guard pattern (#258)
+- Server Logs page: friendly message when LogBuffer not configured (404 handling) (#259)
+
+### Dark Mode Support (12 pages)
+- Agents, FileSearch, FileHistory, AuditLogs, CostEstimation, Announcements, PasswordPolicies, DockerRegistries, DowntimeHistory, OrganizationSSOSettings, Branding (#260, #261)
+- Added `dark:` variant Tailwind classes to all light-mode color classes
+
+### Multi-Channel Notifications (#262)
+- Replaced email-only modal with 6-type channel selector (email, slack, teams, discord, pagerduty, webhook)
+- Type-specific config forms for each channel
+- Feature gating for Pro channels (Slack, Teams, Discord, PagerDuty)
+- Type-specific icons in channel list
+- Dark mode fixes on event badges and log status colors
+
+### License Page Resources (#263)
+- Added Servers and Storage cards to Resource Limits grid
+- Updated grid to 5-column layout
+- Added `max_servers` and `max_storage_bytes` to `LicenseLimits` TypeScript interface
+
+### Onboarding Org Name (#264)
+- OrganizationStep pre-fills org name from license `customer_name`
+- Allows renaming default orgs to license-provided name
+
+### Result
+- `npx tsc --noEmit`: clean
+- 19 files changed, 1847 insertions, 711 deletions
+- 5 commits, 9 GitHub issues created (#256-#264)
