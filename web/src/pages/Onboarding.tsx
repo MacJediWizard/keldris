@@ -13,7 +13,10 @@ import {
 	useOnboardingStatus,
 	useSkipOnboarding,
 } from '../hooks/useOnboarding';
-import { useOrganizations } from '../hooks/useOrganizations';
+import {
+	useOrganizations,
+	useUpdateOrganization,
+} from '../hooks/useOrganizations';
 import { useRepositories } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
 import type { OnboardingStep } from '../lib/types';
@@ -373,41 +376,112 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 
 function OrganizationStep({ onComplete, isLoading }: StepProps) {
 	const { data: organizations } = useOrganizations();
+	const { data: license } = useLicense();
+	const updateOrg = useUpdateOrganization();
 	const hasOrganization = organizations && organizations.length > 0;
+
+	// Check if the org still has the default name and can be updated from license
+	const defaultOrg = organizations?.find(
+		(o) =>
+			o.name === 'Default' ||
+			o.name === 'Default Organization' ||
+			o.name === 'default',
+	);
+	const licenseOrgName = license?.customer_name;
+	const canRename = defaultOrg && licenseOrgName && defaultOrg.name !== licenseOrgName;
+
+	const [orgName, setOrgName] = useState('');
+	const [renameError, setRenameError] = useState('');
+
+	// Pre-fill org name from license when available
+	useEffect(() => {
+		if (licenseOrgName && !orgName) {
+			setOrgName(licenseOrgName);
+		}
+	}, [licenseOrgName, orgName]);
+
+	const handleRename = async () => {
+		if (!defaultOrg || !orgName.trim()) return;
+		setRenameError('');
+		try {
+			await updateOrg.mutateAsync({
+				id: defaultOrg.id,
+				data: { name: orgName.trim() },
+			});
+		} catch (err) {
+			setRenameError(
+				err instanceof Error ? err.message : 'Failed to rename organization',
+			);
+		}
+	};
 
 	return (
 		<div className="py-4">
 			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-				Create Your Organization
+				Your Organization
 			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
 				Organizations help you manage backup resources and team access.
 			</p>
 
 			{hasOrganization ? (
-				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
-					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
-						<svg
-							aria-hidden="true"
-							className="w-5 h-5"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-						>
-							<path
-								fillRule="evenodd"
-								d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-								clipRule="evenodd"
-							/>
-						</svg>
-						<span className="font-medium">
-							You already have an organization!
-						</span>
+				<div className="space-y-4 mb-6">
+					<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+						<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
+							<svg
+								aria-hidden="true"
+								className="w-5 h-5"
+								fill="currentColor"
+								viewBox="0 0 20 20"
+							>
+								<path
+									fillRule="evenodd"
+									d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+									clipRule="evenodd"
+								/>
+							</svg>
+							<span className="font-medium">
+								Organization ready!
+							</span>
+						</div>
+						<p className="mt-1 text-sm text-green-700 dark:text-green-400">
+							You're part of{' '}
+							<strong>{organizations.map((o) => o.name).join(', ')}</strong>.
+						</p>
 					</div>
-					<p className="mt-1 text-sm text-green-700 dark:text-green-400">
-						You're part of{' '}
-						<strong>{organizations.map((o) => o.name).join(', ')}</strong>. You
-						can continue to the next step.
-					</p>
+
+					{canRename && (
+						<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+							<p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
+								Update organization name
+							</p>
+							<p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
+								Your organization is currently named "{defaultOrg.name}". Would you like to rename it?
+							</p>
+							<div className="flex gap-3">
+								<input
+									type="text"
+									value={orgName}
+									onChange={(e) => setOrgName(e.target.value)}
+									placeholder="Organization name..."
+									className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+								/>
+								<button
+									type="button"
+									onClick={handleRename}
+									disabled={!orgName.trim() || updateOrg.isPending}
+									className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									{updateOrg.isPending ? 'Renaming...' : 'Rename'}
+								</button>
+							</div>
+							{renameError && (
+								<p className="mt-2 text-sm text-red-600 dark:text-red-400">
+									{renameError}
+								</p>
+							)}
+						</div>
+					)}
 				</div>
 			) : (
 				<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
