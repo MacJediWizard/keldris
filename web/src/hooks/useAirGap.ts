@@ -68,6 +68,16 @@ export interface DocumentationIndex {
 async function fetchAirGapStatus(): Promise<AirGapStatus> {
 	const res = await fetch(`${API_BASE}/public/airgap/status`);
 	if (!res.ok) {
+		// Air-gap endpoint may not be registered if AirGapManager is not configured
+		if (res.status === 404) {
+			return {
+				airgap_mode: false,
+				disable_update_checker: false,
+				disable_telemetry: false,
+				disable_external_links: false,
+				license_valid: true,
+			};
+		}
 		throw new Error('Failed to fetch air-gap status');
 	}
 	return res.json();

@@ -3325,6 +3325,7 @@ export interface LicenseInfo {
 	tier: LicenseTier;
 	customer_id: string;
 	customer_name?: string;
+	company?: string;
 	expires_at: string;
 	issued_at: string;
 	features: string[];

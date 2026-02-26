@@ -14,6 +14,7 @@ type LicenseInfoResponse struct {
 	Tier             string             `json:"tier"`
 	CustomerID       string             `json:"customer_id"`
 	CustomerName     string             `json:"customer_name,omitempty"`
+	Company          string             `json:"company,omitempty"`
 	ExpiresAt        string             `json:"expires_at"`
 	IssuedAt         string             `json:"issued_at"`
 	Features         []string           `json:"features"`
@@ -73,6 +74,7 @@ func (h *LicenseInfoHandler) Get(c *gin.Context) {
 		Tier:             string(lic.Tier),
 		CustomerID:       lic.CustomerID,
 		CustomerName:     lic.CustomerName,
+		Company:          lic.Company,
 		ExpiresAt:        lic.ExpiresAt.Format("2006-01-02T15:04:05Z"),
 		IssuedAt:         lic.IssuedAt.Format("2006-01-02T15:04:05Z"),
 		Features:         featureStrings,

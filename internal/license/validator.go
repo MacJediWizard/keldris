@@ -566,6 +566,11 @@ func (v *Validator) updateLicenseFromResponse(resp map[string]interface{}) {
 		customerName = cn
 	}
 
+	company := currentLic.Company
+	if co, ok := resp["company"].(string); ok && co != "" {
+		company = co
+	}
+
 	expiresAt := currentLic.ExpiresAt
 	if exp, ok := resp["expires_at"].(string); ok && exp != "" {
 		if t, err := time.Parse(time.RFC3339, exp); err == nil {
@@ -606,6 +611,7 @@ func (v *Validator) updateLicenseFromResponse(resp map[string]interface{}) {
 		Tier:              tier,
 		CustomerID:        customerID,
 		CustomerName:      customerName,
+		Company:           company,
 		ExpiresAt:         expiresAt,
 		IssuedAt:          issuedAt,
 		Limits:            limits,

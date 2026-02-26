@@ -115,6 +115,9 @@ func (h *ChangelogHandler) Get(c *gin.Context) {
 func (h *ChangelogHandler) parseChangelog() ([]ChangelogEntry, error) {
 	file, err := os.Open(h.changelogPath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return []ChangelogEntry{}, nil
+		}
 		return nil, err
 	}
 	defer file.Close()

@@ -16,7 +16,13 @@ export function useCurrentLicense() {
 export function useLicenseWarnings() {
 	return useQuery({
 		queryKey: ['licenses', 'warnings'],
-		queryFn: () => licensesApi.getWarnings(),
+		queryFn: async () => {
+			try {
+				return await licensesApi.getWarnings();
+			} catch {
+				return { warnings: { limits: [] } };
+			}
+		},
 		refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
 		staleTime: 60 * 1000,
 	});
@@ -51,7 +57,13 @@ export function useActivateLicense() {
 export function useLicensePurchaseUrl() {
 	return useQuery({
 		queryKey: ['licenses', 'purchase-url'],
-		queryFn: () => licensesApi.getPurchaseUrl(),
+		queryFn: async () => {
+			try {
+				return await licensesApi.getPurchaseUrl();
+			} catch {
+				return { url: '' };
+			}
+		},
 		staleTime: 5 * 60 * 1000,
 	});
 }

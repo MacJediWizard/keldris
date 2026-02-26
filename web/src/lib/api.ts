@@ -3565,7 +3565,7 @@ export const passwordApi = {
 		}),
 
 	getExpiration: async (): Promise<PasswordExpirationInfo> =>
-		fetchApi<PasswordExpirationInfo>('/auth/password/expiration'),
+		fetchApi<PasswordExpirationInfo>('/password/expiration'),
 };
 
 // Password Policies API

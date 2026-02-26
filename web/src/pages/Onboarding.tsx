@@ -383,7 +383,7 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 	// Find the current org (prefer default-slug org, fallback to first)
 	const currentOrg =
 		organizations?.find((o) => o.slug === 'default') ?? organizations?.[0];
-	const licenseOrgName = license?.customer_name;
+	const licenseOrgName = license?.company || license?.customer_name;
 
 	const [orgName, setOrgName] = useState('');
 	const [renameError, setRenameError] = useState('');

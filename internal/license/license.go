@@ -49,6 +49,7 @@ type License struct {
 	Tier              LicenseTier `json:"tier"`
 	CustomerID        string      `json:"customer_id"`
 	CustomerName      string      `json:"customer_name,omitempty"`
+	Company           string      `json:"company,omitempty"`
 	ExpiresAt         time.Time   `json:"expires_at"`
 	IssuedAt          time.Time   `json:"issued_at"`
 	Limits            TierLimits  `json:"limits"`
