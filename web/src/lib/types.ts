@@ -1835,6 +1835,8 @@ export interface Alert {
 export type NotificationChannelType =
 	| 'email'
 	| 'slack'
+	| 'teams'
+	| 'discord'
 	| 'webhook'
 	| 'pagerduty';
 export type NotificationEventType =
@@ -1880,6 +1882,39 @@ export interface EmailChannelConfig {
 	password: string;
 	from: string;
 	tls: boolean;
+}
+
+export interface SlackChannelConfig {
+	webhook_url: string;
+	channel: string;
+	username?: string;
+	icon_emoji?: string;
+}
+
+export interface TeamsChannelConfig {
+	webhook_url: string;
+}
+
+export interface DiscordChannelConfig {
+	webhook_url: string;
+	username?: string;
+	avatar_url?: string;
+}
+
+export interface PagerDutyChannelConfig {
+	routing_key: string;
+	severity?: string;
+	component?: string;
+	group?: string;
+	class?: string;
+}
+
+export interface WebhookChannelConfig {
+	url: string;
+	method?: string;
+	auth_type?: string;
+	auth_token?: string;
+	content_type?: string;
 }
 
 export interface NotificationPreference {
@@ -1933,12 +1968,26 @@ export interface NotificationLog {
 export interface CreateNotificationChannelRequest {
 	name: string;
 	type: NotificationChannelType;
-	config: EmailChannelConfig | Record<string, unknown>;
+	config:
+		| EmailChannelConfig
+		| SlackChannelConfig
+		| TeamsChannelConfig
+		| DiscordChannelConfig
+		| PagerDutyChannelConfig
+		| WebhookChannelConfig
+		| Record<string, unknown>;
 }
 
 export interface UpdateNotificationChannelRequest {
 	name?: string;
-	config?: EmailChannelConfig | Record<string, unknown>;
+	config?:
+		| EmailChannelConfig
+		| SlackChannelConfig
+		| TeamsChannelConfig
+		| DiscordChannelConfig
+		| PagerDutyChannelConfig
+		| WebhookChannelConfig
+		| Record<string, unknown>;
 	enabled?: boolean;
 }
 
@@ -3317,8 +3366,10 @@ export interface PricingPlan {
 
 export interface LicenseLimits {
 	max_agents: number;
+	max_servers: number;
 	max_users: number;
 	max_orgs: number;
+	max_storage_bytes: number;
 }
 
 export interface StartTrialRequest {
