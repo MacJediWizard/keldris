@@ -380,35 +380,31 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 	const updateOrg = useUpdateOrganization();
 	const hasOrganization = organizations && organizations.length > 0;
 
-	// Check if the org still has the default name and can be updated from license
-	const defaultOrg = organizations?.find(
-		(o) =>
-			o.name === 'Default' ||
-			o.name === 'Default Organization' ||
-			o.name === 'default',
-	);
+	// Find the current org (prefer default-slug org, fallback to first)
+	const currentOrg =
+		organizations?.find((o) => o.slug === 'default') ?? organizations?.[0];
 	const licenseOrgName = license?.customer_name;
-	const canRename =
-		defaultOrg && licenseOrgName && defaultOrg.name !== licenseOrgName;
 
 	const [orgName, setOrgName] = useState('');
 	const [renameError, setRenameError] = useState('');
+	const [renamed, setRenamed] = useState(false);
 
-	// Pre-fill org name from license when available
+	// Pre-fill org name: prefer license customer_name, otherwise keep current name
 	useEffect(() => {
-		if (licenseOrgName && !orgName) {
-			setOrgName(licenseOrgName);
+		if (!orgName && currentOrg) {
+			setOrgName(licenseOrgName || currentOrg.name);
 		}
-	}, [licenseOrgName, orgName]);
+	}, [licenseOrgName, currentOrg, orgName]);
 
 	const handleRename = async () => {
-		if (!defaultOrg || !orgName.trim()) return;
+		if (!currentOrg || !orgName.trim()) return;
 		setRenameError('');
 		try {
 			await updateOrg.mutateAsync({
-				id: defaultOrg.id,
+				id: currentOrg.id,
 				data: { name: orgName.trim() },
 			});
+			setRenamed(true);
 		} catch (err) {
 			setRenameError(
 				err instanceof Error ? err.message : 'Failed to rename organization',
@@ -449,14 +445,13 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 						</p>
 					</div>
 
-					{canRename && (
+					{currentOrg && !renamed && (
 						<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
 							<p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
-								Update organization name
+								Organization name
 							</p>
 							<p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
-								Your organization is currently named "{defaultOrg.name}". Would
-								you like to rename it?
+								Set a name for your organization.
 							</p>
 							<div className="flex gap-3">
 								<input
@@ -469,10 +464,14 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 								<button
 									type="button"
 									onClick={handleRename}
-									disabled={!orgName.trim() || updateOrg.isPending}
+									disabled={
+										!orgName.trim() ||
+										orgName.trim() === currentOrg.name ||
+										updateOrg.isPending
+									}
 									className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
 								>
-									{updateOrg.isPending ? 'Renaming...' : 'Rename'}
+									{updateOrg.isPending ? 'Saving...' : 'Save'}
 								</button>
 							</div>
 							{renameError && (
