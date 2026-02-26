@@ -25,8 +25,8 @@ func TestGetLimits(t *testing.T) {
 	t.Run("pro tier limits", func(t *testing.T) {
 		limits := GetLimits(TierPro)
 
-		if limits.MaxAgents != 25 {
-			t.Errorf("MaxAgents = %d, want 25", limits.MaxAgents)
+		if limits.MaxAgents != 100 {
+			t.Errorf("MaxAgents = %d, want 100", limits.MaxAgents)
 		}
 		if limits.MaxUsers != 10 {
 			t.Errorf("MaxUsers = %d, want 10", limits.MaxUsers)
@@ -102,7 +102,7 @@ func TestLimits_CheckAgentLimit(t *testing.T) {
 		wantLimit int
 	}{
 		{"free tier allows 3 agents", TierFree, 3},
-		{"pro tier allows 25 agents", TierPro, 25},
+		{"pro tier allows 100 agents", TierPro, 100},
 		{"enterprise tier has unlimited agents", TierEnterprise, Unlimited},
 	}
 

@@ -12,6 +12,7 @@ import (
 // Only tracks resources monitored by the license server via heartbeat.
 type TierLimits struct {
 	MaxAgents  int   `json:"max_agents"`
+	MaxServers int   `json:"max_servers"`
 	MaxUsers   int   `json:"max_users"`
 	MaxOrgs    int   `json:"max_orgs"`
 	MaxStorage int64 `json:"max_storage_bytes"`
@@ -24,18 +25,21 @@ const Unlimited = -1
 var tierLimits = map[LicenseTier]TierLimits{
 	TierFree: {
 		MaxAgents:  3,
+		MaxServers: 1,
 		MaxUsers:   3,
 		MaxOrgs:    1,
 		MaxStorage: 10 * 1024 * 1024 * 1024, // 10 GB
 	},
 	TierPro: {
-		MaxAgents:  25,
+		MaxAgents:  100,
+		MaxServers: 10,
 		MaxUsers:   10,
 		MaxOrgs:    3,
 		MaxStorage: 100 * 1024 * 1024 * 1024, // 100 GB
 	},
 	TierEnterprise: {
 		MaxAgents:  Unlimited,
+		MaxServers: Unlimited,
 		MaxUsers:   Unlimited,
 		MaxOrgs:    Unlimited,
 		MaxStorage: Unlimited,

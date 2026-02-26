@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -222,6 +223,10 @@ func (v *Validator) Start(ctx context.Context) error {
 		v.activateLicense(ctx)
 	}
 
+	// Send initial heartbeat immediately so the license server has full
+	// metrics (org count, feature usage, etc.) without waiting 24 hours.
+	v.sendHeartbeat(ctx)
+
 	// Start background goroutines
 	go v.heartbeatLoop()
 	if v.licenseKey != "" {
@@ -289,12 +294,18 @@ func (v *Validator) registerInstance(ctx context.Context) {
 		userCount, _ = v.metrics.UserCount(ctx)
 	}
 
+	var orgCount int
+	if v.orgCounter != nil {
+		orgCount, _ = v.orgCounter.OrgCount(ctx)
+	}
+
+	hostname, _ := os.Hostname()
 	lic := v.GetLicense()
 
 	body := map[string]interface{}{
 		"instance_id":    v.instanceID,
 		"product":        "keldris",
-		"hostname":       "",
+		"hostname":       hostname,
 		"server_version": v.serverVersion,
 		"tier":           string(lic.Tier),
 		"os":             runtime.GOOS,
@@ -302,6 +313,7 @@ func (v *Validator) registerInstance(ctx context.Context) {
 		"metrics": map[string]interface{}{
 			"agent_count": agentCount,
 			"user_count":  userCount,
+			"org_count":   orgCount,
 		},
 	}
 
@@ -310,15 +322,16 @@ func (v *Validator) registerInstance(ctx context.Context) {
 		return
 	}
 
-	v.logger.Info().Msg("registered with license server")
+	v.logger.Info().Str("hostname", hostname).Msg("registered with license server")
 }
 
 func (v *Validator) activateLicense(ctx context.Context) {
+	hostname, _ := os.Hostname()
 	body := map[string]interface{}{
 		"license_key":    v.licenseKey,
 		"instance_id":    v.instanceID,
 		"product":        "keldris",
-		"hostname":       "",
+		"hostname":       hostname,
 		"server_version": v.serverVersion,
 	}
 
@@ -625,6 +638,11 @@ func parseLimitsFromResponse(resp map[string]interface{}) TierLimits {
 		limits.MaxAgents = int(v)
 	} else if v, ok := limitsMap["max_agents"].(float64); ok {
 		limits.MaxAgents = int(v)
+	}
+	if v, ok := limitsMap["servers"].(float64); ok {
+		limits.MaxServers = int(v)
+	} else if v, ok := limitsMap["max_servers"].(float64); ok {
+		limits.MaxServers = int(v)
 	}
 	if v, ok := limitsMap["users"].(float64); ok {
 		limits.MaxUsers = int(v)
