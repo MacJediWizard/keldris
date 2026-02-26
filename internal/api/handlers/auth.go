@@ -98,7 +98,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	authURL := h.oidc.AuthorizationURL(state)
 	h.logger.Debug().Str("redirect_url", authURL).Msg("redirecting to OIDC provider")
-	c.Redirect(http.StatusTemporaryRedirect, authURL)
+	c.Redirect(http.StatusFound, authURL)
 }
 
 // Callback handles the OIDC callback after authentication.
@@ -136,12 +136,22 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	savedState, err := h.sessions.GetOIDCState(c.Request, c.Writer)
+	// Read state directly from session without saving, to avoid a duplicate
+	// Set-Cookie header. The subsequent SetUser call will save the session
+	// (with the state already cleared from the in-memory session object).
+	session, err := h.sessions.Get(c.Request)
 	if err != nil {
-		h.logger.Warn().Err(err).Msg("failed to retrieve state from session")
+		h.logger.Warn().Err(err).Msg("failed to retrieve session")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session state"})
 		return
 	}
+	savedState, ok := session.Values[auth.StateKey].(string)
+	if !ok {
+		h.logger.Warn().Msg("no OIDC state in session")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session state"})
+		return
+	}
+	delete(session.Values, auth.StateKey)
 
 	if state != savedState {
 		h.logger.Warn().Msg("state parameter mismatch")
@@ -271,7 +281,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		Msg("user authenticated successfully")
 
 	// Redirect to frontend dashboard
-	c.Redirect(http.StatusTemporaryRedirect, "/")
+	c.Redirect(http.StatusFound, "/")
 }
 
 // findOrCreateUser finds an existing user by OIDC subject or creates a new one.

@@ -340,8 +340,8 @@ func TestAuthHandler_Login(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/auth/login", nil)
 		r.ServeHTTP(w, req)
 
-		if w.Code != http.StatusTemporaryRedirect {
-			t.Fatalf("expected status 307, got %d", w.Code)
+		if w.Code != http.StatusFound {
+			t.Fatalf("expected status 302, got %d", w.Code)
 		}
 
 		location := w.Header().Get("Location")
@@ -416,8 +416,8 @@ func TestAuthHandler_Callback(t *testing.T) {
 		}
 		r.ServeHTTP(callbackW, callbackReq)
 
-		if callbackW.Code != http.StatusTemporaryRedirect {
-			t.Fatalf("expected status 307, got %d: %s", callbackW.Code, callbackW.Body.String())
+		if callbackW.Code != http.StatusFound {
+			t.Fatalf("expected status 302, got %d: %s", callbackW.Code, callbackW.Body.String())
 		}
 
 		callbackLocation := callbackW.Header().Get("Location")
