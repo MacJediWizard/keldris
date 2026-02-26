@@ -33,11 +33,31 @@ export function LegalHolds() {
 	const { data: holds, isLoading, isError, refetch } = useLegalHolds();
 	const deleteHold = useDeleteLegalHold();
 	const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-	const { hasFeature } = usePlanLimits();
-	const hasLegalHolds = hasFeature('legal_holds');
+	const { hasFeature, isLoading: limitsLoading } = usePlanLimits();
 
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
+
+	// Wait for plan limits to load before checking feature gate
+	if (limitsLoading) {
+		return (
+			<div className="space-y-6">
+				<div>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Legal Holds
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						Preserve snapshots for litigation or compliance purposes
+					</p>
+				</div>
+				<div className="flex items-center justify-center py-12">
+					<div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+				</div>
+			</div>
+		);
+	}
+
+	const hasLegalHolds = hasFeature('legal_holds');
 
 	// Feature gate check
 	if (!hasLegalHolds) {

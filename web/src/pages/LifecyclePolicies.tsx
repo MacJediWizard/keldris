@@ -541,8 +541,7 @@ export function LifecyclePolicies() {
 	const { data: deletions } = useOrgLifecycleDeletions(10);
 	const deletePolicy = useDeleteLifecyclePolicy();
 	const updatePolicy = useUpdateLifecyclePolicy();
-	const { hasFeature } = usePlanLimits();
-	const hasLifecyclePolicies = hasFeature('lifecycle_policies');
+	const { hasFeature, isLoading: limitsLoading } = usePlanLimits();
 
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [dryRunPolicy, setDryRunPolicy] = useState<LifecyclePolicy | null>(
@@ -552,6 +551,27 @@ export function LifecyclePolicies() {
 
 	const isAdmin =
 		user?.current_org_role === 'owner' || user?.current_org_role === 'admin';
+
+	// Wait for plan limits to load before checking feature gate
+	if (limitsLoading) {
+		return (
+			<div className="space-y-6">
+				<div>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Lifecycle Policies
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
+						Automate snapshot retention and cleanup based on custom rules
+					</p>
+				</div>
+				<div className="flex items-center justify-center py-12">
+					<div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+				</div>
+			</div>
+		);
+	}
+
+	const hasLifecyclePolicies = hasFeature('lifecycle_policies');
 
 	if (!hasLifecyclePolicies) {
 		return (

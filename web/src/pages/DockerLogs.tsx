@@ -526,7 +526,7 @@ export function DockerLogs() {
 	};
 
 	// Filter backups by selected agent
-	const filteredBackups = data?.backups.filter((backup) =>
+	const filteredBackups = (data?.backups ?? []).filter((backup) =>
 		selectedAgent ? backup.agent_id === selectedAgent : true,
 	);
 
