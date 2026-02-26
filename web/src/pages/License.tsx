@@ -490,13 +490,21 @@ export default function License() {
 				<h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
 					Resource Limits
 				</h2>
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+				<div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5">
 					<div className="rounded-lg border border-gray-200 p-4 dark:border-dark-border">
 						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
 							Agents
 						</p>
 						<p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
 							{formatLimit(license.limits.max_agents)}
+						</p>
+					</div>
+					<div className="rounded-lg border border-gray-200 p-4 dark:border-dark-border">
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Servers
+						</p>
+						<p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
+							{formatLimit(license.limits.max_servers)}
 						</p>
 					</div>
 					<div className="rounded-lg border border-gray-200 p-4 dark:border-dark-border">
@@ -513,6 +521,14 @@ export default function License() {
 						</p>
 						<p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
 							{formatLimit(license.limits.max_orgs)}
+						</p>
+					</div>
+					<div className="rounded-lg border border-gray-200 p-4 dark:border-dark-border">
+						<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+							Storage
+						</p>
+						<p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
+							{license.limits.max_storage_bytes > 0 ? formatBytes(license.limits.max_storage_bytes) : 'Unlimited'}
 						</p>
 					</div>
 				</div>
