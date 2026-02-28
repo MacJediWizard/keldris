@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -30,15 +31,17 @@ type LegalHoldStore interface {
 
 // LegalHoldsHandler handles legal hold HTTP endpoints.
 type LegalHoldsHandler struct {
-	store  LegalHoldStore
-	logger zerolog.Logger
+	store   LegalHoldStore
+	checker *license.FeatureChecker
+	logger  zerolog.Logger
 }
 
 // NewLegalHoldsHandler creates a new LegalHoldsHandler.
-func NewLegalHoldsHandler(store LegalHoldStore, logger zerolog.Logger) *LegalHoldsHandler {
+func NewLegalHoldsHandler(store LegalHoldStore, checker *license.FeatureChecker, logger zerolog.Logger) *LegalHoldsHandler {
 	return &LegalHoldsHandler{
-		store:  store,
-		logger: logger.With().Str("component", "legal_holds_handler").Logger(),
+		store:   store,
+		checker: checker,
+		logger:  logger.With().Str("component", "legal_holds_handler").Logger(),
 	}
 }
 
@@ -161,6 +164,10 @@ func (h *LegalHoldsHandler) ListLegalHolds(c *gin.Context) {
 //	@Security		SessionAuth
 //	@Router			/snapshots/{id}/hold [post]
 func (h *LegalHoldsHandler) CreateLegalHold(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureLegalHolds) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

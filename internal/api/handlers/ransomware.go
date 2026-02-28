@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -31,15 +32,17 @@ type RansomwareStore interface {
 
 // RansomwareHandler handles ransomware detection HTTP endpoints.
 type RansomwareHandler struct {
-	store  RansomwareStore
-	logger zerolog.Logger
+	store   RansomwareStore
+	checker *license.FeatureChecker
+	logger  zerolog.Logger
 }
 
 // NewRansomwareHandler creates a new RansomwareHandler.
-func NewRansomwareHandler(store RansomwareStore, logger zerolog.Logger) *RansomwareHandler {
+func NewRansomwareHandler(store RansomwareStore, checker *license.FeatureChecker, logger zerolog.Logger) *RansomwareHandler {
 	return &RansomwareHandler{
-		store:  store,
-		logger: logger.With().Str("component", "ransomware_handler").Logger(),
+		store:   store,
+		checker: checker,
+		logger:  logger.With().Str("component", "ransomware_handler").Logger(),
 	}
 }
 
@@ -159,6 +162,10 @@ type CreateSettingsRequest struct {
 // CreateSettings creates new ransomware settings for a schedule.
 // POST /api/v1/ransomware/settings
 func (h *RansomwareHandler) CreateSettings(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureRansomwareProtect) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -244,6 +251,10 @@ type UpdateSettingsRequest struct {
 // UpdateSettings updates existing ransomware settings.
 // PUT /api/v1/ransomware/settings/:id
 func (h *RansomwareHandler) UpdateSettings(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureRansomwareProtect) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

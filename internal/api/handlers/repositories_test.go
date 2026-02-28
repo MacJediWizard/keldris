@@ -89,8 +89,8 @@ func setupRepositoryTestRouter(store RepositoryStore, user *auth.SessionUser) *g
 		}
 		c.Next()
 	})
-	// Pass nil keyManager - List/Get/Delete tests don't need encryption
-	handler := NewRepositoriesHandler(store, nil, zerolog.Nop())
+	// Pass nil keyManager and checker - List/Get/Delete tests don't need encryption or license checks
+	handler := NewRepositoriesHandler(store, nil, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r
@@ -403,7 +403,7 @@ func setupRepositoryTestRouterWithKeyManager(store RepositoryStore, user *auth.S
 		c.Next()
 	})
 	km, _ := crypto.NewKeyManager(make([]byte, 32))
-	handler := NewRepositoriesHandler(store, km, zerolog.Nop())
+	handler := NewRepositoriesHandler(store, km, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

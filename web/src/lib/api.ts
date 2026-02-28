@@ -583,8 +583,16 @@ function emitUpgradeRequired(event: UpgradeEvent) {
 
 async function handleResponse<T>(response: Response): Promise<T> {
 	if (response.status === 401) {
-		window.location.href = '/auth/login';
+		window.location.href = '/login';
 		throw new ApiError(401, 'Unauthorized');
+	}
+
+	if (response.status === 503) {
+		const data = await response.json().catch(() => ({}));
+		if (data.redirect === '/setup') {
+			window.location.href = '/setup';
+			throw new ApiError(503, 'Setup required');
+		}
 	}
 
 	if (!response.ok) {
@@ -711,7 +719,7 @@ export const authApi = {
 			body: JSON.stringify(data),
 		}),
 
-	getLoginUrl: () => '/auth/login',
+	getLoginUrl: () => '/login',
 };
 
 export const agentsApi = {
@@ -2541,6 +2549,15 @@ export const onboardingApi = {
 	completeStep: async (step: OnboardingStep): Promise<OnboardingStatus> =>
 		fetchApi<OnboardingStatus>(`/onboarding/step/${step}`, {
 			method: 'POST',
+		}),
+
+	completeStepWithBody: async <T>(
+		step: OnboardingStep,
+		body: T,
+	): Promise<OnboardingStatus> =>
+		fetchApi<OnboardingStatus>(`/onboarding/step/${step}`, {
+			method: 'POST',
+			body: JSON.stringify(body),
 		}),
 
 	skip: async (): Promise<OnboardingStatus> =>

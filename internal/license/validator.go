@@ -29,7 +29,7 @@ const (
 	RetryInterval = 1 * time.Hour
 
 	// HeartbeatInterval is how often telemetry is sent (all tiers).
-	HeartbeatInterval = 24 * time.Hour
+	HeartbeatInterval = 6 * time.Hour
 )
 
 // SettingsStore provides persistence for server settings.
@@ -49,32 +49,41 @@ type OrgCounter interface {
 	OrgCount(ctx context.Context) (int, error)
 }
 
+// OIDCConfiguredChecker reports whether OIDC is currently configured.
+type OIDCConfiguredChecker interface {
+	IsConfigured() bool
+}
+
 // Validator manages phone-home communication with the license server.
 // It handles instance registration, heartbeat, license activation/validation,
 // and grace period management.
 type Validator struct {
-	mu               sync.RWMutex
-	license          *License
-	entitlement      *Entitlement
-	entitlementToken string
-	licenseKey       string
-	licenseKeySource string // "env", "database", or "none" — cached on set
-	serverURL        string
-	instanceID       string
-	serverVersion    string
-	startedAt        time.Time
-	killed           bool
-	store            SettingsStore
-	metrics          MetricsProvider
-	orgCounter       OrgCounter
-	publicKey        ed25519.PublicKey
-	logger           zerolog.Logger
-	lastValidation   time.Time
-	graceStartedAt   *time.Time
-	featureUsage     *FeatureUsageTracker
-	stopCh           chan struct{}
-	stopOnce         sync.Once
-	validationRunning bool
+	mu                  sync.RWMutex
+	license             *License
+	entitlement         *Entitlement
+	entitlementToken    string
+	licenseKey          string
+	licenseKeySource    string // "env", "database", or "none" — cached on set
+	serverURL           string
+	instanceID          string
+	serverVersion       string
+	startedAt           time.Time
+	killed              bool
+	store               SettingsStore
+	metrics             MetricsProvider
+	orgCounter          OrgCounter
+	oidcProvider        OIDCConfiguredChecker
+	publicKey           ed25519.PublicKey
+	logger              zerolog.Logger
+	lastValidation      time.Time
+	graceStartedAt      *time.Time
+	featureUsage        *FeatureUsageTracker
+	featureRefreshToken string
+	lastHeartbeatAt     time.Time
+	integrityHash       string
+	stopCh              chan struct{}
+	stopOnce            sync.Once
+	validationRunning   bool
 }
 
 // ValidatorConfig holds configuration for the validator.
@@ -131,6 +140,36 @@ func (v *Validator) IsKilled() bool {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 	return v.killed
+}
+
+// HasValidRefreshToken returns true if the validator has a fresh refresh token
+// from a recent heartbeat. The token is valid for 12 hours (allows one missed
+// 6-hour heartbeat cycle before expiry).
+func (v *Validator) HasValidRefreshToken() bool {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	return v.featureRefreshToken != "" && time.Since(v.lastHeartbeatAt) < 12*time.Hour
+}
+
+// SetIntegrityHash sets the build integrity hash for heartbeat reporting.
+func (v *Validator) SetIntegrityHash(hash string) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.integrityHash = hash
+}
+
+// SetOIDCProvider sets the OIDC provider used to report oidc_configured in heartbeats.
+func (v *Validator) SetOIDCProvider(provider OIDCConfiguredChecker) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.oidcProvider = provider
+}
+
+// isOIDCConfigured returns whether an OIDC provider is set and configured.
+func (v *Validator) isOIDCConfigured() bool {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	return v.oidcProvider != nil && v.oidcProvider.IsConfigured()
 }
 
 // SetLicenseKey stores a license key in the database and triggers activation.
@@ -431,6 +470,10 @@ func (v *Validator) sendHeartbeat(ctx context.Context) {
 
 	uptimeHours := time.Since(v.startedAt).Hours()
 
+	v.mu.RLock()
+	integrityHash := v.integrityHash
+	v.mu.RUnlock()
+
 	body := map[string]interface{}{
 		"instance_id": v.instanceID,
 		"product":     "keldris",
@@ -438,10 +481,12 @@ func (v *Validator) sendHeartbeat(ctx context.Context) {
 			"agent_count":            agentCount,
 			"user_count":             userCount,
 			"org_count":              orgCount,
+			"oidc_configured":        v.isOIDCConfigured(),
 			"feature_usage":          featureUsage,
 			"entitlement_token_hash": tokenHash,
 			"server_version":         v.serverVersion,
 			"uptime_hours":           uptimeHours,
+			"integrity_hash":         integrityHash,
 		},
 		"reported_tier":        reportedTier,
 		"has_valid_entitlement": hasValidEntitlement,
@@ -451,6 +496,16 @@ func (v *Validator) sendHeartbeat(ctx context.Context) {
 	if err != nil {
 		v.logger.Debug().Err(err).Msg("heartbeat failed")
 		return
+	}
+
+	// Store refresh token from heartbeat config
+	if cfgMap, ok := resp["config"].(map[string]interface{}); ok {
+		if token, ok := cfgMap["feature_refresh_token"].(string); ok && token != "" {
+			v.mu.Lock()
+			v.featureRefreshToken = token
+			v.lastHeartbeatAt = time.Now()
+			v.mu.Unlock()
+		}
 	}
 
 	// Handle kill switch response

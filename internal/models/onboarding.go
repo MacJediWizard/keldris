@@ -13,6 +13,7 @@ const (
 	OnboardingStepWelcome      OnboardingStep = "welcome"
 	OnboardingStepLicense      OnboardingStep = "license"
 	OnboardingStepOrganization OnboardingStep = "organization"
+	OnboardingStepOIDC         OnboardingStep = "oidc"
 	OnboardingStepSMTP         OnboardingStep = "smtp"
 	OnboardingStepRepository   OnboardingStep = "repository"
 	OnboardingStepAgent        OnboardingStep = "agent"
@@ -26,6 +27,7 @@ var OnboardingSteps = []OnboardingStep{
 	OnboardingStepWelcome,
 	OnboardingStepLicense,
 	OnboardingStepOrganization,
+	OnboardingStepOIDC,
 	OnboardingStepSMTP,
 	OnboardingStepRepository,
 	OnboardingStepAgent,

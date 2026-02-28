@@ -85,7 +85,7 @@ func (m *mockDRTestRunner) TriggerDRTest(_ context.Context, _ uuid.UUID) error {
 
 func setupDRTestsTestRouter(store DRTestStore, runner DRTestRunner, user *auth.SessionUser) *gin.Engine {
 	r := SetupTestRouter(user)
-	handler := NewDRTestsHandler(store, runner, zerolog.Nop())
+	handler := NewDRTestsHandler(store, runner, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

@@ -127,6 +127,7 @@ const NotFound = lazy(() =>
 const Setup = lazy(() =>
 	import('./pages/Setup').then((m) => ({ default: m.Setup })),
 );
+const Login = lazy(() => import('./pages/Login'));
 const PasswordReset = lazy(() =>
 	import('./pages/PasswordReset').then((m) => ({ default: m.PasswordReset })),
 );
@@ -201,6 +202,7 @@ function App() {
 								<Routes>
 									{/* Public routes - outside Layout, no auth required */}
 									<Route path="/setup" element={<Setup />} />
+									<Route path="/login" element={<Login />} />
 									<Route path="/reset-password" element={<PasswordReset />} />
 									<Route path="/" element={<Layout />}>
 										<Route index element={<Dashboard />} />

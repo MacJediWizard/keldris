@@ -15,6 +15,7 @@ type Entitlement struct {
 	Tier      LicenseTier      `json:"tier"`
 	Features  []Feature        `json:"features"`
 	Limits    TierLimits       `json:"limits"`
+	Nonce     string           `json:"nonce"`
 	IssuedAt  time.Time        `json:"issued_at"`
 	ExpiresAt time.Time        `json:"expires_at"`
 }
@@ -24,6 +25,7 @@ type entitlementPayload struct {
 	Tier      LicenseTier      `json:"tier"`
 	Features  []string         `json:"features"`
 	Limits    map[string]int64 `json:"limits"`
+	Nonce     string           `json:"nonce,omitempty"`
 	IssuedAt  int64            `json:"issued_at"`
 	ExpiresAt int64            `json:"expires_at"`
 }
@@ -73,6 +75,7 @@ func ParseEntitlementToken(token string, publicKey ed25519.PublicKey) (*Entitlem
 		Tier:      payload.Tier,
 		Features:  features,
 		Limits:    limits,
+		Nonce:     payload.Nonce,
 		IssuedAt:  time.Unix(payload.IssuedAt, 0),
 		ExpiresAt: time.Unix(payload.ExpiresAt, 0),
 	}, nil

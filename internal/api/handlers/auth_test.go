@@ -332,7 +332,7 @@ func TestAuthHandler_Login(t *testing.T) {
 
 	sessions := newAuthTestSessionStore(t)
 	store := &mockUserStore{}
-	handler := NewAuthHandler(oidcProvider, sessions, store, zerolog.Nop())
+	handler := NewAuthHandler(auth.NewOIDCProvider(oidcProvider, zerolog.Nop()), sessions, store, zerolog.Nop())
 	r := setupAuthTestRouter(handler)
 
 	t.Run("redirects to OIDC provider", func(t *testing.T) {
@@ -384,7 +384,7 @@ func TestAuthHandler_Callback(t *testing.T) {
 			org:         org,
 			memberships: []*models.OrgMembership{membership},
 		}
-		handler := NewAuthHandler(oidcProvider, sessions, store, zerolog.Nop())
+		handler := NewAuthHandler(auth.NewOIDCProvider(oidcProvider, zerolog.Nop()), sessions, store, zerolog.Nop())
 		r := setupAuthTestRouter(handler)
 
 		// Initiate login to set the state in session
@@ -432,7 +432,7 @@ func TestAuthHandler_Callback(t *testing.T) {
 
 		sessions := newAuthTestSessionStore(t)
 		store := &mockUserStore{org: org}
-		handler := NewAuthHandler(oidcProvider, sessions, store, zerolog.Nop())
+		handler := NewAuthHandler(auth.NewOIDCProvider(oidcProvider, zerolog.Nop()), sessions, store, zerolog.Nop())
 		r := setupAuthTestRouter(handler)
 
 		w := httptest.NewRecorder()
@@ -459,7 +459,7 @@ func TestAuthHandler_Callback_InvalidState(t *testing.T) {
 
 	sessions := newAuthTestSessionStore(t)
 	store := &mockUserStore{}
-	handler := NewAuthHandler(oidcProvider, sessions, store, zerolog.Nop())
+	handler := NewAuthHandler(auth.NewOIDCProvider(oidcProvider, zerolog.Nop()), sessions, store, zerolog.Nop())
 	r := setupAuthTestRouter(handler)
 
 	t.Run("missing state parameter", func(t *testing.T) {
@@ -542,7 +542,7 @@ func TestAuthHandler_Callback_InvalidCode(t *testing.T) {
 
 		sessions := newAuthTestSessionStore(t)
 		store := &mockUserStore{org: org}
-		handler := NewAuthHandler(oidcProvider, sessions, store, zerolog.Nop())
+		handler := NewAuthHandler(auth.NewOIDCProvider(oidcProvider, zerolog.Nop()), sessions, store, zerolog.Nop())
 		r := setupAuthTestRouter(handler)
 
 		// Login to set state
@@ -582,7 +582,7 @@ func TestAuthHandler_Callback_InvalidCode(t *testing.T) {
 
 		sessions := newAuthTestSessionStore(t)
 		store := &mockUserStore{org: org}
-		handler := NewAuthHandler(oidcProvider, sessions, store, zerolog.Nop())
+		handler := NewAuthHandler(auth.NewOIDCProvider(oidcProvider, zerolog.Nop()), sessions, store, zerolog.Nop())
 		r := setupAuthTestRouter(handler)
 
 		// Login to set state
@@ -623,7 +623,7 @@ func TestAuthHandler_Logout(t *testing.T) {
 
 	sessions := newAuthTestSessionStore(t)
 	store := &mockUserStore{}
-	handler := NewAuthHandler(oidcProvider, sessions, store, zerolog.Nop())
+	handler := NewAuthHandler(auth.NewOIDCProvider(oidcProvider, zerolog.Nop()), sessions, store, zerolog.Nop())
 	r := setupAuthTestRouter(handler)
 
 	t.Run("clears session", func(t *testing.T) {
@@ -679,7 +679,7 @@ func TestAuthHandler_Me(t *testing.T) {
 			SyncedAt:   syncedAt,
 		}
 		store := &mockUserStore{ssoGroups: ssoGroups}
-		handler := NewAuthHandler(oidcProvider, sessions, store, zerolog.Nop())
+		handler := NewAuthHandler(auth.NewOIDCProvider(oidcProvider, zerolog.Nop()), sessions, store, zerolog.Nop())
 		r := setupAuthTestRouter(handler)
 
 		// Set up an authenticated session
@@ -740,7 +740,7 @@ func TestAuthHandler_Me(t *testing.T) {
 	t.Run("returns user without SSO groups", func(t *testing.T) {
 		sessions := newAuthTestSessionStore(t)
 		store := &mockUserStore{getSSOGroupsErr: errors.New("no groups")}
-		handler := NewAuthHandler(oidcProvider, sessions, store, zerolog.Nop())
+		handler := NewAuthHandler(auth.NewOIDCProvider(oidcProvider, zerolog.Nop()), sessions, store, zerolog.Nop())
 		r := setupAuthTestRouter(handler)
 
 		sessionUser := &auth.SessionUser{
@@ -791,7 +791,7 @@ func TestAuthHandler_Me_Unauthenticated(t *testing.T) {
 
 	sessions := newAuthTestSessionStore(t)
 	store := &mockUserStore{}
-	handler := NewAuthHandler(oidcProvider, sessions, store, zerolog.Nop())
+	handler := NewAuthHandler(auth.NewOIDCProvider(oidcProvider, zerolog.Nop()), sessions, store, zerolog.Nop())
 	r := setupAuthTestRouter(handler)
 
 	w := httptest.NewRecorder()
@@ -808,5 +808,109 @@ func TestAuthHandler_Me_Unauthenticated(t *testing.T) {
 	}
 	if resp["error"] != "not authenticated" {
 		t.Fatalf("expected 'not authenticated', got %q", resp["error"])
+	}
+}
+
+func TestAuth_AuthStatus_NoOIDC(t *testing.T) {
+	sessions := newAuthTestSessionStore(t)
+	store := &mockUserStore{}
+	// Unconfigured OIDC provider (nil inner provider)
+	handler := NewAuthHandler(auth.NewOIDCProvider(nil, zerolog.Nop()), sessions, store, zerolog.Nop())
+	r := setupAuthTestRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/auth/status", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp AuthStatusResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if resp.OIDCEnabled {
+		t.Fatal("expected oidc_enabled to be false when OIDC is not configured")
+	}
+	if !resp.PasswordEnabled {
+		t.Fatal("expected password_enabled to be true")
+	}
+}
+
+func TestAuth_AuthStatus_WithOIDC(t *testing.T) {
+	oidcProvider, server := newAuthTestOIDCProvider(t)
+	defer server.Close()
+
+	sessions := newAuthTestSessionStore(t)
+	store := &mockUserStore{}
+	handler := NewAuthHandler(auth.NewOIDCProvider(oidcProvider, zerolog.Nop()), sessions, store, zerolog.Nop())
+	r := setupAuthTestRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/auth/status", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp AuthStatusResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if !resp.OIDCEnabled {
+		t.Fatal("expected oidc_enabled to be true when OIDC is configured")
+	}
+	if !resp.PasswordEnabled {
+		t.Fatal("expected password_enabled to be true")
+	}
+}
+
+func TestAuth_Login_NoOIDCProvider(t *testing.T) {
+	sessions := newAuthTestSessionStore(t)
+	store := &mockUserStore{}
+	// Unconfigured OIDC provider (nil inner provider)
+	handler := NewAuthHandler(auth.NewOIDCProvider(nil, zerolog.Nop()), sessions, store, zerolog.Nop())
+	r := setupAuthTestRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/auth/login", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected status 503, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if resp["error"] != "SSO not configured" {
+		t.Fatalf("expected error 'SSO not configured', got %q", resp["error"])
+	}
+}
+
+func TestAuth_Callback_NoOIDCProvider(t *testing.T) {
+	sessions := newAuthTestSessionStore(t)
+	store := &mockUserStore{}
+	// Unconfigured OIDC provider (nil inner provider)
+	handler := NewAuthHandler(auth.NewOIDCProvider(nil, zerolog.Nop()), sessions, store, zerolog.Nop())
+	r := setupAuthTestRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/auth/callback?code=test-code&state=test-state", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected status 503, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if resp["error"] != "SSO not configured" {
+		t.Fatalf("expected error 'SSO not configured', got %q", resp["error"])
 	}
 }

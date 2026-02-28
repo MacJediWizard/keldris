@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -533,4 +534,107 @@ func TestOIDC_UserInfo(t *testing.T) {
 	if userInfo.Email != "user@example.com" {
 		t.Errorf("expected email 'user@example.com', got %q", userInfo.Email)
 	}
+}
+
+func TestOIDCProvider_InitialState(t *testing.T) {
+	logger := zerolog.Nop()
+	p := NewOIDCProvider(nil, logger)
+
+	if p.IsConfigured() {
+		t.Error("expected IsConfigured() to return false when no provider is set")
+	}
+	if got := p.Get(); got != nil {
+		t.Errorf("expected Get() to return nil, got %v", got)
+	}
+}
+
+func TestOIDCProvider_Update(t *testing.T) {
+	server, _ := newMockOIDCServer(t)
+	defer server.Close()
+
+	logger := zerolog.Nop()
+	p := NewOIDCProvider(nil, logger)
+
+	cfg := DefaultOIDCConfig(server.URL, "client-id", "client-secret", "http://localhost/callback")
+	if err := p.Update(context.Background(), cfg); err != nil {
+		t.Fatalf("Update() returned unexpected error: %v", err)
+	}
+
+	if !p.IsConfigured() {
+		t.Error("expected IsConfigured() to return true after Update()")
+	}
+	if got := p.Get(); got == nil {
+		t.Error("expected Get() to return non-nil after Update()")
+	}
+}
+
+func TestOIDCProvider_Update_Replaces(t *testing.T) {
+	server1, _ := newMockOIDCServer(t)
+	defer server1.Close()
+
+	server2, _ := newMockOIDCServer(t)
+	defer server2.Close()
+
+	logger := zerolog.Nop()
+	p := NewOIDCProvider(nil, logger)
+
+	cfg1 := DefaultOIDCConfig(server1.URL, "client-id-1", "client-secret-1", "http://localhost/callback")
+	if err := p.Update(context.Background(), cfg1); err != nil {
+		t.Fatalf("first Update() returned unexpected error: %v", err)
+	}
+	first := p.Get()
+	if first == nil {
+		t.Fatal("expected non-nil provider after first Update()")
+	}
+
+	cfg2 := DefaultOIDCConfig(server2.URL, "client-id-2", "client-secret-2", "http://localhost/callback")
+	if err := p.Update(context.Background(), cfg2); err != nil {
+		t.Fatalf("second Update() returned unexpected error: %v", err)
+	}
+	second := p.Get()
+	if second == nil {
+		t.Fatal("expected non-nil provider after second Update()")
+	}
+
+	if first == second {
+		t.Error("expected second Update() to replace the provider with a new instance")
+	}
+}
+
+func TestOIDCProvider_ConcurrentAccess(t *testing.T) {
+	server, _ := newMockOIDCServer(t)
+	defer server.Close()
+
+	logger := zerolog.Nop()
+	p := NewOIDCProvider(nil, logger)
+
+	cfg := DefaultOIDCConfig(server.URL, "client-id", "client-secret", "http://localhost/callback")
+
+	const numReaders = 10
+	var wg sync.WaitGroup
+
+	// Start reader goroutines that call Get() and IsConfigured() repeatedly.
+	for i := 0; i < numReaders; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 100; j++ {
+				_ = p.Get()
+				_ = p.IsConfigured()
+			}
+		}()
+	}
+
+	// Start a writer goroutine that calls Update() repeatedly.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for j := 0; j < 10; j++ {
+			_ = p.Update(context.Background(), cfg)
+		}
+	}()
+
+	wg.Wait()
+
+	// If we reach here without a race-detector panic, the test passes.
 }

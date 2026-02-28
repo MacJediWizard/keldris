@@ -7,6 +7,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/backup"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -29,15 +30,17 @@ type GeoReplicationStore interface {
 
 // GeoReplicationHandler handles geo-replication API endpoints.
 type GeoReplicationHandler struct {
-	store  GeoReplicationStore
-	logger zerolog.Logger
+	store   GeoReplicationStore
+	checker *license.FeatureChecker
+	logger  zerolog.Logger
 }
 
 // NewGeoReplicationHandler creates a new GeoReplicationHandler.
-func NewGeoReplicationHandler(store GeoReplicationStore, logger zerolog.Logger) *GeoReplicationHandler {
+func NewGeoReplicationHandler(store GeoReplicationStore, checker *license.FeatureChecker, logger zerolog.Logger) *GeoReplicationHandler {
 	return &GeoReplicationHandler{
-		store:  store,
-		logger: logger.With().Str("component", "geo_replication_handler").Logger(),
+		store:   store,
+		checker: checker,
+		logger:  logger.With().Str("component", "geo_replication_handler").Logger(),
 	}
 }
 
@@ -131,6 +134,10 @@ func (h *GeoReplicationHandler) List(c *gin.Context) {
 //	@Security		SessionAuth
 //	@Router			/geo-replication/configs [post]
 func (h *GeoReplicationHandler) Create(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureGeoReplication) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -377,6 +384,10 @@ func (h *GeoReplicationHandler) Delete(c *gin.Context) {
 //	@Security		SessionAuth
 //	@Router			/geo-replication/configs/{id}/trigger [post]
 func (h *GeoReplicationHandler) TriggerReplication(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureGeoReplication) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

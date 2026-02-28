@@ -96,6 +96,8 @@ type Config struct {
 	// MeteringService for usage tracking and billing (optional).
 	// DRTestRunner for triggering DR test execution (optional).
 	// LogBuffer for server log capture and viewing (optional).
+	// SetupHandler for first-time server setup (optional).
+	SetupHandler *handlers.ServerSetupHandler
 }
 
 // DefaultConfig returns a Config with sensible defaults for development.
@@ -140,7 +142,7 @@ type Router struct {
 func NewRouter(
 	cfg Config,
 	database *db.DB,
-	oidc *auth.OIDC,
+	oidc *auth.OIDCProvider,
 	sessions *auth.SessionStore,
 	keyManager *crypto.KeyManager,
 	logger zerolog.Logger,
@@ -172,6 +174,16 @@ func NewRouter(
 		return nil, err
 	}
 	r.Engine.Use(rateLimiter)
+
+	// Setup required middleware (blocks all API calls until setup is complete)
+	r.Engine.Use(middleware.SetupRequiredMiddleware(database, logger))
+
+	// Register setup routes (available before auth, gated by SetupLockMiddleware)
+	if cfg.SetupHandler != nil {
+		setupGroup := r.Engine.Group("/api/v1")
+		cfg.SetupHandler.RegisterRoutes(setupGroup)
+		cfg.SetupHandler.RegisterSuperuserRoutes(setupGroup)
+	}
 
 	// Health check endpoints (no auth required for basic checks)
 	healthHandler := handlers.NewHealthHandler(database, oidc, logger)
@@ -230,6 +242,9 @@ func NewRouter(
 	authHandler := handlers.NewAuthHandler(oidc, sessions, database, logger)
 	authHandler.RegisterRoutes(authGroup)
 
+	// Auth status endpoint (public, for login page)
+	authHandler.RegisterPublicRoutes(r.Engine)
+
 	// Password reset routes (no auth required)
 	passwordResetHandler := handlers.NewPasswordResetHandler(database, cfg.EmailService, cfg.ServerURL, logger)
 	passwordResetHandler.RegisterPublicRoutes(r.Engine)
@@ -260,6 +275,9 @@ func NewRouter(
 	// Create RBAC for permission checks
 	rbac := auth.NewRBAC(database)
 
+	// Create feature checker for handler-level gating
+	featureChecker := license.NewFeatureChecker(database)
+
 	// Register API handlers
 	versionHandler.RegisterRoutes(apiV1)
 	changelogHandler.RegisterRoutes(apiV1)
@@ -289,7 +307,7 @@ func NewRouter(
 	}
 
 	// Organizations
-	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, logger)
+	orgsHandler := handlers.NewOrganizationsHandler(database, sessions, rbac, featureChecker, logger)
 	orgsHandler.RegisterRoutes(apiV1)
 	orgsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureMultiOrg, logger))
 	orgsHandler.RegisterMultiOrgRoutes(orgsGroup, middleware.LimitMiddleware(database, "organizations", logger))
@@ -314,7 +332,7 @@ func NewRouter(
 	agentImportHandler.RegisterRoutes(apiV1)
 
 	// Repositories
-	reposHandler := handlers.NewRepositoriesHandler(database, keyManager, logger)
+	reposHandler := handlers.NewRepositoriesHandler(database, keyManager, featureChecker, logger)
 	reposHandler.RegisterRoutes(apiV1)
 
 	repoImportHandler := handlers.NewRepositoryImportHandler(database, keyManager, logger)
@@ -344,8 +362,9 @@ func NewRouter(
 	snapshotsHandler := handlers.NewSnapshotsHandler(database, keyManager, logger)
 	snapshotsHandler.RegisterRoutes(apiV1)
 
-	legalHoldsHandler := handlers.NewLegalHoldsHandler(database, logger)
-	legalHoldsHandler.RegisterRoutes(apiV1)
+	legalHoldsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureLegalHolds, logger))
+	legalHoldsHandler := handlers.NewLegalHoldsHandler(database, featureChecker, logger)
+	legalHoldsHandler.RegisterRoutes(legalHoldsGroup)
 
 	fileHistoryHandler := handlers.NewFileHistoryHandler(database, logger)
 	fileHistoryHandler.RegisterRoutes(apiV1)
@@ -355,7 +374,7 @@ func NewRouter(
 
 	// Audit logs (feature gated)
 	auditLogsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureAuditLogs, logger))
-	auditLogsHandler := handlers.NewAuditLogsHandler(database, logger)
+	auditLogsHandler := handlers.NewAuditLogsHandler(database, featureChecker, logger)
 	auditLogsHandler.RegisterRoutes(auditLogsGroup)
 
 	// Alerts
@@ -363,7 +382,7 @@ func NewRouter(
 	alertsHandler.RegisterRoutes(apiV1)
 
 	// Notifications (per-channel feature gating is handled inside the handler)
-	notificationsHandler := handlers.NewNotificationsHandlerWithEnv(database, keyManager, logger, cfg.Environment)
+	notificationsHandler := handlers.NewNotificationsHandlerWithEnv(database, keyManager, featureChecker, logger, cfg.Environment)
 	notificationsHandler.RegisterRoutes(apiV1)
 
 	// Notification rules (feature gated - requires Pro+ for notification automation)
@@ -374,7 +393,7 @@ func NewRouter(
 	// Reports (feature gated - requires Pro+)
 	if cfg.ReportScheduler != nil {
 		reportsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureCustomReports, logger))
-		reportsHandler := handlers.NewReportsHandler(database, cfg.ReportScheduler, logger)
+		reportsHandler := handlers.NewReportsHandler(database, cfg.ReportScheduler, featureChecker, logger)
 		reportsHandler.RegisterRoutes(reportsGroup)
 	}
 
@@ -400,7 +419,7 @@ func NewRouter(
 	dashboardMetricsHandler := handlers.NewDashboardMetricsHandler(database, logger)
 	dashboardMetricsHandler.RegisterRoutes(apiV1)
 
-	onboardingHandler := handlers.NewOnboardingHandler(database, logger)
+	onboardingHandler := handlers.NewOnboardingHandler(database, featureChecker, oidc, logger)
 	onboardingHandler.RegisterRoutes(apiV1)
 
 	costHandler := handlers.NewCostEstimationHandler(database, logger)
@@ -418,7 +437,7 @@ func NewRouter(
 
 	// SSO Group Mappings (feature gated - requires Enterprise)
 	ssoGroupMappingsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureSSOSync, logger))
-	ssoGroupMappingsHandler := handlers.NewSSOGroupMappingsHandler(database, rbac, logger)
+	ssoGroupMappingsHandler := handlers.NewSSOGroupMappingsHandler(database, rbac, featureChecker, logger)
 	ssoGroupMappingsHandler.RegisterRoutes(ssoGroupMappingsGroup)
 
 	maintenanceHandler := handlers.NewMaintenanceHandler(database, logger)
@@ -428,7 +447,7 @@ func NewRouter(
 	dockerBackupGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDockerBackup, logger))
 	dockerBackupDiscoveryConfig := docker.DefaultDiscoveryConfig()
 	dockerBackupDiscoveryService := docker.NewDiscoveryService(database, dockerBackupDiscoveryConfig, logger)
-	dockerBackupHandler := handlers.NewDockerBackupHandler(database, dockerBackupDiscoveryService, logger)
+	dockerBackupHandler := handlers.NewDockerBackupHandler(database, dockerBackupDiscoveryService, featureChecker, logger)
 	dockerBackupHandler.RegisterRoutes(dockerBackupGroup)
 
 	// Announcements
@@ -445,8 +464,9 @@ func NewRouter(
 		serverLogsHandler.RegisterRoutes(apiV1)
 	}
 
-	ransomwareHandler := handlers.NewRansomwareHandler(database, logger)
-	ransomwareHandler.RegisterRoutes(apiV1)
+	ransomwareGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureRansomwareProtect, logger))
+	ransomwareHandler := handlers.NewRansomwareHandler(database, featureChecker, logger)
+	ransomwareHandler.RegisterRoutes(ransomwareGroup)
 
 	configExportHandler := handlers.NewConfigExportHandler(database, logger)
 	configExportHandler.RegisterRoutes(apiV1)
@@ -457,17 +477,17 @@ func NewRouter(
 
 	// DR Runbook routes (Enterprise)
 	drRunbooksGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDRRunbooks, logger))
-	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, logger)
+	drRunbooksHandler := handlers.NewDRRunbooksHandler(database, featureChecker, logger)
 	drRunbooksHandler.RegisterRoutes(drRunbooksGroup)
 
 	// DR Test routes (Enterprise)
 	drTestsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureDRTests, logger))
-	drTestsHandler := handlers.NewDRTestsHandler(database, cfg.DRTestRunner, logger)
+	drTestsHandler := handlers.NewDRTestsHandler(database, cfg.DRTestRunner, featureChecker, logger)
 	drTestsHandler.RegisterRoutes(drTestsGroup)
 
 	// SLA Tracking routes (Enterprise)
 	slaGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureSLATracking, logger))
-	slaHandler := handlers.NewSLAHandler(database, logger)
+	slaHandler := handlers.NewSLAHandler(database, featureChecker, logger)
 	slaHandler.RegisterRoutes(slaGroup)
 
 	// Branding routes (Enterprise - White Label)
@@ -476,9 +496,10 @@ func NewRouter(
 	brandingHandler.RegisterRoutes(brandingGroup)
 	brandingHandler.RegisterPublicRoutes(r.Engine.Group("/api/public"))
 
-	// Geo-Replication routes
-	geoReplicationHandler := handlers.NewGeoReplicationHandler(database, logger)
-	geoReplicationHandler.RegisterRoutes(apiV1)
+	// Geo-Replication routes (Enterprise)
+	geoReplicationGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureGeoReplication, logger))
+	geoReplicationHandler := handlers.NewGeoReplicationHandler(database, featureChecker, logger)
+	geoReplicationHandler.RegisterRoutes(geoReplicationGroup)
 
 	// Classification routes
 	classificationsHandler := handlers.NewClassificationsHandler(database, logger)
@@ -520,20 +541,20 @@ func NewRouter(
 	recentItemsHandler := handlers.NewRecentItemsHandler(database, logger)
 	recentItemsHandler.RegisterRoutes(apiV1)
 
-	// Lifecycle policy routes
-	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, logger)
-	lifecyclePoliciesHandler.RegisterRoutes(apiV1)
+	// Lifecycle policy routes (Pro+ - custom retention)
+	lifecyclePoliciesGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureCustomRetention, logger))
+	lifecyclePoliciesHandler := handlers.NewLifecyclePoliciesHandler(database, featureChecker, logger)
+	lifecyclePoliciesHandler.RegisterRoutes(lifecyclePoliciesGroup)
 
 	// Job queue routes
 	jobQueueHandler := handlers.NewJobQueueHandler(database, rbac, logger)
 	jobQueueHandler.RegisterRoutes(apiV1)
 
 	// System settings routes (admin only)
-	systemSettingsHandler := handlers.NewSystemSettingsHandler(database, logger)
+	systemSettingsHandler := handlers.NewSystemSettingsHandler(database, featureChecker, logger)
 	systemSettingsHandler.RegisterRoutes(apiV1)
 
 	// License and feature flags routes
-	featureChecker := license.NewFeatureChecker(database)
 	licenseHandler := handlers.NewLicenseHandler(database, featureChecker, logger)
 	licenseHandler.RegisterRoutes(apiV1)
 

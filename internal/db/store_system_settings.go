@@ -125,6 +125,32 @@ func (db *DB) GetOIDCSettings(ctx context.Context, orgID uuid.UUID) (*settings.O
 	return &oidc, nil
 }
 
+// GetFirstOrgOIDCSettings returns OIDC settings from the first organization that has them configured.
+// This is used at startup to initialize the OIDC provider from database settings.
+func (db *DB) GetFirstOrgOIDCSettings(ctx context.Context) (*settings.OIDCSettings, error) {
+	var value json.RawMessage
+	err := db.Pool.QueryRow(ctx, `
+		SELECT setting_value
+		FROM system_settings
+		WHERE setting_key = $1
+		ORDER BY created_at ASC
+		LIMIT 1
+	`, string(settings.SettingKeyOIDC)).Scan(&value)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get first org OIDC settings: %w", err)
+	}
+
+	var oidc settings.OIDCSettings
+	if err := json.Unmarshal(value, &oidc); err != nil {
+		return nil, fmt.Errorf("unmarshal OIDC settings: %w", err)
+	}
+
+	return &oidc, nil
+}
+
 // UpdateOIDCSettings updates OIDC settings for an organization.
 func (db *DB) UpdateOIDCSettings(ctx context.Context, orgID uuid.UUID, oidc *settings.OIDCSettings) error {
 	value, err := json.Marshal(oidc)

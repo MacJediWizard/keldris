@@ -80,6 +80,26 @@ func FeatureMiddleware(feature license.Feature, logger zerolog.Logger) gin.Handl
 				return
 			}
 
+			// Layer 2: Entitlement nonce verification
+			if ent.Nonce == "" {
+				c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
+					"error":   "valid entitlement required",
+					"feature": string(feature),
+				})
+				return
+			}
+
+			// Layer 3: Refresh token verification
+			if validator := getValidator(c); validator != nil {
+				if !validator.HasValidRefreshToken() {
+					c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
+						"error":   "service connection required",
+						"feature": string(feature),
+					})
+					return
+				}
+			}
+
 			// Track feature usage for telemetry
 			if tracker, exists := c.Get("feature_usage_tracker"); exists {
 				if t, ok := tracker.(*license.FeatureUsageTracker); ok {
@@ -113,6 +133,17 @@ func FeatureMiddleware(feature license.Feature, logger zerolog.Logger) gin.Handl
 				"tier":    string(lic.Tier),
 			})
 			return
+		}
+
+		// Layer 3: Refresh token verification (tier-based fallback path)
+		if validator := getValidator(c); validator != nil {
+			if !validator.HasValidRefreshToken() {
+				c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
+					"error":   "service connection required",
+					"feature": string(feature),
+				})
+				return
+			}
 		}
 
 		// Track feature usage for telemetry
@@ -169,6 +200,26 @@ func FeatureGateMiddleware(checker *license.FeatureChecker, feature license.Feat
 				"upgrade_info":  result.UpgradeInfo,
 			})
 			return
+		}
+
+		// Layer 2: Entitlement nonce verification
+		if ent := GetEntitlement(c); ent != nil && ent.Nonce == "" {
+			c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
+				"error":   "valid entitlement required",
+				"feature": string(feature),
+			})
+			return
+		}
+
+		// Layer 3: Refresh token verification
+		if validator := getValidator(c); validator != nil {
+			if !validator.HasValidRefreshToken() {
+				c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
+					"error":   "service connection required",
+					"feature": string(feature),
+				})
+				return
+			}
 		}
 
 		log.Debug().
@@ -263,6 +314,9 @@ func DynamicLicenseMiddleware(validator *license.Validator, logger zerolog.Logge
 		// Set feature usage tracker
 		c.Set("feature_usage_tracker", validator.GetFeatureUsageTracker())
 
+		// Set validator reference for refresh token checks
+		c.Set(string(ValidatorContextKey), validator)
+
 		log.Debug().
 			Str("tier", string(lic.Tier)).
 			Str("path", c.Request.URL.Path).
@@ -301,7 +355,36 @@ func GetFeatureAccess(c *gin.Context) *FeatureAccess {
 
 // RequireFeature is a helper that checks feature access inline within a handler.
 // Returns true if the feature is accessible, false and aborts if not.
+// Performs three layers of verification: entitlement nonce, refresh token, and
+// organization tier check.
 func RequireFeature(c *gin.Context, checker *license.FeatureChecker, feature license.Feature) bool {
+	// Layers 2+3 only apply when validator is active (phone-home mode).
+	if validator := getValidator(c); validator != nil {
+		// Layer 2: Entitlement nonce check
+		ent := GetEntitlement(c)
+		if ent == nil || ent.Nonce == "" {
+			c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
+				"error":   "valid entitlement required",
+				"feature": string(feature),
+			})
+			return false
+		}
+
+		// Layer 3: Refresh token check
+		if !validator.HasValidRefreshToken() {
+			c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
+				"error":   "service connection required",
+				"feature": string(feature),
+			})
+			return false
+		}
+	}
+
+	// If no checker is provided, skip org-tier check (test/air-gap).
+	if checker == nil {
+		return true
+	}
+
 	user := GetUser(c)
 	if user == nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
@@ -326,6 +409,22 @@ func RequireFeature(c *gin.Context, checker *license.FeatureChecker, feature lic
 	}
 
 	return true
+}
+
+// ValidatorContextKey is the context key for the license validator.
+const ValidatorContextKey ContextKey = "license_validator"
+
+// getValidator retrieves the license validator from the Gin context.
+func getValidator(c *gin.Context) *license.Validator {
+	val, exists := c.Get(string(ValidatorContextKey))
+	if !exists {
+		return nil
+	}
+	v, ok := val.(*license.Validator)
+	if !ok {
+		return nil
+	}
+	return v
 }
 
 // FeatureGateGroup applies feature gating to a route group.

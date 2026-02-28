@@ -69,6 +69,7 @@ import (
 	"encoding/hex"
 
 	"github.com/MacJediWizard/keldris/internal/api"
+	"github.com/MacJediWizard/keldris/internal/api/handlers"
 	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/config"
@@ -83,9 +84,10 @@ import (
 )
 
 var (
-	Version   = "dev"
-	Commit    = "unknown"
-	BuildDate = "unknown"
+	Version       = "dev"
+	Commit        = "unknown"
+	BuildDate     = "unknown"
+	IntegrityHash = ""
 )
 
 func main() {
@@ -150,24 +152,25 @@ func run() int {
 		return 1
 	}
 
-	// Initialize OIDC provider (optional - nil if not configured)
-	var oidcProvider *auth.OIDC
-	oidcIssuer := os.Getenv("OIDC_ISSUER")
-	if oidcIssuer != "" {
+	// Initialize OIDC provider wrapper (starts nil, loaded from DB if configured)
+	oidcProvider := auth.NewOIDCProvider(nil, logger)
+
+	// Try loading OIDC settings from DB (first org's settings)
+	oidcSettings, err := database.GetFirstOrgOIDCSettings(ctx)
+	if err == nil && oidcSettings != nil && oidcSettings.Enabled && oidcSettings.Issuer != "" {
 		oidcCfg := auth.DefaultOIDCConfig(
-			oidcIssuer,
-			os.Getenv("OIDC_CLIENT_ID"),
-			os.Getenv("OIDC_CLIENT_SECRET"),
-			os.Getenv("OIDC_REDIRECT_URL"),
+			oidcSettings.Issuer,
+			oidcSettings.ClientID,
+			oidcSettings.ClientSecret,
+			oidcSettings.RedirectURL,
 		)
-		oidcProvider, err = auth.NewOIDC(ctx, oidcCfg, logger)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to initialize OIDC provider")
-			return 1
+		if err := oidcProvider.Update(ctx, oidcCfg); err != nil {
+			logger.Warn().Err(err).Msg("Failed to initialize OIDC from database settings (continuing without SSO)")
+		} else {
+			logger.Info().Str("issuer", oidcSettings.Issuer).Msg("OIDC provider initialized from database")
 		}
-		logger.Info().Str("issuer", oidcIssuer).Msg("OIDC provider initialized")
 	} else {
-		logger.Warn().Msg("OIDC not configured - authentication will be unavailable")
+		logger.Info().Msg("OIDC not configured - password login only")
 	}
 
 	// Initialize session store
@@ -294,11 +297,23 @@ func run() int {
 		if lic != nil {
 			validator.SetLicense(lic)
 		}
+		if IntegrityHash != "" {
+			validator.SetIntegrityHash(IntegrityHash)
+		}
+		validator.SetOIDCProvider(oidcProvider)
 		if err := validator.Start(ctx); err != nil {
 			logger.Error().Err(err).Msg("Failed to start license validator (continuing without phone-home)")
 			validator = nil
 		}
 	}
+
+	// Set license checker on backup scheduler for premium feature gating
+	if validator != nil {
+		backupScheduler.SetLicenseChecker(validator)
+	}
+
+	// Create setup handler for first-time server setup
+	setupHandler := handlers.NewServerSetupHandler(database, database, sessions, logger)
 
 	routerCfg := api.Config{
 		Environment:         cfg.Environment,
@@ -316,6 +331,7 @@ func run() int {
 		License:             lic,
 		Validator:           validator,
 		LicensePublicKey:    licPubKey,
+		SetupHandler:        setupHandler,
 	}
 
 	router, err := api.NewRouter(routerCfg, database, oidcProvider, sessions, keyManager, logger)

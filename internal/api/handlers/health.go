@@ -70,7 +70,7 @@ type ShutdownStatusProvider interface {
 // HealthHandler handles health-related HTTP endpoints.
 type HealthHandler struct {
 	db            DatabaseHealthChecker
-	oidc          OIDCHealthChecker
+	oidcProvider  *auth.OIDCProvider
 	sessions      *auth.SessionStore
 	backupService *maintenance.DatabaseBackupService
 	shutdown      ShutdownStatusProvider
@@ -78,11 +78,11 @@ type HealthHandler struct {
 }
 
 // NewHealthHandler creates a new HealthHandler.
-func NewHealthHandler(db DatabaseHealthChecker, oidc OIDCHealthChecker, logger zerolog.Logger) *HealthHandler {
+func NewHealthHandler(db DatabaseHealthChecker, oidc *auth.OIDCProvider, logger zerolog.Logger) *HealthHandler {
 	return &HealthHandler{
-		db:     db,
-		oidc:   oidc,
-		logger: logger.With().Str("component", "health_handler").Logger(),
+		db:           db,
+		oidcProvider: oidc,
+		logger:       logger.With().Str("component", "health_handler").Logger(),
 	}
 }
 
@@ -235,14 +235,15 @@ func (h *HealthHandler) checkOIDC(ctx context.Context) *HealthCheckResult {
 		Status: HealthStatusHealthy,
 	}
 
-	if h.oidc == nil {
+	// Check if OIDC is configured via the provider wrapper
+	if h.oidcProvider == nil || !h.oidcProvider.IsConfigured() {
 		// OIDC is optional - if not configured, it's not unhealthy
 		result.Details = map[string]any{"configured": false}
 		result.Duration = time.Since(start).String()
 		return result
 	}
 
-	err := h.oidc.HealthCheck(ctx)
+	err := h.oidcProvider.HealthCheck(ctx)
 	result.Duration = time.Since(start).String()
 
 	if err != nil {

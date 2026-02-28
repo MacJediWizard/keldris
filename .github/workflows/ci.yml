@@ -35,6 +35,37 @@ jobs:
         run: govulncheck ./...
         continue-on-error: true
 
+      - name: Verify telemetry integration
+        run: |
+          # Ensure core telemetry functions are present
+          grep -q 'sendHeartbeat' internal/license/validator.go || (echo "Missing telemetry function" && exit 1)
+          grep -q 'heartbeatLoop' internal/license/validator.go || (echo "Missing telemetry loop" && exit 1)
+          grep -q 'RequireFeature' internal/api/middleware/features.go || (echo "Missing feature check helper" && exit 1)
+          # Verify handler initialization includes feature checks
+          for f in internal/api/handlers/audit_logs.go internal/api/handlers/dr_runbooks.go \
+                   internal/api/handlers/reports.go internal/api/handlers/sla.go \
+                   internal/api/handlers/geo_replication.go internal/api/handlers/ransomware.go \
+                   internal/api/handlers/legal_holds.go internal/api/handlers/repositories.go \
+                   internal/api/handlers/lifecycle_policies.go internal/api/handlers/docker_backup.go \
+                   internal/api/handlers/organizations.go internal/api/handlers/sso_group_mappings.go \
+                   internal/api/handlers/dr_tests.go internal/api/handlers/notifications.go \
+                   internal/api/handlers/system_settings.go \
+                   internal/api/handlers/onboarding.go; do
+            grep -q 'RequireFeature' "$f" || (echo "Missing feature check in $f" && exit 1)
+          done
+
+          # Verify setup middleware is wired
+          grep -q 'SetupRequiredMiddleware' internal/api/routes.go || (echo "Missing setup middleware" && exit 1)
+
+          # Verify OIDCProvider wrapper is used (not raw *auth.OIDC)
+          grep -q 'OIDCProvider' internal/api/handlers/auth.go || (echo "Missing OIDCProvider in auth" && exit 1)
+
+          # Verify OIDC not in env var initialization
+          ! grep -q 'OIDC_ISSUER' cmd/keldris-server/main.go || (echo "OIDC should not be in env vars" && exit 1)
+
+          # Verify auth/status endpoint exists
+          grep -q 'AuthStatus' internal/api/handlers/auth.go || (echo "Missing AuthStatus endpoint" && exit 1)
+
       - name: Run tests
         run: go test -race -coverprofile=coverage.out ./...
 

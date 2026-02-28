@@ -76,7 +76,7 @@ func setupAuditLogTestRouter(store AuditLogStore, user *auth.SessionUser) *gin.E
 		}
 		c.Next()
 	})
-	handler := NewAuditLogsHandler(store, zerolog.Nop())
+	handler := NewAuditLogsHandler(store, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

@@ -6,6 +6,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/dr"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -34,14 +35,16 @@ type DRRunbookStore interface {
 // DRRunbooksHandler handles DR runbook-related HTTP endpoints.
 type DRRunbooksHandler struct {
 	store     DRRunbookStore
+	checker   *license.FeatureChecker
 	generator *dr.RunbookGenerator
 	logger    zerolog.Logger
 }
 
 // NewDRRunbooksHandler creates a new DRRunbooksHandler.
-func NewDRRunbooksHandler(store DRRunbookStore, logger zerolog.Logger) *DRRunbooksHandler {
+func NewDRRunbooksHandler(store DRRunbookStore, checker *license.FeatureChecker, logger zerolog.Logger) *DRRunbooksHandler {
 	return &DRRunbooksHandler{
 		store:     store,
+		checker:   checker,
 		generator: dr.NewRunbookGenerator(store),
 		logger:    logger.With().Str("component", "dr_runbooks_handler").Logger(),
 	}
@@ -153,6 +156,10 @@ func (h *DRRunbooksHandler) Get(c *gin.Context) {
 // Create creates a new DR runbook.
 // POST /api/v1/dr-runbooks
 func (h *DRRunbooksHandler) Create(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureDRRunbooks) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -318,6 +325,10 @@ func (h *DRRunbooksHandler) Delete(c *gin.Context) {
 // Activate sets the runbook status to active.
 // POST /api/v1/dr-runbooks/:id/activate
 func (h *DRRunbooksHandler) Activate(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureDRRunbooks) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

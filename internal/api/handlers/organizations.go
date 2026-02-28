@@ -12,6 +12,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -49,15 +50,17 @@ type OrganizationsHandler struct {
 	store    OrganizationStore
 	sessions *auth.SessionStore
 	rbac     *auth.RBAC
+	checker  *license.FeatureChecker
 	logger   zerolog.Logger
 }
 
 // NewOrganizationsHandler creates a new OrganizationsHandler.
-func NewOrganizationsHandler(store OrganizationStore, sessions *auth.SessionStore, rbac *auth.RBAC, logger zerolog.Logger) *OrganizationsHandler {
+func NewOrganizationsHandler(store OrganizationStore, sessions *auth.SessionStore, rbac *auth.RBAC, checker *license.FeatureChecker, logger zerolog.Logger) *OrganizationsHandler {
 	return &OrganizationsHandler{
 		store:    store,
 		sessions: sessions,
 		rbac:     rbac,
+		checker:  checker,
 		logger:   logger.With().Str("component", "organizations_handler").Logger(),
 	}
 }
@@ -207,6 +210,10 @@ func (h *OrganizationsHandler) List(c *gin.Context) {
 //	@Router			/organizations [post]
 // POST /api/v1/organizations
 func (h *OrganizationsHandler) Create(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureMultiOrg) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

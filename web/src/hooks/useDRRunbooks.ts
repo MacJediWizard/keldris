@@ -25,7 +25,24 @@ export function useDRRunbook(id: string) {
 export function useDRStatus() {
 	return useQuery({
 		queryKey: ['dr-status'],
-		queryFn: () => drRunbooksApi.getStatus(),
+		queryFn: async () => {
+			try {
+				return await drRunbooksApi.getStatus();
+			} catch {
+				return {
+					active_runbooks: 0,
+					total_runbooks: 0,
+					tested_runbooks: 0,
+					untested_runbooks: 0,
+					overdue_runbooks: 0,
+					tests_last_30_days: 0,
+					pass_rate: 0,
+					last_test_at: null,
+					next_test_at: null,
+					upcoming_tests: [],
+				};
+			}
+		},
 		staleTime: 30 * 1000,
 	});
 }

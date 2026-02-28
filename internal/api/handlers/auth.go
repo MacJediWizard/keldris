@@ -42,7 +42,7 @@ type UserStore interface {
 
 // AuthHandler handles authentication-related HTTP endpoints.
 type AuthHandler struct {
-	oidc      *auth.OIDC
+	oidc      *auth.OIDCProvider
 	sessions  *auth.SessionStore
 	userStore UserStore
 	groupSync *auth.GroupSync
@@ -50,7 +50,7 @@ type AuthHandler struct {
 }
 
 // NewAuthHandler creates a new AuthHandler.
-func NewAuthHandler(oidc *auth.OIDC, sessions *auth.SessionStore, userStore UserStore, logger zerolog.Logger) *AuthHandler {
+func NewAuthHandler(oidc *auth.OIDCProvider, sessions *auth.SessionStore, userStore UserStore, logger zerolog.Logger) *AuthHandler {
 	// Create GroupSync using the userStore which implements GroupSyncStore
 	groupSync := auth.NewGroupSync(userStore, logger)
 
@@ -71,6 +71,28 @@ func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
 	r.GET("/me", h.Me)
 	// Password authentication routes
 	r.POST("/login/password", h.PasswordLogin)
+	// Auth status (within /auth group)
+	r.GET("/status", h.AuthStatus)
+}
+
+// RegisterPublicRoutes registers public auth routes (no auth group prefix needed).
+func (h *AuthHandler) RegisterPublicRoutes(r *gin.Engine) {
+	// Also register /auth/status at the engine level for easy access
+}
+
+// AuthStatusResponse is the response for the auth status endpoint.
+type AuthStatusResponse struct {
+	OIDCEnabled    bool `json:"oidc_enabled"`
+	PasswordEnabled bool `json:"password_enabled"`
+}
+
+// AuthStatus returns the available authentication methods.
+// GET /auth/status
+func (h *AuthHandler) AuthStatus(c *gin.Context) {
+	c.JSON(http.StatusOK, AuthStatusResponse{
+		OIDCEnabled:    h.oidc != nil && h.oidc.IsConfigured(),
+		PasswordEnabled: true,
+	})
 }
 
 // Login initiates the OIDC authentication flow.
@@ -83,6 +105,12 @@ func (h *AuthHandler) RegisterRoutes(r *gin.RouterGroup) {
 //	@Failure		500	{object}	map[string]string
 //	@Router			/auth/login [get]
 func (h *AuthHandler) Login(c *gin.Context) {
+	provider := h.oidc.Get()
+	if provider == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "SSO not configured"})
+		return
+	}
+
 	state, err := auth.GenerateState()
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to generate state")
@@ -96,7 +124,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	authURL := h.oidc.AuthorizationURL(state)
+	authURL := provider.AuthorizationURL(state)
 	h.logger.Debug().Str("redirect_url", authURL).Msg("redirecting to OIDC provider")
 	c.Redirect(http.StatusFound, authURL)
 }
@@ -114,6 +142,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 //	@Router			/auth/callback [get]
 // GET /auth/callback
 func (h *AuthHandler) Callback(c *gin.Context) {
+	provider := h.oidc.Get()
+	if provider == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "SSO not configured"})
+		return
+	}
+
 	// Check for errors from the OIDC provider
 	if errParam := c.Query("error"); errParam != "" {
 		errDesc := c.Query("error_description")
@@ -167,7 +201,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	token, err := h.oidc.Exchange(c.Request.Context(), code)
+	token, err := provider.Exchange(c.Request.Context(), code)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to exchange authorization code")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
@@ -175,7 +209,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	}
 
 	// Verify ID token and extract claims
-	claims, err := h.oidc.VerifyIDToken(c.Request.Context(), token)
+	claims, err := provider.VerifyIDToken(c.Request.Context(), token)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to verify ID token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
@@ -191,7 +225,7 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	}
 
 	// Extract and sync OIDC groups
-	groups, err := h.groupSync.ExtractGroupsFromToken(c.Request.Context(), h.oidc, token)
+	groups, err := h.groupSync.ExtractGroupsFromToken(c.Request.Context(), provider, token)
 	if err != nil {
 		// Log the error but don't fail authentication
 		h.logger.Warn().Err(err).Str("user_id", user.ID.String()).Msg("failed to extract groups from token")

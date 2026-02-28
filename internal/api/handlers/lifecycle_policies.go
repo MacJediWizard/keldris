@@ -7,6 +7,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/classification"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/lifecycle"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
@@ -37,15 +38,17 @@ type LifecyclePolicyStore interface {
 
 // LifecyclePoliciesHandler handles lifecycle policy HTTP endpoints.
 type LifecyclePoliciesHandler struct {
-	store  LifecyclePolicyStore
-	logger zerolog.Logger
+	store   LifecyclePolicyStore
+	checker *license.FeatureChecker
+	logger  zerolog.Logger
 }
 
 // NewLifecyclePoliciesHandler creates a new LifecyclePoliciesHandler.
-func NewLifecyclePoliciesHandler(store LifecyclePolicyStore, logger zerolog.Logger) *LifecyclePoliciesHandler {
+func NewLifecyclePoliciesHandler(store LifecyclePolicyStore, checker *license.FeatureChecker, logger zerolog.Logger) *LifecyclePoliciesHandler {
 	return &LifecyclePoliciesHandler{
-		store:  store,
-		logger: logger.With().Str("component", "lifecycle_policies_handler").Logger(),
+		store:   store,
+		checker: checker,
+		logger:  logger.With().Str("component", "lifecycle_policies_handler").Logger(),
 	}
 }
 
@@ -189,6 +192,10 @@ func (h *LifecyclePoliciesHandler) ListLifecyclePolicies(c *gin.Context) {
 //	@Security		SessionAuth
 //	@Router			/lifecycle-policies [post]
 func (h *LifecyclePoliciesHandler) CreateLifecyclePolicy(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureCustomRetention) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

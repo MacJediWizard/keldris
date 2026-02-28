@@ -11,6 +11,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/db"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -28,15 +29,17 @@ type AuditLogStore interface {
 
 // AuditLogsHandler handles audit log HTTP endpoints.
 type AuditLogsHandler struct {
-	store  AuditLogStore
-	logger zerolog.Logger
+	store   AuditLogStore
+	checker *license.FeatureChecker
+	logger  zerolog.Logger
 }
 
 // NewAuditLogsHandler creates a new AuditLogsHandler.
-func NewAuditLogsHandler(store AuditLogStore, logger zerolog.Logger) *AuditLogsHandler {
+func NewAuditLogsHandler(store AuditLogStore, checker *license.FeatureChecker, logger zerolog.Logger) *AuditLogsHandler {
 	return &AuditLogsHandler{
-		store:  store,
-		logger: logger.With().Str("component", "audit_logs_handler").Logger(),
+		store:   store,
+		checker: checker,
+		logger:  logger.With().Str("component", "audit_logs_handler").Logger(),
 	}
 }
 
@@ -63,6 +66,10 @@ type AuditLogListResponse struct {
 // GET /api/v1/audit-logs
 // Query params: action, resource_type, result, start_date, end_date, search, limit, offset
 func (h *AuditLogsHandler) List(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureAuditLogs) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -144,6 +151,10 @@ func (h *AuditLogsHandler) Get(c *gin.Context) {
 // ExportCSV exports audit logs as CSV.
 // GET /api/v1/audit-logs/export/csv
 func (h *AuditLogsHandler) ExportCSV(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureAuditLogs) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -217,6 +228,10 @@ func (h *AuditLogsHandler) ExportCSV(c *gin.Context) {
 // ExportJSON exports audit logs as JSON.
 // GET /api/v1/audit-logs/export/json
 func (h *AuditLogsHandler) ExportJSON(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureAuditLogs) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

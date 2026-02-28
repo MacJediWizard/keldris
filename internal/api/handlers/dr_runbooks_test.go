@@ -143,7 +143,7 @@ func (m *mockDRRunbookStore) GetDRStatus(_ context.Context, orgID uuid.UUID) (*m
 
 func setupDRRunbookTestRouter(store DRRunbookStore, user *auth.SessionUser) *gin.Engine {
 	r := SetupTestRouter(user)
-	handler := NewDRRunbooksHandler(store, zerolog.Nop())
+	handler := NewDRRunbooksHandler(store, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

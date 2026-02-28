@@ -37,26 +37,29 @@ type NotificationStore interface {
 type NotificationsHandler struct {
 	store      NotificationStore
 	keyManager *crypto.KeyManager
+	checker    *license.FeatureChecker
 	logger     zerolog.Logger
 	env        config.Environment
 	service    NotificationService
 }
 
 // NewNotificationsHandler creates a new NotificationsHandler.
-func NewNotificationsHandler(store NotificationStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *NotificationsHandler {
+func NewNotificationsHandler(store NotificationStore, keyManager *crypto.KeyManager, checker *license.FeatureChecker, logger zerolog.Logger) *NotificationsHandler {
 	return &NotificationsHandler{
 		store:      store,
 		keyManager: keyManager,
+		checker:    checker,
 		logger:     logger.With().Str("component", "notifications_handler").Logger(),
 		env:        config.EnvDevelopment,
 	}
 }
 
 // NewNotificationsHandlerWithEnv creates a new NotificationsHandler with an explicit environment.
-func NewNotificationsHandlerWithEnv(store NotificationStore, keyManager *crypto.KeyManager, logger zerolog.Logger, env config.Environment) *NotificationsHandler {
+func NewNotificationsHandlerWithEnv(store NotificationStore, keyManager *crypto.KeyManager, checker *license.FeatureChecker, logger zerolog.Logger, env config.Environment) *NotificationsHandler {
 	return &NotificationsHandler{
 		store:      store,
 		keyManager: keyManager,
+		checker:    checker,
 		logger:     logger.With().Str("component", "notifications_handler").Logger(),
 		env:        env,
 	}
@@ -200,28 +203,7 @@ func (h *NotificationsHandler) CreateChannel(c *gin.Context) {
 
 	// Check feature gate for the channel type (email and webhook are free)
 	if requiredFeature, gated := channelTypeFeature(req.Type); gated {
-		if ent := middleware.GetEntitlement(c); ent != nil {
-			if !ent.HasFeature(requiredFeature) {
-				c.JSON(http.StatusPaymentRequired, gin.H{
-					"error":   fmt.Sprintf("%s notifications require a Pro or Enterprise license", req.Type),
-					"feature": string(requiredFeature),
-				})
-				return
-			}
-		} else if lic := middleware.GetLicense(c); lic != nil {
-			if !license.HasFeature(lic.Tier, requiredFeature) {
-				c.JSON(http.StatusPaymentRequired, gin.H{
-					"error":   fmt.Sprintf("%s notifications require a Pro or Enterprise license", req.Type),
-					"feature": string(requiredFeature),
-					"tier":    string(lic.Tier),
-				})
-				return
-			}
-		} else {
-			c.JSON(http.StatusPaymentRequired, gin.H{
-				"error":   "license required",
-				"feature": string(requiredFeature),
-			})
+		if !middleware.RequireFeature(c, h.checker, requiredFeature) {
 			return
 		}
 	}

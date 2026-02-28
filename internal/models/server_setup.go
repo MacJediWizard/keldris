@@ -15,26 +15,16 @@ const (
 	SetupStepDatabase ServerSetupStep = "database"
 	// SetupStepSuperuser is the superuser account creation step.
 	SetupStepSuperuser ServerSetupStep = "superuser"
-	// SetupStepSMTP is the SMTP configuration step.
-	SetupStepSMTP ServerSetupStep = "smtp"
-	// SetupStepOIDC is the OIDC configuration step.
-	SetupStepOIDC ServerSetupStep = "oidc"
-	// SetupStepLicense is the license key activation step.
-	SetupStepLicense ServerSetupStep = "license"
-	// SetupStepOrganization is the first organization creation step.
-	SetupStepOrganization ServerSetupStep = "organization"
 	// SetupStepComplete indicates setup is finished.
 	SetupStepComplete ServerSetupStep = "complete"
 )
 
 // ServerSetupSteps is the ordered list of setup steps.
+// Setup is simplified to DB + superuser only. SMTP, OIDC, license, and
+// organization configuration are handled during onboarding after login.
 var ServerSetupSteps = []ServerSetupStep{
 	SetupStepDatabase,
 	SetupStepSuperuser,
-	SetupStepSMTP,
-	SetupStepOIDC,
-	SetupStepLicense,
-	SetupStepOrganization,
 	SetupStepComplete,
 }
 

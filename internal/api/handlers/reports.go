@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/gin-gonic/gin"
@@ -28,14 +29,16 @@ type ReportStore interface {
 type ReportsHandler struct {
 	store     ReportStore
 	scheduler *reports.Scheduler
+	checker   *license.FeatureChecker
 	logger    zerolog.Logger
 }
 
 // NewReportsHandler creates a new ReportsHandler.
-func NewReportsHandler(store ReportStore, scheduler *reports.Scheduler, logger zerolog.Logger) *ReportsHandler {
+func NewReportsHandler(store ReportStore, scheduler *reports.Scheduler, checker *license.FeatureChecker, logger zerolog.Logger) *ReportsHandler {
 	return &ReportsHandler{
 		store:     store,
 		scheduler: scheduler,
+		checker:   checker,
 		logger:    logger.With().Str("component", "reports_handler").Logger(),
 	}
 }
@@ -125,6 +128,10 @@ func (h *ReportsHandler) GetSchedule(c *gin.Context) {
 // CreateSchedule creates a new report schedule.
 // POST /api/v1/reports/schedules
 func (h *ReportsHandler) CreateSchedule(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureCustomReports) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -295,6 +302,10 @@ func (h *ReportsHandler) DeleteSchedule(c *gin.Context) {
 // SendReport manually triggers sending a report.
 // POST /api/v1/reports/schedules/:id/send
 func (h *ReportsHandler) SendReport(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureCustomReports) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

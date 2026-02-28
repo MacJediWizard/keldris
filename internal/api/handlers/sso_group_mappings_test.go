@@ -107,7 +107,7 @@ func (m *mockSSOmembershipStore) GetMembershipsByUserID(_ context.Context, _ uui
 func setupSSOGroupMappingsTestRouter(store SSOGroupMappingStore, memberStore *mockSSOmembershipStore, user *auth.SessionUser) *gin.Engine {
 	r := SetupTestRouter(user)
 	rbac := auth.NewRBAC(memberStore)
-	handler := NewSSOGroupMappingsHandler(store, rbac, zerolog.Nop())
+	handler := NewSSOGroupMappingsHandler(store, rbac, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

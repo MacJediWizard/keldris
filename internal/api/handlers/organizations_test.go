@@ -164,7 +164,7 @@ func setupOrgTestRouter(store *mockOrgStore, user *auth.SessionUser) *gin.Engine
 		c.Next()
 	})
 	rbac := auth.NewRBAC(store)
-	handler := NewOrganizationsHandler(store, nil, rbac, zerolog.Nop())
+	handler := NewOrganizationsHandler(store, nil, rbac, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	handler.RegisterMultiOrgRoutes(api)
@@ -1014,7 +1014,7 @@ func setupOrgTestRouterWithSessions(store *mockOrgStore, user *auth.SessionUser)
 		MaxAge:     3600,
 		CookiePath: "/",
 	}, zerolog.Nop())
-	handler := NewOrganizationsHandler(store, sessionStore, rbac, zerolog.Nop())
+	handler := NewOrganizationsHandler(store, sessionStore, rbac, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	handler.RegisterMultiOrgRoutes(api)

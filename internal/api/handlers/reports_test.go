@@ -101,7 +101,7 @@ func setupReportTestRouter(store ReportStore, user *auth.SessionUser) *gin.Engin
 		c.Next()
 	})
 	// Pass nil scheduler - basic CRUD tests don't need it
-	handler := NewReportsHandler(store, nil, zerolog.Nop())
+	handler := NewReportsHandler(store, nil, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r
@@ -779,7 +779,7 @@ func setupReportTestRouterWithScheduler(store *mockReportSchedulerStore, user *a
 		c.Next()
 	})
 	scheduler := reports.NewScheduler(store, reports.DefaultSchedulerConfig(), zerolog.Nop())
-	handler := NewReportsHandler(store, scheduler, zerolog.Nop())
+	handler := NewReportsHandler(store, scheduler, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

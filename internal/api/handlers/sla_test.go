@@ -140,7 +140,7 @@ func setupSLATestRouter(store SLAStore, user *auth.SessionUser) *gin.Engine {
 		}
 		c.Next()
 	})
-	handler := NewSLAHandler(store, zerolog.Nop())
+	handler := NewSLAHandler(store, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

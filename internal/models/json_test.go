@@ -685,8 +685,8 @@ func TestOnboardingProgress_JSONRoundTrip(t *testing.T) {
 	if len(p2.CompletedSteps) != 2 {
 		t.Errorf("expected 2 completed steps, got %d", len(p2.CompletedSteps))
 	}
-	if p2.CurrentStep != OnboardingStepSMTP {
-		t.Errorf("expected current step 'smtp', got %s", p2.CurrentStep)
+	if p2.CurrentStep != OnboardingStepOIDC {
+		t.Errorf("expected current step 'oidc', got %s", p2.CurrentStep)
 	}
 }
 

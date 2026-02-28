@@ -35,6 +35,12 @@ func SetupRequiredMiddleware(store SetupStore, logger zerolog.Logger) gin.Handle
 			return
 		}
 
+		// Always allow auth endpoints (needed for post-setup login)
+		if strings.HasPrefix(path, "/auth/") {
+			c.Next()
+			return
+		}
+
 		// Always allow static assets
 		if strings.HasPrefix(path, "/assets/") || strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".css") {
 			c.Next()

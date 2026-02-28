@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"sync"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/rs/zerolog"
@@ -144,4 +145,61 @@ func (o *OIDC) HealthCheck(ctx context.Context) error {
 		return fmt.Errorf("OIDC provider endpoints not available")
 	}
 	return nil
+}
+
+// OIDCProvider is a thread-safe wrapper around an OIDC provider that supports
+// hot-reloading when OIDC settings change at runtime.
+type OIDCProvider struct {
+	mu       sync.RWMutex
+	provider *OIDC
+	logger   zerolog.Logger
+}
+
+// NewOIDCProvider creates a new OIDCProvider wrapper.
+// The initial provider can be nil (password-only mode).
+func NewOIDCProvider(provider *OIDC, logger zerolog.Logger) *OIDCProvider {
+	return &OIDCProvider{
+		provider: provider,
+		logger:   logger.With().Str("component", "oidc_provider").Logger(),
+	}
+}
+
+// Get returns the current OIDC provider instance (may be nil).
+func (p *OIDCProvider) Get() *OIDC {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.provider
+}
+
+// Update creates a new OIDC provider from the given config and swaps it in.
+// If initialization fails, the old provider is kept.
+func (p *OIDCProvider) Update(ctx context.Context, cfg OIDCConfig) error {
+	newProvider, err := NewOIDC(ctx, cfg, p.logger)
+	if err != nil {
+		return fmt.Errorf("initialize OIDC provider: %w", err)
+	}
+
+	p.mu.Lock()
+	p.provider = newProvider
+	p.mu.Unlock()
+
+	p.logger.Info().Str("issuer", cfg.Issuer).Msg("OIDC provider updated")
+	return nil
+}
+
+// IsConfigured returns true if an OIDC provider is currently loaded.
+func (p *OIDCProvider) IsConfigured() bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.provider != nil
+}
+
+// HealthCheck delegates to the underlying provider's health check.
+// Returns nil if no provider is configured (OIDC is optional).
+func (p *OIDCProvider) HealthCheck(ctx context.Context) error {
+	provider := p.Get()
+	if provider == nil {
+		return nil
+	}
+	return provider.HealthCheck(ctx)
 }

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/sla"
 	"github.com/gin-gonic/gin"
@@ -40,14 +41,16 @@ type SLAStore interface {
 // SLAHandler handles SLA policy HTTP endpoints.
 type SLAHandler struct {
 	store      SLAStore
+	checker    *license.FeatureChecker
 	calculator *sla.Calculator
 	logger     zerolog.Logger
 }
 
 // NewSLAHandler creates a new SLAHandler.
-func NewSLAHandler(store SLAStore, logger zerolog.Logger) *SLAHandler {
+func NewSLAHandler(store SLAStore, checker *license.FeatureChecker, logger zerolog.Logger) *SLAHandler {
 	return &SLAHandler{
 		store:      store,
+		checker:    checker,
 		calculator: sla.NewCalculator(store),
 		logger:     logger.With().Str("component", "sla_handler").Logger(),
 	}
@@ -97,6 +100,10 @@ func (h *SLAHandler) List(c *gin.Context) {
 
 // Create creates a new SLA policy.
 func (h *SLAHandler) Create(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureSLATracking) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -280,6 +287,10 @@ func (h *SLAHandler) Delete(c *gin.Context) {
 
 // GetStatus returns the current SLA compliance status for a policy.
 func (h *SLAHandler) GetStatus(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureSLATracking) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

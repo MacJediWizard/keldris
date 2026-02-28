@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/backup/apps"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/maintenance"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/notifications"
@@ -84,6 +85,12 @@ func DefaultSchedulerConfig() SchedulerConfig {
 	}
 }
 
+// LicenseChecker provides license feature checking for non-HTTP contexts.
+type LicenseChecker interface {
+	GetLicense() *license.License
+	HasValidRefreshToken() bool
+}
+
 // Scheduler manages backup schedules using cron.
 type Scheduler struct {
 	store              ScheduleStore
@@ -96,11 +103,17 @@ type Scheduler struct {
 	concurrencyManager *ConcurrencyManager
 	validator          *BackupValidator
 	validationConfig   ValidationConfig
+	licenseChecker     LicenseChecker
 	cron               *cron.Cron
 	logger             zerolog.Logger
 	mu                 sync.RWMutex
 	entries            map[uuid.UUID]cron.EntryID
 	running            bool
+}
+
+// SetLicenseChecker sets the license checker for premium feature gating.
+func (s *Scheduler) SetLicenseChecker(checker LicenseChecker) {
+	s.licenseChecker = checker
 }
 
 // NewScheduler creates a new backup scheduler.
@@ -945,6 +958,19 @@ func (s *Scheduler) replicateToOtherRepos(
 	allRepos []models.ScheduleRepository,
 	logger zerolog.Logger,
 ) {
+	// Verify geo-replication feature is available
+	if s.licenseChecker != nil {
+		lic := s.licenseChecker.GetLicense()
+		if lic == nil || !license.HasFeature(lic.Tier, license.FeatureGeoReplication) {
+			logger.Debug().Msg("geo-replication not available for current license tier")
+			return
+		}
+		if !s.licenseChecker.HasValidRefreshToken() {
+			logger.Debug().Msg("geo-replication requires active service connection")
+			return
+		}
+	}
+
 	for i := range allRepos {
 		targetRepo := &allRepos[i]
 		if targetRepo.RepositoryID == sourceRepo.RepositoryID {

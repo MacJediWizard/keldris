@@ -70,6 +70,7 @@ func NewServerSetupHandler(store ServerSetupStore, db DBPinger, sessions *auth.S
 
 // RegisterRoutes registers setup routes on the given router group.
 // These routes are available during initial setup (no auth required).
+// Setup is simplified to database verification + superuser creation only.
 func (h *ServerSetupHandler) RegisterRoutes(r *gin.RouterGroup) {
 	setup := r.Group("/setup")
 	setup.Use(middleware.SetupLockMiddleware(h.store, h.logger))
@@ -77,16 +78,9 @@ func (h *ServerSetupHandler) RegisterRoutes(r *gin.RouterGroup) {
 		// Status endpoint (always available)
 		setup.GET("/status", h.GetStatus)
 
-		// Setup steps
+		// Setup steps (DB + superuser only)
 		setup.POST("/database/test", h.TestDatabaseConnection)
 		setup.POST("/superuser", h.CreateSuperuser)
-		setup.POST("/smtp", h.ConfigureSMTP)
-		setup.POST("/smtp/skip", h.SkipSMTP)
-		setup.POST("/oidc", h.ConfigureOIDC)
-		setup.POST("/oidc/skip", h.SkipOIDC)
-		setup.POST("/license/activate", h.ActivateLicense)
-		setup.POST("/license/trial", h.StartTrial)
-		setup.POST("/organization", h.CreateOrganization)
 		setup.POST("/complete", h.CompleteSetup)
 	}
 }
@@ -245,247 +239,6 @@ func (h *ServerSetupHandler) CreateSuperuser(c *gin.Context) {
 	})
 }
 
-// ConfigureSMTP configures SMTP settings.
-// POST /api/v1/setup/smtp
-func (h *ServerSetupHandler) ConfigureSMTP(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	var req settings.SMTPSettings
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Validate SMTP settings
-	if err := req.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Get the default org (created during superuser step)
-	setup, err := h.store.GetServerSetup(ctx)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get setup state"})
-		return
-	}
-
-	// We need an org to store settings - use the first org
-	hasOrg, _ := h.store.HasAnyOrganization(ctx)
-	if !hasOrg {
-		c.JSON(http.StatusPreconditionFailed, gin.H{"error": "superuser step must be completed first"})
-		return
-	}
-
-	// For setup, we store settings in the default org
-	// First, ensure system settings exist
-	defaultOrgID := uuid.Nil // Will be resolved by the store
-	if err := h.store.EnsureSystemSettingsExist(ctx, defaultOrgID); err != nil {
-		h.logger.Warn().Err(err).Msg("failed to ensure system settings exist")
-	}
-
-	if err := h.store.UpdateSMTPSettings(ctx, defaultOrgID, &req); err != nil {
-		h.logger.Error().Err(err).Msg("failed to save SMTP settings")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save SMTP settings"})
-		return
-	}
-
-	// Mark SMTP step as complete
-	if !setup.HasCompletedStep(models.SetupStepSMTP) {
-		if err := h.store.CompleteSetupStep(ctx, models.SetupStepSMTP); err != nil {
-			h.logger.Error().Err(err).Msg("failed to complete SMTP step")
-		}
-	}
-
-	h.logAction(c, "smtp_configured", "smtp", nil, map[string]string{"host": req.Host})
-
-	c.JSON(http.StatusOK, gin.H{"message": "SMTP settings saved"})
-}
-
-// SkipSMTP skips the SMTP configuration step.
-// POST /api/v1/setup/smtp/skip
-func (h *ServerSetupHandler) SkipSMTP(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	if err := h.store.CompleteSetupStep(ctx, models.SetupStepSMTP); err != nil {
-		h.logger.Error().Err(err).Msg("failed to skip SMTP step")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to skip step"})
-		return
-	}
-
-	h.logAction(c, "smtp_skipped", "smtp", nil, nil)
-
-	c.JSON(http.StatusOK, gin.H{"message": "SMTP configuration skipped"})
-}
-
-// ConfigureOIDC configures OIDC settings.
-// POST /api/v1/setup/oidc
-func (h *ServerSetupHandler) ConfigureOIDC(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	var req settings.OIDCSettings
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Validate OIDC settings
-	if err := req.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	setup, err := h.store.GetServerSetup(ctx)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get setup state"})
-		return
-	}
-
-	defaultOrgID := uuid.Nil
-	if err := h.store.UpdateOIDCSettings(ctx, defaultOrgID, &req); err != nil {
-		h.logger.Error().Err(err).Msg("failed to save OIDC settings")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save OIDC settings"})
-		return
-	}
-
-	if !setup.HasCompletedStep(models.SetupStepOIDC) {
-		if err := h.store.CompleteSetupStep(ctx, models.SetupStepOIDC); err != nil {
-			h.logger.Error().Err(err).Msg("failed to complete OIDC step")
-		}
-	}
-
-	h.logAction(c, "oidc_configured", "oidc", nil, map[string]string{"issuer": req.Issuer})
-
-	c.JSON(http.StatusOK, gin.H{"message": "OIDC settings saved"})
-}
-
-// SkipOIDC skips the OIDC configuration step.
-// POST /api/v1/setup/oidc/skip
-func (h *ServerSetupHandler) SkipOIDC(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	if err := h.store.CompleteSetupStep(ctx, models.SetupStepOIDC); err != nil {
-		h.logger.Error().Err(err).Msg("failed to skip OIDC step")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to skip step"})
-		return
-	}
-
-	h.logAction(c, "oidc_skipped", "oidc", nil, nil)
-
-	c.JSON(http.StatusOK, gin.H{"message": "OIDC configuration skipped"})
-}
-
-// ActivateLicense activates a license key.
-// POST /api/v1/setup/license/activate
-func (h *ServerSetupHandler) ActivateLicense(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	var req models.ActivateLicenseRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	license, err := h.store.ActivateLicense(ctx, req.LicenseKey, nil)
-	if err != nil {
-		h.logger.Error().Err(err).Msg("failed to activate license")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to activate license: " + err.Error()})
-		return
-	}
-
-	// Mark license step as complete
-	if err := h.store.CompleteSetupStep(ctx, models.SetupStepLicense); err != nil {
-		h.logger.Error().Err(err).Msg("failed to complete license step")
-	}
-
-	h.logAction(c, "license_activated", "license", nil, map[string]string{
-		"license_type": string(license.LicenseType),
-	})
-
-	c.JSON(http.StatusOK, gin.H{
-		"license_type": license.LicenseType,
-		"expires_at":   license.ExpiresAt,
-		"message":      "License activated successfully",
-	})
-}
-
-// StartTrial starts a 14-day trial license.
-// POST /api/v1/setup/license/trial
-func (h *ServerSetupHandler) StartTrial(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	var req models.StartTrialRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	license, err := h.store.CreateTrialLicense(ctx, req.CompanyName, req.ContactEmail, nil)
-	if err != nil {
-		h.logger.Error().Err(err).Msg("failed to create trial license")
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Mark license step as complete
-	if err := h.store.CompleteSetupStep(ctx, models.SetupStepLicense); err != nil {
-		h.logger.Error().Err(err).Msg("failed to complete license step")
-	}
-
-	h.logAction(c, "trial_started", "license", nil, map[string]string{
-		"contact_email": req.ContactEmail,
-	})
-
-	c.JSON(http.StatusOK, gin.H{
-		"license_type": license.LicenseType,
-		"expires_at":   license.ExpiresAt,
-		"message":      "14-day trial started",
-	})
-}
-
-// CreateOrganization creates the first organization.
-// POST /api/v1/setup/organization
-func (h *ServerSetupHandler) CreateOrganization(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	var req models.CreateOrganizationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if req.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "organization name is required"})
-		return
-	}
-
-	// Get superuser to associate with org
-	hasSuperuser, err := h.store.HasAnySuperuser(ctx)
-	if err != nil || !hasSuperuser {
-		c.JSON(http.StatusPreconditionFailed, gin.H{"error": "superuser must be created first"})
-		return
-	}
-
-	// For now, we'll skip the org creation if one exists (it was created with the superuser)
-	hasOrg, _ := h.store.HasAnyOrganization(ctx)
-	if hasOrg {
-		// Just mark the step as complete
-		if err := h.store.CompleteSetupStep(ctx, models.SetupStepOrganization); err != nil {
-			h.logger.Error().Err(err).Msg("failed to complete organization step")
-		}
-		c.JSON(http.StatusOK, gin.H{"message": "Organization already exists"})
-		return
-	}
-
-	// This shouldn't happen since org is created with superuser, but handle it anyway
-	h.logAction(c, "organization_step_completed", "organization", nil, nil)
-
-	if err := h.store.CompleteSetupStep(ctx, models.SetupStepOrganization); err != nil {
-		h.logger.Error().Err(err).Msg("failed to complete organization step")
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Organization step completed"})
-}
-
 // CompleteSetup finalizes the setup process.
 // POST /api/v1/setup/complete
 func (h *ServerSetupHandler) CompleteSetup(c *gin.Context) {
@@ -497,11 +250,10 @@ func (h *ServerSetupHandler) CompleteSetup(c *gin.Context) {
 		return
 	}
 
-	// Verify all required steps are complete
+	// Verify all required steps are complete (DB + superuser only)
 	requiredSteps := []models.ServerSetupStep{
 		models.SetupStepDatabase,
 		models.SetupStepSuperuser,
-		models.SetupStepLicense,
 	}
 
 	for _, step := range requiredSteps {
@@ -525,7 +277,7 @@ func (h *ServerSetupHandler) CompleteSetup(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "Server setup completed successfully",
-		"redirect": "/",
+		"redirect": "/login",
 	})
 }
 

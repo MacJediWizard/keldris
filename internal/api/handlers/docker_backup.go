@@ -7,6 +7,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/backup/docker"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -37,15 +38,17 @@ type DockerBackupStore interface {
 type DockerBackupHandler struct {
 	store     DockerBackupStore
 	discovery *docker.DiscoveryService
+	checker   *license.FeatureChecker
 	parser    *docker.LabelParser
 	logger    zerolog.Logger
 }
 
 // NewDockerBackupHandler creates a new DockerBackupHandler.
-func NewDockerBackupHandler(store DockerBackupStore, discovery *docker.DiscoveryService, logger zerolog.Logger) *DockerBackupHandler {
+func NewDockerBackupHandler(store DockerBackupStore, discovery *docker.DiscoveryService, checker *license.FeatureChecker, logger zerolog.Logger) *DockerBackupHandler {
 	return &DockerBackupHandler{
 		store:     store,
 		discovery: discovery,
+		checker:   checker,
 		parser:    docker.NewLabelParser(),
 		logger:    logger.With().Str("component", "docker_backup_handler").Logger(),
 	}
@@ -182,6 +185,10 @@ func (h *DockerBackupHandler) ListVolumes(c *gin.Context) {
 //	@Security		SessionAuth
 //	@Router			/docker/backup [post]
 func (h *DockerBackupHandler) TriggerBackup(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureDockerBackup) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

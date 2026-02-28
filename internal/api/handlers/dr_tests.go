@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -29,17 +30,19 @@ type DRTestRunner interface {
 
 // DRTestsHandler handles DR test-related HTTP endpoints.
 type DRTestsHandler struct {
-	store  DRTestStore
-	runner DRTestRunner
-	logger zerolog.Logger
+	store   DRTestStore
+	runner  DRTestRunner
+	checker *license.FeatureChecker
+	logger  zerolog.Logger
 }
 
 // NewDRTestsHandler creates a new DRTestsHandler.
-func NewDRTestsHandler(store DRTestStore, runner DRTestRunner, logger zerolog.Logger) *DRTestsHandler {
+func NewDRTestsHandler(store DRTestStore, runner DRTestRunner, checker *license.FeatureChecker, logger zerolog.Logger) *DRTestsHandler {
 	return &DRTestsHandler{
-		store:  store,
-		runner: runner,
-		logger: logger.With().Str("component", "dr_tests_handler").Logger(),
+		store:   store,
+		runner:  runner,
+		checker: checker,
+		logger:  logger.With().Str("component", "dr_tests_handler").Logger(),
 	}
 }
 
@@ -167,6 +170,10 @@ func (h *DRTestsHandler) Get(c *gin.Context) {
 // Run triggers a new DR test.
 // POST /api/v1/dr-tests
 func (h *DRTestsHandler) Run(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureDRTests) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

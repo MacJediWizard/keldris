@@ -6,6 +6,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -27,17 +28,19 @@ type SSOGroupMappingStore interface {
 
 // SSOGroupMappingsHandler handles SSO group mapping HTTP endpoints.
 type SSOGroupMappingsHandler struct {
-	store  SSOGroupMappingStore
-	rbac   *auth.RBAC
-	logger zerolog.Logger
+	store   SSOGroupMappingStore
+	rbac    *auth.RBAC
+	checker *license.FeatureChecker
+	logger  zerolog.Logger
 }
 
 // NewSSOGroupMappingsHandler creates a new SSOGroupMappingsHandler.
-func NewSSOGroupMappingsHandler(store SSOGroupMappingStore, rbac *auth.RBAC, logger zerolog.Logger) *SSOGroupMappingsHandler {
+func NewSSOGroupMappingsHandler(store SSOGroupMappingStore, rbac *auth.RBAC, checker *license.FeatureChecker, logger zerolog.Logger) *SSOGroupMappingsHandler {
 	return &SSOGroupMappingsHandler{
-		store:  store,
-		rbac:   rbac,
-		logger: logger.With().Str("component", "sso_group_mappings_handler").Logger(),
+		store:   store,
+		rbac:    rbac,
+		checker: checker,
+		logger:  logger.With().Str("component", "sso_group_mappings_handler").Logger(),
 	}
 }
 
@@ -117,6 +120,10 @@ func (h *SSOGroupMappingsHandler) List(c *gin.Context) {
 // POST /api/v1/organizations/:id/sso-group-mappings
 // POST /api/v1/organizations/:org_id/sso-group-mappings
 func (h *SSOGroupMappingsHandler) Create(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureSSOSync) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -380,6 +387,10 @@ func (h *SSOGroupMappingsHandler) GetSSOSettings(c *gin.Context) {
 // PUT /api/v1/organizations/:id/sso-settings
 // PUT /api/v1/organizations/:org_id/sso-settings
 func (h *SSOGroupMappingsHandler) UpdateSSOSettings(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureSSOSync) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return

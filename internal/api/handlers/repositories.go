@@ -8,6 +8,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/crypto"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -32,14 +33,16 @@ type RepositoryStore interface {
 type RepositoriesHandler struct {
 	store      RepositoryStore
 	keyManager *crypto.KeyManager
+	checker    *license.FeatureChecker
 	logger     zerolog.Logger
 }
 
 // NewRepositoriesHandler creates a new RepositoriesHandler.
-func NewRepositoriesHandler(store RepositoryStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *RepositoriesHandler {
+func NewRepositoriesHandler(store RepositoryStore, keyManager *crypto.KeyManager, checker *license.FeatureChecker, logger zerolog.Logger) *RepositoriesHandler {
 	return &RepositoriesHandler{
 		store:      store,
 		keyManager: keyManager,
+		checker:    checker,
 		logger:     logger.With().Str("component", "repositories_handler").Logger(),
 	}
 }
@@ -253,6 +256,27 @@ func (h *RepositoriesHandler) Create(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
 		return
+	}
+
+	// Check storage backend feature gate
+	storageFeature := storageTypeFeature(string(req.Type))
+	if storageFeature != "" {
+		if !middleware.RequireFeature(c, h.checker, storageFeature) {
+			return
+		}
+	}
+
+	// Check multi-repo feature gate: free tier limited to one repository
+	existing, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), user.CurrentOrgID)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to count repositories")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check repository limits"})
+		return
+	}
+	if len(existing) >= 1 {
+		if !middleware.RequireFeature(c, h.checker, license.FeatureMultiRepo) {
+			return
+		}
 	}
 
 	// Validate repository type
@@ -947,4 +971,23 @@ func isCredentialField(field string) bool {
 		"application_secret": true,
 	}
 	return credentialFields[field]
+}
+
+// storageTypeFeature returns the license feature required for a storage backend type.
+// Returns empty string for local storage (free tier).
+func storageTypeFeature(storageType string) license.Feature {
+	switch storageType {
+	case "s3":
+		return license.FeatureStorageS3
+	case "b2":
+		return license.FeatureStorageB2
+	case "sftp":
+		return license.FeatureStorageSFTP
+	case "dropbox":
+		return license.FeatureStorageDropbox
+	case "rest":
+		return license.FeatureStorageRest
+	default:
+		return ""
+	}
 }

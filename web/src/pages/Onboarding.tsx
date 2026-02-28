@@ -9,6 +9,7 @@ import {
 	useStartTrial,
 } from '../hooks/useLicense';
 import {
+	useCompleteOIDCStep,
 	useCompleteOnboardingStep,
 	useOnboardingStatus,
 	useSkipOnboarding,
@@ -36,6 +37,11 @@ const ONBOARDING_STEPS = [
 		id: 'organization',
 		label: 'Organization',
 		description: 'Create your first organization',
+	},
+	{
+		id: 'oidc',
+		label: 'Single Sign-On',
+		description: 'Configure OIDC authentication (Pro+)',
 	},
 	{
 		id: 'smtp',
@@ -68,6 +74,7 @@ const DOCS_LINKS: Record<string, string> = {
 	welcome: '/docs/getting-started',
 	license: '/docs/licensing',
 	organization: '/docs/organizations',
+	oidc: '/docs/authentication/oidc',
 	smtp: '/docs/notifications/email',
 	repository: '/docs/repositories',
 	agent: '/docs/agent-installation',
@@ -508,6 +515,177 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 				>
 					{isLoading ? 'Saving...' : 'Continue'}
 				</button>
+			</div>
+		</div>
+	);
+}
+
+interface OIDCStepProps extends StepProps {
+	licenseTier?: string;
+}
+
+function OIDCStep({ onSkip, isLoading, licenseTier }: OIDCStepProps) {
+	const completeOIDC = useCompleteOIDCStep();
+	const [issuer, setIssuer] = useState('');
+	const [clientId, setClientId] = useState('');
+	const [clientSecret, setClientSecret] = useState('');
+	const [redirectUrl, setRedirectUrl] = useState('');
+	const [oidcError, setOidcError] = useState('');
+
+	const isFree = !licenseTier || licenseTier === 'free';
+
+	// Auto-skip if free tier
+	useEffect(() => {
+		if (isFree && onSkip) {
+			onSkip();
+		}
+	}, [isFree, onSkip]);
+
+	const handleSave = async () => {
+		setOidcError('');
+		try {
+			await completeOIDC.mutateAsync({
+				issuer,
+				client_id: clientId,
+				client_secret: clientSecret,
+				redirect_url: redirectUrl,
+			});
+		} catch (err) {
+			setOidcError(
+				err instanceof Error ? err.message : 'Failed to configure OIDC',
+			);
+		}
+	};
+
+	// If free tier, show nothing while auto-skip runs
+	if (isFree) {
+		return (
+			<div className="py-4 text-center">
+				<p className="text-gray-600 dark:text-gray-400">
+					OIDC is available on Pro and Enterprise tiers. Skipping...
+				</p>
+			</div>
+		);
+	}
+
+	const canSave =
+		issuer.trim() &&
+		clientId.trim() &&
+		clientSecret.trim() &&
+		redirectUrl.trim();
+
+	return (
+		<div className="py-4">
+			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+				Configure Single Sign-On (OIDC)
+			</h2>
+			<p className="text-gray-600 dark:text-gray-400 mb-6">
+				Set up OpenID Connect to enable SSO for your team. This step is optional
+				and can be configured later.
+			</p>
+
+			<div className="space-y-4 mb-6">
+				<div>
+					<label
+						htmlFor="oidc-issuer"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Issuer URL
+					</label>
+					<input
+						id="oidc-issuer"
+						type="url"
+						value={issuer}
+						onChange={(e) => setIssuer(e.target.value)}
+						placeholder="https://accounts.google.com"
+						className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+					/>
+				</div>
+
+				<div>
+					<label
+						htmlFor="oidc-client-id"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Client ID
+					</label>
+					<input
+						id="oidc-client-id"
+						type="text"
+						value={clientId}
+						onChange={(e) => setClientId(e.target.value)}
+						placeholder="your-client-id"
+						className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+					/>
+				</div>
+
+				<div>
+					<label
+						htmlFor="oidc-client-secret"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Client Secret
+					</label>
+					<input
+						id="oidc-client-secret"
+						type="password"
+						value={clientSecret}
+						onChange={(e) => setClientSecret(e.target.value)}
+						placeholder="your-client-secret"
+						className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+					/>
+				</div>
+
+				<div>
+					<label
+						htmlFor="oidc-redirect-url"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Redirect URL
+					</label>
+					<input
+						id="oidc-redirect-url"
+						type="url"
+						value={redirectUrl}
+						onChange={(e) => setRedirectUrl(e.target.value)}
+						placeholder="https://keldris.example.com/auth/callback"
+						className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+					/>
+				</div>
+			</div>
+
+			{oidcError && (
+				<div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
+					<p className="text-sm text-red-600 dark:text-red-400">{oidcError}</p>
+				</div>
+			)}
+
+			<div className="flex justify-between items-center">
+				<a
+					href={DOCS_LINKS.oidc}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+				>
+					Learn about OIDC setup
+				</a>
+				<div className="flex gap-3">
+					<button
+						type="button"
+						onClick={onSkip}
+						className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+					>
+						Skip for now
+					</button>
+					<button
+						type="button"
+						onClick={handleSave}
+						disabled={!canSave || completeOIDC.isPending || isLoading}
+						className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+					>
+						{completeOIDC.isPending ? 'Saving...' : 'Save & Continue'}
+					</button>
+				</div>
 			</div>
 		</div>
 	);
@@ -1047,6 +1225,15 @@ export function Onboarding() {
 					<OrganizationStep
 						onComplete={() => handleCompleteStep('organization')}
 						isLoading={isLoading}
+					/>
+				);
+			case 'oidc':
+				return (
+					<OIDCStep
+						onComplete={() => handleCompleteStep('oidc')}
+						onSkip={() => handleCompleteStep('oidc')}
+						isLoading={isLoading}
+						licenseTier={onboardingStatus?.license_tier}
 					/>
 				);
 			case 'smtp':

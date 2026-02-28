@@ -34,3 +34,55 @@ export function useUpdatePreferences() {
 		},
 	});
 }
+
+interface AuthStatus {
+	oidc_enabled: boolean;
+	password_enabled: boolean;
+}
+
+export function useAuthStatus() {
+	return useQuery({
+		queryKey: ['auth', 'status'],
+		queryFn: async (): Promise<AuthStatus> => {
+			const response = await fetch('/auth/status', {
+				credentials: 'include',
+				headers: { 'Content-Type': 'application/json' },
+			});
+			if (!response.ok) {
+				throw new Error('Failed to fetch auth status');
+			}
+			return response.json();
+		},
+		staleTime: 5 * 60 * 1000,
+	});
+}
+
+interface PasswordLoginRequest {
+	email: string;
+	password: string;
+}
+
+export function usePasswordLogin() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (data: PasswordLoginRequest) => {
+			const response = await fetch('/auth/login/password', {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(data),
+			});
+			if (!response.ok) {
+				const errorData = await response
+					.json()
+					.catch(() => ({ error: 'Login failed' }));
+				throw new Error(errorData.error || errorData.message || 'Login failed');
+			}
+			return response.json();
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+		},
+	});
+}

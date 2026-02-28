@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { onboardingApi } from '../lib/api';
-import type { OnboardingStep } from '../lib/types';
+import type { OIDCOnboardingRequest, OnboardingStep } from '../lib/types';
 
 export function useOnboardingStatus() {
 	return useQuery({
@@ -15,6 +15,18 @@ export function useCompleteOnboardingStep() {
 
 	return useMutation({
 		mutationFn: (step: OnboardingStep) => onboardingApi.completeStep(step),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['onboarding'] });
+		},
+	});
+}
+
+export function useCompleteOIDCStep() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (data: OIDCOnboardingRequest) =>
+			onboardingApi.completeStepWithBody('oidc', data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['onboarding'] });
 		},

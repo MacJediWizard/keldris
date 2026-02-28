@@ -2922,6 +2922,7 @@ export type OnboardingStep =
 	| 'welcome'
 	| 'license'
 	| 'organization'
+	| 'oidc'
 	| 'smtp'
 	| 'repository'
 	| 'agent'
@@ -2935,6 +2936,14 @@ export interface OnboardingStatus {
 	completed_steps: OnboardingStep[];
 	skipped: boolean;
 	is_complete: boolean;
+	license_tier?: string;
+}
+
+export interface OIDCOnboardingRequest {
+	issuer: string;
+	client_id: string;
+	client_secret: string;
+	redirect_url: string;
 }
 
 // File History types

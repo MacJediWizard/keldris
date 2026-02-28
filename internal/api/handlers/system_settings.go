@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/settings"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -31,15 +32,17 @@ type SystemSettingsStore interface {
 
 // SystemSettingsHandler handles system settings HTTP endpoints.
 type SystemSettingsHandler struct {
-	store  SystemSettingsStore
-	logger zerolog.Logger
+	store   SystemSettingsStore
+	checker *license.FeatureChecker
+	logger  zerolog.Logger
 }
 
 // NewSystemSettingsHandler creates a new SystemSettingsHandler.
-func NewSystemSettingsHandler(store SystemSettingsStore, logger zerolog.Logger) *SystemSettingsHandler {
+func NewSystemSettingsHandler(store SystemSettingsStore, checker *license.FeatureChecker, logger zerolog.Logger) *SystemSettingsHandler {
 	return &SystemSettingsHandler{
-		store:  store,
-		logger: logger.With().Str("component", "system_settings_handler").Logger(),
+		store:   store,
+		checker: checker,
+		logger:  logger.With().Str("component", "system_settings_handler").Logger(),
 	}
 }
 
@@ -328,6 +331,10 @@ func (h *SystemSettingsHandler) TestSMTP(c *gin.Context) {
 // GetOIDC returns OIDC settings for the organization.
 // GET /api/v1/system-settings/oidc
 func (h *SystemSettingsHandler) GetOIDC(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureOIDC) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -359,6 +366,10 @@ func (h *SystemSettingsHandler) GetOIDC(c *gin.Context) {
 // UpdateOIDC updates OIDC settings for the organization.
 // PUT /api/v1/system-settings/oidc
 func (h *SystemSettingsHandler) UpdateOIDC(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureOIDC) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
@@ -468,6 +479,10 @@ func (h *SystemSettingsHandler) UpdateOIDC(c *gin.Context) {
 // TestOIDC tests the OIDC provider connection.
 // POST /api/v1/system-settings/oidc/test
 func (h *SystemSettingsHandler) TestOIDC(c *gin.Context) {
+	if !middleware.RequireFeature(c, h.checker, license.FeatureOIDC) {
+		return
+	}
+
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
