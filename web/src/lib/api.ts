@@ -583,7 +583,15 @@ function emitUpgradeRequired(event: UpgradeEvent) {
 
 async function handleResponse<T>(response: Response): Promise<T> {
 	if (response.status === 401) {
-		window.location.href = '/login';
+		// Don't redirect if already on a public page (prevents infinite loop)
+		const currentPath = window.location.pathname;
+		if (
+			currentPath !== '/login' &&
+			currentPath !== '/setup' &&
+			!currentPath.startsWith('/reset-password')
+		) {
+			window.location.href = '/login';
+		}
 		throw new ApiError(401, 'Unauthorized');
 	}
 
