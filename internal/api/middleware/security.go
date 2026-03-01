@@ -47,7 +47,7 @@ type SecurityHeadersConfig struct {
 	CrossOriginResourcePolicy string
 
 	// CrossOriginEmbedderPolicy sets the Cross-Origin-Embedder-Policy header.
-	// Defaults to "require-corp" if empty.
+	// Defaults to "credentialless" if empty.
 	CrossOriginEmbedderPolicy string
 
 	// AdditionalCSPDirectives allows adding extra CSP directives for white-label.
@@ -67,7 +67,7 @@ func DefaultSecurityHeadersConfig() SecurityHeadersConfig {
 		PermissionsPolicy:         defaultPermissionsPolicy(),
 		CrossOriginOpenerPolicy:   "same-origin",
 		CrossOriginResourcePolicy: "same-origin",
-		CrossOriginEmbedderPolicy: "require-corp",
+		CrossOriginEmbedderPolicy: "credentialless",
 	}
 }
 
@@ -192,7 +192,7 @@ func SecurityHeaders(cfg SecurityHeadersConfig) gin.HandlerFunc {
 
 	coep := cfg.CrossOriginEmbedderPolicy
 	if coep == "" {
-		coep = "require-corp"
+		coep = "credentialless"
 	}
 
 	return func(c *gin.Context) {

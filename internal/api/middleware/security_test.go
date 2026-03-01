@@ -37,7 +37,7 @@ func TestSecurityHeaders_DefaultConfig(t *testing.T) {
 		{"X-Permitted-Cross-Domain-Policies", "none", false},
 		{"Cross-Origin-Opener-Policy", "same-origin", false},
 		{"Cross-Origin-Resource-Policy", "same-origin", false},
-		{"Cross-Origin-Embedder-Policy", "require-corp", false},
+		{"Cross-Origin-Embedder-Policy", "credentialless", false},
 		{"Content-Security-Policy", "default-src", true},
 		{"Strict-Transport-Security", "max-age=", true},
 		{"Permissions-Policy", "camera=()", true},
