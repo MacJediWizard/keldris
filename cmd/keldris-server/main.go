@@ -58,6 +58,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
@@ -67,6 +68,8 @@ import (
 
 	"crypto/ed25519"
 	"encoding/hex"
+	"encoding/json"
+	"io"
 
 	"github.com/MacJediWizard/keldris/internal/api"
 	"github.com/MacJediWizard/keldris/internal/api/handlers"
@@ -191,18 +194,25 @@ func run() int {
 	// Parse license key
 	var lic *license.License
 
+	// Fetch signing public key from license server (unless air-gapped)
 	var licPubKey []byte
-	if cfg.LicensePublicKey != "" {
-		decoded, err := hex.DecodeString(cfg.LicensePublicKey)
+	if !cfg.AirGapMode {
+		pubKeyHex, err := fetchSigningKey(cfg.LicenseServerURL)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to decode AIRGAP_PUBLIC_KEY (expected hex-encoded Ed25519 public key)")
+			logger.Fatal().Err(err).Str("url", cfg.LicenseServerURL).Msg("Failed to fetch signing key from license server")
+			return 1
+		}
+		decoded, err := hex.DecodeString(pubKeyHex)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("License server returned invalid public key (expected hex)")
 			return 1
 		}
 		if len(decoded) != ed25519.PublicKeySize {
-			logger.Fatal().Int("got", len(decoded)).Int("expected", ed25519.PublicKeySize).Msg("Invalid AIRGAP_PUBLIC_KEY size")
+			logger.Fatal().Int("got", len(decoded)).Int("expected", ed25519.PublicKeySize).Msg("License server returned invalid public key size")
 			return 1
 		}
 		licPubKey = decoded
+		logger.Info().Str("fingerprint", pubKeyHex[:8]).Msg("Signing key fetched from license server")
 	}
 
 	if cfg.LicenseKey != "" {
@@ -425,4 +435,48 @@ func run() int {
 
 	logger.Info().Msg("Server stopped gracefully")
 	return 0
+}
+
+// fetchSigningKey retrieves the Ed25519 public key from the license server.
+func fetchSigningKey(serverURL string) (string, error) {
+	parsed, err := url.Parse(serverURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid LICENSE_SERVER_URL: %w", err)
+	}
+	if parsed.Scheme != "https" {
+		return "", fmt.Errorf("LICENSE_SERVER_URL must use HTTPS (got %q)", parsed.Scheme)
+	}
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	endpoint := strings.TrimRight(serverURL, "/") + "/api/v1/signing-key"
+	resp, err := client.Get(endpoint)
+	if err != nil {
+		return "", fmt.Errorf("GET %s: %w", endpoint, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil {
+		return "", fmt.Errorf("reading response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("license server returned HTTP %d", resp.StatusCode)
+	}
+
+	var result struct {
+		PublicKey string `json:"public_key"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", fmt.Errorf("parsing response: %w", err)
+	}
+	if result.PublicKey == "" {
+		return "", fmt.Errorf("license server returned empty public key")
+	}
+	return result.PublicKey, nil
 }

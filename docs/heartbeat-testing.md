@@ -239,7 +239,7 @@ Day 30: Grace period expires → downgrade to Free
 
 ### Entitlement token issues
 - Tokens expire after 24 hours; validation cycle renews them
-- Check `AIRGAP_PUBLIC_KEY` matches the license server's signing key
+- Verify Keldris can reach `LICENSE_SERVER_URL` to fetch the signing key at startup
 - Look for `failed to parse entitlement token` in logs
 
 ### Grace period questions

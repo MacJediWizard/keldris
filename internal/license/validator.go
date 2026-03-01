@@ -759,7 +759,7 @@ func (v *Validator) storeEntitlementFromResponse(resp map[string]interface{}) {
 	}
 }
 
-// verifyKeyLocally validates the license key using the hardcoded Ed25519 public key
+// verifyKeyLocally validates the license key using the Ed25519 public key
 // when the license server is unreachable. If the key is valid but expired, a 30-day
 // grace period allows continued operation.
 func (v *Validator) verifyKeyLocally() {
