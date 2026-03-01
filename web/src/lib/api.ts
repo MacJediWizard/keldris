@@ -597,7 +597,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 	if (response.status === 503) {
 		const data = await response.json().catch(() => ({}));
-		if (data.redirect === '/setup') {
+		if (data.redirect === '/setup' && window.location.pathname !== '/setup') {
 			window.location.href = '/setup';
 			throw new ApiError(503, 'Setup required');
 		}

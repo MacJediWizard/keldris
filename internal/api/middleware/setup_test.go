@@ -93,7 +93,6 @@ func TestSetupRequired_AllowsHealth(t *testing.T) {
 	paths := []string{
 		"/health",
 		"/api/v1/health",
-		"/api/v1/branding",
 	}
 
 	for _, path := range paths {

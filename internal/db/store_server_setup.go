@@ -102,7 +102,7 @@ func (db *DB) CompleteSetupStep(ctx context.Context, step models.ServerSetupStep
 }
 
 // FinalizeSetup marks setup as complete and locks the wizard.
-func (db *DB) FinalizeSetup(ctx context.Context, userID uuid.UUID) error {
+func (db *DB) FinalizeSetup(ctx context.Context, userID *uuid.UUID) error {
 	now := time.Now()
 	_, err := db.Pool.Exec(ctx, `
 		UPDATE server_setup

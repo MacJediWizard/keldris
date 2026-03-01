@@ -19,7 +19,7 @@ type ServerSetupStore interface {
 	GetServerSetup(ctx context.Context) (*models.ServerSetup, error)
 	IsSetupComplete(ctx context.Context) (bool, error)
 	CompleteSetupStep(ctx context.Context, step models.ServerSetupStep) error
-	FinalizeSetup(ctx context.Context, userID uuid.UUID) error
+	FinalizeSetup(ctx context.Context, userID *uuid.UUID) error
 
 	// User/Superuser
 	HasAnySuperuser(ctx context.Context) (bool, error)
@@ -266,8 +266,8 @@ func (h *ServerSetupHandler) CompleteSetup(c *gin.Context) {
 		}
 	}
 
-	// Finalize setup (we don't have a user ID at this point)
-	if err := h.store.FinalizeSetup(ctx, uuid.Nil); err != nil {
+	// Finalize setup (no user in session during setup — column is nullable)
+	if err := h.store.FinalizeSetup(ctx, nil); err != nil {
 		h.logger.Error().Err(err).Msg("failed to finalize setup")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to complete setup"})
 		return
