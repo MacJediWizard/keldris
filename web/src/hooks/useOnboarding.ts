@@ -35,6 +35,13 @@ export function useCompleteOIDCStep() {
 	});
 }
 
+export function useTestOnboardingOIDC() {
+	return useMutation({
+		mutationFn: (data: OIDCOnboardingRequest) => onboardingApi.testOIDC(data),
+		retry: false,
+	});
+}
+
 export function useSkipOnboarding() {
 	const queryClient = useQueryClient();
 

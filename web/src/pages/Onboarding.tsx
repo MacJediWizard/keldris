@@ -14,6 +14,7 @@ import {
 	useCompleteOnboardingStep,
 	useOnboardingStatus,
 	useSkipOnboarding,
+	useTestOnboardingOIDC,
 } from '../hooks/useOnboarding';
 import {
 	useOrganizations,
@@ -559,11 +560,17 @@ interface OIDCStepProps extends StepProps {
 
 function OIDCStep({ onSkip, isLoading, licenseTier }: OIDCStepProps) {
 	const completeOIDC = useCompleteOIDCStep();
+	const testOIDC = useTestOnboardingOIDC();
 	const [issuer, setIssuer] = useState('');
 	const [clientId, setClientId] = useState('');
 	const [clientSecret, setClientSecret] = useState('');
 	const [redirectUrl, setRedirectUrl] = useState('');
 	const [oidcError, setOidcError] = useState('');
+	const [testResult, setTestResult] = useState<{
+		success: boolean;
+		message: string;
+		provider_name?: string;
+	} | null>(null);
 
 	const isFree = !licenseTier || licenseTier === 'free';
 	const skipAttempted = useRef(false);
@@ -576,15 +583,33 @@ function OIDCStep({ onSkip, isLoading, licenseTier }: OIDCStepProps) {
 		}
 	}, [isFree, onSkip]);
 
+	const oidcData = {
+		issuer,
+		client_id: clientId,
+		client_secret: clientSecret,
+		redirect_url: redirectUrl,
+	};
+
+	const handleTest = async () => {
+		setOidcError('');
+		setTestResult(null);
+		try {
+			const result = await testOIDC.mutateAsync(oidcData);
+			setTestResult(result);
+			if (!result.success) {
+				setOidcError(result.message);
+			}
+		} catch (err) {
+			setOidcError(
+				err instanceof Error ? err.message : 'Failed to test OIDC connection',
+			);
+		}
+	};
+
 	const handleSave = async () => {
 		setOidcError('');
 		try {
-			await completeOIDC.mutateAsync({
-				issuer,
-				client_id: clientId,
-				client_secret: clientSecret,
-				redirect_url: redirectUrl,
-			});
+			await completeOIDC.mutateAsync(oidcData);
 		} catch (err) {
 			setOidcError(
 				err instanceof Error ? err.message : 'Failed to configure OIDC',
@@ -689,6 +714,17 @@ function OIDCStep({ onSkip, isLoading, licenseTier }: OIDCStepProps) {
 				</div>
 			</div>
 
+			{testResult?.success && (
+				<div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-900/20">
+					<p className="text-sm font-medium text-green-700 dark:text-green-400">
+						Connection successful
+					</p>
+					<p className="text-sm text-green-600 dark:text-green-400">
+						Provider: {testResult.provider_name || issuer}
+					</p>
+				</div>
+			)}
+
 			{oidcError && (
 				<div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
 					<p className="text-sm text-red-600 dark:text-red-400">{oidcError}</p>
@@ -711,6 +747,14 @@ function OIDCStep({ onSkip, isLoading, licenseTier }: OIDCStepProps) {
 						className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
 					>
 						Skip for now
+					</button>
+					<button
+						type="button"
+						onClick={handleTest}
+						disabled={!canSave || testOIDC.isPending}
+						className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+					>
+						{testOIDC.isPending ? 'Testing...' : 'Test Connection'}
 					</button>
 					<button
 						type="button"

@@ -320,6 +320,7 @@ import type {
 	NotificationRuleExecution,
 	NotificationRuleExecutionsResponse,
 	NotificationRulesResponse,
+	OIDCOnboardingRequest,
 	OIDCSettings,
 	OnboardingStatus,
 	OnboardingStep,
@@ -2571,6 +2572,12 @@ export const onboardingApi = {
 	skip: async (): Promise<OnboardingStatus> =>
 		fetchApi<OnboardingStatus>('/onboarding/skip', {
 			method: 'POST',
+		}),
+
+	testOIDC: async (data: OIDCOnboardingRequest): Promise<TestOIDCResponse> =>
+		fetchApi<TestOIDCResponse>('/onboarding/test-oidc', {
+			method: 'POST',
+			body: JSON.stringify(data),
 		}),
 };
 

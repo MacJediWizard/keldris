@@ -2,7 +2,12 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
@@ -51,6 +56,7 @@ func (h *OnboardingHandler) RegisterRoutes(r *gin.RouterGroup) {
 		onboarding.GET("/status", h.GetStatus)
 		onboarding.POST("/step/:step", h.CompleteStep)
 		onboarding.POST("/skip", h.Skip)
+		onboarding.POST("/test-oidc", h.TestOIDC)
 	}
 }
 
@@ -170,7 +176,8 @@ func (h *OnboardingHandler) completeOIDCStep(c *gin.Context, user *auth.SessionU
 	//   Layer 2: Entitlement nonce (proves license server issued a token)
 	//   Layer 3: Refresh token (proves recent heartbeat)
 	// The DB tier is updated by LicenseManageHandler.Activate/StartTrial
-	// before the user reaches this step.
+	// before the user reaches this step. Layers 2+3 are delivered by the
+	// activation and heartbeat calls in SetLicenseKey.
 	if !middleware.RequireFeature(c, h.checker, license.FeatureOIDC) {
 		return
 	}
@@ -288,5 +295,108 @@ func (h *OnboardingHandler) Skip(c *gin.Context) {
 		CompletedSteps:  progress.CompletedSteps,
 		Skipped:         true,
 		IsComplete:      true,
+	})
+}
+
+// TestOIDC tests an OIDC configuration by performing provider discovery.
+// POST /api/v1/onboarding/test-oidc
+func (h *OnboardingHandler) TestOIDC(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	// All 3 security layers enforced via RequireFeature (same as completeOIDCStep).
+	if !middleware.RequireFeature(c, h.checker, license.FeatureOIDC) {
+		return
+	}
+
+	var req OIDCOnboardingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate the settings struct (set defaults for fields not in the request)
+	oidcSettings := &settings.OIDCSettings{
+		Enabled:      true,
+		Issuer:       req.Issuer,
+		ClientID:     req.ClientID,
+		ClientSecret: req.ClientSecret,
+		RedirectURL:  req.RedirectURL,
+		Scopes:       []string{"openid", "profile", "email"},
+		DefaultRole:  "member",
+	}
+	if err := oidcSettings.Validate(); err != nil {
+		c.JSON(http.StatusOK, settings.TestOIDCResponse{
+			Success: false,
+			Message: "Configuration validation failed: " + err.Error(),
+		})
+		return
+	}
+
+	// Perform OIDC discovery against the issuer
+	discoveryURL := strings.TrimRight(req.Issuer, "/") + "/.well-known/openid-configuration"
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	resp, err := client.Get(discoveryURL) //nolint:gosec // Issuer URL is user-provided for OIDC discovery
+	if err != nil {
+		c.JSON(http.StatusOK, settings.TestOIDCResponse{
+			Success: false,
+			Message: fmt.Sprintf("Failed to reach OIDC provider: %v", err),
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.JSON(http.StatusOK, settings.TestOIDCResponse{
+			Success: false,
+			Message: fmt.Sprintf("OIDC discovery returned status %d", resp.StatusCode),
+		})
+		return
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1 MB limit
+	if err != nil {
+		c.JSON(http.StatusOK, settings.TestOIDCResponse{
+			Success: false,
+			Message: "Failed to read OIDC discovery response",
+		})
+		return
+	}
+
+	var discovery struct {
+		Issuer   string `json:"issuer"`
+		AuthURL  string `json:"authorization_endpoint"`
+		TokenURL string `json:"token_endpoint"`
+	}
+	if err := json.Unmarshal(body, &discovery); err != nil {
+		c.JSON(http.StatusOK, settings.TestOIDCResponse{
+			Success: false,
+			Message: "Invalid OIDC discovery document",
+		})
+		return
+	}
+
+	if discovery.Issuer == "" || discovery.AuthURL == "" {
+		c.JSON(http.StatusOK, settings.TestOIDCResponse{
+			Success: false,
+			Message: "OIDC discovery document missing required fields (issuer, authorization_endpoint)",
+		})
+		return
+	}
+
+	h.logger.Info().
+		Str("org_id", user.CurrentOrgID.String()).
+		Str("issuer", req.Issuer).
+		Msg("OIDC test connection successful during onboarding")
+
+	c.JSON(http.StatusOK, settings.TestOIDCResponse{
+		Success:       true,
+		Message:       "OIDC provider discovery successful",
+		ProviderName:  discovery.Issuer,
+		AuthURL:       discovery.AuthURL,
+		SupportedFlow: "authorization_code",
 	})
 }
