@@ -29,8 +29,8 @@ func SetupRequiredMiddleware(store SetupStore, logger zerolog.Logger) gin.Handle
 			return
 		}
 
-		// Always allow health endpoints
-		if path == "/api/v1/health" || path == "/health" {
+		// Always allow health and branding endpoints
+		if path == "/api/v1/health" || path == "/health" || path == "/api/v1/branding" {
 			c.Next()
 			return
 		}

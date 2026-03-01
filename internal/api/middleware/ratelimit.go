@@ -208,6 +208,7 @@ func rateLimitMiddleware(manager *RateLimitManager) gin.HandlerFunc {
 		// should not consume the user's API rate limit budget.
 		path := c.Request.URL.Path
 		if strings.HasPrefix(path, "/assets/") ||
+			strings.HasPrefix(path, "/api/v1/setup") ||
 			path == "/health" ||
 			path == "/favicon.ico" {
 			c.Next()
