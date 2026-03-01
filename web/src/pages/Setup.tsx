@@ -131,6 +131,14 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 	const [password, setPassword] = useState('');
 	const [confirmPassword, setConfirmPassword] = useState('');
 	const [error, setError] = useState('');
+	const [showConfetti, setShowConfetti] = useState(false);
+
+	useEffect(() => {
+		if (showConfetti) {
+			const timer = setTimeout(() => setShowConfetti(false), 5000);
+			return () => clearTimeout(timer);
+		}
+	}, [showConfetti]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -149,7 +157,10 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 		createSuperuser.mutate(
 			{ email, password, name },
 			{
-				onSuccess: () => onComplete(),
+				onSuccess: () => {
+					setShowConfetti(true);
+					onComplete();
+				},
 				onError: (err) =>
 					setError(
 						err instanceof Error ? err.message : 'Failed to create superuser',
@@ -160,6 +171,7 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 
 	return (
 		<div className="py-4">
+			{showConfetti && <Confetti />}
 			<h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
 				Create Superuser Account
 			</h2>
@@ -449,22 +461,11 @@ export function Setup() {
 			<div className="max-w-4xl w-full">
 				{/* Header */}
 				<div className="text-center mb-8">
-					<div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-						<svg
-							aria-hidden="true"
-							className="w-8 h-8 text-indigo-600"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
-							/>
-						</svg>
-					</div>
+					<img
+						src="https://cdn.macjediwizard.com/cdn/Keldris%20Branding%20Images/keldris-webicon-727336cd.png"
+						alt="Keldris"
+						className="w-16 h-16 mx-auto mb-4"
+					/>
 					<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
 						Keldris Server Setup
 					</h1>
