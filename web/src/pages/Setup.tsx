@@ -464,7 +464,7 @@ export function Setup() {
 					<img
 						src="https://cdn.macjediwizard.com/cdn/Keldris%20Branding%20Images/keldris-webicon-727336cd.png"
 						alt="Keldris"
-						className="w-16 h-16 mx-auto mb-4"
+						className="w-64 h-64 mx-auto mb-4"
 					/>
 					<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
 						Keldris Server Setup
