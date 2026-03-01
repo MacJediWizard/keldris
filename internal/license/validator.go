@@ -853,8 +853,12 @@ func (v *Validator) postJSONWithResponse(ctx context.Context, path string, body 
 		return nil, fmt.Errorf("decode response from %s (status %d): %w", path, resp.StatusCode, err)
 	}
 
-	if resp.StatusCode >= 500 {
-		return result, fmt.Errorf("server error from %s: %d", path, resp.StatusCode)
+	if resp.StatusCode >= 400 {
+		errMsg := ""
+		if e, ok := result["error"].(string); ok {
+			errMsg = e
+		}
+		return result, fmt.Errorf("HTTP %d from %s: %s", resp.StatusCode, path, errMsg)
 	}
 
 	return result, nil
