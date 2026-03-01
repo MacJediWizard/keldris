@@ -131,15 +131,6 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 	const [password, setPassword] = useState('');
 	const [confirmPassword, setConfirmPassword] = useState('');
 	const [error, setError] = useState('');
-	const [showConfetti, setShowConfetti] = useState(false);
-
-	useEffect(() => {
-		if (showConfetti) {
-			const timer = setTimeout(() => setShowConfetti(false), 5000);
-			return () => clearTimeout(timer);
-		}
-	}, [showConfetti]);
-
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		setError('');
@@ -157,10 +148,7 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 		createSuperuser.mutate(
 			{ email, password, name },
 			{
-				onSuccess: () => {
-					setShowConfetti(true);
-					onComplete();
-				},
+				onSuccess: () => onComplete(),
 				onError: (err) =>
 					setError(
 						err instanceof Error ? err.message : 'Failed to create superuser',
@@ -171,7 +159,6 @@ function SuperuserStep({ onComplete, isLoading }: StepProps) {
 
 	return (
 		<div className="py-4">
-			{showConfetti && <Confetti />}
 			<h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
 				Create Superuser Account
 			</h2>
@@ -416,6 +403,7 @@ function Confetti() {
 export function Setup() {
 	const navigate = useNavigate();
 	const { data: setupStatus, isLoading: statusLoading } = useSetupStatus();
+	const [showConfetti, setShowConfetti] = useState(false);
 
 	const currentStep = setupStatus?.current_step ?? 'database';
 	const completedSteps = setupStatus?.completed_steps ?? [];
@@ -427,9 +415,21 @@ export function Setup() {
 		}
 	}, [setupStatus?.setup_completed, navigate]);
 
+	useEffect(() => {
+		if (showConfetti) {
+			const timer = setTimeout(() => setShowConfetti(false), 5000);
+			return () => clearTimeout(timer);
+		}
+	}, [showConfetti]);
+
 	// Handle step completion by refetching status (which advances the step)
 	const handleStepComplete = () => {
 		// The hooks already invalidate the query, so the status will update automatically
+	};
+
+	const handleSuperuserComplete = () => {
+		setShowConfetti(true);
+		handleStepComplete();
 	};
 
 	if (statusLoading) {
@@ -448,7 +448,7 @@ export function Setup() {
 			case 'database':
 				return <DatabaseStep onComplete={handleStepComplete} />;
 			case 'superuser':
-				return <SuperuserStep onComplete={handleStepComplete} />;
+				return <SuperuserStep onComplete={handleSuperuserComplete} />;
 			case 'complete':
 				return <CompleteSetupStep />;
 			default:
@@ -458,6 +458,7 @@ export function Setup() {
 
 	return (
 		<div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4">
+			{showConfetti && <Confetti />}
 			<div className="max-w-4xl w-full">
 				{/* Header */}
 				<div className="text-center mb-8">

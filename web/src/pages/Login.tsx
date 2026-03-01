@@ -92,34 +92,11 @@ export default function LoginPage() {
 			<div className="sm:mx-auto sm:w-full sm:max-w-md">
 				{/* Keldris branding */}
 				<div className="flex justify-center">
-					<svg
-						className="h-12 w-12 text-blue-600"
-						viewBox="0 0 48 48"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-						aria-hidden="true"
-					>
-						<rect
-							x="4"
-							y="8"
-							width="40"
-							height="32"
-							rx="4"
-							stroke="currentColor"
-							strokeWidth="3"
-						/>
-						<path d="M4 16h40" stroke="currentColor" strokeWidth="3" />
-						<circle cx="10" cy="12" r="1.5" fill="currentColor" />
-						<circle cx="15" cy="12" r="1.5" fill="currentColor" />
-						<circle cx="20" cy="12" r="1.5" fill="currentColor" />
-						<path
-							d="M16 26l4 4 8-8"
-							stroke="currentColor"
-							strokeWidth="2.5"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						/>
-					</svg>
+					<img
+						src="https://cdn.macjediwizard.com/cdn/Keldris%20Branding%20Images/keldris-webicon-727336cd.png"
+						alt="Keldris"
+						className="h-24 w-24"
+					/>
 				</div>
 				<h1 className="mt-4 text-center text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
 					Keldris
