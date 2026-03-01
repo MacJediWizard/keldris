@@ -79,12 +79,10 @@ func (h *OnboardingHandler) GetStatus(c *gin.Context) {
 		return
 	}
 
-	// Get license tier for conditional step visibility
+	// Get license tier from gin context (set by DynamicLicenseMiddleware)
 	var licenseTier string
-	if h.checker != nil {
-		if info, err := h.checker.CheckFeatureWithInfo(c.Request.Context(), user.CurrentOrgID, license.FeatureOIDC); err == nil {
-			licenseTier = string(info.CurrentTier)
-		}
+	if lic := middleware.GetLicense(c); lic != nil {
+		licenseTier = string(lic.Tier)
 	}
 
 	c.JSON(http.StatusOK, OnboardingStatusResponse{
@@ -167,25 +165,14 @@ func (h *OnboardingHandler) CompleteStep(c *gin.Context) {
 
 // completeOIDCStep handles the OIDC onboarding step with feature gating and provider hot-reload.
 func (h *OnboardingHandler) completeOIDCStep(c *gin.Context, user *auth.SessionUser) {
-	// During onboarding, only check org tier (Layer 1). Layers 2+3
-	// (entitlement nonce, refresh token) may not be available yet
-	// immediately after license activation. The full 3-layer check
-	// protects the system settings page post-onboarding.
-	if h.checker != nil {
-		result, err := h.checker.CheckFeatureWithInfo(c.Request.Context(), user.CurrentOrgID, license.FeatureOIDC)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check feature access"})
-			return
-		}
-		if !result.Enabled {
-			c.JSON(http.StatusPaymentRequired, gin.H{
-				"error":         "feature not available",
-				"feature":       string(license.FeatureOIDC),
-				"current_tier":  string(result.CurrentTier),
-				"required_tier": string(result.RequiredTier),
-			})
-			return
-		}
+	// All 3 security layers enforced via RequireFeature:
+	//   Layer 1: Org tier from DB (via FeatureChecker.CheckFeatureWithInfo)
+	//   Layer 2: Entitlement nonce (proves license server issued a token)
+	//   Layer 3: Refresh token (proves recent heartbeat)
+	// The DB tier is updated by LicenseManageHandler.Activate/StartTrial
+	// before the user reaches this step.
+	if !middleware.RequireFeature(c, h.checker, license.FeatureOIDC) {
+		return
 	}
 
 	// Parse OIDC settings from request body

@@ -458,3 +458,82 @@ Added `checker *license.FeatureChecker` field and `RequireFeature()` calls to 14
 - `go vet ./...`: clean (both repos)
 - `npx @biomejs/biome check .`: 368 files, no issues
 - `npm run build`: clean
+
+---
+
+## 2026-02-27 - Onboarding Flow Redesign (Parts 1-8)
+
+### What
+Implemented the 11-part Onboarding Flow Redesign plan (Parts 1-8). Removed OIDC from `.env`, wired the setup wizard, added a login page, made OIDC configurable through onboarding (gated by license tier), and created the dynamic OIDC provider.
+
+### Key Changes
+- **Setup wizard wired**: `SetupRequiredMiddleware` blocks API until superuser created; simplified to DB + superuser only
+- **Login page**: New `/login` route with password form + optional SSO button; 401 redirects to `/login` instead of OIDC
+- **OIDC removed from .env**: No longer initialized at boot from env vars; loaded from DB or configured during onboarding
+- **Dynamic OIDC provider**: `OIDCProvider` wrapper with `sync.RWMutex` for hot-reload; `Get()`, `Update()`, `IsConfigured()` methods
+- **OIDC onboarding step**: Added between organization and SMTP steps, gated by `FeatureOIDC` (Pro+)
+- **License step first**: Reordered onboarding so license activation happens before OIDC visibility check
+- **Auth status endpoint**: `GET /auth/status` reports `oidc_enabled` and `password_enabled` for login page
+- **3-layer security on OIDC config**: `RequireFeature` enforces org tier, entitlement nonce, and refresh token
+
+### Production Bugs Fixed (v0.0.43)
+- Fixed OIDC 402 errors from retry storms — heartbeat now fires immediately after `SetLicenseKey` so entitlements are available before onboarding continues
+- Fixed confetti animation on superuser creation, Keldris icon on login page
+- Fixed upgrade prompt showing on public pages (setup, login)
+- Suppressed upgrade prompt during entire onboarding flow
+- Auto-rename default org from license `customer_name` during onboarding
+
+---
+
+## 2026-03-01 - Fix OIDC Onboarding Auto-Skip & DB Tier Persistence
+
+### What
+Fixed two critical bugs preventing the OIDC onboarding step from working:
+1. **OIDC step auto-skipping** for enterprise users because `GetStatus` returned empty `license_tier`
+2. **Database org tier never updated** after license activation — `SetOrgTier()` existed but was never called
+
+### Root Cause Analysis
+
+**Bug 1: Empty `license_tier` in status response**
+- `GetStatus` used `CheckFeatureWithInfo(c.Request.Context(), ...)` which reads tier from DB
+- DB had stale "free" tier because it was never updated after activation
+- `omitempty` JSON tag omitted empty string → frontend saw `undefined` → treated as free → auto-skipped OIDC
+
+**Bug 2: `SetOrgTier()` never called**
+- `db/store_license.go` had `SetOrgTier()` method (upserts to `organization_licenses` table)
+- `LicenseManageHandler.Activate`, `.Deactivate`, `.StartTrial` all changed in-memory tier but never persisted to DB
+- This meant `RequireFeature` (used by `system_settings.go` for OIDC config) also had stale tier
+
+### Fixes Applied
+
+**`internal/api/handlers/license_manage.go`**:
+- Added `featureChecker *license.FeatureChecker` field
+- `Activate()`: calls `h.featureChecker.SetOrgTier(ctx, user.CurrentOrgID, lic.Tier)` after activation
+- `Deactivate()`: calls `h.featureChecker.SetOrgTier(ctx, user.CurrentOrgID, license.TierFree)` after deactivation
+- `StartTrial()`: calls `h.featureChecker.SetOrgTier(ctx, user.CurrentOrgID, lic.Tier)` after trial start
+
+**`internal/license/features.go`**:
+- Added `SetOrgTier()` method to `FeatureChecker` — writes to DB + invalidates cache
+
+**`internal/api/handlers/onboarding.go`**:
+- `GetStatus`: reads tier from gin context (`DynamicLicenseMiddleware`) for display — always current
+- `completeOIDCStep`: uses `middleware.RequireFeature(c, h.checker, license.FeatureOIDC)` — canonical 3-layer check reading from DB (now correct)
+- Re-added `checker *license.FeatureChecker` field
+
+**`internal/api/middleware/features.go`**:
+- Exported `GetValidator` (was `getValidator`) for use by onboarding handler
+
+**`internal/api/routes.go`**:
+- Passes `featureChecker` to both `NewLicenseManageHandler` and `NewOnboardingHandler`
+
+### Security Layers
+All 3 layers enforced consistently via `RequireFeature`:
+- **Layer 1**: Org tier from DB via `FeatureChecker.CheckFeatureWithInfo()` — now correct after `SetOrgTier` fix
+- **Layer 2**: Entitlement nonce from `DynamicLicenseMiddleware`
+- **Layer 3**: Refresh token via `validator.HasValidRefreshToken()`
+
+### Result
+- `go build ./...`: clean
+- `go test -race ./internal/api/handlers/`: all pass
+- `go test -race ./internal/license/`: all pass
+- 6 files changed, 105 insertions, 65 deletions

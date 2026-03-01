@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/models"
@@ -63,6 +64,26 @@ func setupOnboardingTestRouter(store OnboardingStore, orgID uuid.UUID) *gin.Engi
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r
+}
+
+// setupOnboardingTestRouterWithChecker is like setupOnboardingTestRouter but also
+// accepts a FeatureChecker for tests that exercise feature gating.
+func setupOnboardingTestRouterWithChecker(store OnboardingStore, checker *license.FeatureChecker, orgID uuid.UUID) *gin.Engine {
+	user := testUser(orgID)
+	r := SetupTestRouter(user)
+	handler := NewOnboardingHandler(store, checker, nil, zerolog.Nop())
+	api := r.Group("/api/v1")
+	handler.RegisterRoutes(api)
+	return r
+}
+
+// injectLicense returns a gin middleware that sets a license with the given tier in the context.
+func injectLicense(tier license.LicenseTier) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		lic := &license.License{Tier: tier}
+		c.Set(string(middleware.LicenseContextKey), lic)
+		c.Next()
+	}
 }
 
 func TestOnboardingGetStatus(t *testing.T) {
@@ -244,31 +265,16 @@ func TestOnboardingSkip(t *testing.T) {
 	})
 }
 
-// mockFeatureStore implements license.FeatureStore for testing.
-type mockFeatureStore struct {
-	tier license.LicenseTier
-}
-
-func (m *mockFeatureStore) GetOrgTier(_ context.Context, _ uuid.UUID) (license.LicenseTier, error) {
-	return m.tier, nil
-}
-
-func (m *mockFeatureStore) SetOrgTier(_ context.Context, _ uuid.UUID, tier license.LicenseTier) error {
-	m.tier = tier
-	return nil
-}
-
 func TestOnboarding_StatusIncludesTier(t *testing.T) {
 	orgID := uuid.New()
 
-	t.Run("with pro tier checker", func(t *testing.T) {
+	t.Run("with pro tier license", func(t *testing.T) {
 		store := &mockOnboardingStore{}
-		featureStore := &mockFeatureStore{tier: license.TierPro}
-		checker := license.NewFeatureChecker(featureStore)
 
 		user := testUser(orgID)
 		r := SetupTestRouter(user)
-		handler := NewOnboardingHandler(store, checker, nil, zerolog.Nop())
+		r.Use(injectLicense(license.TierPro))
+		handler := NewOnboardingHandler(store, nil, nil, zerolog.Nop())
 		api := r.Group("/api/v1")
 		handler.RegisterRoutes(api)
 
@@ -288,14 +294,13 @@ func TestOnboarding_StatusIncludesTier(t *testing.T) {
 		}
 	})
 
-	t.Run("with enterprise tier checker", func(t *testing.T) {
+	t.Run("with enterprise tier license", func(t *testing.T) {
 		store := &mockOnboardingStore{}
-		featureStore := &mockFeatureStore{tier: license.TierEnterprise}
-		checker := license.NewFeatureChecker(featureStore)
 
 		user := testUser(orgID)
 		r := SetupTestRouter(user)
-		handler := NewOnboardingHandler(store, checker, nil, zerolog.Nop())
+		r.Use(injectLicense(license.TierEnterprise))
+		handler := NewOnboardingHandler(store, nil, nil, zerolog.Nop())
 		api := r.Group("/api/v1")
 		handler.RegisterRoutes(api)
 
@@ -315,7 +320,7 @@ func TestOnboarding_StatusIncludesTier(t *testing.T) {
 		}
 	})
 
-	t.Run("nil checker omits tier", func(t *testing.T) {
+	t.Run("no license omits tier", func(t *testing.T) {
 		store := &mockOnboardingStore{}
 		r := setupOnboardingTestRouter(store, orgID)
 
@@ -331,12 +336,12 @@ func TestOnboarding_StatusIncludesTier(t *testing.T) {
 		}
 
 		if resp.LicenseTier != "" {
-			t.Fatalf("expected empty license_tier with nil checker, got %q", resp.LicenseTier)
+			t.Fatalf("expected empty license_tier with no license, got %q", resp.LicenseTier)
 		}
 	})
 }
 
-func TestOnboarding_OIDCStep_NoChecker(t *testing.T) {
+func TestOnboarding_OIDCStep_NoLicense(t *testing.T) {
 	orgID := uuid.New()
 	store := &mockOnboardingStore{}
 
@@ -344,7 +349,7 @@ func TestOnboarding_OIDCStep_NoChecker(t *testing.T) {
 	oidcServer := newMockOIDCServer(t)
 	defer oidcServer.Close()
 
-	// Handler with nil checker and nil oidcProvider
+	// Handler with no license in context and nil oidcProvider
 	user := testUser(orgID)
 	r := SetupTestRouter(user)
 	handler := NewOnboardingHandler(store, nil, nil, zerolog.Nop())
@@ -396,7 +401,7 @@ func TestOnboarding_OIDCStep_HotReload(t *testing.T) {
 		t.Fatal("expected OIDCProvider to not be configured initially")
 	}
 
-	// Handler with nil checker (skip feature gate) but real oidcProvider
+	// Handler with no license (allows all) and real oidcProvider
 	user := testUser(orgID)
 	r := SetupTestRouter(user)
 	handler := NewOnboardingHandler(store, nil, oidcProvider, zerolog.Nop())

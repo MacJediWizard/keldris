@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -16,17 +17,19 @@ import (
 
 // LicenseManageHandler handles license activation/deactivation from the GUI.
 type LicenseManageHandler struct {
-	validator *license.Validator
-	publicKey ed25519.PublicKey
-	logger    zerolog.Logger
+	validator      *license.Validator
+	featureChecker *license.FeatureChecker
+	publicKey      ed25519.PublicKey
+	logger         zerolog.Logger
 }
 
 // NewLicenseManageHandler creates a new LicenseManageHandler.
-func NewLicenseManageHandler(validator *license.Validator, publicKey ed25519.PublicKey, logger zerolog.Logger) *LicenseManageHandler {
+func NewLicenseManageHandler(validator *license.Validator, featureChecker *license.FeatureChecker, publicKey ed25519.PublicKey, logger zerolog.Logger) *LicenseManageHandler {
 	return &LicenseManageHandler{
-		validator: validator,
-		publicKey: publicKey,
-		logger:    logger.With().Str("component", "license_manage_handler").Logger(),
+		validator:      validator,
+		featureChecker: featureChecker,
+		publicKey:      publicKey,
+		logger:         logger.With().Str("component", "license_manage_handler").Logger(),
 	}
 }
 
@@ -75,6 +78,18 @@ func (h *LicenseManageHandler) Activate(c *gin.Context) {
 
 	// Return current license info
 	lic := h.validator.GetLicense()
+
+	// Persist the new tier to the database so RequireFeature reads the correct tier
+	if h.featureChecker != nil {
+		user := middleware.RequireUser(c)
+		if user == nil {
+			return
+		}
+		if err := h.featureChecker.SetOrgTier(c.Request.Context(), user.CurrentOrgID, lic.Tier); err != nil {
+			h.logger.Error().Err(err).Str("tier", string(lic.Tier)).Msg("failed to persist org tier after activation")
+		}
+	}
+
 	features := license.FeaturesForTier(lic.Tier)
 	featureStrings := make([]string, len(features))
 	for i, f := range features {
@@ -112,6 +127,17 @@ func (h *LicenseManageHandler) Deactivate(c *gin.Context) {
 		h.logger.Error().Err(err).Msg("failed to deactivate license")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to deactivate license"})
 		return
+	}
+
+	// Revert the org tier to free in the database
+	if h.featureChecker != nil {
+		user := middleware.RequireUser(c)
+		if user == nil {
+			return
+		}
+		if err := h.featureChecker.SetOrgTier(ctx, user.CurrentOrgID, license.TierFree); err != nil {
+			h.logger.Error().Err(err).Msg("failed to persist org tier after deactivation")
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -216,6 +242,18 @@ func (h *LicenseManageHandler) StartTrial(c *gin.Context) {
 	}
 
 	lic := h.validator.GetLicense()
+
+	// Persist the trial tier to the database
+	if h.featureChecker != nil {
+		user := middleware.RequireUser(c)
+		if user == nil {
+			return
+		}
+		if err := h.featureChecker.SetOrgTier(c.Request.Context(), user.CurrentOrgID, lic.Tier); err != nil {
+			h.logger.Error().Err(err).Str("tier", string(lic.Tier)).Msg("failed to persist org tier after trial start")
+		}
+	}
+
 	features := license.FeaturesForTier(lic.Tier)
 	featureStrings := make([]string, len(features))
 	for i, f := range features {

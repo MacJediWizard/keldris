@@ -489,6 +489,15 @@ func (fc *FeatureChecker) InvalidateCache(orgID uuid.UUID) {
 	fc.mu.Unlock()
 }
 
+// SetOrgTier updates the organization's tier in the database and invalidates the cache.
+func (fc *FeatureChecker) SetOrgTier(ctx context.Context, orgID uuid.UUID, tier Tier) error {
+	if err := fc.store.SetOrgTier(ctx, orgID, tier); err != nil {
+		return err
+	}
+	fc.InvalidateCache(orgID)
+	return nil
+}
+
 // ClearCache removes all organizations from the cache.
 func (fc *FeatureChecker) ClearCache() {
 	fc.mu.Lock()

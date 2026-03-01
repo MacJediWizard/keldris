@@ -90,7 +90,7 @@ func FeatureMiddleware(feature license.Feature, logger zerolog.Logger) gin.Handl
 			}
 
 			// Layer 3: Refresh token verification
-			if validator := getValidator(c); validator != nil {
+			if validator := GetValidator(c); validator != nil {
 				if !validator.HasValidRefreshToken() {
 					c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
 						"error":   "service connection required",
@@ -136,7 +136,7 @@ func FeatureMiddleware(feature license.Feature, logger zerolog.Logger) gin.Handl
 		}
 
 		// Layer 3: Refresh token verification (tier-based fallback path)
-		if validator := getValidator(c); validator != nil {
+		if validator := GetValidator(c); validator != nil {
 			if !validator.HasValidRefreshToken() {
 				c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
 					"error":   "service connection required",
@@ -212,7 +212,7 @@ func FeatureGateMiddleware(checker *license.FeatureChecker, feature license.Feat
 		}
 
 		// Layer 3: Refresh token verification
-		if validator := getValidator(c); validator != nil {
+		if validator := GetValidator(c); validator != nil {
 			if !validator.HasValidRefreshToken() {
 				c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
 					"error":   "service connection required",
@@ -359,7 +359,7 @@ func GetFeatureAccess(c *gin.Context) *FeatureAccess {
 // organization tier check.
 func RequireFeature(c *gin.Context, checker *license.FeatureChecker, feature license.Feature) bool {
 	// Layers 2+3 only apply when validator is active (phone-home mode).
-	if validator := getValidator(c); validator != nil {
+	if validator := GetValidator(c); validator != nil {
 		// Layer 2: Entitlement nonce check
 		ent := GetEntitlement(c)
 		if ent == nil || ent.Nonce == "" {
@@ -414,8 +414,9 @@ func RequireFeature(c *gin.Context, checker *license.FeatureChecker, feature lic
 // ValidatorContextKey is the context key for the license validator.
 const ValidatorContextKey ContextKey = "license_validator"
 
-// getValidator retrieves the license validator from the Gin context.
-func getValidator(c *gin.Context) *license.Validator {
+// GetValidator retrieves the license validator from the Gin context.
+// Returns nil if no validator is set.
+func GetValidator(c *gin.Context) *license.Validator {
 	val, exists := c.Get(string(ValidatorContextKey))
 	if !exists {
 		return nil

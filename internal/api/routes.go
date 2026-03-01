@@ -297,7 +297,7 @@ func NewRouter(
 
 	// License management endpoints (activate/deactivate from GUI)
 	if cfg.Validator != nil {
-		licenseManageHandler := handlers.NewLicenseManageHandler(cfg.Validator, cfg.LicensePublicKey, logger)
+		licenseManageHandler := handlers.NewLicenseManageHandler(cfg.Validator, featureChecker, cfg.LicensePublicKey, logger)
 		licenseManageHandler.RegisterRoutes(apiV1)
 	}
 
