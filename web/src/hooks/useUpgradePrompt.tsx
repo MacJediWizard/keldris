@@ -6,13 +6,13 @@ import type { UpgradeEvent } from '../lib/api';
 import { onUpgradeRequired } from '../lib/api';
 import type { UpgradeFeature } from '../lib/types';
 
-const PUBLIC_PATHS = ['/setup', '/login', '/reset-password'];
+const SUPPRESSED_PATHS = ['/setup', '/login', '/reset-password', '/onboarding'];
 
 export function UpgradePromptProvider({ children }: { children: ReactNode }) {
 	const [info, setInfo] = useState<UpgradeEvent | null>(null);
 	const location = useLocation();
 
-	const isPublicPage = PUBLIC_PATHS.some(
+	const isSuppressed = SUPPRESSED_PATHS.some(
 		(p) => location.pathname === p || location.pathname.startsWith(`${p}/`),
 	);
 
@@ -22,11 +22,18 @@ export function UpgradePromptProvider({ children }: { children: ReactNode }) {
 		});
 	}, []);
 
+	// Clear upgrade prompt when navigating to a suppressed page
+	useEffect(() => {
+		if (isSuppressed && info) {
+			setInfo(null);
+		}
+	}, [isSuppressed, info]);
+
 	const handleClose = useCallback(() => {
 		setInfo(null);
 	}, []);
 
-	if (!info || isPublicPage) return <>{children}</>;
+	if (!info || isSuppressed) return <>{children}</>;
 
 	return (
 		<>
