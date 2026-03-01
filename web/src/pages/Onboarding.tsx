@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AgentDownloads } from '../components/features/AgentDownloads';
@@ -382,6 +383,7 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 }
 
 function OrganizationStep({ onComplete, isLoading }: StepProps) {
+	const queryClient = useQueryClient();
 	const { data: organizations } = useOrganizations();
 	const { data: license } = useLicense();
 	const updateOrg = useUpdateOrganization();
@@ -395,13 +397,40 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 	const [orgName, setOrgName] = useState('');
 	const [renameError, setRenameError] = useState('');
 	const [renamed, setRenamed] = useState(false);
+	const [autoRenamed, setAutoRenamed] = useState(false);
 
-	// Pre-fill org name: prefer license customer_name, otherwise keep current name
+	// Pre-fill org name from license
 	useEffect(() => {
 		if (!orgName && currentOrg) {
 			setOrgName(licenseOrgName || currentOrg.name);
 		}
 	}, [licenseOrgName, currentOrg, orgName]);
+
+	// Auto-rename the default org from license company name
+	// biome-ignore lint/correctness/useExhaustiveDependencies: only run once when data is ready
+	useEffect(() => {
+		if (
+			!autoRenamed &&
+			currentOrg &&
+			licenseOrgName &&
+			currentOrg.name !== licenseOrgName
+		) {
+			setAutoRenamed(true);
+			updateOrg
+				.mutateAsync({
+					id: currentOrg.id,
+					data: { name: licenseOrgName },
+				})
+				.then(() => {
+					setOrgName(licenseOrgName);
+					setRenamed(true);
+					queryClient.invalidateQueries({ queryKey: ['organizations'] });
+				})
+				.catch(() => {
+					// Auto-rename failed silently; user can still rename manually
+				});
+		}
+	}, [currentOrg, licenseOrgName, autoRenamed]);
 
 	const handleRename = async () => {
 		if (!currentOrg || !orgName.trim()) return;
@@ -418,6 +447,11 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 			);
 		}
 	};
+
+	// Display name: use the input value if changed, otherwise the current org name
+	const displayName = renamed
+		? orgName
+		: currentOrg?.name || 'your organization';
 
 	return (
 		<div className="py-4">
@@ -447,8 +481,7 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 							<span className="font-medium">Organization ready!</span>
 						</div>
 						<p className="mt-1 text-sm text-green-700 dark:text-green-400">
-							You're part of{' '}
-							<strong>{organizations.map((o) => o.name).join(', ')}</strong>.
+							You're part of <strong>{displayName}</strong>.
 						</p>
 					</div>
 
