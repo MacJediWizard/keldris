@@ -54,7 +54,7 @@ func TestSetupRequired_BlocksAPI(t *testing.T) {
 		"/api/v1/agents",
 		"/api/v1/backups",
 		"/api/v1/settings",
-		"/dashboard",
+		"/api/v1/onboarding/status",
 	}
 
 	for _, path := range paths {
@@ -132,6 +132,27 @@ func TestSetupRequired_AllowsStatic(t *testing.T) {
 		"/assets/fonts/inter.woff2",
 		"/main.js",
 		"/style.css",
+	}
+
+	for _, path := range paths {
+		w := doRequest(r, "GET", path)
+		if w.Code != http.StatusOK {
+			t.Errorf("path %s: expected 200, got %d", path, w.Code)
+		}
+	}
+}
+
+func TestSetupRequired_AllowsFrontendRoutes(t *testing.T) {
+	store := &mockSetupStore{complete: false}
+	logger := zerolog.Nop()
+	r := newSetupRouter(SetupRequiredMiddleware(store, logger))
+
+	paths := []string{
+		"/",
+		"/setup",
+		"/login",
+		"/dashboard",
+		"/agents",
 	}
 
 	for _, path := range paths {

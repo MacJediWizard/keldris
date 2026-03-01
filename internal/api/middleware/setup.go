@@ -41,8 +41,15 @@ func SetupRequiredMiddleware(store SetupStore, logger zerolog.Logger) gin.Handle
 			return
 		}
 
-		// Always allow static assets
-		if strings.HasPrefix(path, "/assets/") || strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".css") {
+		// Always allow static assets and frontend routes
+		if strings.HasPrefix(path, "/assets/") || strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".css") ||
+			strings.HasSuffix(path, ".ico") || strings.HasSuffix(path, ".png") || strings.HasSuffix(path, ".svg") {
+			c.Next()
+			return
+		}
+
+		// Always allow frontend SPA routes (served as index.html by the catch-all)
+		if path == "/" || path == "/setup" || path == "/login" || !strings.HasPrefix(path, "/api/") {
 			c.Next()
 			return
 		}
