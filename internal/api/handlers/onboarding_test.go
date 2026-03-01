@@ -66,17 +66,6 @@ func setupOnboardingTestRouter(store OnboardingStore, orgID uuid.UUID) *gin.Engi
 	return r
 }
 
-// setupOnboardingTestRouterWithChecker is like setupOnboardingTestRouter but also
-// accepts a FeatureChecker for tests that exercise feature gating.
-func setupOnboardingTestRouterWithChecker(store OnboardingStore, checker *license.FeatureChecker, orgID uuid.UUID) *gin.Engine {
-	user := testUser(orgID)
-	r := SetupTestRouter(user)
-	handler := NewOnboardingHandler(store, checker, nil, zerolog.Nop())
-	api := r.Group("/api/v1")
-	handler.RegisterRoutes(api)
-	return r
-}
-
 // injectLicense returns a gin middleware that sets a license with the given tier in the context.
 func injectLicense(tier license.LicenseTier) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -430,4 +419,90 @@ func TestOnboarding_OIDCStep_HotReload(t *testing.T) {
 	if oidcProvider.Get() == nil {
 		t.Fatal("expected OIDCProvider.Get() to return non-nil after hot-reload")
 	}
+}
+
+func TestOnboarding_TestOIDC(t *testing.T) {
+	orgID := uuid.New()
+
+	t.Run("success", func(t *testing.T) {
+		store := &mockOnboardingStore{}
+		oidcServer := newMockOIDCServer(t)
+		defer oidcServer.Close()
+
+		user := testUser(orgID)
+		r := SetupTestRouter(user)
+		handler := NewOnboardingHandler(store, nil, nil, zerolog.Nop())
+		api := r.Group("/api/v1")
+		handler.RegisterRoutes(api)
+
+		body := fmt.Sprintf(`{
+			"issuer": %q,
+			"client_id": "test-client",
+			"client_secret": "test-secret",
+			"redirect_url": "http://localhost/callback"
+		}`, oidcServer.URL)
+
+		w := DoRequest(r, JSONRequest("POST", "/api/v1/onboarding/test-oidc", body))
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		var resp map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+
+		if resp["success"] != true {
+			t.Fatalf("expected success=true, got %v: %s", resp["success"], resp["message"])
+		}
+	})
+
+	t.Run("bad issuer", func(t *testing.T) {
+		store := &mockOnboardingStore{}
+
+		user := testUser(orgID)
+		r := SetupTestRouter(user)
+		handler := NewOnboardingHandler(store, nil, nil, zerolog.Nop())
+		api := r.Group("/api/v1")
+		handler.RegisterRoutes(api)
+
+		body := `{
+			"issuer": "http://127.0.0.1:1",
+			"client_id": "test-client",
+			"client_secret": "test-secret",
+			"redirect_url": "http://localhost/callback"
+		}`
+
+		w := DoRequest(r, JSONRequest("POST", "/api/v1/onboarding/test-oidc", body))
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+
+		var resp map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+
+		if resp["success"] != false {
+			t.Fatalf("expected success=false for unreachable issuer, got %v", resp["success"])
+		}
+	})
+
+	t.Run("missing fields", func(t *testing.T) {
+		store := &mockOnboardingStore{}
+
+		user := testUser(orgID)
+		r := SetupTestRouter(user)
+		handler := NewOnboardingHandler(store, nil, nil, zerolog.Nop())
+		api := r.Group("/api/v1")
+		handler.RegisterRoutes(api)
+
+		w := DoRequest(r, JSONRequest("POST", "/api/v1/onboarding/test-oidc", `{}`))
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
 }
