@@ -65,9 +65,8 @@ func NewOrganizationsHandler(store OrganizationStore, sessions *auth.SessionStor
 	}
 }
 
-// RegisterRoutes registers organization routes available on all tiers (read-only access).
-// These allow free-tier users to access their default organization.
-// RegisterRoutes registers organization routes on the given router group.
+// RegisterRoutes registers organization routes available on all tiers.
+// These allow free-tier users to access and manage their default organization.
 func (h *OrganizationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 	orgs := r.Group("/organizations")
 	{
@@ -75,18 +74,18 @@ func (h *OrganizationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 		orgs.GET("/current", h.GetCurrent)
 		orgs.POST("/switch", h.Switch)
 		orgs.GET("/:id", h.Get)
+		orgs.PUT("/:id", h.Update)
 		orgs.GET("/:id/members", h.ListMembers)
 	}
 }
 
 // RegisterMultiOrgRoutes registers organization management routes that require the multi_org feature.
-// These include creating, updating, deleting orgs, managing members, and invitations.
+// These include creating, deleting orgs, managing members, and invitations.
 func (h *OrganizationsHandler) RegisterMultiOrgRoutes(r *gin.RouterGroup, createMiddleware ...gin.HandlerFunc) {
 	orgs := r.Group("/organizations")
 	{
 		createChain := append(createMiddleware, h.Create)
 		orgs.POST("", createChain...)
-		orgs.PUT("/:id", h.Update)
 		orgs.DELETE("/:id", h.Delete)
 
 		// Member management
