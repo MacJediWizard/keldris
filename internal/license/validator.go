@@ -186,6 +186,11 @@ func (v *Validator) SetLicenseKey(ctx context.Context, key string) error {
 
 	v.activateLicense(ctx)
 
+	// Send an immediate heartbeat to get the refresh token (Layer 3).
+	// Without this, feature checks requiring HasValidRefreshToken() would
+	// fail until the next scheduled heartbeat (up to 6 hours).
+	v.sendHeartbeat(ctx)
+
 	// Start validation loop if not already running
 	if shouldStartLoop {
 		v.mu.Lock()
