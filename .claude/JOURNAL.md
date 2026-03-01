@@ -537,3 +537,176 @@ All 3 layers enforced consistently via `RequireFeature`:
 - `go test -race ./internal/api/handlers/`: all pass
 - `go test -race ./internal/license/`: all pass
 - 6 files changed, 105 insertions, 65 deletions
+
+---
+
+## 2026-03-01 - Fix OIDC Onboarding 402 (Layer 2+3 not ready) & Add Test Button
+
+### What
+Fixed the 402 "valid entitlement required" error on the OIDC onboarding step and added an OIDC test button.
+
+### Root Cause Analysis
+The previous fix (`67a0d5bd`) replaced the onboarding OIDC step's Layer 1 only check with `RequireFeature` (all 3 layers). This re-introduced the bug that `ec4f87e4` had already fixed — Layers 2+3 (entitlement nonce, refresh token) aren't reliably available immediately after license activation during onboarding.
+
+Timeline:
+1. `bb9fb05b` — OIDC step used `RequireFeature` (3 layers) → 402 error
+2. `ec4f87e4` — Fixed to Layer 1 only → works
+3. `67a0d5bd` — Reverted to `RequireFeature` → 402 re-introduced
+
+### Fixes Applied
+
+**`internal/api/handlers/onboarding.go`**:
+- `completeOIDCStep`: Reverted to Layer 1 only check (`checker.CheckFeatureWithInfo`) — Layers 2+3 protect the system settings page post-onboarding
+- Added `TestOIDC` endpoint (`POST /api/v1/onboarding/test-oidc`) — performs OIDC discovery against issuer URL, validates config, Layer 1 only gating
+
+**`web/src/pages/Onboarding.tsx`**:
+- Added "Test Connection" button to OIDC step — calls `POST /api/v1/onboarding/test-oidc`
+- Shows green success banner with provider name on successful discovery
+- Shows red error banner on failure
+
+**`web/src/hooks/useOnboarding.ts`**:
+- Added `useTestOnboardingOIDC()` mutation hook
+
+**`web/src/lib/api.ts`**:
+- Added `onboardingApi.testOIDC()` method
+
+**`internal/api/handlers/onboarding_test.go`**:
+- Added `TestOnboarding_TestOIDC` tests (success, bad issuer, missing fields)
+
+### Design Decision: Layer 1 Only for Onboarding (REVERTED)
+This approach was reverted — see next entry.
+
+### Result
+- `go build ./...`: clean
+- `go vet ./...`: clean
+- `go test ./internal/...`: all pass
+- `npx tsc --noEmit`: clean
+- `npx @biomejs/biome check`: clean
+
+---
+
+## 2026-03-01 - Fix All 3 Security Layers on OIDC Onboarding
+
+### What
+Restored full `RequireFeature` (all 3 security layers) on both `completeOIDCStep` and `TestOIDC` endpoints. Fixed the root cause: `SetLicenseKey` was using the HTTP request context for license server calls, which could be cancelled if the client disconnected.
+
+### Why
+User requirement: all 3 security layers (org tier, entitlement nonce, refresh token) are non-negotiable on OIDC configuration endpoints. The previous "Layer 1 only" workaround was explicitly rejected.
+
+### Root Cause
+`SetLicenseKey` passed the HTTP request context (`c.Request.Context()`) to both `activateLicense` and `sendHeartbeat`. If the client disconnected or timed out during the sequential license server calls (up to 60s total), the context would be cancelled, silently preventing Layer 2 (entitlement) and Layer 3 (refresh token) from being stored. Additionally, heartbeat failures were logged at `Debug` level, making them invisible in production.
+
+### Changes
+
+**`internal/license/validator.go`**:
+- `SetLicenseKey` now uses `context.Background()` with 30s timeout for both `activateLicense` and `sendHeartbeat` (matches `heartbeatLoop` pattern)
+- Added verification after activation: warns if entitlement (Layer 2) not received
+- Added verification after heartbeat: warns if refresh token (Layer 3) not received, retries once
+- Added final info log showing all 3 layer statuses after activation
+- Upgraded `sendHeartbeat` failure logging from `Debug` to `Warn` level
+
+**`internal/api/handlers/onboarding.go`**:
+- `TestOIDC` endpoint now uses `RequireFeature` (all 3 layers) instead of Layer 1 only
+- `completeOIDCStep` already had `RequireFeature` (restored in previous session)
+
+### Result
+- `go build ./...`: clean
+- `go test -race ./...`: all pass
+- `npx tsc --noEmit`: clean
+
+---
+
+## 2026-03-01 - Make Signing Key Required & Auto-Fetch Public Key
+
+### What
+Removed the hardcoded `DefaultLicensePublicKey` constant from Keldris. The Ed25519 public key is now fetched from the license server at startup via a new `GET /api/v1/signing-key` endpoint. The license server's signing key is now required at startup (was optional).
+
+### Why
+- Hardcoded public key was shared across all deployments — key rotation required a code change and rebuild
+- License server silently started without a signing key, producing no entitlement tokens (Layer 2 broken)
+- Public key should be authoritative from the license server, not baked into the binary
+
+### Changes
+
+**License Server** (`69f4cc7`):
+
+`cmd/server/main.go`:
+- `LS_SIGNING_PRIVATE_KEY` now required at startup (Fatal instead of Warn)
+
+`internal/api/handlers/activations.go`:
+- Added `GetSigningKey()` handler — derives public key via `.Public()`, returns `{"public_key": "<hex>"}`
+
+`internal/api/routes.go`:
+- Added `GET /api/v1/signing-key` in the public (unauthenticated) group
+
+`cmd/keygen/main.go`:
+- Renamed `AIRGAP_PUBLIC_KEY` → `LICENSE_PUBLIC_KEY`
+- Updated output to note Keldris auto-fetches the key
+
+**Keldris** (`5009f1b6`):
+
+`internal/config/server.go`:
+- Removed `DefaultLicensePublicKey` constant
+- Removed `LicensePublicKey` field from `ServerConfig`
+- Removed `LICENSE_PUBLIC_KEY` env var loading
+- Removed unused `getEnvDefault()` helper
+
+`cmd/keldris-server/main.go`:
+- Replaced env var key loading with `fetchSigningKey()` — HTTP GET to license server
+- Skipped in air-gap mode (no license server to reach)
+- Logs key fingerprint (first 8 hex chars) on success
+
+`internal/license/validator.go`:
+- Fixed stale "hardcoded" comment on `verifyKeyLocally()`
+
+`docs/heartbeat-testing.md`:
+- Updated troubleshooting to reference `LICENSE_SERVER_URL` connectivity instead of env var
+
+### Security Review
+- `GetSigningKey` endpoint: verified `.Public()` returns only 32-byte public portion
+- `fetchSigningKey`: HTTPS enforced, redirects disabled, response capped at 4KB, error messages sanitized
+- Air-gap mode: `licPubKey` stays nil, downstream checks `len(v.publicKey) == ed25519.PublicKeySize`
+- No hardcoded key remains: `grep -r "a1d5554e" .` returns nothing
+
+### Result
+- `go build ./...`: clean (both repos)
+- `go test ./...`: all pass (both repos)
+
+---
+
+## 2026-03-01 - Fix Silent 4xx Errors & Instances Page Error Display
+
+### What
+Fixed `postJSONWithResponse` silently treating HTTP 4xx as success, and added error display to the license server's Instances page.
+
+### Root Cause Analysis
+User reported the license server's `/instances` page showed no data despite Keldris logs showing successful registration and heartbeat. Investigation revealed two bugs:
+
+1. **`postJSONWithResponse` swallowed 4xx errors** — Only `>= 500` was treated as an error. If the license server returned 400 (Bad Request), 401, or 404, Keldris treated it as success and logged "registered with license server" even though registration failed.
+
+2. **Instances page hid errors** — When the API call failed (auth error, network issue), `instances` was `undefined`, and `!filteredInstances?.length` evaluated to `true`, showing "No instances registered" instead of an error message.
+
+### Changes
+
+**Keldris** (`10a21d9c`):
+
+`internal/license/validator.go`:
+- Changed `postJSONWithResponse` error threshold from `>= 500` to `>= 400`
+- Error message now includes HTTP status code and server error text
+- All callers already handle errors properly (fallback to local verification or warning log)
+
+**License Server** (`548b27e`):
+
+`web/src/pages/Instances.tsx`:
+- Destructured `error` from `useQuery` alongside `data` and `isLoading`
+- Added error state branch showing red error banner with actual error message
+- Now distinguishes between "no data" and "query failed"
+
+### Impact
+- Keldris will now properly log the actual error when registration/heartbeat/validation receives a 4xx
+- License server web UI will show meaningful errors instead of blank tables
+- Combined with request logging middleware (pushed earlier), provides full visibility for troubleshooting
+
+### Result
+- `go build ./...`: clean (both repos)
+- Linting: clean

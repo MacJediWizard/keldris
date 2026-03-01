@@ -173,6 +173,10 @@ func (v *Validator) isOIDCConfigured() bool {
 }
 
 // SetLicenseKey stores a license key in the database and triggers activation.
+// After activation, it sends an immediate heartbeat so all 3 security layers
+// (org tier, entitlement nonce, refresh token) are available before returning.
+// Uses a detached context for license server calls to prevent the HTTP request
+// context from cancelling them if the client disconnects.
 func (v *Validator) SetLicenseKey(ctx context.Context, key string) error {
 	if err := v.store.SetServerSetting(ctx, "license_key", key); err != nil {
 		return fmt.Errorf("store license key: %w", err)
@@ -184,12 +188,55 @@ func (v *Validator) SetLicenseKey(ctx context.Context, key string) error {
 	shouldStartLoop := !v.validationRunning
 	v.mu.Unlock()
 
-	v.activateLicense(ctx)
+	// Use a detached context with generous timeout for license server calls.
+	// The HTTP request context can be cancelled if the client disconnects,
+	// which would silently prevent Layer 2 (entitlement) and Layer 3 (refresh
+	// token) from being stored.
+	activationCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	v.activateLicense(activationCtx)
+
+	// Verify Layer 2 was stored
+	v.mu.RLock()
+	hasEntitlement := v.entitlement != nil
+	v.mu.RUnlock()
+	if !hasEntitlement {
+		v.logger.Warn().Msg("entitlement token not received from activation — Layer 2 unavailable (license server may not have signing key configured)")
+	}
 
 	// Send an immediate heartbeat to get the refresh token (Layer 3).
 	// Without this, feature checks requiring HasValidRefreshToken() would
 	// fail until the next scheduled heartbeat (up to 6 hours).
-	v.sendHeartbeat(ctx)
+	heartbeatCtx, hbCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer hbCancel()
+
+	v.sendHeartbeat(heartbeatCtx)
+
+	// Verify Layer 3 was stored
+	if !v.HasValidRefreshToken() {
+		v.logger.Warn().Msg("refresh token not received from heartbeat — Layer 3 unavailable; retrying heartbeat")
+		// Retry once with a fresh context
+		retryCtx, retryCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer retryCancel()
+		v.sendHeartbeat(retryCtx)
+
+		if !v.HasValidRefreshToken() {
+			v.logger.Error().Msg("refresh token still unavailable after retry — feature gating will fail until next heartbeat")
+		}
+	}
+
+	// Log final state of all 3 layers for debugging
+	v.mu.RLock()
+	ent := v.entitlement
+	hasRefresh := v.featureRefreshToken != ""
+	tier := v.license.Tier
+	v.mu.RUnlock()
+	v.logger.Info().
+		Str("tier", string(tier)).
+		Bool("has_entitlement", ent != nil).
+		Bool("has_refresh_token", hasRefresh).
+		Msg("license activation complete — security layer status")
 
 	// Start validation loop if not already running
 	if shouldStartLoop {
@@ -506,7 +553,7 @@ func (v *Validator) sendHeartbeat(ctx context.Context) {
 
 	resp, err := v.postJSONWithResponse(ctx, "/api/v1/instances/heartbeat", body)
 	if err != nil {
-		v.logger.Debug().Err(err).Msg("heartbeat failed")
+		v.logger.Warn().Err(err).Msg("heartbeat failed — refresh token (Layer 3) not updated")
 		return
 	}
 
