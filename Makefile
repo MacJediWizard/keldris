@@ -4,7 +4,8 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
-LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildDate=$(BUILD_DATE)"
+INTEGRITY_HASH ?= $(shell cat internal/license/validator.go internal/license/entitlement.go internal/license/features.go internal/api/middleware/features.go 2>/dev/null | shasum -a 256 | cut -d' ' -f1)
+LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildDate=$(BUILD_DATE) -X main.IntegrityHash=$(INTEGRITY_HASH)"
 
 all: deps lint test build
 

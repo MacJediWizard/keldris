@@ -392,3 +392,69 @@ Fixed 20+ UI/functionality issues discovered after v0.0.30 deployment.
 - `npx tsc --noEmit`: clean
 - 19 files changed, 1847 insertions, 711 deletions
 - 5 commits, 9 GitHub issues created (#256-#264)
+
+---
+
+## 2026-02-26 - Heartbeat System, Feature Gating & Telemetry Hardening
+
+### What
+Comprehensive implementation of heartbeat telemetry, feature gating for all premium features, entitlement token improvements, and CI integrity guards across both Keldris and license-server repos.
+
+### Bug Fixes
+- Fixed DR Runbooks modal triggering on free tier first login — `useDRStatus()` now catches 402 errors silently with a complete `DRStatus` fallback object
+- Fixed `.gitignore` using `.claude/` (directory ignore prevented negation) — changed to `.claude/*` so `!.claude/conductor.json` works correctly
+- Untracked `.claude/CLAUDE.md` and `.claude/JOURNAL.md` from git
+
+### Heartbeat Changes
+- Changed heartbeat interval from 24h to 6h for faster kill switch response
+- Heartbeat now sends `integrity_hash` in metrics payload
+- Heartbeat response now includes `config.feature_refresh_token` (rotating 32-byte hex)
+- Validator stores refresh token with 12h expiry window (allows one missed cycle)
+
+### Feature Gating — Route Level (Part 2)
+Added `FeatureMiddleware` route wrapping for 4 previously ungated feature groups:
+- Legal Holds (`FeatureLegalHolds`)
+- Geo-Replication (`FeatureGeoReplication`)
+- Ransomware Protection (`FeatureRansomwareProtect`)
+- Custom Retention (`FeatureCustomRetention`)
+
+### Feature Gating — Handler Level (Part 6)
+Added `checker *license.FeatureChecker` field and `RequireFeature()` calls to 14 handler files:
+- audit_logs, docker_backup, reports, sso_group_mappings, dr_runbooks, dr_tests, sla, notifications, repositories, lifecycle_policies, geo_replication, ransomware, legal_holds, organizations
+- Storage backends gated by type in repositories.go (S3, B2, SFTP, Dropbox, REST)
+- Multi-repo gated by count (second+ repo requires FeatureMultiRepo)
+- Backup scheduler checks geo-replication license before cross-repo replication
+
+### Entitlement Token (Part 7)
+- Added `Nonce` field to entitlement structs in both Keldris and license-server
+- License server generates 16-byte hex nonce per token
+- `RequireFeature()` verifies nonce presence when validator is active
+
+### Refresh Token (Part 8)
+- `RequireFeature()` verifies refresh token validity when validator is active
+- Layers 2+3 are conditional on validator presence (skipped in air-gap/test mode)
+- `DynamicLicenseMiddleware` sets validator reference in gin context
+
+### CI & Build Integrity (Part 9)
+- Makefile computes SHA256 of 4 license enforcement files, embeds via LDFLAGS
+- CI guard verifies `sendHeartbeat`, `heartbeatLoop`, `RequireFeature` in 14 handler files
+- License server: added `DetectStaleInstances` endpoint (flags instances silent >48h)
+- Fixed `FlagStaleInstances` SQL: `last_heartbeat_at` → `last_seen_at`, `resolved_at IS NULL` → `resolved = false`
+
+### Testing & Documentation
+- Created `scripts/test-heartbeat.sh` — 10 automated endpoint tests
+- Created `docs/heartbeat-testing.md` — testing guide with curl examples
+- Updated 11 test files to pass nil checker to handler constructors
+
+### Files Changed — Keldris
+36 files modified, 2 files created
+
+### Files Changed — License Server
+6 files modified
+
+### Result
+- `go build ./...`: clean (both repos)
+- `go test ./...`: all pass (both repos)
+- `go vet ./...`: clean (both repos)
+- `npx @biomejs/biome check .`: 368 files, no issues
+- `npm run build`: clean
