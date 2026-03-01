@@ -447,6 +447,13 @@ func (v *Validator) heartbeatLoop() {
 	}
 }
 
+// SendHeartbeat triggers an immediate heartbeat to the license server.
+// This is useful after events like superuser creation or license activation
+// to ensure the instance is registered and entitlement tokens are up to date.
+func (v *Validator) SendHeartbeat(ctx context.Context) {
+	v.sendHeartbeat(ctx)
+}
+
 func (v *Validator) sendHeartbeat(ctx context.Context) {
 	var agentCount, userCount int
 	if v.metrics != nil {
@@ -502,6 +509,9 @@ func (v *Validator) sendHeartbeat(ctx context.Context) {
 		v.logger.Debug().Err(err).Msg("heartbeat failed")
 		return
 	}
+
+	// Update entitlement from heartbeat response (may include nonce)
+	v.storeEntitlementFromResponse(resp)
 
 	// Store refresh token from heartbeat config
 	if cfgMap, ok := resp["config"].(map[string]interface{}); ok {

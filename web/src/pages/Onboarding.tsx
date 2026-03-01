@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AgentDownloads } from '../components/features/AgentDownloads';
 import { VerticalStepper } from '../components/ui/Stepper';
@@ -566,10 +566,12 @@ function OIDCStep({ onSkip, isLoading, licenseTier }: OIDCStepProps) {
 	const [oidcError, setOidcError] = useState('');
 
 	const isFree = !licenseTier || licenseTier === 'free';
+	const skipAttempted = useRef(false);
 
-	// Auto-skip if free tier
+	// Auto-skip if free tier (guard prevents infinite retry loop)
 	useEffect(() => {
-		if (isFree && onSkip) {
+		if (isFree && onSkip && !skipAttempted.current) {
+			skipAttempted.current = true;
 			onSkip();
 		}
 	}, [isFree, onSkip]);
@@ -1208,9 +1210,12 @@ export function Onboarding() {
 	const currentStep = onboardingStatus?.current_step ?? 'welcome';
 	const completedSteps = onboardingStatus?.completed_steps ?? [];
 
-	const handleCompleteStep = (step: OnboardingStep) => {
-		completeStep.mutate(step);
-	};
+	const handleCompleteStep = useCallback(
+		(step: OnboardingStep) => {
+			completeStep.mutate(step);
+		},
+		[completeStep.mutate],
+	);
 
 	const handleSkip = () => {
 		skipOnboarding.mutate(undefined, {

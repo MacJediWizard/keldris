@@ -15,6 +15,7 @@ export function useCompleteOnboardingStep() {
 
 	return useMutation({
 		mutationFn: (step: OnboardingStep) => onboardingApi.completeStep(step),
+		retry: false,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['onboarding'] });
 		},
@@ -27,6 +28,7 @@ export function useCompleteOIDCStep() {
 	return useMutation({
 		mutationFn: (data: OIDCOnboardingRequest) =>
 			onboardingApi.completeStepWithBody('oidc', data),
+		retry: false,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['onboarding'] });
 		},

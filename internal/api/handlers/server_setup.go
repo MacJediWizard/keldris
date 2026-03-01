@@ -51,11 +51,17 @@ type DBPinger interface {
 }
 
 // ServerSetupHandler handles first-time server setup HTTP endpoints.
+// HeartbeatSender can trigger an immediate license heartbeat.
+type HeartbeatSender interface {
+	SendHeartbeat(ctx context.Context)
+}
+
 type ServerSetupHandler struct {
-	store    ServerSetupStore
-	db       DBPinger
-	sessions *auth.SessionStore
-	logger   zerolog.Logger
+	store     ServerSetupStore
+	db        DBPinger
+	sessions  *auth.SessionStore
+	heartbeat HeartbeatSender
+	logger    zerolog.Logger
 }
 
 // NewServerSetupHandler creates a new ServerSetupHandler.
@@ -66,6 +72,11 @@ func NewServerSetupHandler(store ServerSetupStore, db DBPinger, sessions *auth.S
 		sessions: sessions,
 		logger:   logger.With().Str("component", "server_setup_handler").Logger(),
 	}
+}
+
+// SetHeartbeatSender sets the heartbeat sender for post-setup registration.
+func (h *ServerSetupHandler) SetHeartbeatSender(hb HeartbeatSender) {
+	h.heartbeat = hb
 }
 
 // RegisterRoutes registers setup routes on the given router group.
@@ -225,6 +236,11 @@ func (h *ServerSetupHandler) CreateSuperuser(c *gin.Context) {
 	// Mark superuser step as complete
 	if err := h.store.CompleteSetupStep(ctx, models.SetupStepSuperuser); err != nil {
 		h.logger.Error().Err(err).Msg("failed to complete superuser step")
+	}
+
+	// Send heartbeat to register instance with license server
+	if h.heartbeat != nil {
+		h.heartbeat.SendHeartbeat(ctx)
 	}
 
 	h.logAction(c, "superuser_created", "superuser", &user.ID, map[string]string{

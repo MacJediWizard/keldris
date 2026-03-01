@@ -128,8 +128,10 @@ func (h *OnboardingHandler) CompleteStep(c *gin.Context) {
 		return
 	}
 
-	// Handle OIDC step specially — requires feature gating and saves settings
-	if step == models.OnboardingStepOIDC {
+	// Handle OIDC step specially — only require feature gating when
+	// actually configuring OIDC (request has a body). A skip (no body)
+	// just marks the step complete without feature checks.
+	if step == models.OnboardingStepOIDC && c.Request.ContentLength > 0 {
 		h.completeOIDCStep(c, user)
 		return
 	}
@@ -165,9 +167,25 @@ func (h *OnboardingHandler) CompleteStep(c *gin.Context) {
 
 // completeOIDCStep handles the OIDC onboarding step with feature gating and provider hot-reload.
 func (h *OnboardingHandler) completeOIDCStep(c *gin.Context, user *auth.SessionUser) {
-	// Enforce 3-layer security: org tier, entitlement nonce, refresh token
-	if !middleware.RequireFeature(c, h.checker, license.FeatureOIDC) {
-		return
+	// During onboarding, only check org tier (Layer 1). Layers 2+3
+	// (entitlement nonce, refresh token) may not be available yet
+	// immediately after license activation. The full 3-layer check
+	// protects the system settings page post-onboarding.
+	if h.checker != nil {
+		result, err := h.checker.CheckFeatureWithInfo(c.Request.Context(), user.CurrentOrgID, license.FeatureOIDC)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check feature access"})
+			return
+		}
+		if !result.Enabled {
+			c.JSON(http.StatusPaymentRequired, gin.H{
+				"error":         "feature not available",
+				"feature":       string(license.FeatureOIDC),
+				"current_tier":  string(result.CurrentTier),
+				"required_tier": string(result.RequiredTier),
+			})
+			return
+		}
 	}
 
 	// Parse OIDC settings from request body

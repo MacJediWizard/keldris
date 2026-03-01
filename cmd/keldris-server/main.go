@@ -314,6 +314,7 @@ func run() int {
 
 	// Create setup handler for first-time server setup
 	setupHandler := handlers.NewServerSetupHandler(database, database, sessions, logger)
+	setupHandler.SetHeartbeatSender(validator)
 
 	routerCfg := api.Config{
 		Environment:         cfg.Environment,
