@@ -153,7 +153,7 @@ func (s *DRTestScheduler) addDRTestSchedule(schedule *models.DRTestSchedule) err
 	// Create a copy for the closure
 	sched := *schedule
 
-	entryID, err := s.cron.AddFunc(schedule.CronExpression, func() {
+	entryID, err := s.cron.AddFunc(normalizeCron(schedule.CronExpression), func() {
 		s.executeDRTest(sched)
 	})
 	if err != nil {

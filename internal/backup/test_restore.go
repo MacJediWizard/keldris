@@ -225,7 +225,7 @@ func (trs *TestRestoreScheduler) Reload(ctx context.Context) error {
 func (trs *TestRestoreScheduler) addSetting(setting *models.TestRestoreSettings) error {
 	s := setting // Create a copy for the closure
 
-	entryID, err := trs.cron.AddFunc(setting.CronExpression, func() {
+	entryID, err := trs.cron.AddFunc(normalizeCron(setting.CronExpression), func() {
 		trs.executeTestRestore(s)
 	})
 	if err != nil {

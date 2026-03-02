@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,6 +14,16 @@ import (
 	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog"
 )
+
+// normalizeCron ensures a cron expression has 6 fields (with seconds).
+// If a standard 5-field expression is provided, it prepends "0 " for seconds.
+func normalizeCron(expr string) string {
+	fields := strings.Fields(expr)
+	if len(fields) == 5 {
+		return "0 " + expr
+	}
+	return expr
+}
 
 // ImageBackupStore defines the interface for image backup persistence.
 type ImageBackupStore interface {
@@ -196,7 +207,7 @@ func (s *ImageBackupScheduler) Reload(ctx context.Context) error {
 func (s *ImageBackupScheduler) addSchedule(schedule *models.DockerImageSchedule) error {
 	sched := schedule
 
-	entryID, err := s.cron.AddFunc(schedule.CronExpression, func() {
+	entryID, err := s.cron.AddFunc(normalizeCron(schedule.CronExpression), func() {
 		s.executeBackup(sched)
 	})
 	if err != nil {

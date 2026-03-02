@@ -110,27 +110,29 @@ function SuccessRateWidget({
 	isLoading: boolean;
 }) {
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6">
-			<h3 className="text-lg font-semibold text-gray-900 mb-4">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+			<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 				Backup Success Rate
 			</h3>
 			{isLoading ? (
 				<div className="space-y-4">
-					<div className="animate-pulse h-4 bg-gray-200 rounded w-3/4" />
-					<div className="animate-pulse h-4 bg-gray-200 rounded w-2/3" />
+					<div className="animate-pulse h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+					<div className="animate-pulse h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
 				</div>
 			) : (
 				<div className="space-y-4">
 					<div>
 						<div className="flex items-center justify-between mb-1">
-							<span className="text-sm text-gray-600">Last 7 days</span>
+							<span className="text-sm text-gray-600 dark:text-gray-400">
+								Last 7 days
+							</span>
 							<span
 								className={`text-sm font-semibold ${getSuccessRateColor(rate7d)}`}
 							>
 								{formatPercent(rate7d)}
 							</span>
 						</div>
-						<div className="w-full bg-gray-200 rounded-full h-2">
+						<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
 							<div
 								className={`h-2 rounded-full ${rate7d >= 95 ? 'bg-green-500' : rate7d >= 80 ? 'bg-yellow-500' : 'bg-red-500'}`}
 								style={{ width: `${Math.min(rate7d, 100)}%` }}
@@ -139,14 +141,16 @@ function SuccessRateWidget({
 					</div>
 					<div>
 						<div className="flex items-center justify-between mb-1">
-							<span className="text-sm text-gray-600">Last 30 days</span>
+							<span className="text-sm text-gray-600 dark:text-gray-400">
+								Last 30 days
+							</span>
 							<span
 								className={`text-sm font-semibold ${getSuccessRateColor(rate30d)}`}
 							>
 								{formatPercent(rate30d)}
 							</span>
 						</div>
-						<div className="w-full bg-gray-200 rounded-full h-2">
+						<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
 							<div
 								className={`h-2 rounded-full ${rate30d >= 95 ? 'bg-green-500' : rate30d >= 80 ? 'bg-yellow-500' : 'bg-red-500'}`}
 								style={{ width: `${Math.min(rate30d, 100)}%` }}
@@ -169,22 +173,24 @@ function StorageGrowthChart({
 	const maxSize = Math.max(...data.map((d) => d.total_size), 1);
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-center justify-between mb-4">
-				<h3 className="text-lg font-semibold text-gray-900">Storage Growth</h3>
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+					Storage Growth
+				</h3>
 				<Link
 					to="/stats"
-					className="text-sm text-indigo-600 hover:text-indigo-800"
+					className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					View Details
 				</Link>
 			</div>
 			{isLoading ? (
 				<div className="h-40 flex items-center justify-center">
-					<div className="animate-pulse h-full w-full bg-gray-100 rounded" />
+					<div className="animate-pulse h-full w-full bg-gray-100 dark:bg-gray-700 rounded" />
 				</div>
 			) : data.length === 0 ? (
-				<div className="h-40 flex items-center justify-center text-gray-500">
+				<div className="h-40 flex items-center justify-center text-gray-500 dark:text-gray-400">
 					No storage data yet
 				</div>
 			) : (
@@ -203,7 +209,7 @@ function StorageGrowthChart({
 								title={`${formatBytes(point.total_size)} on ${new Date(point.date).toLocaleDateString()}`}
 							/>
 							{i % 2 === 0 && (
-								<span className="text-[10px] text-gray-400">
+								<span className="text-[10px] text-gray-400 dark:text-gray-500">
 									{new Date(point.date).toLocaleDateString('en-US', {
 										month: 'short',
 										day: 'numeric',
@@ -233,16 +239,16 @@ function BackupDurationChart({
 	const maxDuration = Math.max(...data.map((d) => d.avg_duration_ms), 1);
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6">
-			<h3 className="text-lg font-semibold text-gray-900 mb-4">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+			<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 				Backup Duration Trends
 			</h3>
 			{isLoading ? (
 				<div className="h-40 flex items-center justify-center">
-					<div className="animate-pulse h-full w-full bg-gray-100 rounded" />
+					<div className="animate-pulse h-full w-full bg-gray-100 dark:bg-gray-700 rounded" />
 				</div>
 			) : data.length === 0 ? (
-				<div className="h-40 flex items-center justify-center text-gray-500">
+				<div className="h-40 flex items-center justify-center text-gray-500 dark:text-gray-400">
 					No backup duration data yet
 				</div>
 			) : (
@@ -261,7 +267,7 @@ function BackupDurationChart({
 								title={`Avg: ${formatDurationMs(point.avg_duration_ms)} (${point.backup_count} backups)`}
 							/>
 							{i % 2 === 0 && (
-								<span className="text-[10px] text-gray-400">
+								<span className="text-[10px] text-gray-400 dark:text-gray-500">
 									{new Date(point.date).toLocaleDateString('en-US', {
 										month: 'short',
 										day: 'numeric',
@@ -291,10 +297,12 @@ function DailyBackupsChart({
 	const maxCount = Math.max(...data.map((d) => d.total), 1);
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-center justify-between mb-4">
-				<h3 className="text-lg font-semibold text-gray-900">Daily Backups</h3>
-				<div className="flex items-center gap-4 text-xs">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+					Daily Backups
+				</h3>
+				<div className="flex items-center gap-4 text-xs text-gray-700 dark:text-gray-300">
 					<span className="flex items-center gap-1">
 						<span className="w-3 h-3 bg-green-500 rounded" /> Successful
 					</span>
@@ -305,10 +313,10 @@ function DailyBackupsChart({
 			</div>
 			{isLoading ? (
 				<div className="h-40 flex items-center justify-center">
-					<div className="animate-pulse h-full w-full bg-gray-100 rounded" />
+					<div className="animate-pulse h-full w-full bg-gray-100 dark:bg-gray-700 rounded" />
 				</div>
 			) : data.length === 0 ? (
-				<div className="h-40 flex items-center justify-center text-gray-500">
+				<div className="h-40 flex items-center justify-center text-gray-500 dark:text-gray-400">
 					No backup data yet
 				</div>
 			) : (
@@ -342,7 +350,7 @@ function DailyBackupsChart({
 								/>
 							</div>
 							{i % 2 === 0 && (
-								<span className="text-[10px] text-gray-400">
+								<span className="text-[10px] text-gray-400 dark:text-gray-500">
 									{new Date(point.date).toLocaleDateString('en-US', {
 										month: 'short',
 										day: 'numeric',
@@ -369,26 +377,28 @@ function FleetHealthWidget({
 		totalAgents > 0 ? ((data?.healthy_count ?? 0) / totalAgents) * 100 : 0;
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 			<div className="flex items-center justify-between mb-4">
-				<h3 className="text-lg font-semibold text-gray-900">Fleet Health</h3>
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+					Fleet Health
+				</h3>
 				<Link
 					to="/agents"
-					className="text-sm text-indigo-600 hover:text-indigo-800"
+					className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					View Agents
 				</Link>
 			</div>
 			{isLoading ? (
 				<div className="space-y-4">
-					<div className="animate-pulse h-20 bg-gray-100 rounded" />
-					<div className="animate-pulse h-4 bg-gray-200 rounded w-3/4" />
+					<div className="animate-pulse h-20 bg-gray-100 dark:bg-gray-700 rounded" />
+					<div className="animate-pulse h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
 				</div>
 			) : totalAgents === 0 ? (
-				<div className="text-center py-8 text-gray-500">
+				<div className="text-center py-8 text-gray-500 dark:text-gray-400">
 					<svg
 						aria-hidden="true"
-						className="w-12 h-12 mx-auto mb-3 text-gray-300"
+						className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -420,7 +430,7 @@ function FleetHealthWidget({
 									cy="18"
 									r="15.5"
 									fill="none"
-									stroke="#e5e7eb"
+									className="stroke-gray-200 dark:stroke-gray-600"
 									strokeWidth="3"
 								/>
 								{/* Healthy segment */}
@@ -436,7 +446,7 @@ function FleetHealthWidget({
 								/>
 							</svg>
 							<div className="absolute inset-0 flex items-center justify-center">
-								<span className="text-lg font-bold text-gray-900">
+								<span className="text-lg font-bold text-gray-900 dark:text-white">
 									{Math.round(healthyPercent)}%
 								</span>
 							</div>
@@ -447,56 +457,64 @@ function FleetHealthWidget({
 							<div className="flex items-center gap-2">
 								<span className="w-3 h-3 bg-green-500 rounded-full" />
 								<div>
-									<p className="text-sm font-medium text-gray-900">
+									<p className="text-sm font-medium text-gray-900 dark:text-white">
 										{data?.healthy_count ?? 0}
 									</p>
-									<p className="text-xs text-gray-500">Healthy</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400">
+										Healthy
+									</p>
 								</div>
 							</div>
 							<div className="flex items-center gap-2">
 								<span className="w-3 h-3 bg-yellow-500 rounded-full" />
 								<div>
-									<p className="text-sm font-medium text-gray-900">
+									<p className="text-sm font-medium text-gray-900 dark:text-white">
 										{data?.warning_count ?? 0}
 									</p>
-									<p className="text-xs text-gray-500">Warning</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400">
+										Warning
+									</p>
 								</div>
 							</div>
 							<div className="flex items-center gap-2">
 								<span className="w-3 h-3 bg-red-500 rounded-full" />
 								<div>
-									<p className="text-sm font-medium text-gray-900">
+									<p className="text-sm font-medium text-gray-900 dark:text-white">
 										{data?.critical_count ?? 0}
 									</p>
-									<p className="text-xs text-gray-500">Critical</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400">
+										Critical
+									</p>
 								</div>
 							</div>
 							<div className="flex items-center gap-2">
 								<span className="w-3 h-3 bg-gray-400 rounded-full" />
 								<div>
-									<p className="text-sm font-medium text-gray-900">
+									<p className="text-sm font-medium text-gray-900 dark:text-white">
 										{data?.unknown_count ?? 0}
 									</p>
-									<p className="text-xs text-gray-500">Unknown</p>
+									<p className="text-xs text-gray-500 dark:text-gray-400">
+										Unknown
+									</p>
 								</div>
 							</div>
 						</div>
 					</div>
 
 					{/* Resource Averages */}
-					<div className="border-t border-gray-200 pt-4">
-						<p className="text-sm font-medium text-gray-600 mb-3">
+					<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+						<p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
 							Average Resource Usage
 						</p>
 						<div className="space-y-2">
 							<div>
 								<div className="flex items-center justify-between text-xs mb-1">
-									<span className="text-gray-500">CPU</span>
-									<span className="font-medium text-gray-700">
+									<span className="text-gray-500 dark:text-gray-400">CPU</span>
+									<span className="font-medium text-gray-700 dark:text-gray-300">
 										{formatPercent(data?.avg_cpu_usage)}
 									</span>
 								</div>
-								<div className="w-full bg-gray-200 rounded-full h-1.5">
+								<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
 									<div
 										className={`h-1.5 rounded-full ${
 											(data?.avg_cpu_usage ?? 0) >= 80
@@ -513,12 +531,14 @@ function FleetHealthWidget({
 							</div>
 							<div>
 								<div className="flex items-center justify-between text-xs mb-1">
-									<span className="text-gray-500">Memory</span>
-									<span className="font-medium text-gray-700">
+									<span className="text-gray-500 dark:text-gray-400">
+										Memory
+									</span>
+									<span className="font-medium text-gray-700 dark:text-gray-300">
 										{formatPercent(data?.avg_memory_usage)}
 									</span>
 								</div>
-								<div className="w-full bg-gray-200 rounded-full h-1.5">
+								<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
 									<div
 										className={`h-1.5 rounded-full ${
 											(data?.avg_memory_usage ?? 0) >= 85
@@ -535,12 +555,12 @@ function FleetHealthWidget({
 							</div>
 							<div>
 								<div className="flex items-center justify-between text-xs mb-1">
-									<span className="text-gray-500">Disk</span>
-									<span className="font-medium text-gray-700">
+									<span className="text-gray-500 dark:text-gray-400">Disk</span>
+									<span className="font-medium text-gray-700 dark:text-gray-300">
 										{formatPercent(data?.avg_disk_usage)}
 									</span>
 								</div>
-								<div className="w-full bg-gray-200 rounded-full h-1.5">
+								<div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
 									<div
 										className={`h-1.5 rounded-full ${
 											(data?.avg_disk_usage ?? 0) >= 80
@@ -561,9 +581,9 @@ function FleetHealthWidget({
 					{/* Alerts */}
 					{((data?.critical_count ?? 0) > 0 ||
 						(data?.warning_count ?? 0) > 0) && (
-						<div className="border-t border-gray-200 pt-4">
+						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
 							{(data?.critical_count ?? 0) > 0 && (
-								<div className="flex items-center gap-2 text-red-700 bg-red-50 px-3 py-2 rounded-lg text-sm mb-2">
+								<div className="flex items-center gap-2 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg text-sm mb-2">
 									<svg
 										aria-hidden="true"
 										className="w-4 h-4"
@@ -582,7 +602,7 @@ function FleetHealthWidget({
 								</div>
 							)}
 							{(data?.warning_count ?? 0) > 0 && (
-								<div className="flex items-center gap-2 text-yellow-700 bg-yellow-50 px-3 py-2 rounded-lg text-sm">
+								<div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-lg text-sm">
 									<svg
 										aria-hidden="true"
 										className="w-4 h-4"
@@ -679,7 +699,7 @@ export function Dashboard() {
 		<div className="space-y-6">
 			<div>
 				<div className="flex items-center gap-2">
-					<h1 className="text-2xl font-bold text-gray-900">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 						{t('dashboard.title')}
 					</h1>
 					<HelpTooltip
@@ -689,7 +709,9 @@ export function Dashboard() {
 						size="md"
 					/>
 				</div>
-				<p className="text-gray-600 mt-1">{t('dashboard.subtitle')}</p>
+				<p className="text-gray-600 dark:text-gray-400 mt-1">
+					{t('dashboard.subtitle')}
+				</p>
 			</div>
 
 			{/* Main Stats Row */}
@@ -827,14 +849,14 @@ export function Dashboard() {
 					rate30d={dashboardStats?.success_rate_30d ?? 0}
 					isLoading={dashboardStatsLoading}
 				/>
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 					<div className="flex items-center justify-between mb-4">
-						<h3 className="text-lg font-semibold text-gray-900">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Storage Efficiency
 						</h3>
 						<Link
 							to="/stats"
-							className="text-sm text-indigo-600 hover:text-indigo-800"
+							className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
 						>
 							View Details
 						</Link>
@@ -843,15 +865,17 @@ export function Dashboard() {
 						<div className="grid grid-cols-2 gap-4">
 							{[1, 2, 3, 4].map((i) => (
 								<div key={i} className="animate-pulse">
-									<div className="h-4 w-24 bg-gray-200 rounded mb-2" />
-									<div className="h-8 w-20 bg-gray-200 rounded" />
+									<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+									<div className="h-8 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
 								</div>
 							))}
 						</div>
 					) : dashboardStats ? (
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<p className="text-sm font-medium text-gray-600">Dedup Ratio</p>
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+									Dedup Ratio
+								</p>
 								<p
 									className={`text-2xl font-bold mt-1 ${getDedupRatioColor(dashboardStats.avg_dedup_ratio)}`}
 								>
@@ -859,7 +883,9 @@ export function Dashboard() {
 								</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-600">Space Saved</p>
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+									Space Saved
+								</p>
 								<p
 									className={`text-2xl font-bold mt-1 ${getSpaceSavedColor(dashboardStats.total_backup_size > 0 ? (dashboardStats.total_space_saved / dashboardStats.total_backup_size) * 100 : 0)}`}
 								>
@@ -867,24 +893,24 @@ export function Dashboard() {
 								</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-600">
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 									Actual Storage
 								</p>
-								<p className="text-2xl font-bold text-gray-900 mt-1">
+								<p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
 									{formatBytes(dashboardStats.total_raw_size)}
 								</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-600">
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 									Original Size
 								</p>
-								<p className="text-2xl font-bold text-gray-900 mt-1">
+								<p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
 									{formatBytes(dashboardStats.total_backup_size)}
 								</p>
 							</div>
 						</div>
 					) : (
-						<div className="text-center py-8 text-gray-500">
+						<div className="text-center py-8 text-gray-500 dark:text-gray-400">
 							No storage stats available
 						</div>
 					)}
@@ -1322,8 +1348,8 @@ export function Dashboard() {
 
 			{/* System Status, DR Testing, and Calendar Row */}
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="flex items-center gap-1.5 text-lg font-semibold text-gray-900 mb-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+					<h2 className="flex items-center gap-1.5 text-lg font-semibold text-gray-900 dark:text-white mb-4">
 						{t('dashboard.systemStatus')}
 						<HelpTooltip
 							content={dashboardHelp.systemStatus.content}
@@ -1333,28 +1359,34 @@ export function Dashboard() {
 					</h2>
 					<div className="space-y-4">
 						<div className="flex items-center justify-between">
-							<span className="text-gray-600">{t('dashboard.server')}</span>
-							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+							<span className="text-gray-600 dark:text-gray-400">
+								{t('dashboard.server')}
+							</span>
+							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
 								<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
 								{t('dashboard.online')}
 							</span>
 						</div>
 						<div className="flex items-center justify-between">
-							<span className="text-gray-600">{t('dashboard.database')}</span>
-							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+							<span className="text-gray-600 dark:text-gray-400">
+								{t('dashboard.database')}
+							</span>
+							<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
 								<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
 								{t('dashboard.connected')}
 							</span>
 						</div>
 						<div className="flex items-center justify-between">
-							<span className="text-gray-600">{t('dashboard.scheduler')}</span>
+							<span className="text-gray-600 dark:text-gray-400">
+								{t('dashboard.scheduler')}
+							</span>
 							{enabledSchedules > 0 ? (
-								<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+								<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
 									<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
 									{t('dashboard.activeJobs', { count: enabledSchedules })}
 								</span>
 							) : (
-								<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+								<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
 									<span className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
 									{t('dashboard.idle')}
 								</span>
@@ -1362,42 +1394,52 @@ export function Dashboard() {
 						</div>
 					</div>
 
-					<div className="border-t border-gray-200 mt-4 pt-4">
-						<h3 className="text-sm font-medium text-gray-900 mb-3">
+					<div className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4">
+						<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
 							DR Testing
 						</h3>
 						<div className="space-y-3">
 							<div className="flex items-center justify-between">
-								<span className="text-gray-600 text-sm">Active Runbooks</span>
-								<span className="text-sm font-medium text-gray-900">
+								<span className="text-gray-600 dark:text-gray-400 text-sm">
+									Active Runbooks
+								</span>
+								<span className="text-sm font-medium text-gray-900 dark:text-white">
 									{drStatusLoading ? (
-										<span className="inline-block w-6 h-4 bg-gray-200 rounded animate-pulse" />
+										<span className="inline-block w-6 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
 									) : (
 										`${drStatus?.active_runbooks ?? 0} / ${drStatus?.total_runbooks ?? 0}`
 									)}
 								</span>
 							</div>
 							<div className="flex items-center justify-between">
-								<span className="text-gray-600 text-sm">Last Test</span>
-								<span className="text-sm text-gray-900">
+								<span className="text-gray-600 dark:text-gray-400 text-sm">
+									Last Test
+								</span>
+								<span className="text-sm text-gray-900 dark:text-white">
 									{drStatusLoading ? (
-										<span className="inline-block w-16 h-4 bg-gray-200 rounded animate-pulse" />
+										<span className="inline-block w-16 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
 									) : drStatus?.last_test_at ? (
 										formatRelativeTime(drStatus.last_test_at)
 									) : (
-										<span className="text-gray-400">Never</span>
+										<span className="text-gray-400 dark:text-gray-500">
+											Never
+										</span>
 									)}
 								</span>
 							</div>
 							<div className="flex items-center justify-between">
-								<span className="text-gray-600 text-sm">Next Test</span>
-								<span className="text-sm text-gray-900">
+								<span className="text-gray-600 dark:text-gray-400 text-sm">
+									Next Test
+								</span>
+								<span className="text-sm text-gray-900 dark:text-white">
 									{drStatusLoading ? (
-										<span className="inline-block w-16 h-4 bg-gray-200 rounded animate-pulse" />
+										<span className="inline-block w-16 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
 									) : drStatus?.next_test_at ? (
 										formatRelativeTime(drStatus.next_test_at)
 									) : (
-										<span className="text-gray-400">Not scheduled</span>
+										<span className="text-gray-400 dark:text-gray-500">
+											Not scheduled
+										</span>
 									)}
 								</span>
 							</div>
@@ -1405,8 +1447,8 @@ export function Dashboard() {
 					</div>
 				</div>
 
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="flex items-center gap-1.5 text-lg font-semibold text-gray-900 mb-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+					<h2 className="flex items-center gap-1.5 text-lg font-semibold text-gray-900 dark:text-white mb-4">
 						{t('dashboard.storageEfficiency')}
 						<HelpTooltip
 							content={dashboardHelp.storageEfficiency.content}
@@ -1428,7 +1470,7 @@ export function Dashboard() {
 					) : storageStats ? (
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<p className="text-sm font-medium text-gray-600">
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 									{t('dashboard.avgDedupRatio')}
 								</p>
 								<p
@@ -1436,14 +1478,14 @@ export function Dashboard() {
 								>
 									{formatDedupRatio(storageStats.avg_dedup_ratio)}
 								</p>
-								<p className="text-sm text-gray-500 mt-1">
+								<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 									{t('dashboard.repositoriesCount', {
 										count: storageStats.repository_count,
 									})}
 								</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-600">
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 									{t('dashboard.spaceSaved')}
 								</p>
 								<p
@@ -1451,7 +1493,7 @@ export function Dashboard() {
 								>
 									{localFormatBytes(storageStats.total_space_saved)}
 								</p>
-								<p className="text-sm text-gray-500 mt-1">
+								<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 									{localFormatPercent(
 										storageStats.total_restore_size > 0
 											? (storageStats.total_space_saved /
@@ -1463,26 +1505,26 @@ export function Dashboard() {
 								</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-600">
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 									{t('dashboard.actualStorage')}
 								</p>
-								<p className="text-2xl font-bold text-gray-900 mt-1">
+								<p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
 									{localFormatBytes(storageStats.total_raw_size)}
 								</p>
-								<p className="text-sm text-gray-500 mt-1">
+								<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 									{t('dashboard.fromOriginal', {
 										size: localFormatBytes(storageStats.total_restore_size),
 									})}
 								</p>
 							</div>
 							<div>
-								<p className="text-sm font-medium text-gray-600">
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 									{t('dashboard.totalSnapshots')}
 								</p>
-								<p className="text-2xl font-bold text-gray-900 mt-1">
+								<p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
 									{storageStats.total_snapshots}
 								</p>
-								<p className="text-sm text-gray-500 mt-1">
+								<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 									{t('dashboard.acrossRepositories')}
 								</p>
 							</div>

@@ -634,35 +634,35 @@ export default function License() {
 			)}
 
 			{/* Usage Section */}
-			{currentLicense?.usage && (
+			{currentLicense?.limits && (
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 					<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
 						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-							Usage
+							Limits
 						</h2>
 					</div>
 					<div className="p-6 space-y-6">
 						<UsageBar
 							label="Agents"
-							used={currentLicense.usage.agents_used}
-							limit={currentLicense.usage.agents_limit}
+							used={0}
+							limit={currentLicense.limits.max_agents}
 						/>
 						<UsageBar
-							label="Repositories"
-							used={currentLicense.usage.repositories_used}
-							limit={currentLicense.usage.repositories_limit}
+							label="Servers"
+							used={0}
+							limit={currentLicense.limits.max_servers}
 						/>
 						<StorageUsageBar
 							label="Storage"
-							used={currentLicense.usage.storage_used_bytes}
-							limit={currentLicense.usage.storage_limit_bytes}
+							used={0}
+							limit={currentLicense.limits.max_storage_bytes}
 						/>
 					</div>
 				</div>
 			)}
 
 			{/* Extended Features Section */}
-			{currentLicense?.features && (
+			{currentLicense?.features && currentLicense.features.length > 0 && (
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 					<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
 						<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -674,39 +674,39 @@ export default function License() {
 							<div className="space-y-1">
 								<FeatureItem
 									name="Single Sign-On (SSO)"
-									enabled={currentLicense.features.sso_enabled}
+									enabled={currentLicense.features.includes('oidc')}
 									proFeature="sso"
 								/>
 								<FeatureItem
 									name="API Access"
-									enabled={currentLicense.features.api_access}
+									enabled={currentLicense.features.includes('api_access')}
 									proFeature="api_access"
 								/>
 								<FeatureItem
 									name="Advanced Reporting"
-									enabled={currentLicense.features.advanced_reporting}
+									enabled={currentLicense.features.includes('custom_reports')}
 									proFeature="advanced_reporting"
 								/>
 								<FeatureItem
 									name="Custom Branding"
-									enabled={currentLicense.features.custom_branding}
+									enabled={currentLicense.features.includes('white_label')}
 									proFeature="custom_branding"
 								/>
 							</div>
 							<div className="space-y-1 pt-2 md:pt-0">
 								<FeatureItem
 									name="Priority Support"
-									enabled={currentLicense.features.priority_support}
+									enabled={currentLicense.features.includes('priority_support')}
 									proFeature="priority_support"
 								/>
 								<FeatureItem
 									name="Backup Hooks"
-									enabled={currentLicense.features.backup_hooks}
+									enabled={currentLicense.features.includes('backup_hooks')}
 									proFeature="backup_hooks"
 								/>
 								<FeatureItem
 									name="Multi-Destination Backups"
-									enabled={currentLicense.features.multi_destination}
+									enabled={currentLicense.features.includes('multi_repo')}
 									proFeature="multi_destination"
 								/>
 							</div>

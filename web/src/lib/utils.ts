@@ -139,22 +139,34 @@ export function getBackupStatusColor(status: string): {
 	switch (status) {
 		case 'completed':
 			return {
-				bg: 'bg-green-100',
-				text: 'text-green-800',
+				bg: 'bg-green-100 dark:bg-green-900/30',
+				text: 'text-green-800 dark:text-green-300',
 				dot: 'bg-green-500',
 			};
 		case 'running':
 			return {
-				bg: 'bg-blue-100',
-				text: 'text-blue-800',
+				bg: 'bg-blue-100 dark:bg-blue-900/30',
+				text: 'text-blue-800 dark:text-blue-300',
 				dot: 'bg-blue-500',
 			};
 		case 'failed':
-			return { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-500' };
+			return {
+				bg: 'bg-red-100 dark:bg-red-900/30',
+				text: 'text-red-800 dark:text-red-300',
+				dot: 'bg-red-500',
+			};
 		case 'canceled':
-			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-700',
+				text: 'text-gray-600 dark:text-gray-300',
+				dot: 'bg-gray-400',
+			};
 		default:
-			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-700',
+				text: 'text-gray-600 dark:text-gray-300',
+				dot: 'bg-gray-400',
+			};
 	}
 }
 
@@ -337,18 +349,18 @@ export function formatPercent(percent: number | undefined): string {
 
 // Get color class based on dedup ratio quality
 export function getDedupRatioColor(ratio: number): string {
-	if (ratio >= 3) return 'text-green-600';
-	if (ratio >= 2) return 'text-blue-600';
-	if (ratio >= 1.5) return 'text-yellow-600';
-	return 'text-gray-600';
+	if (ratio >= 3) return 'text-green-600 dark:text-green-400';
+	if (ratio >= 2) return 'text-blue-600 dark:text-blue-400';
+	if (ratio >= 1.5) return 'text-yellow-600 dark:text-yellow-400';
+	return 'text-gray-600 dark:text-gray-400';
 }
 
 // Get color class based on space saved percentage
 export function getSpaceSavedColor(percent: number): string {
-	if (percent >= 70) return 'text-green-600';
-	if (percent >= 50) return 'text-blue-600';
-	if (percent >= 30) return 'text-yellow-600';
-	return 'text-gray-600';
+	if (percent >= 70) return 'text-green-600 dark:text-green-400';
+	if (percent >= 50) return 'text-blue-600 dark:text-blue-400';
+	if (percent >= 30) return 'text-yellow-600 dark:text-yellow-400';
+	return 'text-gray-600 dark:text-gray-400';
 }
 
 // Format a date for chart axis labels
@@ -376,10 +388,10 @@ export function formatDurationMs(ms: number | undefined): string {
 
 // Get success rate color based on percentage
 export function getSuccessRateColor(percent: number): string {
-	if (percent >= 95) return 'text-green-600';
-	if (percent >= 80) return 'text-yellow-600';
-	if (percent >= 50) return 'text-orange-600';
-	return 'text-red-600';
+	if (percent >= 95) return 'text-green-600 dark:text-green-400';
+	if (percent >= 80) return 'text-yellow-600 dark:text-yellow-400';
+	if (percent >= 50) return 'text-orange-600 dark:text-orange-400';
+	return 'text-red-600 dark:text-red-400';
 }
 
 // Get success rate badge classes based on percentage
@@ -387,10 +399,25 @@ export function getSuccessRateBadge(percent: number): {
 	bg: string;
 	text: string;
 } {
-	if (percent >= 95) return { bg: 'bg-green-100', text: 'text-green-800' };
-	if (percent >= 80) return { bg: 'bg-yellow-100', text: 'text-yellow-800' };
-	if (percent >= 50) return { bg: 'bg-orange-100', text: 'text-orange-800' };
-	return { bg: 'bg-red-100', text: 'text-red-800' };
+	if (percent >= 95)
+		return {
+			bg: 'bg-green-100 dark:bg-green-900/30',
+			text: 'text-green-800 dark:text-green-300',
+		};
+	if (percent >= 80)
+		return {
+			bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+			text: 'text-yellow-800 dark:text-yellow-300',
+		};
+	if (percent >= 50)
+		return {
+			bg: 'bg-orange-100 dark:bg-orange-900/30',
+			text: 'text-orange-800 dark:text-orange-300',
+		};
+	return {
+		bg: 'bg-red-100 dark:bg-red-900/30',
+		text: 'text-red-800 dark:text-red-300',
+	};
 }
 
 // Get health status color classes for badges

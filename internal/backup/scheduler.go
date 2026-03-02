@@ -312,12 +312,23 @@ func (s *Scheduler) Reload(ctx context.Context) error {
 	return nil
 }
 
+// normalizeCron ensures a cron expression has 6 fields (with seconds).
+// If a standard 5-field expression is provided, it prepends "0 " for seconds.
+func normalizeCron(expr string) string {
+	fields := strings.Fields(expr)
+	if len(fields) == 5 {
+		return "0 " + expr
+	}
+	return expr
+}
+
 // addSchedule adds a schedule to the cron scheduler.
 func (s *Scheduler) addSchedule(schedule models.Schedule) error {
 	// Create a copy of schedule for the closure
 	sched := schedule
 
-	entryID, err := s.cron.AddFunc(schedule.CronExpression, func() {
+	cronExpr := normalizeCron(schedule.CronExpression)
+	entryID, err := s.cron.AddFunc(cronExpr, func() {
 		s.executeBackup(sched)
 	})
 	if err != nil {

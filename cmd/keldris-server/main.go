@@ -71,6 +71,7 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/MacJediWizard/keldris/internal/activity"
 	"github.com/MacJediWizard/keldris/internal/api"
 	"github.com/MacJediWizard/keldris/internal/api/handlers"
 	"github.com/MacJediWizard/keldris/internal/auth"
@@ -79,6 +80,7 @@ import (
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/MacJediWizard/keldris/internal/license"
+	"github.com/MacJediWizard/keldris/internal/logs"
 	"github.com/MacJediWizard/keldris/internal/maintenance"
 	"github.com/MacJediWizard/keldris/internal/monitoring"
 	"github.com/MacJediWizard/keldris/internal/reports"
@@ -101,11 +103,17 @@ func run() int {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Initialize logger
-	logger := zerolog.New(os.Stdout).With().Timestamp().Str("version", Version).Logger()
+	// Initialize server log buffer for admin log viewing
+	logBuffer := logs.NewLogBuffer(logs.DefaultConfig())
+
+	// Initialize logger with log buffer as additional writer
+	var logWriter io.Writer
 	if os.Getenv("ENV") != string(config.EnvProduction) {
-		logger = logger.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+		logWriter = io.MultiWriter(zerolog.ConsoleWriter{Out: os.Stderr}, logBuffer)
+	} else {
+		logWriter = io.MultiWriter(os.Stdout, logBuffer)
 	}
+	logger := zerolog.New(logWriter).With().Timestamp().Str("version", Version).Logger()
 
 	logger.Info().
 		Str("version", Version).
@@ -326,6 +334,11 @@ func run() int {
 	setupHandler := handlers.NewServerSetupHandler(database, database, sessions, logger)
 	setupHandler.SetHeartbeatSender(validator)
 
+	// Initialize activity feed for real-time event streaming
+	activityFeed := activity.NewFeed(database, activity.DefaultConfig(), logger)
+	activityFeed.Start()
+	defer activityFeed.Stop()
+
 	routerCfg := api.Config{
 		Environment:         cfg.Environment,
 		AllowedOrigins:      allowedOrigins,
@@ -343,6 +356,8 @@ func run() int {
 		Validator:           validator,
 		LicensePublicKey:    licPubKey,
 		SetupHandler:        setupHandler,
+		ActivityFeed:        activityFeed,
+		LogBuffer:           logBuffer,
 	}
 
 	router, err := api.NewRouter(routerCfg, database, oidcProvider, sessions, keyManager, logger)

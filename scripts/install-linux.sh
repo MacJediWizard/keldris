@@ -137,7 +137,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/local/bin/keldris-agent daemon
+ExecStart=/usr/local/bin/keldris-agent start
 Restart=always
 RestartSec=10
 StandardOutput=journal

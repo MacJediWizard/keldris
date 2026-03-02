@@ -10,8 +10,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// DefaultConfigDir returns the default config directory (~/.keldris).
+// DefaultConfigDir returns the config directory.
+// It checks KELDRIS_CONFIG_DIR env var first, then falls back to ~/.keldris.
 func DefaultConfigDir() (string, error) {
+	if dir := os.Getenv("KELDRIS_CONFIG_DIR"); dir != "" {
+		return dir, nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("get home directory: %w", err)

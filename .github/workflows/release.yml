@@ -165,11 +165,14 @@ jobs:
             sha256sum "$f" > "$f.sha256"
           done
 
-      - name: Copy install scripts
+      - name: Copy install and uninstall scripts
         run: |
           cp scripts/install-linux.sh release/
           cp scripts/install-macos.sh release/
           cp scripts/install-windows.ps1 release/
+          cp scripts/uninstall-linux.sh release/
+          cp scripts/uninstall-macos.sh release/
+          cp scripts/uninstall-windows.ps1 release/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -180,5 +183,8 @@ jobs:
             release/install-linux.sh
             release/install-macos.sh
             release/install-windows.ps1
+            release/uninstall-linux.sh
+            release/uninstall-macos.sh
+            release/uninstall-windows.ps1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

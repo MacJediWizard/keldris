@@ -191,7 +191,7 @@ function New-AgentService {
     }
 
     # Create the service
-    $serviceBinPath = "`"$BinaryPath`" daemon"
+    $serviceBinPath = "`"$BinaryPath`" start"
 
     $result = sc.exe create $ServiceName binPath= $serviceBinPath start= auto DisplayName= $ServiceDisplayName
     if ($LASTEXITCODE -ne 0) {
@@ -207,6 +207,9 @@ function New-AgentService {
 
     # Set service to delayed auto-start
     sc.exe config $ServiceName start= delayed-auto | Out-Null
+
+    # Set KELDRIS_CONFIG_DIR so the agent finds its config
+    [Environment]::SetEnvironmentVariable("KELDRIS_CONFIG_DIR", $ConfigDir, "Machine")
 
     Write-Info "Windows Service created: $ServiceDisplayName"
 }

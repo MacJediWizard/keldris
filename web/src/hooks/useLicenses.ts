@@ -1,14 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { licensesApi } from '../lib/api';
+import { licenseApi, licensesApi } from '../lib/api';
 import type {
 	CreateLicenseKeyRequest,
+	LicenseInfo,
 	UpdateLicenseRequest,
 } from '../lib/types';
 
 export function useCurrentLicense() {
-	return useQuery({
+	return useQuery<LicenseInfo>({
 		queryKey: ['licenses', 'current'],
-		queryFn: () => licensesApi.getCurrent(),
+		queryFn: () => licenseApi.getInfo(),
 		staleTime: 60 * 1000,
 	});
 }

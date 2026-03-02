@@ -208,7 +208,7 @@ func (vs *VerificationScheduler) Reload(ctx context.Context) error {
 func (vs *VerificationScheduler) addSchedule(schedule *models.VerificationSchedule) error {
 	sched := schedule // Create a copy for the closure
 
-	entryID, err := vs.cron.AddFunc(schedule.CronExpression, func() {
+	entryID, err := vs.cron.AddFunc(normalizeCron(schedule.CronExpression), func() {
 		vs.executeVerification(sched)
 	})
 	if err != nil {

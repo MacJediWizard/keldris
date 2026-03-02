@@ -133,7 +133,7 @@ create_launchd_plist() {
     <key>ProgramArguments</key>
     <array>
         <string>${INSTALL_DIR}/${BINARY_NAME}</string>
-        <string>daemon</string>
+        <string>start</string>
     </array>
 
     <key>RunAtLoad</key>

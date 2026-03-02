@@ -362,6 +362,10 @@ func NewRouter(
 	snapshotsHandler := handlers.NewSnapshotsHandler(database, keyManager, logger)
 	snapshotsHandler.RegisterRoutes(apiV1)
 
+	// Backup queue
+	backupQueueHandler := handlers.NewBackupQueueHandler(database, rbac, logger)
+	backupQueueHandler.RegisterRoutes(apiV1)
+
 	legalHoldsGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureLegalHolds, logger))
 	legalHoldsHandler := handlers.NewLegalHoldsHandler(database, featureChecker, logger)
 	legalHoldsHandler.RegisterRoutes(legalHoldsGroup)

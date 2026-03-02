@@ -4,7 +4,7 @@ import {
 	useCurrentLicense,
 	useLicensePurchaseUrl,
 } from '../../hooks/useLicenses';
-import type { ProFeature } from '../../lib/types';
+import type { LicenseInfo, ProFeature } from '../../lib/types';
 
 interface FeatureGateProps {
 	feature: ProFeature;
@@ -25,40 +25,41 @@ const featureLabels: Record<ProFeature, string> = {
 	unlimited_storage: 'Unlimited Storage',
 };
 
-const featureToLicenseKey: Record<ProFeature, string> = {
-	sso: 'sso_enabled',
+// Maps ProFeature names to backend feature strings from the license
+const featureToBackendKey: Record<ProFeature, string> = {
+	sso: 'oidc',
 	api_access: 'api_access',
-	advanced_reporting: 'advanced_reporting',
-	custom_branding: 'custom_branding',
+	advanced_reporting: 'custom_reports',
+	custom_branding: 'white_label',
 	priority_support: 'priority_support',
 	backup_hooks: 'backup_hooks',
-	multi_destination: 'multi_destination',
-	unlimited_agents: 'max_agents',
-	unlimited_repositories: 'max_repositories',
-	unlimited_storage: 'max_storage_bytes',
+	multi_destination: 'multi_repo',
+	unlimited_agents: 'unlimited_agents',
+	unlimited_repositories: 'unlimited_repositories',
+	unlimited_storage: 'unlimited_storage',
 };
 
-function isFeatureEnabled(
-	feature: ProFeature,
-	features?: Record<string, boolean | number>,
-): boolean {
-	if (!features) return false;
+// Limit-based features check the limits object instead of the features array
+const limitFeatures: Partial<Record<ProFeature, keyof LicenseInfo['limits']>> =
+	{
+		unlimited_agents: 'max_agents',
+		unlimited_storage: 'max_storage_bytes',
+	};
 
-	const key = featureToLicenseKey[feature];
-	const value = features[key as keyof typeof features];
+function isFeatureEnabled(feature: ProFeature, license?: LicenseInfo): boolean {
+	if (!license) return false;
 
-	// For boolean features
-	if (typeof value === 'boolean') {
-		return value;
-	}
-
-	// For limit-based features (unlimited means 0 or very high)
-	if (typeof value === 'number') {
+	// Check limit-based features against the limits object
+	const limitKey = limitFeatures[feature];
+	if (limitKey) {
+		const value = license.limits?.[limitKey];
 		// 0 or negative typically means unlimited
-		return value <= 0 || value >= 999999;
+		return typeof value === 'number' && (value <= 0 || value >= 999999);
 	}
 
-	return false;
+	// Check feature string array
+	const backendKey = featureToBackendKey[feature];
+	return license.features?.includes(backendKey) ?? false;
 }
 
 export function FeatureGate({ feature, children, fallback }: FeatureGateProps) {
@@ -69,10 +70,7 @@ export function FeatureGate({ feature, children, fallback }: FeatureGateProps) {
 		return <>{children}</>;
 	}
 
-	const hasFeature = isFeatureEnabled(
-		feature,
-		license?.features as unknown as Record<string, boolean | number>,
-	);
+	const hasFeature = isFeatureEnabled(feature, license);
 
 	if (hasFeature) {
 		return <>{children}</>;
@@ -140,10 +138,7 @@ export function ProBadge({
 		return null;
 	}
 
-	const hasFeature = isFeatureEnabled(
-		feature,
-		license?.features as unknown as Record<string, boolean | number>,
-	);
+	const hasFeature = isFeatureEnabled(feature, license);
 
 	if (hasFeature) {
 		return null;
@@ -178,10 +173,7 @@ export function FeatureDisabledButton({
 	const { data: license, isLoading } = useCurrentLicense();
 	const { data: purchaseUrlData } = useLicensePurchaseUrl();
 
-	const hasFeature = isFeatureEnabled(
-		feature,
-		license?.features as unknown as Record<string, boolean | number>,
-	);
+	const hasFeature = isFeatureEnabled(feature, license);
 
 	if (isLoading || hasFeature) {
 		return (
@@ -237,10 +229,7 @@ export function FeatureCheck({ feature, children }: FeatureCheckProps) {
 		return <>{children(false, featureLabels[feature])}</>;
 	}
 
-	const hasFeature = isFeatureEnabled(
-		feature,
-		license?.features as unknown as Record<string, boolean | number>,
-	);
+	const hasFeature = isFeatureEnabled(feature, license);
 
 	return <>{children(hasFeature, featureLabels[feature])}</>;
 }
