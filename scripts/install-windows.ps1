@@ -10,9 +10,6 @@
 .PARAMETER Action
     The action to perform: Install or Uninstall
 
-.PARAMETER Version
-    The version to install. Defaults to 'latest'.
-
 .PARAMETER DownloadUrl
     Base URL for downloading the agent binary.
 
@@ -29,11 +26,16 @@ param(
     [string]$Action = "Install",
 
     [Parameter(Mandatory = $false)]
-    [string]$Version = "latest",
+    [string]$DownloadUrl = "https://github.com/MacJediWizard/keldris/releases/latest/download",
 
     [Parameter(Mandatory = $false)]
-    [string]$DownloadUrl = "https://github.com/MacJediWizard/keldris/releases/latest/download"
-    [string]$DownloadUrl = "https://releases.keldris.io/agent"
+    [string]$KeldrisServer = "",
+
+    [Parameter(Mandatory = $false)]
+    [string]$KeldrisCode = "",
+
+    [Parameter(Mandatory = $false)]
+    [string]$KeldrisOrgId = ""
 )
 
 # Configuration
@@ -84,10 +86,9 @@ function Get-AgentBinary {
     param([string]$Arch)
 
     $downloadFullUrl = "$DownloadUrl/keldris-agent-windows-$Arch.exe"
-    $downloadFullUrl = "$DownloadUrl/$Version/keldris-agent-windows-$Arch.exe"
     $tempFile = Join-Path $env:TEMP $BinaryName
 
-    Write-Info "Downloading Keldris Agent ($Version, windows/$Arch)..."
+    Write-Info "Downloading Keldris Agent (windows/$Arch)..."
     Write-Info "URL: $downloadFullUrl"
 
     try {
@@ -248,6 +249,73 @@ function Add-ToPath {
     }
 }
 
+# Register agent with Keldris server
+$script:RegistrationSuccess = $false
+function Register-Agent {
+    # Read from params first, fall back to env vars
+    $server = if ($KeldrisServer) { $KeldrisServer } else { $env:KELDRIS_SERVER }
+    $code = if ($KeldrisCode) { $KeldrisCode } else { $env:KELDRIS_CODE }
+    $orgId = if ($KeldrisOrgId) { $KeldrisOrgId } else { $env:KELDRIS_ORG_ID }
+
+    # Skip if any required value is missing
+    if (-not $server -or -not $code -or -not $orgId) {
+        return
+    }
+
+    Write-Info "Registering agent with Keldris server..."
+
+    $hostname = [System.Net.Dns]::GetHostName()
+
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+        $body = @{ code = $code; hostname = $hostname } | ConvertTo-Json
+        $headers = @{
+            "Content-Type" = "application/json"
+            "X-Org-ID" = $orgId
+        }
+
+        $response = Invoke-RestMethod -Uri "$server/api/v1/agents/register" `
+            -Method Post -Body $body -Headers $headers
+
+        $apiKey = $response.api_key
+        $agentId = $response.id
+
+        if (-not $apiKey -or -not $agentId) {
+            Write-Warn "Could not parse registration response. You can register manually later."
+            return
+        }
+
+        # Write config file
+        $configContent = @"
+server_url: $server
+api_key: $apiKey
+agent_id: $agentId
+hostname: $hostname
+"@
+        $configPath = Join-Path $ConfigDir "config.yml"
+        Set-Content -Path $configPath -Value $configContent -Force
+
+        # Restrict config file permissions to Administrators + SYSTEM
+        $acl = Get-Acl $configPath
+        $acl.SetAccessRuleProtection($true, $false)
+        $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "BUILTIN\Administrators", "FullControl", "None", "None", "Allow")
+        $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "NT AUTHORITY\SYSTEM", "FullControl", "None", "None", "Allow")
+        $acl.AddAccessRule($adminRule)
+        $acl.AddAccessRule($systemRule)
+        Set-Acl -Path $configPath -AclObject $acl
+
+        Write-Info "Agent registered successfully (agent_id: $agentId)"
+        $script:RegistrationSuccess = $true
+    }
+    catch {
+        Write-Warn "Agent registration failed: $_"
+        Write-Warn "You can register manually later."
+    }
+}
+
 # Print instructions
 function Show-Instructions {
     Write-Host ""
@@ -255,12 +323,22 @@ function Show-Instructions {
     Write-Host "  Keldris Agent Installation Complete" -ForegroundColor Cyan
     Write-Host "==============================================" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Next steps:"
-    Write-Host "  1. Register the agent with your Keldris server:"
-    Write-Host "     keldris-agent register --server https://your-server.com" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  2. Check agent status:"
-    Write-Host "     keldris-agent status" -ForegroundColor Yellow
+
+    if ($script:RegistrationSuccess) {
+        Write-Host "  Agent is registered and running!"
+        Write-Host ""
+        Write-Host "  Check agent status:"
+        Write-Host "     keldris-agent status" -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "Next steps:"
+        Write-Host "  1. Register the agent with your Keldris server:"
+        Write-Host "     keldris-agent register --server https://your-server.com" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "  2. Check agent status:"
+        Write-Host "     keldris-agent status" -ForegroundColor Yellow
+    }
+
     Write-Host ""
     Write-Host "Service management (PowerShell as Administrator):"
     Write-Host "  Start:   Start-Service $ServiceName"
@@ -333,6 +411,7 @@ function Main {
             New-ConfigDirectory
             New-AgentService -BinaryPath $binaryPath
             Add-ToPath
+            Register-Agent
             Start-AgentService
             Show-Instructions
         }

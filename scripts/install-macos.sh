@@ -12,8 +12,6 @@ SERVICE_LABEL="io.keldris.agent"
 BINARY_NAME="keldris-agent"
 GITHUB_REPO="MacJediWizard/keldris"
 DOWNLOAD_BASE_URL="${KELDRIS_DOWNLOAD_URL:-https://github.com/${GITHUB_REPO}/releases/latest/download}"
-DOWNLOAD_BASE_URL="${KELDRIS_DOWNLOAD_URL:-https://releases.keldris.io/agent}"
-VERSION="${KELDRIS_VERSION:-latest}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -22,15 +20,15 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e "${GREEN}[INFO]${NC} $1" >&2
 }
 
 log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    echo -e "${YELLOW}[WARN]${NC} $1" >&2
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
 # Detect architecture
@@ -67,10 +65,9 @@ check_macos() {
 download_binary() {
     local arch="$1"
     local download_url="${DOWNLOAD_BASE_URL}/keldris-agent-darwin-${arch}"
-    local download_url="${DOWNLOAD_BASE_URL}/${VERSION}/keldris-agent-darwin-${arch}"
     local tmp_file="/tmp/${BINARY_NAME}"
 
-    log_info "Downloading Keldris Agent (${VERSION}, darwin/${arch})..."
+    log_info "Downloading Keldris Agent (darwin/${arch})..."
 
     if command -v curl &> /dev/null; then
         curl -fsSL -o "$tmp_file" "$download_url" || {
@@ -199,6 +196,56 @@ start_service() {
     fi
 }
 
+# Register agent with Keldris server using env vars
+REGISTRATION_SUCCESS=""
+register_agent() {
+    local server="${KELDRIS_SERVER:-}"
+    local code="${KELDRIS_CODE:-}"
+    local org_id="${KELDRIS_ORG_ID:-}"
+
+    # Skip if any required env var is missing
+    if [[ -z "$server" || -z "$code" || -z "$org_id" ]]; then
+        return 0
+    fi
+
+    log_info "Registering agent with Keldris server..."
+
+    local hostname
+    hostname=$(hostname)
+
+    local response
+    response=$(curl -fsSL -X POST "${server}/api/v1/agents/register" \
+        -H "Content-Type: application/json" \
+        -H "X-Org-ID: ${org_id}" \
+        -d "{\"code\":\"${code}\",\"hostname\":\"${hostname}\"}") || {
+        log_warn "Agent registration failed. You can register manually later."
+        return 0
+    }
+
+    # Parse api_key and agent_id from JSON response (no jq dependency)
+    local api_key agent_id
+    api_key=$(echo "$response" | grep -o '"api_key":"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"')
+    agent_id=$(echo "$response" | grep -o '"id":"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"')
+
+    if [[ -z "$api_key" || -z "$agent_id" ]]; then
+        log_warn "Could not parse registration response. You can register manually later."
+        return 0
+    fi
+
+    # Write config file
+    cat > "${CONFIG_DIR}/config.yml" << CONF
+server_url: ${server}
+api_key: ${api_key}
+agent_id: ${agent_id}
+hostname: ${hostname}
+CONF
+
+    chmod 600 "${CONFIG_DIR}/config.yml"
+
+    log_info "Agent registered successfully (agent_id: ${agent_id})"
+    REGISTRATION_SUCCESS="true"
+}
+
 # Print post-install instructions
 print_instructions() {
     echo ""
@@ -206,12 +253,21 @@ print_instructions() {
     echo "  Keldris Agent Installation Complete"
     echo "=============================================="
     echo ""
-    echo "Next steps:"
-    echo "  1. Register the agent with your Keldris server:"
-    echo "     keldris-agent register --server https://your-server.com"
-    echo ""
-    echo "  2. Check agent status:"
-    echo "     keldris-agent status"
+
+    if [[ -n "$REGISTRATION_SUCCESS" ]]; then
+        echo "  Agent is registered and running!"
+        echo ""
+        echo "  Check agent status:"
+        echo "     keldris-agent status"
+    else
+        echo "Next steps:"
+        echo "  1. Register the agent with your Keldris server:"
+        echo "     keldris-agent register --server https://your-server.com"
+        echo ""
+        echo "  2. Check agent status:"
+        echo "     keldris-agent status"
+    fi
+
     echo ""
     echo "Service management:"
     echo "  Start:  launchctl load ~/Library/LaunchAgents/${SERVICE_LABEL}.plist"
@@ -266,6 +322,7 @@ main() {
             install_binary "$tmp_file"
             create_config_dir
             create_launchd_plist
+            register_agent
             start_service
             print_instructions
             ;;

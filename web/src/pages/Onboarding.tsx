@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AgentDownloads } from '../components/features/AgentDownloads';
 import { VerticalStepper } from '../components/ui/Stepper';
+import { useCreateRegistrationCode } from '../hooks/useAgentRegistration';
 import { useAgents } from '../hooks/useAgents';
 import {
 	useActivateLicense,
@@ -28,8 +28,10 @@ import {
 	useTestConnection,
 } from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
+import { AGENT_DOWNLOADS } from '../lib/constants';
 import type {
 	BackendConfig,
+	CreateRegistrationCodeResponse,
 	OnboardingStep,
 	RepositoryType,
 	TestRepositoryResponse,
@@ -1801,11 +1803,79 @@ function RepositoryStep({ onComplete, onSkip, isLoading }: StepProps) {
 	);
 }
 
-function AgentStep({ onComplete, isLoading }: StepProps) {
+function AgentStep({ onComplete, onSkip, isLoading }: StepProps) {
+	const createCode = useCreateRegistrationCode();
+	const [regCode, setRegCode] = useState<CreateRegistrationCodeResponse | null>(
+		null,
+	);
+	const [activeTab, setActiveTab] = useState<'linux' | 'macos' | 'windows'>(
+		'linux',
+	);
+	const [copied, setCopied] = useState(false);
+
+	// Poll for agents once a code has been generated
 	const { data: agents } = useAgents();
 	const hasActiveAgent = agents?.some(
 		(a) => a.status === 'active' || a.status === 'pending',
 	);
+
+	// Enable polling after code is generated
+	const pollAgents = useAgents();
+	// biome-ignore lint/correctness/useExhaustiveDependencies: re-fetch on interval when code is active
+	useEffect(() => {
+		if (!regCode) return;
+		const interval = setInterval(() => {
+			pollAgents.refetch();
+		}, 5000);
+		return () => clearInterval(interval);
+	}, [regCode]);
+
+	const handleGenerateCode = async () => {
+		try {
+			const result = await createCode.mutateAsync({});
+			setRegCode(result);
+		} catch {
+			// mutation error handled by react-query
+		}
+	};
+
+	const handleRegenerate = async () => {
+		setRegCode(null);
+		setCopied(false);
+		handleGenerateCode();
+	};
+
+	const serverUrl = window.location.origin;
+
+	const getInstallCommand = () => {
+		if (!regCode) return '';
+		switch (activeTab) {
+			case 'linux':
+				return `curl -fsSL ${AGENT_DOWNLOADS.installers.linux} | sudo KELDRIS_SERVER=${serverUrl} KELDRIS_CODE=${regCode.code} KELDRIS_ORG_ID=${regCode.org_id} bash`;
+			case 'macos':
+				return `curl -fsSL ${AGENT_DOWNLOADS.installers.macos} | KELDRIS_SERVER=${serverUrl} KELDRIS_CODE=${regCode.code} KELDRIS_ORG_ID=${regCode.org_id} bash`;
+			case 'windows':
+				return `$env:KELDRIS_SERVER='${serverUrl}'; $env:KELDRIS_CODE='${regCode.code}'; $env:KELDRIS_ORG_ID='${regCode.org_id}'; irm ${AGENT_DOWNLOADS.installers.windows} | iex`;
+			default:
+				return '';
+		}
+	};
+
+	const handleCopy = async () => {
+		await navigator.clipboard.writeText(getInstallCommand());
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	};
+
+	const getTimeRemaining = () => {
+		if (!regCode) return '';
+		const expires = new Date(regCode.expires_at);
+		const now = new Date();
+		const diffMs = expires.getTime() - now.getTime();
+		if (diffMs <= 0) return 'Expired';
+		const minutes = Math.ceil(diffMs / 60000);
+		return `Code expires in ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+	};
 
 	return (
 		<div className="py-4">
@@ -1813,10 +1883,12 @@ function AgentStep({ onComplete, isLoading }: StepProps) {
 				Install a Backup Agent
 			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
-				Install the Keldris agent on the systems you want to back up.
+				Install the Keldris agent on the systems you want to back up. Generate
+				an install command that will automatically register the agent.
 			</p>
 
-			{hasActiveAgent ? (
+			{/* Agent detected banner */}
+			{hasActiveAgent && (
 				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
 					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
 						<svg
@@ -1831,15 +1903,94 @@ function AgentStep({ onComplete, isLoading }: StepProps) {
 								clipRule="evenodd"
 							/>
 						</svg>
-						<span className="font-medium">Agent installed!</span>
+						<span className="font-medium">Agent detected!</span>
 					</div>
 					<p className="mt-1 text-sm text-green-700 dark:text-green-400">
 						You have {agents?.length} agent(s) registered.
 					</p>
 				</div>
-			) : (
+			)}
+
+			{/* Generate Install Command section */}
+			{!regCode && !hasActiveAgent && (
 				<div className="mb-6">
-					<AgentDownloads showInstallCommands={true} />
+					<button
+						type="button"
+						onClick={handleGenerateCode}
+						disabled={createCode.isPending}
+						className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+					>
+						{createCode.isPending
+							? 'Generating...'
+							: 'Generate Install Command'}
+					</button>
+				</div>
+			)}
+
+			{/* Platform-specific install commands */}
+			{regCode && !hasActiveAgent && (
+				<div className="mb-6">
+					{/* Platform tabs */}
+					<div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
+						{(
+							[
+								{ key: 'linux', label: 'Linux' },
+								{ key: 'macos', label: 'macOS' },
+								{ key: 'windows', label: 'Windows' },
+							] as const
+						).map((tab) => (
+							<button
+								key={tab.key}
+								type="button"
+								onClick={() => {
+									setActiveTab(tab.key);
+									setCopied(false);
+								}}
+								className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+									activeTab === tab.key
+										? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+										: 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+								}`}
+							>
+								{tab.label}
+							</button>
+						))}
+					</div>
+
+					{/* Command display */}
+					<div className="relative bg-gray-900 rounded-lg p-4">
+						<pre className="text-sm text-green-400 font-mono whitespace-pre-wrap break-all">
+							{getInstallCommand()}
+						</pre>
+						<button
+							type="button"
+							onClick={handleCopy}
+							className="absolute top-2 right-2 px-3 py-1 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
+						>
+							{copied ? 'Copied!' : 'Copy'}
+						</button>
+					</div>
+
+					{/* Code expiry and regenerate */}
+					<div className="flex items-center justify-between mt-3">
+						<p className="text-sm text-gray-500 dark:text-gray-400">
+							{getTimeRemaining()}
+						</p>
+						<button
+							type="button"
+							onClick={handleRegenerate}
+							disabled={createCode.isPending}
+							className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+						>
+							{createCode.isPending ? 'Generating...' : 'Regenerate'}
+						</button>
+					</div>
+
+					{/* Polling indicator */}
+					<div className="mt-4 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+						<div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+						Waiting for agent to connect...
+					</div>
 				</div>
 			)}
 
@@ -1851,14 +2002,23 @@ function AgentStep({ onComplete, isLoading }: StepProps) {
 				>
 					View installation guide
 				</Link>
-				<button
-					type="button"
-					onClick={onComplete}
-					disabled={!hasActiveAgent || isLoading}
-					className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-				>
-					{isLoading ? 'Saving...' : 'Continue'}
-				</button>
+				<div className="flex gap-3">
+					<button
+						type="button"
+						onClick={onSkip}
+						className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+					>
+						Skip for now
+					</button>
+					<button
+						type="button"
+						onClick={onComplete}
+						disabled={!hasActiveAgent || isLoading}
+						className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+					>
+						{isLoading ? 'Saving...' : 'Continue'}
+					</button>
+				</div>
 			</div>
 		</div>
 	);
@@ -2219,6 +2379,7 @@ export function Onboarding() {
 				return (
 					<AgentStep
 						onComplete={() => handleCompleteStep('agent')}
+						onSkip={() => handleCompleteStep('agent')}
 						isLoading={isLoading}
 					/>
 				);

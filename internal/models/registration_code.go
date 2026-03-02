@@ -62,6 +62,7 @@ type CreateRegistrationCodeRequest struct {
 // CreateRegistrationCodeResponse is the response for creating a registration code.
 type CreateRegistrationCodeResponse struct {
 	ID        uuid.UUID `json:"id"`
+	OrgID     uuid.UUID `json:"org_id"`
 	Code      string    `json:"code"`
 	Hostname  *string   `json:"hostname,omitempty"`
 	ExpiresAt time.Time `json:"expires_at"`

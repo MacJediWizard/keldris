@@ -190,6 +190,7 @@ export interface CreateRegistrationCodeRequest {
 
 export interface CreateRegistrationCodeResponse {
 	id: string;
+	org_id: string;
 	code: string;
 	hostname?: string;
 	expires_at: string;

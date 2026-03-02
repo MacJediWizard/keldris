@@ -105,6 +105,7 @@ func (h *AgentRegistrationHandler) CreateCode(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, models.CreateRegistrationCodeResponse{
 		ID:        regCode.ID,
+		OrgID:     user.CurrentOrgID,
 		Code:      regCode.Code,
 		Hostname:  regCode.Hostname,
 		ExpiresAt: regCode.ExpiresAt,
