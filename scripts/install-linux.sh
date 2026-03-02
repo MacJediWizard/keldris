@@ -11,8 +11,6 @@ SERVICE_NAME="keldris-agent"
 BINARY_NAME="keldris-agent"
 GITHUB_REPO="MacJediWizard/keldris"
 DOWNLOAD_BASE_URL="${KELDRIS_DOWNLOAD_URL:-https://github.com/${GITHUB_REPO}/releases/latest/download}"
-DOWNLOAD_BASE_URL="${KELDRIS_DOWNLOAD_URL:-https://releases.keldris.io/agent}"
-VERSION="${KELDRIS_VERSION:-latest}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -74,7 +72,6 @@ detect_os() {
 download_binary() {
     local arch="$1"
     local download_url="${DOWNLOAD_BASE_URL}/keldris-agent-linux-${arch}"
-    local download_url="${DOWNLOAD_BASE_URL}/${VERSION}/keldris-agent-linux-${arch}"
     local tmp_file="/tmp/${BINARY_NAME}"
 
     log_info "Downloading Keldris Agent (${VERSION}, linux/${arch})..."
