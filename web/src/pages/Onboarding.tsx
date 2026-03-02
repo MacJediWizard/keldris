@@ -1,9 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { MultiRepoSelector } from '../components/features/MultiRepoSelector';
 import { VerticalStepper } from '../components/ui/Stepper';
 import { useCreateRegistrationCode } from '../hooks/useAgentRegistration';
 import { useAgents } from '../hooks/useAgents';
+import { useBackups } from '../hooks/useBackups';
 import {
 	useActivateLicense,
 	useLicense,
@@ -27,13 +29,19 @@ import {
 	useRepositories,
 	useTestConnection,
 } from '../hooks/useRepositories';
-import { useSchedules } from '../hooks/useSchedules';
+import {
+	useCreateSchedule,
+	useRunSchedule,
+	useSchedules,
+} from '../hooks/useSchedules';
 import { AGENT_DOWNLOADS } from '../lib/constants';
 import type {
 	BackendConfig,
+	Backup,
 	CreateRegistrationCodeResponse,
 	OnboardingStep,
 	RepositoryType,
+	ScheduleRepositoryRequest,
 	TestRepositoryResponse,
 } from '../lib/types';
 
@@ -2024,9 +2032,75 @@ function AgentStep({ onComplete, onSkip, isLoading }: StepProps) {
 	);
 }
 
-function ScheduleStep({ onComplete, isLoading }: StepProps) {
+const CRON_PRESETS = [
+	{ label: 'Daily 2 AM', value: '0 2 * * *' },
+	{ label: 'Every 6h', value: '0 */6 * * *' },
+	{ label: 'Weekly Sun', value: '0 3 * * 0' },
+];
+
+function ScheduleStep({ onComplete, onSkip, isLoading }: StepProps) {
 	const { data: schedules } = useSchedules();
+	const { data: agents } = useAgents();
+	const { data: repositories } = useRepositories();
+	const createSchedule = useCreateSchedule();
 	const hasSchedule = schedules && schedules.length > 0;
+
+	const [name, setName] = useState('Daily Backup');
+	const [agentId, setAgentId] = useState('');
+	const [selectedRepos, setSelectedRepos] = useState<
+		ScheduleRepositoryRequest[]
+	>([]);
+	const [cronExpression, setCronExpression] = useState('0 2 * * *');
+	const [paths, setPaths] = useState('/home');
+	const [showRetention, setShowRetention] = useState(false);
+	const [keepLast, setKeepLast] = useState(5);
+	const [keepDaily, setKeepDaily] = useState(7);
+	const [keepWeekly, setKeepWeekly] = useState(4);
+	const [keepMonthly, setKeepMonthly] = useState(6);
+	const [error, setError] = useState('');
+	const [created, setCreated] = useState(false);
+
+	// Auto-select first agent if only one
+	useEffect(() => {
+		if (!agentId && agents && agents.length === 1) {
+			setAgentId(agents[0].id);
+		}
+	}, [agents, agentId]);
+
+	const handleCreate = async () => {
+		setError('');
+		if (!name.trim() || !agentId || selectedRepos.length === 0) return;
+
+		const retentionPolicy = showRetention
+			? {
+					keep_last: keepLast > 0 ? keepLast : undefined,
+					keep_daily: keepDaily > 0 ? keepDaily : undefined,
+					keep_weekly: keepWeekly > 0 ? keepWeekly : undefined,
+					keep_monthly: keepMonthly > 0 ? keepMonthly : undefined,
+				}
+			: undefined;
+
+		try {
+			await createSchedule.mutateAsync({
+				name: name.trim(),
+				agent_id: agentId,
+				repositories: selectedRepos,
+				cron_expression: cronExpression,
+				paths: paths.split('\n').filter((p) => p.trim()),
+				retention_policy: retentionPolicy,
+				enabled: true,
+			});
+			setCreated(true);
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : 'Failed to create schedule',
+			);
+		}
+	};
+
+	const canSubmit =
+		name.trim() && agentId && selectedRepos.length > 0 && cronExpression.trim();
+	const showSuccess = hasSchedule || created;
 
 	return (
 		<div className="py-4">
@@ -2038,7 +2112,7 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 				protect your data.
 			</p>
 
-			{hasSchedule ? (
+			{showSuccess ? (
 				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
 					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
 						<svg
@@ -2056,34 +2130,226 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 						<span className="font-medium">Schedule created!</span>
 					</div>
 					<p className="mt-1 text-sm text-green-700 dark:text-green-400">
-						You have {schedules?.length} backup schedule(s) configured.
+						You have {schedules?.length || 1} backup schedule(s) configured.
 					</p>
 				</div>
 			) : (
-				<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
-					<p className="text-sm text-yellow-800 dark:text-yellow-300 mb-2">
-						Create a schedule to start automated backups.
-					</p>
-					<Link
-						to="/schedules"
-						className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-					>
-						<svg
-							aria-hidden="true"
-							className="w-4 h-4"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
+				<div className="space-y-4 mb-6">
+					{/* Name */}
+					<div>
+						<label
+							htmlFor="sched-name"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M12 4v16m8-8H4"
-							/>
-						</svg>
-						Create Schedule
-					</Link>
+							Name <span className="text-red-500">*</span>
+						</label>
+						<input
+							id="sched-name"
+							type="text"
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+							placeholder="Daily Backup"
+							className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+						/>
+					</div>
+
+					{/* Agent */}
+					<div>
+						<label
+							htmlFor="sched-agent"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							Agent <span className="text-red-500">*</span>
+						</label>
+						<select
+							id="sched-agent"
+							value={agentId}
+							onChange={(e) => setAgentId(e.target.value)}
+							className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+						>
+							<option value="">Select an agent...</option>
+							{agents?.map((a) => (
+								<option key={a.id} value={a.id}>
+									{a.hostname} ({a.status})
+								</option>
+							))}
+						</select>
+						{(!agents || agents.length === 0) && (
+							<p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+								No agents found. Go back and install an agent first.
+							</p>
+						)}
+					</div>
+
+					{/* Repository */}
+					{repositories && (
+						<MultiRepoSelector
+							repositories={repositories}
+							selectedRepos={selectedRepos}
+							onChange={setSelectedRepos}
+						/>
+					)}
+
+					{/* Cron Expression */}
+					<div>
+						<label
+							htmlFor="sched-cron"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							Schedule (Cron Expression) <span className="text-red-500">*</span>
+						</label>
+						<input
+							id="sched-cron"
+							type="text"
+							value={cronExpression}
+							onChange={(e) => setCronExpression(e.target.value)}
+							placeholder="0 2 * * *"
+							className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+						/>
+						<div className="flex gap-2 mt-2">
+							{CRON_PRESETS.map((p) => (
+								<button
+									key={p.value}
+									type="button"
+									onClick={() => setCronExpression(p.value)}
+									className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+										cronExpression === p.value
+											? 'bg-indigo-100 border-indigo-300 text-indigo-700 dark:bg-indigo-900/40 dark:border-indigo-600 dark:text-indigo-300'
+											: 'border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700'
+									}`}
+								>
+									{p.label}
+								</button>
+							))}
+						</div>
+					</div>
+
+					{/* Paths */}
+					<div>
+						<label
+							htmlFor="sched-paths"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							Paths to Backup (one per line)
+						</label>
+						<textarea
+							id="sched-paths"
+							value={paths}
+							onChange={(e) => setPaths(e.target.value)}
+							placeholder={'/home\n/etc\n/var/www'}
+							rows={3}
+							className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+						/>
+					</div>
+
+					{/* Retention */}
+					<div>
+						<div className="flex items-center justify-between mb-1">
+							<span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+								Retention Policy
+							</span>
+							<button
+								type="button"
+								onClick={() => setShowRetention(!showRetention)}
+								className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+							>
+								{showRetention ? 'Use defaults' : 'Customize'}
+							</button>
+						</div>
+						{!showRetention ? (
+							<p className="text-sm text-gray-500 dark:text-gray-400">
+								Using default policy: Keep last 5, 7 daily, 4 weekly, 6 monthly
+							</p>
+						) : (
+							<div className="grid grid-cols-2 gap-3">
+								<div>
+									<label
+										htmlFor="onb-keep-last"
+										className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+									>
+										Keep Last
+									</label>
+									<input
+										type="number"
+										id="onb-keep-last"
+										min="0"
+										value={keepLast}
+										onChange={(e) =>
+											setKeepLast(Number.parseInt(e.target.value, 10) || 0)
+										}
+										className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									/>
+								</div>
+								<div>
+									<label
+										htmlFor="onb-keep-daily"
+										className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+									>
+										Keep Daily
+									</label>
+									<input
+										type="number"
+										id="onb-keep-daily"
+										min="0"
+										value={keepDaily}
+										onChange={(e) =>
+											setKeepDaily(Number.parseInt(e.target.value, 10) || 0)
+										}
+										className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									/>
+								</div>
+								<div>
+									<label
+										htmlFor="onb-keep-weekly"
+										className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+									>
+										Keep Weekly
+									</label>
+									<input
+										type="number"
+										id="onb-keep-weekly"
+										min="0"
+										value={keepWeekly}
+										onChange={(e) =>
+											setKeepWeekly(Number.parseInt(e.target.value, 10) || 0)
+										}
+										className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									/>
+								</div>
+								<div>
+									<label
+										htmlFor="onb-keep-monthly"
+										className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
+									>
+										Keep Monthly
+									</label>
+									<input
+										type="number"
+										id="onb-keep-monthly"
+										min="0"
+										value={keepMonthly}
+										onChange={(e) =>
+											setKeepMonthly(Number.parseInt(e.target.value, 10) || 0)
+										}
+										className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									/>
+								</div>
+							</div>
+						)}
+					</div>
+
+					{error && (
+						<p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+					)}
+
+					<button
+						type="button"
+						onClick={handleCreate}
+						disabled={!canSubmit || createSchedule.isPending}
+						className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						{createSchedule.isPending ? 'Creating...' : 'Create Schedule'}
+					</button>
 				</div>
 			)}
 
@@ -2095,20 +2361,110 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 				>
 					Learn about backup schedules
 				</Link>
-				<button
-					type="button"
-					onClick={onComplete}
-					disabled={!hasSchedule || isLoading}
-					className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-				>
-					{isLoading ? 'Saving...' : 'Continue'}
-				</button>
+				<div className="flex gap-3">
+					{!showSuccess && (
+						<button
+							type="button"
+							onClick={onSkip}
+							className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+						>
+							Skip for now
+						</button>
+					)}
+					<button
+						type="button"
+						onClick={onComplete}
+						disabled={!showSuccess || isLoading}
+						className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+					>
+						{isLoading ? 'Saving...' : 'Continue'}
+					</button>
+				</div>
 			</div>
 		</div>
 	);
 }
 
-function VerifyStep({ onComplete, isLoading }: StepProps) {
+function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
+	const { data: schedules } = useSchedules();
+	const runSchedule = useRunSchedule();
+	const [triggeredScheduleIds, setTriggeredScheduleIds] = useState<Set<string>>(
+		new Set(),
+	);
+	const [polling, setPolling] = useState(false);
+
+	const { data: backups } = useBackups(polling ? undefined : undefined);
+
+	// Poll backups every 5s while there's a running backup
+	const { data: polledBackups } = useBackups();
+	const backupList = polledBackups || backups || [];
+
+	// Track backups that were triggered in this session
+	const triggeredBackups = backupList.filter((b: Backup) =>
+		triggeredScheduleIds.has(b.schedule_id),
+	);
+
+	const hasRunning = triggeredBackups.some(
+		(b: Backup) => b.status === 'running',
+	);
+	const hasCompleted = triggeredBackups.some(
+		(b: Backup) => b.status === 'completed',
+	);
+
+	// Auto-poll while there's a running backup
+	useEffect(() => {
+		if (!hasRunning || !polling) return;
+		const interval = setInterval(() => {
+			// React Query will refetch via staleTime
+		}, 5000);
+		return () => clearInterval(interval);
+	}, [hasRunning, polling]);
+
+	// Enable polling with shorter stale time when triggered
+	const queryClient = useQueryClient();
+	useEffect(() => {
+		if (!polling) return;
+		const interval = setInterval(() => {
+			queryClient.invalidateQueries({ queryKey: ['backups'] });
+		}, 5000);
+		return () => clearInterval(interval);
+	}, [polling, queryClient]);
+
+	// Stop polling once no more running backups
+	useEffect(() => {
+		if (polling && triggeredScheduleIds.size > 0 && !hasRunning) {
+			setPolling(false);
+		}
+	}, [polling, triggeredScheduleIds.size, hasRunning]);
+
+	const handleRunNow = async (scheduleId: string) => {
+		try {
+			await runSchedule.mutateAsync(scheduleId);
+			setTriggeredScheduleIds((prev) => new Set(prev).add(scheduleId));
+			setPolling(true);
+		} catch {
+			// Error handled by mutation
+		}
+	};
+
+	const getBackupStatusForSchedule = (scheduleId: string) => {
+		const schedBackups = triggeredBackups
+			.filter((b: Backup) => b.schedule_id === scheduleId)
+			.sort(
+				(a: Backup, b: Backup) =>
+					new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+			);
+		return schedBackups[0] || null;
+	};
+
+	const formatBytes = (bytes: number) => {
+		if (bytes === 0) return '0 B';
+		const k = 1024;
+		const sizes = ['B', 'KB', 'MB', 'GB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
+	};
+
 	return (
 		<div className="py-4">
 			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -2118,32 +2474,153 @@ function VerifyStep({ onComplete, isLoading }: StepProps) {
 				Run a test backup to make sure everything is configured correctly.
 			</p>
 
-			<div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-				<h3 className="font-medium text-blue-900 dark:text-blue-300 mb-2">
-					To verify your backup:
-				</h3>
-				<ol className="text-sm text-blue-700 dark:text-blue-400 space-y-2 list-decimal list-inside">
-					<li>Go to the Schedules page</li>
-					<li>Click "Run Now" on your schedule to trigger a manual backup</li>
-					<li>Check the Backups page to see the backup status</li>
-					<li>Once successful, return here and click "Complete Setup"</li>
-				</ol>
-			</div>
+			{!schedules || schedules.length === 0 ? (
+				<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+					<p className="text-sm text-yellow-800 dark:text-yellow-300">
+						No schedules found. Go back and create a schedule first, or skip
+						this step.
+					</p>
+				</div>
+			) : (
+				<div className="space-y-3 mb-6">
+					{schedules.map((schedule) => {
+						const latestBackup = getBackupStatusForSchedule(schedule.id);
+						const isRunning = latestBackup?.status === 'running';
+						const isTriggered = triggeredScheduleIds.has(schedule.id);
 
-			<div className="flex gap-3 mb-6">
-				<Link
-					to="/schedules"
-					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-400 dark:hover:bg-indigo-900/30"
-				>
-					Go to Schedules
-				</Link>
-				<Link
-					to="/backups"
-					className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
-				>
-					View Backups
-				</Link>
-			</div>
+						return (
+							<div
+								key={schedule.id}
+								className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+							>
+								<div className="flex items-center justify-between mb-2">
+									<div>
+										<span className="font-medium text-gray-900 dark:text-gray-100">
+											{schedule.name}
+										</span>
+										<span className="ml-2 text-xs text-gray-500 dark:text-gray-400 font-mono">
+											{schedule.cron_expression}
+										</span>
+									</div>
+									<button
+										type="button"
+										onClick={() => handleRunNow(schedule.id)}
+										disabled={isRunning || runSchedule.isPending}
+										className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{isRunning ? 'Running...' : 'Run Now'}
+									</button>
+								</div>
+
+								{/* Backup status */}
+								{isTriggered && latestBackup && (
+									<div className="mt-2">
+										{latestBackup.status === 'running' && (
+											<div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+												<svg
+													aria-hidden="true"
+													className="w-4 h-4 animate-spin"
+													fill="none"
+													viewBox="0 0 24 24"
+												>
+													<circle
+														className="opacity-25"
+														cx="12"
+														cy="12"
+														r="10"
+														stroke="currentColor"
+														strokeWidth="4"
+													/>
+													<path
+														className="opacity-75"
+														fill="currentColor"
+														d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+													/>
+												</svg>
+												<span className="text-sm">Backup in progress...</span>
+											</div>
+										)}
+										{latestBackup.status === 'completed' && (
+											<div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+												<svg
+													aria-hidden="true"
+													className="w-4 h-4"
+													fill="currentColor"
+													viewBox="0 0 20 20"
+												>
+													<path
+														fillRule="evenodd"
+														d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+														clipRule="evenodd"
+													/>
+												</svg>
+												<span className="text-sm">
+													Backup completed successfully!
+													{latestBackup.size_bytes != null && (
+														<> ({formatBytes(latestBackup.size_bytes)})</>
+													)}
+													{latestBackup.files_new != null && (
+														<> &middot; {latestBackup.files_new} new files</>
+													)}
+												</span>
+											</div>
+										)}
+										{latestBackup.status === 'failed' && (
+											<div>
+												<div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+													<svg
+														aria-hidden="true"
+														className="w-4 h-4"
+														fill="currentColor"
+														viewBox="0 0 20 20"
+													>
+														<path
+															fillRule="evenodd"
+															d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+															clipRule="evenodd"
+														/>
+													</svg>
+													<span className="text-sm">Backup failed</span>
+												</div>
+												{latestBackup.error_message && (
+													<p className="mt-1 text-xs text-red-600 dark:text-red-400 ml-6">
+														{latestBackup.error_message}
+													</p>
+												)}
+												<button
+													type="button"
+													onClick={() => handleRunNow(schedule.id)}
+													disabled={runSchedule.isPending}
+													className="mt-2 ml-6 text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+												>
+													Try Again
+												</button>
+											</div>
+										)}
+										{latestBackup.status === 'canceled' && (
+											<div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400">
+												<svg
+													aria-hidden="true"
+													className="w-4 h-4"
+													fill="currentColor"
+													viewBox="0 0 20 20"
+												>
+													<path
+														fillRule="evenodd"
+														d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+														clipRule="evenodd"
+													/>
+												</svg>
+												<span className="text-sm">Backup was canceled</span>
+											</div>
+										)}
+									</div>
+								)}
+							</div>
+						);
+					})}
+				</div>
+			)}
 
 			<div className="flex justify-between items-center">
 				<Link
@@ -2153,14 +2630,23 @@ function VerifyStep({ onComplete, isLoading }: StepProps) {
 				>
 					Learn about backup verification
 				</Link>
-				<button
-					type="button"
-					onClick={onComplete}
-					disabled={isLoading}
-					className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-				>
-					{isLoading ? 'Completing...' : 'Complete Setup'}
-				</button>
+				<div className="flex gap-3">
+					<button
+						type="button"
+						onClick={onSkip}
+						className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+					>
+						Skip for now
+					</button>
+					<button
+						type="button"
+						onClick={onComplete}
+						disabled={(!hasCompleted && !isLoading) || isLoading}
+						className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+					>
+						{isLoading ? 'Completing...' : 'Complete Setup'}
+					</button>
+				</div>
 			</div>
 		</div>
 	);
@@ -2387,6 +2873,7 @@ export function Onboarding() {
 				return (
 					<ScheduleStep
 						onComplete={() => handleCompleteStep('schedule')}
+						onSkip={() => handleCompleteStep('schedule')}
 						isLoading={isLoading}
 					/>
 				);
@@ -2394,6 +2881,7 @@ export function Onboarding() {
 				return (
 					<VerifyStep
 						onComplete={() => handleCompleteStep('verify')}
+						onSkip={() => handleCompleteStep('verify')}
 						isLoading={isLoading}
 					/>
 				);
