@@ -745,3 +745,67 @@ Prior sessions added routes and tests but only partially committed the changes �
 - All Go tests pass
 - Frontend builds clean
 - Docker build succeeds (license-server)
+
+---
+
+## 2026-03-01 - Onboarding SMTP Step, Dark Mode Fixes, Docs Links, License Auto-Advance
+
+### Overview
+Four improvements to the onboarding wizard and UI polish for dark mode.
+
+### Changes
+
+#### 1. SMTP Onboarding Step — Full Inline Form
+The SMTP step was a stub that linked to `/notifications` (blocked by onboarding redirect guard) with broken "Learn more" links. Rebuilt it as a full inline form matching the OIDCStep pattern.
+
+**Backend (`internal/api/handlers/onboarding.go`):**
+- Added `SMTPOnboardingRequest` struct (host, port, username, password, from_email, from_name, encryption)
+- Added `completeSMTPStep` handler — saves SMTP settings to DB + marks step complete
+- Added `TestSMTP` handler — does real TCP dial (`net.DialTimeout`) to verify SMTP server reachability
+- Registered `POST /api/v1/onboarding/test-smtp` route
+- Extended `OnboardingStore` interface with `GetSMTPSettings` / `UpdateSMTPSettings`
+- Used `net.JoinHostPort` for IPv6-safe address formatting (caught by `go vet`)
+
+**Frontend (`web/src/pages/Onboarding.tsx`):**
+- Rebuilt `SMTPStep` with form fields: host, port, username, password, from email, from name, encryption dropdown
+- Added "Test Connection" button (calls `/test-smtp`)
+- Added "Skip" button (marks step complete without saving settings)
+- Added "Save & Continue" button (saves settings + advances)
+
+**Hooks & API:**
+- Added `useCompleteSMTPStep` and `useTestOnboardingSMTP` hooks (`web/src/hooks/useOnboarding.ts`)
+- Added `testSMTP` to `onboardingApi` (`web/src/lib/api.ts`)
+- Added `SMTPOnboardingRequest` type (`web/src/lib/types.ts`)
+
+**Tests (`internal/api/handlers/onboarding_test.go`):**
+- Added `GetSMTPSettings` / `UpdateSMTPSettings` mock methods
+
+#### 2. Dark Mode Fixes — LanguageSelector & RecentItems
+Both components had white backgrounds in dark mode. Added `dark:` Tailwind variants throughout:
+- `web/src/components/features/LanguageSelector.tsx` — button, dropdown, header, menu items (selected/unselected/hover states)
+- `web/src/components/features/RecentItems.tsx` — clock button, dropdown panel, header, clear button, empty state, dividers, group labels, item rows, icons, text, timestamps, delete buttons
+
+#### 3. DOCS_LINKS Fix
+`DOCS_LINKS` in `Onboarding.tsx` pointed to relative paths (`/docs/getting-started`) with no matching routes. Changed to GitHub blob URLs using a `DOCS_BASE` constant:
+```
+https://github.com/MacJediWizard/keldris/blob/main/docs/{file}.md
+```
+
+#### 4. License Step Auto-Advance
+User reported having to manually click Continue after license activation. Added `onComplete()` calls immediately after successful `activateMutation.mutateAsync()` and `startTrialMutation.mutateAsync()` so the wizard auto-advances.
+
+### Commits
+- `911ff0c` — Improve onboarding wizard and fix dark mode issues
+- `d5cdf0e` — Fix Biome formatting in SMTPStep component
+- `a85e88a` — Fix Biome formatting in RecentItems and import ordering in api.ts
+
+### CI Issues & Fixes
+- **Run 1**: Biome caught 3 formatting errors in Onboarding.tsx (ternary formatting, text wrapping)
+- **Run 2**: Biome caught 2 more — RecentItems.tsx `<span>` formatting, api.ts import ordering (`SMTPOnboardingRequest` wasn't alphabetical)
+- **Run 3**: All green (Go tests, Frontend/Biome, Docker build)
+
+### Result
+- All CI checks pass
+- Go build + tests clean
+- TypeScript strict mode clean
+- Biome formatting clean
