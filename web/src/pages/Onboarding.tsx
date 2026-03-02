@@ -22,9 +22,18 @@ import {
 	useOrganizations,
 	useUpdateOrganization,
 } from '../hooks/useOrganizations';
-import { useRepositories } from '../hooks/useRepositories';
+import {
+	useCreateRepository,
+	useRepositories,
+	useTestConnection,
+} from '../hooks/useRepositories';
 import { useSchedules } from '../hooks/useSchedules';
-import type { OnboardingStep } from '../lib/types';
+import type {
+	BackendConfig,
+	OnboardingStep,
+	RepositoryType,
+	TestRepositoryResponse,
+} from '../lib/types';
 
 const ONBOARDING_STEPS = [
 	{
@@ -1019,21 +1028,310 @@ function SMTPStep({ onSkip, isLoading }: StepProps) {
 	);
 }
 
-function RepositoryStep({ onComplete, isLoading }: StepProps) {
+interface RepoFieldProps {
+	label: string;
+	id: string;
+	value: string;
+	onChange: (v: string) => void;
+	placeholder?: string;
+	required?: boolean;
+	type?: 'text' | 'password' | 'number';
+	helpText?: string;
+}
+
+function RepoField({
+	label,
+	id,
+	value,
+	onChange,
+	placeholder,
+	required,
+	type = 'text',
+	helpText,
+}: RepoFieldProps) {
+	return (
+		<div>
+			<label
+				htmlFor={id}
+				className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+			>
+				{label}
+				{required && <span className="text-red-500 ml-1">*</span>}
+			</label>
+			<input
+				id={id}
+				type={type}
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				placeholder={placeholder}
+				className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+			/>
+			{helpText && (
+				<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+					{helpText}
+				</p>
+			)}
+		</div>
+	);
+}
+
+function RepositoryStep({ onComplete, onSkip, isLoading }: StepProps) {
 	const { data: repositories } = useRepositories();
+	const createRepository = useCreateRepository();
+	const testConnection = useTestConnection();
 	const hasRepository = repositories && repositories.length > 0;
 
-	return (
-		<div className="py-4">
-			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-				Create a Backup Repository
-			</h2>
-			<p className="text-gray-600 dark:text-gray-400 mb-6">
-				Repositories are where your backups are stored. Create one using local
-				storage, S3, or other supported backends.
-			</p>
+	const [name, setName] = useState('');
+	const [type, setType] = useState<RepositoryType>('local');
+	const [escrowEnabled, setEscrowEnabled] = useState(false);
+	const [error, setError] = useState('');
 
-			{hasRepository ? (
+	// Created result
+	const [createdPassword, setCreatedPassword] = useState('');
+	const [createdRepoName, setCreatedRepoName] = useState('');
+	const [copied, setCopied] = useState(false);
+
+	// Local
+	const [localPath, setLocalPath] = useState('');
+
+	// S3
+	const [s3Bucket, setS3Bucket] = useState('');
+	const [s3AccessKey, setS3AccessKey] = useState('');
+	const [s3SecretKey, setS3SecretKey] = useState('');
+	const [s3Region, setS3Region] = useState('');
+	const [s3Endpoint, setS3Endpoint] = useState('');
+	const [s3Prefix, setS3Prefix] = useState('');
+	const [s3UseSsl, setS3UseSsl] = useState(true);
+
+	// B2
+	const [b2Bucket, setB2Bucket] = useState('');
+	const [b2AccountId, setB2AccountId] = useState('');
+	const [b2AppKey, setB2AppKey] = useState('');
+	const [b2Prefix, setB2Prefix] = useState('');
+
+	// SFTP
+	const [sftpHost, setSftpHost] = useState('');
+	const [sftpPort, setSftpPort] = useState('22');
+	const [sftpUser, setSftpUser] = useState('');
+	const [sftpPath, setSftpPath] = useState('');
+	const [sftpPassword, setSftpPassword] = useState('');
+	const [sftpPrivateKey, setSftpPrivateKey] = useState('');
+
+	// REST
+	const [restUrl, setRestUrl] = useState('');
+	const [restUsername, setRestUsername] = useState('');
+	const [restPassword, setRestPassword] = useState('');
+
+	// Dropbox
+	const [dropboxRemoteName, setDropboxRemoteName] = useState('');
+	const [dropboxPath, setDropboxPath] = useState('');
+	const [dropboxToken, setDropboxToken] = useState('');
+	const [dropboxAppKey, setDropboxAppKey] = useState('');
+	const [dropboxAppSecret, setDropboxAppSecret] = useState('');
+
+	// Test connection
+	const [testResult, setTestResult] = useState<TestRepositoryResponse | null>(
+		null,
+	);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: intentionally reset when type changes
+	useEffect(() => {
+		setTestResult(null);
+	}, [type]);
+
+	const buildConfig = (): BackendConfig => {
+		switch (type) {
+			case 'local':
+				return { path: localPath };
+			case 's3':
+				return {
+					endpoint: s3Endpoint || undefined,
+					bucket: s3Bucket,
+					prefix: s3Prefix || undefined,
+					region: s3Region || undefined,
+					access_key_id: s3AccessKey,
+					secret_access_key: s3SecretKey,
+					use_ssl: s3UseSsl,
+				};
+			case 'b2':
+				return {
+					bucket: b2Bucket,
+					prefix: b2Prefix || undefined,
+					account_id: b2AccountId,
+					application_key: b2AppKey,
+				};
+			case 'sftp':
+				return {
+					host: sftpHost,
+					port: sftpPort ? Number.parseInt(sftpPort, 10) : undefined,
+					user: sftpUser,
+					path: sftpPath,
+					password: sftpPassword || undefined,
+					private_key: sftpPrivateKey || undefined,
+				};
+			case 'rest':
+				return {
+					url: restUrl,
+					username: restUsername || undefined,
+					password: restPassword || undefined,
+				};
+			case 'dropbox':
+				return {
+					remote_name: dropboxRemoteName,
+					path: dropboxPath || undefined,
+					token: dropboxToken || undefined,
+					app_key: dropboxAppKey || undefined,
+					app_secret: dropboxAppSecret || undefined,
+				};
+			default:
+				return { path: localPath };
+		}
+	};
+
+	const canCreate = (() => {
+		if (!name.trim()) return false;
+		switch (type) {
+			case 'local':
+				return !!localPath.trim();
+			case 's3':
+				return (
+					!!s3Bucket.trim() && !!s3AccessKey.trim() && !!s3SecretKey.trim()
+				);
+			case 'b2':
+				return !!b2Bucket.trim() && !!b2AccountId.trim() && !!b2AppKey.trim();
+			case 'sftp':
+				return !!sftpHost.trim() && !!sftpUser.trim() && !!sftpPath.trim();
+			case 'rest':
+				return !!restUrl.trim();
+			case 'dropbox':
+				return !!dropboxRemoteName.trim();
+			default:
+				return false;
+		}
+	})();
+
+	const handleTestConnection = async () => {
+		setTestResult(null);
+		setError('');
+		try {
+			const result = await testConnection.mutateAsync({
+				type,
+				config: buildConfig(),
+			});
+			setTestResult(result);
+		} catch {
+			setTestResult({
+				success: false,
+				message: 'Failed to test connection',
+			});
+		}
+	};
+
+	const handleCreate = async () => {
+		setError('');
+		try {
+			const response = await createRepository.mutateAsync({
+				name,
+				type,
+				config: buildConfig(),
+				escrow_enabled: escrowEnabled,
+			});
+			setCreatedPassword(response.password);
+			setCreatedRepoName(response.repository.name);
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : 'Failed to create repository',
+			);
+		}
+	};
+
+	const handleCopy = async () => {
+		await navigator.clipboard.writeText(createdPassword);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	};
+
+	// After creation: show password + continue
+	if (createdPassword) {
+		return (
+			<div className="py-4">
+				<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+					Repository Created
+				</h2>
+
+				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
+					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
+						<svg
+							aria-hidden="true"
+							className="w-5 h-5"
+							fill="currentColor"
+							viewBox="0 0 20 20"
+						>
+							<path
+								fillRule="evenodd"
+								d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+								clipRule="evenodd"
+							/>
+						</svg>
+						<span className="font-medium">
+							Repository &ldquo;{createdRepoName}&rdquo; created successfully!
+						</span>
+					</div>
+				</div>
+
+				<div className="mb-4">
+					<p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+						Repository Password
+					</p>
+					<div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+						<div className="flex items-center justify-between gap-4">
+							<code className="text-sm font-mono break-all flex-1">
+								{createdPassword}
+							</code>
+							<button
+								type="button"
+								onClick={handleCopy}
+								className="flex-shrink-0 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+							>
+								{copied ? 'Copied!' : 'Copy'}
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
+					<p className="text-sm text-amber-800 dark:text-amber-300">
+						<strong>Important:</strong> This password is required to decrypt
+						your backups. Store it securely — without it, your backup data
+						cannot be recovered.
+					</p>
+				</div>
+
+				<div className="flex justify-end">
+					<button
+						type="button"
+						onClick={onComplete}
+						disabled={isLoading}
+						className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+					>
+						{isLoading ? 'Saving...' : 'Continue'}
+					</button>
+				</div>
+			</div>
+		);
+	}
+
+	// Already have a repository: show success + continue
+	if (hasRepository) {
+		return (
+			<div className="py-4">
+				<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+					Create a Backup Repository
+				</h2>
+				<p className="text-gray-600 dark:text-gray-400 mb-6">
+					Repositories are where your backups are stored.
+				</p>
+
 				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
 					<div className="flex items-center gap-2 text-green-800 dark:text-green-300">
 						<svg
@@ -1054,31 +1352,414 @@ function RepositoryStep({ onComplete, isLoading }: StepProps) {
 						You have {repositories.length} repository(s) set up.
 					</p>
 				</div>
-			) : (
-				<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
-					<p className="text-sm text-yellow-800 dark:text-yellow-300 mb-2">
-						You need to create a repository to store your backups.
-					</p>
+
+				<div className="flex justify-between items-center">
 					<Link
-						to="/repositories"
-						className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+						to={DOCS_LINKS.repository}
+						target="_blank"
+						className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 					>
-						<svg
-							aria-hidden="true"
-							className="w-4 h-4"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M12 4v16m8-8H4"
-							/>
-						</svg>
-						Create Repository
+						Learn about repository types
 					</Link>
+					<button
+						type="button"
+						onClick={onComplete}
+						disabled={isLoading}
+						className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+					>
+						{isLoading ? 'Saving...' : 'Continue'}
+					</button>
+				</div>
+			</div>
+		);
+	}
+
+	// Inline creation form
+	const renderBackendFields = () => {
+		switch (type) {
+			case 'local':
+				return (
+					<RepoField
+						label="Path"
+						id="ob-local-path"
+						value={localPath}
+						onChange={setLocalPath}
+						placeholder="/var/backups/restic"
+						required
+						helpText="Absolute path to the backup directory"
+					/>
+				);
+			case 's3':
+				return (
+					<>
+						<RepoField
+							label="Bucket"
+							id="ob-s3-bucket"
+							value={s3Bucket}
+							onChange={setS3Bucket}
+							placeholder="my-backup-bucket"
+							required
+						/>
+						<RepoField
+							label="Access Key ID"
+							id="ob-s3-access-key"
+							value={s3AccessKey}
+							onChange={setS3AccessKey}
+							placeholder="AKIAIOSFODNN7EXAMPLE"
+							required
+						/>
+						<RepoField
+							label="Secret Access Key"
+							id="ob-s3-secret-key"
+							value={s3SecretKey}
+							onChange={setS3SecretKey}
+							type="password"
+							required
+						/>
+						<RepoField
+							label="Region"
+							id="ob-s3-region"
+							value={s3Region}
+							onChange={setS3Region}
+							placeholder="us-east-1"
+							helpText="Required for AWS S3"
+						/>
+						<RepoField
+							label="Endpoint"
+							id="ob-s3-endpoint"
+							value={s3Endpoint}
+							onChange={setS3Endpoint}
+							placeholder="minio.example.com:9000"
+							helpText="For MinIO, Wasabi, or other S3-compatible services"
+						/>
+						<RepoField
+							label="Prefix"
+							id="ob-s3-prefix"
+							value={s3Prefix}
+							onChange={setS3Prefix}
+							placeholder="backups/server1"
+							helpText="Optional path prefix within the bucket"
+						/>
+						<div className="flex items-center gap-2">
+							<input
+								type="checkbox"
+								id="ob-s3-use-ssl"
+								checked={s3UseSsl}
+								onChange={(e) => setS3UseSsl(e.target.checked)}
+								className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+							/>
+							<label
+								htmlFor="ob-s3-use-ssl"
+								className="text-sm text-gray-700 dark:text-gray-300"
+							>
+								Use SSL/TLS
+							</label>
+						</div>
+					</>
+				);
+			case 'b2':
+				return (
+					<>
+						<RepoField
+							label="Bucket"
+							id="ob-b2-bucket"
+							value={b2Bucket}
+							onChange={setB2Bucket}
+							placeholder="my-backup-bucket"
+							required
+						/>
+						<RepoField
+							label="Account ID"
+							id="ob-b2-account-id"
+							value={b2AccountId}
+							onChange={setB2AccountId}
+							placeholder="0012345678abcdef"
+							required
+						/>
+						<RepoField
+							label="Application Key"
+							id="ob-b2-app-key"
+							value={b2AppKey}
+							onChange={setB2AppKey}
+							type="password"
+							required
+						/>
+						<RepoField
+							label="Prefix"
+							id="ob-b2-prefix"
+							value={b2Prefix}
+							onChange={setB2Prefix}
+							placeholder="backups/server1"
+							helpText="Optional path prefix within the bucket"
+						/>
+					</>
+				);
+			case 'sftp':
+				return (
+					<>
+						<div className="grid grid-cols-3 gap-3">
+							<div className="col-span-2">
+								<RepoField
+									label="Host"
+									id="ob-sftp-host"
+									value={sftpHost}
+									onChange={setSftpHost}
+									placeholder="backup.example.com"
+									required
+								/>
+							</div>
+							<RepoField
+								label="Port"
+								id="ob-sftp-port"
+								value={sftpPort}
+								onChange={setSftpPort}
+								placeholder="22"
+								type="number"
+							/>
+						</div>
+						<RepoField
+							label="Username"
+							id="ob-sftp-user"
+							value={sftpUser}
+							onChange={setSftpUser}
+							placeholder="backup"
+							required
+						/>
+						<RepoField
+							label="Remote Path"
+							id="ob-sftp-path"
+							value={sftpPath}
+							onChange={setSftpPath}
+							placeholder="/var/backups/restic"
+							required
+							helpText="Absolute path on the remote server"
+						/>
+						<RepoField
+							label="Password"
+							id="ob-sftp-password"
+							value={sftpPassword}
+							onChange={setSftpPassword}
+							type="password"
+							helpText="Password or private key required"
+						/>
+						<div>
+							<label
+								htmlFor="ob-sftp-private-key"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+							>
+								Private Key
+							</label>
+							<textarea
+								id="ob-sftp-private-key"
+								value={sftpPrivateKey}
+								onChange={(e) => setSftpPrivateKey(e.target.value)}
+								placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+								className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+								rows={4}
+							/>
+							<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+								Paste your SSH private key (PEM format)
+							</p>
+						</div>
+					</>
+				);
+			case 'rest':
+				return (
+					<>
+						<RepoField
+							label="URL"
+							id="ob-rest-url"
+							value={restUrl}
+							onChange={setRestUrl}
+							placeholder="https://backup.example.com:8000"
+							required
+							helpText="URL of the Restic REST server"
+						/>
+						<RepoField
+							label="Username"
+							id="ob-rest-username"
+							value={restUsername}
+							onChange={setRestUsername}
+							placeholder="backup"
+							helpText="Optional authentication"
+						/>
+						<RepoField
+							label="Password"
+							id="ob-rest-password"
+							value={restPassword}
+							onChange={setRestPassword}
+							type="password"
+						/>
+					</>
+				);
+			case 'dropbox':
+				return (
+					<>
+						<RepoField
+							label="Remote Name"
+							id="ob-dropbox-remote-name"
+							value={dropboxRemoteName}
+							onChange={setDropboxRemoteName}
+							placeholder="dropbox"
+							required
+							helpText="Name for the rclone remote configuration"
+						/>
+						<RepoField
+							label="Path"
+							id="ob-dropbox-path"
+							value={dropboxPath}
+							onChange={setDropboxPath}
+							placeholder="/Backups/server1"
+							helpText="Path within your Dropbox"
+						/>
+						<RepoField
+							label="Token"
+							id="ob-dropbox-token"
+							value={dropboxToken}
+							onChange={setDropboxToken}
+							type="password"
+							helpText="OAuth token from rclone config (optional if rclone is pre-configured)"
+						/>
+						<RepoField
+							label="App Key"
+							id="ob-dropbox-app-key"
+							value={dropboxAppKey}
+							onChange={setDropboxAppKey}
+							helpText="Your Dropbox App Key (optional)"
+						/>
+						<RepoField
+							label="App Secret"
+							id="ob-dropbox-app-secret"
+							value={dropboxAppSecret}
+							onChange={setDropboxAppSecret}
+							type="password"
+							helpText="Your Dropbox App Secret (optional)"
+						/>
+						<p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+							Dropbox backend requires rclone to be installed on the agent. You
+							can either pre-configure rclone with `rclone config` or provide
+							the OAuth token here.
+						</p>
+					</>
+				);
+			default:
+				return null;
+		}
+	};
+
+	return (
+		<div className="py-4">
+			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+				Create a Backup Repository
+			</h2>
+			<p className="text-gray-600 dark:text-gray-400 mb-6">
+				Repositories are where your backups are stored. Configure your first
+				repository using local storage, S3, or another supported backend.
+			</p>
+
+			<div className="space-y-4 mb-6">
+				<RepoField
+					label="Name"
+					id="ob-repo-name"
+					value={name}
+					onChange={setName}
+					placeholder="e.g., primary-backup"
+					required
+				/>
+
+				<div>
+					<label
+						htmlFor="ob-repo-type"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Type
+					</label>
+					<select
+						id="ob-repo-type"
+						value={type}
+						onChange={(e) => setType(e.target.value as RepositoryType)}
+						className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+					>
+						<option value="local">Local Filesystem</option>
+						<option value="s3">Amazon S3 / MinIO / Wasabi</option>
+						<option value="b2">Backblaze B2</option>
+						<option value="sftp">SFTP</option>
+						<option value="rest">Restic REST Server</option>
+						<option value="dropbox">Dropbox (via rclone)</option>
+					</select>
+				</div>
+
+				<hr className="border-gray-200 dark:border-gray-700" />
+
+				{renderBackendFields()}
+
+				<div className="flex items-start gap-3 pt-2">
+					<input
+						type="checkbox"
+						id="ob-escrow-enabled"
+						checked={escrowEnabled}
+						onChange={(e) => setEscrowEnabled(e.target.checked)}
+						className="mt-1 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+					/>
+					<div>
+						<label
+							htmlFor="ob-escrow-enabled"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+						>
+							Enable key escrow
+						</label>
+						<p className="text-xs text-gray-500 dark:text-gray-400">
+							Store an encrypted copy of the password server-side for recovery
+							by administrators
+						</p>
+					</div>
+				</div>
+			</div>
+
+			{testResult && (
+				<div
+					className={`mb-4 p-3 rounded-lg text-sm ${
+						testResult.success
+							? 'bg-green-50 text-green-800 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800'
+							: 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
+					}`}
+				>
+					<div className="flex items-center gap-2">
+						{testResult.success ? (
+							<svg
+								aria-hidden="true"
+								className="w-5 h-5"
+								fill="currentColor"
+								viewBox="0 0 20 20"
+							>
+								<path
+									fillRule="evenodd"
+									d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+									clipRule="evenodd"
+								/>
+							</svg>
+						) : (
+							<svg
+								aria-hidden="true"
+								className="w-5 h-5"
+								fill="currentColor"
+								viewBox="0 0 20 20"
+							>
+								<path
+									fillRule="evenodd"
+									d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+									clipRule="evenodd"
+								/>
+							</svg>
+						)}
+						<span>{testResult.message}</span>
+					</div>
+				</div>
+			)}
+
+			{error && (
+				<div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
+					<p className="text-sm text-red-600 dark:text-red-400">{error}</p>
 				</div>
 			)}
 
@@ -1090,14 +1771,31 @@ function RepositoryStep({ onComplete, isLoading }: StepProps) {
 				>
 					Learn about repository types
 				</Link>
-				<button
-					type="button"
-					onClick={onComplete}
-					disabled={!hasRepository || isLoading}
-					className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-				>
-					{isLoading ? 'Saving...' : 'Continue'}
-				</button>
+				<div className="flex gap-3">
+					<button
+						type="button"
+						onClick={onSkip}
+						className="px-4 py-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+					>
+						Skip for now
+					</button>
+					<button
+						type="button"
+						onClick={handleTestConnection}
+						disabled={!canCreate || testConnection.isPending}
+						className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+					>
+						{testConnection.isPending ? 'Testing...' : 'Test Connection'}
+					</button>
+					<button
+						type="button"
+						onClick={handleCreate}
+						disabled={!canCreate || createRepository.isPending}
+						className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+					>
+						{createRepository.isPending ? 'Creating...' : 'Create Repository'}
+					</button>
+				</div>
 			</div>
 		</div>
 	);
@@ -1513,6 +2211,7 @@ export function Onboarding() {
 				return (
 					<RepositoryStep
 						onComplete={() => handleCompleteStep('repository')}
+						onSkip={() => handleCompleteStep('repository')}
 						isLoading={isLoading}
 					/>
 				);
