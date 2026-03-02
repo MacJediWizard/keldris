@@ -841,3 +841,46 @@ All API endpoints (`POST /api/v1/repositories`, `POST /api/v1/repositories/test-
 ### Result
 - `npx tsc --noEmit`: clean
 - `npx biome check`: clean
+
+---
+
+## 2026-03-02 - Inline Schedule & Verify Steps in Onboarding Wizard
+
+### What
+The onboarding ScheduleStep linked to `/schedules` and the VerifyStep told users to manually navigate to Schedules and Backups pages. Both now work entirely inline within the wizard.
+
+### Changes
+
+**`web/src/pages/Onboarding.tsx`:**
+
+**ScheduleStep** — replaced link stub with inline creation form:
+- Name field (default: "Daily Backup")
+- Agent dropdown (auto-selects if only one agent exists)
+- Repository multi-selector using `MultiRepoSelector` component
+- Cron expression input with preset buttons (Daily 2AM, Every 6h, Weekly Sun)
+- Paths textarea (default: `/home`)
+- Retention policy with "Customize" toggle (defaults: 5 last, 7 daily, 4 weekly, 6 monthly)
+- Green success banner when schedules already exist or after creation
+- "Skip for now" always available
+
+**VerifyStep** — replaced manual instructions with inline run & monitor:
+- Lists all existing schedules with "Run Now" button on each
+- Polls backups every 5s after triggering via `queryClient.invalidateQueries`
+- Live status display per schedule: running (spinner), completed (green + size/files), failed (red + error + Try Again), canceled (yellow)
+- "Complete Setup" enabled only after at least one backup completes
+- "Skip for now" always available
+
+**Parent switch/case** — updated `case 'schedule'` and `case 'verify'` to pass `onSkip={() => handleCompleteStep(...)}`.
+
+**Imports added:**
+- `useCreateSchedule`, `useRunSchedule` from `useSchedules`
+- `useBackups` from `useBackups`
+- `MultiRepoSelector` from `MultiRepoSelector`
+- `Backup`, `ScheduleRepositoryRequest` types
+
+### No backend changes
+All API endpoints (`POST /api/v1/schedules`, `POST /api/v1/schedules/:id/run`, `GET /api/v1/backups`) already existed.
+
+### Result
+- `npx tsc --noEmit`: clean
+- `npx biome check`: clean
