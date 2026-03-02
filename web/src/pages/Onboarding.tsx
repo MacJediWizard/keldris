@@ -815,9 +815,7 @@ function SMTPStep({ onSkip, isLoading }: StepProps) {
 			}
 		} catch (err) {
 			setSmtpError(
-				err instanceof Error
-					? err.message
-					: 'Failed to test SMTP connection',
+				err instanceof Error ? err.message : 'Failed to test SMTP connection',
 			);
 		}
 	};
@@ -841,8 +839,8 @@ function SMTPStep({ onSkip, isLoading }: StepProps) {
 				Configure Email Notifications
 			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
-				Set up SMTP to receive email notifications about your backups. This
-				step is optional and can be configured later.
+				Set up SMTP to receive email notifications about your backups. This step
+				is optional and can be configured later.
 			</p>
 
 			<div className="space-y-4 mb-6">
@@ -984,9 +982,7 @@ function SMTPStep({ onSkip, isLoading }: StepProps) {
 
 			{smtpError && (
 				<div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
-					<p className="text-sm text-red-600 dark:text-red-400">
-						{smtpError}
-					</p>
+					<p className="text-sm text-red-600 dark:text-red-400">{smtpError}</p>
 				</div>
 			)}
 
