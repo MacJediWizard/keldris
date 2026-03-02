@@ -308,7 +308,9 @@ function RecentItemRow({
 			className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer group text-left"
 			onClick={onNavigate}
 		>
-			<span className="flex-shrink-0 text-gray-400 dark:text-gray-500">{icon}</span>
+			<span className="flex-shrink-0 text-gray-400 dark:text-gray-500">
+				{icon}
+			</span>
 			<div className="flex-1 min-w-0">
 				<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
 					{item.item_name}
