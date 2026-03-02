@@ -74,23 +74,23 @@ export function MultiRepoSelector({
 
 	return (
 		<div className="space-y-3">
-			<span className="block text-sm font-medium text-gray-700">
+			<span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
 				Repositories (ordered by priority)
 			</span>
 
 			{/* Selected repositories list */}
 			{selectedRepos.length > 0 && (
-				<div className="space-y-2 border border-gray-200 rounded-lg p-3 bg-gray-50">
+				<div className="space-y-2 border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
 					{selectedRepos.map((repo, index) => (
 						<div
 							key={repo.repository_id}
-							className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-gray-200"
+							className="flex items-center gap-2 bg-white dark:bg-gray-700 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-600"
 						>
 							<span
 								className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-xs font-medium ${
 									index === 0
-										? 'bg-indigo-100 text-indigo-700'
-										: 'bg-gray-100 text-gray-600'
+										? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+										: 'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
 								}`}
 							>
 								{index === 0 ? 'P' : index}
@@ -98,7 +98,9 @@ export function MultiRepoSelector({
 
 							<span
 								className={`flex-1 text-sm ${
-									repo.enabled ? 'text-gray-900' : 'text-gray-400 line-through'
+									repo.enabled
+										? 'text-gray-900 dark:text-gray-100'
+										: 'text-gray-400 dark:text-gray-500 line-through'
 								}`}
 							>
 								{getRepoName(repo.repository_id)}
@@ -110,8 +112,8 @@ export function MultiRepoSelector({
 									onClick={() => toggleEnabled(repo.repository_id)}
 									className={`p-1 rounded ${
 										repo.enabled
-											? 'text-green-600 hover:bg-green-50'
-											: 'text-gray-400 hover:bg-gray-50'
+											? 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/30'
+											: 'text-gray-400 hover:bg-gray-50 dark:text-gray-500 dark:hover:bg-gray-600'
 									}`}
 									title={repo.enabled ? 'Disable' : 'Enable'}
 								>
@@ -152,7 +154,7 @@ export function MultiRepoSelector({
 									type="button"
 									onClick={() => moveUp(index)}
 									disabled={index === 0}
-									className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+									className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
 									title="Move up"
 								>
 									<svg
@@ -175,7 +177,7 @@ export function MultiRepoSelector({
 									type="button"
 									onClick={() => moveDown(index)}
 									disabled={index === selectedRepos.length - 1}
-									className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+									className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
 									title="Move down"
 								>
 									<svg
@@ -197,7 +199,7 @@ export function MultiRepoSelector({
 								<button
 									type="button"
 									onClick={() => removeRepository(repo.repository_id)}
-									className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50"
+									className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:text-red-500 dark:hover:text-red-400 dark:hover:bg-red-900/30"
 									title="Remove"
 								>
 									<svg
@@ -219,7 +221,7 @@ export function MultiRepoSelector({
 						</div>
 					))}
 
-					<p className="text-xs text-gray-500 mt-2">
+					<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
 						P = Primary repository. Backups go to primary first, then replicate
 						to secondaries.
 					</p>
@@ -232,7 +234,7 @@ export function MultiRepoSelector({
 					<select
 						value={selectedId}
 						onChange={(e) => setSelectedId(e.target.value)}
-						className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					>
 						<option value="">Select a repository to add...</option>
 						{availableRepos.map((repo) => (
@@ -253,7 +255,7 @@ export function MultiRepoSelector({
 			)}
 
 			{selectedRepos.length === 0 && (
-				<p className="text-sm text-amber-600">
+				<p className="text-sm text-amber-600 dark:text-amber-400">
 					Please add at least one repository for backups.
 				</p>
 			)}

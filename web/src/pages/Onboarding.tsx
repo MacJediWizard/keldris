@@ -31,6 +31,7 @@ import {
 } from '../hooks/useRepositories';
 import {
 	useCreateSchedule,
+	useDryRunSchedule,
 	useRunSchedule,
 	useSchedules,
 } from '../hooks/useSchedules';
@@ -39,6 +40,7 @@ import type {
 	BackendConfig,
 	Backup,
 	CreateRegistrationCodeResponse,
+	DryRunResponse,
 	OnboardingStep,
 	RepositoryType,
 	ScheduleRepositoryRequest,
@@ -2387,41 +2389,40 @@ function ScheduleStep({ onComplete, onSkip, isLoading }: StepProps) {
 
 function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 	const { data: schedules } = useSchedules();
+	const dryRunSchedule = useDryRunSchedule();
 	const runSchedule = useRunSchedule();
+	const queryClient = useQueryClient();
+
+	// Per-schedule state
+	const [dryRunResults, setDryRunResults] = useState<
+		Record<string, DryRunResponse>
+	>({});
+	const [dryRunErrors, setDryRunErrors] = useState<Record<string, string>>({});
 	const [triggeredScheduleIds, setTriggeredScheduleIds] = useState<Set<string>>(
 		new Set(),
 	);
 	const [polling, setPolling] = useState(false);
+	const [backupStartTimes, setBackupStartTimes] = useState<
+		Record<string, number>
+	>({});
+	const [elapsed, setElapsed] = useState<Record<string, number>>({});
 
-	const { data: backups } = useBackups(polling ? undefined : undefined);
+	const { data: backupList } = useBackups();
+	const allBackups = backupList || [];
 
-	// Poll backups every 5s while there's a running backup
-	const { data: polledBackups } = useBackups();
-	const backupList = polledBackups || backups || [];
-
-	// Track backups that were triggered in this session
-	const triggeredBackups = backupList.filter((b: Backup) =>
+	// Track backups triggered in this session
+	const triggeredBackups = allBackups.filter((b: Backup) =>
 		triggeredScheduleIds.has(b.schedule_id),
 	);
-
 	const hasRunning = triggeredBackups.some(
 		(b: Backup) => b.status === 'running',
 	);
+	const hasAnyDryRunPassed = Object.keys(dryRunResults).length > 0;
 	const hasCompleted = triggeredBackups.some(
 		(b: Backup) => b.status === 'completed',
 	);
 
-	// Auto-poll while there's a running backup
-	useEffect(() => {
-		if (!hasRunning || !polling) return;
-		const interval = setInterval(() => {
-			// React Query will refetch via staleTime
-		}, 5000);
-		return () => clearInterval(interval);
-	}, [hasRunning, polling]);
-
-	// Enable polling with shorter stale time when triggered
-	const queryClient = useQueryClient();
+	// Poll backups while running
 	useEffect(() => {
 		if (!polling) return;
 		const interval = setInterval(() => {
@@ -2430,17 +2431,51 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 		return () => clearInterval(interval);
 	}, [polling, queryClient]);
 
-	// Stop polling once no more running backups
+	// Stop polling when no more running
 	useEffect(() => {
 		if (polling && triggeredScheduleIds.size > 0 && !hasRunning) {
 			setPolling(false);
 		}
 	}, [polling, triggeredScheduleIds.size, hasRunning]);
 
+	// Elapsed time ticker
+	useEffect(() => {
+		const running = Object.keys(backupStartTimes).filter((id) => {
+			const latest = getBackupStatusForSchedule(id);
+			return latest?.status === 'running';
+		});
+		if (running.length === 0) return;
+		const interval = setInterval(() => {
+			const now = Date.now();
+			setElapsed((prev) => {
+				const next = { ...prev };
+				for (const id of running) {
+					next[id] = Math.floor((now - backupStartTimes[id]) / 1000);
+				}
+				return next;
+			});
+		}, 1000);
+		return () => clearInterval(interval);
+	});
+
+	const handleDryRun = async (scheduleId: string) => {
+		setDryRunErrors((prev) => ({ ...prev, [scheduleId]: '' }));
+		try {
+			const result = await dryRunSchedule.mutateAsync(scheduleId);
+			setDryRunResults((prev) => ({ ...prev, [scheduleId]: result }));
+		} catch (err) {
+			setDryRunErrors((prev) => ({
+				...prev,
+				[scheduleId]: err instanceof Error ? err.message : 'Dry run failed',
+			}));
+		}
+	};
+
 	const handleRunNow = async (scheduleId: string) => {
 		try {
 			await runSchedule.mutateAsync(scheduleId);
 			setTriggeredScheduleIds((prev) => new Set(prev).add(scheduleId));
+			setBackupStartTimes((prev) => ({ ...prev, [scheduleId]: Date.now() }));
 			setPolling(true);
 		} catch {
 			// Error handled by mutation
@@ -2460,9 +2495,15 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 	const formatBytes = (bytes: number) => {
 		if (bytes === 0) return '0 B';
 		const k = 1024;
-		const sizes = ['B', 'KB', 'MB', 'GB'];
+		const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
 		const i = Math.floor(Math.log(bytes) / Math.log(k));
 		return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
+	};
+
+	const formatElapsed = (seconds: number) => {
+		const m = Math.floor(seconds / 60);
+		const s = seconds % 60;
+		return m > 0 ? `${m}m ${s}s` : `${s}s`;
 	};
 
 	return (
@@ -2471,7 +2512,8 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 				Verify Your Backup Works
 			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
-				Run a test backup to make sure everything is configured correctly.
+				First, run a dry run to validate connectivity and see what will be
+				backed up. Then optionally run a full backup.
 			</p>
 
 			{!schedules || schedules.length === 0 ? (
@@ -2482,18 +2524,23 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 					</p>
 				</div>
 			) : (
-				<div className="space-y-3 mb-6">
+				<div className="space-y-4 mb-6">
 					{schedules.map((schedule) => {
+						const dryRun = dryRunResults[schedule.id];
+						const dryRunError = dryRunErrors[schedule.id];
 						const latestBackup = getBackupStatusForSchedule(schedule.id);
-						const isRunning = latestBackup?.status === 'running';
 						const isTriggered = triggeredScheduleIds.has(schedule.id);
+						const isDryRunning =
+							dryRunSchedule.isPending &&
+							dryRunSchedule.variables === schedule.id;
 
 						return (
 							<div
 								key={schedule.id}
 								className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
 							>
-								<div className="flex items-center justify-between mb-2">
+								{/* Schedule header */}
+								<div className="flex items-center justify-between mb-3">
 									<div>
 										<span className="font-medium text-gray-900 dark:text-gray-100">
 											{schedule.name}
@@ -2502,17 +2549,132 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 											{schedule.cron_expression}
 										</span>
 									</div>
-									<button
-										type="button"
-										onClick={() => handleRunNow(schedule.id)}
-										disabled={isRunning || runSchedule.isPending}
-										className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-									>
-										{isRunning ? 'Running...' : 'Run Now'}
-									</button>
 								</div>
 
-								{/* Backup status */}
+								{/* Phase 1: Dry Run */}
+								{!dryRun && (
+									<div className="mb-3">
+										<button
+											type="button"
+											onClick={() => handleDryRun(schedule.id)}
+											disabled={isDryRunning}
+											className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+										>
+											{isDryRunning ? (
+												<span className="flex items-center gap-2">
+													<svg
+														aria-hidden="true"
+														className="w-3.5 h-3.5 animate-spin"
+														fill="none"
+														viewBox="0 0 24 24"
+													>
+														<circle
+															className="opacity-25"
+															cx="12"
+															cy="12"
+															r="10"
+															stroke="currentColor"
+															strokeWidth="4"
+														/>
+														<path
+															className="opacity-75"
+															fill="currentColor"
+															d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+														/>
+													</svg>
+													Testing...
+												</span>
+											) : (
+												'Test Configuration'
+											)}
+										</button>
+										{dryRunError && (
+											<div className="mt-2 text-sm text-red-600 dark:text-red-400">
+												{dryRunError}
+											</div>
+										)}
+									</div>
+								)}
+
+								{/* Dry run results */}
+								{dryRun && (
+									<div className="mb-3">
+										<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+											<div className="flex items-center gap-2 text-green-700 dark:text-green-400 mb-2">
+												<svg
+													aria-hidden="true"
+													className="w-4 h-4"
+													fill="currentColor"
+													viewBox="0 0 20 20"
+												>
+													<path
+														fillRule="evenodd"
+														d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+														clipRule="evenodd"
+													/>
+												</svg>
+												<span className="text-sm font-medium">
+													Configuration valid
+												</span>
+											</div>
+											<div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700 dark:text-gray-300 ml-6">
+												<span>
+													Total files:{' '}
+													<span className="font-medium">
+														{dryRun.total_files.toLocaleString()}
+													</span>
+												</span>
+												<span>
+													Total size:{' '}
+													<span className="font-medium">
+														{formatBytes(dryRun.total_size)}
+													</span>
+												</span>
+												<span>
+													New/changed:{' '}
+													<span className="font-medium">
+														{(
+															dryRun.new_files + dryRun.changed_files
+														).toLocaleString()}
+													</span>
+												</span>
+												<span>
+													Unchanged:{' '}
+													<span className="font-medium">
+														{dryRun.unchanged_files.toLocaleString()}
+													</span>
+												</span>
+											</div>
+											{dryRun.message && (
+												<p className="mt-2 text-xs text-green-600 dark:text-green-400 ml-6">
+													{dryRun.message}
+												</p>
+											)}
+										</div>
+
+										{/* Phase 2: Full backup */}
+										{!isTriggered && (
+											<div className="mt-3">
+												<button
+													type="button"
+													onClick={() => handleRunNow(schedule.id)}
+													disabled={runSchedule.isPending}
+													className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+												>
+													Run Full Backup
+												</button>
+												<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+													Scanning ~{formatBytes(dryRun.total_size)} across{' '}
+													{dryRun.total_files.toLocaleString()} files
+													{dryRun.total_size > 1024 * 1024 * 1024 &&
+														' — this may take a while for the first backup'}
+												</p>
+											</div>
+										)}
+									</div>
+								)}
+
+								{/* Full backup status */}
 								{isTriggered && latestBackup && (
 									<div className="mt-2">
 										{latestBackup.status === 'running' && (
@@ -2537,7 +2699,12 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 														d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 													/>
 												</svg>
-												<span className="text-sm">Backup in progress...</span>
+												<span className="text-sm">
+													Backup in progress...{' '}
+													<span className="font-mono text-xs">
+														{formatElapsed(elapsed[schedule.id] || 0)}
+													</span>
+												</span>
 											</div>
 										)}
 										{latestBackup.status === 'completed' && (
@@ -2555,7 +2722,7 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 													/>
 												</svg>
 												<span className="text-sm">
-													Backup completed successfully!
+													Backup completed!
 													{latestBackup.size_bytes != null && (
 														<> ({formatBytes(latestBackup.size_bytes)})</>
 													)}
@@ -2641,7 +2808,9 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 					<button
 						type="button"
 						onClick={onComplete}
-						disabled={(!hasCompleted && !isLoading) || isLoading}
+						disabled={
+							(!hasAnyDryRunPassed && !hasCompleted && !isLoading) || isLoading
+						}
 						className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 					>
 						{isLoading ? 'Completing...' : 'Complete Setup'}
