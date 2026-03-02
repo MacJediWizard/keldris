@@ -2946,6 +2946,16 @@ export interface OIDCOnboardingRequest {
 	redirect_url: string;
 }
 
+export interface SMTPOnboardingRequest {
+	host: string;
+	port: number;
+	username: string;
+	password: string;
+	from_email: string;
+	from_name: string;
+	encryption: string;
+}
+
 // File History types
 export interface FileVersion {
 	snapshot_id: string;

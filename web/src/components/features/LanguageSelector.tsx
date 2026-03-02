@@ -22,7 +22,7 @@ export function LanguageSelector() {
 			<button
 				type="button"
 				onClick={() => setShowDropdown(!showDropdown)}
-				className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+				className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
 				aria-label={t('settings.language')}
 			>
 				<span className="text-base">{LANGUAGE_FLAGS[language]}</span>
@@ -52,8 +52,8 @@ export function LanguageSelector() {
 						tabIndex={0}
 						aria-label="Close dropdown"
 					/>
-					<div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-						<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
+					<div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 py-1 z-50">
+						<div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
 							{t('settings.language')}
 						</div>
 						{languages.map((lang) => (
@@ -61,10 +61,10 @@ export function LanguageSelector() {
 								key={lang}
 								type="button"
 								onClick={() => handleSelect(lang)}
-								className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 ${
+								className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 ${
 									lang === language
-										? 'bg-indigo-50 text-indigo-700'
-										: 'text-gray-700'
+										? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+										: 'text-gray-700 dark:text-gray-200'
 								}`}
 							>
 								<span className="text-base">{LANGUAGE_FLAGS[lang]}</span>

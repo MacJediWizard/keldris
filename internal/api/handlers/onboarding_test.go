@@ -56,6 +56,12 @@ func (m *mockOnboardingStore) UpdateOIDCSettings(_ context.Context, _ uuid.UUID,
 func (m *mockOnboardingStore) EnsureSystemSettingsExist(_ context.Context, _ uuid.UUID) error {
 	return nil
 }
+func (m *mockOnboardingStore) GetSMTPSettings(_ context.Context, _ uuid.UUID) (*settings.SMTPSettings, error) {
+	return nil, nil
+}
+func (m *mockOnboardingStore) UpdateSMTPSettings(_ context.Context, _ uuid.UUID, _ *settings.SMTPSettings) error {
+	return nil
+}
 
 func setupOnboardingTestRouter(store OnboardingStore, orgID uuid.UUID) *gin.Engine {
 	user := testUser(orgID)

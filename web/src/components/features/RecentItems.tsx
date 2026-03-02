@@ -201,7 +201,7 @@ export function RecentItemsDropdown({ className }: RecentItemsDropdownProps) {
 				type="button"
 				onClick={() => setIsOpen(!isOpen)}
 				disabled={isLoading}
-				className="inline-flex items-center justify-center w-9 h-9 text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 transition-colors"
+				className="inline-flex items-center justify-center w-9 h-9 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50 transition-colors"
 				title="Recent Items"
 			>
 				<svg
@@ -221,16 +221,16 @@ export function RecentItemsDropdown({ className }: RecentItemsDropdownProps) {
 			</button>
 
 			{isOpen && (
-				<div className="absolute right-0 z-50 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg">
-					<div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-						<h3 className="text-sm font-semibold text-gray-900">
+				<div className="absolute right-0 z-50 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg">
+					<div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+						<h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
 							Recently Viewed
 						</h3>
 						{hasItems && (
 							<button
 								type="button"
 								onClick={handleClearAll}
-								className="text-xs text-gray-500 hover:text-red-600 transition-colors"
+								className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
 							>
 								Clear all
 							</button>
@@ -239,7 +239,7 @@ export function RecentItemsDropdown({ className }: RecentItemsDropdownProps) {
 
 					<div className="max-h-96 overflow-y-auto">
 						{!hasItems ? (
-							<div className="px-4 py-8 text-center text-gray-500">
+							<div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
 								<svg
 									className="w-8 h-8 mx-auto mb-2 text-gray-400"
 									fill="none"
@@ -255,7 +255,7 @@ export function RecentItemsDropdown({ className }: RecentItemsDropdownProps) {
 									/>
 								</svg>
 								<p className="text-sm">No recent items</p>
-								<p className="text-xs text-gray-400 mt-1">
+								<p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
 									Items you view will appear here
 								</p>
 							</div>
@@ -264,9 +264,9 @@ export function RecentItemsDropdown({ className }: RecentItemsDropdownProps) {
 								{itemTypes.map((type, typeIndex) => (
 									<div key={type}>
 										{typeIndex > 0 && (
-											<div className="border-t border-gray-100 my-2" />
+											<div className="border-t border-gray-100 dark:border-gray-700 my-2" />
 										)}
-										<p className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+										<p className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											{typeLabels[type]}
 										</p>
 										{groupedItems[type].map((item) => (
@@ -305,22 +305,22 @@ function RecentItemRow({
 	return (
 		<button
 			type="button"
-			className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer group text-left"
+			className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer group text-left"
 			onClick={onNavigate}
 		>
-			<span className="flex-shrink-0 text-gray-400">{icon}</span>
+			<span className="flex-shrink-0 text-gray-400 dark:text-gray-500">{icon}</span>
 			<div className="flex-1 min-w-0">
-				<p className="text-sm font-medium text-gray-900 truncate">
+				<p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
 					{item.item_name}
 				</p>
-				<p className="text-xs text-gray-500">
+				<p className="text-xs text-gray-500 dark:text-gray-400">
 					{formatRelativeTime(item.viewed_at)}
 				</p>
 			</div>
 			<button
 				type="button"
 				onClick={onDelete}
-				className="flex-shrink-0 p-1 text-gray-400 opacity-0 group-hover:opacity-100 hover:text-red-600 transition-all"
+				className="flex-shrink-0 p-1 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 hover:text-red-600 dark:hover:text-red-400 transition-all"
 				title="Remove from recent"
 			>
 				<svg

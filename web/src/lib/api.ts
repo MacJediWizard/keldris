@@ -324,6 +324,7 @@ import type {
 	OIDCSettings,
 	OnboardingStatus,
 	OnboardingStep,
+	SMTPOnboardingRequest,
 	OrgInvitation,
 	OrgMember,
 	OrgResponse,
@@ -2576,6 +2577,12 @@ export const onboardingApi = {
 
 	testOIDC: async (data: OIDCOnboardingRequest): Promise<TestOIDCResponse> =>
 		fetchApi<TestOIDCResponse>('/onboarding/test-oidc', {
+			method: 'POST',
+			body: JSON.stringify(data),
+		}),
+
+	testSMTP: async (data: SMTPOnboardingRequest): Promise<TestSMTPResponse> =>
+		fetchApi<TestSMTPResponse>('/onboarding/test-smtp', {
 			method: 'POST',
 			body: JSON.stringify(data),
 		}),

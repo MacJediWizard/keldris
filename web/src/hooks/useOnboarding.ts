@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { onboardingApi } from '../lib/api';
-import type { OIDCOnboardingRequest, OnboardingStep } from '../lib/types';
+import type {
+	OIDCOnboardingRequest,
+	OnboardingStep,
+	SMTPOnboardingRequest,
+} from '../lib/types';
 
 export function useOnboardingStatus() {
 	return useQuery({
@@ -38,6 +42,26 @@ export function useCompleteOIDCStep() {
 export function useTestOnboardingOIDC() {
 	return useMutation({
 		mutationFn: (data: OIDCOnboardingRequest) => onboardingApi.testOIDC(data),
+		retry: false,
+	});
+}
+
+export function useCompleteSMTPStep() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (data: SMTPOnboardingRequest) =>
+			onboardingApi.completeStepWithBody('smtp', data),
+		retry: false,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['onboarding'] });
+		},
+	});
+}
+
+export function useTestOnboardingSMTP() {
+	return useMutation({
+		mutationFn: (data: SMTPOnboardingRequest) => onboardingApi.testSMTP(data),
 		retry: false,
 	});
 }

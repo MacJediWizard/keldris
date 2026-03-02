@@ -12,9 +12,11 @@ import {
 import {
 	useCompleteOIDCStep,
 	useCompleteOnboardingStep,
+	useCompleteSMTPStep,
 	useOnboardingStatus,
 	useSkipOnboarding,
 	useTestOnboardingOIDC,
+	useTestOnboardingSMTP,
 } from '../hooks/useOnboarding';
 import {
 	useOrganizations,
@@ -72,16 +74,18 @@ const ONBOARDING_STEPS = [
 	},
 ];
 
+const DOCS_BASE = 'https://github.com/MacJediWizard/keldris/blob/main/docs';
+
 const DOCS_LINKS: Record<string, string> = {
-	welcome: '/docs/getting-started',
-	license: '/docs/licensing',
-	organization: '/docs/organizations',
-	oidc: '/docs/authentication/oidc',
-	smtp: '/docs/notifications/email',
-	repository: '/docs/repositories',
-	agent: '/docs/agent-installation',
-	schedule: '/docs/schedules',
-	verify: '/docs/backup-verification',
+	welcome: `${DOCS_BASE}/getting-started.md`,
+	license: `${DOCS_BASE}/getting-started.md`,
+	organization: `${DOCS_BASE}/getting-started.md`,
+	oidc: `${DOCS_BASE}/oidc-setup.md`,
+	smtp: `${DOCS_BASE}/configuration.md`,
+	repository: `${DOCS_BASE}/getting-started.md`,
+	agent: `${DOCS_BASE}/agent-installation.md`,
+	schedule: `${DOCS_BASE}/getting-started.md`,
+	verify: `${DOCS_BASE}/troubleshooting.md`,
 };
 
 interface StepProps {
@@ -224,6 +228,8 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 		try {
 			await startTrialMutation.mutateAsync({ email: trialEmail, tier: 'pro' });
 			setTrialEmail('');
+			// Auto-advance after successful trial start
+			onComplete();
 		} catch (err) {
 			setTrialError(
 				err instanceof Error ? err.message : 'Failed to start trial',
@@ -236,6 +242,8 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 		try {
 			await activateMutation.mutateAsync(licenseKey);
 			setLicenseKey('');
+			// Auto-advance after successful activation
+			onComplete();
 		} catch (err) {
 			setActivateError(
 				err instanceof Error ? err.message : 'Activation failed',
@@ -770,46 +778,227 @@ function OIDCStep({ onSkip, isLoading, licenseTier }: OIDCStepProps) {
 	);
 }
 
-function SMTPStep({ onComplete, onSkip, isLoading }: StepProps) {
+function SMTPStep({ onSkip, isLoading }: StepProps) {
+	const completeSMTP = useCompleteSMTPStep();
+	const testSMTP = useTestOnboardingSMTP();
+	const [host, setHost] = useState('');
+	const [port, setPort] = useState(587);
+	const [username, setUsername] = useState('');
+	const [password, setPassword] = useState('');
+	const [fromEmail, setFromEmail] = useState('');
+	const [fromName, setFromName] = useState('');
+	const [encryption, setEncryption] = useState('starttls');
+	const [smtpError, setSmtpError] = useState('');
+	const [testResult, setTestResult] = useState<{
+		success: boolean;
+		message: string;
+	} | null>(null);
+
+	const smtpData = {
+		host,
+		port,
+		username,
+		password,
+		from_email: fromEmail,
+		from_name: fromName,
+		encryption,
+	};
+
+	const handleTest = async () => {
+		setSmtpError('');
+		setTestResult(null);
+		try {
+			const result = await testSMTP.mutateAsync(smtpData);
+			setTestResult(result);
+			if (!result.success) {
+				setSmtpError(result.message);
+			}
+		} catch (err) {
+			setSmtpError(
+				err instanceof Error
+					? err.message
+					: 'Failed to test SMTP connection',
+			);
+		}
+	};
+
+	const handleSave = async () => {
+		setSmtpError('');
+		try {
+			await completeSMTP.mutateAsync(smtpData);
+		} catch (err) {
+			setSmtpError(
+				err instanceof Error ? err.message : 'Failed to configure SMTP',
+			);
+		}
+	};
+
+	const canSave = host.trim() && fromEmail.trim() && port > 0;
+
 	return (
 		<div className="py-4">
 			<h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
 				Configure Email Notifications
 			</h2>
 			<p className="text-gray-600 dark:text-gray-400 mb-6">
-				Set up email notifications to stay informed about your backups. This
+				Set up SMTP to receive email notifications about your backups. This
 				step is optional and can be configured later.
 			</p>
 
-			<div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-6">
-				<h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
-					Email notifications can alert you when:
-				</h3>
-				<ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-					<li>- Backups complete successfully</li>
-					<li>- Backups fail or encounter errors</li>
-					<li>- Agents go offline</li>
-					<li>- Storage reaches capacity thresholds</li>
-				</ul>
+			<div className="space-y-4 mb-6">
+				<div className="grid grid-cols-2 gap-4">
+					<div>
+						<label
+							htmlFor="smtp-host"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							SMTP Host
+						</label>
+						<input
+							id="smtp-host"
+							type="text"
+							value={host}
+							onChange={(e) => setHost(e.target.value)}
+							placeholder="smtp.gmail.com"
+							className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+						/>
+					</div>
+
+					<div>
+						<label
+							htmlFor="smtp-port"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							Port
+						</label>
+						<input
+							id="smtp-port"
+							type="number"
+							value={port}
+							onChange={(e) => setPort(Number(e.target.value))}
+							placeholder="587"
+							className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+						/>
+					</div>
+				</div>
+
+				<div className="grid grid-cols-2 gap-4">
+					<div>
+						<label
+							htmlFor="smtp-username"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							Username
+						</label>
+						<input
+							id="smtp-username"
+							type="text"
+							value={username}
+							onChange={(e) => setUsername(e.target.value)}
+							placeholder="user@example.com"
+							className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+						/>
+					</div>
+
+					<div>
+						<label
+							htmlFor="smtp-password"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							Password
+						</label>
+						<input
+							id="smtp-password"
+							type="password"
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							placeholder="App password or SMTP password"
+							className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+						/>
+					</div>
+				</div>
+
+				<div className="grid grid-cols-2 gap-4">
+					<div>
+						<label
+							htmlFor="smtp-from-email"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							From Email
+						</label>
+						<input
+							id="smtp-from-email"
+							type="email"
+							value={fromEmail}
+							onChange={(e) => setFromEmail(e.target.value)}
+							placeholder="noreply@example.com"
+							className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+						/>
+					</div>
+
+					<div>
+						<label
+							htmlFor="smtp-from-name"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+						>
+							From Name
+						</label>
+						<input
+							id="smtp-from-name"
+							type="text"
+							value={fromName}
+							onChange={(e) => setFromName(e.target.value)}
+							placeholder="Keldris Backups"
+							className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+						/>
+					</div>
+				</div>
+
+				<div>
+					<label
+						htmlFor="smtp-encryption"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+					>
+						Encryption
+					</label>
+					<select
+						id="smtp-encryption"
+						value={encryption}
+						onChange={(e) => setEncryption(e.target.value)}
+						className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+					>
+						<option value="starttls">STARTTLS (port 587)</option>
+						<option value="tls">TLS (port 465)</option>
+						<option value="none">None (port 25)</option>
+					</select>
+				</div>
 			</div>
 
-			<div className="flex justify-between items-center">
-				<div className="flex items-center gap-4">
-					<a
-						href={DOCS_LINKS.smtp}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-					>
-						Learn about email setup
-					</a>
-					<Link
-						to="/notifications"
-						className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-					>
-						Configure email now
-					</Link>
+			{testResult?.success && (
+				<div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-900/20">
+					<p className="text-sm font-medium text-green-700 dark:text-green-400">
+						{testResult.message}
+					</p>
 				</div>
+			)}
+
+			{smtpError && (
+				<div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
+					<p className="text-sm text-red-600 dark:text-red-400">
+						{smtpError}
+					</p>
+				</div>
+			)}
+
+			<div className="flex justify-between items-center">
+				<a
+					href={DOCS_LINKS.smtp}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+				>
+					Learn about email setup
+				</a>
 				<div className="flex gap-3">
 					<button
 						type="button"
@@ -820,11 +1009,19 @@ function SMTPStep({ onComplete, onSkip, isLoading }: StepProps) {
 					</button>
 					<button
 						type="button"
-						onClick={onComplete}
-						disabled={isLoading}
+						onClick={handleTest}
+						disabled={!canSave || testSMTP.isPending}
+						className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+					>
+						{testSMTP.isPending ? 'Testing...' : 'Test Connection'}
+					</button>
+					<button
+						type="button"
+						onClick={handleSave}
+						disabled={!canSave || completeSMTP.isPending || isLoading}
 						className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 					>
-						{isLoading ? 'Saving...' : 'Continue'}
+						{completeSMTP.isPending ? 'Saving...' : 'Save & Continue'}
 					</button>
 				</div>
 			</div>

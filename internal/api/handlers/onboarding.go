@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -29,6 +30,9 @@ type OnboardingStore interface {
 	GetOIDCSettings(ctx context.Context, orgID uuid.UUID) (*settings.OIDCSettings, error)
 	UpdateOIDCSettings(ctx context.Context, orgID uuid.UUID, oidc *settings.OIDCSettings) error
 	EnsureSystemSettingsExist(ctx context.Context, orgID uuid.UUID) error
+	// SMTP settings for onboarding step
+	GetSMTPSettings(ctx context.Context, orgID uuid.UUID) (*settings.SMTPSettings, error)
+	UpdateSMTPSettings(ctx context.Context, orgID uuid.UUID, smtp *settings.SMTPSettings) error
 }
 
 // OnboardingHandler handles onboarding-related HTTP endpoints.
@@ -57,6 +61,7 @@ func (h *OnboardingHandler) RegisterRoutes(r *gin.RouterGroup) {
 		onboarding.POST("/step/:step", h.CompleteStep)
 		onboarding.POST("/skip", h.Skip)
 		onboarding.POST("/test-oidc", h.TestOIDC)
+		onboarding.POST("/test-smtp", h.TestSMTP)
 	}
 }
 
@@ -109,6 +114,17 @@ type OIDCOnboardingRequest struct {
 	RedirectURL  string `json:"redirect_url" binding:"required,url"`
 }
 
+// SMTPOnboardingRequest is the request body for the SMTP onboarding step.
+type SMTPOnboardingRequest struct {
+	Host       string `json:"host" binding:"required"`
+	Port       int    `json:"port" binding:"required"`
+	Username   string `json:"username"`
+	Password   string `json:"password"`
+	FromEmail  string `json:"from_email" binding:"required,email"`
+	FromName   string `json:"from_name"`
+	Encryption string `json:"encryption" binding:"required"`
+}
+
 // CompleteStep marks a step as completed.
 // POST /api/v1/onboarding/step/:step
 func (h *OnboardingHandler) CompleteStep(c *gin.Context) {
@@ -137,6 +153,12 @@ func (h *OnboardingHandler) CompleteStep(c *gin.Context) {
 	// just marks the step complete without feature checks.
 	if step == models.OnboardingStepOIDC && c.Request.ContentLength > 0 {
 		h.completeOIDCStep(c, user)
+		return
+	}
+
+	// Handle SMTP step specially — save SMTP settings when body is present.
+	if step == models.OnboardingStepSMTP && c.Request.ContentLength > 0 {
+		h.completeSMTPStep(c, user)
 		return
 	}
 
@@ -398,5 +420,132 @@ func (h *OnboardingHandler) TestOIDC(c *gin.Context) {
 		ProviderName:  discovery.Issuer,
 		AuthURL:       discovery.AuthURL,
 		SupportedFlow: "authorization_code",
+	})
+}
+
+// completeSMTPStep handles the SMTP onboarding step — saves SMTP settings and marks step complete.
+func (h *OnboardingHandler) completeSMTPStep(c *gin.Context, user *auth.SessionUser) {
+	var req SMTPOnboardingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	smtpSettings := &settings.SMTPSettings{
+		Host:              req.Host,
+		Port:              req.Port,
+		Username:          req.Username,
+		Password:          req.Password,
+		FromEmail:         req.FromEmail,
+		FromName:          req.FromName,
+		Encryption:        req.Encryption,
+		Enabled:           true,
+		ConnectionTimeout: 30,
+	}
+
+	if err := smtpSettings.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// Ensure system settings row exists for this org
+	if err := h.store.EnsureSystemSettingsExist(ctx, user.CurrentOrgID); err != nil {
+		h.logger.Warn().Err(err).Msg("failed to ensure system settings exist")
+	}
+
+	// Save SMTP settings to DB
+	if err := h.store.UpdateSMTPSettings(ctx, user.CurrentOrgID, smtpSettings); err != nil {
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to save SMTP settings")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save SMTP settings"})
+		return
+	}
+
+	// Mark step complete
+	progress, err := h.store.GetOrCreateOnboardingProgress(ctx, user.CurrentOrgID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get onboarding progress")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get onboarding progress"})
+		return
+	}
+
+	progress.CompleteStep(models.OnboardingStepSMTP)
+
+	if err := h.store.UpdateOnboardingProgress(ctx, progress); err != nil {
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to update onboarding progress")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update onboarding progress"})
+		return
+	}
+
+	h.logger.Info().
+		Str("org_id", user.CurrentOrgID.String()).
+		Str("host", req.Host).
+		Msg("completed SMTP onboarding step")
+
+	c.JSON(http.StatusOK, OnboardingStatusResponse{
+		NeedsOnboarding: !progress.IsComplete(),
+		CurrentStep:     progress.CurrentStep,
+		CompletedSteps:  progress.CompletedSteps,
+		Skipped:         progress.Skipped,
+		IsComplete:      progress.IsComplete(),
+	})
+}
+
+// TestSMTP tests an SMTP configuration by connecting to the server.
+// POST /api/v1/onboarding/test-smtp
+func (h *OnboardingHandler) TestSMTP(c *gin.Context) {
+	user := middleware.RequireUser(c)
+	if user == nil {
+		return
+	}
+
+	var req SMTPOnboardingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	smtpSettings := &settings.SMTPSettings{
+		Host:              req.Host,
+		Port:              req.Port,
+		Username:          req.Username,
+		Password:          req.Password,
+		FromEmail:         req.FromEmail,
+		FromName:          req.FromName,
+		Encryption:        req.Encryption,
+		Enabled:           true,
+		ConnectionTimeout: 30,
+	}
+
+	if err := smtpSettings.Validate(); err != nil {
+		c.JSON(http.StatusOK, settings.TestSMTPResponse{
+			Success: false,
+			Message: "Configuration validation failed: " + err.Error(),
+		})
+		return
+	}
+
+	// Attempt a real SMTP connection
+	addr := net.JoinHostPort(req.Host, fmt.Sprintf("%d", req.Port))
+	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	if err != nil {
+		c.JSON(http.StatusOK, settings.TestSMTPResponse{
+			Success: false,
+			Message: fmt.Sprintf("Failed to connect to %s: %v", addr, err),
+		})
+		return
+	}
+	conn.Close()
+
+	h.logger.Info().
+		Str("org_id", user.CurrentOrgID.String()).
+		Str("host", req.Host).
+		Int("port", req.Port).
+		Msg("SMTP test connection successful during onboarding")
+
+	c.JSON(http.StatusOK, settings.TestSMTPResponse{
+		Success: true,
+		Message: fmt.Sprintf("Successfully connected to SMTP server at %s", addr),
 	})
 }
