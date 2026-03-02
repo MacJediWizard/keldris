@@ -809,3 +809,35 @@ User reported having to manually click Continue after license activation. Added 
 - Go build + tests clean
 - TypeScript strict mode clean
 - Biome formatting clean
+
+---
+
+## 2026-03-02 - Inline Repository Creation Form in Onboarding Wizard
+
+### What
+The onboarding RepositoryStep linked to `/repositories` which got bounced by the onboarding redirect guard. Replaced it with a full inline repository creation form, matching the OIDC and SMTP step patterns.
+
+### Changes
+
+**`web/src/pages/Onboarding.tsx`:**
+- Added `RepoField` helper component for labeled form inputs (keeps backend field markup DRY)
+- Rebuilt `RepositoryStep` with three render paths:
+  1. **Password display** — shown after creation with copy button + amber warning
+  2. **Already has repository** — green success banner + Continue
+  3. **Inline creation form** — name, type dropdown, backend-specific fields, key escrow, test/create buttons
+- Backend-specific fields for all 6 types: local, S3, B2, SFTP (with textarea for private key), REST, Dropbox
+- `buildConfig()` and `canCreate` validation adapted from `AddRepositoryModal` in `Repositories.tsx`
+- Test Connection and Create Repository buttons gated by `canCreate`
+- Skip button calls `onComplete` (marks step done without creating)
+- Reverted the `Layout.tsx` workaround that bypassed the onboarding redirect for `/repositories`
+
+**Imports added:**
+- `useCreateRepository`, `useTestConnection` from `useRepositories` hook
+- `BackendConfig`, `RepositoryType`, `TestRepositoryResponse` from types
+
+### No backend changes
+All API endpoints (`POST /api/v1/repositories`, `POST /api/v1/repositories/test-connection`) already existed.
+
+### Result
+- `npx tsc --noEmit`: clean
+- `npx biome check`: clean
