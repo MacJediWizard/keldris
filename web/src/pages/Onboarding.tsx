@@ -74,18 +74,16 @@ const ONBOARDING_STEPS = [
 	},
 ];
 
-const DOCS_BASE = 'https://github.com/MacJediWizard/keldris/blob/main/docs';
-
 const DOCS_LINKS: Record<string, string> = {
-	welcome: `${DOCS_BASE}/getting-started.md`,
-	license: `${DOCS_BASE}/getting-started.md`,
-	organization: `${DOCS_BASE}/getting-started.md`,
-	oidc: `${DOCS_BASE}/oidc-setup.md`,
-	smtp: `${DOCS_BASE}/configuration.md`,
-	repository: `${DOCS_BASE}/getting-started.md`,
-	agent: `${DOCS_BASE}/agent-installation.md`,
-	schedule: `${DOCS_BASE}/getting-started.md`,
-	verify: `${DOCS_BASE}/troubleshooting.md`,
+	welcome: '/docs/getting-started',
+	license: '/docs/getting-started',
+	organization: '/docs/organizations',
+	oidc: '/docs/getting-started',
+	smtp: '/docs/notifications/email',
+	repository: '/docs/repositories',
+	agent: '/docs/agent-installation',
+	schedule: '/docs/schedules',
+	verify: '/docs/backup-verification',
 };
 
 interface StepProps {
@@ -359,14 +357,13 @@ function LicenseStep({ onComplete, onSkip, isLoading }: StepProps) {
 			)}
 
 			<div className="flex justify-between items-center">
-				<a
-					href={DOCS_LINKS.license}
+				<Link
+					to={DOCS_LINKS.license}
 					target="_blank"
-					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					Learn about license tiers
-				</a>
+				</Link>
 				<div className="flex gap-3">
 					{!isActivated && (
 						<button
@@ -541,14 +538,13 @@ function OrganizationStep({ onComplete, isLoading }: StepProps) {
 			)}
 
 			<div className="flex justify-between items-center">
-				<a
-					href={DOCS_LINKS.organization}
+				<Link
+					to={DOCS_LINKS.organization}
 					target="_blank"
-					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					Learn more about organizations
-				</a>
+				</Link>
 				<button
 					type="button"
 					onClick={onComplete}
@@ -740,14 +736,13 @@ function OIDCStep({ onSkip, isLoading, licenseTier }: OIDCStepProps) {
 			)}
 
 			<div className="flex justify-between items-center">
-				<a
-					href={DOCS_LINKS.oidc}
+				<Link
+					to={DOCS_LINKS.oidc}
 					target="_blank"
-					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					Learn about OIDC setup
-				</a>
+				</Link>
 				<div className="flex gap-3">
 					<button
 						type="button"
@@ -987,14 +982,13 @@ function SMTPStep({ onSkip, isLoading }: StepProps) {
 			)}
 
 			<div className="flex justify-between items-center">
-				<a
-					href={DOCS_LINKS.smtp}
+				<Link
+					to={DOCS_LINKS.smtp}
 					target="_blank"
-					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					Learn about email setup
-				</a>
+				</Link>
 				<div className="flex gap-3">
 					<button
 						type="button"
@@ -1089,14 +1083,13 @@ function RepositoryStep({ onComplete, isLoading }: StepProps) {
 			)}
 
 			<div className="flex justify-between items-center">
-				<a
-					href={DOCS_LINKS.repository}
+				<Link
+					to={DOCS_LINKS.repository}
 					target="_blank"
-					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					Learn about repository types
-				</a>
+				</Link>
 				<button
 					type="button"
 					onClick={onComplete}
@@ -1153,14 +1146,13 @@ function AgentStep({ onComplete, isLoading }: StepProps) {
 			)}
 
 			<div className="flex justify-between items-center">
-				<a
-					href={DOCS_LINKS.agent}
+				<Link
+					to={DOCS_LINKS.agent}
 					target="_blank"
-					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					View installation guide
-				</a>
+				</Link>
 				<button
 					type="button"
 					onClick={onComplete}
@@ -1238,14 +1230,13 @@ function ScheduleStep({ onComplete, isLoading }: StepProps) {
 			)}
 
 			<div className="flex justify-between items-center">
-				<a
-					href={DOCS_LINKS.schedule}
+				<Link
+					to={DOCS_LINKS.schedule}
 					target="_blank"
-					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					Learn about backup schedules
-				</a>
+				</Link>
 				<button
 					type="button"
 					onClick={onComplete}
@@ -1297,14 +1288,13 @@ function VerifyStep({ onComplete, isLoading }: StepProps) {
 			</div>
 
 			<div className="flex justify-between items-center">
-				<a
-					href={DOCS_LINKS.verify}
+				<Link
+					to={DOCS_LINKS.verify}
 					target="_blank"
-					rel="noopener noreferrer"
 					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
 				>
 					Learn about backup verification
-				</a>
+				</Link>
 				<button
 					type="button"
 					onClick={onComplete}

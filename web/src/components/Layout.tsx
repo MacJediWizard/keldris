@@ -1793,7 +1793,8 @@ export function Layout() {
 		if (
 			!onboardingLoading &&
 			onboardingStatus?.needs_onboarding &&
-			location.pathname !== '/onboarding'
+			location.pathname !== '/onboarding' &&
+			!location.pathname.startsWith('/docs')
 		) {
 			navigate('/onboarding');
 		}
