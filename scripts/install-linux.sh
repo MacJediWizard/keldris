@@ -74,7 +74,7 @@ download_binary() {
     local download_url="${DOWNLOAD_BASE_URL}/keldris-agent-linux-${arch}"
     local tmp_file="/tmp/${BINARY_NAME}"
 
-    log_info "Downloading Keldris Agent (${VERSION}, linux/${arch})..."
+    log_info "Downloading Keldris Agent (linux/${arch})..."
 
     if command -v curl &> /dev/null; then
         curl -fsSL -o "$tmp_file" "$download_url" || {
