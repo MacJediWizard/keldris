@@ -710,3 +710,38 @@ User reported the license server's `/instances` page showed no data despite Keld
 ### Result
 - `go build ./...`: clean (both repos)
 - Linting: clean
+
+---
+
+## 2026-03-01 - CI Fixes: Commit Outstanding Changes from Prior Sessions
+
+### What
+Fixed CI failures in both repos caused by partially committed work from prior sessions.
+
+### Issues Found
+
+**Keldris CI** — Two problems:
+1. `staticcheck U1000`: `setupOnboardingTestRouterWithChecker` was unused (committed in prior session but never called)
+2. `TestOnboarding_TestOIDC` tests referenced `POST /api/v1/onboarding/test-oidc` but the route/handler in `onboarding.go` was uncommitted
+
+**License-server CI** — Docker build failure:
+- `routes.go:96,143` referenced `instancesHandler.DetectStaleInstances` but the handler, Store interface method, and DB implementation were all uncommitted
+
+### Root Cause
+Prior sessions added routes and tests but only partially committed the changes — route registrations were pushed without their handler implementations, and tests were pushed without the endpoints they test.
+
+### Commits
+
+**Keldris:**
+- `b09ded39` — Remove unused `setupOnboardingTestRouterWithChecker` function
+- `5357a425` — Add OIDC test connection button to onboarding (handler + frontend)
+- `757931cb` — Fix SetLicenseKey context cancellation, update journal
+
+**License-server:**
+- `ca48988` — Add stale instance detection, heartbeat refresh tokens, entitlement nonce
+
+### Result
+- Both repos CI green
+- All Go tests pass
+- Frontend builds clean
+- Docker build succeeds (license-server)
