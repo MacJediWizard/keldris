@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"compress/bzip2"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -125,6 +126,7 @@ func newVersionCmd() *cobra.Command {
 
 func newRegisterCmd() *cobra.Command {
 	var serverURL string
+	var allowInsecure bool
 
 	cmd := &cobra.Command{
 		Use:   "register",
@@ -134,21 +136,25 @@ func newRegisterCmd() *cobra.Command {
 You will be prompted for an API key. To generate an API key,
 log into your Keldris server and navigate to Settings > API Keys.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRegister(serverURL)
+			return runRegister(serverURL, allowInsecure)
 		},
 	}
 
 	cmd.Flags().StringVar(&serverURL, "server", "", "Keldris server URL (required)")
+	cmd.Flags().BoolVar(&allowInsecure, "insecure", false, "Allow HTTP (non-TLS) connections (development only)")
 	_ = cmd.MarkFlagRequired("server")
 
 	return cmd
 }
 
-func runRegister(serverURL string) error {
+func runRegister(serverURL string, allowInsecure bool) error {
 	// Validate URL
 	parsed, err := url.Parse(serverURL)
 	if err != nil {
 		return fmt.Errorf("invalid server URL: %w", err)
+	}
+	if parsed.Scheme == "http" && !allowInsecure {
+		return fmt.Errorf("server URL must use https scheme (use --insecure flag to allow HTTP for development)")
 	}
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return fmt.Errorf("server URL must use http or https scheme")
@@ -438,7 +444,9 @@ Default: 100`,
 }
 
 func newConfigSetServerCmd() *cobra.Command {
-	return &cobra.Command{
+	var allowInsecure bool
+
+	cmd := &cobra.Command{
 		Use:   "set-server <url>",
 		Short: "Set the server URL",
 		Args:  cobra.ExactArgs(1),
@@ -449,6 +457,9 @@ func newConfigSetServerCmd() *cobra.Command {
 			parsed, err := url.Parse(serverURL)
 			if err != nil {
 				return fmt.Errorf("invalid server URL: %w", err)
+			}
+			if parsed.Scheme == "http" && !allowInsecure {
+				return fmt.Errorf("server URL must use https scheme (use --insecure flag to allow HTTP for development)")
 			}
 			if parsed.Scheme != "http" && parsed.Scheme != "https" {
 				return fmt.Errorf("server URL must use http or https scheme")
@@ -469,6 +480,10 @@ func newConfigSetServerCmd() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&allowInsecure, "insecure", false, "Allow HTTP (non-TLS) connections (development only)")
+
+	return cmd
 }
 
 func newConfigSetAutoUpdateCmd() *cobra.Command {
@@ -1830,7 +1845,7 @@ func managedResticPath() string {
 	return filepath.Join(binDir, binary)
 }
 
-// downloadRestic downloads the latest restic binary from GitHub releases.
+// downloadRestic downloads the latest restic binary from GitHub releases with checksum verification.
 func downloadRestic(targetPath string, logger *zerolog.Logger) error {
 	// Ensure bin directory exists
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
@@ -1840,6 +1855,8 @@ func downloadRestic(targetPath string, logger *zerolog.Logger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
+	httpClient := httpclient.NewSimple(5 * time.Minute)
+
 	// Fetch latest restic release from GitHub
 	releaseURL := "https://api.github.com/repos/restic/restic/releases/latest"
 	req, err := http.NewRequestWithContext(ctx, "GET", releaseURL, nil)
@@ -1848,7 +1865,7 @@ func downloadRestic(targetPath string, logger *zerolog.Logger) error {
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("fetch release info: %w", err)
 	}
@@ -1871,23 +1888,32 @@ func downloadRestic(targetPath string, logger *zerolog.Logger) error {
 	// Find matching asset for this platform
 	osName := runtime.GOOS
 	archName := runtime.GOARCH
-	if archName == "amd64" {
-		archName = "amd64"
-	} else if archName == "arm64" {
-		archName = "arm64"
-	}
 
 	var downloadURL string
+	var checksumURL string
 	wantSuffix := fmt.Sprintf("_%s_%s.bz2", osName, archName)
 	for _, asset := range release.Assets {
 		if strings.HasSuffix(asset.Name, wantSuffix) {
 			downloadURL = asset.DownloadURL
-			break
+		}
+		if asset.Name == "SHA256SUMS" {
+			checksumURL = asset.DownloadURL
 		}
 	}
 
 	if downloadURL == "" {
 		return fmt.Errorf("no restic binary found for %s/%s", osName, archName)
+	}
+
+	// Validate download URLs point to GitHub
+	for _, u := range []string{downloadURL, checksumURL} {
+		if u == "" {
+			continue
+		}
+		parsed, parseErr := url.Parse(u)
+		if parseErr != nil || parsed.Scheme != "https" || !strings.HasSuffix(parsed.Host, "github.com") {
+			return fmt.Errorf("download URL is not a valid GitHub HTTPS URL: %s", u)
+		}
 	}
 
 	logger.Info().Str("url", downloadURL).Msg("downloading restic")
@@ -1898,7 +1924,7 @@ func downloadRestic(targetPath string, logger *zerolog.Logger) error {
 		return fmt.Errorf("create download request: %w", err)
 	}
 
-	dlResp, err := http.DefaultClient.Do(dlReq)
+	dlResp, err := httpClient.Do(dlReq)
 	if err != nil {
 		return fmt.Errorf("download restic: %w", err)
 	}
@@ -1908,7 +1934,42 @@ func downloadRestic(targetPath string, logger *zerolog.Logger) error {
 		return fmt.Errorf("download returned %d", dlResp.StatusCode)
 	}
 
-	// Write to temp file then rename
+	// Write compressed download to temp file for checksum verification
+	compressedTmp, err := os.CreateTemp(filepath.Dir(targetPath), "restic-compressed-*")
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+	compressedPath := compressedTmp.Name()
+	defer os.Remove(compressedPath)
+
+	hasher := sha256.New()
+	teeReader := io.TeeReader(dlResp.Body, hasher)
+	if _, err := copyWithLimit(compressedTmp, teeReader, 200*1024*1024); err != nil {
+		compressedTmp.Close()
+		return fmt.Errorf("write compressed restic: %w", err)
+	}
+	compressedTmp.Close()
+	downloadChecksum := fmt.Sprintf("%x", hasher.Sum(nil))
+
+	// Verify checksum if SHA256SUMS available
+	if checksumURL != "" {
+		expectedChecksum, checksumErr := fetchExpectedChecksum(ctx, httpClient, checksumURL, wantSuffix)
+		if checksumErr != nil {
+			logger.Warn().Err(checksumErr).Msg("could not verify checksum, proceeding with caution")
+		} else if expectedChecksum != downloadChecksum {
+			return fmt.Errorf("checksum mismatch: expected %s, got %s", expectedChecksum, downloadChecksum)
+		} else {
+			logger.Info().Str("sha256", downloadChecksum).Msg("checksum verified")
+		}
+	}
+
+	// Decompress bzip2 to final temp file
+	compressedFile, err := os.Open(compressedPath)
+	if err != nil {
+		return fmt.Errorf("reopen compressed file: %w", err)
+	}
+	defer compressedFile.Close()
+
 	tmpFile, err := os.CreateTemp(filepath.Dir(targetPath), "restic-download-*")
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
@@ -1916,8 +1977,7 @@ func downloadRestic(targetPath string, logger *zerolog.Logger) error {
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath) // clean up on failure
 
-	// restic releases are bzip2-compressed raw binaries
-	bz2Reader := newBzip2Reader(dlResp.Body)
+	bz2Reader := newBzip2Reader(compressedFile)
 	if _, err := copyWithLimit(tmpFile, bz2Reader, 200*1024*1024); err != nil {
 		tmpFile.Close()
 		return fmt.Errorf("write restic binary: %w", err)
@@ -1936,6 +1996,44 @@ func downloadRestic(targetPath string, logger *zerolog.Logger) error {
 
 	logger.Info().Str("path", targetPath).Msg("restic installed successfully")
 	return nil
+}
+
+// fetchExpectedChecksum downloads the SHA256SUMS file and extracts the checksum for the target asset.
+func fetchExpectedChecksum(ctx context.Context, client *http.Client, checksumURL, assetSuffix string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", checksumURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("create checksum request: %w", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("download checksums: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("checksum download returned %d", resp.StatusCode)
+	}
+
+	// Limit checksum file to 1MB
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
+	if err != nil {
+		return "", fmt.Errorf("read checksums: %w", err)
+	}
+
+	// Parse SHA256SUMS format: "<hash>  <filename>"
+	for _, line := range strings.Split(string(body), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.Fields(line)
+		if len(parts) >= 2 && strings.HasSuffix(parts[1], assetSuffix) {
+			return parts[0], nil
+		}
+	}
+
+	return "", fmt.Errorf("no checksum found for asset matching %s", assetSuffix)
 }
 
 // pollAndExecuteCommands polls the server for pending commands and executes them.

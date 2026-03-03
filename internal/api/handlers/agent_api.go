@@ -93,17 +93,17 @@ func (h *AgentAPIHandler) ReportHealth(c *gin.Context) {
 		agent.AgentVersion = &req.AgentVersion
 	}
 
-	// Convert metrics to model
+	// Convert metrics to model with bounds validation
 	var healthMetrics *models.HealthMetrics
 	if req.Metrics != nil {
 		healthMetrics = &models.HealthMetrics{
-			CPUUsage:        req.Metrics.CPUUsage,
-			MemoryUsage:     req.Metrics.MemoryUsage,
-			DiskUsage:       req.Metrics.DiskUsage,
-			DiskFreeBytes:   req.Metrics.DiskFreeBytes,
-			DiskTotalBytes:  req.Metrics.DiskTotalBytes,
+			CPUUsage:        clampFloat64(req.Metrics.CPUUsage, 0, 100),
+			MemoryUsage:     clampFloat64(req.Metrics.MemoryUsage, 0, 100),
+			DiskUsage:       clampFloat64(req.Metrics.DiskUsage, 0, 100),
+			DiskFreeBytes:   clampInt64NonNeg(req.Metrics.DiskFreeBytes),
+			DiskTotalBytes:  clampInt64NonNeg(req.Metrics.DiskTotalBytes),
 			NetworkUp:       req.Metrics.NetworkUp,
-			UptimeSeconds:   req.Metrics.UptimeSeconds,
+			UptimeSeconds:   clampInt64NonNeg(req.Metrics.UptimeSeconds),
 			ResticVersion:   req.Metrics.ResticVersion,
 			ResticAvailable: req.Metrics.ResticAvailable,
 		}
@@ -549,6 +549,30 @@ func (h *AgentAPIHandler) ReportCommandResult(c *gin.Context) {
 		return
 	}
 
+	// Enforce size limits on command result data
+	const maxOutputLen = 64 * 1024 // 64KB
+	const maxDiagnosticsKeys = 100
+	if req.Result != nil {
+		if len(req.Result.Output) > maxOutputLen {
+			req.Result.Output = req.Result.Output[:maxOutputLen]
+		}
+		if len(req.Result.Error) > maxOutputLen {
+			req.Result.Error = req.Result.Error[:maxOutputLen]
+		}
+		if len(req.Result.Diagnostics) > maxDiagnosticsKeys {
+			trimmed := make(map[string]any, maxDiagnosticsKeys)
+			count := 0
+			for k, v := range req.Result.Diagnostics {
+				if count >= maxDiagnosticsKeys {
+					break
+				}
+				trimmed[k] = v
+				count++
+			}
+			req.Result.Diagnostics = trimmed
+		}
+	}
+
 	// Update command based on status
 	switch req.Status {
 	case "running":
@@ -726,6 +750,36 @@ func (h *AgentAPIHandler) ReportBackup(c *gin.Context) {
 	var req ReportBackupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
+		return
+	}
+
+	// Verify schedule belongs to this agent
+	schedule, err := h.store.GetScheduleByID(c.Request.Context(), req.ScheduleID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
+		return
+	}
+	if schedule.AgentID != agent.ID {
+		h.logger.Warn().
+			Str("agent_id", agent.ID.String()).
+			Str("schedule_id", req.ScheduleID.String()).
+			Msg("agent attempted to report backup for another agent's schedule")
+		c.JSON(http.StatusForbidden, gin.H{"error": "schedule does not belong to this agent"})
+		return
+	}
+
+	// Verify repository belongs to agent's organization
+	repo, err := h.store.GetRepositoryByID(c.Request.Context(), req.RepositoryID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
+		return
+	}
+	if repo.OrgID != agent.OrgID {
+		h.logger.Warn().
+			Str("agent_id", agent.ID.String()).
+			Str("repo_id", req.RepositoryID.String()).
+			Msg("agent attempted to report backup for repository outside its organization")
+		c.JSON(http.StatusForbidden, gin.H{"error": "repository does not belong to this organization"})
 		return
 	}
 
@@ -994,4 +1048,23 @@ func (h *AgentAPIHandler) NotifyReconnection(c *gin.Context) {
 		Acknowledged: true,
 		AlertCreated: alertCreated,
 	})
+}
+
+// clampFloat64 constrains a value to [min, max].
+func clampFloat64(v, min, max float64) float64 {
+	if v < min {
+		return min
+	}
+	if v > max {
+		return max
+	}
+	return v
+}
+
+// clampInt64NonNeg returns 0 if v is negative, otherwise v.
+func clampInt64NonNeg(v int64) int64 {
+	if v < 0 {
+		return 0
+	}
+	return v
 }
