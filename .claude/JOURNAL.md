@@ -1,5 +1,23 @@
 # Keldris Development Journal
 
+## 2026-03-03 - Post-Deploy UI & Agent Fixes
+
+### What
+After deploying the backup execution pipeline fix, testing revealed several UX issues: agent list didn't auto-refresh, no way to edit schedules after creation, no feedback after "Run Now", and a type mismatch on the run response.
+
+### How
+- **Agent auto-refresh**: Added `refetchInterval: 30_000` to `useAgents()` so the agent list polls every 30 seconds for newly registered agents
+- **RunScheduleResponse type**: Changed `backup_id` to `command_id` to match the server's actual response after the pipeline fix
+- **Schedule edit modal**: Converted `CreateScheduleModal` into a dual-purpose create/edit modal — accepts optional `editSchedule` prop, pre-fills all form fields (name, agent, repos, cron, paths, retention, bandwidth, excludes, priority), calls `useUpdateSchedule()` in edit mode. Added "Edit" button as first action in each schedule row.
+- **Run Now feedback**: Added `onSuccess` callback to `runSchedule.mutate()` that shows an alert explaining the command was sent and the agent will pick it up within 60 seconds on next heartbeat
+
+### Files Modified
+- `web/src/hooks/useAgents.ts` — refetchInterval
+- `web/src/lib/types.ts` — RunScheduleResponse type fix
+- `web/src/pages/Schedules.tsx` — edit modal, Edit button, Run Now feedback
+
+---
+
 ## 2026-03-03 - Fix Backup Execution Pipeline
 
 ### What
