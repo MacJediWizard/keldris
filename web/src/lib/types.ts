@@ -623,7 +623,7 @@ export interface UpdateScheduleRequest {
 }
 
 export interface RunScheduleResponse {
-	backup_id: string;
+	command_id: string;
 	message: string;
 }
 

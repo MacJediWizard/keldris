@@ -70,9 +70,11 @@ function LoadingRow() {
 interface CreateScheduleModalProps {
 	isOpen: boolean;
 	onClose: () => void;
+	editSchedule?: Schedule;
 }
 
-function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
+function CreateScheduleModal({ isOpen, onClose, editSchedule }: CreateScheduleModalProps) {
+	const isEditMode = !!editSchedule;
 	const [name, setName] = useState('');
 	const [agentId, setAgentId] = useState('');
 	const [selectedRepos, setSelectedRepos] = useState<
@@ -107,11 +109,57 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 	// Priority and preemption state
 	const [priority, setPriority] = useState<SchedulePriority>(2);
 	const [preemptible, setPreemptible] = useState(false);
+	// Track whether we've initialized for this editSchedule
+	const [initializedForId, setInitializedForId] = useState<string | null>(null);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
 	const { data: policies } = usePolicies();
 	const createSchedule = useCreateSchedule();
+	const updateSchedule = useUpdateSchedule();
+
+	// Pre-fill form when editing
+	if (isOpen && editSchedule && initializedForId !== editSchedule.id) {
+		setName(editSchedule.name);
+		setAgentId(editSchedule.agent_id);
+		setSelectedRepos(
+			editSchedule.repositories?.map((r) => ({
+				repository_id: r.repository_id,
+				priority: r.priority,
+				enabled: r.enabled,
+			})) ?? [],
+		);
+		setCronExpression(editSchedule.cron_expression);
+		setPaths(editSchedule.paths.join('\n'));
+		setExcludes(editSchedule.excludes ?? []);
+		if (editSchedule.retention_policy) {
+			setShowRetention(true);
+			setKeepLast(editSchedule.retention_policy.keep_last ?? 5);
+			setKeepDaily(editSchedule.retention_policy.keep_daily ?? 7);
+			setKeepWeekly(editSchedule.retention_policy.keep_weekly ?? 4);
+			setKeepMonthly(editSchedule.retention_policy.keep_monthly ?? 6);
+			setKeepYearly(editSchedule.retention_policy.keep_yearly ?? 0);
+		} else {
+			setShowRetention(false);
+		}
+		setBandwidthLimitKb(editSchedule.bandwidth_limit_kb?.toString() ?? '');
+		setWindowStart(editSchedule.backup_window?.start ?? '');
+		setWindowEnd(editSchedule.backup_window?.end ?? '');
+		setExcludedHours(editSchedule.excluded_hours ?? []);
+		setCompressionLevel(editSchedule.compression_level ?? '');
+		setMaxFileSizeMb(editSchedule.max_file_size_mb?.toString() ?? '');
+		setOnMountUnavailable(editSchedule.on_mount_unavailable ?? 'fail');
+		setPriority(editSchedule.priority ?? 2);
+		setPreemptible(editSchedule.preemptible ?? false);
+		const hasAdvanced = !!(editSchedule.bandwidth_limit_kb || editSchedule.backup_window || (editSchedule.excluded_hours && editSchedule.excluded_hours.length > 0) || editSchedule.compression_level || editSchedule.max_file_size_mb || (editSchedule.on_mount_unavailable && editSchedule.on_mount_unavailable !== 'fail') || editSchedule.priority !== 2 || editSchedule.preemptible);
+		setShowAdvanced(hasAdvanced);
+		setInitializedForId(editSchedule.id);
+	}
+
+	// Reset initializedForId when modal closes
+	if (!isOpen && initializedForId !== null) {
+		setInitializedForId(null);
+	}
 
 	const handlePolicySelect = (policyId: string) => {
 		setSelectedPolicyId(policyId);
@@ -172,51 +220,91 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 					}
 				: undefined;
 
-			const data: Parameters<typeof createSchedule.mutateAsync>[0] = {
-				name,
-				agent_id: agentId,
-				repositories: selectedRepos,
-				cron_expression: cronExpression,
-				paths: paths.split('\n').filter((p) => p.trim()),
-				excludes: excludes.length > 0 ? excludes : undefined,
-				retention_policy: retentionPolicy,
-				enabled: true,
-			};
-
-			if (bandwidthLimitKb && Number.parseInt(bandwidthLimitKb, 10) > 0) {
-				data.bandwidth_limit_kb = Number.parseInt(bandwidthLimitKb, 10);
-			}
-
-			if (windowStart || windowEnd) {
-				data.backup_window = {
-					start: windowStart || undefined,
-					end: windowEnd || undefined,
+			if (isEditMode && editSchedule) {
+				const updateData: Parameters<typeof updateSchedule.mutateAsync>[0] = {
+					id: editSchedule.id,
+					data: {
+						name,
+						repositories: selectedRepos,
+						cron_expression: cronExpression,
+						paths: paths.split('\n').filter((p) => p.trim()),
+						excludes: excludes.length > 0 ? excludes : undefined,
+						retention_policy: retentionPolicy,
+					},
 				};
+
+				if (bandwidthLimitKb && Number.parseInt(bandwidthLimitKb, 10) > 0) {
+					updateData.data.bandwidth_limit_kb = Number.parseInt(bandwidthLimitKb, 10);
+				}
+				if (windowStart || windowEnd) {
+					updateData.data.backup_window = {
+						start: windowStart || undefined,
+						end: windowEnd || undefined,
+					};
+				}
+				if (excludedHours.length > 0) {
+					updateData.data.excluded_hours = excludedHours;
+				}
+				if (compressionLevel) {
+					updateData.data.compression_level = compressionLevel;
+				}
+				if (maxFileSizeMb && Number.parseInt(maxFileSizeMb, 10) > 0) {
+					updateData.data.max_file_size_mb = Number.parseInt(maxFileSizeMb, 10);
+				}
+				if (onMountUnavailable !== 'fail') {
+					updateData.data.on_mount_unavailable = onMountUnavailable;
+				}
+				if (priority !== 2) {
+					updateData.data.priority = priority;
+				}
+				if (preemptible) {
+					updateData.data.preemptible = preemptible;
+				}
+
+				await updateSchedule.mutateAsync(updateData);
+			} else {
+				const data: Parameters<typeof createSchedule.mutateAsync>[0] = {
+					name,
+					agent_id: agentId,
+					repositories: selectedRepos,
+					cron_expression: cronExpression,
+					paths: paths.split('\n').filter((p) => p.trim()),
+					excludes: excludes.length > 0 ? excludes : undefined,
+					retention_policy: retentionPolicy,
+					enabled: true,
+				};
+
+				if (bandwidthLimitKb && Number.parseInt(bandwidthLimitKb, 10) > 0) {
+					data.bandwidth_limit_kb = Number.parseInt(bandwidthLimitKb, 10);
+				}
+				if (windowStart || windowEnd) {
+					data.backup_window = {
+						start: windowStart || undefined,
+						end: windowEnd || undefined,
+					};
+				}
+				if (excludedHours.length > 0) {
+					data.excluded_hours = excludedHours;
+				}
+				if (compressionLevel) {
+					data.compression_level = compressionLevel;
+				}
+				if (maxFileSizeMb && Number.parseInt(maxFileSizeMb, 10) > 0) {
+					data.max_file_size_mb = Number.parseInt(maxFileSizeMb, 10);
+				}
+				if (onMountUnavailable !== 'fail') {
+					data.on_mount_unavailable = onMountUnavailable;
+				}
+				if (priority !== 2) {
+					data.priority = priority;
+				}
+				if (preemptible) {
+					data.preemptible = preemptible;
+				}
+
+				await createSchedule.mutateAsync(data);
 			}
 
-			if (excludedHours.length > 0) {
-				data.excluded_hours = excludedHours;
-			}
-
-			if (compressionLevel) {
-				data.compression_level = compressionLevel;
-			}
-			if (maxFileSizeMb && Number.parseInt(maxFileSizeMb, 10) > 0) {
-				data.max_file_size_mb = Number.parseInt(maxFileSizeMb, 10);
-			}
-			if (onMountUnavailable !== 'fail') {
-				data.on_mount_unavailable = onMountUnavailable;
-			}
-
-			// Priority settings
-			if (priority !== 2) {
-				data.priority = priority;
-			}
-			if (preemptible) {
-				data.preemptible = preemptible;
-			}
-
-			await createSchedule.mutateAsync(data);
 			onClose();
 			setName('');
 			setAgentId('');
@@ -268,7 +356,7 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-					Create Schedule
+					{isEditMode ? 'Edit Schedule' : 'Create Schedule'}
 				</h3>
 				<form onSubmit={handleSubmit}>
 					<div className="space-y-4">
@@ -816,9 +904,9 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 							)}
 						</div>
 					</div>
-					{createSchedule.isError && (
+					{(createSchedule.isError || updateSchedule.isError) && (
 						<p className="text-sm text-red-600 mt-4">
-							Failed to create schedule. Please try again.
+							Failed to {isEditMode ? 'update' : 'create'} schedule. Please try again.
 						</p>
 					)}
 					<div className="flex justify-end gap-3 mt-6">
@@ -831,10 +919,12 @@ function CreateScheduleModal({ isOpen, onClose }: CreateScheduleModalProps) {
 						</button>
 						<button
 							type="submit"
-							disabled={createSchedule.isPending}
+							disabled={createSchedule.isPending || updateSchedule.isPending}
 							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 						>
-							{createSchedule.isPending ? 'Creating...' : 'Create Schedule'}
+							{isEditMode
+								? updateSchedule.isPending ? 'Saving...' : 'Save Changes'
+								: createSchedule.isPending ? 'Creating...' : 'Create Schedule'}
 						</button>
 					</div>
 				</form>
@@ -1282,6 +1372,7 @@ interface ScheduleRowProps {
 	onDelete: (id: string) => void;
 	onRun: (id: string) => void;
 	onDryRun: (id: string) => void;
+	onEdit: (schedule: Schedule) => void;
 	onEditScripts: (id: string) => void;
 	onExport: (schedule: Schedule) => void;
 	onClone: (schedule: Schedule) => void;
@@ -1302,6 +1393,7 @@ function ScheduleRow({
 	onDelete,
 	onRun,
 	onDryRun,
+	onEdit,
 	onEditScripts,
 	onExport,
 	onClone,
@@ -1566,6 +1658,14 @@ function ScheduleRow({
 				<div className="flex items-center justify-end gap-2">
 					<button
 						type="button"
+						onClick={() => onEdit(schedule)}
+						className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
+					>
+						Edit
+					</button>
+					<span className="text-gray-300 dark:text-gray-600">|</span>
+					<button
+						type="button"
 						onClick={() => onRun(schedule.id)}
 						disabled={isRunning}
 						className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium disabled:opacity-50"
@@ -1627,6 +1727,7 @@ export function Schedules() {
 	);
 	const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 	const [showCreateModal, setShowCreateModal] = useState(false);
+	const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
 	const [editingScriptsScheduleId, setEditingScriptsScheduleId] = useState<
 		string | null
 	>(null);
@@ -1884,8 +1985,17 @@ export function Schedules() {
 		}
 	};
 
+	const handleEdit = (schedule: Schedule) => {
+		setEditingSchedule(schedule);
+		setShowCreateModal(true);
+	};
+
 	const handleRun = (id: string) => {
-		runSchedule.mutate(id);
+		runSchedule.mutate(id, {
+			onSuccess: () => {
+				alert('Backup command sent to agent. It will start within 60 seconds on the next heartbeat.');
+			},
+		});
 	};
 
 	const handleDryRun = (id: string) => {
@@ -2140,6 +2250,7 @@ export function Schedules() {
 										onDelete={handleDelete}
 										onRun={handleRun}
 										onDryRun={handleDryRun}
+										onEdit={handleEdit}
 										onEditScripts={setEditingScriptsScheduleId}
 										onExport={(s) => {
 											setSelectedScheduleForExport(s);
@@ -2208,7 +2319,11 @@ export function Schedules() {
 
 			<CreateScheduleModal
 				isOpen={showCreateModal}
-				onClose={() => setShowCreateModal(false)}
+				onClose={() => {
+					setShowCreateModal(false);
+					setEditingSchedule(null);
+				}}
+				editSchedule={editingSchedule ?? undefined}
 			/>
 
 			{editingScriptsScheduleId && (

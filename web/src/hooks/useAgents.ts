@@ -12,6 +12,7 @@ export function useAgents() {
 		queryKey: ['agents'],
 		queryFn: agentsApi.list,
 		staleTime: 30 * 1000, // 30 seconds
+		refetchInterval: 30 * 1000, // Poll every 30 seconds for new agents
 	});
 }
 
