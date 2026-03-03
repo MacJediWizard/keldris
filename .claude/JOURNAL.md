@@ -1,5 +1,41 @@
 # Keldris Development Journal
 
+## 2026-03-03 - Dark Mode Overhaul, Dry Run Constraint Fix, Remote Uninstall
+
+### What
+Comprehensive dark mode pass across the entire frontend (49 files), fixed the `agent_commands_type_check` constraint that was blocking dry runs, and added a remote uninstall command so agents can be uninstalled from the dashboard without SSH.
+
+### How
+
+**Dark mode** — Added `dark:` Tailwind variants to every component and page missing them:
+- **UI primitives** (11 files): Badge, Button, DataTable, DropdownMenu, ErrorMessage, Label, LoadingSpinner, Pagination, ReadOnlyBlocker, Stepper, Tabs
+- **Heavy pages** (6 files): Policies, SLA, Reports, AgentGroups, Documentation, DockerBackup
+- **Light pages** (9 files): Backups, DockerRegistries, RateLimits, DRRunbooks, RepositoryStatsDetail, StorageStats, Changelog, SLATracking, AgentDetails
+- **Feature components** (18 files): ExportImportModal, PatternLibraryModal, ContainerHooksEditor, ImportRepositoryWizard, KeyboardShortcutsSettings, GlobalSearchBar, MaintenanceCountdown, NetworkMountSelector, BackupScriptsEditor, DockerRestoreWizard, ImportAgentsWizard, ShortcutHelpModal, AgentLogViewer, AirGapIndicator, MetadataSchemaManager, RegionMapIndicator, ReplicationStatusCard, WhatsNewModal
+
+**Dry run constraint fix** — Migration 107 drops and recreates `agent_commands_type_check` to include `dry_run` (was missing from migration 106 which only added `update_restic`).
+
+**Remote uninstall** — Full-stack implementation of an `uninstall` command type:
+- Go model: `CommandTypeUninstall` constant + `Purge bool` in `CommandPayload`
+- Agent client: `Purge` field in agent-side `CommandPayload`
+- Server handler: Added `uninstall` to `CreateCommandRequest` binding validation
+- Agent executor: New `"uninstall"` case reports completed then calls `runUninstall(purge, force=true)`
+- DB migration: `uninstall` included in the type constraint
+- Frontend types: `'uninstall'` in `CommandType` union, `purge` in `CommandPayload`
+- UI: Replaced static CLI instructions in AgentDetails with two buttons — "Uninstall" (service+binary) and "Uninstall & Purge Data" (everything) — with confirmation dialogs, danger-zone styling, and dark mode support
+
+### Files Modified
+- `internal/models/agent_command.go` — `CommandTypeUninstall`, `Purge` payload field
+- `internal/agent/client.go` — `Purge` in agent `CommandPayload`
+- `internal/api/handlers/agent_commands.go` — `uninstall` in validation binding
+- `internal/db/migrations/107_add_dry_run_command_type.sql` — new migration
+- `cmd/keldris-agent/main.go` — `"uninstall"` case in command dispatch
+- `web/src/lib/types.ts` — `'uninstall'` type, `purge` payload
+- `web/src/pages/AgentDetails.tsx` — remote uninstall UI, dark mode
+- 44 additional frontend files — dark mode variants
+
+---
+
 ## 2026-03-03 - Agent-Side Dry Run, Config Path Fix, and UI Polish
 
 ### What
