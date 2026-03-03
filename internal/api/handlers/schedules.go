@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/models"
@@ -26,6 +27,7 @@ type ScheduleStore interface {
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 	GetReplicationStatusBySchedule(ctx context.Context, scheduleID uuid.UUID) ([]*models.ReplicationStatus, error)
 	CreateBackup(ctx context.Context, backup *models.Backup) error
+	CreateAgentCommand(ctx context.Context, cmd *models.AgentCommand) error
 }
 
 // SchedulesHandler handles schedule-related HTTP endpoints.
@@ -658,8 +660,8 @@ type RunScheduleRequest struct {
 
 // RunScheduleResponse is the response for running a schedule.
 type RunScheduleResponse struct {
-	BackupID uuid.UUID `json:"backup_id"`
-	Message  string    `json:"message"`
+	CommandID uuid.UUID `json:"command_id"`
+	Message   string    `json:"message"`
 }
 
 // DryRunResponse is the response for a dry run operation.
@@ -733,22 +735,33 @@ func (h *SchedulesHandler) Run(c *gin.Context) {
 		return
 	}
 
-	backup := models.NewBackup(schedule.ID, schedule.AgentID, nil)
-	if err := h.store.CreateBackup(c.Request.Context(), backup); err != nil {
-		h.logger.Error().Err(err).Str("schedule_id", id.String()).Msg("failed to create backup record")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create backup"})
+	// Dispatch a backup_now command to the agent (the agent will create the
+	// backup record when it actually runs via ReportBackup).
+	cmd := models.NewAgentCommand(
+		schedule.AgentID,
+		user.CurrentOrgID,
+		models.CommandTypeBackupNow,
+		&models.CommandPayload{ScheduleID: &schedule.ID},
+		&user.ID,
+	)
+	// Backups can take a long time; use a 2-hour timeout instead of the default 5 minutes.
+	cmd.TimeoutAt = time.Now().Add(2 * time.Hour)
+
+	if err := h.store.CreateAgentCommand(c.Request.Context(), cmd); err != nil {
+		h.logger.Error().Err(err).Str("schedule_id", id.String()).Msg("failed to create backup command")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to trigger backup"})
 		return
 	}
 
 	h.logger.Info().
 		Str("schedule_id", id.String()).
 		Str("agent_id", schedule.AgentID.String()).
-		Str("backup_id", backup.ID.String()).
-		Msg("manual backup run triggered")
+		Str("command_id", cmd.ID.String()).
+		Msg("manual backup command dispatched to agent")
 
 	c.JSON(http.StatusAccepted, RunScheduleResponse{
-		BackupID: backup.ID,
-		Message:  "Backup triggered successfully",
+		CommandID: cmd.ID,
+		Message:   "Backup command sent to agent",
 	})
 }
 
@@ -821,7 +834,7 @@ func (h *SchedulesHandler) DryRun(c *gin.Context) {
 		UnchangedFiles: 0,
 		FilesToBackup:  []DryRunFileResponse{},
 		ExcludedFiles:  excludedFiles,
-		Message:        "Dry run not yet fully implemented. Schedule paths: " + formatPaths(schedule.Paths),
+		Message:        "Dry run requires agent-side execution and is not yet available. Schedule paths: " + formatPaths(schedule.Paths),
 	})
 }
 

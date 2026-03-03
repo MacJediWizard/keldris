@@ -1575,3 +1575,21 @@ func (db *DB) UpdateMembership(ctx context.Context, m *models.OrgMembership) err
 	}
 	return nil
 }
+
+// FailStaleBackups marks any backups stuck in "running" status for longer than
+// the given duration as "failed". Returns the number of backups updated.
+func (db *DB) FailStaleBackups(ctx context.Context, olderThan time.Duration) (int, error) {
+	cutoff := time.Now().Add(-olderThan)
+	result, err := db.Pool.Exec(ctx, `
+		UPDATE backups
+		SET status = 'failed',
+		    error_message = 'backup timed out — agent may have been offline',
+		    completed_at = NOW()
+		WHERE status = 'running'
+		  AND started_at < $1
+	`, cutoff)
+	if err != nil {
+		return 0, fmt.Errorf("fail stale backups: %w", err)
+	}
+	return int(result.RowsAffected()), nil
+}

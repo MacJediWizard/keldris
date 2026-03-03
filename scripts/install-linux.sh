@@ -226,6 +226,7 @@ ReadWritePaths=/etc/keldris /var/log
 
 # Environment
 Environment=KELDRIS_CONFIG_DIR=/etc/keldris
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 [Install]
 WantedBy=multi-user.target

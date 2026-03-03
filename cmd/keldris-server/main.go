@@ -144,6 +144,13 @@ func run() int {
 		return 1
 	}
 
+	// Clean up stale backups stuck in "running" from previous runs
+	if staleCount, err := database.FailStaleBackups(ctx, 24*time.Hour); err != nil {
+		logger.Error().Err(err).Msg("Failed to clean up stale backups")
+	} else if staleCount > 0 {
+		logger.Info().Int("count", staleCount).Msg("Marked stale running backups as failed")
+	}
+
 	// Initialize crypto key manager
 	encryptionKeyHex := os.Getenv("ENCRYPTION_KEY")
 	if encryptionKeyHex == "" {

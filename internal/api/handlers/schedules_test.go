@@ -32,6 +32,7 @@ type mockScheduleStore struct {
 	listAgentsErr       error
 	replStatusErr       error
 	createBackupErr     error
+	createCmdErr        error
 }
 
 func newMockScheduleStore() *mockScheduleStore {
@@ -102,6 +103,10 @@ func (m *mockScheduleStore) GetReplicationStatusBySchedule(_ context.Context, sc
 
 func (m *mockScheduleStore) CreateBackup(_ context.Context, _ *models.Backup) error {
 	return m.createBackupErr
+}
+
+func (m *mockScheduleStore) CreateAgentCommand(_ context.Context, _ *models.AgentCommand) error {
+	return m.createCmdErr
 }
 
 func setupScheduleTestRouter(store ScheduleStore, user *auth.SessionUser) *gin.Engine {
