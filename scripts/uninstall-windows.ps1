@@ -77,6 +77,13 @@ function Main {
         Remove-Item -Path $binaryPath -Force
     }
 
+    # Remove restic if installed alongside agent
+    $resticPath = Join-Path $InstallDir "restic.exe"
+    if ($Purge -and (Test-Path $resticPath)) {
+        Write-Info "Removing restic..."
+        Remove-Item -Path $resticPath -Force
+    }
+
     # Remove from PATH
     $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
     if ($currentPath -like "*$InstallDir*") {

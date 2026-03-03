@@ -106,6 +106,53 @@ install_binary() {
     log_info "Binary installed successfully"
 }
 
+# Install restic backup engine
+install_restic() {
+    if command -v restic &> /dev/null; then
+        local current_version
+        current_version=$(restic version 2>/dev/null | awk '{print $2}')
+        log_info "Restic already installed (${current_version})"
+        return 0
+    fi
+
+    log_info "Installing restic..."
+
+    local arch
+    arch=$(uname -m)
+    local restic_arch
+    case "$arch" in
+        x86_64)  restic_arch="amd64" ;;
+        arm64)   restic_arch="arm64" ;;
+        *) log_warn "Unsupported architecture for restic: $arch"; return 0 ;;
+    esac
+
+    # Get latest version tag
+    local latest_tag
+    latest_tag=$(curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/restic/restic/releases/latest | grep -o '[^/]*$')
+    local version="${latest_tag#v}"
+    local restic_url="https://github.com/restic/restic/releases/download/${latest_tag}/restic_${version}_darwin_${restic_arch}.bz2"
+    local tmp_restic="/tmp/restic.bz2"
+
+    curl -fsSL -o "$tmp_restic" "$restic_url" || {
+        log_warn "Failed to download restic. Install manually: brew install restic"
+        return 0
+    }
+
+    bunzip2 -f "$tmp_restic"
+    if [[ ! -f "/tmp/restic" ]]; then
+        log_warn "Failed to decompress restic. Install manually: brew install restic"
+        return 0
+    fi
+
+    sudo mv "/tmp/restic" "${INSTALL_DIR}/restic"
+    sudo chmod 755 "${INSTALL_DIR}/restic"
+    sudo xattr -d com.apple.quarantine "${INSTALL_DIR}/restic" 2>/dev/null || true
+
+    local installed_version
+    installed_version=$(restic version 2>/dev/null | awk '{print $2}')
+    log_info "Restic ${installed_version} installed successfully"
+}
+
 # Create config directory
 create_config_dir() {
     log_info "Creating configuration directory..."
@@ -320,6 +367,7 @@ main() {
             tmp_file=$(download_binary "$arch")
 
             install_binary "$tmp_file"
+            install_restic
             create_config_dir
             create_launchd_plist
             register_agent

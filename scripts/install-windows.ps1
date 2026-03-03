@@ -136,6 +136,72 @@ function Install-AgentBinary {
     return $installPath
 }
 
+# Install restic backup engine
+function Install-Restic {
+    $resticPath = Join-Path $InstallDir "restic.exe"
+
+    # Check if already installed
+    if (Test-Path $resticPath) {
+        $currentVersion = & $resticPath version 2>$null | Select-Object -First 1
+        Write-Info "Restic already installed ($currentVersion)"
+        return
+    }
+
+    # Also check PATH
+    $existingRestic = Get-Command restic -ErrorAction SilentlyContinue
+    if ($existingRestic) {
+        $currentVersion = & restic version 2>$null | Select-Object -First 1
+        Write-Info "Restic already installed ($currentVersion)"
+        return
+    }
+
+    Write-Info "Installing restic..."
+
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+        # Get latest release tag
+        $latestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/restic/restic/releases/latest"
+        $version = $latestRelease.tag_name -replace '^v', ''
+        $zipName = "restic_${version}_windows_amd64.zip"
+        $downloadUrl = ($latestRelease.assets | Where-Object { $_.name -eq $zipName }).browser_download_url
+
+        if (-not $downloadUrl) {
+            Write-Warn "Could not find restic download URL. Install manually: https://restic.net"
+            return
+        }
+
+        $tempZip = Join-Path $env:TEMP $zipName
+        $tempExtract = Join-Path $env:TEMP "restic-extract"
+
+        $webClient = New-Object System.Net.WebClient
+        $webClient.DownloadFile($downloadUrl, $tempZip)
+
+        # Extract
+        if (Test-Path $tempExtract) { Remove-Item -Path $tempExtract -Recurse -Force }
+        Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+
+        # Find and move the binary
+        $resticBin = Get-ChildItem -Path $tempExtract -Filter "restic*.exe" -Recurse | Select-Object -First 1
+        if ($resticBin) {
+            Copy-Item -Path $resticBin.FullName -Destination $resticPath -Force
+            $installedVersion = & $resticPath version 2>$null | Select-Object -First 1
+            Write-Info "Restic installed ($installedVersion)"
+        }
+        else {
+            Write-Warn "Could not find restic binary in archive"
+        }
+
+        # Cleanup
+        Remove-Item -Path $tempZip -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    catch {
+        Write-Warn "Failed to install restic: $_"
+        Write-Warn "Install manually from https://restic.net"
+    }
+}
+
 # Create configuration directory
 function New-ConfigDirectory {
     Write-Info "Creating configuration directory..."
@@ -411,6 +477,7 @@ function Main {
 
             $tempFile = Get-AgentBinary -Arch $arch
             $binaryPath = Install-AgentBinary -TempFile $tempFile
+            Install-Restic
             New-ConfigDirectory
             New-AgentService -BinaryPath $binaryPath
             Add-ToPath

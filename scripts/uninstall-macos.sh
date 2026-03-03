@@ -79,6 +79,21 @@ main() {
         fi
     fi
 
+    # Remove restic if installed by us (only in /usr/local/bin, not Homebrew)
+    if [[ "$remove_all" == true && -f "${INSTALL_DIR}/restic" ]]; then
+        # Only remove if not managed by Homebrew
+        if ! brew list restic &>/dev/null 2>&1; then
+            log_info "Removing restic..."
+            if [[ -w "${INSTALL_DIR}/restic" ]]; then
+                rm -f "${INSTALL_DIR}/restic"
+            else
+                sudo rm -f "${INSTALL_DIR}/restic"
+            fi
+        else
+            log_info "Restic is managed by Homebrew, skipping"
+        fi
+    fi
+
     # Remove config and data if --purge
     if [[ "$remove_all" == true ]]; then
         if [[ -d "$CONFIG_DIR" ]]; then

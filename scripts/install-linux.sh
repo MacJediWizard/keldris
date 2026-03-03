@@ -114,6 +114,79 @@ install_binary() {
     log_info "Binary installed successfully"
 }
 
+# Install restic backup engine
+install_restic() {
+    if command -v restic &> /dev/null; then
+        local current_version
+        current_version=$(restic version 2>/dev/null | awk '{print $2}')
+        log_info "Restic already installed (${current_version})"
+        return 0
+    fi
+
+    log_info "Installing restic..."
+
+    local arch
+    arch=$(uname -m)
+    local restic_arch
+    case "$arch" in
+        x86_64)  restic_arch="amd64" ;;
+        aarch64|arm64) restic_arch="arm64" ;;
+        *) log_warn "Unsupported architecture for restic: $arch"; return 0 ;;
+    esac
+
+    local restic_url="https://github.com/restic/restic/releases/latest/download/restic_${restic_arch}.bz2"
+    local tmp_restic="/tmp/restic.bz2"
+
+    # Try downloading the versioned binary
+    if command -v curl &> /dev/null; then
+        # Get latest version tag
+        local latest_tag
+        latest_tag=$(curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/restic/restic/releases/latest | grep -o '[^/]*$')
+        local version="${latest_tag#v}"
+        restic_url="https://github.com/restic/restic/releases/download/${latest_tag}/restic_${version}_linux_${restic_arch}.bz2"
+        curl -fsSL -o "$tmp_restic" "$restic_url"
+    elif command -v wget &> /dev/null; then
+        local latest_tag
+        latest_tag=$(wget -q -O /dev/null --server-response https://github.com/restic/restic/releases/latest 2>&1 | grep -i location | grep -o '[^/]*$' | tr -d '\r')
+        local version="${latest_tag#v}"
+        restic_url="https://github.com/restic/restic/releases/download/${latest_tag}/restic_${version}_linux_${restic_arch}.bz2"
+        wget -q -O "$tmp_restic" "$restic_url"
+    else
+        log_warn "Cannot download restic: neither curl nor wget available"
+        return 0
+    fi
+
+    if [[ ! -f "$tmp_restic" ]]; then
+        log_warn "Failed to download restic. Install manually: https://restic.net"
+        return 0
+    fi
+
+    # Decompress and install
+    if ! command -v bunzip2 &> /dev/null; then
+        log_warn "bunzip2 not found. Installing bzip2..."
+        apt-get install -y bzip2 2>/dev/null || yum install -y bzip2 2>/dev/null || true
+    fi
+
+    bunzip2 -f "$tmp_restic"
+    local tmp_bin="/tmp/restic"
+    # The decompressed file may have the original name without .bz2
+    if [[ -f "/tmp/restic" ]]; then
+        tmp_bin="/tmp/restic"
+    elif [[ -f "/tmp/restic.bz2" ]]; then
+        # bunzip2 failed silently
+        log_warn "Failed to decompress restic. Install manually: https://restic.net"
+        return 0
+    fi
+
+    mv "$tmp_bin" "${INSTALL_DIR}/restic"
+    chmod 755 "${INSTALL_DIR}/restic"
+    chown root:root "${INSTALL_DIR}/restic"
+
+    local installed_version
+    installed_version=$(restic version 2>/dev/null | awk '{print $2}')
+    log_info "Restic ${installed_version} installed successfully"
+}
+
 # Create config directory
 create_config_dir() {
     log_info "Creating configuration directory..."
@@ -320,6 +393,7 @@ main() {
             tmp_file=$(download_binary "$arch")
 
             install_binary "$tmp_file"
+            install_restic
             create_config_dir
             create_systemd_service
             register_agent

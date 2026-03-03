@@ -92,6 +92,12 @@ main() {
         rm -f "${INSTALL_DIR}/${BINARY_NAME}"
     fi
 
+    # Remove restic if installed by us (only in /usr/local/bin, not system package)
+    if [[ "$remove_all" == true && -f "${INSTALL_DIR}/restic" ]]; then
+        log_info "Removing restic..."
+        rm -f "${INSTALL_DIR}/restic"
+    fi
+
     # Remove config and data if --purge
     if [[ "$remove_all" == true ]]; then
         if [[ -d "$CONFIG_DIR" ]]; then
