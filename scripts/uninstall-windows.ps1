@@ -118,6 +118,21 @@ function Main {
             Write-Info "Removing $userKeldris..."
             Remove-Item -Path $userKeldris -Recurse -Force
         }
+
+        # Remove temporary files
+        $tempMounts = Join-Path $env:TEMP "keldris-mounts"
+        if (Test-Path $tempMounts) {
+            Write-Info "Removing temporary mount directory..."
+            Remove-Item -Path $tempMounts -Recurse -Force
+        }
+
+        Write-Info "Removing temporary files..."
+        Get-ChildItem -Path $env:TEMP -Filter "keldris-*" -ErrorAction SilentlyContinue |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $env:TEMP -Filter "restic-compressed-*" -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $env:TEMP -Filter "restic-download-*" -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
     }
     else {
         if (Test-Path $ConfigDir) {

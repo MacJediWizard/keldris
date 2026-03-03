@@ -342,6 +342,13 @@ print_instructions() {
 
 # Uninstall function
 uninstall() {
+    local purge=false
+    for arg in "$@"; do
+        case "$arg" in
+            --purge) purge=true ;;
+        esac
+    done
+
     log_info "Uninstalling Keldris Agent..."
 
     # Stop and disable service
@@ -360,6 +367,7 @@ uninstall() {
         log_info "Removing systemd service..."
         rm -f "/etc/systemd/system/${SERVICE_NAME}.service"
         systemctl daemon-reload
+        systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || true
     fi
 
     # Remove binary
@@ -368,8 +376,48 @@ uninstall() {
         rm -f "${INSTALL_DIR}/${BINARY_NAME}"
     fi
 
-    log_info "Uninstall complete"
-    log_warn "Configuration directory ${CONFIG_DIR} was not removed. Delete manually if needed."
+    # Remove restic if installed by us (only in /usr/local/bin, not system package)
+    if [[ "$purge" == true && -f "${INSTALL_DIR}/restic" ]]; then
+        log_info "Removing restic..."
+        rm -f "${INSTALL_DIR}/restic"
+    fi
+
+    # Remove config and data if --purge
+    if [[ "$purge" == true ]]; then
+        if [[ -d "$CONFIG_DIR" ]]; then
+            log_info "Removing configuration directory ${CONFIG_DIR}..."
+            rm -rf "$CONFIG_DIR"
+        fi
+
+        # Also clean up root's home config if it exists
+        if [[ -d "/root/.keldris" ]]; then
+            log_info "Removing /root/.keldris..."
+            rm -rf "/root/.keldris"
+        fi
+
+        # Unmount any active FUSE mounts before cleanup
+        if [[ -d "/tmp/keldris-mounts" ]]; then
+            log_info "Unmounting FUSE mounts..."
+            for mnt in /tmp/keldris-mounts/*/; do
+                [[ -d "$mnt" ]] || continue
+                fusermount -u "$mnt" 2>/dev/null || umount "$mnt" 2>/dev/null || true
+            done
+        fi
+
+        log_info "Removing temporary files..."
+        rm -rf /tmp/keldris-* 2>/dev/null || true
+        rm -f /tmp/restic-compressed-* /tmp/restic-download-* 2>/dev/null || true
+
+        # Remove log files
+        rm -f /var/log/keldris* 2>/dev/null || true
+    else
+        if [[ -d "$CONFIG_DIR" ]]; then
+            log_warn "Configuration directory ${CONFIG_DIR} was preserved."
+            log_warn "Run with --purge to remove all configuration and data."
+        fi
+    fi
+
+    log_info "Keldris Agent has been uninstalled."
 }
 
 # Main installation function
@@ -403,10 +451,10 @@ main() {
             ;;
         uninstall)
             check_root
-            uninstall
+            uninstall "${@:2}"
             ;;
         *)
-            echo "Usage: $0 [install|uninstall]"
+            echo "Usage: $0 [install|uninstall [--purge]]"
             exit 1
             ;;
     esac

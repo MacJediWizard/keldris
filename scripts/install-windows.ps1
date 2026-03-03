@@ -35,7 +35,10 @@ param(
     [string]$KeldrisCode = "",
 
     [Parameter(Mandatory = $false)]
-    [string]$KeldrisOrgId = ""
+    [string]$KeldrisOrgId = "",
+
+    [Parameter(Mandatory = $false)]
+    [switch]$Purge
 )
 
 # Configuration
@@ -434,6 +437,7 @@ function Uninstall-Agent {
         }
         Write-Info "Removing service..."
         sc.exe delete $ServiceName | Out-Null
+        Start-Sleep -Seconds 1
     }
 
     # Remove binary
@@ -443,21 +447,71 @@ function Uninstall-Agent {
         Remove-Item -Path $binaryPath -Force
     }
 
+    # Remove restic if installed alongside agent
+    $resticPath = Join-Path $InstallDir "restic.exe"
+    if ($Purge -and (Test-Path $resticPath)) {
+        Write-Info "Removing restic..."
+        Remove-Item -Path $resticPath -Force
+    }
+
     # Remove from PATH
     $currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
     if ($currentPath -like "*$InstallDir*") {
         $newPath = ($currentPath.Split(';') | Where-Object { $_ -ne $InstallDir }) -join ';'
         [Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
-        Write-Info "Removed from PATH"
+        Write-Info "Removed from system PATH"
+    }
+
+    # Remove KELDRIS_CONFIG_DIR env var
+    $configDirEnv = [Environment]::GetEnvironmentVariable("KELDRIS_CONFIG_DIR", "Machine")
+    if ($configDirEnv) {
+        [Environment]::SetEnvironmentVariable("KELDRIS_CONFIG_DIR", $null, "Machine")
+        Write-Info "Removed KELDRIS_CONFIG_DIR environment variable"
     }
 
     # Remove install directory if empty
     if ((Test-Path $InstallDir) -and ((Get-ChildItem $InstallDir | Measure-Object).Count -eq 0)) {
         Remove-Item -Path $InstallDir -Force
+        Write-Info "Removed empty install directory"
     }
 
-    Write-Info "Uninstall complete"
-    Write-Warn "Configuration directory $ConfigDir was not removed. Delete manually if needed."
+    # Remove config and data if -Purge
+    if ($Purge) {
+        if (Test-Path $ConfigDir) {
+            Write-Info "Removing configuration directory $ConfigDir..."
+            Remove-Item -Path $ConfigDir -Recurse -Force
+        }
+
+        # Also clean up user home .keldris if it exists
+        $userKeldris = Join-Path $env:USERPROFILE ".keldris"
+        if (Test-Path $userKeldris) {
+            Write-Info "Removing $userKeldris..."
+            Remove-Item -Path $userKeldris -Recurse -Force
+        }
+
+        # Remove temporary files
+        $tempMounts = Join-Path $env:TEMP "keldris-mounts"
+        if (Test-Path $tempMounts) {
+            Write-Info "Removing temporary mount directory..."
+            Remove-Item -Path $tempMounts -Recurse -Force
+        }
+
+        Write-Info "Removing temporary files..."
+        Get-ChildItem -Path $env:TEMP -Filter "keldris-*" -ErrorAction SilentlyContinue |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $env:TEMP -Filter "restic-compressed-*" -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $env:TEMP -Filter "restic-download-*" -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+    }
+    else {
+        if (Test-Path $ConfigDir) {
+            Write-Warn "Configuration directory $ConfigDir was preserved."
+            Write-Warn "Run with -Purge to remove all configuration and data."
+        }
+    }
+
+    Write-Info "Keldris Agent has been uninstalled."
 }
 
 # Main

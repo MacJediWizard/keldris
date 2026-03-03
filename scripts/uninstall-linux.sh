@@ -110,6 +110,22 @@ main() {
             log_info "Removing /root/.keldris..."
             rm -rf "/root/.keldris"
         fi
+
+        # Unmount any active FUSE mounts before cleanup
+        if [[ -d "/tmp/keldris-mounts" ]]; then
+            log_info "Unmounting FUSE mounts..."
+            for mnt in /tmp/keldris-mounts/*/; do
+                [[ -d "$mnt" ]] || continue
+                fusermount -u "$mnt" 2>/dev/null || umount "$mnt" 2>/dev/null || true
+            done
+        fi
+
+        log_info "Removing temporary files..."
+        rm -rf /tmp/keldris-* 2>/dev/null || true
+        rm -f /tmp/restic-compressed-* /tmp/restic-download-* 2>/dev/null || true
+
+        # Remove log files
+        rm -f /var/log/keldris* 2>/dev/null || true
     else
         if [[ -d "$CONFIG_DIR" ]]; then
             log_warn "Configuration directory ${CONFIG_DIR} was preserved."

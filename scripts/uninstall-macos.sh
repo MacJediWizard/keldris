@@ -106,6 +106,19 @@ main() {
             log_info "Removing $HOME/.keldris..."
             rm -rf "$HOME/.keldris"
         fi
+
+        # Unmount any active FUSE mounts before cleanup
+        if [[ -d "/tmp/keldris-mounts" ]]; then
+            log_info "Unmounting FUSE mounts..."
+            for mnt in /tmp/keldris-mounts/*/; do
+                [[ -d "$mnt" ]] || continue
+                umount "$mnt" 2>/dev/null || true
+            done
+        fi
+
+        log_info "Removing temporary files..."
+        rm -rf /tmp/keldris-* 2>/dev/null || true
+        rm -f /tmp/restic-compressed-* /tmp/restic-download-* 2>/dev/null || true
     else
         if [[ -d "$CONFIG_DIR" ]]; then
             log_warn "Configuration directory ${CONFIG_DIR} was preserved."

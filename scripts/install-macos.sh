@@ -328,6 +328,13 @@ print_instructions() {
 
 # Uninstall function
 uninstall() {
+    local purge=false
+    for arg in "$@"; do
+        case "$arg" in
+            --purge) purge=true ;;
+        esac
+    done
+
     local plist_file="${PLIST_DIR}/${SERVICE_LABEL}.plist"
 
     log_info "Uninstalling Keldris Agent..."
@@ -337,16 +344,66 @@ uninstall() {
         log_info "Stopping and unloading service..."
         launchctl unload "$plist_file" 2>/dev/null || true
         rm -f "$plist_file"
+        log_info "Launchd plist removed."
     fi
 
-    # Remove binary
+    # Remove binary (may need sudo for /usr/local/bin)
     if [[ -f "${INSTALL_DIR}/${BINARY_NAME}" ]]; then
         log_info "Removing binary..."
-        sudo rm -f "${INSTALL_DIR}/${BINARY_NAME}"
+        if [[ -w "${INSTALL_DIR}/${BINARY_NAME}" ]]; then
+            rm -f "${INSTALL_DIR}/${BINARY_NAME}"
+        else
+            sudo rm -f "${INSTALL_DIR}/${BINARY_NAME}"
+        fi
     fi
 
-    log_info "Uninstall complete"
-    log_warn "Configuration directory ${CONFIG_DIR} was not removed. Delete manually if needed."
+    # Remove restic if installed by us (only in /usr/local/bin, not Homebrew)
+    if [[ "$purge" == true && -f "${INSTALL_DIR}/restic" ]]; then
+        if ! brew list restic &>/dev/null 2>&1; then
+            log_info "Removing restic..."
+            if [[ -w "${INSTALL_DIR}/restic" ]]; then
+                rm -f "${INSTALL_DIR}/restic"
+            else
+                sudo rm -f "${INSTALL_DIR}/restic"
+            fi
+        else
+            log_info "Restic is managed by Homebrew, skipping"
+        fi
+    fi
+
+    # Remove config and data if --purge
+    if [[ "$purge" == true ]]; then
+        if [[ -d "$CONFIG_DIR" ]]; then
+            log_info "Removing configuration directory ${CONFIG_DIR}..."
+            rm -rf "$CONFIG_DIR"
+        fi
+
+        # Also clean up ~/.keldris if it exists
+        if [[ -d "$HOME/.keldris" ]]; then
+            log_info "Removing $HOME/.keldris..."
+            rm -rf "$HOME/.keldris"
+        fi
+
+        # Unmount any active FUSE mounts before cleanup
+        if [[ -d "/tmp/keldris-mounts" ]]; then
+            log_info "Unmounting FUSE mounts..."
+            for mnt in /tmp/keldris-mounts/*/; do
+                [[ -d "$mnt" ]] || continue
+                umount "$mnt" 2>/dev/null || true
+            done
+        fi
+
+        log_info "Removing temporary files..."
+        rm -rf /tmp/keldris-* 2>/dev/null || true
+        rm -f /tmp/restic-compressed-* /tmp/restic-download-* 2>/dev/null || true
+    else
+        if [[ -d "$CONFIG_DIR" ]]; then
+            log_warn "Configuration directory ${CONFIG_DIR} was preserved."
+            log_warn "Run with --purge to remove all configuration and data."
+        fi
+    fi
+
+    log_info "Keldris Agent has been uninstalled."
 }
 
 # Main installation function
@@ -375,10 +432,10 @@ main() {
             print_instructions
             ;;
         uninstall)
-            uninstall
+            uninstall "${@:2}"
             ;;
         *)
-            echo "Usage: $0 [install|uninstall]"
+            echo "Usage: $0 [install|uninstall [--purge]]"
             exit 1
             ;;
     esac
