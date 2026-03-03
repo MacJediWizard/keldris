@@ -1,5 +1,33 @@
 # Keldris Development Journal
 
+## 2026-03-03 - Agent-Side Dry Run, Config Path Fix, and UI Polish
+
+### What
+Implemented real dry run execution via the agent, fixed `sudo keldris-agent status` showing "Not configured", fixed dark mode contrast on cron badges, and improved agent page responsiveness.
+
+### How
+- **Dry run command dispatch**: Server DryRun handler now creates a `dry_run` command (like `backup_now`) instead of returning placeholder data. Agent polls for it, runs `restic backup --dry-run --json`, and reports results back.
+- **Agent executor**: Added `dry_run` case in `executeCommand` switch and `executeDryRun()` function that fetches the schedule from the server, builds restic config, and runs `restic.DryRun()`.
+- **Frontend async flow**: Both Schedules and Onboarding pages now dispatch the command, then poll `useCommandResult()` (2s interval) until terminal status. Results are converted from `DryRunCommandResult` into the existing `DryRunResponse` shape for display.
+- **Config path fallback**: `DefaultConfigDir()` now checks `~/.keldris/config.yml` then `/etc/keldris/config.yml` as fallback, fixing the case where `sudo` doesn't carry the `KELDRIS_CONFIG_DIR` env var set in the systemd unit.
+- **Cron dark mode**: Added `dark:bg-gray-700 text-gray-800 dark:text-gray-200` to cron expression badges in Schedules page.
+- **Agent page responsiveness**: Lowered `useAgents()` polling from 30s to 10s and added `placeholderData: keepPreviousData` to prevent empty-state flash on navigation.
+
+### Files Modified
+- `cmd/keldris-agent/main.go` — `executeDryRun()` function and `dry_run` case
+- `internal/models/agent_command.go` — `CommandTypeDryRun`, `DryRunCommandResult`
+- `internal/agent/client.go` — `DryRunResultDetail` in `CommandResultDetail`
+- `internal/api/handlers/schedules.go` — DryRun handler dispatches command, removed unused `formatPaths`
+- `internal/config/agent.go` — `/etc/keldris` fallback in `DefaultConfigDir()`
+- `web/src/lib/types.ts` — `DryRunCommandResponse`, `DryRunCommandResult`
+- `web/src/lib/api.ts` — updated `dryRun` return type
+- `web/src/hooks/useSchedules.ts` — `useCommandResult` hook
+- `web/src/hooks/useAgents.ts` — lower polling, `keepPreviousData`
+- `web/src/pages/Schedules.tsx` — async dry run flow, cron dark mode fix
+- `web/src/pages/Onboarding.tsx` — async dry run flow
+
+---
+
 ## 2026-03-03 - Add `uninstall` Subcommand to Agent Binary
 
 ### What
