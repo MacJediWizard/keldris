@@ -1,5 +1,23 @@
 # Keldris Development Journal
 
+## 2026-03-03 - Add `uninstall` Subcommand to Agent Binary
+
+### What
+Users who installed the agent via a curl-pipe-to-bash one-liner don't have the install/uninstall scripts on disk afterward. Added `keldris-agent uninstall [--purge] [--force]` so users can cleanly remove the agent from any platform without needing the scripts.
+
+### How
+- **Command registration**: Added `newUninstallCmd()` to root command and to the auto-update skip list
+- **Privilege checks**: Linux requires root (os.Getuid), Windows checks admin via `net session`, macOS warns if binary dir isn't writable
+- **Service removal**: Linux (systemctl stop/disable/daemon-reload/reset-failed + unit file removal), macOS (launchctl unload + plist removal), Windows (sc.exe stop/delete with sleep)
+- **Binary self-deletion**: Unix uses `os.Remove`; Windows renames to `.removing` since you can't delete a running exe
+- **Purge mode** removes: managed restic, system restic (skips Homebrew symlinks on macOS), FUSE mounts (fusermount/umount), config dir (~/.keldris), platform config (/etc/keldris on Linux, %ProgramData%\Keldris on Windows), log files (/var/log/keldris* on Linux), temp files (keldris-*, restic-compressed-*, restic-download-*), PATH entries and KELDRIS_CONFIG_DIR env var (Windows)
+- All platform-specific logic uses `runtime.GOOS` switches and `exec.Command` — no build tags or platform-specific imports needed
+
+### Files Modified
+- `cmd/keldris-agent/main.go` — newUninstallCmd, runUninstall, and platform-specific helpers
+
+---
+
 ## 2026-03-03 - Post-Deploy UI & Agent Fixes
 
 ### What
