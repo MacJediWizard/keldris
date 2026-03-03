@@ -1,5 +1,27 @@
 # Keldris Development Journal
 
+## 2026-03-02 - Agent Security Hardening
+
+### What
+Comprehensive security audit and fixes for the agent command dispatch and binary download infrastructure.
+
+### How
+- **ReportBackup authorization**: Added schedule ownership validation (schedule.AgentID must match calling agent) and repository org validation (repo.OrgID must match agent.OrgID) before creating backup records
+- **HTTPS enforcement**: `register --server` and `config set-server` now require `https://` by default; added `--insecure` flag as escape hatch for development
+- **Restic download checksums**: Downloads SHA256SUMS from the release, verifies compressed binary hash before decompressing; validates all download URLs are HTTPS pointing to github.com
+- **Proper HTTP client**: Replaced `http.DefaultClient` with `httpclient.NewSimple()` for TLS handshake timeout
+- **Command result size limits**: Output/Error truncated to 64KB, Diagnostics map capped at 100 keys
+- **Health metrics bounds**: CPU/Memory/Disk usage clamped to 0-100, byte values and uptime clamped to non-negative
+
+### Files Modified
+- `cmd/keldris-agent/main.go` — HTTPS enforcement, checksum verification, proper HTTP client
+- `internal/api/handlers/agent_api.go` — ownership checks, size limits, metrics clamping
+
+### Next
+Deploy and verify agent update + restic update flows end-to-end
+
+---
+
 ## 2026-01-19 - Project Initialized
 
 ### What
