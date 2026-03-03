@@ -51,3 +51,25 @@ export const INSTALL_COMMANDS = {
 	macos: `curl -fsSL ${GITHUB_RELEASE_BASE}/install-macos.sh | bash`,
 	windows: `irm ${GITHUB_RELEASE_BASE}/install-windows.ps1 | iex`,
 };
+
+// Build install commands with optional auto-registration env vars
+export function getInstallCommand(
+	platform: 'linux' | 'macos' | 'windows',
+	opts?: { serverUrl: string; code: string; orgId: string },
+): string {
+	if (!opts) {
+		return INSTALL_COMMANDS[platform];
+	}
+
+	const { serverUrl, code, orgId } = opts;
+	const envVars = `KELDRIS_SERVER=${serverUrl} KELDRIS_CODE=${code} KELDRIS_ORG_ID=${orgId}`;
+
+	switch (platform) {
+		case 'linux':
+			return `curl -fsSL ${GITHUB_RELEASE_BASE}/install-linux.sh | ${envVars} sudo -E bash`;
+		case 'macos':
+			return `curl -fsSL ${GITHUB_RELEASE_BASE}/install-macos.sh | ${envVars} bash`;
+		case 'windows':
+			return `$env:KELDRIS_SERVER="${serverUrl}"; $env:KELDRIS_CODE="${code}"; $env:KELDRIS_ORG_ID="${orgId}"; irm ${GITHUB_RELEASE_BASE}/install-windows.ps1 | iex`;
+	}
+}

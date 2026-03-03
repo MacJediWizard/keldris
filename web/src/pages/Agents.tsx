@@ -25,6 +25,7 @@ import {
 	useRevokeAgentApiKey,
 	useRotateAgentApiKey,
 } from '../hooks/useAgents';
+import { useMe } from '../hooks/useAuth';
 import { useBulkSelect } from '../hooks/useBulkSelect';
 import { useFavoriteIds } from '../hooks/useFavorites';
 import { useLocale } from '../hooks/useLocale';
@@ -60,7 +61,7 @@ function LoadingRow() {
 interface GenerateCodeModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onSuccess: (code: string, expiresAt: string) => void;
+	onSuccess: (code: string, expiresAt: string, orgId: string) => void;
 }
 
 function GenerateCodeModal({
@@ -78,7 +79,7 @@ function GenerateCodeModal({
 			const result = await createCode.mutateAsync({
 				hostname: hostname || undefined,
 			});
-			onSuccess(result.code, result.expires_at);
+			onSuccess(result.code, result.expires_at, result.org_id);
 			setHostname('');
 		} catch {
 			// Error handled by mutation
@@ -250,7 +251,8 @@ function RegistrationCodeModal({
 						To register an agent, run:
 					</p>
 					<code className="text-xs text-blue-700 dark:text-blue-400 block">
-						keldris-agent register --server YOUR_SERVER_URL --code {code}
+						keldris-agent register --server {window.location.origin} --code{' '}
+						{code}
 					</code>
 				</div>
 				<div className="flex justify-end">
@@ -625,6 +627,7 @@ export function Agents() {
 	const [newCode, setNewCode] = useState<{
 		code: string;
 		expiresAt: string;
+		orgId: string;
 	} | null>(null);
 	const [newApiKey, setNewApiKey] = useState<string | null>(null);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -638,6 +641,7 @@ export function Agents() {
 		string | null
 	>(null);
 
+	const { data: me } = useMe();
 	const { data: agents, isLoading, isError } = useAgents();
 	const { data: pendingRegistrations, isLoading: isPendingLoading } =
 		usePendingRegistrations();
@@ -796,9 +800,13 @@ export function Agents() {
 		bulkSelect.clear();
 	};
 
-	const handleGenerateSuccess = (code: string, expiresAt: string) => {
+	const handleGenerateSuccess = (
+		code: string,
+		expiresAt: string,
+		orgId: string,
+	) => {
 		setShowGenerateModal(false);
-		setNewCode({ code, expiresAt });
+		setNewCode({ code, expiresAt, orgId });
 	};
 
 	const handleDelete = (id: string) => {
@@ -834,6 +842,15 @@ export function Agents() {
 	const activePendingCount =
 		pendingRegistrations?.filter((r) => new Date(r.expires_at) > new Date())
 			.length ?? 0;
+
+	// Determine active registration code for auto-install commands
+	// Prefer the just-generated code; fall back to first non-expired pending code
+	const fallbackPending = pendingRegistrations?.find(
+		(r) => new Date(r.expires_at) > new Date(),
+	);
+	const activeCode = newCode?.code ?? fallbackPending?.code;
+	const activeOrgId =
+		newCode?.orgId ?? (fallbackPending ? me?.current_org_id : undefined);
 
 	return (
 		<div className="space-y-6">
@@ -1293,7 +1310,11 @@ export function Agents() {
 			/>
 
 			{/* Download section - always visible */}
-			<AgentDownloads showInstallCommands={true} />
+			<AgentDownloads
+				showInstallCommands={true}
+				registrationCode={activeCode}
+				orgId={activeOrgId}
+			/>
 
 			<ExportImportModal
 				isOpen={showExportModal}

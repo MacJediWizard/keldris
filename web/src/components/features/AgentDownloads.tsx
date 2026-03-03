@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { AGENT_DOWNLOADS, INSTALL_COMMANDS } from '../../lib/constants';
+import { AGENT_DOWNLOADS, getInstallCommand } from '../../lib/constants';
 
 type Platform = 'linux' | 'macos' | 'windows';
 
 interface AgentDownloadsProps {
 	showInstallCommands?: boolean;
+	registrationCode?: string;
+	orgId?: string;
 }
 
 function PlatformIcon({ platform }: { platform: string }) {
@@ -100,8 +102,19 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
 
 export function AgentDownloads({
 	showInstallCommands = true,
+	registrationCode,
+	orgId,
 }: AgentDownloadsProps) {
 	const [selectedPlatform, setSelectedPlatform] = useState<Platform>('linux');
+
+	const registrationOpts =
+		registrationCode && orgId
+			? {
+					serverUrl: window.location.origin,
+					code: registrationCode,
+					orgId,
+				}
+			: undefined;
 
 	const platformTabs: { key: Platform; label: string; icon: string }[] = [
 		{ key: 'linux', label: 'Linux', icon: 'linux' },
@@ -155,13 +168,18 @@ export function AgentDownloads({
 					<div>
 						<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Quick Install
+							{registrationOpts && (
+								<span className="ml-2 text-xs font-normal text-green-600 dark:text-green-400">
+									(auto-registers with server)
+								</span>
+							)}
 						</span>
 						<div className="flex items-center gap-2 bg-gray-900 rounded-lg p-3">
 							<code className="text-sm text-green-400 font-mono flex-1 overflow-x-auto whitespace-nowrap">
-								{INSTALL_COMMANDS[selectedPlatform]}
+								{getInstallCommand(selectedPlatform, registrationOpts)}
 							</code>
 							<CopyButton
-								text={INSTALL_COMMANDS[selectedPlatform]}
+								text={getInstallCommand(selectedPlatform, registrationOpts)}
 								className="text-gray-400 hover:text-gray-200 hover:bg-gray-700"
 							/>
 						</div>
