@@ -84,7 +84,7 @@ Run 'keldris-agent register' to connect to a server.`,
 		SilenceUsage: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// Skip auto-check for certain commands
-			if cmd.Name() == "update" || cmd.Name() == "version" || cmd.Name() == "help" || cmd.Name() == "diagnostics" {
+			if cmd.Name() == "update" || cmd.Name() == "version" || cmd.Name() == "help" || cmd.Name() == "diagnostics" || cmd.Name() == "uninstall" {
 				return
 			}
 			checkUpdateOnStartup()
@@ -99,6 +99,7 @@ Run 'keldris-agent register' to connect to a server.`,
 		newBackupCmd(),
 		newRestoreCmd(),
 		newUpdateCmd(),
+		newUninstallCmd(),
 		newMountsCmd(),
 		newStartCmd(),
 		newSnapshotMountCmd(),
@@ -2268,4 +2269,375 @@ func newBzip2Reader(r io.Reader) io.Reader {
 // copyWithLimit copies up to limit bytes from src to dst.
 func copyWithLimit(dst io.Writer, src io.Reader, limit int64) (int64, error) {
 	return io.Copy(dst, io.LimitReader(src, limit))
+}
+
+func newUninstallCmd() *cobra.Command {
+	var purge bool
+	var force bool
+
+	cmd := &cobra.Command{
+		Use:   "uninstall",
+		Short: "Uninstall the Keldris agent from this system",
+		Long: `Completely remove the Keldris agent from this system.
+
+This will stop the agent service, remove the service registration,
+and delete the agent binary.
+
+Use --purge to also remove configuration, data, managed restic binary,
+temporary files, and FUSE mounts.
+
+On Linux, run with sudo. On macOS, you may need sudo if the binary
+is installed in a system directory.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runUninstall(purge, force)
+		},
+	}
+
+	cmd.Flags().BoolVar(&purge, "purge", false, "Also remove config, data, managed restic, and temp files")
+	cmd.Flags().BoolVar(&force, "force", false, "Skip confirmation prompt")
+
+	return cmd
+}
+
+func runUninstall(purge, force bool) error {
+	// Privilege check
+	switch runtime.GOOS {
+	case "linux":
+		if os.Getuid() != 0 {
+			return fmt.Errorf("uninstall requires root privileges; re-run with: sudo keldris-agent uninstall")
+		}
+	case "windows":
+		if !isWindowsAdmin() {
+			return fmt.Errorf("uninstall requires administrator privileges; re-run from an elevated Command Prompt")
+		}
+	case "darwin":
+		exePath, err := os.Executable()
+		if err == nil {
+			exePath, _ = filepath.EvalSymlinks(exePath)
+			dir := filepath.Dir(exePath)
+			testFile := filepath.Join(dir, ".keldris-uninstall-test")
+			if f, err := os.Create(testFile); err != nil {
+				fmt.Printf("Warning: %s may not be writable; you may need to use sudo\n\n", dir)
+			} else {
+				f.Close()
+				os.Remove(testFile)
+			}
+		}
+	}
+
+	// Resolve binary path
+	exePath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("determine executable path: %w", err)
+	}
+	exePath, err = filepath.EvalSymlinks(exePath)
+	if err != nil {
+		return fmt.Errorf("resolve executable path: %w", err)
+	}
+
+	// Print summary of what will be removed
+	fmt.Println("The following actions will be performed:")
+	fmt.Println()
+	fmt.Println("  - Stop and remove the Keldris agent service")
+	fmt.Printf("  - Remove agent binary: %s\n", exePath)
+	if purge {
+		if configDir, err := config.DefaultConfigDir(); err == nil {
+			fmt.Printf("  - Remove config directory: %s\n", configDir)
+		}
+		fmt.Println("  - Remove managed restic binary")
+		switch runtime.GOOS {
+		case "linux":
+			fmt.Println("  - Remove /etc/keldris")
+			fmt.Println("  - Remove /var/log/keldris*")
+			fmt.Println("  - Remove /usr/local/bin/restic")
+		case "darwin":
+			fmt.Println("  - Remove /usr/local/bin/restic (if not Homebrew-managed)")
+		case "windows":
+			fmt.Println("  - Remove %ProgramData%\\Keldris")
+			fmt.Println("  - Remove Keldris entries from system PATH")
+			fmt.Println("  - Remove KELDRIS_CONFIG_DIR environment variable")
+		}
+		fmt.Println("  - Unmount FUSE mounts and remove temp files")
+	}
+	fmt.Println()
+
+	// Confirmation prompt
+	if !force {
+		fmt.Print("Proceed with uninstall? [y/N] ")
+		reader := bufio.NewReader(os.Stdin)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("read response: %w", err)
+		}
+		response = strings.TrimSpace(strings.ToLower(response))
+		if response != "y" && response != "yes" {
+			fmt.Println("Uninstall cancelled.")
+			return nil
+		}
+	}
+
+	// Stop and remove service
+	fmt.Print("Stopping and removing service... ")
+	if err := uninstallService(); err != nil {
+		fmt.Printf("warning: %v\n", err)
+	} else {
+		fmt.Println("done")
+	}
+
+	// Remove binary
+	fmt.Print("Removing agent binary... ")
+	if runtime.GOOS == "windows" {
+		// Can't delete a running exe on Windows; rename and tell user to clean up
+		removingPath := exePath + ".removing"
+		if err := os.Rename(exePath, removingPath); err != nil {
+			fmt.Printf("warning: %v\n", err)
+		} else {
+			fmt.Println("done")
+			fmt.Printf("  Note: Manually delete %s after this process exits.\n", removingPath)
+		}
+	} else {
+		if err := os.Remove(exePath); err != nil {
+			fmt.Printf("warning: %v\n", err)
+		} else {
+			fmt.Println("done")
+		}
+	}
+
+	// Purge additional data if requested
+	if purge {
+		uninstallPurge()
+	}
+
+	fmt.Println()
+	fmt.Println("Keldris agent has been uninstalled.")
+	return nil
+}
+
+// isWindowsAdmin checks for administrator privileges on Windows by running "net session".
+func isWindowsAdmin() bool {
+	cmd := exec.Command("net", "session")
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Run() == nil
+}
+
+// uninstallService stops and removes the agent service for the current platform.
+func uninstallService() error {
+	switch runtime.GOOS {
+	case "linux":
+		return uninstallLinuxService()
+	case "darwin":
+		return uninstallDarwinService()
+	case "windows":
+		return uninstallWindowsService()
+	default:
+		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+	}
+}
+
+func uninstallLinuxService() error {
+	exec.Command("systemctl", "stop", "keldris-agent").Run()
+	exec.Command("systemctl", "disable", "keldris-agent").Run()
+	os.Remove("/etc/systemd/system/keldris-agent.service")
+	exec.Command("systemctl", "daemon-reload").Run()
+	exec.Command("systemctl", "reset-failed", "keldris-agent").Run()
+	return nil
+}
+
+func uninstallDarwinService() error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("get home directory: %w", err)
+	}
+	plistPath := filepath.Join(home, "Library", "LaunchAgents", "io.keldris.agent.plist")
+	exec.Command("launchctl", "unload", plistPath).Run()
+	if err := os.Remove(plistPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove plist: %w", err)
+	}
+	return nil
+}
+
+func uninstallWindowsService() error {
+	exec.Command("sc.exe", "stop", "KeldrisAgent").Run()
+	time.Sleep(3 * time.Second)
+	exec.Command("sc.exe", "delete", "KeldrisAgent").Run()
+	return nil
+}
+
+// uninstallPurge removes config, data, managed restic, temp files, and FUSE mounts.
+func uninstallPurge() {
+	// Remove managed restic binary
+	fmt.Print("Removing managed restic... ")
+	if p := managedResticPath(); p != "" {
+		if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
+			fmt.Printf("warning: %v\n", err)
+		} else {
+			fmt.Println("done")
+		}
+	} else {
+		fmt.Println("skipped (path unknown)")
+	}
+
+	// Remove system restic (skip if Homebrew-managed on macOS)
+	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+		removeSystemRestic()
+	}
+
+	// Unmount FUSE mounts before removing directories
+	unmountAllFUSE()
+
+	// Remove config directory (~/.keldris)
+	fmt.Print("Removing config directory... ")
+	if configDir, err := config.DefaultConfigDir(); err == nil && configDir != "" {
+		if err := os.RemoveAll(configDir); err != nil {
+			fmt.Printf("warning: %v\n", err)
+		} else {
+			fmt.Println("done")
+		}
+	} else {
+		fmt.Println("skipped")
+	}
+
+	// Platform-specific purge
+	switch runtime.GOOS {
+	case "linux":
+		purgeLinux()
+	case "windows":
+		purgeWindows()
+	}
+
+	// Remove temp files
+	removeTempFiles()
+}
+
+// removeSystemRestic removes /usr/local/bin/restic, skipping if Homebrew-managed on macOS.
+func removeSystemRestic() {
+	resticPath := "/usr/local/bin/restic"
+	if _, err := os.Lstat(resticPath); os.IsNotExist(err) {
+		return
+	}
+
+	// On macOS, skip if the binary is a Homebrew symlink
+	if runtime.GOOS == "darwin" {
+		if target, err := os.Readlink(resticPath); err == nil {
+			if strings.Contains(target, "/Cellar/") || strings.Contains(target, "/homebrew/") {
+				fmt.Printf("Skipping %s (Homebrew-managed)\n", resticPath)
+				return
+			}
+		}
+	}
+
+	fmt.Printf("Removing %s... ", resticPath)
+	if err := os.Remove(resticPath); err != nil {
+		fmt.Printf("warning: %v\n", err)
+	} else {
+		fmt.Println("done")
+	}
+}
+
+// unmountAllFUSE unmounts all FUSE mounts under the keldris mounts directory.
+func unmountAllFUSE() {
+	mountBase := filepath.Join(os.TempDir(), "keldris-mounts")
+	entries, err := os.ReadDir(mountBase)
+	if err != nil {
+		return // No mounts directory
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		mountPoint := filepath.Join(mountBase, entry.Name())
+		fmt.Printf("Unmounting %s... ", mountPoint)
+		var unmountErr error
+		switch runtime.GOOS {
+		case "linux":
+			unmountErr = exec.Command("fusermount", "-u", mountPoint).Run()
+			if unmountErr != nil {
+				unmountErr = exec.Command("umount", mountPoint).Run()
+			}
+		case "darwin":
+			unmountErr = exec.Command("umount", mountPoint).Run()
+		}
+		if unmountErr != nil {
+			fmt.Printf("warning: %v\n", unmountErr)
+		} else {
+			fmt.Println("done")
+		}
+	}
+
+	// Remove the mounts directory itself
+	os.RemoveAll(mountBase)
+}
+
+// purgeLinux removes Linux-specific files and directories.
+func purgeLinux() {
+	fmt.Print("Removing /etc/keldris... ")
+	if err := os.RemoveAll("/etc/keldris"); err != nil && !os.IsNotExist(err) {
+		fmt.Printf("warning: %v\n", err)
+	} else {
+		fmt.Println("done")
+	}
+
+	fmt.Print("Removing /var/log/keldris*... ")
+	matches, _ := filepath.Glob("/var/log/keldris*")
+	for _, m := range matches {
+		os.RemoveAll(m)
+	}
+	fmt.Println("done")
+}
+
+// purgeWindows removes Windows-specific files, PATH entries, and environment variables.
+func purgeWindows() {
+	// Remove %ProgramData%\Keldris
+	programData := os.Getenv("ProgramData")
+	if programData != "" {
+		keldrisData := filepath.Join(programData, "Keldris")
+		fmt.Printf("Removing %s... ", keldrisData)
+		if err := os.RemoveAll(keldrisData); err != nil && !os.IsNotExist(err) {
+			fmt.Printf("warning: %v\n", err)
+		} else {
+			fmt.Println("done")
+		}
+	}
+
+	// Remove Keldris entries from system PATH
+	fmt.Print("Removing Keldris from system PATH... ")
+	removePathCmd := exec.Command("powershell", "-NoProfile", "-Command",
+		`$path = [Environment]::GetEnvironmentVariable('PATH', 'Machine'); `+
+			`$parts = $path -split ';' | Where-Object { $_ -notmatch '[Kk]eldris' }; `+
+			`[Environment]::SetEnvironmentVariable('PATH', ($parts -join ';'), 'Machine')`)
+	if err := removePathCmd.Run(); err != nil {
+		fmt.Printf("warning: %v\n", err)
+	} else {
+		fmt.Println("done")
+	}
+
+	// Remove KELDRIS_CONFIG_DIR environment variable
+	fmt.Print("Removing KELDRIS_CONFIG_DIR environment variable... ")
+	removeEnvCmd := exec.Command("powershell", "-NoProfile", "-Command",
+		`[Environment]::SetEnvironmentVariable('KELDRIS_CONFIG_DIR', $null, 'Machine')`)
+	if err := removeEnvCmd.Run(); err != nil {
+		fmt.Printf("warning: %v\n", err)
+	} else {
+		fmt.Println("done")
+	}
+}
+
+// removeTempFiles removes Keldris and restic temp files.
+func removeTempFiles() {
+	fmt.Print("Removing temp files... ")
+	tmpDir := os.TempDir()
+	patterns := []string{
+		filepath.Join(tmpDir, "keldris-*"),
+		filepath.Join(tmpDir, "restic-compressed-*"),
+		filepath.Join(tmpDir, "restic-download-*"),
+	}
+	for _, pattern := range patterns {
+		matches, _ := filepath.Glob(pattern)
+		for _, m := range matches {
+			os.RemoveAll(m)
+		}
+	}
+	fmt.Println("done")
 }
