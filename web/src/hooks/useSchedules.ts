@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { schedulesApi } from '../lib/api';
+import { agentsApi, schedulesApi } from '../lib/api';
 import type {
 	BulkCloneScheduleRequest,
 	CloneScheduleRequest,
@@ -81,6 +81,21 @@ export function useReplicationStatus(scheduleId: string) {
 export function useDryRunSchedule() {
 	return useMutation({
 		mutationFn: (id: string) => schedulesApi.dryRun(id),
+	});
+}
+
+export function useCommandResult(agentId: string | null, commandId: string | null) {
+	return useQuery({
+		queryKey: ['agents', agentId, 'commands', commandId],
+		queryFn: () => agentsApi.getCommand(agentId!, commandId!),
+		enabled: !!agentId && !!commandId,
+		refetchInterval: (query) => {
+			const status = query.state.data?.status;
+			if (status === 'completed' || status === 'failed' || status === 'timed_out' || status === 'canceled') {
+				return false;
+			}
+			return 2000;
+		},
 	});
 }
 

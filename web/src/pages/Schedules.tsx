@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ClassificationBadge } from '../components/ClassificationBadge';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
@@ -24,6 +24,7 @@ import { useRepositories } from '../hooks/useRepositories';
 import {
 	useBulkCloneSchedule,
 	useCloneSchedule,
+	useCommandResult,
 	useCreateSchedule,
 	useDeleteSchedule,
 	useDryRunSchedule,
@@ -1628,7 +1629,7 @@ function ScheduleRow({
 				)}
 			</td>
 			<td className="px-6 py-4">
-				<code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">
+				<code className="text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded font-mono">
 					{schedule.cron_expression}
 				</code>
 			</td>
@@ -1739,6 +1740,8 @@ export function Schedules() {
 		null,
 	);
 	const [dryRunError, setDryRunError] = useState<Error | null>(null);
+	const [dryRunCommandId, setDryRunCommandId] = useState<string | null>(null);
+	const [dryRunAgentId, setDryRunAgentId] = useState<string | null>(null);
 	const [showExportModal, setShowExportModal] = useState(false);
 	const [selectedScheduleForExport, setSelectedScheduleForExport] =
 		useState<Schedule | null>(null);
@@ -1756,10 +1759,33 @@ export function Schedules() {
 	const deleteSchedule = useDeleteSchedule();
 	const runSchedule = useRunSchedule();
 	const dryRunSchedule = useDryRunSchedule();
+	const dryRunCommand = useCommandResult(dryRunAgentId, dryRunCommandId);
 	const cloneSchedule = useCloneSchedule();
 	const bulkCloneSchedule = useBulkCloneSchedule();
 
 	const bulkOperation = useBulkOperation();
+
+	// Convert command result to DryRunResponse when polling completes
+	useEffect(() => {
+		if (!dryRunCommand.data) return;
+		const cmd = dryRunCommand.data;
+		if (cmd.status === 'completed' && cmd.result?.dry_run) {
+			const dr = cmd.result.dry_run;
+			setDryRunResults({
+				schedule_id: '',
+				total_files: dr.total_files,
+				total_size: dr.total_size,
+				new_files: dr.new_files,
+				changed_files: dr.changed_files,
+				unchanged_files: dr.unchanged_files,
+				files_to_backup: [],
+				excluded_files: [],
+				message: cmd.result.output || '',
+			});
+		} else if (cmd.status === 'failed' || cmd.status === 'timed_out' || cmd.status === 'canceled') {
+			setDryRunError(new Error(cmd.result?.error || `Command ${cmd.status}`));
+		}
+	}, [dryRunCommand.data]);
 
 	const agentMap = new Map(agents?.map((a) => [a.id, a.hostname]));
 	const repoMap = new Map(repositories?.map((r) => [r.id, r.name]));
@@ -2001,10 +2027,13 @@ export function Schedules() {
 	const handleDryRun = (id: string) => {
 		setDryRunResults(null);
 		setDryRunError(null);
+		setDryRunCommandId(null);
+		setDryRunAgentId(null);
 		setShowDryRunModal(true);
 		dryRunSchedule.mutate(id, {
 			onSuccess: (data) => {
-				setDryRunResults(data);
+				setDryRunCommandId(data.command_id);
+				setDryRunAgentId(data.agent_id);
 			},
 			onError: (error) => {
 				setDryRunError(error as Error);
@@ -2016,6 +2045,8 @@ export function Schedules() {
 		setShowDryRunModal(false);
 		setDryRunResults(null);
 		setDryRunError(null);
+		setDryRunCommandId(null);
+		setDryRunAgentId(null);
 	};
 
 	const handleClone = (schedule: Schedule) => {
@@ -2260,7 +2291,7 @@ export function Schedules() {
 										isUpdating={updateSchedule.isPending}
 										isDeleting={deleteSchedule.isPending}
 										isRunning={runSchedule.isPending}
-										isDryRunning={dryRunSchedule.isPending}
+										isDryRunning={dryRunSchedule.isPending || (!!dryRunCommandId && !dryRunResults && !dryRunError)}
 										isSelected={bulkSelect.isSelected(schedule.id)}
 										onToggleSelect={() => bulkSelect.toggle(schedule.id)}
 									/>
@@ -2417,7 +2448,7 @@ export function Schedules() {
 				isOpen={showDryRunModal}
 				onClose={handleCloseDryRunModal}
 				results={dryRunResults}
-				isLoading={dryRunSchedule.isPending}
+				isLoading={dryRunSchedule.isPending || (!!dryRunCommandId && !dryRunResults && !dryRunError)}
 				error={dryRunError}
 			/>
 

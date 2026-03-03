@@ -6,21 +6,39 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"gopkg.in/yaml.v3"
 )
 
 // DefaultConfigDir returns the config directory.
-// It checks KELDRIS_CONFIG_DIR env var first, then falls back to ~/.keldris.
+// Lookup order:
+//  1. KELDRIS_CONFIG_DIR env var (explicit override)
+//  2. ~/.keldris (if config.yml exists there)
+//  3. /etc/keldris (system-wide, Linux/macOS — written by install scripts)
+//  4. ~/.keldris (default for new installs)
 func DefaultConfigDir() (string, error) {
 	if dir := os.Getenv("KELDRIS_CONFIG_DIR"); dir != "" {
 		return dir, nil
 	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("get home directory: %w", err)
 	}
-	return filepath.Join(home, ".keldris"), nil
+
+	userDir := filepath.Join(home, ".keldris")
+	if _, statErr := os.Stat(filepath.Join(userDir, "config.yml")); statErr == nil {
+		return userDir, nil
+	}
+
+	if runtime.GOOS != "windows" {
+		if _, statErr := os.Stat("/etc/keldris/config.yml"); statErr == nil {
+			return "/etc/keldris", nil
+		}
+	}
+
+	return userDir, nil
 }
 
 // DefaultConfigPath returns the default config file path (~/.keldris/config.yml).

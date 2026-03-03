@@ -30,6 +30,7 @@ import {
 	useTestConnection,
 } from '../hooks/useRepositories';
 import {
+	useCommandResult,
 	useCreateSchedule,
 	useDryRunSchedule,
 	useRunSchedule,
@@ -2398,6 +2399,12 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 		Record<string, DryRunResponse>
 	>({});
 	const [dryRunErrors, setDryRunErrors] = useState<Record<string, string>>({});
+
+	// Async dry run command tracking
+	const [dryRunCommandId, setDryRunCommandId] = useState<string | null>(null);
+	const [dryRunAgentId, setDryRunAgentId] = useState<string | null>(null);
+	const [activeDryRunScheduleId, setActiveDryRunScheduleId] = useState<string | null>(null);
+	const dryRunCommand = useCommandResult(dryRunAgentId, dryRunCommandId);
 	const [triggeredScheduleIds, setTriggeredScheduleIds] = useState<Set<string>>(
 		new Set(),
 	);
@@ -2406,6 +2413,40 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 		Record<string, number>
 	>({});
 	const [elapsed, setElapsed] = useState<Record<string, number>>({});
+
+	// Convert command result to DryRunResponse when polling completes
+	useEffect(() => {
+		if (!dryRunCommand.data || !activeDryRunScheduleId) return;
+		const cmd = dryRunCommand.data;
+		if (cmd.status === 'completed' && cmd.result?.dry_run) {
+			const dr = cmd.result.dry_run;
+			setDryRunResults((prev) => ({
+				...prev,
+				[activeDryRunScheduleId]: {
+					schedule_id: activeDryRunScheduleId,
+					total_files: dr.total_files,
+					total_size: dr.total_size,
+					new_files: dr.new_files,
+					changed_files: dr.changed_files,
+					unchanged_files: dr.unchanged_files,
+					files_to_backup: [],
+					excluded_files: [],
+					message: '',
+				},
+			}));
+			setDryRunCommandId(null);
+			setDryRunAgentId(null);
+			setActiveDryRunScheduleId(null);
+		} else if (cmd.status === 'failed' || cmd.status === 'timed_out' || cmd.status === 'canceled') {
+			setDryRunErrors((prev) => ({
+				...prev,
+				[activeDryRunScheduleId]: cmd.result?.error || `Command ${cmd.status}`,
+			}));
+			setDryRunCommandId(null);
+			setDryRunAgentId(null);
+			setActiveDryRunScheduleId(null);
+		}
+	}, [dryRunCommand.data, activeDryRunScheduleId]);
 
 	const { data: backupList } = useBackups();
 	const allBackups = backupList || [];
@@ -2460,14 +2501,19 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 
 	const handleDryRun = async (scheduleId: string) => {
 		setDryRunErrors((prev) => ({ ...prev, [scheduleId]: '' }));
+		setDryRunCommandId(null);
+		setDryRunAgentId(null);
+		setActiveDryRunScheduleId(scheduleId);
 		try {
-			const result = await dryRunSchedule.mutateAsync(scheduleId);
-			setDryRunResults((prev) => ({ ...prev, [scheduleId]: result }));
+			const data = await dryRunSchedule.mutateAsync(scheduleId);
+			setDryRunCommandId(data.command_id);
+			setDryRunAgentId(data.agent_id);
 		} catch (err) {
 			setDryRunErrors((prev) => ({
 				...prev,
 				[scheduleId]: err instanceof Error ? err.message : 'Dry run failed',
 			}));
+			setActiveDryRunScheduleId(null);
 		}
 	};
 
@@ -2531,8 +2577,9 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 						const latestBackup = getBackupStatusForSchedule(schedule.id);
 						const isTriggered = triggeredScheduleIds.has(schedule.id);
 						const isDryRunning =
-							dryRunSchedule.isPending &&
-							dryRunSchedule.variables === schedule.id;
+							(dryRunSchedule.isPending &&
+								dryRunSchedule.variables === schedule.id) ||
+							(activeDryRunScheduleId === schedule.id && !!dryRunCommandId);
 
 						return (
 							<div

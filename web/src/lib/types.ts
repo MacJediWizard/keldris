@@ -673,6 +673,12 @@ export interface DryRunResponse {
 	message: string;
 }
 
+export interface DryRunCommandResponse {
+	command_id: string;
+	agent_id: string;
+	message: string;
+}
+
 // Policy types
 export interface Policy {
 	id: string;
@@ -3780,11 +3786,20 @@ export interface CommandPayload {
 	diagnostic_types?: string[];
 }
 
+export interface DryRunCommandResult {
+	total_files: number;
+	total_size: number;
+	new_files: number;
+	changed_files: number;
+	unchanged_files: number;
+}
+
 export interface CommandResult {
 	output?: string;
 	error?: string;
 	diagnostics?: Record<string, unknown>;
 	backup_id?: string;
+	dry_run?: DryRunCommandResult;
 }
 
 export interface AgentCommand {

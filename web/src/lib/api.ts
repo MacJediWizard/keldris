@@ -209,7 +209,7 @@ import type {
 	DowntimeAlertsResponse,
 	DowntimeEvent,
 	DowntimeEventsResponse,
-	DryRunResponse,
+	DryRunCommandResponse,
 	ErrorResponse,
 	ExcludePattern,
 	ExcludePatternsResponse,
@@ -1038,8 +1038,8 @@ export const schedulesApi = {
 			method: 'POST',
 		}),
 
-	dryRun: async (id: string): Promise<DryRunResponse> =>
-		fetchApi<DryRunResponse>(`/schedules/${id}/dry-run`, {
+	dryRun: async (id: string): Promise<DryRunCommandResponse> =>
+		fetchApi<DryRunCommandResponse>(`/schedules/${id}/dry-run`, {
 			method: 'POST',
 		}),
 

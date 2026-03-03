@@ -2096,6 +2096,8 @@ func executeCommand(client *agent.Client, cfg *config.AgentConfig, cmd agent.Com
 		result, execErr = executeUpdateRestic(resticBinary, logger)
 	case "backup_now":
 		result, execErr = executeBackupNow(cfg, cmd.Payload, logger)
+	case "dry_run":
+		result, execErr = executeDryRun(cfg, cmd.Payload, resticBinary, logger)
 	case "restart":
 		// Report completed before restart
 		_ = client.ReportCommandResult(cmd.ID, &agent.CommandResultReport{
@@ -2222,6 +2224,54 @@ func executeBackupNow(cfg *config.AgentConfig, payload *agent.CommandPayload, lo
 
 	return &agent.CommandResultDetail{
 		Output: "backup completed successfully",
+	}, nil
+}
+
+// executeDryRun performs a dry run backup for the specified schedule.
+func executeDryRun(cfg *config.AgentConfig, payload *agent.CommandPayload, resticBinary string, logger *zerolog.Logger) (*agent.CommandResultDetail, error) {
+	if payload == nil || payload.ScheduleID == nil {
+		return nil, fmt.Errorf("schedule_id is required for dry run")
+	}
+
+	client := agent.NewClient(cfg.ServerURL, cfg.APIKey)
+	schedules, err := client.GetSchedules()
+	if err != nil {
+		return nil, fmt.Errorf("fetch schedules: %w", err)
+	}
+
+	targetID := *payload.ScheduleID
+	var sched *agent.ScheduleConfig
+	for i := range schedules {
+		if schedules[i].ID.String() == targetID {
+			sched = &schedules[i]
+			break
+		}
+	}
+	if sched == nil {
+		return nil, fmt.Errorf("schedule %s not found", targetID)
+	}
+
+	resticCfg := backends.ResticConfig{
+		Repository: sched.Repository,
+		Password:   sched.RepositoryPassword,
+		Env:        sched.RepositoryEnv,
+	}
+
+	restic := backup.NewRestic(*logger)
+	result, err := restic.DryRun(context.Background(), resticCfg, sched.Paths, sched.Excludes)
+	if err != nil {
+		return nil, fmt.Errorf("dry run failed: %w", err)
+	}
+
+	return &agent.CommandResultDetail{
+		Output: fmt.Sprintf("dry run complete: %d files, %d new, %d changed", result.TotalFiles, result.NewFiles, result.ChangedFiles),
+		DryRun: &agent.DryRunResultDetail{
+			TotalFiles:     result.TotalFiles,
+			TotalSize:      result.TotalSize,
+			NewFiles:       result.NewFiles,
+			ChangedFiles:   result.ChangedFiles,
+			UnchangedFiles: result.UnchangedFiles,
+		},
 	}, nil
 }
 

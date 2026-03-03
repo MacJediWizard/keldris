@@ -664,6 +664,13 @@ type RunScheduleResponse struct {
 	Message   string    `json:"message"`
 }
 
+// DryRunCommandResponse is the response when a dry run command is dispatched to an agent.
+type DryRunCommandResponse struct {
+	CommandID uuid.UUID `json:"command_id"`
+	AgentID   uuid.UUID `json:"agent_id"`
+	Message   string    `json:"message"`
+}
+
 // DryRunResponse is the response for a dry run operation.
 type DryRunResponse struct {
 	ScheduleID     uuid.UUID            `json:"schedule_id"`
@@ -765,15 +772,15 @@ func (h *SchedulesHandler) Run(c *gin.Context) {
 	})
 }
 
-// DryRun performs a dry run backup simulation for this schedule.
+// DryRun dispatches a dry run command to the agent to preview what would be backed up.
 //
 //	@Summary		Dry run schedule
-//	@Description	Performs a dry run to preview what would be backed up for the specified schedule
+//	@Description	Dispatches a dry run command to the agent for the specified schedule
 //	@Tags			Schedules
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		string	true	"Schedule ID"
-//	@Success		200	{object}	DryRunResponse
+//	@Success		202	{object}	DryRunCommandResponse
 //	@Failure		400	{object}	map[string]string
 //	@Failure		401	{object}	map[string]string
 //	@Failure		404	{object}	map[string]string
@@ -807,47 +814,31 @@ func (h *SchedulesHandler) DryRun(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual dry run when backup package is ready
-	// This will use the Restic.DryRun method with the schedule's paths and excludes
+	cmd := models.NewAgentCommand(
+		schedule.AgentID,
+		user.CurrentOrgID,
+		models.CommandTypeDryRun,
+		&models.CommandPayload{ScheduleID: &schedule.ID},
+		&user.ID,
+	)
+
+	if err := h.store.CreateAgentCommand(c.Request.Context(), cmd); err != nil {
+		h.logger.Error().Err(err).Str("schedule_id", id.String()).Msg("failed to create dry run command")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to trigger dry run"})
+		return
+	}
+
 	h.logger.Info().
 		Str("schedule_id", id.String()).
 		Str("agent_id", schedule.AgentID.String()).
-		Strs("paths", schedule.Paths).
-		Strs("excludes", schedule.Excludes).
-		Msg("dry run requested")
+		Str("command_id", cmd.ID.String()).
+		Msg("dry run command dispatched to agent")
 
-	// Return placeholder response showing what would be backed up
-	excludedFiles := make([]DryRunExcluded, 0, len(schedule.Excludes))
-	for _, pattern := range schedule.Excludes {
-		excludedFiles = append(excludedFiles, DryRunExcluded{
-			Path:   pattern,
-			Reason: "matched exclude pattern",
-		})
-	}
-
-	c.JSON(http.StatusOK, DryRunResponse{
-		ScheduleID:     id,
-		TotalFiles:     0,
-		TotalSize:      0,
-		NewFiles:       0,
-		ChangedFiles:   0,
-		UnchangedFiles: 0,
-		FilesToBackup:  []DryRunFileResponse{},
-		ExcludedFiles:  excludedFiles,
-		Message:        "Dry run requires agent-side execution and is not yet available. Schedule paths: " + formatPaths(schedule.Paths),
+	c.JSON(http.StatusAccepted, DryRunCommandResponse{
+		CommandID: cmd.ID,
+		AgentID:   schedule.AgentID,
+		Message:   "Dry run command sent to agent",
 	})
-}
-
-// formatPaths formats a slice of paths as a comma-separated string.
-func formatPaths(paths []string) string {
-	if len(paths) == 0 {
-		return "(none)"
-	}
-	result := paths[0]
-	for i := 1; i < len(paths); i++ {
-		result += ", " + paths[i]
-	}
-	return result
 }
 
 // verifyScheduleAccess checks if the user has access to the schedule.

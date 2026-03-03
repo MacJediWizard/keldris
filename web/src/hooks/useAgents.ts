@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { agentsApi, schedulesApi } from '../lib/api';
 import type {
 	AgentLogFilter,
@@ -11,8 +11,9 @@ export function useAgents() {
 	return useQuery({
 		queryKey: ['agents'],
 		queryFn: agentsApi.list,
-		staleTime: 30 * 1000, // 30 seconds
-		refetchInterval: 30 * 1000, // Poll every 30 seconds for new agents
+		staleTime: 10 * 1000, // 10 seconds
+		refetchInterval: 10 * 1000, // Poll every 10 seconds for new agents
+		placeholderData: keepPreviousData,
 	});
 }
 
@@ -21,6 +22,8 @@ export function useAgent(id: string) {
 		queryKey: ['agents', id],
 		queryFn: () => agentsApi.get(id),
 		enabled: !!id,
+		staleTime: 10 * 1000,
+		placeholderData: keepPreviousData,
 	});
 }
 

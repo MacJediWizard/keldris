@@ -21,6 +21,8 @@ const (
 	CommandTypeDiagnostics CommandType = "diagnostics"
 	// CommandTypeUpdateRestic triggers a restic binary update.
 	CommandTypeUpdateRestic CommandType = "update_restic"
+	// CommandTypeDryRun triggers a dry run backup preview.
+	CommandTypeDryRun CommandType = "dry_run"
 )
 
 // CommandStatus represents the current status of a command.
@@ -57,10 +59,20 @@ type CommandPayload struct {
 
 // CommandResult contains the result of a command execution.
 type CommandResult struct {
-	Output      string         `json:"output,omitempty"`
-	Error       string         `json:"error,omitempty"`
-	Diagnostics map[string]any `json:"diagnostics,omitempty"`
-	BackupID    *uuid.UUID     `json:"backup_id,omitempty"`
+	Output      string              `json:"output,omitempty"`
+	Error       string              `json:"error,omitempty"`
+	Diagnostics map[string]any      `json:"diagnostics,omitempty"`
+	BackupID    *uuid.UUID          `json:"backup_id,omitempty"`
+	DryRun      *DryRunCommandResult `json:"dry_run,omitempty"`
+}
+
+// DryRunCommandResult contains the results of a dry run backup operation.
+type DryRunCommandResult struct {
+	TotalFiles     int   `json:"total_files"`
+	TotalSize      int64 `json:"total_size"`
+	NewFiles       int   `json:"new_files"`
+	ChangedFiles   int   `json:"changed_files"`
+	UnchangedFiles int   `json:"unchanged_files"`
 }
 
 // AgentCommand represents a command queued for an agent.

@@ -222,9 +222,19 @@ type CommandResultReport struct {
 
 // CommandResultDetail contains the result details of a command execution.
 type CommandResultDetail struct {
-	Output      string         `json:"output,omitempty"`
-	Error       string         `json:"error,omitempty"`
-	Diagnostics map[string]any `json:"diagnostics,omitempty"`
+	Output      string              `json:"output,omitempty"`
+	Error       string              `json:"error,omitempty"`
+	Diagnostics map[string]any      `json:"diagnostics,omitempty"`
+	DryRun      *DryRunResultDetail `json:"dry_run,omitempty"`
+}
+
+// DryRunResultDetail contains dry run backup preview results.
+type DryRunResultDetail struct {
+	TotalFiles     int   `json:"total_files"`
+	TotalSize      int64 `json:"total_size"`
+	NewFiles       int   `json:"new_files"`
+	ChangedFiles   int   `json:"changed_files"`
+	UnchangedFiles int   `json:"unchanged_files"`
 }
 
 // GetCommands polls the server for pending commands.
