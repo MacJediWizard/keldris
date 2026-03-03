@@ -1,5 +1,28 @@
 # Keldris Development Journal
 
+## 2026-03-03 - Fix Backup Execution Pipeline
+
+### What
+Backups triggered from the UI were broken: `Run()` created a Backup record but never dispatched a command to the agent, so backups sat in "running" forever. Also, the server's repository integrity check (`restic check`) failed because restic wasn't installed in the server Docker image.
+
+### How
+- **`schedules.go:Run()`**: Replaced premature `NewBackup`+`CreateBackup` with `NewAgentCommand(backup_now)` dispatch. The agent already handles `backup_now` commands and creates the backup record via `ReportBackup` when it actually runs — so the old approach created duplicates and orphaned records. Set command timeout to 2 hours (was 5 min default).
+- **`Dockerfile.server`**: Added `restic` to Alpine packages so `VerificationScheduler` can run `restic check`.
+- **`install-linux.sh`**: Added explicit `PATH` to systemd service so the agent can find `/usr/local/bin/restic` on systems with restricted default PATH.
+- **`store_recovered.go`**: Added `FailStaleBackups()` — marks backups stuck in "running" for >24h as "failed" with a timeout message.
+- **`main.go`**: Calls `FailStaleBackups()` on server startup after migrations.
+- **DryRun**: Updated message to explain it requires agent-side execution (out of scope for now).
+
+### Files Modified
+- `internal/api/handlers/schedules.go` — core fix: command dispatch + interface update
+- `internal/api/handlers/schedules_test.go` — mock update for new interface method
+- `internal/db/store_recovered.go` — `FailStaleBackups()`
+- `cmd/keldris-server/main.go` — stale backup cleanup on startup
+- `docker/Dockerfile.server` — add restic
+- `scripts/install-linux.sh` — PATH in systemd service
+
+---
+
 ## 2026-03-03 - Quick Install with Auto-Registration
 
 ### What
