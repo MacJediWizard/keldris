@@ -23,13 +23,13 @@ function ChangeList({
 
 	return (
 		<div className="mb-4">
-			<h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+			<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
 				<span>{icon}</span>
 				{title}
 			</h4>
 			<ul className="space-y-1 pl-6">
 				{items.slice(0, 5).map((item) => (
-					<li key={item} className="text-sm text-gray-600 list-disc">
+					<li key={item} className="text-sm text-gray-600 dark:text-gray-400 list-disc">
 						{item}
 					</li>
 				))}
@@ -89,7 +89,7 @@ export function WhatsNewModal({
 			/>
 
 			{/* Modal */}
-			<div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+			<div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
 				{/* Header */}
 				<div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-8 text-white">
 					<div className="flex items-center justify-between">
@@ -102,7 +102,7 @@ export function WhatsNewModal({
 								<p className="text-indigo-200 text-sm mt-1">{entry.date}</p>
 							)}
 						</div>
-						<div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
+						<div className="w-16 h-16 bg-white dark:bg-gray-800/10 rounded-full flex items-center justify-center">
 							<svg
 								className="w-8 h-8"
 								fill="none"
@@ -142,14 +142,14 @@ export function WhatsNewModal({
 							/>
 						</>
 					) : (
-						<p className="text-gray-500 text-center py-4">
+						<p className="text-gray-500 dark:text-gray-400 text-center py-4">
 							This release includes various improvements and bug fixes.
 						</p>
 					)}
 				</div>
 
 				{/* Footer */}
-				<div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+				<div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
 					<Link
 						to="/changelog"
 						onClick={handleDismiss}

@@ -168,8 +168,8 @@ export function RegionMapIndicator({
 
 	if (activeConfigs.length === 0) {
 		return (
-			<div className="bg-gray-50 rounded-lg p-4 text-center">
-				<p className="text-sm text-gray-500">No geo-replication configured</p>
+			<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 text-center">
+				<p className="text-sm text-gray-500 dark:text-gray-400">No geo-replication configured</p>
 			</div>
 		);
 	}
@@ -189,21 +189,21 @@ export function RegionMapIndicator({
 		return (
 			<div className="flex items-center gap-3">
 				<div className="flex items-center gap-1.5">
-					<span className="w-2 h-2 rounded-full bg-green-500" />
-					<span className="text-xs text-gray-600">{syncedCount} synced</span>
+					<span className="w-2 h-2 rounded-full bg-green-50 dark:bg-green-900/300" />
+					<span className="text-xs text-gray-600 dark:text-gray-400">{syncedCount} synced</span>
 				</div>
 				{syncingCount > 0 && (
 					<div className="flex items-center gap-1.5">
-						<span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-						<span className="text-xs text-gray-600">
+						<span className="w-2 h-2 rounded-full bg-blue-50 dark:bg-blue-900/300 animate-pulse" />
+						<span className="text-xs text-gray-600 dark:text-gray-400">
 							{syncingCount} syncing
 						</span>
 					</div>
 				)}
 				{failedCount > 0 && (
 					<div className="flex items-center gap-1.5">
-						<span className="w-2 h-2 rounded-full bg-red-500" />
-						<span className="text-xs text-gray-600">{failedCount} failed</span>
+						<span className="w-2 h-2 rounded-full bg-red-50 dark:bg-red-900/300" />
+						<span className="text-xs text-gray-600 dark:text-gray-400">{failedCount} failed</span>
 					</div>
 				)}
 			</div>
@@ -211,11 +211,11 @@ export function RegionMapIndicator({
 	}
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-4">
-			<h3 className="text-sm font-medium text-gray-900 mb-3">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+			<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
 				Geo-Replication Map
 			</h3>
-			<div className="relative bg-gray-100 rounded-lg overflow-hidden">
+			<div className="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
 				{/* Simplified world map background */}
 				<svg
 					aria-hidden="true"
@@ -264,13 +264,13 @@ export function RegionMapIndicator({
 			</div>
 
 			{/* Legend */}
-			<div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-600">
+			<div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400">
 				<div className="flex items-center gap-1.5">
-					<span className="w-2 h-2 rounded-full bg-green-500" />
+					<span className="w-2 h-2 rounded-full bg-green-50 dark:bg-green-900/300" />
 					<span>Synced</span>
 				</div>
 				<div className="flex items-center gap-1.5">
-					<span className="w-2 h-2 rounded-full bg-blue-500" />
+					<span className="w-2 h-2 rounded-full bg-blue-50 dark:bg-blue-900/300" />
 					<span>Syncing</span>
 				</div>
 				<div className="flex items-center gap-1.5">
@@ -278,7 +278,7 @@ export function RegionMapIndicator({
 					<span>Pending</span>
 				</div>
 				<div className="flex items-center gap-1.5">
-					<span className="w-2 h-2 rounded-full bg-red-500" />
+					<span className="w-2 h-2 rounded-full bg-red-50 dark:bg-red-900/300" />
 					<span>Failed</span>
 				</div>
 			</div>

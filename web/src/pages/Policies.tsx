@@ -20,19 +20,19 @@ function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
 			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="h-4 bg-gray-200 rounded w-32" />
+				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32" />
 			</td>
 			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="h-4 bg-gray-200 rounded w-48" />
+				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-48" />
 			</td>
 			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="h-4 bg-gray-200 rounded w-24" />
+				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24" />
 			</td>
 			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="h-4 bg-gray-200 rounded w-20" />
+				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20" />
 			</td>
 			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="h-4 bg-gray-200 rounded w-16" />
+				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16" />
 			</td>
 		</tr>
 	);
@@ -121,8 +121,8 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-				<h3 className="text-lg font-semibold text-gray-900 mb-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 					Create Policy
 				</h3>
 				<form onSubmit={handleSubmit}>
@@ -130,7 +130,7 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 						<div>
 							<label
 								htmlFor="policy-name"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Name
 							</label>
@@ -140,7 +140,7 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 								value={name}
 								onChange={(e) => setName(e.target.value)}
 								placeholder="e.g., Standard Backup Policy"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 								required
 							/>
 						</div>
@@ -148,7 +148,7 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 						<div>
 							<label
 								htmlFor="policy-description"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Description
 							</label>
@@ -158,14 +158,14 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 								onChange={(e) => setDescription(e.target.value)}
 								placeholder="Optional description of this policy"
 								rows={2}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 							/>
 						</div>
 
 						<div>
 							<label
 								htmlFor="policy-paths"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Default Paths
 							</label>
@@ -175,14 +175,14 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 								onChange={(e) => setPaths(e.target.value)}
 								placeholder="One path per line, e.g.,&#10;/home&#10;/var/www"
 								rows={3}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm dark:bg-gray-700 dark:text-white"
 							/>
 						</div>
 
 						<div>
 							<label
 								htmlFor="policy-excludes"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Default Excludes
 							</label>
@@ -192,14 +192,14 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 								onChange={(e) => setExcludes(e.target.value)}
 								placeholder="One pattern per line, e.g.,&#10;*.tmp&#10;.git"
 								rows={2}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm dark:bg-gray-700 dark:text-white"
 							/>
 						</div>
 
 						<div>
 							<label
 								htmlFor="policy-cron"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Default Schedule (Cron)
 							</label>
@@ -209,16 +209,16 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 								value={cronExpression}
 								onChange={(e) => setCronExpression(e.target.value)}
 								placeholder="e.g., 0 2 * * * (daily at 2am)"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono dark:bg-gray-700 dark:text-white"
 							/>
-							<p className="text-xs text-gray-500 mt-1">
+							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 								Format: minute hour day-of-month month day-of-week
 							</p>
 						</div>
 
-						<div className="border-t border-gray-200 pt-4">
+						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
 							<div className="flex items-center justify-between mb-3">
-								<span className="text-sm font-medium text-gray-700">
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 									Retention Policy
 								</span>
 								<button
@@ -234,7 +234,7 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 									<div>
 										<label
 											htmlFor="keep-last"
-											className="block text-xs text-gray-600 mb-1"
+											className="block text-xs text-gray-600 dark:text-gray-400 mb-1"
 										>
 											Keep Last
 										</label>
@@ -246,13 +246,13 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 												setKeepLast(Number.parseInt(e.target.value, 10) || 0)
 											}
 											min="0"
-											className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500"
+											className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
 										/>
 									</div>
 									<div>
 										<label
 											htmlFor="keep-daily"
-											className="block text-xs text-gray-600 mb-1"
+											className="block text-xs text-gray-600 dark:text-gray-400 mb-1"
 										>
 											Keep Daily
 										</label>
@@ -264,13 +264,13 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 												setKeepDaily(Number.parseInt(e.target.value, 10) || 0)
 											}
 											min="0"
-											className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500"
+											className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
 										/>
 									</div>
 									<div>
 										<label
 											htmlFor="keep-weekly"
-											className="block text-xs text-gray-600 mb-1"
+											className="block text-xs text-gray-600 dark:text-gray-400 mb-1"
 										>
 											Keep Weekly
 										</label>
@@ -282,13 +282,13 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 												setKeepWeekly(Number.parseInt(e.target.value, 10) || 0)
 											}
 											min="0"
-											className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500"
+											className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
 										/>
 									</div>
 									<div>
 										<label
 											htmlFor="keep-monthly"
-											className="block text-xs text-gray-600 mb-1"
+											className="block text-xs text-gray-600 dark:text-gray-400 mb-1"
 										>
 											Keep Monthly
 										</label>
@@ -300,20 +300,20 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 												setKeepMonthly(Number.parseInt(e.target.value, 10) || 0)
 											}
 											min="0"
-											className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500"
+											className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
 										/>
 									</div>
 								</div>
 							) : (
-								<p className="text-sm text-gray-500">
+								<p className="text-sm text-gray-500 dark:text-gray-400">
 									Keep 5 latest, 7 daily, 4 weekly, 6 monthly
 								</p>
 							)}
 						</div>
 
-						<div className="border-t border-gray-200 pt-4">
+						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
 							<div className="flex items-center justify-between mb-3">
-								<span className="text-sm font-medium text-gray-700">
+								<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
 									Advanced Settings
 								</span>
 								<button
@@ -329,7 +329,7 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 									<div>
 										<label
 											htmlFor="bandwidth-limit"
-											className="block text-xs text-gray-600 mb-1"
+											className="block text-xs text-gray-600 dark:text-gray-400 mb-1"
 										>
 											Bandwidth Limit (KB/s)
 										</label>
@@ -340,14 +340,14 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 											onChange={(e) => setBandwidthLimit(e.target.value)}
 											placeholder="Unlimited"
 											min="0"
-											className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500"
+											className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
 										/>
 									</div>
 									<div className="grid grid-cols-2 gap-3">
 										<div>
 											<label
 												htmlFor="window-start"
-												className="block text-xs text-gray-600 mb-1"
+												className="block text-xs text-gray-600 dark:text-gray-400 mb-1"
 											>
 												Backup Window Start
 											</label>
@@ -356,13 +356,13 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 												id="window-start"
 												value={windowStart}
 												onChange={(e) => setWindowStart(e.target.value)}
-												className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500"
+												className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
 											/>
 										</div>
 										<div>
 											<label
 												htmlFor="window-end"
-												className="block text-xs text-gray-600 mb-1"
+												className="block text-xs text-gray-600 dark:text-gray-400 mb-1"
 											>
 												Backup Window End
 											</label>
@@ -371,7 +371,7 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 												id="window-end"
 												value={windowEnd}
 												onChange={(e) => setWindowEnd(e.target.value)}
-												className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500"
+												className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
 											/>
 										</div>
 									</div>
@@ -384,7 +384,7 @@ function CreatePolicyModal({ isOpen, onClose }: CreatePolicyModalProps) {
 						<button
 							type="button"
 							onClick={onClose}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 						>
 							Cancel
 						</button>
@@ -461,18 +461,18 @@ function ApplyPolicyModal({ policy, isOpen, onClose }: ApplyPolicyModalProps) {
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-				<h3 className="text-lg font-semibold text-gray-900 mb-2">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
 					Apply Policy: {policy.name}
 				</h3>
-				<p className="text-sm text-gray-600 mb-4">
+				<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
 					Create schedules for selected agents using this policy as a template.
 				</p>
 				<form onSubmit={handleSubmit}>
 					<div className="space-y-4">
 						<div>
 							<div className="flex items-center justify-between mb-2">
-								<span className="block text-sm font-medium text-gray-700">
+								<span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
 									Select Agents
 								</span>
 								<div className="flex gap-2">
@@ -486,33 +486,33 @@ function ApplyPolicyModal({ policy, isOpen, onClose }: ApplyPolicyModalProps) {
 									<button
 										type="button"
 										onClick={deselectAllAgents}
-										className="text-xs text-gray-600 hover:text-gray-800"
+										className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 									>
 										Deselect all
 									</button>
 								</div>
 							</div>
-							<div className="border border-gray-300 rounded-lg max-h-48 overflow-y-auto">
+							<div className="border border-gray-300 dark:border-gray-600 rounded-lg max-h-48 overflow-y-auto">
 								{agents?.length ? (
 									agents.map((agent) => (
 										<label
 											key={agent.id}
-											className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+											className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
 										>
 											<input
 												type="checkbox"
 												checked={selectedAgents.includes(agent.id)}
 												onChange={() => toggleAgent(agent.id)}
-												className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+												className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 											/>
-											<span className="text-sm text-gray-900">
+											<span className="text-sm text-gray-900 dark:text-white">
 												{agent.hostname}
 											</span>
 											<span
 												className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
 													agent.status === 'active'
-														? 'bg-green-100 text-green-800'
-														: 'bg-gray-100 text-gray-600'
+														? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+														: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
 												}`}
 											>
 												{agent.status}
@@ -520,12 +520,12 @@ function ApplyPolicyModal({ policy, isOpen, onClose }: ApplyPolicyModalProps) {
 										</label>
 									))
 								) : (
-									<p className="px-4 py-3 text-sm text-gray-500">
+									<p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
 										No agents available
 									</p>
 								)}
 							</div>
-							<p className="text-xs text-gray-500 mt-1">
+							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 								{selectedAgents.length} agent(s) selected
 							</p>
 						</div>
@@ -533,7 +533,7 @@ function ApplyPolicyModal({ policy, isOpen, onClose }: ApplyPolicyModalProps) {
 						<div>
 							<label
 								htmlFor="apply-repository"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Repository
 							</label>
@@ -541,7 +541,7 @@ function ApplyPolicyModal({ policy, isOpen, onClose }: ApplyPolicyModalProps) {
 								id="apply-repository"
 								value={repositoryId}
 								onChange={(e) => setRepositoryId(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 								required
 							>
 								<option value="">Select a repository</option>
@@ -556,7 +556,7 @@ function ApplyPolicyModal({ policy, isOpen, onClose }: ApplyPolicyModalProps) {
 						<div>
 							<label
 								htmlFor="apply-schedule-name"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Schedule Name Prefix (optional)
 							</label>
@@ -566,9 +566,9 @@ function ApplyPolicyModal({ policy, isOpen, onClose }: ApplyPolicyModalProps) {
 								value={scheduleName}
 								onChange={(e) => setScheduleName(e.target.value)}
 								placeholder={`Default: ${policy.name}`}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 							/>
-							<p className="text-xs text-gray-500 mt-1">
+							<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 								Agent hostname will be appended to create unique schedule names
 							</p>
 						</div>
@@ -578,7 +578,7 @@ function ApplyPolicyModal({ policy, isOpen, onClose }: ApplyPolicyModalProps) {
 						<button
 							type="button"
 							onClick={onClose}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 						>
 							Cancel
 						</button>
@@ -621,8 +621,8 @@ function PolicySchedulesModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-				<h3 className="text-lg font-semibold text-gray-900 mb-2">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
 					Schedules using: {policy.name}
 				</h3>
 				<div className="mt-4">
@@ -635,21 +635,21 @@ function PolicySchedulesModal({
 							{schedules.map((schedule) => (
 								<div
 									key={schedule.id}
-									className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-lg"
+									className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-900 rounded-lg"
 								>
 									<div>
-										<p className="text-sm font-medium text-gray-900">
+										<p className="text-sm font-medium text-gray-900 dark:text-white">
 											{schedule.name}
 										</p>
-										<p className="text-xs text-gray-500">
+										<p className="text-xs text-gray-500 dark:text-gray-400">
 											{schedule.cron_expression}
 										</p>
 									</div>
 									<span
 										className={`text-xs px-2 py-0.5 rounded-full ${
 											schedule.enabled
-												? 'bg-green-100 text-green-800'
-												: 'bg-gray-100 text-gray-600'
+												? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+												: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
 										}`}
 									>
 										{schedule.enabled ? 'Enabled' : 'Disabled'}
@@ -658,7 +658,7 @@ function PolicySchedulesModal({
 							))}
 						</div>
 					) : (
-						<p className="text-sm text-gray-500 text-center py-4">
+						<p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
 							No schedules are using this policy yet.
 						</p>
 					)}
@@ -667,7 +667,7 @@ function PolicySchedulesModal({
 					<button
 						type="button"
 						onClick={onClose}
-						className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+						className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 					>
 						Close
 					</button>
@@ -693,26 +693,28 @@ function PolicyRow({
 	const [showActions, setShowActions] = useState(false);
 
 	return (
-		<tr className="hover:bg-gray-50">
+		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="text-sm font-medium text-gray-900">{policy.name}</div>
+				<div className="text-sm font-medium text-gray-900 dark:text-white">
+					{policy.name}
+				</div>
 				{policy.description && (
-					<div className="text-xs text-gray-500 truncate max-w-xs">
+					<div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">
 						{policy.description}
 					</div>
 				)}
 			</td>
 			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="text-sm text-gray-900 font-mono">
+				<div className="text-sm text-gray-900 dark:text-white font-mono">
 					{policy.cron_expression || '-'}
 				</div>
 			</td>
 			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="text-sm text-gray-500">
+				<div className="text-sm text-gray-500 dark:text-gray-400">
 					{policy.paths?.length || 0} path(s)
 				</div>
 			</td>
-			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(policy.created_at)}
 			</td>
 			<td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -720,7 +722,7 @@ function PolicyRow({
 					<button
 						type="button"
 						onClick={() => setShowActions(!showActions)}
-						className="text-gray-400 hover:text-gray-600"
+						className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
 					>
 						<svg
 							className="w-5 h-5"
@@ -741,14 +743,14 @@ function PolicyRow({
 								}}
 								aria-label="Close menu"
 							/>
-							<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+							<div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
 								<button
 									type="button"
 									onClick={() => {
 										onApply(policy);
 										setShowActions(false);
 									}}
-									className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+									className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
 								>
 									Apply to Agents
 								</button>
@@ -758,7 +760,7 @@ function PolicyRow({
 										onViewSchedules(policy);
 										setShowActions(false);
 									}}
-									className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+									className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
 								>
 									View Schedules
 								</button>
@@ -774,7 +776,7 @@ function PolicyRow({
 										}
 										setShowActions(false);
 									}}
-									className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+									className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
 								>
 									Delete
 								</button>
@@ -801,8 +803,10 @@ export function Policies() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Policies</h1>
-					<p className="text-sm text-gray-500 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Policies
+					</h1>
+					<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 						Create reusable backup configuration templates
 					</p>
 				</div>
@@ -829,28 +833,28 @@ export function Policies() {
 				</button>
 			</div>
 
-			<div className="bg-white rounded-lg shadow overflow-hidden">
-				<table className="min-w-full divide-y divide-gray-200">
-					<thead className="bg-gray-50">
+			<div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+				<table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+					<thead className="bg-gray-50 dark:bg-gray-900">
 						<tr>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 								Name
 							</th>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 								Schedule
 							</th>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 								Paths
 							</th>
-							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+							<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 								Created
 							</th>
-							<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+							<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 								Actions
 							</th>
 						</tr>
 					</thead>
-					<tbody className="bg-white divide-y divide-gray-200">
+					<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 						{isLoading ? (
 							<>
 								<LoadingRow />
@@ -880,7 +884,9 @@ export function Policies() {
 											d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
 										/>
 									</svg>
-									<p className="text-gray-500">No policies created yet</p>
+									<p className="text-gray-500 dark:text-gray-400">
+										No policies created yet
+									</p>
 									<p className="text-sm text-gray-400 mt-1">
 										Create a policy to define reusable backup configurations
 									</p>

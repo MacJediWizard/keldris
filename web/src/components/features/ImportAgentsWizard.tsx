@@ -220,7 +220,7 @@ export function ImportAgentsWizard({
 
 	const renderUploadStep = () => (
 		<div className="space-y-4">
-			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+			<div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
 				<div className="flex gap-3">
 					<svg
 						aria-hidden="true"
@@ -237,10 +237,10 @@ export function ImportAgentsWizard({
 						/>
 					</svg>
 					<div>
-						<p className="text-sm text-blue-800 font-medium">
+						<p className="text-sm text-blue-800 dark:text-blue-400 font-medium">
 							Bulk Import Agents
 						</p>
-						<p className="text-sm text-blue-700 mt-1">
+						<p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
 							Upload a CSV file to register multiple agents at once. Each agent
 							will receive a unique registration code.
 						</p>
@@ -253,8 +253,8 @@ export function ImportAgentsWizard({
 				onDrop={handleDrop}
 				className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
 					file
-						? 'border-green-300 bg-green-50'
-						: 'border-gray-300 hover:border-indigo-300'
+						? 'border-green-300 bg-green-50 dark:bg-green-900/30'
+						: 'border-gray-300 dark:border-gray-600 hover:border-indigo-300'
 				}`}
 			>
 				{file ? (
@@ -273,14 +273,14 @@ export function ImportAgentsWizard({
 								d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
 							/>
 						</svg>
-						<p className="text-sm font-medium text-green-700">{file.name}</p>
+						<p className="text-sm font-medium text-green-700 dark:text-green-400">{file.name}</p>
 						<p className="text-xs text-green-600 mt-1">
 							{(file.size / 1024).toFixed(1)} KB
 						</p>
 						<button
 							type="button"
 							onClick={() => setFile(null)}
-							className="mt-2 text-sm text-gray-500 hover:text-gray-700"
+							className="mt-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 dark:text-gray-300"
 						>
 							Remove
 						</button>
@@ -301,12 +301,12 @@ export function ImportAgentsWizard({
 								d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
 							/>
 						</svg>
-						<p className="text-sm text-gray-600">
+						<p className="text-sm text-gray-600 dark:text-gray-400">
 							Drag and drop a CSV file, or{' '}
 							<button
 								type="button"
 								onClick={() => fileInputRef.current?.click()}
-								className="text-indigo-600 hover:text-indigo-700 font-medium"
+								className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 font-medium"
 							>
 								browse
 							</button>
@@ -327,7 +327,7 @@ export function ImportAgentsWizard({
 					type="button"
 					onClick={handleDownloadTemplate}
 					disabled={downloadTemplate.isPending}
-					className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+					className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 flex items-center gap-1"
 				>
 					<svg
 						aria-hidden="true"
@@ -353,11 +353,11 @@ export function ImportAgentsWizard({
 
 	const renderMappingStep = () => (
 		<div className="space-y-4">
-			<div className="bg-gray-50 rounded-lg p-4">
-				<h4 className="text-sm font-medium text-gray-700 mb-3">
+			<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+				<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
 					Column Mapping
 				</h4>
-				<p className="text-xs text-gray-500 mb-4">
+				<p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
 					Configure which CSV columns map to each field
 				</p>
 
@@ -368,9 +368,9 @@ export function ImportAgentsWizard({
 							id="has-header"
 							checked={hasHeader}
 							onChange={(e) => setHasHeader(e.target.checked)}
-							className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+							className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 						/>
-						<label htmlFor="has-header" className="text-sm text-gray-700">
+						<label htmlFor="has-header" className="text-sm text-gray-700 dark:text-gray-300">
 							First row contains headers
 						</label>
 					</div>
@@ -379,7 +379,7 @@ export function ImportAgentsWizard({
 						<div>
 							<label
 								htmlFor="hostname-col"
-								className="block text-xs font-medium text-gray-600 mb-1"
+								className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
 							>
 								Hostname Column *
 							</label>
@@ -389,13 +389,13 @@ export function ImportAgentsWizard({
 								min="0"
 								value={hostnameCol}
 								onChange={(e) => setHostnameCol(Number(e.target.value))}
-								className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+								className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm"
 							/>
 						</div>
 						<div>
 							<label
 								htmlFor="group-col"
-								className="block text-xs font-medium text-gray-600 mb-1"
+								className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
 							>
 								Group Column
 							</label>
@@ -405,13 +405,13 @@ export function ImportAgentsWizard({
 								min="0"
 								value={groupCol}
 								onChange={(e) => setGroupCol(Number(e.target.value))}
-								className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+								className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm"
 							/>
 						</div>
 						<div>
 							<label
 								htmlFor="tags-col"
-								className="block text-xs font-medium text-gray-600 mb-1"
+								className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
 							>
 								Tags Column
 							</label>
@@ -421,13 +421,13 @@ export function ImportAgentsWizard({
 								min="0"
 								value={tagsCol}
 								onChange={(e) => setTagsCol(Number(e.target.value))}
-								className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+								className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm"
 							/>
 						</div>
 						<div>
 							<label
 								htmlFor="config-col"
-								className="block text-xs font-medium text-gray-600 mb-1"
+								className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
 							>
 								Config Column
 							</label>
@@ -437,15 +437,15 @@ export function ImportAgentsWizard({
 								min="0"
 								value={configCol}
 								onChange={(e) => setConfigCol(Number(e.target.value))}
-								className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm"
+								className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm"
 							/>
 						</div>
 					</div>
 				</div>
 			</div>
 
-			<div className="bg-gray-50 rounded-lg p-4">
-				<h4 className="text-sm font-medium text-gray-700 mb-3">
+			<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+				<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
 					Import Options
 				</h4>
 
@@ -456,9 +456,9 @@ export function ImportAgentsWizard({
 							id="create-groups"
 							checked={createMissingGroups}
 							onChange={(e) => setCreateMissingGroups(e.target.checked)}
-							className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+							className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 						/>
-						<label htmlFor="create-groups" className="text-sm text-gray-700">
+						<label htmlFor="create-groups" className="text-sm text-gray-700 dark:text-gray-300">
 							Create missing groups automatically
 						</label>
 					</div>
@@ -466,7 +466,7 @@ export function ImportAgentsWizard({
 					<div>
 						<label
 							htmlFor="token-expiry"
-							className="block text-xs font-medium text-gray-600 mb-1"
+							className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
 						>
 							Registration Code Expiry (hours)
 						</label>
@@ -477,9 +477,9 @@ export function ImportAgentsWizard({
 							max="168"
 							value={tokenExpiryHours}
 							onChange={(e) => setTokenExpiryHours(Number(e.target.value))}
-							className="w-24 px-3 py-1.5 border border-gray-300 rounded text-sm"
+							className="w-24 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm"
 						/>
-						<span className="text-xs text-gray-500 ml-2">
+						<span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
 							(max 168 hours / 7 days)
 						</span>
 					</div>
@@ -496,29 +496,29 @@ export function ImportAgentsWizard({
 		return (
 			<div className="space-y-4">
 				<div className="grid grid-cols-3 gap-4">
-					<div className="bg-gray-50 rounded-lg p-3 text-center">
-						<p className="text-2xl font-bold text-gray-900">
+					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 text-center">
+						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{preview.total_rows}
 						</p>
-						<p className="text-xs text-gray-500">Total Rows</p>
+						<p className="text-xs text-gray-500 dark:text-gray-400">Total Rows</p>
 					</div>
-					<div className="bg-green-50 rounded-lg p-3 text-center">
+					<div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 text-center">
 						<p className="text-2xl font-bold text-green-600">
 							{preview.valid_rows}
 						</p>
-						<p className="text-xs text-gray-500">Valid</p>
+						<p className="text-xs text-gray-500 dark:text-gray-400">Valid</p>
 					</div>
-					<div className="bg-red-50 rounded-lg p-3 text-center">
+					<div className="bg-red-50 dark:bg-red-900/30 rounded-lg p-3 text-center">
 						<p className="text-2xl font-bold text-red-600">
 							{preview.invalid_rows}
 						</p>
-						<p className="text-xs text-gray-500">Invalid</p>
+						<p className="text-xs text-gray-500 dark:text-gray-400">Invalid</p>
 					</div>
 				</div>
 
 				{preview.detected_groups.length > 0 && (
 					<div>
-						<h4 className="text-sm font-medium text-gray-700 mb-2">
+						<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Detected Groups
 						</h4>
 						<div className="flex flex-wrap gap-2">
@@ -527,8 +527,8 @@ export function ImportAgentsWizard({
 									key={group}
 									className={`px-2 py-1 rounded text-sm ${
 										newGroups.includes(group)
-											? 'bg-amber-100 text-amber-700'
-											: 'bg-indigo-100 text-indigo-700'
+											? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+											: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
 									}`}
 								>
 									{group}
@@ -543,14 +543,14 @@ export function ImportAgentsWizard({
 
 				{preview.detected_tags.length > 0 && (
 					<div>
-						<h4 className="text-sm font-medium text-gray-700 mb-2">
+						<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Detected Tags
 						</h4>
 						<div className="flex flex-wrap gap-2">
 							{preview.detected_tags.map((tag) => (
 								<span
 									key={tag}
-									className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm"
+									className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm"
 								>
 									{tag}
 								</span>
@@ -560,27 +560,27 @@ export function ImportAgentsWizard({
 				)}
 
 				<div>
-					<h4 className="text-sm font-medium text-gray-700 mb-2">
+					<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 						Preview (first 10 entries)
 					</h4>
-					<div className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-48 overflow-y-auto">
+					<div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700 max-h-48 overflow-y-auto">
 						{preview.entries
 							.slice(0, 10)
 							.map((entry: AgentImportPreviewEntry) => (
 								<div
 									key={entry.row_number}
-									className={`p-3 text-sm ${entry.is_valid ? '' : 'bg-red-50'}`}
+									className={`p-3 text-sm ${entry.is_valid ? '' : 'bg-red-50 dark:bg-red-900/30'}`}
 								>
 									<div className="flex items-center justify-between">
-										<span className="font-medium text-gray-900">
+										<span className="font-medium text-gray-900 dark:text-white">
 											{entry.hostname || '(empty)'}
 										</span>
-										<span className="text-xs text-gray-500">
+										<span className="text-xs text-gray-500 dark:text-gray-400">
 											Row {entry.row_number}
 										</span>
 									</div>
 									{entry.group_name && (
-										<span className="text-xs text-gray-500">
+										<span className="text-xs text-gray-500 dark:text-gray-400">
 											Group: {entry.group_name}
 										</span>
 									)}
@@ -589,7 +589,7 @@ export function ImportAgentsWizard({
 											{entry.tags.map((tag) => (
 												<span
 													key={tag}
-													className="px-1 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
+													className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs"
 												>
 													{tag}
 												</span>
@@ -607,7 +607,7 @@ export function ImportAgentsWizard({
 				</div>
 
 				{preview.invalid_rows > 0 && (
-					<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+					<div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
 						<div className="flex gap-3">
 							<svg
 								aria-hidden="true"
@@ -624,12 +624,12 @@ export function ImportAgentsWizard({
 								/>
 							</svg>
 							<div>
-								<p className="text-sm text-amber-800 font-medium">
+								<p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
 									{preview.invalid_rows} invalid{' '}
 									{preview.invalid_rows === 1 ? 'entry' : 'entries'} will be
 									skipped
 								</p>
-								<p className="text-sm text-amber-700 mt-1">
+								<p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
 									Only valid entries will be imported.
 								</p>
 							</div>
@@ -643,8 +643,8 @@ export function ImportAgentsWizard({
 	const renderImportingStep = () => (
 		<div className="py-8 text-center">
 			<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
-			<p className="text-gray-600">Importing agents...</p>
-			<p className="text-sm text-gray-500 mt-2">This may take a moment</p>
+			<p className="text-gray-600 dark:text-gray-400">Importing agents...</p>
+			<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">This may take a moment</p>
 		</div>
 	);
 
@@ -663,8 +663,8 @@ export function ImportAgentsWizard({
 				<div
 					className={`rounded-lg p-4 ${
 						importResult.failed_count === 0
-							? 'bg-green-50 border border-green-200'
-							: 'bg-amber-50 border border-amber-200'
+							? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+							: 'bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800'
 					}`}
 				>
 					<div className="flex gap-3">
@@ -694,8 +694,8 @@ export function ImportAgentsWizard({
 							<p
 								className={`text-sm font-medium ${
 									importResult.failed_count === 0
-										? 'text-green-800'
-										: 'text-amber-800'
+										? 'text-green-800 dark:text-green-400'
+										: 'text-amber-800 dark:text-amber-400'
 								}`}
 							>
 								Import Complete
@@ -703,8 +703,8 @@ export function ImportAgentsWizard({
 							<p
 								className={`text-sm mt-1 ${
 									importResult.failed_count === 0
-										? 'text-green-700'
-										: 'text-amber-700'
+										? 'text-green-700 dark:text-green-400'
+										: 'text-amber-700 dark:text-amber-400'
 								}`}
 							>
 								{importResult.imported_count} agent
@@ -719,14 +719,14 @@ export function ImportAgentsWizard({
 				{importResult.groups_created &&
 					importResult.groups_created.length > 0 && (
 						<div>
-							<h4 className="text-sm font-medium text-gray-700 mb-2">
+							<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 								Groups Created
 							</h4>
 							<div className="flex flex-wrap gap-2">
 								{importResult.groups_created.map((group) => (
 									<span
 										key={group}
-										className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm"
+										className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-sm"
 									>
 										{group}
 									</span>
@@ -738,14 +738,14 @@ export function ImportAgentsWizard({
 				{successfulResults.length > 0 && (
 					<div>
 						<div className="flex items-center justify-between mb-2">
-							<h4 className="text-sm font-medium text-gray-700">
+							<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
 								Successful Imports ({successfulResults.length})
 							</h4>
 							<button
 								type="button"
 								onClick={handleExportTokens}
 								disabled={exportTokens.isPending}
-								className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+								className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 flex items-center gap-1"
 							>
 								<svg
 									aria-hidden="true"
@@ -764,11 +764,11 @@ export function ImportAgentsWizard({
 								{exportTokens.isPending ? 'Exporting...' : 'Export Tokens CSV'}
 							</button>
 						</div>
-						<div className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-48 overflow-y-auto">
+						<div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700 max-h-48 overflow-y-auto">
 							{successfulResults.map((result: AgentImportJobResult) => (
 								<div key={result.row_number} className="p-3 text-sm">
 									<div className="flex items-center justify-between">
-										<span className="font-medium text-gray-900">
+										<span className="font-medium text-gray-900 dark:text-white">
 											{result.hostname}
 										</span>
 										<button
@@ -779,17 +779,17 @@ export function ImportAgentsWizard({
 													result.registration_code || '',
 												)
 											}
-											className="text-xs text-indigo-600 hover:text-indigo-700"
+											className="text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
 										>
 											Get Script
 										</button>
 									</div>
 									<div className="flex items-center gap-2 mt-1">
-										<span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">
+										<span className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
 											{result.registration_code}
 										</span>
 										{result.group_name && (
-											<span className="text-xs text-gray-500">
+											<span className="text-xs text-gray-500 dark:text-gray-400">
 												{result.group_name}
 											</span>
 										)}
@@ -802,14 +802,14 @@ export function ImportAgentsWizard({
 
 				{failedResults.length > 0 && (
 					<div>
-						<h4 className="text-sm font-medium text-gray-700 mb-2">
+						<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Failed Imports ({failedResults.length})
 						</h4>
-						<div className="border border-red-200 rounded-lg divide-y divide-red-100 max-h-32 overflow-y-auto bg-red-50">
+						<div className="border border-red-200 dark:border-red-800 rounded-lg divide-y divide-red-100 dark:divide-red-800 max-h-32 overflow-y-auto bg-red-50 dark:bg-red-900/30">
 							{failedResults.map((result: AgentImportJobResult) => (
 								<div key={result.row_number} className="p-3 text-sm">
 									<div className="flex items-center justify-between">
-										<span className="font-medium text-gray-900">
+										<span className="font-medium text-gray-900 dark:text-white">
 											{result.hostname || `Row ${result.row_number}`}
 										</span>
 									</div>
@@ -823,15 +823,15 @@ export function ImportAgentsWizard({
 				)}
 
 				{selectedScript && scriptContent && (
-					<div className="border border-gray-200 rounded-lg p-4">
+					<div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
 						<div className="flex items-center justify-between mb-2">
-							<h4 className="text-sm font-medium text-gray-700">
+							<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
 								Registration Script for {selectedScript.hostname}
 							</h4>
 							<button
 								type="button"
 								onClick={handleCopyScript}
-								className="text-sm text-indigo-600 hover:text-indigo-700"
+								className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
 							>
 								Copy
 							</button>
@@ -902,16 +902,16 @@ export function ImportAgentsWizard({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						{getStepTitle()}
 					</h3>
 					{step !== 'importing' && (
 						<button
 							type="button"
 							onClick={handleClose}
-							className="text-gray-400 hover:text-gray-600"
+							className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
 						>
 							<svg
 								aria-hidden="true"
@@ -941,8 +941,8 @@ export function ImportAgentsWizard({
 										step === s
 											? 'bg-indigo-600 text-white'
 											: stepOrder.indexOf(step as WizardStep) > i
-												? 'bg-indigo-100 text-indigo-600'
-												: 'bg-gray-100 text-gray-400'
+												? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600'
+												: 'bg-gray-100 dark:bg-gray-700 text-gray-400'
 									}`}
 								>
 									{i + 1}
@@ -952,7 +952,7 @@ export function ImportAgentsWizard({
 										className={`w-12 h-0.5 mx-1 ${
 											stepOrder.indexOf(step as WizardStep) > i
 												? 'bg-indigo-200'
-												: 'bg-gray-200'
+												: 'bg-gray-200 dark:bg-gray-700'
 										}`}
 									/>
 								)}
@@ -962,8 +962,8 @@ export function ImportAgentsWizard({
 				)}
 
 				{error && (
-					<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-						<p className="text-sm text-red-700">{error}</p>
+					<div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+						<p className="text-sm text-red-700 dark:text-red-400">{error}</p>
 					</div>
 				)}
 
@@ -978,7 +978,7 @@ export function ImportAgentsWizard({
 								else if (step === 'preview') setStep('mapping');
 								else handleClose();
 							}}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-lg transition-colors"
 						>
 							{step === 'upload' ? 'Cancel' : 'Back'}
 						</button>

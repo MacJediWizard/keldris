@@ -12,27 +12,27 @@ interface ReplicationStatusCardProps {
 function StatusBadge({ status }: { status: ReplicationStatusType }) {
 	const config = {
 		pending: {
-			bg: 'bg-gray-100',
-			text: 'text-gray-700',
+			bg: 'bg-gray-100 dark:bg-gray-700',
+			text: 'text-gray-700 dark:text-gray-300',
 			dot: 'bg-gray-400',
 			label: 'Pending',
 		},
 		syncing: {
-			bg: 'bg-blue-100',
-			text: 'text-blue-700',
-			dot: 'bg-blue-500 animate-pulse',
+			bg: 'bg-blue-100 dark:bg-blue-900/30',
+			text: 'text-blue-700 dark:text-blue-400',
+			dot: 'bg-blue-50 dark:bg-blue-900/300 animate-pulse',
 			label: 'Syncing',
 		},
 		synced: {
-			bg: 'bg-green-100',
-			text: 'text-green-700',
-			dot: 'bg-green-500',
+			bg: 'bg-green-100 dark:bg-green-900/30',
+			text: 'text-green-700 dark:text-green-400',
+			dot: 'bg-green-50 dark:bg-green-900/300',
 			label: 'Synced',
 		},
 		failed: {
-			bg: 'bg-red-100',
-			text: 'text-red-700',
-			dot: 'bg-red-500',
+			bg: 'bg-red-100 dark:bg-red-900/30',
+			text: 'text-red-700 dark:text-red-400',
+			dot: 'bg-red-50 dark:bg-red-900/300',
 			label: 'Failed',
 		},
 	}[status];
@@ -76,11 +76,11 @@ export function ReplicationStatusCard({
 
 	if (statuses.length === 0) {
 		return (
-			<div className="bg-white rounded-lg border border-gray-200 p-4">
-				<h3 className="text-sm font-medium text-gray-900 mb-2">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+				<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
 					Replication Status
 				</h3>
-				<p className="text-sm text-gray-500">
+				<p className="text-sm text-gray-500 dark:text-gray-400">
 					No replication configured. Add secondary repositories to enable
 					replication.
 				</p>
@@ -89,15 +89,15 @@ export function ReplicationStatusCard({
 	}
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-4">
-			<h3 className="text-sm font-medium text-gray-900 mb-3">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+			<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
 				Replication Status
 			</h3>
 			<div className="space-y-3">
 				{statuses.map((status) => (
 					<div
 						key={status.id}
-						className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
+						className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg"
 					>
 						<div className="flex-shrink-0 mt-0.5">
 							<svg
@@ -117,24 +117,24 @@ export function ReplicationStatusCard({
 						</div>
 						<div className="flex-1 min-w-0">
 							<div className="flex items-center gap-2 text-sm">
-								<span className="font-medium text-gray-900 truncate">
+								<span className="font-medium text-gray-900 dark:text-white truncate">
 									{getRepoName(status.source_repository_id)}
 								</span>
 								<span className="text-gray-400">→</span>
-								<span className="font-medium text-gray-900 truncate">
+								<span className="font-medium text-gray-900 dark:text-white truncate">
 									{getRepoName(status.target_repository_id)}
 								</span>
 							</div>
 							<div className="flex items-center gap-3 mt-1">
 								<StatusBadge status={status.status} />
 								{status.last_sync_at && (
-									<span className="text-xs text-gray-500">
+									<span className="text-xs text-gray-500 dark:text-gray-400">
 										Last synced: {formatRelativeTime(status.last_sync_at)}
 									</span>
 								)}
 							</div>
 							{status.error_message && (
-								<p className="text-xs text-red-600 mt-1.5 bg-red-50 px-2 py-1 rounded">
+								<p className="text-xs text-red-600 mt-1.5 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded">
 									{status.error_message}
 								</p>
 							)}

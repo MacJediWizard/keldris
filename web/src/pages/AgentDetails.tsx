@@ -43,10 +43,10 @@ import {
 
 function LoadingCard() {
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
-			<div className="h-4 w-24 bg-gray-200 rounded mb-2" />
-			<div className="h-8 w-32 bg-gray-200 rounded mb-1" />
-			<div className="h-3 w-20 bg-gray-100 rounded" />
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
+			<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+			<div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-1" />
+			<div className="h-3 w-20 bg-gray-100 dark:bg-gray-700 rounded" />
 		</div>
 	);
 }
@@ -55,19 +55,19 @@ function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
 			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 rounded-full" />
+				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 rounded" />
+				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 rounded" />
+				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 		</tr>
 	);
@@ -89,9 +89,9 @@ function ApiKeyModal({ apiKey, onClose }: ApiKeyModalProps) {
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4">
 				<div className="flex items-center gap-3 mb-4">
-					<div className="p-2 bg-green-100 rounded-full">
+					<div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
 						<svg
 							aria-hidden="true"
 							className="w-6 h-6 text-green-600"
@@ -107,22 +107,22 @@ function ApiKeyModal({ apiKey, onClose }: ApiKeyModalProps) {
 							/>
 						</svg>
 					</div>
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						API Key Regenerated
 					</h3>
 				</div>
-				<p className="text-sm text-gray-600 mb-4">
+				<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
 					Save this API key now. You won't be able to see it again!
 				</p>
-				<div className="bg-gray-50 rounded-lg p-4 mb-4">
+				<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
 					<div className="flex items-center justify-between gap-2">
-						<code className="text-sm font-mono text-gray-800 break-all">
+						<code className="text-sm font-mono text-gray-800 dark:text-gray-200 break-all">
 							{apiKey}
 						</code>
 						<button
 							type="button"
 							onClick={copyToClipboard}
-							className="flex-shrink-0 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
+							className="flex-shrink-0 p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
 						>
 							{copied ? (
 								<svg
@@ -180,8 +180,8 @@ function BackupRow({ backup }: BackupRowProps) {
 	const statusColor = getBackupStatusColor(backup.status);
 
 	return (
-		<tr className="hover:bg-gray-50">
-			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
+			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
 				{formatDateTime(backup.started_at)}
 			</td>
 			<td className="px-6 py-4">
@@ -192,13 +192,13 @@ function BackupRow({ backup }: BackupRowProps) {
 					{backup.status}
 				</span>
 			</td>
-			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 				{formatDuration(backup.started_at, backup.completed_at)}
 			</td>
-			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 				{formatBytes(backup.size_bytes)}
 			</td>
-			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 				{backup.files_new !== undefined && backup.files_changed !== undefined
 					? `${backup.files_new} new, ${backup.files_changed} changed`
 					: '-'}
@@ -215,23 +215,23 @@ interface ScheduleRowProps {
 
 function ScheduleRow({ schedule, onRun, isRunning }: ScheduleRowProps) {
 	return (
-		<tr className="hover:bg-gray-50">
+		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900">{schedule.name}</div>
-				<div className="text-sm text-gray-500">{schedule.cron_expression}</div>
+				<div className="font-medium text-gray-900 dark:text-white">{schedule.name}</div>
+				<div className="text-sm text-gray-500 dark:text-gray-400">{schedule.cron_expression}</div>
 			</td>
 			<td className="px-6 py-4">
 				<span
 					className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
 						schedule.enabled
-							? 'bg-green-100 text-green-800'
-							: 'bg-gray-100 text-gray-600'
+							? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+							: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
 					}`}
 				>
 					{schedule.enabled ? 'Enabled' : 'Disabled'}
 				</span>
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{schedule.paths.join(', ')}
 			</td>
 			<td className="px-6 py-4 text-right">
@@ -271,33 +271,33 @@ function ScheduleRow({ schedule, onRun, isRunning }: ScheduleRowProps) {
 function getCommandStatusColor(status: CommandStatus) {
 	switch (status) {
 		case 'pending':
-			return { bg: 'bg-gray-100', text: 'text-gray-800', dot: 'bg-gray-400' };
+			return { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-200', dot: 'bg-gray-400' };
 		case 'acknowledged':
-			return { bg: 'bg-blue-100', text: 'text-blue-800', dot: 'bg-blue-400' };
+			return { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-800 dark:text-blue-400', dot: 'bg-blue-400' };
 		case 'running':
 			return {
-				bg: 'bg-yellow-100',
-				text: 'text-yellow-800',
+				bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+				text: 'text-yellow-800 dark:text-yellow-400',
 				dot: 'bg-yellow-400',
 			};
 		case 'completed':
 			return {
-				bg: 'bg-green-100',
-				text: 'text-green-800',
+				bg: 'bg-green-100 dark:bg-green-900/30',
+				text: 'text-green-800 dark:text-green-400',
 				dot: 'bg-green-400',
 			};
 		case 'failed':
-			return { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-400' };
+			return { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-400', dot: 'bg-red-400' };
 		case 'timed_out':
 			return {
-				bg: 'bg-orange-100',
-				text: 'text-orange-800',
+				bg: 'bg-orange-100 dark:bg-orange-900/30',
+				text: 'text-orange-800 dark:text-orange-400',
 				dot: 'bg-orange-400',
 			};
 		case 'canceled':
-			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+			return { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-400', dot: 'bg-gray-400' };
 		default:
-			return { bg: 'bg-gray-100', text: 'text-gray-800', dot: 'bg-gray-400' };
+			return { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-200', dot: 'bg-gray-400' };
 	}
 }
 
@@ -313,6 +313,8 @@ function getCommandTypeLabel(type: CommandType) {
 			return 'Restart';
 		case 'diagnostics':
 			return 'Diagnostics';
+		case 'uninstall':
+			return 'Uninstall';
 		default:
 			return type;
 	}
@@ -331,11 +333,11 @@ function CommandRow({ command, onCancel, isCanceling }: CommandRowProps) {
 	);
 
 	return (
-		<tr className="hover:bg-gray-50">
-			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
+			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
 				{formatDateTime(command.created_at)}
 			</td>
-			<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+			<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
 				{getCommandTypeLabel(command.type)}
 			</td>
 			<td className="px-6 py-4">
@@ -346,10 +348,10 @@ function CommandRow({ command, onCancel, isCanceling }: CommandRowProps) {
 					{command.status}
 				</span>
 			</td>
-			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 				{command.created_by_name || '-'}
 			</td>
-			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+			<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 				{command.result?.error ? (
 					<span className="text-red-600">{command.result.error}</span>
 				) : command.result?.output ? (
@@ -488,11 +490,24 @@ export function AgentDetails() {
 			update_restic: 'update the restic binary',
 			restart: 'restart the agent',
 			diagnostics: 'run diagnostics',
+			uninstall: 'uninstall the agent',
 		};
 		if (confirm(`Are you sure you want to ${typeLabels[type]}?`)) {
 			createCommand.mutate({
 				agentId: id ?? '',
 				data: { type },
+			});
+		}
+	};
+
+	const handleUninstall = (purge: boolean) => {
+		const message = purge
+			? 'This will completely uninstall the agent and remove all its data, config, and managed restic binary from the host. This action cannot be undone.\n\nAre you sure?'
+			: 'This will uninstall the agent service and binary from the host, but keep configuration files.\n\nAre you sure?';
+		if (confirm(message)) {
+			createCommand.mutate({
+				agentId: id ?? '',
+				data: { type: 'uninstall', payload: { purge } },
 			});
 		}
 	};
@@ -510,8 +525,8 @@ export function AgentDetails() {
 		return (
 			<div className="space-y-6">
 				<div className="animate-pulse">
-					<div className="h-8 w-48 bg-gray-200 rounded mb-2" />
-					<div className="h-4 w-32 bg-gray-100 rounded" />
+					<div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+					<div className="h-4 w-32 bg-gray-100 dark:bg-gray-700 rounded" />
 				</div>
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 					<LoadingCard />
@@ -526,8 +541,8 @@ export function AgentDetails() {
 	if (!agent) {
 		return (
 			<div className="text-center py-12">
-				<h2 className="text-xl font-semibold text-gray-900">Agent not found</h2>
-				<p className="text-gray-500 mt-2">
+				<h2 className="text-xl font-semibold text-gray-900 dark:text-white">Agent not found</h2>
+				<p className="text-gray-500 dark:text-gray-400 mt-2">
 					The agent you're looking for doesn't exist.
 				</p>
 				<Link
@@ -550,7 +565,7 @@ export function AgentDetails() {
 				<div className="flex items-center gap-4">
 					<Link
 						to="/agents"
-						className="text-gray-500 hover:text-gray-700 transition-colors"
+						className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
 					>
 						<svg
 							aria-hidden="true"
@@ -569,7 +584,7 @@ export function AgentDetails() {
 					</Link>
 					<div>
 						<div className="flex items-center gap-3">
-							<h1 className="text-2xl font-bold text-gray-900">
+							<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 								{agent.hostname}
 							</h1>
 							<span
@@ -594,7 +609,7 @@ export function AgentDetails() {
 								{getHealthStatusLabel(agent.health_status || 'unknown')}
 							</span>
 						</div>
-						<p className="text-gray-600 mt-1">
+						<p className="text-gray-600 dark:text-gray-400 mt-1">
 							{agent.os_info
 								? `${agent.os_info.os} ${agent.os_info.arch}${agent.os_info.version ? ` (${agent.os_info.version})` : ''}`
 								: 'OS information not available'}
@@ -610,7 +625,7 @@ export function AgentDetails() {
 				{/* Actions */}
 				<div className="flex items-center gap-2">
 					{/* Command Buttons */}
-					<div className="flex items-center gap-1 mr-2 pr-2 border-r border-gray-200">
+					<div className="flex items-center gap-1 mr-2 pr-2 border-r border-gray-200 dark:border-gray-700">
 						<button
 							type="button"
 							onClick={() => handleSendCommand('backup_now')}
@@ -638,7 +653,7 @@ export function AgentDetails() {
 							type="button"
 							onClick={() => handleSendCommand('diagnostics')}
 							disabled={createCommand.isPending || agent.status !== 'active'}
-							className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+							className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
 							title="Run diagnostics"
 						>
 							<svg
@@ -733,8 +748,8 @@ export function AgentDetails() {
 						disabled={setDebugMode.isPending}
 						className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ${
 							agent.debug_mode
-								? 'text-orange-700 bg-orange-50 border border-orange-200 hover:bg-orange-100'
-								: 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+								? 'text-orange-700 bg-orange-50 border border-orange-200 hover:bg-orange-100 dark:text-orange-400 dark:bg-orange-900/30 dark:border-orange-800 dark:hover:bg-orange-900/50'
+								: 'text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
 						}`}
 						title={
 							agent.debug_mode
@@ -766,7 +781,7 @@ export function AgentDetails() {
 						type="button"
 						onClick={handleRotateKey}
 						disabled={rotateApiKey.isPending}
-						className="inline-flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+						className="inline-flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
 					>
 						<svg
 							aria-hidden="true"
@@ -833,7 +848,7 @@ export function AgentDetails() {
 
 			{/* Debug Mode Warning Banner */}
 			{agent.debug_mode && (
-				<div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+				<div className="bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
 					<div className="flex items-start gap-3">
 						<div className="flex-shrink-0">
 							<svg
@@ -852,10 +867,10 @@ export function AgentDetails() {
 							</svg>
 						</div>
 						<div className="flex-1">
-							<h3 className="text-sm font-medium text-orange-800">
+							<h3 className="text-sm font-medium text-orange-800 dark:text-orange-400">
 								Debug Mode Active
 							</h3>
-							<p className="text-sm text-orange-700 mt-1">
+							<p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
 								This agent is running in debug mode with verbose logging
 								enabled. Detailed restic output and file operations are being
 								logged.
@@ -894,18 +909,18 @@ export function AgentDetails() {
 					</>
 				) : (
 					<>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
-							<p className="text-sm font-medium text-gray-600">Total Backups</p>
-							<p className="text-3xl font-bold text-gray-900 mt-1">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Backups</p>
+							<p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
 								{stats?.total_backups ?? 0}
 							</p>
-							<p className="text-sm text-gray-500 mt-1">
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 								{stats?.successful_backups ?? 0} successful,{' '}
 								{stats?.failed_backups ?? 0} failed
 							</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
-							<p className="text-sm font-medium text-gray-600">Success Rate</p>
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Success Rate</p>
 							<p
 								className={`text-3xl font-bold mt-1 ${
 									(stats?.success_rate ?? 0) >= 90
@@ -917,25 +932,25 @@ export function AgentDetails() {
 							>
 								{stats?.success_rate?.toFixed(1) ?? '0'}%
 							</p>
-							<p className="text-sm text-gray-500 mt-1">
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 								{stats?.schedule_count ?? 0} active schedules
 							</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
-							<p className="text-sm font-medium text-gray-600">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 								Total Backup Size
 							</p>
-							<p className="text-3xl font-bold text-gray-900 mt-1">
+							<p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
 								{formatBytes(stats?.total_size_bytes)}
 							</p>
-							<p className="text-sm text-gray-500 mt-1">Across all backups</p>
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Across all backups</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
-							<p className="text-sm font-medium text-gray-600">Last Backup</p>
-							<p className="text-3xl font-bold text-gray-900 mt-1">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Last Backup</p>
+							<p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
 								{formatDate(stats?.last_backup_at)}
 							</p>
-							<p className="text-sm text-gray-500 mt-1">
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 								Last seen: {formatDate(agent.last_seen)}
 							</p>
 						</div>
@@ -944,42 +959,42 @@ export function AgentDetails() {
 			</div>
 
 			{/* Agent Info Card */}
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
-				<h2 className="text-lg font-semibold text-gray-900 mb-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+				<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 					Agent Information
 				</h2>
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 					<div>
-						<p className="text-sm text-gray-600">Hostname</p>
-						<p className="font-medium text-gray-900">{agent.hostname}</p>
+						<p className="text-sm text-gray-600 dark:text-gray-400">Hostname</p>
+						<p className="font-medium text-gray-900 dark:text-white">{agent.hostname}</p>
 					</div>
 					<div>
-						<p className="text-sm text-gray-600">Operating System</p>
-						<p className="font-medium text-gray-900">
+						<p className="text-sm text-gray-600 dark:text-gray-400">Operating System</p>
+						<p className="font-medium text-gray-900 dark:text-white">
 							{agent.os_info?.os ?? 'Unknown'}
 						</p>
 					</div>
 					<div>
-						<p className="text-sm text-gray-600">Architecture</p>
-						<p className="font-medium text-gray-900">
+						<p className="text-sm text-gray-600 dark:text-gray-400">Architecture</p>
+						<p className="font-medium text-gray-900 dark:text-white">
 							{agent.os_info?.arch ?? 'Unknown'}
 						</p>
 					</div>
 					<div>
-						<p className="text-sm text-gray-600">OS Version</p>
-						<p className="font-medium text-gray-900">
+						<p className="text-sm text-gray-600 dark:text-gray-400">OS Version</p>
+						<p className="font-medium text-gray-900 dark:text-white">
 							{agent.os_info?.version ?? 'Unknown'}
 						</p>
 					</div>
 					<div>
-						<p className="text-sm text-gray-600">Registered</p>
-						<p className="font-medium text-gray-900">
+						<p className="text-sm text-gray-600 dark:text-gray-400">Registered</p>
+						<p className="font-medium text-gray-900 dark:text-white">
 							{formatDateTime(agent.created_at)}
 						</p>
 					</div>
 					<div>
-						<p className="text-sm text-gray-600">Last Seen</p>
-						<p className="font-medium text-gray-900">
+						<p className="text-sm text-gray-600 dark:text-gray-400">Last Seen</p>
+						<p className="font-medium text-gray-900 dark:text-white">
 							{formatDateTime(agent.last_seen)}
 						</p>
 					</div>
@@ -988,9 +1003,9 @@ export function AgentDetails() {
 
 			{/* Docker Information */}
 			{agent.docker_info && (
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 					<div className="flex items-center gap-3 mb-4">
-						<div className="p-2 bg-blue-100 rounded-lg">
+						<div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
 							<svg
 								className="w-5 h-5 text-blue-600"
 								fill="none"
@@ -1007,15 +1022,15 @@ export function AgentDetails() {
 							</svg>
 						</div>
 						<div>
-							<h2 className="text-lg font-semibold text-gray-900">
+							<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 								Docker Information
 							</h2>
 							{agent.docker_info.available ? (
-								<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+								<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
 									Available
 								</span>
 							) : (
-								<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+								<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
 									Not Available
 								</span>
 							)}
@@ -1026,30 +1041,30 @@ export function AgentDetails() {
 						<>
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
 								<div>
-									<p className="text-sm text-gray-600">Docker Version</p>
-									<p className="font-medium text-gray-900">
+									<p className="text-sm text-gray-600 dark:text-gray-400">Docker Version</p>
+									<p className="font-medium text-gray-900 dark:text-white">
 										{agent.docker_info.version ?? 'Unknown'}
 									</p>
 								</div>
 								<div>
-									<p className="text-sm text-gray-600">Containers</p>
-									<p className="font-medium text-gray-900">
+									<p className="text-sm text-gray-600 dark:text-gray-400">Containers</p>
+									<p className="font-medium text-gray-900 dark:text-white">
 										{agent.docker_info.container_count}
-										<span className="text-sm text-gray-500 ml-1">
+										<span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
 											({agent.docker_info.running_count} running)
 										</span>
 									</p>
 								</div>
 								<div>
-									<p className="text-sm text-gray-600">Volumes</p>
-									<p className="font-medium text-gray-900">
+									<p className="text-sm text-gray-600 dark:text-gray-400">Volumes</p>
+									<p className="font-medium text-gray-900 dark:text-white">
 										{agent.docker_info.volume_count}
 									</p>
 								</div>
 								{agent.docker_info.detected_at && (
 									<div>
-										<p className="text-sm text-gray-600">Last Detected</p>
-										<p className="font-medium text-gray-900">
+										<p className="text-sm text-gray-600 dark:text-gray-400">Last Detected</p>
+										<p className="font-medium text-gray-900 dark:text-white">
 											{formatDateTime(agent.docker_info.detected_at)}
 										</p>
 									</div>
@@ -1060,41 +1075,41 @@ export function AgentDetails() {
 							{agent.docker_info.containers &&
 								agent.docker_info.containers.length > 0 && (
 									<div className="mb-6">
-										<h3 className="text-sm font-medium text-gray-700 mb-3">
+										<h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
 											Containers
 										</h3>
 										<div className="overflow-x-auto">
 											<table className="min-w-full text-sm">
-												<thead className="bg-gray-50">
+												<thead className="bg-gray-50 dark:bg-gray-900">
 													<tr>
-														<th className="px-3 py-2 text-left font-medium text-gray-500">
+														<th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
 															Name
 														</th>
-														<th className="px-3 py-2 text-left font-medium text-gray-500">
+														<th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
 															Image
 														</th>
-														<th className="px-3 py-2 text-left font-medium text-gray-500">
+														<th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
 															Status
 														</th>
 													</tr>
 												</thead>
-												<tbody className="divide-y divide-gray-200">
+												<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 													{agent.docker_info.containers.map((container) => (
-														<tr key={container.id} className="hover:bg-gray-50">
-															<td className="px-3 py-2 font-medium text-gray-900">
+														<tr key={container.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+															<td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
 																{container.name}
 															</td>
-															<td className="px-3 py-2 text-gray-500 font-mono text-xs">
+															<td className="px-3 py-2 text-gray-500 dark:text-gray-400 font-mono text-xs">
 																{container.image}
 															</td>
 															<td className="px-3 py-2">
 																<span
 																	className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
 																		container.state === 'running'
-																			? 'bg-green-100 text-green-800'
+																			? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
 																			: container.state === 'paused'
-																				? 'bg-yellow-100 text-yellow-800'
-																				: 'bg-gray-100 text-gray-600'
+																				? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400'
+																				: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
 																	}`}
 																>
 																	{container.state}
@@ -1112,34 +1127,34 @@ export function AgentDetails() {
 							{agent.docker_info.volumes &&
 								agent.docker_info.volumes.length > 0 && (
 									<div>
-										<h3 className="text-sm font-medium text-gray-700 mb-3">
+										<h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
 											Volumes
 										</h3>
 										<div className="overflow-x-auto">
 											<table className="min-w-full text-sm">
-												<thead className="bg-gray-50">
+												<thead className="bg-gray-50 dark:bg-gray-900">
 													<tr>
-														<th className="px-3 py-2 text-left font-medium text-gray-500">
+														<th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
 															Name
 														</th>
-														<th className="px-3 py-2 text-left font-medium text-gray-500">
+														<th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
 															Driver
 														</th>
-														<th className="px-3 py-2 text-left font-medium text-gray-500">
+														<th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
 															Mount Point
 														</th>
 													</tr>
 												</thead>
-												<tbody className="divide-y divide-gray-200">
+												<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 													{agent.docker_info.volumes.map((volume) => (
-														<tr key={volume.name} className="hover:bg-gray-50">
-															<td className="px-3 py-2 font-medium text-gray-900">
+														<tr key={volume.name} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+															<td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
 																{volume.name}
 															</td>
-															<td className="px-3 py-2 text-gray-500">
+															<td className="px-3 py-2 text-gray-500 dark:text-gray-400">
 																{volume.driver}
 															</td>
-															<td className="px-3 py-2 text-gray-500 font-mono text-xs">
+															<td className="px-3 py-2 text-gray-500 dark:text-gray-400 font-mono text-xs">
 																{volume.mountpoint || '-'}
 															</td>
 														</tr>
@@ -1151,7 +1166,7 @@ export function AgentDetails() {
 								)}
 						</>
 					) : (
-						<div className="text-sm text-gray-500">
+						<div className="text-sm text-gray-500 dark:text-gray-400">
 							{agent.docker_info.error ? (
 								<p>
 									<span className="font-medium text-red-600">Error:</span>{' '}
@@ -1169,9 +1184,9 @@ export function AgentDetails() {
 			)}
 
 			{/* Backup Concurrency Settings */}
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 				<div className="flex items-center justify-between mb-4">
-					<h2 className="text-lg font-semibold text-gray-900">
+					<h2 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Backup Concurrency
 					</h2>
 					{!isEditingConcurrency && (
@@ -1210,7 +1225,7 @@ export function AgentDetails() {
 						<div>
 							<label
 								htmlFor="concurrencyLimit"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Maximum Concurrent Backups
 							</label>
@@ -1221,9 +1236,9 @@ export function AgentDetails() {
 								onChange={(e) => setConcurrencyLimit(e.target.value)}
 								min="0"
 								placeholder="Use organization default"
-								className="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full max-w-xs px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 							/>
-							<p className="mt-1 text-xs text-gray-500">
+							<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 								Leave empty to use organization default. When the limit is
 								reached, new backups will be queued.
 							</p>
@@ -1244,7 +1259,7 @@ export function AgentDetails() {
 							<button
 								type="button"
 								onClick={() => setIsEditingConcurrency(false)}
-								className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+								className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 							>
 								Cancel
 							</button>
@@ -1253,29 +1268,29 @@ export function AgentDetails() {
 				) : (
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 						<div>
-							<p className="text-sm text-gray-600">Max Concurrent Backups</p>
-							<p className="font-medium text-gray-900">
+							<p className="text-sm text-gray-600 dark:text-gray-400">Max Concurrent Backups</p>
+							<p className="font-medium text-gray-900 dark:text-white">
 								{concurrencyLoading ? (
-									<span className="h-4 w-16 bg-gray-200 rounded animate-pulse inline-block" />
+									<span className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse inline-block" />
 								) : concurrencyData?.max_concurrent_backups != null ? (
 									concurrencyData.max_concurrent_backups
 								) : (
-									<span className="text-gray-500">Use org default</span>
+									<span className="text-gray-500 dark:text-gray-400">Use org default</span>
 								)}
 							</p>
 						</div>
 						<div>
-							<p className="text-sm text-gray-600">Currently Running</p>
-							<p className="font-medium text-gray-900">
+							<p className="text-sm text-gray-600 dark:text-gray-400">Currently Running</p>
+							<p className="font-medium text-gray-900 dark:text-white">
 								{concurrencyData?.running_count ?? 0}
 							</p>
 						</div>
 						<div>
-							<p className="text-sm text-gray-600">Queued</p>
-							<p className="font-medium text-gray-900">
+							<p className="text-sm text-gray-600 dark:text-gray-400">Queued</p>
+							<p className="font-medium text-gray-900 dark:text-white">
 								{concurrencyData?.queued_count ?? 0}
 								{(concurrencyData?.queued_count ?? 0) > 0 && (
-									<span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+									<span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">
 										Waiting
 									</span>
 								)}
@@ -1286,7 +1301,7 @@ export function AgentDetails() {
 			</div>
 
 			{/* Tabs */}
-			<div className="border-b border-gray-200">
+			<div className="border-b border-gray-200 dark:border-gray-700">
 				<nav className="-mb-px flex space-x-8">
 					<button
 						type="button"
@@ -1294,7 +1309,7 @@ export function AgentDetails() {
 						className={`py-4 px-1 border-b-2 font-medium text-sm ${
 							activeTab === 'overview'
 								? 'border-indigo-500 text-indigo-600'
-								: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+								: 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
 						}`}
 					>
 						Overview
@@ -1305,7 +1320,7 @@ export function AgentDetails() {
 						className={`py-4 px-1 border-b-2 font-medium text-sm ${
 							activeTab === 'backups'
 								? 'border-indigo-500 text-indigo-600'
-								: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+								: 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
 						}`}
 					>
 						Backup History ({backups.length})
@@ -1316,7 +1331,7 @@ export function AgentDetails() {
 						className={`py-4 px-1 border-b-2 font-medium text-sm ${
 							activeTab === 'schedules'
 								? 'border-indigo-500 text-indigo-600'
-								: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+								: 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
 						}`}
 					>
 						Schedules ({schedules.length})
@@ -1327,7 +1342,7 @@ export function AgentDetails() {
 						className={`py-4 px-1 border-b-2 font-medium text-sm ${
 							activeTab === 'health'
 								? 'border-indigo-500 text-indigo-600'
-								: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+								: 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
 						}`}
 					>
 						Health
@@ -1338,7 +1353,7 @@ export function AgentDetails() {
 						className={`py-4 px-1 border-b-2 font-medium text-sm ${
 							activeTab === 'logs'
 								? 'border-indigo-500 text-indigo-600'
-								: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+								: 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
 						}`}
 					>
 						Logs
@@ -1349,7 +1364,7 @@ export function AgentDetails() {
 						className={`py-4 px-1 border-b-2 font-medium text-sm ${
 							activeTab === 'commands'
 								? 'border-indigo-500 text-indigo-600'
-								: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+								: 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
 						}`}
 					>
 						Commands ({commands.length})
@@ -1361,9 +1376,9 @@ export function AgentDetails() {
 			{activeTab === 'overview' && (
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 					{/* Recent Backups */}
-					<div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-						<div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-							<h3 className="text-lg font-semibold text-gray-900">
+					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+						<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+							<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 								Recent Backups
 							</h3>
 							<button
@@ -1378,12 +1393,12 @@ export function AgentDetails() {
 							<div className="p-6">
 								<div className="animate-pulse space-y-4">
 									{[1, 2, 3].map((i) => (
-										<div key={i} className="h-12 bg-gray-100 rounded" />
+										<div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 rounded" />
 									))}
 								</div>
 							</div>
 						) : backups.length > 0 ? (
-							<div className="divide-y divide-gray-200">
+							<div className="divide-y divide-gray-200 dark:divide-gray-700">
 								{backups.slice(0, 5).map((backup) => {
 									const statusColor = getBackupStatusColor(backup.status);
 									return (
@@ -1392,10 +1407,10 @@ export function AgentDetails() {
 											className="px-6 py-4 flex items-center justify-between"
 										>
 											<div>
-												<p className="text-sm font-medium text-gray-900">
+												<p className="text-sm font-medium text-gray-900 dark:text-white">
 													{formatDateTime(backup.started_at)}
 												</p>
-												<p className="text-sm text-gray-500">
+												<p className="text-sm text-gray-500 dark:text-gray-400">
 													{formatBytes(backup.size_bytes)} -{' '}
 													{formatDuration(
 														backup.started_at,
@@ -1416,16 +1431,16 @@ export function AgentDetails() {
 								})}
 							</div>
 						) : (
-							<div className="p-12 text-center text-gray-500">
+							<div className="p-12 text-center text-gray-500 dark:text-gray-400">
 								<p>No backups yet</p>
 							</div>
 						)}
 					</div>
 
 					{/* Schedules */}
-					<div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-						<div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-							<h3 className="text-lg font-semibold text-gray-900">
+					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+						<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+							<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 								Active Schedules
 							</h3>
 							<button
@@ -1440,12 +1455,12 @@ export function AgentDetails() {
 							<div className="p-6">
 								<div className="animate-pulse space-y-4">
 									{[1, 2, 3].map((i) => (
-										<div key={i} className="h-12 bg-gray-100 rounded" />
+										<div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 rounded" />
 									))}
 								</div>
 							</div>
 						) : schedules.length > 0 ? (
-							<div className="divide-y divide-gray-200">
+							<div className="divide-y divide-gray-200 dark:divide-gray-700">
 								{schedules
 									.filter((s) => s.enabled)
 									.slice(0, 5)
@@ -1455,10 +1470,10 @@ export function AgentDetails() {
 											className="px-6 py-4 flex items-center justify-between"
 										>
 											<div>
-												<p className="text-sm font-medium text-gray-900">
+												<p className="text-sm font-medium text-gray-900 dark:text-white">
 													{schedule.name}
 												</p>
-												<p className="text-sm text-gray-500">
+												<p className="text-sm text-gray-500 dark:text-gray-400">
 													{schedule.cron_expression}
 												</p>
 											</div>
@@ -1474,7 +1489,7 @@ export function AgentDetails() {
 									))}
 							</div>
 						) : (
-							<div className="p-12 text-center text-gray-500">
+							<div className="p-12 text-center text-gray-500 dark:text-gray-400">
 								<p>No schedules configured</p>
 								<Link
 									to="/schedules"
@@ -1489,34 +1504,34 @@ export function AgentDetails() {
 			)}
 
 			{activeTab === 'backups' && (
-				<div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-					<div className="px-6 py-4 border-b border-gray-200">
-						<h3 className="text-lg font-semibold text-gray-900">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+					<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Backup History
 						</h3>
 					</div>
 					{backupsLoading ? (
 						<table className="w-full">
-							<thead className="bg-gray-50 border-b border-gray-200">
+							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Started
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Status
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Duration
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Size
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Files
 									</th>
 								</tr>
 							</thead>
-							<tbody className="divide-y divide-gray-200">
+							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 								<LoadingRow />
 								<LoadingRow />
 								<LoadingRow />
@@ -1525,26 +1540,26 @@ export function AgentDetails() {
 					) : backups.length > 0 ? (
 						<div className="overflow-x-auto">
 							<table className="w-full">
-								<thead className="bg-gray-50 border-b border-gray-200">
+								<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 									<tr>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Started
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Status
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Duration
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Size
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Files
 										</th>
 									</tr>
 								</thead>
-								<tbody className="divide-y divide-gray-200">
+								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 									{backups.map((backup) => (
 										<BackupRow key={backup.id} backup={backup} />
 									))}
@@ -1552,7 +1567,7 @@ export function AgentDetails() {
 							</table>
 						</div>
 					) : (
-						<div className="p-12 text-center text-gray-500">
+						<div className="p-12 text-center text-gray-500 dark:text-gray-400">
 							<p>No backup history</p>
 						</div>
 					)}
@@ -1560,9 +1575,9 @@ export function AgentDetails() {
 			)}
 
 			{activeTab === 'schedules' && (
-				<div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-					<div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-						<h3 className="text-lg font-semibold text-gray-900">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+					<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Backup Schedules
 						</h3>
 						<Link
@@ -1588,23 +1603,23 @@ export function AgentDetails() {
 					</div>
 					{schedulesLoading ? (
 						<table className="w-full">
-							<thead className="bg-gray-50 border-b border-gray-200">
+							<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Name
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Status
 									</th>
-									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Paths
 									</th>
-									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Actions
 									</th>
 								</tr>
 							</thead>
-							<tbody className="divide-y divide-gray-200">
+							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 								<LoadingRow />
 								<LoadingRow />
 							</tbody>
@@ -1612,23 +1627,23 @@ export function AgentDetails() {
 					) : schedules.length > 0 ? (
 						<div className="overflow-x-auto">
 							<table className="w-full">
-								<thead className="bg-gray-50 border-b border-gray-200">
+								<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 									<tr>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Name
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Status
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Paths
 										</th>
-										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Actions
 										</th>
 									</tr>
 								</thead>
-								<tbody className="divide-y divide-gray-200">
+								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 									{schedules.map((schedule) => (
 										<ScheduleRow
 											key={schedule.id}
@@ -1641,7 +1656,7 @@ export function AgentDetails() {
 							</table>
 						</div>
 					) : (
-						<div className="p-12 text-center text-gray-500">
+						<div className="p-12 text-center text-gray-500 dark:text-gray-400">
 							<svg
 								aria-hidden="true"
 								className="w-16 h-16 mx-auto mb-4 text-gray-300"
@@ -1656,7 +1671,7 @@ export function AgentDetails() {
 									d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 								/>
 							</svg>
-							<h3 className="text-lg font-medium text-gray-900 mb-2">
+							<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
 								No schedules configured
 							</h3>
 							<p className="mb-6">
@@ -1691,7 +1706,7 @@ export function AgentDetails() {
 				<div className="space-y-6">
 					{/* Current Health Status */}
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<div className="flex items-center gap-2 mb-2">
 								<svg
 									aria-hidden="true"
@@ -1707,7 +1722,7 @@ export function AgentDetails() {
 										d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
 									/>
 								</svg>
-								<p className="text-sm font-medium text-gray-600">CPU Usage</p>
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">CPU Usage</p>
 							</div>
 							<p
 								className={`text-3xl font-bold ${
@@ -1715,13 +1730,13 @@ export function AgentDetails() {
 										? 'text-red-600'
 										: (agent.health_metrics?.cpu_usage ?? 0) >= 80
 											? 'text-yellow-600'
-											: 'text-gray-900'
+											: 'text-gray-900 dark:text-white'
 								}`}
 							>
 								{formatPercent(agent.health_metrics?.cpu_usage)}
 							</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<div className="flex items-center gap-2 mb-2">
 								<svg
 									aria-hidden="true"
@@ -1737,7 +1752,7 @@ export function AgentDetails() {
 										d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
 									/>
 								</svg>
-								<p className="text-sm font-medium text-gray-600">
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 									Memory Usage
 								</p>
 							</div>
@@ -1747,13 +1762,13 @@ export function AgentDetails() {
 										? 'text-red-600'
 										: (agent.health_metrics?.memory_usage ?? 0) >= 85
 											? 'text-yellow-600'
-											: 'text-gray-900'
+											: 'text-gray-900 dark:text-white'
 								}`}
 							>
 								{formatPercent(agent.health_metrics?.memory_usage)}
 							</p>
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<div className="flex items-center gap-2 mb-2">
 								<svg
 									aria-hidden="true"
@@ -1769,7 +1784,7 @@ export function AgentDetails() {
 										d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
 									/>
 								</svg>
-								<p className="text-sm font-medium text-gray-600">Disk Usage</p>
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Disk Usage</p>
 							</div>
 							<p
 								className={`text-3xl font-bold ${
@@ -1777,19 +1792,19 @@ export function AgentDetails() {
 										? 'text-red-600'
 										: (agent.health_metrics?.disk_usage ?? 0) >= 80
 											? 'text-yellow-600'
-											: 'text-gray-900'
+											: 'text-gray-900 dark:text-white'
 								}`}
 							>
 								{formatPercent(agent.health_metrics?.disk_usage)}
 							</p>
 							{agent.health_metrics && (
-								<p className="text-sm text-gray-500 mt-1">
+								<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 									{formatBytes(agent.health_metrics.disk_free_bytes)} free of{' '}
 									{formatBytes(agent.health_metrics.disk_total_bytes)}
 								</p>
 							)}
 						</div>
-						<div className="bg-white rounded-lg border border-gray-200 p-6">
+						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 							<div className="flex items-center gap-2 mb-2">
 								<svg
 									aria-hidden="true"
@@ -1805,9 +1820,9 @@ export function AgentDetails() {
 										d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
 									/>
 								</svg>
-								<p className="text-sm font-medium text-gray-600">Uptime</p>
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Uptime</p>
 							</div>
-							<p className="text-3xl font-bold text-gray-900">
+							<p className="text-3xl font-bold text-gray-900 dark:text-white">
 								{formatUptime(agent.health_metrics?.uptime_seconds)}
 							</p>
 						</div>
@@ -1816,16 +1831,16 @@ export function AgentDetails() {
 					{/* Health Issues */}
 					{agent.health_metrics?.issues &&
 						agent.health_metrics.issues.length > 0 && (
-							<div className="bg-white rounded-lg border border-gray-200 p-6">
-								<h3 className="text-lg font-semibold text-gray-900 mb-4">
+							<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 									Health Issues
 								</h3>
 								<div className="space-y-3">
 									{agent.health_metrics.issues.map((issue) => {
 										const severityColors =
 											issue.severity === 'critical'
-												? 'bg-red-50 border-red-200 text-red-800'
-												: 'bg-yellow-50 border-yellow-200 text-yellow-800';
+												? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-400'
+												: 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-400';
 										return (
 											<div
 												key={`${issue.component}-${issue.severity}-${issue.message}`}
@@ -1859,36 +1874,36 @@ export function AgentDetails() {
 						)}
 
 					{/* Restic Info */}
-					<div className="bg-white rounded-lg border border-gray-200 p-6">
-						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 							Restic Information
 						</h3>
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 							<div>
-								<p className="text-sm text-gray-600">Version</p>
-								<p className="font-medium text-gray-900">
+								<p className="text-sm text-gray-600 dark:text-gray-400">Version</p>
+								<p className="font-medium text-gray-900 dark:text-white">
 									{agent.health_metrics?.restic_version || 'Unknown'}
 								</p>
 							</div>
 							<div>
-								<p className="text-sm text-gray-600">Available</p>
+								<p className="text-sm text-gray-600 dark:text-gray-400">Available</p>
 								<span
 									className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
 										agent.health_metrics?.restic_available
-											? 'bg-green-100 text-green-800'
-											: 'bg-red-100 text-red-800'
+											? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+											: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
 									}`}
 								>
 									{agent.health_metrics?.restic_available ? 'Yes' : 'No'}
 								</span>
 							</div>
 							<div>
-								<p className="text-sm text-gray-600">Network</p>
+								<p className="text-sm text-gray-600 dark:text-gray-400">Network</p>
 								<span
 									className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
 										agent.health_metrics?.network_up
-											? 'bg-green-100 text-green-800'
-											: 'bg-red-100 text-red-800'
+											? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+											: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
 									}`}
 								>
 									{agent.health_metrics?.network_up ? 'Online' : 'Offline'}
@@ -1898,8 +1913,8 @@ export function AgentDetails() {
 					</div>
 
 					{/* Health History Chart */}
-					<div className="bg-white rounded-lg border border-gray-200 p-6">
-						<h3 className="text-lg font-semibold text-gray-900 mb-4">
+					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 							Health History
 						</h3>
 						{healthLoading ? (
@@ -1912,7 +1927,7 @@ export function AgentDetails() {
 								<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 									{/* CPU History */}
 									<div>
-										<p className="text-sm font-medium text-gray-600 mb-2">
+										<p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
 											CPU Usage
 										</p>
 										<div className="h-32 flex items-end gap-1">
@@ -1940,7 +1955,7 @@ export function AgentDetails() {
 									</div>
 									{/* Memory History */}
 									<div>
-										<p className="text-sm font-medium text-gray-600 mb-2">
+										<p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
 											Memory Usage
 										</p>
 										<div className="h-32 flex items-end gap-1">
@@ -1968,7 +1983,7 @@ export function AgentDetails() {
 									</div>
 									{/* Disk History */}
 									<div>
-										<p className="text-sm font-medium text-gray-600 mb-2">
+										<p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
 											Disk Usage
 										</p>
 										<div className="h-32 flex items-end gap-1">
@@ -1999,33 +2014,33 @@ export function AgentDetails() {
 								{/* Health History Table */}
 								<div className="overflow-x-auto">
 									<table className="w-full text-sm">
-										<thead className="bg-gray-50 border-b border-gray-200">
+										<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 											<tr>
-												<th className="px-4 py-2 text-left font-medium text-gray-500">
+												<th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
 													Time
 												</th>
-												<th className="px-4 py-2 text-left font-medium text-gray-500">
+												<th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
 													Status
 												</th>
-												<th className="px-4 py-2 text-left font-medium text-gray-500">
+												<th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
 													CPU
 												</th>
-												<th className="px-4 py-2 text-left font-medium text-gray-500">
+												<th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
 													Memory
 												</th>
-												<th className="px-4 py-2 text-left font-medium text-gray-500">
+												<th className="px-4 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
 													Disk
 												</th>
 											</tr>
 										</thead>
-										<tbody className="divide-y divide-gray-200">
+										<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 											{healthHistory
 												.slice(0, 10)
 												.map((h: AgentHealthHistory) => {
 													const hColor = getHealthStatusColor(h.health_status);
 													return (
-														<tr key={h.id} className="hover:bg-gray-50">
-															<td className="px-4 py-2 text-gray-900">
+														<tr key={h.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+															<td className="px-4 py-2 text-gray-900 dark:text-white">
 																{formatDateTime(h.recorded_at)}
 															</td>
 															<td className="px-4 py-2">
@@ -2038,13 +2053,13 @@ export function AgentDetails() {
 																	{getHealthStatusLabel(h.health_status)}
 																</span>
 															</td>
-															<td className="px-4 py-2 text-gray-500">
+															<td className="px-4 py-2 text-gray-500 dark:text-gray-400">
 																{formatPercent(h.cpu_usage)}
 															</td>
-															<td className="px-4 py-2 text-gray-500">
+															<td className="px-4 py-2 text-gray-500 dark:text-gray-400">
 																{formatPercent(h.memory_usage)}
 															</td>
-															<td className="px-4 py-2 text-gray-500">
+															<td className="px-4 py-2 text-gray-500 dark:text-gray-400">
 																{formatPercent(h.disk_usage)}
 															</td>
 														</tr>
@@ -2055,7 +2070,7 @@ export function AgentDetails() {
 								</div>
 							</div>
 						) : (
-							<div className="h-64 flex items-center justify-center text-gray-500">
+							<div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
 								<div className="text-center">
 									<svg
 										aria-hidden="true"
@@ -2086,10 +2101,10 @@ export function AgentDetails() {
 
 			{/* Commands Tab */}
 			{activeTab === 'commands' && (
-				<div className="bg-white rounded-lg border border-gray-200">
-					<div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-						<h3 className="font-semibold text-gray-900">Command History</h3>
-						<span className="text-sm text-gray-500">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+					<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+						<h3 className="font-semibold text-gray-900 dark:text-white">Command History</h3>
+						<span className="text-sm text-gray-500 dark:text-gray-400">
 							Showing last 50 commands
 						</span>
 					</div>
@@ -2100,29 +2115,29 @@ export function AgentDetails() {
 					) : commands.length > 0 ? (
 						<div className="overflow-x-auto">
 							<table className="w-full">
-								<thead className="bg-gray-50">
+								<thead className="bg-gray-50 dark:bg-gray-900">
 									<tr>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Created
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Type
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Status
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Created By
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Result
 										</th>
-										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+										<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 											Actions
 										</th>
 									</tr>
 								</thead>
-								<tbody className="divide-y divide-gray-200">
+								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 									{commands.map((cmd: AgentCommand) => (
 										<CommandRow
 											key={cmd.id}
@@ -2135,7 +2150,7 @@ export function AgentDetails() {
 							</table>
 						</div>
 					) : (
-						<div className="p-12 text-center text-gray-500">
+						<div className="p-12 text-center text-gray-500 dark:text-gray-400">
 							<svg
 								aria-hidden="true"
 								className="w-12 h-12 mx-auto mb-4 text-gray-300"
@@ -2158,6 +2173,43 @@ export function AgentDetails() {
 					)}
 				</div>
 			)}
+
+			{/* Uninstall Agent */}
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-800 p-6">
+				<h3 className="text-lg font-semibold text-red-900 dark:text-red-400 mb-3">Uninstall Agent</h3>
+				<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+					Remotely uninstall the agent from <strong>{agent.hostname}</strong>. The agent must be online to receive the uninstall command.
+					Deleting the agent from the dashboard only removes it from the database — use these buttons to also remove the binary and service from the host.
+				</p>
+				<div className="flex items-center gap-3">
+					<button
+						type="button"
+						onClick={() => handleUninstall(false)}
+						disabled={createCommand.isPending || agent.status !== 'active'}
+						className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 dark:text-red-400 dark:bg-red-900/30 dark:border-red-800 dark:hover:bg-red-900/50"
+					>
+						<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						</svg>
+						Uninstall
+					</button>
+					<button
+						type="button"
+						onClick={() => handleUninstall(true)}
+						disabled={createCommand.isPending || agent.status !== 'active'}
+						className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 border border-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 dark:bg-red-700 dark:border-red-700 dark:hover:bg-red-800"
+					>
+						<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						</svg>
+						Uninstall &amp; Purge Data
+					</button>
+				</div>
+				<p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+					<strong>Uninstall</strong> removes the service and binary. <strong>Uninstall &amp; Purge Data</strong> also removes config, data, and managed restic binary.
+					The agent must be online to process the command.
+				</p>
+			</div>
 
 			{/* API Key Modal */}
 			{newApiKey && (

@@ -146,15 +146,15 @@ export function ExportImportModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						{type === 'agent' ? 'Agent' : 'Schedule'} Configuration
 					</h3>
 					<button
 						type="button"
 						onClick={handleClose}
-						className="text-gray-400 hover:text-gray-600"
+						className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
 					>
 						<svg
 							aria-hidden="true"
@@ -181,7 +181,7 @@ export function ExportImportModal({
 						className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
 							mode === 'export'
 								? 'bg-indigo-600 text-white'
-								: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+								: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
 						}`}
 					>
 						<span className="flex items-center justify-center gap-2">
@@ -208,7 +208,7 @@ export function ExportImportModal({
 						className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
 							mode === 'import'
 								? 'bg-indigo-600 text-white'
-								: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+								: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
 						}`}
 					>
 						<span className="flex items-center justify-center gap-2">
@@ -236,10 +236,10 @@ export function ExportImportModal({
 					<div className="space-y-4">
 						{item ? (
 							<>
-								<div className="bg-gray-50 rounded-lg p-4">
-									<p className="text-sm text-gray-600">
+								<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+									<p className="text-sm text-gray-600 dark:text-gray-400">
 										Export configuration for:{' '}
-										<span className="font-medium text-gray-900">
+										<span className="font-medium text-gray-900 dark:text-white">
 											{type === 'agent'
 												? (item as Agent).hostname
 												: (item as Schedule).name}
@@ -248,7 +248,7 @@ export function ExportImportModal({
 								</div>
 
 								<div>
-									<span className="block text-sm font-medium text-gray-700 mb-2">
+									<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 										Export Format
 									</span>
 									<div className="flex gap-4">
@@ -278,7 +278,7 @@ export function ExportImportModal({
 								</div>
 
 								{(exportAgent.isError || exportSchedule.isError) && (
-									<p className="text-sm text-red-600">
+									<p className="text-sm text-red-600 dark:text-red-400">
 										Failed to export configuration. Please try again.
 									</p>
 								)}
@@ -287,7 +287,7 @@ export function ExportImportModal({
 									<button
 										type="button"
 										onClick={handleClose}
-										className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+										className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-lg transition-colors"
 									>
 										{t('common.cancel')}
 									</button>
@@ -302,7 +302,7 @@ export function ExportImportModal({
 								</div>
 							</>
 						) : (
-							<p className="text-gray-600 text-center py-8">
+							<p className="text-gray-600 dark:text-gray-400 text-center py-8">
 								Select an item to export from the list.
 							</p>
 						)}
@@ -313,10 +313,10 @@ export function ExportImportModal({
 						{importStep === 'input' && (
 							<>
 								<div>
-									<span className="block text-sm font-medium text-gray-700 mb-2">
+									<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 										Configuration File
 									</span>
-									<div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors">
+									<div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors">
 										<input
 											type="file"
 											accept=".json,.yaml,.yml"
@@ -339,7 +339,7 @@ export function ExportImportModal({
 													d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
 												/>
 											</svg>
-											<p className="text-sm text-gray-600">
+											<p className="text-sm text-gray-600 dark:text-gray-400">
 												Drop a file here or{' '}
 												<span className="text-indigo-600">click to upload</span>
 											</p>
@@ -353,7 +353,7 @@ export function ExportImportModal({
 								<div>
 									<label
 										htmlFor="config-paste"
-										className="block text-sm font-medium text-gray-700 mb-2"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
 									>
 										Or paste configuration:
 									</label>
@@ -362,7 +362,7 @@ export function ExportImportModal({
 										value={configText}
 										onChange={(e) => setConfigText(e.target.value)}
 										placeholder="Paste exported configuration here..."
-										className="w-full h-40 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+										className="w-full h-40 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm dark:bg-gray-700 dark:text-white"
 									/>
 								</div>
 
@@ -370,7 +370,7 @@ export function ExportImportModal({
 									<div>
 										<label
 											htmlFor="target-agent"
-											className="block text-sm font-medium text-gray-700 mb-2"
+											className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
 										>
 											Target Agent (for schedule imports)
 										</label>
@@ -378,7 +378,7 @@ export function ExportImportModal({
 											id="target-agent"
 											value={targetAgentId}
 											onChange={(e) => setTargetAgentId(e.target.value)}
-											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+											className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 										>
 											<option value="">Select an agent...</option>
 											{agents.map((agent) => (
@@ -394,7 +394,7 @@ export function ExportImportModal({
 									<button
 										type="button"
 										onClick={handleClose}
-										className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+										className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-lg transition-colors"
 									>
 										{t('common.cancel')}
 									</button>
@@ -415,8 +415,8 @@ export function ExportImportModal({
 								<div
 									className={`p-4 rounded-lg ${
 										validationResult.valid
-											? 'bg-green-50 border border-green-200'
-											: 'bg-red-50 border border-red-200'
+											? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+											: 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800'
 									}`}
 								>
 									<div className="flex items-center gap-2">
@@ -454,8 +454,8 @@ export function ExportImportModal({
 										<span
 											className={`font-medium ${
 												validationResult.valid
-													? 'text-green-800'
-													: 'text-red-800'
+													? 'text-green-800 dark:text-green-400'
+													: 'text-red-800 dark:text-red-400'
 											}`}
 										>
 											{validationResult.valid
@@ -467,9 +467,9 @@ export function ExportImportModal({
 
 								{validationResult.errors &&
 									validationResult.errors.length > 0 && (
-										<div className="bg-red-50 rounded-lg p-4">
-											<h4 className="font-medium text-red-800 mb-2">Errors:</h4>
-											<ul className="text-sm text-red-700 space-y-1">
+										<div className="bg-red-50 dark:bg-red-900/30 rounded-lg p-4">
+											<h4 className="font-medium text-red-800 dark:text-red-400 mb-2">Errors:</h4>
+											<ul className="text-sm text-red-700 dark:text-red-400 space-y-1">
 												{validationResult.errors.map((error) => (
 													<li key={`${error.field}-${error.message}`}>
 														<span className="font-medium">{error.field}:</span>{' '}
@@ -482,11 +482,11 @@ export function ExportImportModal({
 
 								{validationResult.warnings &&
 									validationResult.warnings.length > 0 && (
-										<div className="bg-yellow-50 rounded-lg p-4">
-											<h4 className="font-medium text-yellow-800 mb-2">
+										<div className="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-4">
+											<h4 className="font-medium text-yellow-800 dark:text-yellow-400 mb-2">
 												Warnings:
 											</h4>
-											<ul className="text-sm text-yellow-700 space-y-1">
+											<ul className="text-sm text-yellow-700 dark:text-yellow-400 space-y-1">
 												{validationResult.warnings.map((warning) => (
 													<li key={warning}>{warning}</li>
 												))}
@@ -496,11 +496,11 @@ export function ExportImportModal({
 
 								{validationResult.conflicts &&
 									validationResult.conflicts.length > 0 && (
-										<div className="bg-orange-50 rounded-lg p-4">
-											<h4 className="font-medium text-orange-800 mb-2">
+										<div className="bg-orange-50 dark:bg-orange-900/30 rounded-lg p-4">
+											<h4 className="font-medium text-orange-800 dark:text-orange-400 mb-2">
 												Conflicts Found:
 											</h4>
-											<ul className="text-sm text-orange-700 space-y-1">
+											<ul className="text-sm text-orange-700 dark:text-orange-400 space-y-1">
 												{validationResult.conflicts.map((conflict) => (
 													<li key={conflict.name}>
 														<span className="font-medium">{conflict.name}</span>
@@ -512,7 +512,7 @@ export function ExportImportModal({
 											<div className="mt-3">
 												<label
 													htmlFor="conflict-resolution"
-													className="block text-sm font-medium text-orange-800 mb-2"
+													className="block text-sm font-medium text-orange-800 dark:text-orange-400 mb-2"
 												>
 													Conflict Resolution:
 												</label>
@@ -539,11 +539,11 @@ export function ExportImportModal({
 
 								{validationResult.suggestions &&
 									validationResult.suggestions.length > 0 && (
-										<div className="bg-blue-50 rounded-lg p-4">
-											<h4 className="font-medium text-blue-800 mb-2">
+										<div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4">
+											<h4 className="font-medium text-blue-800 dark:text-blue-400 mb-2">
 												Suggestions:
 											</h4>
-											<ul className="text-sm text-blue-700 space-y-1">
+											<ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
 												{validationResult.suggestions.map((suggestion) => (
 													<li key={suggestion}>{suggestion}</li>
 												))}
@@ -552,7 +552,7 @@ export function ExportImportModal({
 									)}
 
 								{importConfig.isError && (
-									<p className="text-sm text-red-600">
+									<p className="text-sm text-red-600 dark:text-red-400">
 										Failed to import configuration. Please try again.
 									</p>
 								)}
@@ -564,7 +564,7 @@ export function ExportImportModal({
 											setImportStep('input');
 											setValidationResult(null);
 										}}
-										className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+										className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-lg transition-colors"
 									>
 										Back
 									</button>

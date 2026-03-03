@@ -23,16 +23,16 @@ function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
 			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 rounded" />
+				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 rounded-full" />
+				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 rounded inline-block" />
+				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
 			</td>
 		</tr>
 	);
@@ -95,8 +95,8 @@ function AddScheduleModal({ isOpen, onClose }: AddScheduleModalProps) {
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-				<h3 className="text-lg font-semibold text-gray-900 mb-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 					Create Report Schedule
 				</h3>
 				<form onSubmit={handleSubmit}>
@@ -104,7 +104,7 @@ function AddScheduleModal({ isOpen, onClose }: AddScheduleModalProps) {
 						<div>
 							<label
 								htmlFor="name"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Schedule Name
 							</label>
@@ -114,14 +114,14 @@ function AddScheduleModal({ isOpen, onClose }: AddScheduleModalProps) {
 								value={name}
 								onChange={(e) => setName(e.target.value)}
 								placeholder="e.g., Weekly Summary"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 								required
 							/>
 						</div>
 						<div>
 							<label
 								htmlFor="frequency"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Frequency
 							</label>
@@ -131,7 +131,7 @@ function AddScheduleModal({ isOpen, onClose }: AddScheduleModalProps) {
 								onChange={(e) =>
 									setFrequency(e.target.value as ReportFrequency)
 								}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 							>
 								<option value="daily">Daily (8:00 AM)</option>
 								<option value="weekly">Weekly (Monday 8:00 AM)</option>
@@ -141,7 +141,7 @@ function AddScheduleModal({ isOpen, onClose }: AddScheduleModalProps) {
 						<div>
 							<label
 								htmlFor="recipients"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Recipients (comma-separated)
 							</label>
@@ -151,14 +151,14 @@ function AddScheduleModal({ isOpen, onClose }: AddScheduleModalProps) {
 								value={recipients}
 								onChange={(e) => setRecipients(e.target.value)}
 								placeholder="admin@example.com, team@example.com"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 								required
 							/>
 						</div>
 						<div>
 							<label
 								htmlFor="timezone"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Timezone
 							</label>
@@ -166,7 +166,7 @@ function AddScheduleModal({ isOpen, onClose }: AddScheduleModalProps) {
 								id="timezone"
 								value={timezone}
 								onChange={(e) => setTimezone(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 							>
 								<option value="UTC">UTC</option>
 								<option value="America/New_York">Eastern Time</option>
@@ -181,7 +181,7 @@ function AddScheduleModal({ isOpen, onClose }: AddScheduleModalProps) {
 						<div>
 							<label
 								htmlFor="channelId"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Email Channel
 							</label>
@@ -189,7 +189,7 @@ function AddScheduleModal({ isOpen, onClose }: AddScheduleModalProps) {
 								id="channelId"
 								value={channelId}
 								onChange={(e) => setChannelId(e.target.value)}
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 								required
 							>
 								<option value="">Select a channel...</option>
@@ -201,7 +201,7 @@ function AddScheduleModal({ isOpen, onClose }: AddScheduleModalProps) {
 										</option>
 									))}
 							</select>
-							<p className="mt-1 text-xs text-gray-500">
+							<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 								Configure email channels in Notifications settings
 							</p>
 						</div>
@@ -213,7 +213,7 @@ function AddScheduleModal({ isOpen, onClose }: AddScheduleModalProps) {
 								resetForm();
 								onClose();
 							}}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
 						>
 							Cancel
 						</button>
@@ -250,15 +250,15 @@ function PreviewModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="flex justify-between items-center mb-4">
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Report Preview
 					</h3>
 					<button
 						type="button"
 						onClick={onClose}
-						className="text-gray-400 hover:text-gray-500"
+						className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
 					>
 						<span className="sr-only">Close</span>
 						<svg
@@ -278,33 +278,41 @@ function PreviewModal({
 					</button>
 				</div>
 				{periodStart && periodEnd && (
-					<p className="text-sm text-gray-500 mb-4">
+					<p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
 						Period: {formatDate(periodStart)} - {formatDate(periodEnd)}
 					</p>
 				)}
 
 				<div className="space-y-6">
 					{/* Backup Summary */}
-					<div className="bg-gray-50 rounded-lg p-4">
-						<h4 className="font-medium text-gray-900 mb-3">Backup Summary</h4>
+					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+						<h4 className="font-medium text-gray-900 dark:text-white mb-3">
+							Backup Summary
+						</h4>
 						<div className="grid grid-cols-3 gap-4 text-center">
 							<div>
-								<div className="text-2xl font-bold text-gray-900">
+								<div className="text-2xl font-bold text-gray-900 dark:text-white">
 									{data.backup_summary.total_backups}
 								</div>
-								<div className="text-xs text-gray-500">Total</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400">
+									Total
+								</div>
 							</div>
 							<div>
 								<div className="text-2xl font-bold text-green-600">
 									{data.backup_summary.successful_backups}
 								</div>
-								<div className="text-xs text-gray-500">Successful</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400">
+									Successful
+								</div>
 							</div>
 							<div>
 								<div className="text-2xl font-bold text-red-600">
 									{data.backup_summary.failed_backups}
 								</div>
-								<div className="text-xs text-gray-500">Failed</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400">
+									Failed
+								</div>
 							</div>
 						</div>
 						<div className="mt-3 text-center">
@@ -323,35 +331,47 @@ function PreviewModal({
 					</div>
 
 					{/* Storage Summary */}
-					<div className="bg-gray-50 rounded-lg p-4">
-						<h4 className="font-medium text-gray-900 mb-3">Storage Overview</h4>
+					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+						<h4 className="font-medium text-gray-900 dark:text-white mb-3">
+							Storage Overview
+						</h4>
 						<div className="space-y-2 text-sm">
 							<div className="flex justify-between">
-								<span className="text-gray-500">Repositories</span>
+								<span className="text-gray-500 dark:text-gray-400">
+									Repositories
+								</span>
 								<span className="font-medium">
 									{data.storage_summary.repository_count}
 								</span>
 							</div>
 							<div className="flex justify-between">
-								<span className="text-gray-500">Total Snapshots</span>
+								<span className="text-gray-500 dark:text-gray-400">
+									Total Snapshots
+								</span>
 								<span className="font-medium">
 									{data.storage_summary.total_snapshots}
 								</span>
 							</div>
 							<div className="flex justify-between">
-								<span className="text-gray-500">Original Data</span>
+								<span className="text-gray-500 dark:text-gray-400">
+									Original Data
+								</span>
 								<span className="font-medium">
 									{formatBytes(data.storage_summary.total_restore_size)}
 								</span>
 							</div>
 							<div className="flex justify-between">
-								<span className="text-gray-500">Storage Used</span>
+								<span className="text-gray-500 dark:text-gray-400">
+									Storage Used
+								</span>
 								<span className="font-medium">
 									{formatBytes(data.storage_summary.total_raw_size)}
 								</span>
 							</div>
 							<div className="flex justify-between">
-								<span className="text-gray-500">Space Saved</span>
+								<span className="text-gray-500 dark:text-gray-400">
+									Space Saved
+								</span>
 								<span className="font-medium text-green-600">
 									{formatBytes(data.storage_summary.space_saved)} (
 									{data.storage_summary.space_saved_pct.toFixed(1)}%)
@@ -361,58 +381,76 @@ function PreviewModal({
 					</div>
 
 					{/* Agent Summary */}
-					<div className="bg-gray-50 rounded-lg p-4">
-						<h4 className="font-medium text-gray-900 mb-3">Agent Status</h4>
+					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+						<h4 className="font-medium text-gray-900 dark:text-white mb-3">
+							Agent Status
+						</h4>
 						<div className="grid grid-cols-4 gap-4 text-center">
 							<div>
-								<div className="text-xl font-bold text-gray-900">
+								<div className="text-xl font-bold text-gray-900 dark:text-white">
 									{data.agent_summary.total_agents}
 								</div>
-								<div className="text-xs text-gray-500">Total</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400">
+									Total
+								</div>
 							</div>
 							<div>
 								<div className="text-xl font-bold text-green-600">
 									{data.agent_summary.active_agents}
 								</div>
-								<div className="text-xs text-gray-500">Active</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400">
+									Active
+								</div>
 							</div>
 							<div>
 								<div className="text-xl font-bold text-red-600">
 									{data.agent_summary.offline_agents}
 								</div>
-								<div className="text-xs text-gray-500">Offline</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400">
+									Offline
+								</div>
 							</div>
 							<div>
 								<div className="text-xl font-bold text-yellow-600">
 									{data.agent_summary.pending_agents}
 								</div>
-								<div className="text-xs text-gray-500">Pending</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400">
+									Pending
+								</div>
 							</div>
 						</div>
 					</div>
 
 					{/* Alerts Summary */}
 					{data.alert_summary.total_alerts > 0 && (
-						<div className="bg-gray-50 rounded-lg p-4">
-							<h4 className="font-medium text-gray-900 mb-3">Alerts</h4>
+						<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+							<h4 className="font-medium text-gray-900 dark:text-white mb-3">
+								Alerts
+							</h4>
 							<div className="grid grid-cols-3 gap-4 text-center">
 								<div>
 									<div className="text-xl font-bold text-red-600">
 										{data.alert_summary.critical_alerts}
 									</div>
-									<div className="text-xs text-gray-500">Critical</div>
+									<div className="text-xs text-gray-500 dark:text-gray-400">
+										Critical
+									</div>
 								</div>
 								<div>
 									<div className="text-xl font-bold text-yellow-600">
 										{data.alert_summary.warning_alerts}
 									</div>
-									<div className="text-xs text-gray-500">Warning</div>
+									<div className="text-xs text-gray-500 dark:text-gray-400">
+										Warning
+									</div>
 								</div>
 								<div>
 									<div className="text-xl font-bold text-green-600">
 										{data.alert_summary.resolved_alerts}
 									</div>
-									<div className="text-xs text-gray-500">Resolved</div>
+									<div className="text-xs text-gray-500 dark:text-gray-400">
+										Resolved
+									</div>
 								</div>
 							</div>
 						</div>
@@ -420,20 +458,22 @@ function PreviewModal({
 
 					{/* Top Issues */}
 					{data.top_issues && data.top_issues.length > 0 && (
-						<div className="bg-red-50 rounded-lg p-4">
-							<h4 className="font-medium text-red-900 mb-3">
+						<div className="bg-red-50 dark:bg-red-900/30 rounded-lg p-4">
+							<h4 className="font-medium text-red-900 dark:text-red-400 mb-3">
 								Issues Requiring Attention
 							</h4>
 							<div className="space-y-2">
 								{data.top_issues.map((issue, idx) => (
 									<div
 										key={`${issue.type}-${idx}`}
-										className="text-sm border-b border-red-200 pb-2 last:border-0"
+										className="text-sm border-b border-red-200 dark:border-red-800 pb-2 last:border-0"
 									>
-										<div className="font-medium text-red-800">
+										<div className="font-medium text-red-800 dark:text-red-400">
 											{issue.title}
 										</div>
-										<div className="text-red-700">{issue.description}</div>
+										<div className="text-red-700 dark:text-red-300">
+											{issue.description}
+										</div>
 									</div>
 								))}
 							</div>
@@ -445,7 +485,7 @@ function PreviewModal({
 					<button
 						type="button"
 						onClick={onClose}
-						className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+						className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
 					>
 						Close
 					</button>
@@ -506,19 +546,21 @@ function ScheduleRow({ schedule }: { schedule: ReportSchedule }) {
 
 	return (
 		<>
-			<tr className="hover:bg-gray-50">
+			<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 				<td className="px-6 py-4">
-					<div className="font-medium text-gray-900">{schedule.name}</div>
-					<div className="text-sm text-gray-500">
+					<div className="font-medium text-gray-900 dark:text-white">
+						{schedule.name}
+					</div>
+					<div className="text-sm text-gray-500 dark:text-gray-400">
 						{schedule.recipients.join(', ')}
 					</div>
 				</td>
 				<td className="px-6 py-4">
-					<span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800 capitalize">
+					<span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400 capitalize">
 						{schedule.frequency}
 					</span>
 				</td>
-				<td className="px-6 py-4 text-sm text-gray-500">
+				<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 					{schedule.last_sent_at ? formatDate(schedule.last_sent_at) : 'Never'}
 				</td>
 				<td className="px-6 py-4">
@@ -527,7 +569,9 @@ function ScheduleRow({ schedule }: { schedule: ReportSchedule }) {
 						onClick={handleToggle}
 						disabled={updateSchedule.isPending}
 						className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-							schedule.enabled ? 'bg-indigo-600' : 'bg-gray-200'
+							schedule.enabled
+								? 'bg-indigo-600'
+								: 'bg-gray-200 dark:bg-gray-600'
 						}`}
 					>
 						<span
@@ -580,32 +624,32 @@ function HistoryRow({ history }: { history: ReportHistory }) {
 
 	return (
 		<>
-			<tr className="hover:bg-gray-50">
+			<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 				<td className="px-6 py-4">
-					<span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800 capitalize">
+					<span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400 capitalize">
 						{history.report_type}
 					</span>
 				</td>
-				<td className="px-6 py-4 text-sm text-gray-500">
+				<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 					{formatDate(history.period_start)} - {formatDate(history.period_end)}
 				</td>
-				<td className="px-6 py-4 text-sm text-gray-500">
+				<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 					{history.recipients.join(', ')}
 				</td>
 				<td className="px-6 py-4">
 					<span
 						className={`px-2 py-1 text-xs font-medium rounded-full ${
 							history.status === 'sent'
-								? 'bg-green-100 text-green-800'
+								? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
 								: history.status === 'failed'
-									? 'bg-red-100 text-red-800'
-									: 'bg-gray-100 text-gray-800'
+									? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+									: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
 						}`}
 					>
 						{history.status}
 					</span>
 				</td>
-				<td className="px-6 py-4 text-sm text-gray-500">
+				<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 					{history.sent_at ? formatDate(history.sent_at) : '-'}
 				</td>
 				<td className="px-6 py-4 text-right">
@@ -646,8 +690,10 @@ export default function Reports() {
 		return (
 			<div className="p-6 space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Email Reports</h1>
-					<p className="text-sm text-gray-500 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Email Reports
+					</h1>
+					<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 						Schedule automated backup summary reports
 					</p>
 				</div>
@@ -665,8 +711,10 @@ export default function Reports() {
 		<div className="p-6">
 			<div className="mb-6 flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Email Reports</h1>
-					<p className="text-sm text-gray-500 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Email Reports
+					</h1>
+					<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 						Schedule automated backup summary reports
 					</p>
 				</div>
@@ -682,7 +730,7 @@ export default function Reports() {
 			</div>
 
 			{/* Tabs */}
-			<div className="border-b border-gray-200 mb-6">
+			<div className="border-b border-gray-200 dark:border-gray-700 mb-6">
 				<nav className="-mb-px flex space-x-8">
 					<button
 						type="button"
@@ -690,7 +738,7 @@ export default function Reports() {
 						className={`py-4 px-1 border-b-2 font-medium text-sm ${
 							activeTab === 'schedules'
 								? 'border-indigo-500 text-indigo-600'
-								: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+								: 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
 						}`}
 					>
 						Schedules
@@ -701,7 +749,7 @@ export default function Reports() {
 						className={`py-4 px-1 border-b-2 font-medium text-sm ${
 							activeTab === 'history'
 								? 'border-indigo-500 text-indigo-600'
-								: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+								: 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
 						}`}
 					>
 						History
@@ -711,28 +759,28 @@ export default function Reports() {
 
 			{/* Schedules Tab */}
 			{activeTab === 'schedules' && (
-				<div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-					<table className="min-w-full divide-y divide-gray-200">
-						<thead className="bg-gray-50">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+					<table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+						<thead className="bg-gray-50 dark:bg-gray-900">
 							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Schedule
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Frequency
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Last Sent
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Enabled
 								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
 						</thead>
-						<tbody className="bg-white divide-y divide-gray-200">
+						<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 							{schedulesLoading ? (
 								<>
 									<LoadingRow />
@@ -742,7 +790,7 @@ export default function Reports() {
 								<tr>
 									<td
 										colSpan={5}
-										className="px-6 py-12 text-center text-gray-500"
+										className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
 									>
 										No report schedules configured. Create one to start
 										receiving automated reports.
@@ -760,31 +808,31 @@ export default function Reports() {
 
 			{/* History Tab */}
 			{activeTab === 'history' && (
-				<div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-					<table className="min-w-full divide-y divide-gray-200">
-						<thead className="bg-gray-50">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+					<table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+						<thead className="bg-gray-50 dark:bg-gray-900">
 							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Type
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Period
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Recipients
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Status
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Sent At
 								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
 						</thead>
-						<tbody className="bg-white divide-y divide-gray-200">
+						<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 							{historyLoading ? (
 								<>
 									<LoadingRow />
@@ -794,7 +842,7 @@ export default function Reports() {
 								<tr>
 									<td
 										colSpan={6}
-										className="px-6 py-12 text-center text-gray-500"
+										className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
 									>
 										No reports have been sent yet.
 									</td>

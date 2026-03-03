@@ -40,8 +40,8 @@ function DocSidebar({
 	};
 
 	return (
-		<div className="w-64 bg-white border-r border-gray-200 p-4">
-			<h2 className="text-lg font-semibold text-gray-900 mb-4">
+		<div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4">
+			<h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 				{t('help.documentation')}
 			</h2>
 
@@ -52,11 +52,11 @@ function DocSidebar({
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
 						placeholder={t('common.search')}
-						className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+						className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
 					/>
 					<button
 						type="submit"
-						className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+						className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
 					>
 						<svg
 							aria-hidden="true"
@@ -84,8 +84,8 @@ function DocSidebar({
 								to={`/docs/${page.slug}`}
 								className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
 									currentSlug === page.slug
-										? 'bg-indigo-100 text-indigo-700 font-medium'
-										: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+										? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium'
+										: 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
 								}`}
 							>
 								{t(page.labelKey)}
@@ -95,12 +95,12 @@ function DocSidebar({
 				</ul>
 			</nav>
 
-			<div className="mt-6 pt-4 border-t border-gray-200">
+			<div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
 				<a
 					href="/api/docs"
 					target="_blank"
 					rel="noopener noreferrer"
-					className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors"
+					className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded-lg transition-colors"
 				>
 					<svg
 						aria-hidden="true"
@@ -148,7 +148,7 @@ function MarkdownRenderer({ content }: { content: string }) {
 		// Inline code
 		.replace(
 			/`([^`]+)`/g,
-			'<code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm">$1</code>',
+			'<code class="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm">$1</code>',
 		)
 		// Bold
 		.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -164,12 +164,12 @@ function MarkdownRenderer({ content }: { content: string }) {
 		// Paragraphs (simple approach)
 		.replace(
 			/^(?!<[hluop]|```)((?!<).+)$/gm,
-			'<p class="my-3 text-gray-700 leading-relaxed">$1</p>',
+			'<p class="my-3 text-gray-700 dark:text-gray-300 leading-relaxed">$1</p>',
 		);
 
 	return (
 		<div
-			className="prose prose-indigo max-w-none"
+			className="prose prose-indigo dark:prose-invert max-w-none"
 			dangerouslySetInnerHTML={{ __html: html }}
 		/>
 	);
@@ -193,14 +193,14 @@ function SearchResults({
 				<button
 					type="button"
 					onClick={onClose}
-					className="text-gray-500 hover:text-gray-700"
+					className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
 				>
 					{t('common.close')}
 				</button>
 			</div>
 
 			{results.length === 0 ? (
-				<p className="text-gray-500">No results found</p>
+				<p className="text-gray-500 dark:text-gray-400">No results found</p>
 			) : (
 				<div className="space-y-4">
 					{results.map((result) => (
@@ -208,10 +208,14 @@ function SearchResults({
 							key={result.slug}
 							to={`/docs/${result.slug}`}
 							onClick={onClose}
-							className="block p-4 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:shadow-sm transition-all"
+							className="block p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-sm transition-all"
 						>
-							<h3 className="font-medium text-gray-900">{result.title}</h3>
-							<p className="text-sm text-gray-500 mt-1">{result.excerpt}</p>
+							<h3 className="font-medium text-gray-900 dark:text-white">
+								{result.title}
+							</h3>
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+								{result.excerpt}
+							</p>
 						</Link>
 					))}
 				</div>
@@ -293,7 +297,7 @@ export function Documentation() {
 				<DocSidebar currentSlug={undefined} onSearch={handleSearch} />
 				<div className="flex-1 p-6">
 					<h1 className="text-3xl font-bold mb-6">{t('help.documentation')}</h1>
-					<p className="text-gray-600 mb-8">
+					<p className="text-gray-600 dark:text-gray-400 mb-8">
 						Welcome to the Keldris documentation. Select a topic from the
 						sidebar to get started.
 					</p>
@@ -303,9 +307,9 @@ export function Documentation() {
 							<Link
 								key={page.slug}
 								to={`/docs/${page.slug}`}
-								className="p-4 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all"
+								className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all"
 							>
-								<h3 className="font-medium text-gray-900">
+								<h3 className="font-medium text-gray-900 dark:text-white">
 									{t(page.labelKey)}
 								</h3>
 							</Link>
@@ -345,11 +349,11 @@ export function Documentation() {
 			<div className="flex h-full">
 				<DocSidebar currentSlug={slug} onSearch={handleSearch} />
 				<div className="flex-1 p-6">
-					<div className="bg-red-50 border border-red-200 rounded-lg p-4">
-						<h2 className="text-red-800 font-medium">
+					<div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+						<h2 className="text-red-800 dark:text-red-400 font-medium">
 							Documentation not found
 						</h2>
-						<p className="text-red-600 text-sm mt-1">
+						<p className="text-red-600 dark:text-red-300 text-sm mt-1">
 							The requested documentation page could not be found.
 						</p>
 						<Link

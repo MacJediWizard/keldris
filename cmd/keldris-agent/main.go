@@ -2108,6 +2108,20 @@ func executeCommand(client *agent.Client, cfg *config.AgentConfig, cmd agent.Com
 		return
 	case "diagnostics":
 		result, execErr = executeDiagnosticsCmd(cfg, logger)
+	case "uninstall":
+		purge := false
+		if cmd.Payload != nil {
+			purge = cmd.Payload.Purge
+		}
+		// Report completed before uninstall since the agent won't be running after
+		_ = client.ReportCommandResult(cmd.ID, &agent.CommandResultReport{
+			Status: "completed",
+			Result: &agent.CommandResultDetail{Output: "uninstalling agent"},
+		})
+		if err := runUninstall(purge, true); err != nil {
+			logger.Error().Err(err).Msg("uninstall failed")
+		}
+		return
 	default:
 		execErr = fmt.Errorf("unknown command type: %s", cmd.Type)
 	}

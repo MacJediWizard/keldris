@@ -43,7 +43,7 @@ function FormField({
 		<div>
 			<label
 				htmlFor={id}
-				className="block text-sm font-medium text-gray-700 mb-1"
+				className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 			>
 				{label}
 				{required && <span className="text-red-500 ml-1">*</span>}
@@ -54,10 +54,10 @@ function FormField({
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				placeholder={placeholder}
-				className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+				className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 				required={required}
 			/>
-			{helpText && <p className="mt-1 text-xs text-gray-500">{helpText}</p>}
+			{helpText && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{helpText}</p>}
 		</div>
 	);
 }
@@ -234,7 +234,7 @@ export function DockerRestoreWizard({
 
 	const renderSourceStep = () => (
 		<div className="space-y-4">
-			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+			<div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
 				<div className="flex gap-3">
 					<svg
 						aria-hidden="true"
@@ -251,10 +251,10 @@ export function DockerRestoreWizard({
 						/>
 					</svg>
 					<div>
-						<p className="text-sm text-blue-800 font-medium">
+						<p className="text-sm text-blue-800 dark:text-blue-400 font-medium">
 							Docker Container/Volume Restore
 						</p>
-						<p className="text-sm text-blue-700 mt-1">
+						<p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
 							Restore Docker containers and volumes from a backup snapshot.
 							Select the source snapshot and agent.
 						</p>
@@ -265,7 +265,7 @@ export function DockerRestoreWizard({
 			<div>
 				<label
 					htmlFor="restore-agent"
-					className="block text-sm font-medium text-gray-700 mb-1"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 				>
 					Agent <span className="text-red-500">*</span>
 				</label>
@@ -276,7 +276,7 @@ export function DockerRestoreWizard({
 						setSelectedAgentId(e.target.value);
 						setSelectedSnapshotId('');
 					}}
-					className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+					className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 				>
 					<option value="">Select an agent...</option>
 					{agents?.map((agent: Agent) => (
@@ -291,7 +291,7 @@ export function DockerRestoreWizard({
 				<div>
 					<label
 						htmlFor="restore-snapshot"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						Snapshot <span className="text-red-500">*</span>
 					</label>
@@ -305,7 +305,7 @@ export function DockerRestoreWizard({
 							setSelectedSnapshotId(e.target.value);
 							setSelectedRepositoryId(snapshot?.repository_id || '');
 						}}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					>
 						<option value="">Select a snapshot...</option>
 						{snapshots
@@ -325,7 +325,7 @@ export function DockerRestoreWizard({
 	const renderSelectionStep = () => (
 		<div className="space-y-4">
 			<div>
-				<span className="block text-sm font-medium text-gray-700 mb-2">
+				<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 					What do you want to restore?
 				</span>
 				<div className="flex gap-4">
@@ -341,7 +341,7 @@ export function DockerRestoreWizard({
 							}}
 							className="text-indigo-600 focus:ring-indigo-500"
 						/>
-						<span className="text-sm text-gray-700">
+						<span className="text-sm text-gray-700 dark:text-gray-300">
 							Container (with volumes)
 						</span>
 					</label>
@@ -357,22 +357,22 @@ export function DockerRestoreWizard({
 							}}
 							className="text-indigo-600 focus:ring-indigo-500"
 						/>
-						<span className="text-sm text-gray-700">Volume only</span>
+						<span className="text-sm text-gray-700 dark:text-gray-300">Volume only</span>
 					</label>
 				</div>
 			</div>
 
 			{restoreType === 'container' && (
 				<div>
-					<h4 className="text-sm font-medium text-gray-700 mb-2">
+					<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 						Select Container
 					</h4>
 					{containers && containers.length > 0 ? (
-						<div className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-64 overflow-y-auto">
+						<div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700 max-h-64 overflow-y-auto">
 							{containers.map((container: DockerContainer) => (
 								<label
 									key={container.id}
-									className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 ${
+									className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 ${
 										selectedContainer?.id === container.id ? 'bg-indigo-50' : ''
 									}`}
 								>
@@ -384,10 +384,10 @@ export function DockerRestoreWizard({
 										className="text-indigo-600 focus:ring-indigo-500"
 									/>
 									<div className="flex-1 min-w-0">
-										<p className="text-sm font-medium text-gray-900">
+										<p className="text-sm font-medium text-gray-900 dark:text-white">
 											{container.name}
 										</p>
-										<p className="text-xs text-gray-500 truncate">
+										<p className="text-xs text-gray-500 dark:text-gray-400 truncate">
 											{container.image}
 										</p>
 										{container.volumes && container.volumes.length > 0 && (
@@ -400,8 +400,8 @@ export function DockerRestoreWizard({
 							))}
 						</div>
 					) : (
-						<div className="text-center py-8 bg-gray-50 rounded-lg">
-							<p className="text-sm text-gray-500">
+						<div className="text-center py-8 bg-gray-50 dark:bg-gray-900 rounded-lg">
+							<p className="text-sm text-gray-500 dark:text-gray-400">
 								No containers found in this snapshot
 							</p>
 						</div>
@@ -411,15 +411,15 @@ export function DockerRestoreWizard({
 
 			{restoreType === 'volume' && (
 				<div>
-					<h4 className="text-sm font-medium text-gray-700 mb-2">
+					<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 						Select Volume
 					</h4>
 					{volumes && volumes.length > 0 ? (
-						<div className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-64 overflow-y-auto">
+						<div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700 max-h-64 overflow-y-auto">
 							{volumes.map((volume: DockerVolume) => (
 								<label
 									key={volume.name}
-									className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 ${
+									className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 ${
 										selectedVolume?.name === volume.name ? 'bg-indigo-50' : ''
 									}`}
 								>
@@ -431,10 +431,10 @@ export function DockerRestoreWizard({
 										className="text-indigo-600 focus:ring-indigo-500"
 									/>
 									<div className="flex-1 min-w-0">
-										<p className="text-sm font-medium text-gray-900">
+										<p className="text-sm font-medium text-gray-900 dark:text-white">
 											{volume.name}
 										</p>
-										<p className="text-xs text-gray-500">
+										<p className="text-xs text-gray-500 dark:text-gray-400">
 											{volume.driver} - {formatBytes(volume.size_bytes)}
 										</p>
 									</div>
@@ -442,8 +442,8 @@ export function DockerRestoreWizard({
 							))}
 						</div>
 					) : (
-						<div className="text-center py-8 bg-gray-50 rounded-lg">
-							<p className="text-sm text-gray-500">
+						<div className="text-center py-8 bg-gray-50 dark:bg-gray-900 rounded-lg">
+							<p className="text-sm text-gray-500 dark:text-gray-400">
 								No volumes found in this snapshot
 							</p>
 						</div>
@@ -458,7 +458,7 @@ export function DockerRestoreWizard({
 
 		return (
 			<div className="space-y-4">
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4">
+				<div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
 					<div className="flex gap-3">
 						<svg
 							aria-hidden="true"
@@ -475,10 +475,10 @@ export function DockerRestoreWizard({
 							/>
 						</svg>
 						<div>
-							<p className="text-sm text-green-800 font-medium">
+							<p className="text-sm text-green-800 dark:text-green-400 font-medium">
 								Restore Plan Generated
 							</p>
-							<p className="text-sm text-green-700 mt-1">
+							<p className="text-sm text-green-700 dark:text-green-400 mt-1">
 								Review the restore plan below before proceeding.
 							</p>
 						</div>
@@ -486,27 +486,27 @@ export function DockerRestoreWizard({
 				</div>
 
 				{preview.container && (
-					<div className="bg-gray-50 rounded-lg p-4">
-						<h4 className="text-sm font-medium text-gray-700 mb-2">
+					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+						<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Container
 						</h4>
-						<p className="text-sm text-gray-900">{preview.container.name}</p>
-						<p className="text-xs text-gray-500">{preview.container.image}</p>
+						<p className="text-sm text-gray-900 dark:text-white">{preview.container.name}</p>
+						<p className="text-xs text-gray-500 dark:text-gray-400">{preview.container.image}</p>
 					</div>
 				)}
 
 				{preview.volumes.length > 0 && (
 					<div>
-						<h4 className="text-sm font-medium text-gray-700 mb-2">
+						<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Volumes to Restore
 						</h4>
-						<div className="border border-gray-200 rounded-lg divide-y divide-gray-200">
+						<div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
 							{preview.volumes.map((vol) => (
 								<div key={vol.name} className="p-3">
-									<p className="text-sm font-medium text-gray-900">
+									<p className="text-sm font-medium text-gray-900 dark:text-white">
 										{vol.name}
 									</p>
-									<p className="text-xs text-gray-500">
+									<p className="text-xs text-gray-500 dark:text-gray-400">
 										{vol.driver} - {formatBytes(vol.size_bytes)}
 									</p>
 								</div>
@@ -516,26 +516,26 @@ export function DockerRestoreWizard({
 				)}
 
 				<div className="grid grid-cols-2 gap-4">
-					<div className="bg-gray-50 rounded-lg p-4">
-						<p className="text-sm text-gray-500">Total Size</p>
-						<p className="text-xl font-bold text-gray-900">
+					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+						<p className="text-sm text-gray-500 dark:text-gray-400">Total Size</p>
+						<p className="text-xl font-bold text-gray-900 dark:text-white">
 							{formatBytes(preview.total_size_bytes)}
 						</p>
 					</div>
-					<div className="bg-gray-50 rounded-lg p-4">
-						<p className="text-sm text-gray-500">Volumes</p>
-						<p className="text-xl font-bold text-gray-900">
+					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+						<p className="text-sm text-gray-500 dark:text-gray-400">Volumes</p>
+						<p className="text-xl font-bold text-gray-900 dark:text-white">
 							{preview.volumes.length}
 						</p>
 					</div>
 				</div>
 
 				{preview.conflicts.length > 0 && (
-					<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-						<h4 className="text-sm font-medium text-amber-800 mb-2">
+					<div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+						<h4 className="text-sm font-medium text-amber-800 dark:text-amber-400 mb-2">
 							Conflicts Detected
 						</h4>
-						<ul className="text-sm text-amber-700 space-y-1">
+						<ul className="text-sm text-amber-700 dark:text-amber-400 space-y-1">
 							{preview.conflicts.map((conflict: DockerRestoreConflict) => (
 								<li key={`${conflict.type}-${conflict.name}`}>
 									{conflict.type}: {conflict.description}
@@ -573,7 +573,7 @@ export function DockerRestoreWizard({
 			)}
 
 			<div>
-				<span className="block text-sm font-medium text-gray-700 mb-2">
+				<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 					Restore Target
 				</span>
 				<div className="flex gap-4">
@@ -586,7 +586,7 @@ export function DockerRestoreWizard({
 							onChange={() => setTargetType('local')}
 							className="text-indigo-600 focus:ring-indigo-500"
 						/>
-						<span className="text-sm text-gray-700">Local Docker Host</span>
+						<span className="text-sm text-gray-700 dark:text-gray-300">Local Docker Host</span>
 					</label>
 					<label className="flex items-center gap-2">
 						<input
@@ -597,7 +597,7 @@ export function DockerRestoreWizard({
 							onChange={() => setTargetType('remote')}
 							className="text-indigo-600 focus:ring-indigo-500"
 						/>
-						<span className="text-sm text-gray-700">Remote Docker Host</span>
+						<span className="text-sm text-gray-700 dark:text-gray-300">Remote Docker Host</span>
 					</label>
 				</div>
 			</div>
@@ -626,11 +626,11 @@ export function DockerRestoreWizard({
 							id="remote-tls-verify"
 							checked={remoteTlsVerify}
 							onChange={(e) => setRemoteTlsVerify(e.target.checked)}
-							className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+							className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 						/>
 						<label
 							htmlFor="remote-tls-verify"
-							className="text-sm text-gray-700"
+							className="text-sm text-gray-700 dark:text-gray-300"
 						>
 							Verify TLS certificate
 						</label>
@@ -647,9 +647,9 @@ export function DockerRestoreWizard({
 						id="overwrite-existing"
 						checked={overwriteExisting}
 						onChange={(e) => setOverwriteExisting(e.target.checked)}
-						className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+						className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 					/>
-					<label htmlFor="overwrite-existing" className="text-sm text-gray-700">
+					<label htmlFor="overwrite-existing" className="text-sm text-gray-700 dark:text-gray-300">
 						Overwrite existing containers/volumes
 					</label>
 				</div>
@@ -662,11 +662,11 @@ export function DockerRestoreWizard({
 								id="start-after-restore"
 								checked={startAfterRestore}
 								onChange={(e) => setStartAfterRestore(e.target.checked)}
-								className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+								className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 							/>
 							<label
 								htmlFor="start-after-restore"
-								className="text-sm text-gray-700"
+								className="text-sm text-gray-700 dark:text-gray-300"
 							>
 								Start container after restore
 							</label>
@@ -679,9 +679,9 @@ export function DockerRestoreWizard({
 									id="verify-start"
 									checked={verifyStart}
 									onChange={(e) => setVerifyStart(e.target.checked)}
-									className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+									className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 								/>
-								<label htmlFor="verify-start" className="text-sm text-gray-700">
+								<label htmlFor="verify-start" className="text-sm text-gray-700 dark:text-gray-300">
 									Verify container starts successfully
 								</label>
 							</div>
@@ -695,8 +695,8 @@ export function DockerRestoreWizard({
 	const renderRestoringStep = () => (
 		<div className="py-8 text-center">
 			<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
-			<p className="text-gray-600">Starting Docker restore...</p>
-			<p className="text-sm text-gray-500 mt-2">This may take a moment</p>
+			<p className="text-gray-600 dark:text-gray-400">Starting Docker restore...</p>
+			<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">This may take a moment</p>
 		</div>
 	);
 
@@ -774,16 +774,16 @@ export function DockerRestoreWizard({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						{getStepTitle()}
 					</h3>
 					{step !== 'restoring' && (
 						<button
 							type="button"
 							onClick={handleClose}
-							className="text-gray-400 hover:text-gray-600"
+							className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
 						>
 							<svg
 								aria-hidden="true"
@@ -813,8 +813,8 @@ export function DockerRestoreWizard({
 										step === s
 											? 'bg-indigo-600 text-white'
 											: ['selection', 'preview', 'options'].indexOf(step) > i
-												? 'bg-indigo-100 text-indigo-600'
-												: 'bg-gray-100 text-gray-400'
+												? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600'
+												: 'bg-gray-100 dark:bg-gray-700 text-gray-400'
 									}`}
 								>
 									{i + 1}
@@ -824,7 +824,7 @@ export function DockerRestoreWizard({
 										className={`w-8 h-0.5 mx-1 ${
 											['selection', 'preview', 'options'].indexOf(step) > i
 												? 'bg-indigo-200'
-												: 'bg-gray-200'
+												: 'bg-gray-200 dark:bg-gray-700'
 										}`}
 									/>
 								)}
@@ -834,8 +834,8 @@ export function DockerRestoreWizard({
 				)}
 
 				{error && (
-					<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-						<p className="text-sm text-red-700">{error}</p>
+					<div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+						<p className="text-sm text-red-700 dark:text-red-400">{error}</p>
 					</div>
 				)}
 
@@ -849,7 +849,7 @@ export function DockerRestoreWizard({
 								if (step === 'source') handleClose();
 								else handleBack();
 							}}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-lg transition-colors"
 						>
 							{step === 'source' ? 'Cancel' : 'Back'}
 						</button>

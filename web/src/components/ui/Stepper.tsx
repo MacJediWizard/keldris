@@ -39,9 +39,9 @@ export function Stepper({
 										isCompleted
 											? 'border-indigo-600 bg-indigo-600 text-white'
 											: isCurrent
-												? 'border-indigo-600 bg-white text-indigo-600'
-												: 'border-gray-300 bg-white text-gray-500'
-									} ${isClickable ? 'cursor-pointer hover:bg-indigo-50' : 'cursor-default'}`}
+												? 'border-indigo-600 bg-white text-indigo-600 dark:bg-gray-800'
+												: 'border-gray-300 bg-white text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400'
+									} ${isClickable ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30' : 'cursor-default'}`}
 									title={step.label}
 								>
 									{isCompleted ? (
@@ -66,7 +66,7 @@ export function Stepper({
 										className={`ml-2 h-0.5 flex-1 ${
 											index < currentIndex || isCompleted
 												? 'bg-indigo-600'
-												: 'bg-gray-300'
+												: 'bg-gray-300 dark:bg-gray-600'
 										}`}
 									/>
 								)}
@@ -75,10 +75,10 @@ export function Stepper({
 								<span
 									className={`text-xs font-medium ${
 										isCurrent
-											? 'text-indigo-600'
+											? 'text-indigo-600 dark:text-indigo-400'
 											: isCompleted
-												? 'text-gray-900'
-												: 'text-gray-500'
+												? 'text-gray-900 dark:text-white'
+												: 'text-gray-500 dark:text-gray-400'
 									}`}
 								>
 									{step.label}
@@ -121,7 +121,7 @@ export function VerticalStepper({
 								{!isLast && (
 									<div
 										className={`absolute left-5 top-10 h-full w-0.5 -translate-x-1/2 ${
-											isCompleted ? 'bg-indigo-600' : 'bg-gray-300'
+											isCompleted ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'
 										}`}
 									/>
 								)}
@@ -134,9 +134,9 @@ export function VerticalStepper({
 										isCompleted
 											? 'border-indigo-600 bg-indigo-600 text-white'
 											: isCurrent
-												? 'border-indigo-600 bg-white text-indigo-600'
-												: 'border-gray-300 bg-white text-gray-500'
-									} ${isClickable ? 'cursor-pointer hover:bg-indigo-50' : 'cursor-default'}`}
+												? 'border-indigo-600 bg-white text-indigo-600 dark:bg-gray-800'
+												: 'border-gray-300 bg-white text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400'
+									} ${isClickable ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30' : 'cursor-default'}`}
 								>
 									{isCompleted ? (
 										<svg
@@ -160,16 +160,16 @@ export function VerticalStepper({
 									<span
 										className={`block text-sm font-medium ${
 											isCurrent
-												? 'text-indigo-600'
+												? 'text-indigo-600 dark:text-indigo-400'
 												: isCompleted
-													? 'text-gray-900'
-													: 'text-gray-500'
+													? 'text-gray-900 dark:text-white'
+													: 'text-gray-500 dark:text-gray-400'
 										}`}
 									>
 										{step.label}
 									</span>
 									{step.description && (
-										<span className="mt-0.5 block text-xs text-gray-500">
+										<span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
 											{step.description}
 										</span>
 									)}

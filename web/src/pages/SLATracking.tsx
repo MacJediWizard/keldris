@@ -31,7 +31,7 @@ function PolicyStatusBadge({ policyId }: PolicyStatusBadgeProps) {
 
 	if (isLoading) {
 		return (
-			<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+			<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
 				Loading...
 			</span>
 		);
@@ -39,7 +39,7 @@ function PolicyStatusBadge({ policyId }: PolicyStatusBadgeProps) {
 
 	if (!status) {
 		return (
-			<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+			<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
 				No data
 			</span>
 		);
@@ -49,8 +49,8 @@ function PolicyStatusBadge({ policyId }: PolicyStatusBadgeProps) {
 		<span
 			className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
 				status.compliant
-					? 'bg-green-100 text-green-800'
-					: 'bg-red-100 text-red-800'
+					? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+					: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
 			}`}
 		>
 			<span
@@ -184,8 +184,8 @@ function PolicyHistory({ policyId }: PolicyHistoryProps) {
 									<span
 										className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
 											snap.compliant
-												? 'bg-green-100 text-green-800'
-												: 'bg-red-100 text-red-800'
+												? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+												: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
 										}`}
 									>
 										{snap.compliant ? 'Pass' : 'Fail'}
@@ -218,7 +218,7 @@ function PolicyCard({ policy, onDelete, isDeleting }: PolicyCardProps) {
 					</h3>
 					<PolicyStatusBadge policyId={policy.id} />
 					{!policy.enabled && (
-						<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+						<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
 							Disabled
 						</span>
 					)}

@@ -11,10 +11,10 @@ const LOG_LEVEL_COLORS: Record<
 	LogLevel,
 	{ bg: string; text: string; dot: string }
 > = {
-	debug: { bg: 'bg-gray-100', text: 'text-gray-700', dot: 'bg-gray-400' },
-	info: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-400' },
-	warn: { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-400' },
-	error: { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-400' },
+	debug: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', dot: 'bg-gray-400' },
+	info: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400', dot: 'bg-blue-400' },
+	warn: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400', dot: 'bg-yellow-400' },
+	error: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-400' },
 };
 
 function LogRow({ log }: { log: AgentLog }) {
@@ -22,7 +22,7 @@ function LogRow({ log }: { log: AgentLog }) {
 	const [expanded, setExpanded] = useState(false);
 
 	return (
-		<div className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+		<div className="border-b border-gray-100 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900">
 			<button
 				type="button"
 				className="w-full px-4 py-2 flex items-start gap-3 cursor-pointer text-left bg-transparent border-none"
@@ -38,11 +38,11 @@ function LogRow({ log }: { log: AgentLog }) {
 					{log.level.toUpperCase()}
 				</span>
 				{log.component && (
-					<span className="text-xs text-gray-500 font-mono">
+					<span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
 						[{log.component}]
 					</span>
 				)}
-				<span className="text-sm text-gray-900 flex-1 font-mono break-all">
+				<span className="text-sm text-gray-900 dark:text-white flex-1 font-mono break-all">
 					{log.message}
 				</span>
 				<svg
@@ -62,7 +62,7 @@ function LogRow({ log }: { log: AgentLog }) {
 			</button>
 			{expanded && log.metadata && Object.keys(log.metadata).length > 0 && (
 				<div className="px-4 pb-3 ml-[180px]">
-					<pre className="text-xs bg-gray-50 p-3 rounded-lg overflow-x-auto font-mono text-gray-600">
+					<pre className="text-xs bg-gray-50 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto font-mono text-gray-600 dark:text-gray-400">
 						{JSON.stringify(log.metadata, null, 2)}
 					</pre>
 				</div>
@@ -154,19 +154,19 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 	}, [logs, agentId]);
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col h-[600px]">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col h-[600px]">
 			{/* Toolbar */}
-			<div className="px-4 py-3 border-b border-gray-200 flex items-center gap-4 flex-wrap">
+			<div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4 flex-wrap">
 				{/* Level Filter */}
 				<div className="flex items-center gap-2">
-					<label htmlFor="log-level" className="text-sm text-gray-600">
+					<label htmlFor="log-level" className="text-sm text-gray-600 dark:text-gray-400">
 						Level:
 					</label>
 					<select
 						id="log-level"
 						value={filter.level ?? ''}
 						onChange={(e) => handleLevelChange(e.target.value as LogLevel | '')}
-						className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					>
 						<option value="">All Levels</option>
 						<option value="debug">Debug</option>
@@ -185,7 +185,7 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 							value={searchText}
 							onChange={(e) => setSearchText(e.target.value)}
 							onKeyDown={handleKeyDown}
-							className="w-full text-sm border border-gray-300 rounded-lg pl-8 pr-8 py-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg pl-8 pr-8 py-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 						<svg
 							aria-hidden="true"
@@ -205,7 +205,7 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 							<button
 								type="button"
 								onClick={handleClearSearch}
-								className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+								className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
 							>
 								<svg
 									aria-hidden="true"
@@ -238,7 +238,7 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 					<button
 						type="button"
 						onClick={() => refetch()}
-						className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+						className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-lg"
 						title="Refresh logs"
 					>
 						<svg
@@ -260,7 +260,7 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 						type="button"
 						onClick={handleDownload}
 						disabled={logs.length === 0}
-						className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+						className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-lg disabled:opacity-50"
 						title="Download logs"
 					>
 						<svg
@@ -278,12 +278,12 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 							/>
 						</svg>
 					</button>
-					<label className="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
+					<label className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
 						<input
 							type="checkbox"
 							checked={autoScroll}
 							onChange={(e) => setAutoScroll(e.target.checked)}
-							className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+							className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 						/>
 						Auto-scroll
 					</label>
@@ -291,7 +291,7 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 			</div>
 
 			{/* Stats */}
-			<div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs text-gray-500">
+			<div className="px-4 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
 				{totalCount} log entries{' '}
 				{filter.search && `matching "${filter.search}"`}
 				{filter.level && ` at ${filter.level} level`}
@@ -303,7 +303,7 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 				className="flex-1 overflow-auto font-mono text-sm"
 			>
 				{isLoading && logs.length === 0 ? (
-					<div className="flex items-center justify-center h-full text-gray-500">
+					<div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
 						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
 					</div>
 				) : isError ? (
@@ -311,7 +311,7 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 						Failed to load logs
 					</div>
 				) : logs.length === 0 ? (
-					<div className="flex flex-col items-center justify-center h-full text-gray-500">
+					<div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
 						<svg
 							aria-hidden="true"
 							className="w-12 h-12 mb-4 text-gray-300"
@@ -341,7 +341,7 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 								<button
 									type="button"
 									onClick={handleLoadMore}
-									className="text-sm text-indigo-600 hover:text-indigo-700"
+									className="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
 								>
 									Load more logs...
 								</button>

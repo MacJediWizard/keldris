@@ -17,19 +17,19 @@ function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
 			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 rounded" />
+				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-48 bg-gray-200 rounded" />
+				<div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-6 w-8 bg-gray-200 rounded-full" />
+				<div className="h-6 w-8 bg-gray-200 dark:bg-gray-700 rounded-full" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 rounded" />
+				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 rounded inline-block" />
+				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
 			</td>
 		</tr>
 	);
@@ -68,15 +68,15 @@ function CreateModal({ isOpen, onClose, onSuccess }: CreateModalProps) {
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-				<h3 className="text-lg font-semibold text-gray-900 mb-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 					Create Agent Group
 				</h3>
 				<form onSubmit={handleSubmit}>
 					<div className="mb-4">
 						<label
 							htmlFor="name"
-							className="block text-sm font-medium text-gray-700 mb-1"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 						>
 							Name
 						</label>
@@ -86,14 +86,14 @@ function CreateModal({ isOpen, onClose, onSuccess }: CreateModalProps) {
 							value={name}
 							onChange={(e) => setName(e.target.value)}
 							placeholder="e.g., Production Servers"
-							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 							required
 						/>
 					</div>
 					<div className="mb-4">
 						<label
 							htmlFor="description"
-							className="block text-sm font-medium text-gray-700 mb-1"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 						>
 							Description (optional)
 						</label>
@@ -103,13 +103,13 @@ function CreateModal({ isOpen, onClose, onSuccess }: CreateModalProps) {
 							onChange={(e) => setDescription(e.target.value)}
 							placeholder="Describe this group..."
 							rows={2}
-							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 						/>
 					</div>
 					<div className="mb-4">
 						<label
 							htmlFor="color"
-							className="block text-sm font-medium text-gray-700 mb-1"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 						>
 							Color
 						</label>
@@ -119,14 +119,14 @@ function CreateModal({ isOpen, onClose, onSuccess }: CreateModalProps) {
 								id="color"
 								value={color}
 								onChange={(e) => setColor(e.target.value)}
-								className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
+								className="w-10 h-10 border border-gray-300 dark:border-gray-600 rounded cursor-pointer"
 							/>
 							<input
 								type="text"
 								value={color}
 								onChange={(e) => setColor(e.target.value)}
 								placeholder="#6366f1"
-								className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 							/>
 						</div>
 					</div>
@@ -139,7 +139,7 @@ function CreateModal({ isOpen, onClose, onSuccess }: CreateModalProps) {
 						<button
 							type="button"
 							onClick={onClose}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 						>
 							Cancel
 						</button>
@@ -191,15 +191,15 @@ function EditModal({ group, isOpen, onClose, onSuccess }: EditModalProps) {
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-				<h3 className="text-lg font-semibold text-gray-900 mb-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+				<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
 					Edit Agent Group
 				</h3>
 				<form onSubmit={handleSubmit}>
 					<div className="mb-4">
 						<label
 							htmlFor="edit-name"
-							className="block text-sm font-medium text-gray-700 mb-1"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 						>
 							Name
 						</label>
@@ -208,14 +208,14 @@ function EditModal({ group, isOpen, onClose, onSuccess }: EditModalProps) {
 							id="edit-name"
 							value={name}
 							onChange={(e) => setName(e.target.value)}
-							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 							required
 						/>
 					</div>
 					<div className="mb-4">
 						<label
 							htmlFor="edit-description"
-							className="block text-sm font-medium text-gray-700 mb-1"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 						>
 							Description (optional)
 						</label>
@@ -224,13 +224,13 @@ function EditModal({ group, isOpen, onClose, onSuccess }: EditModalProps) {
 							value={description}
 							onChange={(e) => setDescription(e.target.value)}
 							rows={2}
-							className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 						/>
 					</div>
 					<div className="mb-4">
 						<label
 							htmlFor="edit-color"
-							className="block text-sm font-medium text-gray-700 mb-1"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 						>
 							Color
 						</label>
@@ -240,13 +240,13 @@ function EditModal({ group, isOpen, onClose, onSuccess }: EditModalProps) {
 								id="edit-color"
 								value={color}
 								onChange={(e) => setColor(e.target.value)}
-								className="w-10 h-10 border border-gray-300 rounded cursor-pointer"
+								className="w-10 h-10 border border-gray-300 dark:border-gray-600 rounded cursor-pointer"
 							/>
 							<input
 								type="text"
 								value={color}
 								onChange={(e) => setColor(e.target.value)}
-								className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 							/>
 						</div>
 					</div>
@@ -259,7 +259,7 @@ function EditModal({ group, isOpen, onClose, onSuccess }: EditModalProps) {
 						<button
 							type="button"
 							onClick={onClose}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 						>
 							Cancel
 						</button>
@@ -326,15 +326,15 @@ function ManageMembersModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Manage Group Members: {group.name}
 					</h3>
 					<button
 						type="button"
 						onClick={onClose}
-						className="text-gray-400 hover:text-gray-600"
+						className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
 					>
 						<svg
 							aria-hidden="true"
@@ -357,22 +357,22 @@ function ManageMembersModal({
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						{/* Current Members */}
 						<div>
-							<h4 className="font-medium text-gray-900 mb-2">
+							<h4 className="font-medium text-gray-900 dark:text-white mb-2">
 								Current Members ({members?.length || 0})
 							</h4>
-							<div className="border border-gray-200 rounded-lg overflow-hidden">
+							<div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
 								{membersLoading ? (
-									<div className="p-4 text-center text-gray-500">
+									<div className="p-4 text-center text-gray-500 dark:text-gray-400">
 										Loading...
 									</div>
 								) : members && members.length > 0 ? (
-									<ul className="divide-y divide-gray-200 max-h-64 overflow-auto">
+									<ul className="divide-y divide-gray-200 dark:divide-gray-700 max-h-64 overflow-auto">
 										{members.map((agent) => (
 											<li
 												key={agent.id}
-												className="p-3 flex items-center justify-between hover:bg-gray-50"
+												className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700"
 											>
-												<span className="text-sm text-gray-900">
+												<span className="text-sm text-gray-900 dark:text-white">
 													{agent.hostname}
 												</span>
 												<button
@@ -387,7 +387,7 @@ function ManageMembersModal({
 										))}
 									</ul>
 								) : (
-									<div className="p-4 text-center text-gray-500 text-sm">
+									<div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
 										No agents in this group
 									</div>
 								)}
@@ -396,22 +396,22 @@ function ManageMembersModal({
 
 						{/* Available Agents */}
 						<div>
-							<h4 className="font-medium text-gray-900 mb-2">
+							<h4 className="font-medium text-gray-900 dark:text-white mb-2">
 								Available Agents ({availableAgents.length})
 							</h4>
-							<div className="border border-gray-200 rounded-lg overflow-hidden">
+							<div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
 								{agentsLoading ? (
-									<div className="p-4 text-center text-gray-500">
+									<div className="p-4 text-center text-gray-500 dark:text-gray-400">
 										Loading...
 									</div>
 								) : availableAgents.length > 0 ? (
-									<ul className="divide-y divide-gray-200 max-h-64 overflow-auto">
+									<ul className="divide-y divide-gray-200 dark:divide-gray-700 max-h-64 overflow-auto">
 										{availableAgents.map((agent) => (
 											<li
 												key={agent.id}
-												className="p-3 flex items-center justify-between hover:bg-gray-50"
+												className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700"
 											>
-												<span className="text-sm text-gray-900">
+												<span className="text-sm text-gray-900 dark:text-white">
 													{agent.hostname}
 												</span>
 												<button
@@ -426,7 +426,7 @@ function ManageMembersModal({
 										))}
 									</ul>
 								) : (
-									<div className="p-4 text-center text-gray-500 text-sm">
+									<div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
 										All agents are already in this group
 									</div>
 								)}
@@ -435,11 +435,11 @@ function ManageMembersModal({
 					</div>
 				</div>
 
-				<div className="flex justify-end mt-4 pt-4 border-t border-gray-200">
+				<div className="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
 					<button
 						type="button"
 						onClick={onClose}
-						className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+						className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
 					>
 						Done
 					</button>
@@ -467,7 +467,7 @@ function GroupRow({
 	const [showMenu, setShowMenu] = useState(false);
 
 	return (
-		<tr className="hover:bg-gray-50">
+		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
 				<div className="flex items-center gap-2">
 					{group.color && (
@@ -476,18 +476,20 @@ function GroupRow({
 							style={{ backgroundColor: group.color }}
 						/>
 					)}
-					<span className="font-medium text-gray-900">{group.name}</span>
+					<span className="font-medium text-gray-900 dark:text-white">
+						{group.name}
+					</span>
 				</div>
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{group.description || '-'}
 			</td>
 			<td className="px-6 py-4">
-				<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+				<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
 					{group.agent_count} agent{group.agent_count !== 1 ? 's' : ''}
 				</span>
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(group.created_at)}
 			</td>
 			<td className="px-6 py-4 text-right">
@@ -495,7 +497,7 @@ function GroupRow({
 					<button
 						type="button"
 						onClick={() => setShowMenu(!showMenu)}
-						className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+						className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
 					>
 						Actions
 						<svg
@@ -521,14 +523,14 @@ function GroupRow({
 								onKeyDown={(e) => e.key === 'Escape' && setShowMenu(false)}
 								aria-label="Close menu"
 							/>
-							<div className="absolute right-0 z-20 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+							<div className="absolute right-0 z-20 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
 								<button
 									type="button"
 									onClick={() => {
 										onManageMembers(group);
 										setShowMenu(false);
 									}}
-									className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+									className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
 								>
 									Manage Agents
 								</button>
@@ -538,11 +540,11 @@ function GroupRow({
 										onEdit(group);
 										setShowMenu(false);
 									}}
-									className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+									className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
 								>
 									Edit Group
 								</button>
-								<div className="border-t border-gray-100 my-1" />
+								<div className="border-t border-gray-100 dark:border-gray-700 my-1" />
 								<button
 									type="button"
 									onClick={() => {
@@ -550,7 +552,7 @@ function GroupRow({
 										setShowMenu(false);
 									}}
 									disabled={isDeleting}
-									className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+									className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
 								>
 									{isDeleting ? 'Deleting...' : 'Delete Group'}
 								</button>
@@ -586,8 +588,10 @@ export function AgentGroups() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Agent Groups</h1>
-					<p className="text-gray-600 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Agent Groups
+					</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Organize agents by environment or purpose
 					</p>
 				</div>
@@ -614,14 +618,14 @@ export function AgentGroups() {
 				</button>
 			</div>
 
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="p-6 border-b border-gray-200">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 					<input
 						type="text"
 						placeholder="Search groups..."
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 					/>
 				</div>
 
@@ -632,26 +636,26 @@ export function AgentGroups() {
 					</div>
 				) : isLoading ? (
 					<table className="w-full">
-						<thead className="bg-gray-50 border-b border-gray-200">
+						<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Name
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Description
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Agents
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Created
 								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-gray-200">
+						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 							<LoadingRow />
 							<LoadingRow />
 							<LoadingRow />
@@ -659,26 +663,26 @@ export function AgentGroups() {
 					</table>
 				) : filteredGroups && filteredGroups.length > 0 ? (
 					<table className="w-full">
-						<thead className="bg-gray-50 border-b border-gray-200">
+						<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Name
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Description
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Agents
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Created
 								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-gray-200">
+						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 							{filteredGroups.map((group) => (
 								<GroupRow
 									key={group.id}

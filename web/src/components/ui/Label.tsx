@@ -14,7 +14,7 @@ export function Label({
 	return (
 		// biome-ignore lint/a11y/noLabelWithoutControl: Label is a reusable primitive; htmlFor is passed via props
 		<label
-			className={`block text-sm font-medium text-gray-700 ${className}`}
+			className={`block text-sm font-medium text-gray-700 dark:text-gray-300 ${className}`}
 			{...props}
 		>
 			{children}

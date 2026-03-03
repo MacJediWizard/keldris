@@ -41,7 +41,7 @@ export function Pagination({
 				type="button"
 				onClick={() => onPageChange(currentPage - 1)}
 				disabled={currentPage === 1}
-				className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+				className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700"
 			>
 				Previous
 			</button>
@@ -58,7 +58,7 @@ export function Pagination({
 						className={`rounded-md px-3 py-2 text-sm font-medium ${
 							page === currentPage
 								? 'bg-indigo-600 text-white'
-								: 'text-gray-700 hover:bg-gray-100'
+								: 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
 						}`}
 						aria-current={page === currentPage ? 'page' : undefined}
 					>
@@ -70,7 +70,7 @@ export function Pagination({
 				type="button"
 				onClick={() => onPageChange(currentPage + 1)}
 				disabled={currentPage === totalPages}
-				className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+				className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700"
 			>
 				Next
 			</button>

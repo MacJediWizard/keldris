@@ -85,15 +85,15 @@ function VersionCard({
 		0;
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
 			<button
 				type="button"
 				onClick={onToggle}
-				className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+				className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
 			>
 				<div className="flex items-center gap-4">
 					<div className="flex items-center gap-2">
-						<span className="text-lg font-semibold text-gray-900">
+						<span className="text-lg font-semibold text-gray-900 dark:text-white">
 							{entry.is_unreleased ? 'Unreleased' : `v${entry.version}`}
 						</span>
 						<VersionBadge version={entry.version} isCurrent={isCurrent} />
@@ -140,7 +140,7 @@ function VersionCard({
 			</button>
 
 			{isExpanded && (
-				<div className="px-6 pb-6 border-t border-gray-100 pt-4">
+				<div className="px-6 pb-6 border-t border-gray-100 dark:border-gray-700 pt-4">
 					{!hasChanges ? (
 						<p className="text-gray-500 text-sm italic">
 							No changes documented yet.
@@ -210,15 +210,15 @@ export function Changelog() {
 			<div className="space-y-6">
 				<div className="flex items-center justify-between">
 					<div>
-						<div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-						<div className="h-5 w-64 bg-gray-200 rounded animate-pulse mt-2" />
+						<div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+						<div className="h-5 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2" />
 					</div>
 				</div>
 				<div className="space-y-4">
 					{[1, 2, 3].map((i) => (
 						<div
 							key={i}
-							className="h-20 bg-gray-100 rounded-lg animate-pulse"
+							className="h-20 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse"
 						/>
 					))}
 				</div>
@@ -230,12 +230,12 @@ export function Changelog() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Changelog</h1>
-					<p className="text-gray-600 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Changelog</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Version history and release notes
 					</p>
 				</div>
-				<div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+				<div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-800 dark:text-red-400">
 					<p>Failed to load changelog. Please try again later.</p>
 				</div>
 			</div>
@@ -246,8 +246,8 @@ export function Changelog() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Changelog</h1>
-					<p className="text-gray-600 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Changelog</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Version history and release notes
 						{data?.current_version && (
 							<span className="ml-2 text-indigo-600 font-medium">
@@ -260,14 +260,14 @@ export function Changelog() {
 					<button
 						type="button"
 						onClick={expandAll}
-						className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50"
+						className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
 					>
 						Expand All
 					</button>
 					<button
 						type="button"
 						onClick={collapseAll}
-						className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50"
+						className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
 					>
 						Collapse All
 					</button>
@@ -287,7 +287,7 @@ export function Changelog() {
 			</div>
 
 			{(!data?.entries || data.entries.length === 0) && (
-				<div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-8 text-center">
 					<svg
 						className="w-12 h-12 mx-auto text-gray-300 mb-4"
 						fill="none"

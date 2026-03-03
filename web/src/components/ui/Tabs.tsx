@@ -40,7 +40,7 @@ interface TabListProps {
 
 export function TabList({ children }: TabListProps) {
 	return (
-		<div className="border-b border-gray-200" role="tablist">
+		<div className="border-b border-gray-200 dark:border-gray-700" role="tablist">
 			<nav className="-mb-px flex space-x-8">{children}</nav>
 		</div>
 	);
@@ -64,8 +64,8 @@ export function Tab({ id, children }: TabProps) {
 			onClick={() => setActiveTab(id)}
 			className={`whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium ${
 				isActive
-					? 'border-indigo-500 text-indigo-600'
-					: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+					? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+					: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-200'
 			}`}
 		>
 			{children}

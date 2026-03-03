@@ -38,9 +38,11 @@ function formatDuration(minutes: number): string {
 
 function ScopeBadge({ scope }: { scope: SLAScope }) {
 	const colors = {
-		agent: 'bg-blue-100 text-blue-800',
-		repository: 'bg-purple-100 text-purple-800',
-		organization: 'bg-green-100 text-green-800',
+		agent: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+		repository:
+			'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+		organization:
+			'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
 	};
 
 	return (
@@ -56,7 +58,9 @@ function StatusBadge({ active }: { active: boolean }) {
 	return (
 		<span
 			className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-				active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+				active
+					? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+					: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
 			}`}
 		>
 			{active ? 'Active' : 'Inactive'}
@@ -66,9 +70,10 @@ function StatusBadge({ active }: { active: boolean }) {
 
 function BreachTypeBadge({ type }: { type: string }) {
 	const colors: Record<string, string> = {
-		rpo: 'bg-red-100 text-red-800',
-		rto: 'bg-orange-100 text-orange-800',
-		uptime: 'bg-yellow-100 text-yellow-800',
+		rpo: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+		rto: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+		uptime:
+			'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
 	};
 
 	const labels: Record<string, string> = {
@@ -79,7 +84,10 @@ function BreachTypeBadge({ type }: { type: string }) {
 
 	return (
 		<span
-			className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[type] ?? 'bg-gray-100 text-gray-800'}`}
+			className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+				colors[type] ??
+				'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+			}`}
 		>
 			{labels[type] ?? type}
 		</span>
@@ -105,14 +113,20 @@ function DashboardCard({
 	};
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-4">
-			<p className="text-sm font-medium text-gray-500">{title}</p>
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+			<p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+				{title}
+			</p>
 			<p
-				className={`text-2xl font-bold ${color ? colors[color] : 'text-gray-900'}`}
+				className={`text-2xl font-bold ${color ? colors[color] : 'text-gray-900 dark:text-white'}`}
 			>
 				{value}
 			</p>
-			{subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+			{subtitle && (
+				<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+					{subtitle}
+				</p>
+			)}
 		</div>
 	);
 }
@@ -232,15 +246,17 @@ export function SLA() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 						Service Level Agreements
 					</h1>
-					<p className="text-gray-600 mt-1">
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Define and track SLA compliance for your organization
 					</p>
 				</div>
-				<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-					<p className="text-amber-800">Only administrators can manage SLAs.</p>
+				<div className="bg-amber-50 dark:bg-yellow-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+					<p className="text-amber-800 dark:text-yellow-400">
+						Only administrators can manage SLAs.
+					</p>
 				</div>
 			</div>
 		);
@@ -250,12 +266,15 @@ export function SLA() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-					<div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
+					<div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+					<div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2" />
 				</div>
 				<div className="grid grid-cols-4 gap-4">
 					{[1, 2, 3, 4].map((i) => (
-						<div key={i} className="h-24 bg-gray-200 rounded animate-pulse" />
+						<div
+							key={i}
+							className="h-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+						/>
 					))}
 				</div>
 			</div>
@@ -266,12 +285,12 @@ export function SLA() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 						Service Level Agreements
 					</h1>
 				</div>
-				<div className="bg-red-50 border border-red-200 rounded-lg p-4">
-					<p className="text-red-800">Failed to load SLAs</p>
+				<div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+					<p className="text-red-800 dark:text-red-400">Failed to load SLAs</p>
 				</div>
 			</div>
 		);
@@ -281,10 +300,10 @@ export function SLA() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 						Service Level Agreements
 					</h1>
-					<p className="text-gray-600 mt-1">
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Define and track SLA compliance for your organization
 					</p>
 				</div>
@@ -349,23 +368,23 @@ export function SLA() {
 
 			{/* Active Breaches */}
 			{activeBreaches && activeBreaches.length > 0 && (
-				<div className="bg-red-50 border border-red-200 rounded-lg p-4">
-					<h2 className="text-lg font-medium text-red-900 mb-3">
+				<div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+					<h2 className="text-lg font-medium text-red-900 dark:text-red-400 mb-3">
 						Active Breaches ({activeBreaches.length})
 					</h2>
 					<div className="space-y-2">
 						{activeBreaches.slice(0, 5).map((breach) => (
 							<div
 								key={breach.id}
-								className="flex items-center justify-between bg-white rounded-md p-3 border border-red-100"
+								className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-md p-3 border border-red-100 dark:border-red-800"
 							>
 								<div className="flex items-center gap-3">
 									<BreachTypeBadge type={breach.breach_type} />
-									<span className="text-sm text-gray-700">
+									<span className="text-sm text-gray-700 dark:text-gray-300">
 										{breach.description ??
 											`${breach.breach_type.toUpperCase()} breach`}
 									</span>
-									<span className="text-xs text-gray-500">
+									<span className="text-xs text-gray-500 dark:text-gray-400">
 										Started: {formatDateTime(breach.breach_start)}
 									</span>
 								</div>
@@ -397,8 +416,8 @@ export function SLA() {
 
 			{/* Create/Edit Form */}
 			{(showForm || editingId) && (
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
-					<h2 className="text-lg font-medium text-gray-900 mb-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+					<h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
 						{editingId ? 'Edit SLA' : 'Create SLA'}
 					</h2>
 					<form onSubmit={editingId ? handleUpdate : handleCreate}>
@@ -407,7 +426,7 @@ export function SLA() {
 								<div>
 									<label
 										htmlFor="name"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										Name
 									</label>
@@ -419,14 +438,14 @@ export function SLA() {
 											setFormData({ ...formData, name: e.target.value })
 										}
 										required
-										className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+										className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
 										placeholder="Production Backup SLA"
 									/>
 								</div>
 								<div>
 									<label
 										htmlFor="scope"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										Scope
 									</label>
@@ -439,7 +458,7 @@ export function SLA() {
 												scope: e.target.value as SLAScope,
 											})
 										}
-										className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+										className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
 									>
 										<option value="agent">Agent</option>
 										<option value="repository">Repository</option>
@@ -451,7 +470,7 @@ export function SLA() {
 							<div>
 								<label
 									htmlFor="description"
-									className="block text-sm font-medium text-gray-700"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 								>
 									Description (optional)
 								</label>
@@ -462,7 +481,7 @@ export function SLA() {
 										setFormData({ ...formData, description: e.target.value })
 									}
 									rows={2}
-									className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+									className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
 									placeholder="SLA for critical production systems..."
 								/>
 							</div>
@@ -471,7 +490,7 @@ export function SLA() {
 								<div>
 									<label
 										htmlFor="rpo"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										RPO (minutes)
 									</label>
@@ -488,17 +507,17 @@ export function SLA() {
 											})
 										}
 										min="1"
-										className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+										className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
 										placeholder="60"
 									/>
-									<p className="mt-1 text-xs text-gray-500">
+									<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 										Max time between backups
 									</p>
 								</div>
 								<div>
 									<label
 										htmlFor="rto"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										RTO (minutes)
 									</label>
@@ -515,15 +534,17 @@ export function SLA() {
 											})
 										}
 										min="1"
-										className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+										className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
 										placeholder="30"
 									/>
-									<p className="mt-1 text-xs text-gray-500">Max restore time</p>
+									<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+										Max restore time
+									</p>
 								</div>
 								<div>
 									<label
 										htmlFor="uptime"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										Uptime (%)
 									</label>
@@ -542,10 +563,10 @@ export function SLA() {
 										min="0"
 										max="100"
 										step="0.01"
-										className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+										className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
 										placeholder="99.9"
 									/>
-									<p className="mt-1 text-xs text-gray-500">
+									<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 										Target uptime percentage
 									</p>
 								</div>
@@ -562,9 +583,9 @@ export function SLA() {
 												active: e.target.checked,
 											})
 										}
-										className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+										className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 									/>
-									<span className="ml-2 text-sm text-gray-700">
+									<span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
 										Active (enforce this SLA)
 									</span>
 								</label>
@@ -574,7 +595,7 @@ export function SLA() {
 								<button
 									type="button"
 									onClick={cancelEdit}
-									className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+									className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
 								>
 									Cancel
 								</button>
@@ -596,7 +617,7 @@ export function SLA() {
 			)}
 
 			{/* SLA List */}
-			<div className="bg-white rounded-lg border border-gray-200">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				{(slas ?? []).length === 0 ? (
 					<div className="p-8 text-center">
 						<svg
@@ -613,30 +634,35 @@ export function SLA() {
 								d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
 							/>
 						</svg>
-						<h3 className="mt-2 text-sm font-medium text-gray-900">No SLAs</h3>
-						<p className="mt-1 text-sm text-gray-500">
+						<h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+							No SLAs
+						</h3>
+						<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
 							Create an SLA to start tracking compliance.
 						</p>
 					</div>
 				) : (
-					<ul className="divide-y divide-gray-200">
+					<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 						{(slas ?? []).map((sla) => (
-							<li key={sla.id} className="p-4 hover:bg-gray-50">
+							<li
+								key={sla.id}
+								className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
+							>
 								<div className="flex items-center justify-between">
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center gap-2 flex-wrap">
-											<h3 className="text-sm font-medium text-gray-900">
+											<h3 className="text-sm font-medium text-gray-900 dark:text-white">
 												{sla.name}
 											</h3>
 											<ScopeBadge scope={sla.scope} />
 											<StatusBadge active={sla.active} />
 										</div>
 										{sla.description && (
-											<p className="mt-1 text-sm text-gray-500 truncate">
+											<p className="mt-1 text-sm text-gray-500 dark:text-gray-400 truncate">
 												{sla.description}
 											</p>
 										)}
-										<div className="mt-2 flex flex-wrap gap-4 text-xs text-gray-500">
+										<div className="mt-2 flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
 											{sla.rpo_minutes && (
 												<span>RPO: {formatDuration(sla.rpo_minutes)}</span>
 											)}

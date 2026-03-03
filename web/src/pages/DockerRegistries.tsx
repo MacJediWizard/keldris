@@ -25,16 +25,16 @@ function getHealthStatusColor(status: string) {
 	switch (status) {
 		case 'healthy':
 			return {
-				bg: 'bg-green-100',
-				text: 'text-green-700',
+				bg: 'bg-green-100 dark:bg-green-900/30',
+				text: 'text-green-700 dark:text-green-400',
 				dot: 'bg-green-500',
 			};
 		case 'unhealthy':
-			return { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' };
+			return { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-500' };
 		default:
 			return {
-				bg: 'bg-gray-100',
-				text: 'text-gray-700',
+				bg: 'bg-gray-100 dark:bg-gray-700',
+				text: 'text-gray-700 dark:text-gray-300',
 				dot: 'bg-gray-500',
 			};
 	}
@@ -143,8 +143,8 @@ function RegistryCard({
 					<span>{formatDate(registry.last_health_check)}</span>
 				</div>
 				{registry.credentials_expires_at && (
-					<div className="flex items-center text-sm text-gray-600">
-						<span className="w-24 text-gray-500">Expires:</span>
+					<div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+						<span className="w-24 text-gray-500 dark:text-gray-400">Expires:</span>
 						<span
 							className={
 								new Date(registry.credentials_expires_at) < new Date()
@@ -163,7 +163,7 @@ function RegistryCard({
 				)}
 			</div>
 
-			<div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+			<div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
 				<button
 					type="button"
 					onClick={() => onLogin(registry.id)}
@@ -185,7 +185,7 @@ function RegistryCard({
 						type="button"
 						onClick={() => onSetDefault(registry.id)}
 						disabled={isProcessing}
-						className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+						className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
 					>
 						Set Default
 					</button>
@@ -201,7 +201,7 @@ function RegistryCard({
 				<button
 					type="button"
 					onClick={() => onEdit(registry)}
-					className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+					className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
 				>
 					Edit
 				</button>

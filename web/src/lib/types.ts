@@ -3769,7 +3769,8 @@ export type CommandType =
 	| 'update'
 	| 'update_restic'
 	| 'restart'
-	| 'diagnostics';
+	| 'diagnostics'
+	| 'uninstall';
 export type CommandStatus =
 	| 'pending'
 	| 'acknowledged'
@@ -3784,6 +3785,7 @@ export interface CommandPayload {
 	target_version?: string;
 	target_restic_version?: string;
 	diagnostic_types?: string[];
+	purge?: boolean;
 }
 
 export interface DryRunCommandResult {

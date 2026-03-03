@@ -67,9 +67,9 @@ function ShortcutEditor({
 	};
 
 	return (
-		<div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+		<div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
 			<div className="flex-1">
-				<span className="text-sm text-gray-700">
+				<span className="text-sm text-gray-700 dark:text-gray-300">
 					{t(`shortcuts.actions.${shortcut.action}`) || shortcut.description}
 				</span>
 			</div>
@@ -89,7 +89,7 @@ function ShortcutEditor({
 						<button
 							type="button"
 							onClick={handleCancelEditing}
-							className="p-1 text-gray-400 hover:text-gray-600"
+							className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
 						>
 							<svg
 								aria-hidden="true"
@@ -116,7 +116,7 @@ function ShortcutEditor({
 						>
 							{shortcut.keys.map((key, index) => (
 								<span key={key}>
-									<kbd className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 text-xs font-mono font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded shadow-sm hover:bg-gray-200 transition-colors">
+									<kbd className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 text-xs font-mono font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
 										{key === 'Escape'
 											? 'Esc'
 											: key === '?'
@@ -133,7 +133,7 @@ function ShortcutEditor({
 							<button
 								type="button"
 								onClick={() => onReset(shortcut.action)}
-								className="p-1 text-gray-400 hover:text-gray-600"
+								className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
 								title={t('shortcuts.resetToDefault')}
 							>
 								<svg
@@ -195,25 +195,25 @@ export function KeyboardShortcutsSettings({
 			}}
 		>
 			<div
-				className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden"
+				className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden"
 				aria-labelledby="shortcut-settings-title"
 			>
-				<div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+				<div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
 					<div>
 						<h2
 							id="shortcut-settings-title"
-							className="text-lg font-semibold text-gray-900"
+							className="text-lg font-semibold text-gray-900 dark:text-white"
 						>
 							{t('shortcuts.customizeTitle')}
 						</h2>
-						<p className="text-sm text-gray-500 mt-1">
+						<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 							{t('shortcuts.customizeDescription')}
 						</p>
 					</div>
 					<button
 						type="button"
 						onClick={onClose}
-						className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+						className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 transition-colors"
 						aria-label={t('common.close')}
 					>
 						<svg
@@ -236,7 +236,7 @@ export function KeyboardShortcutsSettings({
 				<div className="px-6 py-4 overflow-y-auto max-h-[60vh]">
 					{/* Navigation Shortcuts */}
 					<div className="mb-6">
-						<h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+						<h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
 							{t('shortcuts.navigation')}
 						</h3>
 						<div>
@@ -254,7 +254,7 @@ export function KeyboardShortcutsSettings({
 
 					{/* Action Shortcuts */}
 					<div className="mb-6">
-						<h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+						<h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
 							{t('shortcuts.actionsSection')}
 						</h3>
 						<div>
@@ -272,7 +272,7 @@ export function KeyboardShortcutsSettings({
 
 					{/* General Shortcuts */}
 					<div>
-						<h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+						<h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
 							{t('shortcuts.general')}
 						</h3>
 						<div>
@@ -289,12 +289,12 @@ export function KeyboardShortcutsSettings({
 					</div>
 				</div>
 
-				<div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+				<div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
 					{hasCustomShortcuts && (
 						<button
 							type="button"
 							onClick={resetAllShortcuts}
-							className="text-sm text-red-600 hover:text-red-800"
+							className="text-sm text-red-600 hover:text-red-800 dark:text-red-400"
 						>
 							{t('shortcuts.resetAll')}
 						</button>

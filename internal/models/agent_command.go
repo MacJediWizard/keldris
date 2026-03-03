@@ -23,6 +23,8 @@ const (
 	CommandTypeUpdateRestic CommandType = "update_restic"
 	// CommandTypeDryRun triggers a dry run backup preview.
 	CommandTypeDryRun CommandType = "dry_run"
+	// CommandTypeUninstall triggers a remote agent uninstall.
+	CommandTypeUninstall CommandType = "uninstall"
 )
 
 // CommandStatus represents the current status of a command.
@@ -55,6 +57,8 @@ type CommandPayload struct {
 	TargetResticVersion string `json:"target_restic_version,omitempty"`
 	// For diagnostics command
 	DiagnosticTypes []string `json:"diagnostic_types,omitempty"`
+	// For uninstall command
+	Purge bool `json:"purge,omitempty"`
 }
 
 // CommandResult contains the result of a command execution.

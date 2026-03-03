@@ -13,7 +13,7 @@ function ShortcutKey({ keys }: { keys: string[] }) {
 		<span className="flex items-center gap-1">
 			{keys.map((key, index) => (
 				<span key={key}>
-					<kbd className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 text-xs font-mono font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded shadow-sm">
+					<kbd className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 text-xs font-mono font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded shadow-sm">
 						{key === 'Escape' ? 'Esc' : key === '?' ? '?' : key.toUpperCase()}
 					</kbd>
 					{index < keys.length - 1 && (
@@ -75,21 +75,21 @@ export function ShortcutHelpModal({
 		>
 			<div
 				ref={modalRef}
-				className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden"
+				className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden"
 				aria-labelledby="shortcut-help-title"
 				tabIndex={-1}
 			>
-				<div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+				<div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
 					<h2
 						id="shortcut-help-title"
-						className="text-lg font-semibold text-gray-900"
+						className="text-lg font-semibold text-gray-900 dark:text-white"
 					>
 						{t('shortcuts.title')}
 					</h2>
 					<button
 						type="button"
 						onClick={onClose}
-						className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+						className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 transition-colors"
 						aria-label={t('common.close')}
 					>
 						<svg
@@ -112,7 +112,7 @@ export function ShortcutHelpModal({
 				<div className="px-6 py-4 overflow-y-auto max-h-[60vh]">
 					{/* Navigation Shortcuts */}
 					<div className="mb-6">
-						<h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+						<h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
 							{t('shortcuts.navigation')}
 						</h3>
 						<div className="space-y-2">
@@ -121,7 +121,7 @@ export function ShortcutHelpModal({
 									key={shortcut.action}
 									className="flex items-center justify-between py-2"
 								>
-									<span className="text-sm text-gray-700">
+									<span className="text-sm text-gray-700 dark:text-gray-300">
 										{t(`shortcuts.actions.${shortcut.action}`) ||
 											shortcut.description}
 									</span>
@@ -133,7 +133,7 @@ export function ShortcutHelpModal({
 
 					{/* Action Shortcuts */}
 					<div className="mb-6">
-						<h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+						<h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
 							{t('shortcuts.actionsSection')}
 						</h3>
 						<div className="space-y-2">
@@ -142,7 +142,7 @@ export function ShortcutHelpModal({
 									key={shortcut.action}
 									className="flex items-center justify-between py-2"
 								>
-									<span className="text-sm text-gray-700">
+									<span className="text-sm text-gray-700 dark:text-gray-300">
 										{t(`shortcuts.actions.${shortcut.action}`) ||
 											shortcut.description}
 									</span>
@@ -154,7 +154,7 @@ export function ShortcutHelpModal({
 
 					{/* General Shortcuts */}
 					<div>
-						<h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+						<h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
 							{t('shortcuts.general')}
 						</h3>
 						<div className="space-y-2">
@@ -163,7 +163,7 @@ export function ShortcutHelpModal({
 									key={shortcut.action}
 									className="flex items-center justify-between py-2"
 								>
-									<span className="text-sm text-gray-700">
+									<span className="text-sm text-gray-700 dark:text-gray-300">
 										{t(`shortcuts.actions.${shortcut.action}`) ||
 											shortcut.description}
 									</span>
@@ -174,8 +174,8 @@ export function ShortcutHelpModal({
 					</div>
 				</div>
 
-				<div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-					<p className="text-xs text-gray-500 text-center">
+				<div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+					<p className="text-xs text-gray-500 dark:text-gray-400 text-center">
 						{t('shortcuts.hint')}
 					</p>
 				</div>

@@ -22,25 +22,27 @@ function ContainerRow({
 	onToggle: () => void;
 }) {
 	return (
-		<tr className="border-b border-gray-100">
+		<tr className="border-b border-gray-100 dark:border-gray-700">
 			<td className="px-4 py-3">
 				<input
 					type="checkbox"
 					checked={selected}
 					onChange={onToggle}
-					className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+					className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
 				/>
 			</td>
-			<td className="px-4 py-3 text-sm font-medium text-gray-900">
+			<td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
 				{container.name}
 			</td>
-			<td className="px-4 py-3 text-sm text-gray-500">{container.image}</td>
+			<td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+				{container.image}
+			</td>
 			<td className="px-4 py-3">
 				<span
 					className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
 						container.state === 'running'
-							? 'bg-green-50 text-green-700'
-							: 'bg-gray-100 text-gray-600'
+							? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+							: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
 					}`}
 				>
 					{container.state}
@@ -62,20 +64,22 @@ function VolumeRow({
 	formatBytes: (bytes: number) => string;
 }) {
 	return (
-		<tr className="border-b border-gray-100">
+		<tr className="border-b border-gray-100 dark:border-gray-700">
 			<td className="px-4 py-3">
 				<input
 					type="checkbox"
 					checked={selected}
 					onChange={onToggle}
-					className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+					className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
 				/>
 			</td>
-			<td className="px-4 py-3 text-sm font-medium text-gray-900">
+			<td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
 				{volume.name}
 			</td>
-			<td className="px-4 py-3 text-sm text-gray-500">{volume.driver}</td>
-			<td className="px-4 py-3 text-sm text-gray-500">
+			<td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+				{volume.driver}
+			</td>
+			<td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
 				{formatBytes(volume.size_bytes)}
 			</td>
 		</tr>
@@ -157,10 +161,10 @@ export function DockerBackup() {
 	return (
 		<div className="p-6">
 			<div className="mb-6">
-				<h1 className="text-2xl font-bold text-gray-900">
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
 					{t('dockerBackup.title')}
 				</h1>
-				<p className="mt-1 text-sm text-gray-500">
+				<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
 					{t('dockerBackup.subtitle')}
 				</p>
 			</div>
@@ -170,7 +174,7 @@ export function DockerBackup() {
 				<div>
 					<label
 						htmlFor="agent-select"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						{t('dockerBackup.selectAgent')}
 					</label>
@@ -178,7 +182,7 @@ export function DockerBackup() {
 						id="agent-select"
 						value={selectedAgentId}
 						onChange={(e) => handleAgentChange(e.target.value)}
-						className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+						className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
 						disabled={agentsLoading}
 					>
 						<option value="">{t('dockerBackup.chooseAgent')}</option>
@@ -192,7 +196,7 @@ export function DockerBackup() {
 				<div>
 					<label
 						htmlFor="repo-select"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						{t('dockerBackup.repositoryId')}
 					</label>
@@ -202,7 +206,7 @@ export function DockerBackup() {
 						value={repositoryId}
 						onChange={(e) => setRepositoryId(e.target.value)}
 						placeholder={t('dockerBackup.repositoryIdPlaceholder')}
-						className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+						className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
 					/>
 				</div>
 			</div>
@@ -216,7 +220,7 @@ export function DockerBackup() {
 					)}
 					{daemonStatus && (
 						<div
-							className={`rounded-lg border p-4 ${daemonStatus.available ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}
+							className={`rounded-lg border p-4 ${daemonStatus.available ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/30' : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/30'}`}
 						>
 							<div className="flex items-center gap-2">
 								<span
@@ -228,7 +232,7 @@ export function DockerBackup() {
 										: t('dockerBackup.daemonStopped')}
 								</span>
 								{daemonStatus.version && (
-									<span className="text-sm text-gray-500">
+									<span className="text-sm text-gray-500 dark:text-gray-400">
 										v{daemonStatus.version}
 									</span>
 								)}
@@ -241,7 +245,7 @@ export function DockerBackup() {
 			{/* Containers */}
 			{selectedAgentId && daemonStatus?.available && (
 				<div className="mb-6">
-					<h2 className="mb-3 text-lg font-semibold text-gray-900">
+					<h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">
 						{t('dockerBackup.containers')}
 					</h2>
 					{containersLoading && <LoadingSpinner />}
@@ -249,20 +253,20 @@ export function DockerBackup() {
 						<ErrorMessage message={t('dockerBackup.containersError')} />
 					)}
 					{containers && containers.length > 0 ? (
-						<div className="overflow-hidden rounded-lg border border-gray-200">
+						<div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
 							<table className="w-full">
-								<thead className="bg-gray-50">
+								<thead className="bg-gray-50 dark:bg-gray-900">
 									<tr>
-										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
 											{t('dockerBackup.select')}
 										</th>
-										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
 											{t('common.name')}
 										</th>
-										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
 											{t('dockerBackup.image')}
 										</th>
-										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
 											{t('common.status')}
 										</th>
 									</tr>
@@ -281,7 +285,7 @@ export function DockerBackup() {
 						</div>
 					) : (
 						containers && (
-							<p className="text-sm text-gray-500">
+							<p className="text-sm text-gray-500 dark:text-gray-400">
 								{t('dockerBackup.noContainers')}
 							</p>
 						)
@@ -292,7 +296,7 @@ export function DockerBackup() {
 			{/* Volumes */}
 			{selectedAgentId && daemonStatus?.available && (
 				<div className="mb-6">
-					<h2 className="mb-3 text-lg font-semibold text-gray-900">
+					<h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">
 						{t('dockerBackup.volumes')}
 					</h2>
 					{volumesLoading && <LoadingSpinner />}
@@ -300,20 +304,20 @@ export function DockerBackup() {
 						<ErrorMessage message={t('dockerBackup.volumesError')} />
 					)}
 					{volumes && volumes.length > 0 ? (
-						<div className="overflow-hidden rounded-lg border border-gray-200">
+						<div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
 							<table className="w-full">
-								<thead className="bg-gray-50">
+								<thead className="bg-gray-50 dark:bg-gray-900">
 									<tr>
-										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
 											{t('dockerBackup.select')}
 										</th>
-										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
 											{t('common.name')}
 										</th>
-										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
 											{t('dockerBackup.driver')}
 										</th>
-										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+										<th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
 											{t('dockerBackup.size')}
 										</th>
 									</tr>
@@ -333,7 +337,7 @@ export function DockerBackup() {
 						</div>
 					) : (
 						volumes && (
-							<p className="text-sm text-gray-500">
+							<p className="text-sm text-gray-500 dark:text-gray-400">
 								{t('dockerBackup.noVolumes')}
 							</p>
 						)

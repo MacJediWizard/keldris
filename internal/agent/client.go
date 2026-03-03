@@ -207,6 +207,7 @@ type CommandPayload struct {
 	TargetVersion       string   `json:"target_version,omitempty"`
 	TargetResticVersion string   `json:"target_restic_version,omitempty"`
 	DiagnosticTypes     []string `json:"diagnostic_types,omitempty"`
+	Purge               bool     `json:"purge,omitempty"`
 }
 
 // CommandsResponse is the server response for polling commands.

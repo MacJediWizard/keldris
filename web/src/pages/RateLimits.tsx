@@ -181,13 +181,13 @@ export function RateLimits() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Rate Limits</h1>
-					<p className="text-gray-600 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Rate Limits</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Configure rate limiting for API endpoints
 					</p>
 				</div>
-				<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-					<p className="text-amber-800">
+				<div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+					<p className="text-amber-800 dark:text-amber-400">
 						Only administrators can manage rate limits.
 					</p>
 				</div>
@@ -199,14 +199,14 @@ export function RateLimits() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-					<div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
+					<div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+					<div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2" />
 				</div>
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 					{[1, 2, 3].map((i) => (
 						<div
 							key={i}
-							className="h-24 bg-gray-200 rounded-lg animate-pulse"
+							className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"
 						/>
 					))}
 				</div>
@@ -218,8 +218,8 @@ export function RateLimits() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">Rate Limits</h1>
-					<p className="text-gray-600 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Rate Limits</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Configure rate limiting for API endpoints
 					</p>
 				</div>
@@ -227,22 +227,22 @@ export function RateLimits() {
 
 			{/* Stats Cards */}
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-				<div className="bg-white rounded-lg border border-gray-200 p-4">
-					<div className="text-sm font-medium text-gray-500">Blocked Today</div>
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+					<div className="text-sm font-medium text-gray-500 dark:text-gray-400">Blocked Today</div>
 					<div className="mt-1 text-3xl font-bold text-red-600">
 						{stats?.blocked_today ?? 0}
 					</div>
 				</div>
-				<div className="bg-white rounded-lg border border-gray-200 p-4">
-					<div className="text-sm font-medium text-gray-500">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+					<div className="text-sm font-medium text-gray-500 dark:text-gray-400">
 						Active Configs
 					</div>
-					<div className="mt-1 text-3xl font-bold text-gray-900">
+					<div className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
 						{configs?.filter((c) => c.enabled).length ?? 0}
 					</div>
 				</div>
-				<div className="bg-white rounded-lg border border-gray-200 p-4">
-					<div className="text-sm font-medium text-gray-500">Active Bans</div>
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+					<div className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Bans</div>
 					<div className="mt-1 text-3xl font-bold text-amber-600">
 						{bans?.filter(isBanActive).length ?? 0}
 					</div>
@@ -255,8 +255,8 @@ export function RateLimits() {
 					stats.top_blocked_endpoints?.length > 0) && (
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						{stats.top_blocked_ips?.length > 0 && (
-							<div className="bg-white rounded-lg border border-gray-200 p-4">
-								<h3 className="text-sm font-medium text-gray-900 mb-3">
+							<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+								<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
 									Top Blocked IPs (7 days)
 								</h3>
 								<ul className="space-y-2">
@@ -265,7 +265,7 @@ export function RateLimits() {
 											key={ip.ip_address}
 											className="flex items-center justify-between text-sm"
 										>
-											<code className="bg-gray-100 px-2 py-0.5 rounded text-gray-700">
+											<code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">
 												{ip.ip_address}
 											</code>
 											<div className="flex items-center gap-2">
@@ -286,8 +286,8 @@ export function RateLimits() {
 							</div>
 						)}
 						{stats.top_blocked_endpoints?.length > 0 && (
-							<div className="bg-white rounded-lg border border-gray-200 p-4">
-								<h3 className="text-sm font-medium text-gray-900 mb-3">
+							<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+								<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
 									Top Blocked Endpoints (7 days)
 								</h3>
 								<ul className="space-y-2">
@@ -296,7 +296,7 @@ export function RateLimits() {
 											key={route.endpoint}
 											className="flex items-center justify-between text-sm"
 										>
-											<code className="bg-gray-100 px-2 py-0.5 rounded text-gray-700 truncate max-w-xs">
+											<code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300 truncate max-w-xs">
 												{route.endpoint}
 											</code>
 											<span className="text-red-600 font-medium">
@@ -311,9 +311,9 @@ export function RateLimits() {
 				)}
 
 			{/* Rate Limit Configs Section */}
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-					<h2 className="text-lg font-medium text-gray-900">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+					<h2 className="text-lg font-medium text-gray-900 dark:text-white">
 						Rate Limit Configurations
 					</h2>
 					{!showConfigForm && !editingId && (
@@ -342,7 +342,7 @@ export function RateLimits() {
 				</div>
 
 				{(showConfigForm || editingId) && (
-					<div className="p-4 border-b border-gray-200 bg-gray-50">
+					<div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
 						<form
 							onSubmit={editingId ? handleUpdateConfig : handleCreateConfig}
 						>
@@ -350,7 +350,7 @@ export function RateLimits() {
 								<div>
 									<label
 										htmlFor="endpoint"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										Endpoint
 									</label>
@@ -373,7 +373,7 @@ export function RateLimits() {
 								<div>
 									<label
 										htmlFor="requests"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										Requests
 									</label>
@@ -398,7 +398,7 @@ export function RateLimits() {
 								<div>
 									<label
 										htmlFor="period"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										Period (seconds)
 									</label>
@@ -430,7 +430,7 @@ export function RateLimits() {
 											}
 											className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
 										/>
-										<span className="ml-2 text-sm text-gray-700">Enabled</span>
+										<span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Enabled</span>
 									</label>
 								</div>
 							</div>
@@ -438,7 +438,7 @@ export function RateLimits() {
 								<button
 									type="button"
 									onClick={cancelEdit}
-									className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+									className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
 								>
 									Cancel
 								</button>
@@ -463,21 +463,21 @@ export function RateLimits() {
 						No custom rate limit configurations. Using default global limits.
 					</div>
 				) : (
-					<ul className="divide-y divide-gray-200">
+					<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 						{configs?.map((config) => (
-							<li key={config.id} className="px-4 py-3 hover:bg-gray-50">
+							<li key={config.id} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700">
 								<div className="flex items-center justify-between">
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center gap-2">
-											<code className="text-sm font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+											<code className="text-sm font-medium text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
 												{config.endpoint}
 											</code>
 											{config.enabled ? (
-												<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+												<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
 													Active
 												</span>
 											) : (
-												<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+												<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
 													Disabled
 												</span>
 											)}
@@ -512,9 +512,9 @@ export function RateLimits() {
 			</div>
 
 			{/* IP Bans Section */}
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-					<h2 className="text-lg font-medium text-gray-900">IP Bans</h2>
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+					<h2 className="text-lg font-medium text-gray-900 dark:text-white">IP Bans</h2>
 					{!showBanForm && (
 						<button
 							type="button"
@@ -541,13 +541,13 @@ export function RateLimits() {
 				</div>
 
 				{showBanForm && (
-					<div className="p-4 border-b border-gray-200 bg-gray-50">
+					<div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
 						<form onSubmit={handleCreateBan}>
 							<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 								<div>
 									<label
 										htmlFor="ip_address"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										IP Address
 									</label>
@@ -569,7 +569,7 @@ export function RateLimits() {
 								<div className="md:col-span-2">
 									<label
 										htmlFor="reason"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										Reason
 									</label>
@@ -591,7 +591,7 @@ export function RateLimits() {
 								<div>
 									<label
 										htmlFor="duration"
-										className="block text-sm font-medium text-gray-700"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 									>
 										Duration (minutes)
 									</label>
@@ -620,7 +620,7 @@ export function RateLimits() {
 										setShowBanForm(false);
 										resetBanForm();
 									}}
-									className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+									className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
 								>
 									Cancel
 								</button>
@@ -641,26 +641,26 @@ export function RateLimits() {
 						No IP bans active.
 					</div>
 				) : (
-					<ul className="divide-y divide-gray-200">
+					<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 						{bans?.map((ban) => (
-							<li key={ban.id} className="px-4 py-3 hover:bg-gray-50">
+							<li key={ban.id} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700">
 								<div className="flex items-center justify-between">
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center gap-2">
-											<code className="text-sm font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+											<code className="text-sm font-medium text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
 												{ban.ip_address}
 											</code>
 											{isBanActive(ban) ? (
-												<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+												<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">
 													Active
 												</span>
 											) : (
-												<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+												<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
 													Expired
 												</span>
 											)}
 											{!ban.expires_at && (
-												<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+												<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400">
 													Permanent
 												</span>
 											)}
@@ -691,41 +691,41 @@ export function RateLimits() {
 
 			{/* Recent Blocked Requests */}
 			{blockedRequests.length > 0 && (
-				<div className="bg-white rounded-lg border border-gray-200">
-					<div className="px-4 py-3 border-b border-gray-200">
-						<h2 className="text-lg font-medium text-gray-900">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+					<div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+						<h2 className="text-lg font-medium text-gray-900 dark:text-white">
 							Recent Blocked Requests
 						</h2>
 					</div>
 					<div className="overflow-x-auto">
 						<table className="min-w-full divide-y divide-gray-200">
-							<thead className="bg-gray-50">
+							<thead className="bg-gray-50 dark:bg-gray-900">
 								<tr>
-									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Time
 									</th>
-									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										IP Address
 									</th>
-									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Endpoint
 									</th>
-									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Reason
 									</th>
-									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Action
 									</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
+							<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 								{blockedRequests.slice(0, 20).map((req) => (
-									<tr key={req.id} className="hover:bg-gray-50">
+									<tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
 										<td className="px-4 py-2 text-sm text-gray-500 whitespace-nowrap">
 											{formatDateTime(req.blocked_at)}
 										</td>
 										<td className="px-4 py-2 text-sm whitespace-nowrap">
-											<code className="bg-gray-100 px-1 py-0.5 rounded text-gray-700">
+											<code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-gray-700 dark:text-gray-300">
 												{req.ip_address}
 											</code>
 										</td>

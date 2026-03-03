@@ -20,7 +20,7 @@ function LoadingCard() {
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
 			<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
 			<div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-1" />
-			<div className="h-3 w-20 bg-gray-100 rounded" />
+			<div className="h-3 w-20 bg-gray-100 dark:bg-gray-700 rounded" />
 		</div>
 	);
 }
@@ -86,7 +86,7 @@ export function RepositoryStatsDetail() {
 				) : stats ? (
 					<>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600">Dedup Ratio</p>
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Dedup Ratio</p>
 							<p
 								className={`text-3xl font-bold mt-1 ${getDedupRatioColor(stats.dedup_ratio)}`}
 							>
@@ -97,7 +97,7 @@ export function RepositoryStatsDetail() {
 							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600">Space Saved</p>
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Space Saved</p>
 							<p
 								className={`text-3xl font-bold mt-1 ${getSpaceSavedColor(stats.space_saved_pct)}`}
 							>
@@ -108,10 +108,10 @@ export function RepositoryStatsDetail() {
 							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600">
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 								Actual Storage
 							</p>
-							<p className="text-3xl font-bold text-gray-900 mt-1">
+							<p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
 								{formatBytes(stats.raw_data_size)}
 							</p>
 							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -119,8 +119,8 @@ export function RepositoryStatsDetail() {
 							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600">Original Size</p>
-							<p className="text-3xl font-bold text-gray-900 mt-1">
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Original Size</p>
+							<p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
 								{formatBytes(stats.restore_size)}
 							</p>
 							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -192,11 +192,11 @@ export function RepositoryStatsDetail() {
 							<div className="flex items-center justify-center gap-4 mt-3">
 								<div className="flex items-center gap-1">
 									<div className="w-2 h-2 bg-indigo-500 rounded" />
-									<span className="text-xs text-gray-600">Stored</span>
+									<span className="text-xs text-gray-600 dark:text-gray-400">Stored</span>
 								</div>
 								<div className="flex items-center gap-1">
 									<div className="w-2 h-2 bg-gray-200 dark:bg-gray-700 rounded" />
-									<span className="text-xs text-gray-600">Original</span>
+									<span className="text-xs text-gray-600 dark:text-gray-400">Original</span>
 								</div>
 							</div>
 						</div>
@@ -245,12 +245,12 @@ export function RepositoryStatsDetail() {
 									</span>
 								</div>
 							</div>
-							<div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+							<div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
 								<div>
 									<p className="text-sm text-gray-600 dark:text-gray-400">
 										Total Files
 									</p>
-									<p className="text-xl font-semibold text-gray-900">
+									<p className="text-xl font-semibold text-gray-900 dark:text-white">
 										{stats.total_file_count.toLocaleString()}
 									</p>
 								</div>
@@ -258,7 +258,7 @@ export function RepositoryStatsDetail() {
 									<p className="text-sm text-gray-600 dark:text-gray-400">
 										Snapshots
 									</p>
-									<p className="text-xl font-semibold text-gray-900">
+									<p className="text-xl font-semibold text-gray-900 dark:text-white">
 										{stats.snapshot_count}
 									</p>
 								</div>
@@ -292,14 +292,14 @@ export function RepositoryStatsDetail() {
 					<div className="p-6">
 						<div className="animate-pulse space-y-4">
 							{[1, 2, 3].map((i) => (
-								<div key={i} className="h-12 bg-gray-100 rounded" />
+								<div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 rounded" />
 							))}
 						</div>
 					</div>
 				) : history.length > 0 ? (
 					<div className="overflow-x-auto">
 						<table className="w-full">
-							<thead className="bg-gray-50">
+							<thead className="bg-gray-50 dark:bg-gray-900">
 								<tr>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Collected At
@@ -321,13 +321,13 @@ export function RepositoryStatsDetail() {
 									</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700">
+							<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 								{history.map((record) => (
 									<tr
 										key={record.id}
 										className="hover:bg-gray-50 dark:hover:bg-gray-700"
 									>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
 											{formatDateTime(record.collected_at)}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
@@ -349,13 +349,13 @@ export function RepositoryStatsDetail() {
 												</span>
 											</div>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
 											{formatBytes(record.raw_data_size)}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 											{formatBytes(record.restore_size)}
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
 											{record.snapshot_count}
 										</td>
 									</tr>

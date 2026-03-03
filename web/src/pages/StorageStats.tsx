@@ -31,7 +31,7 @@ function LoadingTable() {
 			{[1, 2, 3].map((i) => (
 				<div
 					key={i}
-					className="flex items-center justify-between py-4 border-b border-gray-100"
+					className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-700"
 				>
 					<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
 					<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
@@ -73,7 +73,7 @@ export function StorageStats() {
 				) : summary ? (
 					<>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600">
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 								Average Dedup Ratio
 							</p>
 							<p
@@ -86,7 +86,7 @@ export function StorageStats() {
 							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600">
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 								Total Space Saved
 							</p>
 							<p
@@ -105,10 +105,10 @@ export function StorageStats() {
 							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600">
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 								Actual Storage Used
 							</p>
-							<p className="text-3xl font-bold text-gray-900 mt-1">
+							<p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
 								{formatBytes(summary.total_raw_size)}
 							</p>
 							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -116,10 +116,10 @@ export function StorageStats() {
 							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600">
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
 								Total Snapshots
 							</p>
-							<p className="text-3xl font-bold text-gray-900 mt-1">
+							<p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
 								{summary.total_snapshots}
 							</p>
 							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -151,7 +151,7 @@ export function StorageStats() {
 					</select>
 				</div>
 				{growthLoading ? (
-					<div className="h-64 bg-gray-100 rounded animate-pulse" />
+					<div className="h-64 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
 				) : growth && growth.length > 0 ? (
 					<div className="h-64">
 						<div className="flex items-end justify-between h-full gap-1">
@@ -239,7 +239,7 @@ export function StorageStats() {
 				) : repoStats && repoStats.length > 0 ? (
 					<div className="overflow-x-auto">
 						<table className="w-full">
-							<thead className="bg-gray-50">
+							<thead className="bg-gray-50 dark:bg-gray-900">
 								<tr>
 									<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 										Repository
@@ -264,7 +264,7 @@ export function StorageStats() {
 									</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200 dark:divide-gray-700">
+							<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 								{repoStats.map((stats) => (
 									<tr
 										key={stats.id}
@@ -297,13 +297,13 @@ export function StorageStats() {
 												</span>
 											</div>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
 											{formatBytes(stats.raw_data_size)}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 											{formatBytes(stats.restore_size)}
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
 											{stats.snapshot_count}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">

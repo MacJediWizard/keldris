@@ -140,7 +140,7 @@ function BackupTagsEditor({ backupId, allTags }: BackupTagsEditorProps) {
 
 	return (
 		<div>
-			<p className="text-sm font-medium text-gray-500 mb-2">Tags</p>
+			<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Tags</p>
 			<div className="flex flex-wrap gap-1 mb-2">
 				{backupTags && backupTags.length > 0 ? (
 					backupTags.map((tag) => (
@@ -163,19 +163,19 @@ function BackupTagsEditor({ backupId, allTags }: BackupTagsEditorProps) {
 					{showDropdown ? 'Done' : '+ Add tags'}
 				</button>
 				{showDropdown && allTags.length > 0 && (
-					<div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[150px]">
+					<div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 z-10 min-w-[150px]">
 						{allTags.map((tag) => (
 							<button
 								key={tag.id}
 								type="button"
 								onClick={() => handleToggleTag(tag.id)}
-								className="w-full text-left px-3 py-1.5 hover:bg-gray-100 flex items-center gap-2"
+								className="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
 							>
 								<span
 									className="w-3 h-3 rounded-full"
 									style={{ backgroundColor: tag.color }}
 								/>
-								<span className="text-sm text-gray-700">{tag.name}</span>
+								<span className="text-sm text-gray-700 dark:text-gray-300">{tag.name}</span>
 								{currentTagIds.has(tag.id) && (
 									<svg
 										aria-hidden="true"
@@ -373,7 +373,7 @@ function BackupDetailsModal({
 					{(backup.classification_level ||
 						backup.classification_data_types) && (
 						<div>
-							<p className="text-sm font-medium text-gray-500 mb-2">
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
 								Classification
 							</p>
 							<ClassificationBadge
@@ -400,7 +400,7 @@ function BackupDetailsModal({
 
 					{(backup.pre_script_output || backup.pre_script_error) && (
 						<div>
-							<p className="text-sm font-medium text-gray-500 mb-2">
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
 								Pre-Backup Script
 							</p>
 							{backup.pre_script_output && (
@@ -408,7 +408,7 @@ function BackupDetailsModal({
 									<p className="text-xs font-medium text-gray-400 mb-1">
 										Output
 									</p>
-									<pre className="bg-gray-100 p-3 rounded-lg text-xs text-gray-800 overflow-x-auto max-h-32 whitespace-pre-wrap">
+									<pre className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg text-xs text-gray-800 dark:text-gray-200 overflow-x-auto max-h-32 whitespace-pre-wrap">
 										{backup.pre_script_output}
 									</pre>
 								</div>
@@ -416,7 +416,7 @@ function BackupDetailsModal({
 							{backup.pre_script_error && (
 								<div>
 									<p className="text-xs font-medium text-red-400 mb-1">Error</p>
-									<pre className="bg-red-50 p-3 rounded-lg text-xs text-red-700 overflow-x-auto max-h-32 whitespace-pre-wrap">
+									<pre className="bg-red-50 dark:bg-red-900/30 p-3 rounded-lg text-xs text-red-700 dark:text-red-400 overflow-x-auto max-h-32 whitespace-pre-wrap">
 										{backup.pre_script_error}
 									</pre>
 								</div>
@@ -426,7 +426,7 @@ function BackupDetailsModal({
 
 					{(backup.post_script_output || backup.post_script_error) && (
 						<div>
-							<p className="text-sm font-medium text-gray-500 mb-2">
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
 								Post-Backup Script
 							</p>
 							{backup.post_script_output && (
@@ -434,7 +434,7 @@ function BackupDetailsModal({
 									<p className="text-xs font-medium text-gray-400 mb-1">
 										Output
 									</p>
-									<pre className="bg-gray-100 p-3 rounded-lg text-xs text-gray-800 overflow-x-auto max-h-32 whitespace-pre-wrap">
+									<pre className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg text-xs text-gray-800 dark:text-gray-200 overflow-x-auto max-h-32 whitespace-pre-wrap">
 										{backup.post_script_output}
 									</pre>
 								</div>
@@ -442,7 +442,7 @@ function BackupDetailsModal({
 							{backup.post_script_error && (
 								<div>
 									<p className="text-xs font-medium text-red-400 mb-1">Error</p>
-									<pre className="bg-red-50 p-3 rounded-lg text-xs text-red-700 overflow-x-auto max-h-32 whitespace-pre-wrap">
+									<pre className="bg-red-50 dark:bg-red-900/30 p-3 rounded-lg text-xs text-red-700 dark:text-red-400 overflow-x-auto max-h-32 whitespace-pre-wrap">
 										{backup.post_script_error}
 									</pre>
 								</div>
@@ -453,7 +453,7 @@ function BackupDetailsModal({
 					{(backup.container_pre_hook_output ||
 						backup.container_pre_hook_error) && (
 						<div>
-							<p className="text-sm font-medium text-gray-500 mb-2">
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
 								Container Pre-Backup Hook
 							</p>
 							{backup.container_pre_hook_output && (
@@ -461,7 +461,7 @@ function BackupDetailsModal({
 									<p className="text-xs font-medium text-gray-400 mb-1">
 										Output
 									</p>
-									<pre className="bg-gray-100 p-3 rounded-lg text-xs text-gray-800 overflow-x-auto max-h-32 whitespace-pre-wrap">
+									<pre className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg text-xs text-gray-800 dark:text-gray-200 overflow-x-auto max-h-32 whitespace-pre-wrap">
 										{backup.container_pre_hook_output}
 									</pre>
 								</div>
@@ -469,7 +469,7 @@ function BackupDetailsModal({
 							{backup.container_pre_hook_error && (
 								<div>
 									<p className="text-xs font-medium text-red-400 mb-1">Error</p>
-									<pre className="bg-red-50 p-3 rounded-lg text-xs text-red-700 overflow-x-auto max-h-32 whitespace-pre-wrap">
+									<pre className="bg-red-50 dark:bg-red-900/30 p-3 rounded-lg text-xs text-red-700 dark:text-red-400 overflow-x-auto max-h-32 whitespace-pre-wrap">
 										{backup.container_pre_hook_error}
 									</pre>
 								</div>
@@ -480,7 +480,7 @@ function BackupDetailsModal({
 					{(backup.container_post_hook_output ||
 						backup.container_post_hook_error) && (
 						<div>
-							<p className="text-sm font-medium text-gray-500 mb-2">
+							<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
 								Container Post-Backup Hook
 							</p>
 							{backup.container_post_hook_output && (
@@ -488,7 +488,7 @@ function BackupDetailsModal({
 									<p className="text-xs font-medium text-gray-400 mb-1">
 										Output
 									</p>
-									<pre className="bg-gray-100 p-3 rounded-lg text-xs text-gray-800 overflow-x-auto max-h-32 whitespace-pre-wrap">
+									<pre className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg text-xs text-gray-800 dark:text-gray-200 overflow-x-auto max-h-32 whitespace-pre-wrap">
 										{backup.container_post_hook_output}
 									</pre>
 								</div>
@@ -496,7 +496,7 @@ function BackupDetailsModal({
 							{backup.container_post_hook_error && (
 								<div>
 									<p className="text-xs font-medium text-red-400 mb-1">Error</p>
-									<pre className="bg-red-50 p-3 rounded-lg text-xs text-red-700 overflow-x-auto max-h-32 whitespace-pre-wrap">
+									<pre className="bg-red-50 dark:bg-red-900/30 p-3 rounded-lg text-xs text-red-700 dark:text-red-400 overflow-x-auto max-h-32 whitespace-pre-wrap">
 										{backup.container_post_hook_error}
 									</pre>
 								</div>
@@ -903,7 +903,7 @@ export function Backups() {
 									<button
 										type="button"
 										onClick={() => setSelectedTagFilters(new Set())}
-										className="text-sm text-gray-500 hover:text-gray-700"
+										className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
 									>
 										Clear all
 									</button>

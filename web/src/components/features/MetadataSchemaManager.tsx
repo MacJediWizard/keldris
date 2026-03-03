@@ -35,13 +35,13 @@ export function MetadataSchemaManager({
 		entityType.charAt(0).toUpperCase() + entityType.slice(1);
 
 	if (isLoading) {
-		return <div className="text-sm text-gray-500">Loading schemas...</div>;
+		return <div className="text-sm text-gray-500 dark:text-gray-400">Loading schemas...</div>;
 	}
 
 	return (
 		<div className="space-y-4">
 			<div className="flex items-center justify-between">
-				<h3 className="text-lg font-medium text-gray-900">
+				<h3 className="text-lg font-medium text-gray-900 dark:text-white">
 					{entityTypeLabel} Metadata Fields
 				</h3>
 				{!isCreating && (
@@ -111,8 +111,8 @@ export function MetadataSchemaManager({
 				</div>
 			) : (
 				!isCreating && (
-					<div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-						<p className="text-sm text-gray-500">
+					<div className="text-center py-6 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+						<p className="text-sm text-gray-500 dark:text-gray-400">
 							No custom fields defined for {entityTypeLabel.toLowerCase()}s yet.
 						</p>
 						<button
@@ -146,22 +146,22 @@ function SchemaCard({ schema, onEdit, onDelete, isDeleting }: SchemaCardProps) {
 	};
 
 	return (
-		<div className="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between">
+		<div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex items-center justify-between">
 			<div className="flex-1">
 				<div className="flex items-center gap-2">
-					<span className="font-medium text-gray-900">{schema.name}</span>
-					<span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+					<span className="font-medium text-gray-900 dark:text-white">{schema.name}</span>
+					<span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
 						{fieldTypeLabels[schema.field_type]}
 					</span>
 					{schema.required && (
-						<span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded">
+						<span className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 rounded">
 							Required
 						</span>
 					)}
 				</div>
-				<div className="text-sm text-gray-500 mt-1">
+				<div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 					Key:{' '}
-					<code className="bg-gray-100 px-1 rounded">{schema.field_key}</code>
+					<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{schema.field_key}</code>
 					{schema.description && <span> - {schema.description}</span>}
 				</div>
 				{schema.field_type === 'select' && schema.options && (
@@ -276,13 +276,13 @@ function SchemaForm({
 	return (
 		<form
 			onSubmit={handleSubmit}
-			className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4"
+			className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4"
 		>
 			<div className="grid grid-cols-2 gap-4">
 				<div>
 					<label
 						htmlFor="schema-field-name"
-						className="block text-sm font-medium text-gray-700"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 					>
 						Field Name <span className="text-red-500">*</span>
 					</label>
@@ -292,14 +292,14 @@ function SchemaForm({
 						value={name}
 						onChange={(e) => handleNameChange(e.target.value)}
 						required
-						className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+						className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 						placeholder="e.g., Department"
 					/>
 				</div>
 				<div>
 					<label
 						htmlFor="schema-field-key"
-						className="block text-sm font-medium text-gray-700"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 					>
 						Field Key <span className="text-red-500">*</span>
 					</label>
@@ -310,10 +310,10 @@ function SchemaForm({
 						onChange={(e) => setFieldKey(e.target.value)}
 						required
 						pattern="^[a-z][a-z0-9_-]*$"
-						className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm font-mono"
+						className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm font-mono"
 						placeholder="e.g., department"
 					/>
-					<p className="mt-1 text-xs text-gray-500">
+					<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
 						Lowercase letters, numbers, underscores, and dashes only
 					</p>
 				</div>
@@ -323,7 +323,7 @@ function SchemaForm({
 				<div>
 					<label
 						htmlFor="schema-field-type"
-						className="block text-sm font-medium text-gray-700"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 					>
 						Field Type <span className="text-red-500">*</span>
 					</label>
@@ -331,7 +331,7 @@ function SchemaForm({
 						id="schema-field-type"
 						value={fieldType}
 						onChange={(e) => setFieldType(e.target.value as MetadataFieldType)}
-						className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+						className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 					>
 						{fieldTypes.map((type) => (
 							<option key={type.type} value={type.type}>
@@ -343,7 +343,7 @@ function SchemaForm({
 				<div>
 					<label
 						htmlFor="schema-description"
-						className="block text-sm font-medium text-gray-700"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 					>
 						Description
 					</label>
@@ -352,7 +352,7 @@ function SchemaForm({
 						type="text"
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
-						className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+						className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 						placeholder="Help text for this field"
 					/>
 				</div>
@@ -360,7 +360,7 @@ function SchemaForm({
 
 			{fieldType === 'select' && (
 				<div>
-					<span className="block text-sm font-medium text-gray-700 mb-2">
+					<span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 						Options <span className="text-red-500">*</span>
 					</span>
 					<div className="space-y-2">
@@ -377,7 +377,7 @@ function SchemaForm({
 									}
 									placeholder="Value"
 									aria-label={`Option ${index + 1} value`}
-									className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+									className="flex-1 rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 								/>
 								<input
 									type="text"
@@ -387,13 +387,13 @@ function SchemaForm({
 									}
 									placeholder="Label"
 									aria-label={`Option ${index + 1} label`}
-									className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+									className="flex-1 rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 								/>
 								{options.length > 1 && (
 									<button
 										type="button"
 										onClick={() => handleRemoveOption(index)}
-										className="text-red-500 hover:text-red-700"
+										className="text-red-500 hover:text-red-700 dark:text-red-400"
 									>
 										Remove
 									</button>
@@ -416,7 +416,7 @@ function SchemaForm({
 					<div>
 						<label
 							htmlFor="schema-min-length"
-							className="block text-sm font-medium text-gray-700"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 						>
 							Min Length
 						</label>
@@ -433,13 +433,13 @@ function SchemaForm({
 										: undefined,
 								})
 							}
-							className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+							className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 						/>
 					</div>
 					<div>
 						<label
 							htmlFor="schema-max-length"
-							className="block text-sm font-medium text-gray-700"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 						>
 							Max Length
 						</label>
@@ -456,7 +456,7 @@ function SchemaForm({
 										: undefined,
 								})
 							}
-							className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+							className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 						/>
 					</div>
 				</div>
@@ -467,7 +467,7 @@ function SchemaForm({
 					<div>
 						<label
 							htmlFor="schema-min-value"
-							className="block text-sm font-medium text-gray-700"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 						>
 							Minimum Value
 						</label>
@@ -481,13 +481,13 @@ function SchemaForm({
 									min: e.target.value ? Number(e.target.value) : undefined,
 								})
 							}
-							className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+							className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 						/>
 					</div>
 					<div>
 						<label
 							htmlFor="schema-max-value"
-							className="block text-sm font-medium text-gray-700"
+							className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 						>
 							Maximum Value
 						</label>
@@ -501,7 +501,7 @@ function SchemaForm({
 									max: e.target.value ? Number(e.target.value) : undefined,
 								})
 							}
-							className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+							className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 						/>
 					</div>
 				</div>
@@ -513,18 +513,18 @@ function SchemaForm({
 					id="required"
 					checked={required}
 					onChange={(e) => setRequired(e.target.checked)}
-					className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+					className="rounded border-gray-300 dark:border-gray-600 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
 				/>
-				<label htmlFor="required" className="ml-2 text-sm text-gray-700">
+				<label htmlFor="required" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
 					Required field
 				</label>
 			</div>
 
-			<div className="flex justify-end gap-2 pt-2 border-t border-gray-200">
+			<div className="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
 				<button
 					type="button"
 					onClick={onCancel}
-					className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+					className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900"
 				>
 					Cancel
 				</button>

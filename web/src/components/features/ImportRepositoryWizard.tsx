@@ -45,7 +45,7 @@ function FormField({
 		<div>
 			<label
 				htmlFor={id}
-				className="block text-sm font-medium text-gray-700 mb-1"
+				className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 			>
 				{label}
 				{required && <span className="text-red-500 ml-1">*</span>}
@@ -56,10 +56,10 @@ function FormField({
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				placeholder={placeholder}
-				className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+				className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 				required={required}
 			/>
-			{helpText && <p className="mt-1 text-xs text-gray-500">{helpText}</p>}
+			{helpText && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{helpText}</p>}
 		</div>
 	);
 }
@@ -364,11 +364,11 @@ export function ImportRepositoryWizard({
 								id="import-s3-use-ssl"
 								checked={s3UseSsl}
 								onChange={(e) => setS3UseSsl(e.target.checked)}
-								className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+								className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 							/>
 							<label
 								htmlFor="import-s3-use-ssl"
-								className="text-sm text-gray-700"
+								className="text-sm text-gray-700 dark:text-gray-300"
 							>
 								Use SSL/TLS
 							</label>
@@ -462,7 +462,7 @@ export function ImportRepositoryWizard({
 						<div>
 							<label
 								htmlFor="import-sftp-private-key"
-								className="block text-sm font-medium text-gray-700 mb-1"
+								className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 							>
 								Private Key
 							</label>
@@ -471,7 +471,7 @@ export function ImportRepositoryWizard({
 								value={sftpPrivateKey}
 								onChange={(e) => setSftpPrivateKey(e.target.value)}
 								placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-xs"
+								className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white font-mono text-xs"
 								rows={4}
 							/>
 						</div>
@@ -554,7 +554,7 @@ export function ImportRepositoryWizard({
 
 	const renderConnectionStep = () => (
 		<div className="space-y-4">
-			<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+			<div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
 				<div className="flex gap-3">
 					<svg
 						aria-hidden="true"
@@ -571,10 +571,10 @@ export function ImportRepositoryWizard({
 						/>
 					</svg>
 					<div>
-						<p className="text-sm text-blue-800 font-medium">
+						<p className="text-sm text-blue-800 dark:text-blue-400 font-medium">
 							Import Existing Repository
 						</p>
-						<p className="text-sm text-blue-700 mt-1">
+						<p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
 							Connect to an existing Restic repository to import its snapshots
 							into Keldris. You'll need the repository password.
 						</p>
@@ -595,7 +595,7 @@ export function ImportRepositoryWizard({
 			<div>
 				<label
 					htmlFor="import-repo-type"
-					className="block text-sm font-medium text-gray-700 mb-1"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 				>
 					Type
 				</label>
@@ -603,7 +603,7 @@ export function ImportRepositoryWizard({
 					id="import-repo-type"
 					value={type}
 					onChange={(e) => setType(e.target.value as RepositoryType)}
-					className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+					className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 				>
 					<option value="local">Local Filesystem</option>
 					<option value="s3">Amazon S3 / MinIO / Wasabi</option>
@@ -636,16 +636,16 @@ export function ImportRepositoryWizard({
 					id="import-escrow-enabled"
 					checked={escrowEnabled}
 					onChange={(e) => setEscrowEnabled(e.target.checked)}
-					className="mt-1 h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+					className="mt-1 h-4 w-4 text-indigo-600 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500"
 				/>
 				<div>
 					<label
 						htmlFor="import-escrow-enabled"
-						className="block text-sm font-medium text-gray-700"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 					>
 						Enable key escrow
 					</label>
-					<p className="text-xs text-gray-500">
+					<p className="text-xs text-gray-500 dark:text-gray-400">
 						Store an encrypted copy of the password for recovery by
 						administrators
 					</p>
@@ -659,7 +659,7 @@ export function ImportRepositoryWizard({
 
 		return (
 			<div className="space-y-4">
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4">
+				<div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
 					<div className="flex gap-3">
 						<svg
 							aria-hidden="true"
@@ -676,10 +676,10 @@ export function ImportRepositoryWizard({
 							/>
 						</svg>
 						<div>
-							<p className="text-sm text-green-800 font-medium">
+							<p className="text-sm text-green-800 dark:text-green-400 font-medium">
 								Repository Found
 							</p>
-							<p className="text-sm text-green-700 mt-1">
+							<p className="text-sm text-green-700 dark:text-green-400 mt-1">
 								Successfully connected to the repository. Review the contents
 								below.
 							</p>
@@ -688,29 +688,29 @@ export function ImportRepositoryWizard({
 				</div>
 
 				<div className="grid grid-cols-2 gap-4">
-					<div className="bg-gray-50 rounded-lg p-4">
-						<p className="text-sm text-gray-500">Snapshots</p>
-						<p className="text-2xl font-bold text-gray-900">
+					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+						<p className="text-sm text-gray-500 dark:text-gray-400">Snapshots</p>
+						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{preview.snapshot_count}
 						</p>
 					</div>
-					<div className="bg-gray-50 rounded-lg p-4">
-						<p className="text-sm text-gray-500">Total Size</p>
-						<p className="text-2xl font-bold text-gray-900">
+					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+						<p className="text-sm text-gray-500 dark:text-gray-400">Total Size</p>
+						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{formatBytes(preview.total_size)}
 						</p>
 					</div>
 				</div>
 
 				<div>
-					<h4 className="text-sm font-medium text-gray-700 mb-2">
+					<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 						Hostnames Found
 					</h4>
 					<div className="flex flex-wrap gap-2">
 						{preview.hostnames.map((hostname) => (
 							<span
 								key={hostname}
-								className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-sm"
+								className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded text-sm"
 							>
 								{hostname}
 							</span>
@@ -720,25 +720,25 @@ export function ImportRepositoryWizard({
 
 				{preview.snapshots.length > 0 && (
 					<div>
-						<h4 className="text-sm font-medium text-gray-700 mb-2">
+						<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Recent Snapshots (showing {Math.min(5, preview.snapshots.length)}{' '}
 							of {preview.snapshots.length})
 						</h4>
-						<div className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-48 overflow-y-auto">
+						<div className="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700 max-h-48 overflow-y-auto">
 							{preview.snapshots.slice(0, 5).map((snap: SnapshotPreview) => (
 								<div key={snap.id} className="p-3 text-sm">
 									<div className="flex items-center justify-between">
-										<span className="font-mono text-xs text-gray-500">
+										<span className="font-mono text-xs text-gray-500 dark:text-gray-400">
 											{snap.short_id}
 										</span>
-										<span className="text-gray-500">
+										<span className="text-gray-500 dark:text-gray-400">
 											{new Date(snap.time).toLocaleString()}
 										</span>
 									</div>
-									<div className="text-gray-700 mt-1">
+									<div className="text-gray-700 dark:text-gray-300 mt-1">
 										<span className="font-medium">{snap.hostname}</span>
 										{snap.paths.length > 0 && (
-											<span className="text-gray-500 ml-2">
+											<span className="text-gray-500 dark:text-gray-400 ml-2">
 												{snap.paths[0]}
 												{snap.paths.length > 1 &&
 													` +${snap.paths.length - 1} more`}
@@ -760,13 +760,13 @@ export function ImportRepositoryWizard({
 		return (
 			<div className="space-y-4">
 				<div>
-					<h4 className="text-sm font-medium text-gray-700 mb-2">
+					<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 						Filter by Hostname
 					</h4>
-					<p className="text-xs text-gray-500 mb-2">
+					<p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
 						Select which hostnames to import (all selected by default)
 					</p>
-					<div className="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-3">
+					<div className="space-y-2 max-h-32 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
 						{preview.hostnames.map((hostname) => (
 							<label key={hostname} className="flex items-center gap-2">
 								<input
@@ -781,25 +781,25 @@ export function ImportRepositoryWizard({
 											);
 										}
 									}}
-									className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+									className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 								/>
-								<span className="text-sm text-gray-700">{hostname}</span>
+								<span className="text-sm text-gray-700 dark:text-gray-300">{hostname}</span>
 							</label>
 						))}
 					</div>
 				</div>
 
 				<div>
-					<h4 className="text-sm font-medium text-gray-700 mb-2">
+					<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 						Assign to Agent
 					</h4>
-					<p className="text-xs text-gray-500 mb-2">
+					<p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
 						Optionally assign imported snapshots to an existing agent
 					</p>
 					<select
 						value={selectedAgentId}
 						onChange={(e) => setSelectedAgentId(e.target.value)}
-						className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 					>
 						<option value="">No agent (unassigned)</option>
 						{agents?.map((agent: Agent) => (
@@ -810,7 +810,7 @@ export function ImportRepositoryWizard({
 					</select>
 				</div>
 
-				<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+				<div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
 					<div className="flex gap-3">
 						<svg
 							aria-hidden="true"
@@ -827,10 +827,10 @@ export function ImportRepositoryWizard({
 							/>
 						</svg>
 						<div>
-							<p className="text-sm text-amber-800 font-medium">
+							<p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
 								Import Summary
 							</p>
-							<p className="text-sm text-amber-700 mt-1">
+							<p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
 								{selectedHostnames.length === preview.hostnames.length
 									? `All ${preview.snapshot_count} snapshots`
 									: `Snapshots from ${selectedHostnames.length} hostname(s)`}{' '}
@@ -846,8 +846,8 @@ export function ImportRepositoryWizard({
 	const renderImportingStep = () => (
 		<div className="py-8 text-center">
 			<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
-			<p className="text-gray-600">Importing repository...</p>
-			<p className="text-sm text-gray-500 mt-2">This may take a moment</p>
+			<p className="text-gray-600 dark:text-gray-400">Importing repository...</p>
+			<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">This may take a moment</p>
 		</div>
 	);
 
@@ -895,16 +895,16 @@ export function ImportRepositoryWizard({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						{getStepTitle()}
 					</h3>
 					{step !== 'importing' && (
 						<button
 							type="button"
 							onClick={handleClose}
-							className="text-gray-400 hover:text-gray-600"
+							className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
 						>
 							<svg
 								aria-hidden="true"
@@ -934,8 +934,8 @@ export function ImportRepositoryWizard({
 										step === s
 											? 'bg-indigo-600 text-white'
 											: ['preview', 'configure'].indexOf(step) > i
-												? 'bg-indigo-100 text-indigo-600'
-												: 'bg-gray-100 text-gray-400'
+												? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600'
+												: 'bg-gray-100 dark:bg-gray-700 text-gray-400'
 									}`}
 								>
 									{i + 1}
@@ -945,7 +945,7 @@ export function ImportRepositoryWizard({
 										className={`w-12 h-0.5 mx-1 ${
 											['preview', 'configure'].indexOf(step) > i
 												? 'bg-indigo-200'
-												: 'bg-gray-200'
+												: 'bg-gray-200 dark:bg-gray-700'
 										}`}
 									/>
 								)}
@@ -955,8 +955,8 @@ export function ImportRepositoryWizard({
 				)}
 
 				{error && (
-					<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-						<p className="text-sm text-red-700">{error}</p>
+					<div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+						<p className="text-sm text-red-700 dark:text-red-400">{error}</p>
 					</div>
 				)}
 
@@ -971,7 +971,7 @@ export function ImportRepositoryWizard({
 								else if (step === 'configure') setStep('preview');
 								else handleClose();
 							}}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-lg transition-colors"
 						>
 							{step === 'connection' ? 'Cancel' : 'Back'}
 						</button>

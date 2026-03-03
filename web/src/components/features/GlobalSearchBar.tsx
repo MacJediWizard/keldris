@@ -387,7 +387,7 @@ export function GlobalSearchBar({
 					onFocus={() => setIsOpen(true)}
 					onKeyDown={handleKeyDown}
 					placeholder={placeholder}
-					className="block w-full pl-10 pr-20 py-2 border border-gray-300 rounded-lg bg-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+					className="block w-full pl-10 pr-20 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 					aria-label="Search"
 					aria-expanded={isOpen}
 					aria-haspopup="listbox"
@@ -403,7 +403,7 @@ export function GlobalSearchBar({
 								setSelectedIndex(-1);
 								inputRef.current?.focus();
 							}}
-							className="p-1 text-gray-400 hover:text-gray-600"
+							className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
 							aria-label="Clear search"
 						>
 							<svg
@@ -425,7 +425,7 @@ export function GlobalSearchBar({
 					<button
 						type="button"
 						onClick={() => setShowFilters(!showFilters)}
-						className={`p-1 rounded ${showFilters ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-gray-600'}`}
+						className={`p-1 rounded ${showFilters ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400'}`}
 						aria-label="Toggle filters"
 					>
 						<svg
@@ -443,7 +443,7 @@ export function GlobalSearchBar({
 							/>
 						</svg>
 					</button>
-					<kbd className="hidden sm:inline-flex items-center px-1.5 text-xs font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded">
+					<kbd className="hidden sm:inline-flex items-center px-1.5 text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded">
 						{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}K
 					</kbd>
 				</div>
@@ -451,10 +451,10 @@ export function GlobalSearchBar({
 
 			{/* Filters Panel */}
 			{showFilters && (
-				<div className="absolute top-full left-0 right-0 mt-1 p-3 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+				<div className="absolute top-full left-0 right-0 mt-1 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
 					<div className="space-y-3">
 						<div>
-							<span className="block text-xs font-medium text-gray-500 mb-1.5">
+							<span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
 								Filter by type
 							</span>
 							<div className="flex flex-wrap gap-1.5">
@@ -463,8 +463,8 @@ export function GlobalSearchBar({
 									onClick={() => setActiveFilter(null)}
 									className={`px-2 py-1 text-xs rounded-full transition-colors ${
 										activeFilter === null
-											? 'bg-indigo-100 text-indigo-700'
-											: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+											? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+											: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
 									}`}
 								>
 									All
@@ -479,8 +479,8 @@ export function GlobalSearchBar({
 											}
 											className={`px-2 py-1 text-xs rounded-full transition-colors ${
 												activeFilter === type
-													? 'bg-indigo-100 text-indigo-700'
-													: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+													? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+													: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
 											}`}
 										>
 											{RESULT_TYPE_LABELS[type]}
@@ -493,7 +493,7 @@ export function GlobalSearchBar({
 							<div className="flex-1">
 								<label
 									htmlFor="search-date-from"
-									className="block text-xs font-medium text-gray-500 mb-1"
+									className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
 								>
 									From
 								</label>
@@ -502,13 +502,13 @@ export function GlobalSearchBar({
 									type="date"
 									value={dateFrom}
 									onChange={(e) => setDateFrom(e.target.value)}
-									className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+									className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
 								/>
 							</div>
 							<div className="flex-1">
 								<label
 									htmlFor="search-date-to"
-									className="block text-xs font-medium text-gray-500 mb-1"
+									className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
 								>
 									To
 								</label>
@@ -517,7 +517,7 @@ export function GlobalSearchBar({
 									type="date"
 									value={dateTo}
 									onChange={(e) => setDateTo(e.target.value)}
-									className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+									className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
 								/>
 							</div>
 						</div>
@@ -529,19 +529,19 @@ export function GlobalSearchBar({
 			{isOpen && (
 				<div
 					id="search-listbox"
-					className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto z-40"
+					className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-96 overflow-y-auto z-40"
 					tabIndex={-1}
 				>
 					{query.length < 2 && recentSearches.length > 0 && (
 						<div className="p-2">
 							<div className="flex items-center justify-between px-2 py-1">
-								<span className="text-xs font-medium text-gray-500">
+								<span className="text-xs font-medium text-gray-500 dark:text-gray-400">
 									Recent Searches
 								</span>
 								<button
 									type="button"
 									onClick={handleClearRecent}
-									className="text-xs text-gray-400 hover:text-gray-600"
+									className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
 								>
 									Clear all
 								</button>
@@ -558,7 +558,7 @@ export function GlobalSearchBar({
 										}
 									}}
 									className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left cursor-pointer ${
-										selectedIndex === idx ? 'bg-indigo-50' : 'hover:bg-gray-50'
+										selectedIndex === idx ? 'bg-indigo-50' : 'hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900'
 									}`}
 									aria-selected={selectedIndex === idx}
 								>
@@ -576,7 +576,7 @@ export function GlobalSearchBar({
 											d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
 										/>
 									</svg>
-									<span className="flex-1 text-sm text-gray-700 truncate">
+									<span className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">
 										{recent.query}
 									</span>
 									{recent.types && recent.types.length > 0 && (
@@ -590,7 +590,7 @@ export function GlobalSearchBar({
 									<button
 										type="button"
 										onClick={(e) => handleDeleteRecent(e, recent.id)}
-										className="p-1 text-gray-400 hover:text-gray-600"
+										className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
 										aria-label="Remove from recent"
 									>
 										<svg
@@ -619,7 +619,7 @@ export function GlobalSearchBar({
 							{isSearching && (
 								<div className="p-4 text-center">
 									<div className="w-5 h-5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto" />
-									<span className="text-sm text-gray-500 mt-2 block">
+									<span className="text-sm text-gray-500 dark:text-gray-400 mt-2 block">
 										Searching...
 									</span>
 								</div>
@@ -627,8 +627,8 @@ export function GlobalSearchBar({
 
 							{/* Suggestions */}
 							{suggestions.length > 0 && (
-								<div className="p-2 border-b border-gray-100">
-									<span className="px-2 text-xs font-medium text-gray-500">
+								<div className="p-2 border-b border-gray-100 dark:border-gray-700">
+									<span className="px-2 text-xs font-medium text-gray-500 dark:text-gray-400">
 										Suggestions
 									</span>
 									{suggestions.slice(0, 5).map((suggestion, idx) => (
@@ -651,14 +651,14 @@ export function GlobalSearchBar({
 											className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left cursor-pointer ${
 												selectedIndex === idx
 													? 'bg-indigo-50'
-													: 'hover:bg-gray-50'
+													: 'hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900'
 											}`}
 											aria-selected={selectedIndex === idx}
 										>
 											<span className="text-gray-400">
 												{RESULT_TYPE_ICONS[suggestion.type]}
 											</span>
-											<span className="flex-1 text-sm text-gray-700">
+											<span className="flex-1 text-sm text-gray-700 dark:text-gray-300">
 												{suggestion.text}
 											</span>
 											<span className="text-xs text-gray-400">
@@ -701,7 +701,7 @@ export function GlobalSearchBar({
 
 											return (
 												<div key={type} className="mb-2">
-													<span className="px-2 text-xs font-medium text-gray-500">
+													<span className="px-2 text-xs font-medium text-gray-500 dark:text-gray-400">
 														{RESULT_TYPE_LABELS[type]}
 													</span>
 													{(results as GroupedSearchResult[])
@@ -730,7 +730,7 @@ export function GlobalSearchBar({
 																	className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left cursor-pointer ${
 																		selectedIndex === globalIdx
 																			? 'bg-indigo-50'
-																			: 'hover:bg-gray-50'
+																			: 'hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900'
 																	}`}
 																	aria-selected={selectedIndex === globalIdx}
 																>
@@ -738,11 +738,11 @@ export function GlobalSearchBar({
 																		{RESULT_TYPE_ICONS[type]}
 																	</span>
 																	<div className="flex-1 min-w-0">
-																		<div className="text-sm text-gray-700 truncate">
+																		<div className="text-sm text-gray-700 dark:text-gray-300 truncate">
 																			{result.name}
 																		</div>
 																		{result.description && (
-																			<div className="text-xs text-gray-500 truncate">
+																			<div className="text-xs text-gray-500 dark:text-gray-400 truncate">
 																				{result.description}
 																			</div>
 																		)}
@@ -753,12 +753,12 @@ export function GlobalSearchBar({
 																				result.status === 'active' ||
 																				result.status === 'completed' ||
 																				result.status === 'enabled'
-																					? 'bg-green-100 text-green-700'
+																					? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
 																					: result.status === 'failed' ||
 																							result.status === 'offline' ||
 																							result.status === 'disabled'
-																						? 'bg-red-100 text-red-700'
-																						: 'bg-gray-100 text-gray-600'
+																						? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+																						: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
 																			}`}
 																		>
 																			{result.status}
@@ -791,26 +791,26 @@ export function GlobalSearchBar({
 											d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 										/>
 									</svg>
-									<p className="text-sm font-medium text-gray-700">
+									<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
 										No results for "{query}"
 									</p>
-									<p className="text-xs text-gray-500 mt-1">
+									<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 										Try different search terms
 									</p>
 								</div>
 							)}
 
 							{/* Search tip */}
-							<div className="p-2 border-t border-gray-100 bg-gray-50">
-								<div className="flex items-center justify-between px-2 text-xs text-gray-500">
+							<div className="p-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+								<div className="flex items-center justify-between px-2 text-xs text-gray-500 dark:text-gray-400">
 									<span>
-										<kbd className="px-1 py-0.5 bg-white border border-gray-200 rounded text-[10px]">
+										<kbd className="px-1 py-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-[10px]">
 											Tab
 										</kbd>{' '}
 										to filter by type
 									</span>
 									<span>
-										<kbd className="px-1 py-0.5 bg-white border border-gray-200 rounded text-[10px]">
+										<kbd className="px-1 py-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-[10px]">
 											Enter
 										</kbd>{' '}
 										to search
@@ -821,7 +821,7 @@ export function GlobalSearchBar({
 					)}
 
 					{query.length < 2 && recentSearches.length === 0 && (
-						<div className="p-4 text-center text-sm text-gray-500">
+						<div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
 							Start typing to search (min 2 characters)
 						</div>
 					)}

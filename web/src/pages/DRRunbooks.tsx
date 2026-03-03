@@ -18,16 +18,16 @@ function LoadingRow() {
 	return (
 		<tr className="animate-pulse">
 			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 rounded" />
+				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 rounded" />
+				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
 			</td>
 			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 rounded-full" />
+				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
 			</td>
 			<td className="px-6 py-4 text-right">
 				<div className="h-8 w-24 bg-gray-200 rounded inline-block" />
@@ -79,7 +79,7 @@ function CreateRunbookModal({ isOpen, onClose }: CreateRunbookModalProps) {
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<h3 className="text-lg font-semibold text-gray-900 mb-4">
 					Create DR Runbook
 				</h3>
@@ -93,7 +93,7 @@ function CreateRunbookModal({ isOpen, onClose }: CreateRunbookModalProps) {
 								onChange={(e) => setUseSchedule(e.target.checked)}
 								className="rounded border-gray-300"
 							/>
-							<label htmlFor="use-schedule" className="text-sm text-gray-700">
+							<label htmlFor="use-schedule" className="text-sm text-gray-700 dark:text-gray-300">
 								Generate from existing backup schedule
 							</label>
 						</div>
@@ -102,7 +102,7 @@ function CreateRunbookModal({ isOpen, onClose }: CreateRunbookModalProps) {
 							<div>
 								<label
 									htmlFor="schedule"
-									className="block text-sm font-medium text-gray-700 mb-1"
+									className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 								>
 									Backup Schedule
 								</label>
@@ -110,7 +110,7 @@ function CreateRunbookModal({ isOpen, onClose }: CreateRunbookModalProps) {
 									id="schedule"
 									value={scheduleId}
 									onChange={(e) => setScheduleId(e.target.value)}
-									className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 									required
 								>
 									<option value="">Select a schedule</option>
@@ -129,7 +129,7 @@ function CreateRunbookModal({ isOpen, onClose }: CreateRunbookModalProps) {
 								<div>
 									<label
 										htmlFor="name"
-										className="block text-sm font-medium text-gray-700 mb-1"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 									>
 										Name
 									</label>
@@ -139,14 +139,14 @@ function CreateRunbookModal({ isOpen, onClose }: CreateRunbookModalProps) {
 										value={name}
 										onChange={(e) => setName(e.target.value)}
 										placeholder="e.g., Production Database Recovery"
-										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 										required
 									/>
 								</div>
 								<div>
 									<label
 										htmlFor="description"
-										className="block text-sm font-medium text-gray-700 mb-1"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 									>
 										Description
 									</label>
@@ -156,13 +156,13 @@ function CreateRunbookModal({ isOpen, onClose }: CreateRunbookModalProps) {
 										onChange={(e) => setDescription(e.target.value)}
 										placeholder="Describe the purpose and scope of this runbook"
 										rows={3}
-										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 									/>
 								</div>
 								<div>
 									<label
 										htmlFor="schedule-optional"
-										className="block text-sm font-medium text-gray-700 mb-1"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 									>
 										Associated Schedule (optional)
 									</label>
@@ -170,7 +170,7 @@ function CreateRunbookModal({ isOpen, onClose }: CreateRunbookModalProps) {
 										id="schedule-optional"
 										value={scheduleId}
 										onChange={(e) => setScheduleId(e.target.value)}
-										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 									>
 										<option value="">None</option>
 										{schedules?.map((schedule) => (
@@ -194,7 +194,7 @@ function CreateRunbookModal({ isOpen, onClose }: CreateRunbookModalProps) {
 						<button
 							type="button"
 							onClick={onClose}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 						>
 							Cancel
 						</button>
@@ -231,16 +231,16 @@ function ViewRunbookModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						DR Runbook Document
 					</h3>
 					<button
 						type="button"
 						onClick={onClose}
 						aria-label="Close"
-						className="text-gray-500 hover:text-gray-700"
+						className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
 					>
 						<svg
 							aria-hidden="true"
@@ -261,14 +261,14 @@ function ViewRunbookModal({
 
 				{isLoading ? (
 					<div className="animate-pulse space-y-4">
-						<div className="h-8 bg-gray-200 rounded w-1/3" />
-						<div className="h-4 bg-gray-200 rounded w-full" />
-						<div className="h-4 bg-gray-200 rounded w-2/3" />
-						<div className="h-4 bg-gray-200 rounded w-3/4" />
+						<div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+						<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+						<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+						<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
 					</div>
 				) : renderData ? (
 					<div className="prose max-w-none">
-						<pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded-lg text-sm font-mono overflow-x-auto">
+						<pre className="whitespace-pre-wrap bg-gray-50 dark:bg-gray-900 p-4 rounded-lg text-sm font-mono overflow-x-auto">
 							{renderData.content}
 						</pre>
 					</div>
@@ -280,7 +280,7 @@ function ViewRunbookModal({
 					<button
 						type="button"
 						onClick={onClose}
-						className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+						className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 					>
 						Close
 					</button>
@@ -335,19 +335,19 @@ function RunbookRow({
 	const statusColor = getStatusColor(runbook.status);
 
 	return (
-		<tr className="hover:bg-gray-50">
+		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900">{runbook.name}</div>
+				<div className="font-medium text-gray-900 dark:text-white">{runbook.name}</div>
 				{runbook.description && (
-					<div className="text-sm text-gray-500 truncate max-w-xs">
+					<div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
 						{runbook.description}
 					</div>
 				)}
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{runbook.steps.length} steps
 			</td>
-			<td className="px-6 py-4 text-sm text-gray-500">
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
 				{formatDate(runbook.updated_at)}
 			</td>
 			<td className="px-6 py-4">
@@ -395,7 +395,7 @@ function RunbookRow({
 								type="button"
 								onClick={() => onArchive(runbook.id)}
 								disabled={isUpdating}
-								className="text-gray-600 hover:text-gray-800 text-sm font-medium disabled:opacity-50"
+								className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm font-medium disabled:opacity-50"
 							>
 								Archive
 							</button>
@@ -467,8 +467,8 @@ export function DRRunbooks() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900">DR Runbooks</h1>
-					<p className="text-gray-600 mt-1">
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">DR Runbooks</h1>
+					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Disaster recovery procedures and testing
 					</p>
 				</div>
@@ -497,27 +497,27 @@ export function DRRunbooks() {
 
 			{drStatus && (
 				<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-					<div className="bg-white rounded-lg border border-gray-200 p-4">
-						<p className="text-sm text-gray-600">Total Runbooks</p>
-						<p className="text-2xl font-bold text-gray-900">
+					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+						<p className="text-sm text-gray-600 dark:text-gray-400">Total Runbooks</p>
+						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{drStatus.total_runbooks}
 						</p>
 					</div>
-					<div className="bg-white rounded-lg border border-gray-200 p-4">
-						<p className="text-sm text-gray-600">Active Runbooks</p>
+					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+						<p className="text-sm text-gray-600 dark:text-gray-400">Active Runbooks</p>
 						<p className="text-2xl font-bold text-green-600">
 							{drStatus.active_runbooks}
 						</p>
 					</div>
-					<div className="bg-white rounded-lg border border-gray-200 p-4">
-						<p className="text-sm text-gray-600">Tests (30 days)</p>
-						<p className="text-2xl font-bold text-gray-900">
+					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+						<p className="text-sm text-gray-600 dark:text-gray-400">Tests (30 days)</p>
+						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{drStatus.tests_last_30_days}
 						</p>
 					</div>
-					<div className="bg-white rounded-lg border border-gray-200 p-4">
-						<p className="text-sm text-gray-600">Pass Rate</p>
-						<p className="text-2xl font-bold text-gray-900">
+					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+						<p className="text-sm text-gray-600 dark:text-gray-400">Pass Rate</p>
+						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{drStatus.pass_rate.toFixed(1)}%
 						</p>
 					</div>
@@ -525,8 +525,8 @@ export function DRRunbooks() {
 			)}
 
 			{recentTests.length > 0 && (
-				<div className="bg-white rounded-lg border border-gray-200 p-4">
-					<h3 className="font-medium text-gray-900 mb-3">Recent Tests</h3>
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+					<h3 className="font-medium text-gray-900 dark:text-white mb-3">Recent Tests</h3>
 					<div className="space-y-2">
 						{recentTests.map((test) => (
 							<div
@@ -555,22 +555,22 @@ export function DRRunbooks() {
 				</div>
 			)}
 
-			<div className="bg-white rounded-lg border border-gray-200">
-				<div className="p-6 border-b border-gray-200">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+				<div className="p-6 border-b border-gray-200 dark:border-gray-700">
 					<div className="flex items-center gap-4">
 						<input
 							type="text"
 							placeholder="Search runbooks..."
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
-							className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						/>
 						<select
 							value={statusFilter}
 							onChange={(e) =>
 								setStatusFilter(e.target.value as 'all' | DRRunbookStatus)
 							}
-							className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							className="px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 						>
 							<option value="all">All Status</option>
 							<option value="draft">Draft</option>
@@ -587,26 +587,26 @@ export function DRRunbooks() {
 					</div>
 				) : isLoading ? (
 					<table className="w-full">
-						<thead className="bg-gray-50 border-b border-gray-200">
+						<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Runbook
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Steps
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Last Updated
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Status
 								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-gray-200">
+						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 							<LoadingRow />
 							<LoadingRow />
 							<LoadingRow />
@@ -614,26 +614,26 @@ export function DRRunbooks() {
 					</table>
 				) : filteredRunbooks && filteredRunbooks.length > 0 ? (
 					<table className="w-full">
-						<thead className="bg-gray-50 border-b border-gray-200">
+						<thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
 							<tr>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Runbook
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Steps
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Last Updated
 								</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Status
 								</th>
-								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+								<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									Actions
 								</th>
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-gray-200">
+						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 							{filteredRunbooks.map((runbook) => (
 								<RunbookRow
 									key={runbook.id}
@@ -667,7 +667,7 @@ export function DRRunbooks() {
 								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
 							/>
 						</svg>
-						<h3 className="text-lg font-medium text-gray-900 mb-2">
+						<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
 							No DR runbooks configured
 						</h3>
 						<p className="mb-4">

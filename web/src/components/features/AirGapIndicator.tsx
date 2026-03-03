@@ -25,8 +25,8 @@ export function AirGapIndicator({
 			to="/admin/license"
 			className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
 				licenseValid
-					? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
-					: 'bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-300'
+					? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+					: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 hover:bg-amber-200 border border-amber-300 dark:border-amber-700'
 			} ${className}`}
 			title={
 				licenseValid
@@ -75,11 +75,11 @@ export function AirGapStatusCard() {
 
 	if (isLoading || licenseLoading) {
 		return (
-			<div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
-				<div className="h-6 bg-gray-200 rounded w-1/3 mb-4" />
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
+				<div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4" />
 				<div className="space-y-3">
-					<div className="h-4 bg-gray-200 rounded w-1/2" />
-					<div className="h-4 bg-gray-200 rounded w-2/3" />
+					<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+					<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
 				</div>
 			</div>
 		);
@@ -87,9 +87,9 @@ export function AirGapStatusCard() {
 
 	if (!isAirGapMode) {
 		return (
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 				<div className="flex items-center gap-3 mb-4">
-					<div className="p-2 bg-blue-100 rounded-lg">
+					<div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
 						<svg
 							aria-hidden="true"
 							className="w-5 h-5 text-blue-600"
@@ -106,13 +106,13 @@ export function AirGapStatusCard() {
 						</svg>
 					</div>
 					<div>
-						<h3 className="font-semibold text-gray-900">Connected Mode</h3>
-						<p className="text-sm text-gray-500">
+						<h3 className="font-semibold text-gray-900 dark:text-white">Connected Mode</h3>
+						<p className="text-sm text-gray-500 dark:text-gray-400">
 							System is operating with network access
 						</p>
 					</div>
 				</div>
-				<div className="text-sm text-gray-600">
+				<div className="text-sm text-gray-600 dark:text-gray-400">
 					<p>
 						The system can connect to external services for updates, telemetry,
 						and documentation.
@@ -123,9 +123,9 @@ export function AirGapStatusCard() {
 	}
 
 	return (
-		<div className="bg-white rounded-lg border border-slate-200 p-6">
+		<div className="bg-white dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6">
 			<div className="flex items-center gap-3 mb-4">
-				<div className="p-2 bg-slate-100 rounded-lg">
+				<div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
 					<svg
 						aria-hidden="true"
 						className="w-5 h-5 text-slate-600"
@@ -148,8 +148,8 @@ export function AirGapStatusCard() {
 					</svg>
 				</div>
 				<div>
-					<h3 className="font-semibold text-gray-900">Air-Gapped Mode</h3>
-					<p className="text-sm text-gray-500">
+					<h3 className="font-semibold text-gray-900 dark:text-white">Air-Gapped Mode</h3>
+					<p className="text-sm text-gray-500 dark:text-gray-400">
 						Operating in offline/isolated environment
 					</p>
 				</div>
@@ -157,10 +157,10 @@ export function AirGapStatusCard() {
 
 			<div className="space-y-4">
 				{/* License Status */}
-				<div className="flex items-center justify-between py-2 border-b border-gray-100">
-					<span className="text-sm text-gray-600">License Status</span>
+				<div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+					<span className="text-sm text-gray-600 dark:text-gray-400">License Status</span>
 					{license?.valid ? (
-						<span className="inline-flex items-center gap-1 text-sm text-green-700 bg-green-50 px-2 py-0.5 rounded">
+						<span className="inline-flex items-center gap-1 text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded">
 							<svg
 								aria-hidden="true"
 								className="w-4 h-4"
@@ -176,7 +176,7 @@ export function AirGapStatusCard() {
 							Valid
 						</span>
 					) : (
-						<span className="inline-flex items-center gap-1 text-sm text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+						<span className="inline-flex items-center gap-1 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded">
 							<svg
 								aria-hidden="true"
 								className="w-4 h-4"
@@ -196,13 +196,13 @@ export function AirGapStatusCard() {
 
 				{/* License Expiry */}
 				{license?.expires_at && (
-					<div className="flex items-center justify-between py-2 border-b border-gray-100">
-						<span className="text-sm text-gray-600">Expires</span>
+					<div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+						<span className="text-sm text-gray-600 dark:text-gray-400">Expires</span>
 						<span
 							className={`text-sm ${
 								(license.days_until_expiry ?? 0) <= 30
-									? 'text-amber-600 font-medium'
-									: 'text-gray-900'
+									? 'text-amber-600 dark:text-amber-400 font-medium'
+									: 'text-gray-900 dark:text-white'
 							}`}
 						>
 							{new Date(license.expires_at).toLocaleDateString()}
@@ -214,19 +214,19 @@ export function AirGapStatusCard() {
 
 				{/* License Type */}
 				{license?.type && (
-					<div className="flex items-center justify-between py-2 border-b border-gray-100">
-						<span className="text-sm text-gray-600">License Type</span>
-						<span className="text-sm font-medium text-gray-900 capitalize">
+					<div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+						<span className="text-sm text-gray-600 dark:text-gray-400">License Type</span>
+						<span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
 							{license.type}
 						</span>
 					</div>
 				)}
 
 				{/* External Links */}
-				<div className="flex items-center justify-between py-2 border-b border-gray-100">
-					<span className="text-sm text-gray-600">External Links</span>
+				<div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+					<span className="text-sm text-gray-600 dark:text-gray-400">External Links</span>
 					<span
-						className={`text-sm ${disableExternalLinks ? 'text-red-600' : 'text-green-600'}`}
+						className={`text-sm ${disableExternalLinks ? 'text-red-600 dark:text-red-400' : 'text-green-600'}`}
 					>
 						{disableExternalLinks ? 'Blocked' : 'Allowed'}
 					</span>
@@ -234,17 +234,17 @@ export function AirGapStatusCard() {
 
 				{/* Offline Docs */}
 				{offlineDocsVersion && (
-					<div className="flex items-center justify-between py-2 border-b border-gray-100">
-						<span className="text-sm text-gray-600">Offline Documentation</span>
-						<span className="text-sm text-gray-900">v{offlineDocsVersion}</span>
+					<div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+						<span className="text-sm text-gray-600 dark:text-gray-400">Offline Documentation</span>
+						<span className="text-sm text-gray-900 dark:text-white">v{offlineDocsVersion}</span>
 					</div>
 				)}
 
 				{/* Organization */}
 				{license?.organization && (
 					<div className="flex items-center justify-between py-2">
-						<span className="text-sm text-gray-600">Organization</span>
-						<span className="text-sm font-medium text-gray-900">
+						<span className="text-sm text-gray-600 dark:text-gray-400">Organization</span>
+						<span className="text-sm font-medium text-gray-900 dark:text-white">
 							{license.organization}
 						</span>
 					</div>
@@ -252,7 +252,7 @@ export function AirGapStatusCard() {
 			</div>
 
 			{/* Actions */}
-			<div className="mt-6 pt-4 border-t border-gray-100">
+			<div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
 				<Link
 					to="/admin/license"
 					className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"

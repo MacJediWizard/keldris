@@ -297,20 +297,20 @@ export function PatternLibraryModal({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
-				<div className="p-6 border-b border-gray-200 flex items-center justify-between">
+			<div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
+				<div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
 					<div>
-						<h3 className="text-lg font-semibold text-gray-900">
+						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 							Exclude Patterns Library
 						</h3>
-						<p className="text-sm text-gray-500 mt-1">
+						<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 							Select patterns to exclude from your backups
 						</p>
 					</div>
 					<button
 						type="button"
 						onClick={onClose}
-						className="text-gray-400 hover:text-gray-500"
+						className="text-gray-400 hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-300"
 					>
 						<svg
 							className="w-6 h-6"
@@ -331,14 +331,14 @@ export function PatternLibraryModal({
 
 				<div className="flex-1 flex overflow-hidden">
 					{/* Categories sidebar */}
-					<div className="w-56 border-r border-gray-200 overflow-y-auto p-4">
+					<div className="w-56 border-r border-gray-200 dark:border-gray-700 overflow-y-auto p-4">
 						<button
 							type="button"
 							onClick={() => setSelectedCategory(null)}
 							className={`w-full text-left px-3 py-2 rounded-lg mb-2 transition-colors ${
 								selectedCategory === null
-									? 'bg-indigo-50 text-indigo-700'
-									: 'text-gray-700 hover:bg-gray-50'
+									? 'bg-indigo-50 text-indigo-700 dark:text-indigo-400'
+									: 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900'
 							}`}
 						>
 							All Categories
@@ -351,18 +351,18 @@ export function PatternLibraryModal({
 									onClick={() => setSelectedCategory(cat.id)}
 									className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${
 										selectedCategory === cat.id
-											? 'bg-indigo-50 text-indigo-700'
-											: 'text-gray-700 hover:bg-gray-50'
+											? 'bg-indigo-50 text-indigo-700 dark:text-indigo-400'
+											: 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900'
 									}`}
 								>
 									{categoryIcons[cat.id] || (
-										<span className="w-4 h-4 rounded bg-gray-200" />
+										<span className="w-4 h-4 rounded bg-gray-200 dark:bg-gray-700" />
 									)}
 									<span className="text-sm">{cat.name}</span>
 								</button>
 							))}
 						</div>
-						<div className="border-t border-gray-200 mt-4 pt-4">
+						<div className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4">
 							<button
 								type="button"
 								onClick={() => setShowCustomForm(true)}
@@ -392,13 +392,13 @@ export function PatternLibraryModal({
 						{showCustomForm ? (
 							<div className="space-y-4">
 								<div className="flex items-center justify-between mb-4">
-									<h4 className="font-medium text-gray-900">
+									<h4 className="font-medium text-gray-900 dark:text-white">
 										Create Custom Pattern
 									</h4>
 									<button
 										type="button"
 										onClick={() => setShowCustomForm(false)}
-										className="text-sm text-gray-500 hover:text-gray-700"
+										className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
 									>
 										Cancel
 									</button>
@@ -406,7 +406,7 @@ export function PatternLibraryModal({
 								<div>
 									<label
 										htmlFor="custom-name"
-										className="block text-sm font-medium text-gray-700 mb-1"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 									>
 										Name
 									</label>
@@ -416,13 +416,13 @@ export function PatternLibraryModal({
 										value={customName}
 										onChange={(e) => setCustomName(e.target.value)}
 										placeholder="My Custom Patterns"
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 									/>
 								</div>
 								<div>
 									<label
 										htmlFor="custom-description"
-										className="block text-sm font-medium text-gray-700 mb-1"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 									>
 										Description
 									</label>
@@ -432,13 +432,13 @@ export function PatternLibraryModal({
 										value={customDescription}
 										onChange={(e) => setCustomDescription(e.target.value)}
 										placeholder="Patterns for my project"
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 									/>
 								</div>
 								<div>
 									<label
 										htmlFor="custom-category"
-										className="block text-sm font-medium text-gray-700 mb-1"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 									>
 										Category
 									</label>
@@ -450,7 +450,7 @@ export function PatternLibraryModal({
 												e.target.value as ExcludePatternCategory,
 											)
 										}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 									>
 										{categories?.map((cat: CategoryInfo) => (
 											<option key={cat.id} value={cat.id}>
@@ -462,7 +462,7 @@ export function PatternLibraryModal({
 								<div>
 									<label
 										htmlFor="custom-patterns"
-										className="block text-sm font-medium text-gray-700 mb-1"
+										className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 									>
 										Patterns (one per line)
 									</label>
@@ -472,7 +472,7 @@ export function PatternLibraryModal({
 										onChange={(e) => setCustomPatterns(e.target.value)}
 										placeholder="*.log&#10;temp/*&#10;.cache/"
 										rows={5}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+										className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white font-mono text-sm"
 									/>
 								</div>
 								<button
@@ -512,28 +512,28 @@ export function PatternLibraryModal({
 												isSelected
 													? 'border-indigo-500 bg-indigo-50'
 													: alreadyAdded
-														? 'border-gray-200 bg-gray-50 opacity-60'
-														: 'border-gray-200 hover:border-gray-300'
+														? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 opacity-60'
+														: 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600 dark:hover:border-gray-600'
 											}`}
 										>
 											<div className="flex items-start justify-between">
 												<div className="flex-1">
 													<div className="flex items-center gap-2">
-														<h5 className="font-medium text-gray-900">
+														<h5 className="font-medium text-gray-900 dark:text-white">
 															{pattern.name}
 														</h5>
 														{alreadyAdded && (
-															<span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+															<span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded">
 																Added
 															</span>
 														)}
 														{partiallyAdded && (
-															<span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
+															<span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-2 py-0.5 rounded">
 																Partially added
 															</span>
 														)}
 													</div>
-													<p className="text-sm text-gray-500 mt-0.5">
+													<p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
 														{pattern.description}
 													</p>
 													<div className="mt-2 flex flex-wrap gap-1">
@@ -545,15 +545,15 @@ export function PatternLibraryModal({
 																	key={i}
 																	className={`text-xs px-1.5 py-0.5 rounded ${
 																		existingPatternsSet.has(p)
-																			? 'bg-green-100 text-green-700'
-																			: 'bg-gray-100 text-gray-600'
+																			? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+																			: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
 																	}`}
 																>
 																	{p}
 																</code>
 															))}
 														{pattern.patterns.length > 5 && (
-															<span className="text-xs text-gray-500">
+															<span className="text-xs text-gray-500 dark:text-gray-400">
 																+{pattern.patterns.length - 5} more
 															</span>
 														)}
@@ -567,8 +567,8 @@ export function PatternLibraryModal({
 																onClick={() => togglePattern(pattern.name)}
 																className={`p-2 rounded-lg transition-colors ${
 																	isSelected
-																		? 'bg-indigo-100 text-indigo-700'
-																		: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+																		? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+																		: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
 																}`}
 																title={isSelected ? 'Deselect' : 'Select'}
 															>
@@ -607,8 +607,8 @@ export function PatternLibraryModal({
 				</div>
 
 				{/* Footer */}
-				<div className="p-4 border-t border-gray-200 flex items-center justify-between">
-					<div className="text-sm text-gray-500">
+				<div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+					<div className="text-sm text-gray-500 dark:text-gray-400">
 						{selectedPatterns.size > 0 && (
 							<span>
 								{selectedPatterns.size} pattern
@@ -622,7 +622,7 @@ export function PatternLibraryModal({
 						<button
 							type="button"
 							onClick={onClose}
-							className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+							className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-lg transition-colors"
 						>
 							Cancel
 						</button>

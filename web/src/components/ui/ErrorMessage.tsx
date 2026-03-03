@@ -4,7 +4,7 @@ interface ErrorMessageProps {
 
 export function ErrorMessage({ message }: ErrorMessageProps) {
 	return (
-		<div className="rounded-md border border-red-200 bg-red-50 p-4">
+		<div className="rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
 			<div className="flex items-center gap-3">
 				<svg
 					className="h-5 w-5 text-red-400"
@@ -18,7 +18,7 @@ export function ErrorMessage({ message }: ErrorMessageProps) {
 						clipRule="evenodd"
 					/>
 				</svg>
-				<p className="text-sm font-medium text-red-800" role="alert">
+				<p className="text-sm font-medium text-red-800 dark:text-red-400" role="alert">
 					{message}
 				</p>
 			</div>

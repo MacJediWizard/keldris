@@ -144,14 +144,14 @@ function HookForm({
 	return (
 		<form onSubmit={handleSubmit} className="space-y-4">
 			<div>
-				<h4 className="text-sm font-medium text-gray-900">{typeInfo?.label}</h4>
-				<p className="text-xs text-gray-500">{typeInfo?.description}</p>
+				<h4 className="text-sm font-medium text-gray-900 dark:text-white">{typeInfo?.label}</h4>
+				<p className="text-xs text-gray-500 dark:text-gray-400">{typeInfo?.description}</p>
 			</div>
 
 			<div>
 				<label
 					htmlFor="container-name"
-					className="block text-sm font-medium text-gray-700 mb-1"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 				>
 					Container Name
 				</label>
@@ -161,10 +161,10 @@ function HookForm({
 					value={containerName}
 					onChange={(e) => setContainerName(e.target.value)}
 					placeholder="my-database"
-					className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+					className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 					required
 				/>
-				<p className="text-xs text-gray-500 mt-1">
+				<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 					The Docker container name or ID to execute the hook in.
 				</p>
 			</div>
@@ -172,7 +172,7 @@ function HookForm({
 			<div>
 				<label
 					htmlFor="template"
-					className="block text-sm font-medium text-gray-700 mb-1"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 				>
 					Template
 				</label>
@@ -182,7 +182,7 @@ function HookForm({
 					onChange={(e) =>
 						handleTemplateChange(e.target.value as ContainerHookTemplate)
 					}
-					className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+					className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 					disabled={!!hook}
 				>
 					<option value="none">Custom Command</option>
@@ -198,7 +198,7 @@ function HookForm({
 				<div>
 					<label
 						htmlFor="command"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						Command
 					</label>
@@ -208,21 +208,21 @@ function HookForm({
 						onChange={(e) => setCommand(e.target.value)}
 						placeholder="pg_dump -U postgres -d mydb > /tmp/backup.sql"
 						rows={4}
-						className="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 						required
 					/>
-					<p className="text-xs text-gray-500 mt-1">
+					<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
 						Shell command to execute inside the container (runs with sh -c).
 					</p>
 				</div>
 			) : (
 				<>
 					{templateInfo && (
-						<div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-							<p className="text-sm text-gray-700 mb-2">
+						<div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+							<p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
 								{templateInfo.description}
 							</p>
-							<div className="bg-gray-100 p-2 rounded text-xs font-mono text-gray-600 whitespace-pre-wrap">
+							<div className="bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs font-mono text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
 								{hookType === 'pre_backup'
 									? templateInfo.pre_backup_cmd
 									: templateInfo.post_backup_cmd}
@@ -234,14 +234,14 @@ function HookForm({
 						(templateInfo.required_vars.length > 0 ||
 							templateInfo.optional_vars.length > 0) && (
 							<div className="space-y-3">
-								<p className="text-sm font-medium text-gray-700">
+								<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
 									Template Variables
 								</p>
 								{templateInfo.required_vars.map((varName) => (
 									<div key={varName}>
 										<label
 											htmlFor={`var-${varName}`}
-											className="block text-xs font-medium text-gray-600 mb-1"
+											className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
 										>
 											{varName} <span className="text-red-500">*</span>
 										</label>
@@ -255,7 +255,7 @@ function HookForm({
 													[varName]: e.target.value,
 												})
 											}
-											className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+											className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 											required
 										/>
 									</div>
@@ -264,7 +264,7 @@ function HookForm({
 									<div key={varName}>
 										<label
 											htmlFor={`var-${varName}`}
-											className="block text-xs font-medium text-gray-600 mb-1"
+											className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1"
 										>
 											{varName}
 											{templateInfo.default_vars[varName] && (
@@ -284,7 +284,7 @@ function HookForm({
 												})
 											}
 											placeholder={templateInfo.default_vars[varName]}
-											className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+											className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 										/>
 									</div>
 								))}
@@ -297,7 +297,7 @@ function HookForm({
 				<div>
 					<label
 						htmlFor="working-dir"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						Working Directory
 					</label>
@@ -307,14 +307,14 @@ function HookForm({
 						value={workingDir}
 						onChange={(e) => setWorkingDir(e.target.value)}
 						placeholder="/app"
-						className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 					/>
 				</div>
 
 				<div>
 					<label
 						htmlFor="user"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						User
 					</label>
@@ -324,7 +324,7 @@ function HookForm({
 						value={user}
 						onChange={(e) => setUser(e.target.value)}
 						placeholder="postgres"
-						className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 					/>
 				</div>
 			</div>
@@ -333,7 +333,7 @@ function HookForm({
 				<div>
 					<label
 						htmlFor="timeout-seconds"
-						className="block text-sm font-medium text-gray-700 mb-1"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 					>
 						Timeout (seconds)
 					</label>
@@ -346,7 +346,7 @@ function HookForm({
 						}
 						min={1}
 						max={3600}
-						className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 					/>
 				</div>
 
@@ -356,9 +356,9 @@ function HookForm({
 							type="checkbox"
 							checked={enabled}
 							onChange={(e) => setEnabled(e.target.checked)}
-							className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+							className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 						/>
-						<span className="text-sm text-gray-700">Enabled</span>
+						<span className="text-sm text-gray-700 dark:text-gray-300">Enabled</span>
 					</label>
 				</div>
 			</div>
@@ -370,13 +370,13 @@ function HookForm({
 							type="checkbox"
 							checked={failOnError}
 							onChange={(e) => setFailOnError(e.target.checked)}
-							className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+							className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 						/>
-						<span className="text-sm text-gray-700">
+						<span className="text-sm text-gray-700 dark:text-gray-300">
 							Fail backup if hook fails
 						</span>
 					</label>
-					<p className="text-xs text-gray-500 mt-1 ml-6">
+					<p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
 						If enabled and this hook fails, the backup will be aborted.
 					</p>
 				</div>
@@ -385,7 +385,7 @@ function HookForm({
 			<div>
 				<label
 					htmlFor="description"
-					className="block text-sm font-medium text-gray-700 mb-1"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
 				>
 					Description
 				</label>
@@ -395,7 +395,7 @@ function HookForm({
 					value={description}
 					onChange={(e) => setDescription(e.target.value)}
 					placeholder="Optional description"
-					className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+					className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 				/>
 			</div>
 
@@ -403,7 +403,7 @@ function HookForm({
 				<button
 					type="button"
 					onClick={onCancel}
-					className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+					className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-lg transition-colors"
 				>
 					Cancel
 				</button>
@@ -441,30 +441,30 @@ function HookCard({ hook, scheduleId, onEdit }: HookCardProps) {
 
 	return (
 		<div
-			className={`border rounded-lg p-4 ${hook.enabled ? 'bg-white' : 'bg-gray-50 border-gray-200'}`}
+			className={`border rounded-lg p-4 ${hook.enabled ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700'}`}
 		>
 			<div className="flex items-start justify-between mb-2">
 				<div>
 					<div className="flex items-center gap-2">
-						<h4 className="text-sm font-medium text-gray-900">
+						<h4 className="text-sm font-medium text-gray-900 dark:text-white">
 							{hook.container_name}
 						</h4>
-						<span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+						<span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
 							{typeInfo?.label}
 						</span>
 						{hook.template !== 'none' && (
-							<span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded">
+							<span className="text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
 								{hook.template}
 							</span>
 						)}
 						{!hook.enabled && (
-							<span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded">
+							<span className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
 								Disabled
 							</span>
 						)}
 					</div>
 					{hook.description && (
-						<p className="text-xs text-gray-500 mt-1">{hook.description}</p>
+						<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{hook.description}</p>
 					)}
 				</div>
 				<div className="flex items-center gap-2">
@@ -479,22 +479,22 @@ function HookCard({ hook, scheduleId, onEdit }: HookCardProps) {
 						type="button"
 						onClick={handleDelete}
 						disabled={deleteHook.isPending}
-						className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
+						className="text-red-600 hover:text-red-800 dark:text-red-400 text-sm font-medium disabled:opacity-50"
 					>
 						Delete
 					</button>
 				</div>
 			</div>
-			<pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto max-h-24 whitespace-pre-wrap">
+			<pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded overflow-x-auto max-h-24 whitespace-pre-wrap dark:text-gray-300">
 				{hook.command.substring(0, 300)}
 				{hook.command.length > 300 && '...'}
 			</pre>
-			<div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+			<div className="mt-2 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
 				<span>Timeout: {hook.timeout_seconds}s</span>
 				{hook.working_dir && <span>Dir: {hook.working_dir}</span>}
 				{hook.user && <span>User: {hook.user}</span>}
 				{hook.type === 'pre_backup' && hook.fail_on_error && (
-					<span className="text-amber-600">Fails backup on error</span>
+					<span className="text-amber-600 dark:text-amber-400">Fails backup on error</span>
 				)}
 			</div>
 		</div>
@@ -517,10 +517,10 @@ export function ContainerHooksEditor({
 	if (isLoading) {
 		return (
 			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-				<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+				<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4">
 					<div className="animate-pulse">
-						<div className="h-6 w-48 bg-gray-200 rounded mb-4" />
-						<div className="h-32 bg-gray-200 rounded" />
+						<div className="h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded mb-4" />
+						<div className="h-32 bg-gray-200 dark:bg-gray-700 rounded" />
 					</div>
 				</div>
 			</div>
@@ -530,12 +530,12 @@ export function ContainerHooksEditor({
 	if (isError) {
 		return (
 			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-				<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-					<p className="text-red-600">Failed to load container hooks</p>
+				<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4">
+					<p className="text-red-600 dark:text-red-400">Failed to load container hooks</p>
 					<button
 						type="button"
 						onClick={onClose}
-						className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+						className="mt-4 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
 					>
 						Close
 					</button>
@@ -546,15 +546,15 @@ export function ContainerHooksEditor({
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
 				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold text-gray-900">
+					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Container Backup Hooks
 					</h3>
 					<button
 						type="button"
 						onClick={onClose}
-						className="text-gray-400 hover:text-gray-600"
+						className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
 						aria-label="Close"
 					>
 						<svg
@@ -591,7 +591,7 @@ export function ContainerHooksEditor({
 					/>
 				) : (
 					<>
-						<p className="text-sm text-gray-600 mb-4">
+						<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
 							Configure hooks to run inside Docker containers before and after
 							backups. Use pre-backup hooks to dump databases or stop writes,
 							and post-backup hooks to clean up or resume operations.
@@ -610,8 +610,8 @@ export function ContainerHooksEditor({
 							</div>
 						)}
 
-						<div className="border-t border-gray-200 pt-4">
-							<p className="text-sm font-medium text-gray-700 mb-2">
+						<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+							<p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 								Add a container hook:
 							</p>
 							<div className="grid grid-cols-2 gap-2">
@@ -620,12 +620,12 @@ export function ContainerHooksEditor({
 										key={type.value}
 										type="button"
 										onClick={() => setCreatingType(type.value)}
-										className="text-left px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+										className="text-left px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors"
 									>
-										<div className="text-sm font-medium text-gray-900">
+										<div className="text-sm font-medium text-gray-900 dark:text-white">
 											{type.label}
 										</div>
-										<div className="text-xs text-gray-500">
+										<div className="text-xs text-gray-500 dark:text-gray-400">
 											{type.description}
 										</div>
 									</button>
@@ -637,7 +637,7 @@ export function ContainerHooksEditor({
 							<button
 								type="button"
 								onClick={onClose}
-								className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+								className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
 							>
 								Close
 							</button>

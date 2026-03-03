@@ -122,12 +122,12 @@ export function MaintenanceCountdown() {
 	const showCountdown = data.show_countdown && countdown;
 
 	// Determine banner color based on state
-	let bannerClass = 'bg-blue-500'; // Default: upcoming
+	let bannerClass = 'bg-blue-50 dark:bg-blue-900/300'; // Default: upcoming
 	if (isActive) {
 		if (isReadOnly) {
 			bannerClass = 'bg-red-600'; // Active read-only
 		} else {
-			bannerClass = 'bg-amber-500'; // Active but not read-only
+			bannerClass = 'bg-amber-50 dark:bg-amber-900/300'; // Active but not read-only
 		}
 	}
 	if (showCountdown && countdown?.isUrgent) {
@@ -199,7 +199,7 @@ export function MaintenanceCountdown() {
 					{showCountdown && countdown && (
 						<span
 							className={`font-mono px-2 py-0.5 rounded ${
-								countdown.isUrgent ? 'bg-white/30 animate-pulse' : 'bg-white/20'
+								countdown.isUrgent ? 'bg-white dark:bg-gray-800/30 animate-pulse' : 'bg-white dark:bg-gray-800/20'
 							}`}
 						>
 							{countdown.display}
@@ -207,7 +207,7 @@ export function MaintenanceCountdown() {
 					)}
 
 					{/* Time remaining */}
-					<span className="font-mono bg-white/20 px-2 py-0.5 rounded">
+					<span className="font-mono bg-white dark:bg-gray-800/20 px-2 py-0.5 rounded">
 						{isActive ? `Ends in ${timeLeft}` : `Starts in ${timeLeft}`}
 					</span>
 
@@ -216,7 +216,7 @@ export function MaintenanceCountdown() {
 						<button
 							type="button"
 							onClick={() => setShowOverrideConfirm(true)}
-							className="ml-2 px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-sm font-medium transition-colors"
+							className="ml-2 px-3 py-1 bg-white dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/30 rounded text-sm font-medium transition-colors"
 						>
 							Emergency Override
 						</button>
@@ -227,10 +227,10 @@ export function MaintenanceCountdown() {
 			{/* Emergency Override Confirmation Modal */}
 			{showOverrideConfirm && (
 				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-					<div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+					<div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
 						<div className="p-6">
 							<div className="flex items-center gap-3 mb-4">
-								<div className="p-2 bg-red-100 rounded-full">
+								<div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full">
 									<svg
 										className="w-6 h-6 text-red-600"
 										fill="none"
@@ -246,17 +246,17 @@ export function MaintenanceCountdown() {
 										/>
 									</svg>
 								</div>
-								<h3 className="text-lg font-semibold text-gray-900">
+								<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 									Emergency Override
 								</h3>
 							</div>
 
-							<p className="text-gray-600 mb-4">
+							<p className="text-gray-600 dark:text-gray-400 mb-4">
 								This will disable read-only mode and allow write operations
 								during the maintenance window. This action will be logged.
 							</p>
 
-							<p className="text-sm text-gray-500 mb-6">
+							<p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
 								Maintenance window: <strong>{window.title}</strong>
 							</p>
 
@@ -264,7 +264,7 @@ export function MaintenanceCountdown() {
 								<button
 									type="button"
 									onClick={() => setShowOverrideConfirm(false)}
-									className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+									className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900"
 								>
 									Cancel
 								</button>
