@@ -884,3 +884,50 @@ All API endpoints (`POST /api/v1/schedules`, `POST /api/v1/schedules/:id/run`, `
 ### Result
 - `npx tsc --noEmit`: clean
 - `npx biome check`: clean
+
+---
+
+## 2026-03-02 - Agent Auto-Update, Restic Management & Command Dispatch
+
+### What
+Wired up the command dispatch infrastructure so admins can push agent updates, restic updates, and other commands from the dashboard. The agent daemon now polls for commands after each heartbeat, executes them, and reports results. Restic is self-managed: auto-downloaded on startup if not found in PATH.
+
+### Changes (14 files)
+
+**DB Migration:**
+- `106_agent_version.sql` — adds `agent_version` column to `agents` table, adds `update_restic` to command type constraint
+
+**Server Models:**
+- `internal/models/agent.go` — `AgentVersion *string` field on Agent struct
+- `internal/models/agent_command.go` — `CommandTypeUpdateRestic` constant, `TargetResticVersion` on CommandPayload
+- `pkg/models/agent.go` — `AgentVersion` on HeartbeatRequest
+
+**Server DB Queries:**
+- `internal/db/store.go` — `agent_version` added to SELECT/Scan in GetAgentsByOrgID, GetAgentByID, GetAgentByAPIKeyHash; added to SET in UpdateAgent
+- `internal/db/store_concurrency.go` — `agent_version` in GetAgentByIDWithConcurrency
+- `internal/db/store_recovered_full.go` — `agent_version` in GetAgentGroupMembers
+
+**Server Handlers:**
+- `internal/api/handlers/agent_api.go` — stores AgentVersion from heartbeat
+- `internal/api/handlers/agent_commands.go` — accepts `update_restic` in validation binding
+
+**Agent Client:**
+- `internal/agent/client.go` — `AgentVersion` on HeartbeatRequest; new types/methods: `GetCommands`, `AcknowledgeCommand`, `ReportCommandResult`
+
+**Agent Daemon:**
+- `cmd/keldris-agent/main.go` — major additions:
+  - Version sent in every heartbeat
+  - `pollAndExecuteCommands` called as goroutine after each heartbeat
+  - Command dispatcher with executors: `update` (agent binary via updater pkg), `update_restic` (download from GitHub releases), `backup_now`, `restart` (syscall.Exec), `diagnostics`
+  - `resolveResticBinary` on startup: PATH → managed dir (`$CONFIG_DIR/bin/restic`) → auto-download from GitHub releases (bzip2 decompression)
+  - `sync.Mutex` concurrency guard prevents duplicate command execution
+
+**Frontend:**
+- `web/src/lib/types.ts` — `agent_version` on Agent, `update_restic` on CommandType, `target_restic_version` on CommandPayload
+- `web/src/pages/AgentDetails.tsx` — "Update Agent" and "Update Restic" buttons, agent version display in header, `update_restic` label in command type labels and confirmation map
+- `web/src/pages/Agents.tsx` — "Version" column in agents table (header + row)
+
+### Result
+- `go build ./...`: clean
+- `npx tsc --noEmit`: clean
+- `npx biome check`: clean
