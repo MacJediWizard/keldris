@@ -1,5 +1,22 @@
 # Keldris Development Journal
 
+## 2026-03-03 - Quick Install with Auto-Registration
+
+### What
+When a registration code exists, the quick install command now automatically includes `KELDRIS_SERVER`, `KELDRIS_CODE`, and `KELDRIS_ORG_ID` env vars so agents self-register on install. Also replaced the `YOUR_SERVER_URL` placeholder in the registration code modal with the actual server origin.
+
+### How
+- **`constants.ts`**: Added `getInstallCommand(platform, opts?)` builder that injects env vars into install commands when registration context is provided (uses `sudo -E` on Linux, `$env:` on Windows)
+- **`AgentDownloads.tsx`**: Accepts optional `registrationCode` and `orgId` props; computes server URL from `window.location.origin`; shows "(auto-registers with server)" hint when active
+- **`Agents.tsx`**: Extended `GenerateCodeModal.onSuccess` to pass `org_id` from API response; tracks `orgId` in `newCode` state; computes `activeCode`/`activeOrgId` with fallback to first non-expired pending registration via `useMe().current_org_id`; replaced `YOUR_SERVER_URL` with `window.location.origin` in `RegistrationCodeModal`
+
+### Files Modified
+- `web/src/lib/constants.ts`
+- `web/src/components/features/AgentDownloads.tsx`
+- `web/src/pages/Agents.tsx`
+
+---
+
 ## 2026-03-02 - Agent Security Hardening
 
 ### What
