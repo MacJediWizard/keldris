@@ -3,9 +3,12 @@ package main
 
 import (
 	"bufio"
+	"compress/bzip2"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -21,13 +25,13 @@ import (
 	"github.com/MacJediWizard/keldris/internal/backup"
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/config"
-	"github.com/MacJediWizard/keldris/internal/health"
 	"github.com/MacJediWizard/keldris/internal/diagnostics"
+	"github.com/MacJediWizard/keldris/internal/health"
 	"github.com/MacJediWizard/keldris/internal/httpclient"
 	"github.com/MacJediWizard/keldris/internal/support"
 	"github.com/MacJediWizard/keldris/internal/updater"
-	"github.com/robfig/cron/v3"
 	"github.com/google/uuid"
+	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog"
 
 	"github.com/spf13/cobra"
@@ -818,27 +822,29 @@ The daemon will:
 func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 	client := agent.NewClient(cfg.ServerURL, cfg.APIKey)
-	collector := health.NewCollector(cfg.ServerURL, "restic")
+
+	// Resolve restic binary: check PATH, then managed location, then auto-download
+	resticBinary := resolveResticBinary(&logger)
+	collector := health.NewCollector(cfg.ServerURL, resticBinary)
 
 	fmt.Printf("Keldris Agent %s starting...\n", Version)
 	fmt.Printf("Server: %s\n", cfg.ServerURL)
 	fmt.Printf("Heartbeat interval: %s\n", heartbeatInterval)
-
-	// Verify restic is available before starting
-	if _, err := exec.LookPath("restic"); err != nil {
-		logger.Warn().Msg("restic binary not found in PATH; backups will fail until restic is installed")
-		fmt.Println("WARNING: restic not found in PATH")
-	} else {
-		fmt.Println("Restic: available")
-	}
+	fmt.Printf("Restic: %s\n", resticBinary)
 	fmt.Println()
 
 	// Set up signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
+	// Concurrency guard for command execution
+	var cmdMu sync.Mutex
+
 	// Send initial heartbeat
 	sendHeartbeat(client, collector, &logger)
+
+	// Poll for commands after initial heartbeat
+	go pollAndExecuteCommands(client, cfg, &cmdMu, resticBinary, &logger)
 
 	heartbeatTicker := time.NewTicker(heartbeatInterval)
 	defer heartbeatTicker.Stop()
@@ -862,6 +868,7 @@ func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
 		select {
 		case <-heartbeatTicker.C:
 			sendHeartbeat(client, collector, &logger)
+			go pollAndExecuteCommands(client, cfg, &cmdMu, resticBinary, &logger)
 		case <-scheduleRefreshTicker.C:
 			refreshSchedules(cronScheduler, client, cfg, &logger)
 		case sig := <-sigChan:
@@ -916,7 +923,8 @@ func sendHeartbeat(client *agent.Client, collector *health.Collector, logger *ze
 	osInfo := health.GetOSInfo()
 
 	req := &agent.HeartbeatRequest{
-		Status: "healthy",
+		Status:       "healthy",
+		AgentVersion: Version,
 		OSInfo: &agent.OSInfo{
 			OS:       osInfo["os"],
 			Arch:     osInfo["arch"],
@@ -1774,4 +1782,392 @@ func runSupportBundle(outputPath string) error {
 	fmt.Println("about sensitive data.")
 
 	return nil
+}
+
+// resolveResticBinary finds or downloads the restic binary.
+// Check order: PATH → managed location → auto-download from GitHub.
+func resolveResticBinary(logger *zerolog.Logger) string {
+	// 1. Check PATH
+	if path, err := exec.LookPath("restic"); err == nil {
+		logger.Info().Str("path", path).Msg("found restic in PATH")
+		return path
+	}
+
+	// 2. Check managed location
+	managedPath := managedResticPath()
+	if managedPath != "" {
+		if _, err := os.Stat(managedPath); err == nil {
+			logger.Info().Str("path", managedPath).Msg("found managed restic binary")
+			return managedPath
+		}
+	}
+
+	// 3. Auto-download
+	if managedPath != "" {
+		logger.Info().Msg("restic not found, attempting auto-download")
+		if err := downloadRestic(managedPath, logger); err != nil {
+			logger.Warn().Err(err).Msg("failed to auto-download restic; backups will fail until restic is installed")
+			return "restic" // fall back to PATH lookup at runtime
+		}
+		return managedPath
+	}
+
+	logger.Warn().Msg("restic not found and managed path unavailable; backups will fail")
+	return "restic"
+}
+
+// managedResticPath returns the managed restic binary path under the config dir.
+func managedResticPath() string {
+	configDir, err := config.DefaultConfigDir()
+	if err != nil {
+		return ""
+	}
+	binDir := filepath.Join(configDir, "bin")
+	binary := "restic"
+	if runtime.GOOS == "windows" {
+		binary = "restic.exe"
+	}
+	return filepath.Join(binDir, binary)
+}
+
+// downloadRestic downloads the latest restic binary from GitHub releases.
+func downloadRestic(targetPath string, logger *zerolog.Logger) error {
+	// Ensure bin directory exists
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return fmt.Errorf("create bin directory: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Fetch latest restic release from GitHub
+	releaseURL := "https://api.github.com/repos/restic/restic/releases/latest"
+	req, err := http.NewRequestWithContext(ctx, "GET", releaseURL, nil)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("fetch release info: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("GitHub API returned %d", resp.StatusCode)
+	}
+
+	var release struct {
+		Assets []struct {
+			Name        string `json:"name"`
+			DownloadURL string `json:"browser_download_url"`
+		} `json:"assets"`
+	}
+	if err := decodeJSONBody(resp.Body, &release); err != nil {
+		return fmt.Errorf("parse release: %w", err)
+	}
+
+	// Find matching asset for this platform
+	osName := runtime.GOOS
+	archName := runtime.GOARCH
+	if archName == "amd64" {
+		archName = "amd64"
+	} else if archName == "arm64" {
+		archName = "arm64"
+	}
+
+	var downloadURL string
+	wantSuffix := fmt.Sprintf("_%s_%s.bz2", osName, archName)
+	for _, asset := range release.Assets {
+		if strings.HasSuffix(asset.Name, wantSuffix) {
+			downloadURL = asset.DownloadURL
+			break
+		}
+	}
+
+	if downloadURL == "" {
+		return fmt.Errorf("no restic binary found for %s/%s", osName, archName)
+	}
+
+	logger.Info().Str("url", downloadURL).Msg("downloading restic")
+
+	// Download the asset
+	dlReq, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
+	if err != nil {
+		return fmt.Errorf("create download request: %w", err)
+	}
+
+	dlResp, err := http.DefaultClient.Do(dlReq)
+	if err != nil {
+		return fmt.Errorf("download restic: %w", err)
+	}
+	defer dlResp.Body.Close()
+
+	if dlResp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download returned %d", dlResp.StatusCode)
+	}
+
+	// Write to temp file then rename
+	tmpFile, err := os.CreateTemp(filepath.Dir(targetPath), "restic-download-*")
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath) // clean up on failure
+
+	// restic releases are bzip2-compressed raw binaries
+	bz2Reader := newBzip2Reader(dlResp.Body)
+	if _, err := copyWithLimit(tmpFile, bz2Reader, 200*1024*1024); err != nil {
+		tmpFile.Close()
+		return fmt.Errorf("write restic binary: %w", err)
+	}
+	tmpFile.Close()
+
+	// Make executable
+	if err := os.Chmod(tmpPath, 0755); err != nil {
+		return fmt.Errorf("chmod restic: %w", err)
+	}
+
+	// Atomic rename
+	if err := os.Rename(tmpPath, targetPath); err != nil {
+		return fmt.Errorf("install restic: %w", err)
+	}
+
+	logger.Info().Str("path", targetPath).Msg("restic installed successfully")
+	return nil
+}
+
+// pollAndExecuteCommands polls the server for pending commands and executes them.
+func pollAndExecuteCommands(client *agent.Client, cfg *config.AgentConfig, mu *sync.Mutex, resticBinary string, logger *zerolog.Logger) {
+	if !mu.TryLock() {
+		logger.Debug().Msg("command execution already in progress, skipping poll")
+		return
+	}
+	defer mu.Unlock()
+
+	commands, err := client.GetCommands()
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to poll for commands")
+		return
+	}
+
+	if len(commands) == 0 {
+		return
+	}
+
+	logger.Info().Int("count", len(commands)).Msg("received commands from server")
+
+	for _, cmd := range commands {
+		executeCommand(client, cfg, cmd, resticBinary, logger)
+	}
+}
+
+// executeCommand dispatches and executes a single command.
+func executeCommand(client *agent.Client, cfg *config.AgentConfig, cmd agent.CommandResponse, resticBinary string, logger *zerolog.Logger) {
+	logger.Info().Str("command_id", cmd.ID).Str("type", cmd.Type).Msg("executing command")
+
+	// Acknowledge receipt
+	if err := client.AcknowledgeCommand(cmd.ID); err != nil {
+		logger.Error().Err(err).Str("command_id", cmd.ID).Msg("failed to acknowledge command")
+		return
+	}
+
+	// Report running
+	_ = client.ReportCommandResult(cmd.ID, &agent.CommandResultReport{Status: "running"})
+
+	// Dispatch based on type
+	var result *agent.CommandResultDetail
+	var execErr error
+
+	switch cmd.Type {
+	case "update":
+		result, execErr = executeUpdate(cfg, cmd.Payload, logger)
+		if execErr == nil {
+			// Report completed before restart
+			_ = client.ReportCommandResult(cmd.ID, &agent.CommandResultReport{
+				Status: "completed",
+				Result: result,
+			})
+			// Restart the agent
+			executeRestart(logger)
+			return
+		}
+	case "update_restic":
+		result, execErr = executeUpdateRestic(resticBinary, logger)
+	case "backup_now":
+		result, execErr = executeBackupNow(cfg, cmd.Payload, logger)
+	case "restart":
+		// Report completed before restart
+		_ = client.ReportCommandResult(cmd.ID, &agent.CommandResultReport{
+			Status: "completed",
+			Result: &agent.CommandResultDetail{Output: "restarting agent"},
+		})
+		executeRestart(logger)
+		return
+	case "diagnostics":
+		result, execErr = executeDiagnosticsCmd(cfg, logger)
+	default:
+		execErr = fmt.Errorf("unknown command type: %s", cmd.Type)
+	}
+
+	// Report result
+	if execErr != nil {
+		logger.Error().Err(execErr).Str("command_id", cmd.ID).Str("type", cmd.Type).Msg("command failed")
+		_ = client.ReportCommandResult(cmd.ID, &agent.CommandResultReport{
+			Status: "failed",
+			Result: &agent.CommandResultDetail{Error: execErr.Error()},
+		})
+	} else {
+		logger.Info().Str("command_id", cmd.ID).Str("type", cmd.Type).Msg("command completed")
+		_ = client.ReportCommandResult(cmd.ID, &agent.CommandResultReport{
+			Status: "completed",
+			Result: result,
+		})
+	}
+}
+
+// executeUpdate uses the updater package to download and apply a new agent binary.
+func executeUpdate(cfg *config.AgentConfig, payload *agent.CommandPayload, logger *zerolog.Logger) (*agent.CommandResultDetail, error) {
+	var proxyConfig *config.ProxyConfig
+	if cfg != nil {
+		proxyConfig = cfg.GetProxyConfig()
+	}
+
+	u := updater.NewWithProxy(Version, proxyConfig)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	info, err := u.CheckForUpdate(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("check for update: %w", err)
+	}
+
+	// If a target version is specified, verify it matches
+	if payload != nil && payload.TargetVersion != "" && payload.TargetVersion != info.LatestVersion {
+		return nil, fmt.Errorf("requested version %s but latest available is %s", payload.TargetVersion, info.LatestVersion)
+	}
+
+	logger.Info().Str("version", info.LatestVersion).Msg("downloading update")
+
+	downloadCtx, downloadCancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer downloadCancel()
+
+	tmpPath, err := u.Download(downloadCtx, info, nil)
+	if err != nil {
+		return nil, fmt.Errorf("download update: %w", err)
+	}
+	defer os.Remove(tmpPath)
+
+	if err := u.Apply(tmpPath); err != nil {
+		return nil, fmt.Errorf("apply update: %w", err)
+	}
+
+	return &agent.CommandResultDetail{
+		Output: fmt.Sprintf("updated from %s to %s", Version, info.LatestVersion),
+	}, nil
+}
+
+// executeUpdateRestic downloads/updates the restic binary.
+func executeUpdateRestic(currentBinary string, logger *zerolog.Logger) (*agent.CommandResultDetail, error) {
+	targetPath := managedResticPath()
+	if targetPath == "" {
+		return nil, fmt.Errorf("cannot determine managed restic path")
+	}
+
+	logger.Info().Str("target", targetPath).Msg("updating restic binary")
+
+	if err := downloadRestic(targetPath, logger); err != nil {
+		return nil, fmt.Errorf("download restic: %w", err)
+	}
+
+	// Verify by running restic version
+	out, err := exec.Command(targetPath, "version").CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("verify restic: %w", err)
+	}
+
+	version := strings.TrimSpace(string(out))
+	return &agent.CommandResultDetail{
+		Output: fmt.Sprintf("restic updated: %s", version),
+	}, nil
+}
+
+// executeBackupNow runs a backup for the specified or first schedule.
+func executeBackupNow(cfg *config.AgentConfig, payload *agent.CommandPayload, logger *zerolog.Logger) (*agent.CommandResultDetail, error) {
+	scheduleName := ""
+
+	// If a schedule ID is provided, look it up to find the name
+	if payload != nil && payload.ScheduleID != nil {
+		client := agent.NewClient(cfg.ServerURL, cfg.APIKey)
+		schedules, err := client.GetSchedules()
+		if err != nil {
+			return nil, fmt.Errorf("fetch schedules: %w", err)
+		}
+		targetID := *payload.ScheduleID
+		for _, s := range schedules {
+			if s.ID.String() == targetID {
+				scheduleName = s.Name
+				break
+			}
+		}
+		if scheduleName == "" {
+			return nil, fmt.Errorf("schedule %s not found", targetID)
+		}
+	}
+
+	if err := runBackup(cfg, scheduleName); err != nil {
+		return nil, err
+	}
+
+	return &agent.CommandResultDetail{
+		Output: "backup completed successfully",
+	}, nil
+}
+
+// executeRestart restarts the agent process.
+func executeRestart(logger *zerolog.Logger) {
+	logger.Info().Msg("restarting agent")
+
+	execPath, err := os.Executable()
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to get executable path for restart")
+		return
+	}
+
+	// Re-exec with same args
+	if err := syscall.Exec(execPath, os.Args, os.Environ()); err != nil {
+		logger.Error().Err(err).Msg("failed to restart agent")
+	}
+}
+
+// executeDiagnosticsCmd runs diagnostics and returns the result.
+func executeDiagnosticsCmd(cfg *config.AgentConfig, logger *zerolog.Logger) (*agent.CommandResultDetail, error) {
+	runner := diagnostics.NewRunner(cfg, Version)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	result := runner.Run(ctx)
+
+	return &agent.CommandResultDetail{
+		Output:      fmt.Sprintf("diagnostics complete: %d passed, %d failed", result.Summary.Passed, result.Summary.Failed),
+		Diagnostics: result.ToMap(),
+	}, nil
+}
+
+// decodeJSONBody decodes JSON from a reader into the target.
+func decodeJSONBody(r io.Reader, target any) error {
+	decoder := json.NewDecoder(r)
+	return decoder.Decode(target)
+}
+
+// newBzip2Reader wraps a bzip2 decompressor around the reader.
+func newBzip2Reader(r io.Reader) io.Reader {
+	return bzip2.NewReader(r)
+}
+
+// copyWithLimit copies up to limit bytes from src to dst.
+func copyWithLimit(dst io.Writer, src io.Reader, limit int64) (int64, error) {
+	return io.Copy(dst, io.LimitReader(src, limit))
 }

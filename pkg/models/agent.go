@@ -20,9 +20,10 @@ type OSInfo struct {
 
 // HeartbeatRequest is the request body for agent health reporting.
 type HeartbeatRequest struct {
-	Status  string            `json:"status" binding:"required,oneof=healthy unhealthy degraded"`
-	OSInfo  *OSInfo           `json:"os_info,omitempty"`
-	Metrics *HeartbeatMetrics `json:"metrics,omitempty"`
+	Status       string            `json:"status" binding:"required,oneof=healthy unhealthy degraded"`
+	AgentVersion string            `json:"agent_version,omitempty"`
+	OSInfo       *OSInfo           `json:"os_info,omitempty"`
+	Metrics      *HeartbeatMetrics `json:"metrics,omitempty"`
 }
 
 // HeartbeatMetrics contains system metrics reported by the agent.

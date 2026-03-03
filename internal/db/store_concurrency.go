@@ -319,7 +319,7 @@ func (db *DB) GetAgentByIDWithConcurrency(ctx context.Context, id uuid.UUID) (*m
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at,
 		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
-		       max_concurrent_backups, created_at, updated_at
+		       max_concurrent_backups, agent_version, created_at, updated_at
 		FROM agents
 		WHERE id = $1
 	`, id).Scan(
@@ -327,7 +327,7 @@ func (db *DB) GetAgentByIDWithConcurrency(ctx context.Context, id uuid.UUID) (*m
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 		&a.HealthCheckedAt,
 		&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
-		&a.MaxConcurrentBackups, &a.CreatedAt, &a.UpdatedAt,
+		&a.MaxConcurrentBackups, &a.AgentVersion, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent by ID: %w", err)

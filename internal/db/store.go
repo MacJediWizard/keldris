@@ -220,7 +220,7 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at,
 		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
-		       metadata, created_at, updated_at
+		       metadata, agent_version, created_at, updated_at
 		FROM agents
 		WHERE org_id = $1
 		ORDER BY hostname
@@ -244,7 +244,7 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 			&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 			&a.HealthCheckedAt,
 			&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
-			&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
+			&metadataBytes, &a.AgentVersion, &a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
@@ -286,7 +286,7 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at,
 		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
-		       metadata, created_at, updated_at
+		       metadata, agent_version, created_at, updated_at
 		FROM agents
 		WHERE id = $1
 	`, id).Scan(
@@ -294,7 +294,7 @@ func (db *DB) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, er
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 		&a.HealthCheckedAt,
 		&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
-		&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
+		&metadataBytes, &a.AgentVersion, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent: %w", err)
@@ -333,7 +333,7 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 		SELECT id, org_id, hostname, api_key_hash, os_info, network_mounts, last_seen, status,
 		       health_status, health_metrics, health_checked_at,
 		       debug_mode, debug_mode_expires_at, debug_mode_enabled_at, debug_mode_enabled_by,
-		       metadata, created_at, updated_at
+		       metadata, agent_version, created_at, updated_at
 		FROM agents
 		WHERE api_key_hash = $1
 	`, hash).Scan(
@@ -341,7 +341,7 @@ func (db *DB) GetAgentByAPIKeyHash(ctx context.Context, hash string) (*models.Ag
 		&a.LastSeen, &statusStr, &healthStatusStr, &healthMetricsBytes,
 		&a.HealthCheckedAt,
 		&a.DebugMode, &a.DebugModeExpiresAt, &a.DebugModeEnabledAt, &a.DebugModeEnabledBy,
-		&metadataBytes, &a.CreatedAt, &a.UpdatedAt,
+		&metadataBytes, &a.AgentVersion, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get agent by API key: %w", err)
@@ -416,12 +416,12 @@ func (db *DB) UpdateAgent(ctx context.Context, agent *models.Agent) error {
 		SET hostname = $2, os_info = $3, network_mounts = $4, last_seen = $5, status = $6, updated_at = $7,
 		    health_status = $8, health_metrics = $9, health_checked_at = $10,
 		    debug_mode = $11, debug_mode_expires_at = $12, debug_mode_enabled_at = $13,
-		    debug_mode_enabled_by = $14, metadata = $15
+		    debug_mode_enabled_by = $14, metadata = $15, agent_version = $16
 		WHERE id = $1
 	`, agent.ID, agent.Hostname, osInfoBytes, networkMountsBytes, agent.LastSeen, string(agent.Status), agent.UpdatedAt,
 		string(agent.HealthStatus), healthMetricsBytes, agent.HealthCheckedAt,
 		agent.DebugMode, agent.DebugModeExpiresAt, agent.DebugModeEnabledAt,
-		agent.DebugModeEnabledBy, metadataBytes)
+		agent.DebugModeEnabledBy, metadataBytes, agent.AgentVersion)
 	if err != nil {
 		return fmt.Errorf("update agent: %w", err)
 	}

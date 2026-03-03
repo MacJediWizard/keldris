@@ -534,6 +534,9 @@ function AgentRow({
 					{agent.status}
 				</span>
 			</td>
+			<td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+				{agent.agent_version || '-'}
+			</td>
 			<td className="px-6 py-4 text-sm text-gray-500">
 				{formatRelativeTime(agent.last_seen)}
 			</td>
@@ -1076,6 +1079,9 @@ export function Agents() {
 									{t('common.status')}
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+									Version
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									{t('agents.lastSeen')}
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -1110,6 +1116,9 @@ export function Agents() {
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									{t('common.status')}
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+									Version
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
 									{t('agents.lastSeen')}

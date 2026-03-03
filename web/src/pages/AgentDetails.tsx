@@ -306,7 +306,9 @@ function getCommandTypeLabel(type: CommandType) {
 		case 'backup_now':
 			return 'Backup Now';
 		case 'update':
-			return 'Update';
+			return 'Update Agent';
+		case 'update_restic':
+			return 'Update Restic';
 		case 'restart':
 			return 'Restart';
 		case 'diagnostics':
@@ -483,6 +485,7 @@ export function AgentDetails() {
 		const typeLabels: Record<CommandType, string> = {
 			backup_now: 'trigger an immediate backup',
 			update: 'update the agent',
+			update_restic: 'update the restic binary',
 			restart: 'restart the agent',
 			diagnostics: 'run diagnostics',
 		};
@@ -595,6 +598,11 @@ export function AgentDetails() {
 							{agent.os_info
 								? `${agent.os_info.os} ${agent.os_info.arch}${agent.os_info.version ? ` (${agent.os_info.version})` : ''}`
 								: 'OS information not available'}
+							{agent.agent_version && (
+								<span className="ml-3 text-gray-400">
+									Agent {agent.agent_version}
+								</span>
+							)}
 						</p>
 					</div>
 				</div>
@@ -671,6 +679,52 @@ export function AgentDetails() {
 								/>
 							</svg>
 							Restart
+						</button>
+						<button
+							type="button"
+							onClick={() => handleSendCommand('update')}
+							disabled={createCommand.isPending || agent.status !== 'active'}
+							className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+							title="Update agent binary"
+						>
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+								/>
+							</svg>
+							Update Agent
+						</button>
+						<button
+							type="button"
+							onClick={() => handleSendCommand('update_restic')}
+							disabled={createCommand.isPending || agent.status !== 'active'}
+							className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-teal-700 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors disabled:opacity-50"
+							title="Update restic binary"
+						>
+							<svg
+								aria-hidden="true"
+								className="w-4 h-4"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+								/>
+							</svg>
+							Update Restic
 						</button>
 					</div>
 					<button

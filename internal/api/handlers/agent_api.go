@@ -89,6 +89,9 @@ func (h *AgentAPIHandler) ReportHealth(c *gin.Context) {
 	if req.OSInfo != nil {
 		agent.OSInfo = req.OSInfo
 	}
+	if req.AgentVersion != "" {
+		agent.AgentVersion = &req.AgentVersion
+	}
 
 	// Convert metrics to model
 	var healthMetrics *models.HealthMetrics

@@ -90,6 +90,7 @@ export interface Agent {
 	debug_mode_expires_at?: string;
 	debug_mode_enabled_at?: string;
 	debug_mode_enabled_by?: string;
+	agent_version?: string;
 	created_at: string;
 	updated_at: string;
 }
@@ -3757,7 +3758,12 @@ export interface RepositoryReplicationStatusResponse {
 }
 
 // Agent Command types
-export type CommandType = 'backup_now' | 'update' | 'restart' | 'diagnostics';
+export type CommandType =
+	| 'backup_now'
+	| 'update'
+	| 'update_restic'
+	| 'restart'
+	| 'diagnostics';
 export type CommandStatus =
 	| 'pending'
 	| 'acknowledged'
@@ -3770,6 +3776,7 @@ export type CommandStatus =
 export interface CommandPayload {
 	schedule_id?: string;
 	target_version?: string;
+	target_restic_version?: string;
 	diagnostic_types?: string[];
 }
 

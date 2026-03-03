@@ -121,6 +121,7 @@ type Agent struct {
 	DebugModeEnabledAt *time.Time       `json:"debug_mode_enabled_at,omitempty"`
 	DebugModeEnabledBy *uuid.UUID       `json:"debug_mode_enabled_by,omitempty"`
 	Metadata              map[string]any   `json:"metadata,omitempty"`
+	AgentVersion          *string          `json:"agent_version,omitempty"`
 	MaxConcurrentBackups  *int             `json:"max_concurrent_backups,omitempty"`
 	ProxmoxInfo           *ProxmoxInfo     `json:"proxmox_info,omitempty"`
 	CreatedAt             time.Time        `json:"created_at"`

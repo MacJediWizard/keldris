@@ -98,9 +98,10 @@ func (c *Client) GetSnapshots() ([]SnapshotInfo, error) {
 
 // HeartbeatRequest is the request body for health reporting.
 type HeartbeatRequest struct {
-	Status  string            `json:"status"`
-	OSInfo  *OSInfo           `json:"os_info,omitempty"`
-	Metrics *HeartbeatMetrics `json:"metrics,omitempty"`
+	Status       string            `json:"status"`
+	AgentVersion string            `json:"agent_version,omitempty"`
+	OSInfo       *OSInfo           `json:"os_info,omitempty"`
+	Metrics      *HeartbeatMetrics `json:"metrics,omitempty"`
 }
 
 // OSInfo contains operating system information.
@@ -188,6 +189,67 @@ func (c *Client) post(path string, payload, result any) error {
 
 	if result != nil {
 		return json.Unmarshal(body, result)
+	}
+	return nil
+}
+
+// CommandResponse represents a command returned by the server.
+type CommandResponse struct {
+	ID        string          `json:"id"`
+	Type      string          `json:"type"`
+	Payload   *CommandPayload `json:"payload,omitempty"`
+	TimeoutAt string          `json:"timeout_at"`
+}
+
+// CommandPayload contains type-specific command parameters.
+type CommandPayload struct {
+	ScheduleID          *string  `json:"schedule_id,omitempty"`
+	TargetVersion       string   `json:"target_version,omitempty"`
+	TargetResticVersion string   `json:"target_restic_version,omitempty"`
+	DiagnosticTypes     []string `json:"diagnostic_types,omitempty"`
+}
+
+// CommandsResponse is the server response for polling commands.
+type CommandsResponse struct {
+	Commands []CommandResponse `json:"commands"`
+}
+
+// CommandResultReport is the request body for reporting command results.
+type CommandResultReport struct {
+	Status string               `json:"status"`
+	Result *CommandResultDetail `json:"result,omitempty"`
+}
+
+// CommandResultDetail contains the result details of a command execution.
+type CommandResultDetail struct {
+	Output      string         `json:"output,omitempty"`
+	Error       string         `json:"error,omitempty"`
+	Diagnostics map[string]any `json:"diagnostics,omitempty"`
+}
+
+// GetCommands polls the server for pending commands.
+func (c *Client) GetCommands() ([]CommandResponse, error) {
+	var resp CommandsResponse
+	if err := c.get("/api/v1/agent/commands", &resp); err != nil {
+		return nil, fmt.Errorf("get commands: %w", err)
+	}
+	return resp.Commands, nil
+}
+
+// AcknowledgeCommand acknowledges receipt of a command.
+func (c *Client) AcknowledgeCommand(id string) error {
+	var result map[string]any
+	if err := c.post("/api/v1/agent/commands/"+id+"/ack", struct{}{}, &result); err != nil {
+		return fmt.Errorf("acknowledge command %s: %w", id, err)
+	}
+	return nil
+}
+
+// ReportCommandResult reports the execution result of a command.
+func (c *Client) ReportCommandResult(id string, report *CommandResultReport) error {
+	var result map[string]any
+	if err := c.post("/api/v1/agent/commands/"+id+"/result", report, &result); err != nil {
+		return fmt.Errorf("report command result %s: %w", id, err)
 	}
 	return nil
 }

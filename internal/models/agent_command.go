@@ -19,6 +19,8 @@ const (
 	CommandTypeRestart CommandType = "restart"
 	// CommandTypeDiagnostics triggers a diagnostics collection.
 	CommandTypeDiagnostics CommandType = "diagnostics"
+	// CommandTypeUpdateRestic triggers a restic binary update.
+	CommandTypeUpdateRestic CommandType = "update_restic"
 )
 
 // CommandStatus represents the current status of a command.
@@ -47,6 +49,8 @@ type CommandPayload struct {
 	ScheduleID *uuid.UUID `json:"schedule_id,omitempty"`
 	// For update command
 	TargetVersion string `json:"target_version,omitempty"`
+	// For update_restic command
+	TargetResticVersion string `json:"target_restic_version,omitempty"`
 	// For diagnostics command
 	DiagnosticTypes []string `json:"diagnostic_types,omitempty"`
 }

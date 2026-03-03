@@ -950,7 +950,7 @@ func (db *DB) GetAgentGroupByID(ctx context.Context, id uuid.UUID) (*models.Agen
 // GetAgentGroupMembers returns all agents in a group.
 func (db *DB) GetAgentGroupMembers(ctx context.Context, groupID uuid.UUID) ([]*models.Agent, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT a.id, a.org_id, a.hostname, a.api_key_hash, a.os_info, a.last_seen, a.status, a.created_at, a.updated_at
+		SELECT a.id, a.org_id, a.hostname, a.api_key_hash, a.os_info, a.last_seen, a.status, a.agent_version, a.created_at, a.updated_at
 		FROM agents a
 		INNER JOIN agent_group_members m ON a.id = m.agent_id
 		WHERE m.group_id = $1
@@ -967,7 +967,7 @@ func (db *DB) GetAgentGroupMembers(ctx context.Context, groupID uuid.UUID) ([]*m
 		var osInfoBytes []byte
 		err := rows.Scan(
 			&a.ID, &a.OrgID, &a.Hostname, &a.APIKeyHash, &osInfoBytes,
-			&a.LastSeen, &a.Status, &a.CreatedAt, &a.UpdatedAt,
+			&a.LastSeen, &a.Status, &a.AgentVersion, &a.CreatedAt, &a.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan agent: %w", err)
