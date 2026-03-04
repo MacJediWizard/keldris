@@ -1,5 +1,68 @@
 # Keldris Development Journal
 
+## 2026-03-04 - Exhaustive Codebase Audit: 44 Fixes Across Server, Agent, DB, Notifications, and Frontend
+
+### What
+Full codebase analysis identified 9 critical, 10 high, 15 medium, and 10 low severity issues. All 44 were fixed and verified (server, agent, frontend all build clean; staticcheck passes).
+
+### Critical Fixes
+- **Empty retention guard** (`restic.go`): `Forget()` and `Prune()` now return no-op when all `--keep-*` values are zero, preventing accidental deletion of all snapshots
+- **Nil deref in heartbeat** (`cmd/keldris-agent/main.go`): Guard `req.Metrics` before accessing fields when metrics collection fails
+- **Wrong restic binary** (`cmd/keldris-agent/main.go`): `runBackup`, `refreshSchedules`, `executeDryRun` now pass the managed binary path instead of relying on PATH
+- **Wrong DB column names** (`store_superuser.go`, `store_telemetry.go`, `store_usage_metrics.go`): Fixed `key`→`setting_key`, `value`→`setting_value`, `last_seen_at`→`last_seen`, wrong table names, wrong status value
+- **Hardcoded HMAC key** (`license.go`): Replaced with `HMAC_SIGNING_KEY` env var (dev fallback preserved)
+- **Encrypted config unmarshaling** (`notifications/service.go`, `rules.go`): All 22 instances of `json.Unmarshal(channel.ConfigEncrypted)` replaced with proper `decryptConfig()` calls
+- **Email sent to self** (`notifications/service.go`): Now uses `Recipients` field instead of `From` address
+- **Dockerfile Go 1.25** (`Dockerfile.server`, `go.mod`): Go 1.25 doesn't exist; changed to 1.24
+- **Corrupted docker-compose** (`docker-compose.images.yml`): Removed duplicate service definitions
+
+### High Priority Fixes
+- **Background services** (`cmd/keldris-server/main.go`): Wired metrics scheduler, docker monitor, downtime, DB backup, and maintenance services into lifecycle with proper Start/Stop
+- **Notification service** (`main.go`): Created `alertNotificationAdapter` wrapping `notifications.Service`, replacing `NoOpNotificationSender`
+- **Handler registration** (`routes.go`): Registered Postgres, Immutability, Metadata, EmailVerification handlers
+- **Agent updater** (`updater.go`): Validates downloaded binary exists and has non-zero size before removing old binary
+- **Queue init** (`cmd/keldris-agent/main.go`): Backup queue now initialized in daemon mode
+- **Auth headers** (`agent/queue.go`): Changed `X-API-Key` to `Authorization: Bearer` to match server middleware
+- **HTTP 204** (`web/src/lib/api.ts`): `handleResponse()` returns `undefined` for 204 instead of trying to parse empty JSON
+- **Shutdown sequence** (`main.go`): HTTP server drains first, then license validator stops
+- **License annotation** (`main.go`): MIT→AGPL-3.0
+- **Unverified entitlement** (`validator.go`): Warning log when no public key available
+
+### Medium/Low Fixes
+- **rows.Err()** (23 scan loops): Added checks after every `for rows.Next()` loop across 4 store files
+- **Transactions** (`store.go`, `store_server_setup.go`): Wrapped `ActivateLicense`, `CreateFirstOrganization`, `UpdateUser`, `DeleteUser` in transactions
+- **JSON injection** (`store_metadata.go`): Replaced `fmt.Sprintf` with `json.Marshal` for metadata search
+- **LIKE escaping** (`store_activity.go`): Escape `%` and `_` in user search queries
+- **URL encoding** (`license_manage.go`): `url.QueryEscape(email)` in trial check
+- **Komodo hardening** (`komodo_integration.go`): Check `Enabled` flag, don't leak internal errors
+- **SMTP/OIDC tests** (`system_settings.go`): Replaced TODO stubs with actual TCP+auth and OIDC discovery
+- **XSS fix** (`Documentation.tsx`): HTML-escape markdown input before rendering
+- **Accessibility** (`ConfirmationModal.tsx`): Added `role="dialog"`, `aria-modal`, escape key, backdrop click
+- **LicenseFeature expansion** (`types.ts`): 5→28 features to match backend
+- **Dead code removal**: Deleted `useFeature.ts`, `KomodoSettings.tsx`, `MaintenancePage.tsx`
+- **Duplicate route** (`App.tsx`): Removed standalone `/license` route
+- **Dead links** (`upgrade.ts`): Fixed `/organization/billing` and `/contact-sales` → `/organization/license`
+- **Pagination** (`store_recovered.go`): Added `LIMIT 10000` to `GetAllBackups`
+- **Makefile** : Removed duplicate `.PHONY` and `staticcheck` lines
+- **redactArgs** (`restic.go`): Actually redacts `--repo`, `--password`, etc. instead of being a no-op
+- **Interface fixes** (`metadata.go`): Changed `interface{}` returns to typed `*models.Agent`, `*models.Repository`, `*models.Schedule`
+
+### Files Modified (45)
+- `cmd/keldris-agent/main.go`, `cmd/keldris-server/main.go`
+- `docker/Dockerfile.server`, `docker/docker-compose.images.yml`
+- `go.mod`, `Makefile`
+- `internal/agent/queue.go`, `internal/backup/restic.go`, `internal/updater/updater.go`
+- `internal/api/handlers/` — `komodo_integration.go`, `license_manage.go`, `metadata.go`, `notification_rules.go`, `system_settings.go`
+- `internal/api/routes.go`
+- `internal/db/` — `store.go`, `store_activity.go`, `store_concurrency.go`, `store_metadata.go`, `store_recovered.go`, `store_recovered_full.go`, `store_server_setup.go`, `store_superuser.go`, `store_telemetry.go`, `store_usage_metrics.go`
+- `internal/license/license.go`, `internal/license/validator.go`
+- `internal/models/notification.go`
+- `internal/notifications/` — `email.go`, `pagerduty.go`, `rules.go`, `service.go`, `teams.go`, `teams_test.go`
+- `web/src/` — `App.tsx`, `components/ui/ConfirmationModal.tsx`, `hooks/usePlanLimits.ts`, `lib/api.ts`, `lib/types.ts`, `lib/upgrade.ts`, `lib/utils.ts`, `pages/Documentation.tsx`
+- Deleted: `web/src/hooks/useFeature.ts`, `web/src/pages/KomodoSettings.tsx`, `web/src/pages/MaintenancePage.tsx`
+
+---
+
 ## 2026-03-03 - Dark Mode Overhaul, Dry Run Constraint Fix, Remote Uninstall
 
 ### What
