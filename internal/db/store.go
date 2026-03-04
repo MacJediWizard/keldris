@@ -68,6 +68,10 @@ func (db *DB) GetAllOrganizations(ctx context.Context) ([]*models.Organization, 
 		orgs = append(orgs, &org)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate organizations: %w", err)
+	}
+
 	return orgs, nil
 }
 
@@ -76,38 +80,46 @@ func (db *DB) GetAllOrganizations(ctx context.Context) ([]*models.Organization, 
 // GetUserByOIDCSubject returns a user by their OIDC subject.
 func (db *DB) GetUserByOIDCSubject(ctx context.Context, subject string) (*models.User, error) {
 	var user models.User
-	var roleStr string
+	var roleStr, statusStr string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, oidc_subject, email, name, role, is_superuser, created_at, updated_at
+		SELECT id, org_id, oidc_subject, email, name, role, status, is_superuser,
+		       email_verified, email_verified_at, last_login_at, created_at, updated_at
 		FROM users
 		WHERE oidc_subject = $1
 	`, subject).Scan(
 		&user.ID, &user.OrgID, &user.OIDCSubject, &user.Email,
-		&user.Name, &roleStr, &user.IsSuperuser, &user.CreatedAt, &user.UpdatedAt,
+		&user.Name, &roleStr, &statusStr, &user.IsSuperuser,
+		&user.EmailVerified, &user.EmailVerifiedAt, &user.LastLoginAt,
+		&user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get user by OIDC subject: %w", err)
 	}
 	user.Role = models.UserRole(roleStr)
+	user.Status = models.UserStatus(statusStr)
 	return &user, nil
 }
 
 // GetUserByID returns a user by their ID.
 func (db *DB) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	var user models.User
-	var roleStr string
+	var roleStr, statusStr string
 	err := db.Pool.QueryRow(ctx, `
-		SELECT id, org_id, oidc_subject, email, name, role, is_superuser, created_at, updated_at
+		SELECT id, org_id, oidc_subject, email, name, role, status, is_superuser,
+		       email_verified, email_verified_at, last_login_at, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`, id).Scan(
 		&user.ID, &user.OrgID, &user.OIDCSubject, &user.Email,
-		&user.Name, &roleStr, &user.IsSuperuser, &user.CreatedAt, &user.UpdatedAt,
+		&user.Name, &roleStr, &statusStr, &user.IsSuperuser,
+		&user.EmailVerified, &user.EmailVerifiedAt, &user.LastLoginAt,
+		&user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get user by ID: %w", err)
 	}
 	user.Role = models.UserRole(roleStr)
+	user.Status = models.UserStatus(statusStr)
 	return &user, nil
 }
 
@@ -150,13 +162,23 @@ func (db *DB) ListUsers(ctx context.Context, orgID uuid.UUID) ([]*models.User, e
 		u.Role = models.UserRole(effectiveRoleStr)
 		users = append(users, &u)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate users: %w", err)
+	}
 	return users, nil
 }
 
 // UpdateUser updates a user's name, email, and role.
 func (db *DB) UpdateUser(ctx context.Context, user *models.User) error {
 	user.UpdatedAt = time.Now()
-	_, err := db.Pool.Exec(ctx, `
+
+	tx, err := db.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, `
 		UPDATE users
 		SET name = $2, email = $3, role = $4, updated_at = $5
 		WHERE id = $1
@@ -166,7 +188,7 @@ func (db *DB) UpdateUser(ctx context.Context, user *models.User) error {
 	}
 
 	// Also update the membership role if one exists
-	_, err = db.Pool.Exec(ctx, `
+	_, err = tx.Exec(ctx, `
 		UPDATE org_memberships
 		SET role = $3, updated_at = $4
 		WHERE user_id = $1 AND org_id = $2
@@ -175,18 +197,30 @@ func (db *DB) UpdateUser(ctx context.Context, user *models.User) error {
 		return fmt.Errorf("update user membership: %w", err)
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit user update: %w", err)
+	}
+
 	return nil
 }
 
 // DeleteUser deletes a user by ID. Returns an error if the user is the last owner of their organization.
 func (db *DB) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	tx, err := db.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Lock the user's membership rows to prevent TOCTOU race
 	// Check if the user is the last owner of any organization
 	var ownerCount int
-	err := db.Pool.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT COUNT(*)
 		FROM org_memberships
 		WHERE org_id = (SELECT org_id FROM org_memberships WHERE user_id = $1 AND role = 'owner' LIMIT 1)
 		  AND role = 'owner'
+		FOR UPDATE
 	`, id).Scan(&ownerCount)
 	if err != nil {
 		return fmt.Errorf("check owner count: %w", err)
@@ -194,7 +228,7 @@ func (db *DB) DeleteUser(ctx context.Context, id uuid.UUID) error {
 
 	// If user is an owner and is the only one, block deletion
 	var isOwner bool
-	err = db.Pool.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT EXISTS(SELECT 1 FROM org_memberships WHERE user_id = $1 AND role = 'owner')
 	`, id).Scan(&isOwner)
 	if err != nil {
@@ -205,9 +239,13 @@ func (db *DB) DeleteUser(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("cannot delete user: last owner of organization")
 	}
 
-	_, err = db.Pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)
+	_, err = tx.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("delete user: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit user deletion: %w", err)
 	}
 	return nil
 }
@@ -268,6 +306,10 @@ func (db *DB) GetAgentsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.
 			db.logger.Warn().Err(err).Str("agent_id", a.ID.String()).Msg("failed to parse metadata")
 		}
 		agents = append(agents, &a)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate agents: %w", err)
 	}
 
 	return agents, nil
@@ -582,6 +624,10 @@ func (db *DB) GetAgentHealthHistory(ctx context.Context, agentID uuid.UUID, limi
 		history = append(history, &h)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate health history: %w", err)
+	}
+
 	return history, nil
 }
 
@@ -696,6 +742,10 @@ func (db *DB) GetRepositoriesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*m
 		repos = append(repos, &r)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate repositories: %w", err)
+	}
+
 	return repos, nil
 }
 
@@ -781,6 +831,9 @@ func (db *DB) GetSchedulesByAgentID(ctx context.Context, agentID uuid.UUID) ([]*
 			return nil, err
 		}
 		schedules = append(schedules, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate schedules: %w", err)
 	}
 
 	// Load repositories for all schedules
@@ -1270,6 +1323,9 @@ func (db *DB) GetPoliciesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*model
 		}
 		policies = append(policies, p)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate policies: %w", err)
+	}
 
 	return policies, nil
 }
@@ -1417,6 +1473,9 @@ func (db *DB) GetSchedulesByPolicyID(ctx context.Context, policyID uuid.UUID) ([
 			return nil, err
 		}
 		schedules = append(schedules, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate schedules by policy: %w", err)
 	}
 
 	return schedules, nil
@@ -1621,6 +1680,9 @@ func (db *DB) GetScheduleRepositories(ctx context.Context, scheduleID uuid.UUID)
 		}
 		repos = append(repos, sr)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate schedule repositories: %w", err)
+	}
 
 	return repos, nil
 }
@@ -1701,6 +1763,9 @@ func (db *DB) GetReplicationStatusBySchedule(ctx context.Context, scheduleID uui
 		}
 		rs.Status = models.ReplicationStatusType(statusStr)
 		statuses = append(statuses, &rs)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate replication statuses: %w", err)
 	}
 
 	return statuses, nil
@@ -2035,6 +2100,9 @@ func (db *DB) GetAlertRulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*mod
 		}
 		rules = append(rules, &r)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate alert rules: %w", err)
+	}
 
 	return rules, nil
 }
@@ -2069,6 +2137,9 @@ func (db *DB) GetEnabledAlertRulesByOrgID(ctx context.Context, orgID uuid.UUID) 
 			db.logger.Warn().Err(err).Str("rule_id", r.ID.String()).Msg("failed to parse alert rule config")
 		}
 		rules = append(rules, &r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate enabled alert rules: %w", err)
 	}
 
 	return rules, nil
@@ -2174,6 +2245,9 @@ func (db *DB) GetAllAgents(ctx context.Context) ([]*models.Agent, error) {
 		}
 		agents = append(agents, &a)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate all agents: %w", err)
+	}
 
 	return agents, nil
 }
@@ -2204,6 +2278,9 @@ func (db *DB) GetAllSchedules(ctx context.Context) ([]*models.Schedule, error) {
 		}
 		schedules = append(schedules, s)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate all schedules: %w", err)
+	}
 
 	return schedules, nil
 }
@@ -2233,6 +2310,9 @@ func (db *DB) GetEnabledSchedules(ctx context.Context) ([]models.Schedule, error
 			return nil, err
 		}
 		schedules = append(schedules, *s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate enabled schedules: %w", err)
 	}
 
 	return schedules, nil

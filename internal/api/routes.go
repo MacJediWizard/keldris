@@ -391,7 +391,7 @@ func NewRouter(
 
 	// Notification rules (feature gated - requires Pro+ for notification automation)
 	notificationRulesGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureNotificationSlack, logger))
-	notificationRulesHandler := handlers.NewNotificationRulesHandler(database, logger)
+	notificationRulesHandler := handlers.NewNotificationRulesHandler(database, keyManager, logger)
 	notificationRulesHandler.RegisterRoutes(notificationRulesGroup)
 
 	// Reports (feature gated - requires Pro+)
@@ -616,6 +616,28 @@ func NewRouter(
 	// Pi-hole backup routes
 	piholeHandler := handlers.NewPiholeHandler(database, logger)
 	piholeHandler.RegisterRoutes(apiV1)
+
+	// PostgreSQL backup routes
+	postgresHandler := handlers.NewPostgresHandler(database, keyManager, logger)
+	postgresHandler.RegisterRoutes(apiV1)
+
+	// Immutability (snapshot lock) routes
+	immutabilityHandler := handlers.NewImmutabilityHandler(database, logger)
+	immutabilityHandler.RegisterRoutes(apiV1)
+
+	// Metadata schema routes
+	metadataHandler := handlers.NewMetadataHandler(database, logger)
+	metadataHandler.RegisterRoutes(apiV1)
+
+	// Migration (export/import) routes: not yet wired — *db.DB.GetUsersByOrgID
+	// returns []*models.UserWithMembership but MigrationStore expects []*models.User.
+	// TODO: add adapter or dedicated DB method to bridge the type mismatch.
+
+	// Email verification routes
+	if cfg.EmailService != nil {
+		emailVerificationHandler := handlers.NewEmailVerificationHandler(database, sessions, cfg.EmailService, cfg.ServerURL, logger)
+		emailVerificationHandler.RegisterRoutes(apiV1)
+	}
 
 	// Usage metering routes (requires MeteringService)
 	if cfg.MeteringService != nil {

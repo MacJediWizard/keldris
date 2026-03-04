@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/gin-gonic/gin"
@@ -38,10 +39,10 @@ type NotificationRulesHandler struct {
 }
 
 // NewNotificationRulesHandler creates a new NotificationRulesHandler.
-func NewNotificationRulesHandler(store NotificationRuleStore, logger zerolog.Logger) *NotificationRulesHandler {
+func NewNotificationRulesHandler(store NotificationRuleStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *NotificationRulesHandler {
 	return &NotificationRulesHandler{
 		store:      store,
-		ruleEngine: notifications.NewRuleEngine(store, logger),
+		ruleEngine: notifications.NewRuleEngine(store, keyManager, logger),
 		logger:     logger.With().Str("component", "notification_rules_handler").Logger(),
 	}
 }

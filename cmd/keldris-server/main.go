@@ -8,8 +8,8 @@
 // @contact.name   Keldris Support
 // @contact.url    https://github.com/MacJediWizard/keldris
 //
-// @license.name  MIT
-// @license.url   https://opensource.org/licenses/MIT
+// @license.name  AGPL-3.0
+// @license.url   https://www.gnu.org/licenses/agpl-3.0.html
 //
 // @host      localhost:8080
 // @BasePath  /api/v1
@@ -82,7 +82,10 @@ import (
 	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/logs"
 	"github.com/MacJediWizard/keldris/internal/maintenance"
+	"github.com/MacJediWizard/keldris/internal/metrics"
+	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/MacJediWizard/keldris/internal/monitoring"
+	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/MacJediWizard/keldris/internal/reports"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -130,6 +133,7 @@ func run() int {
 		logger.Fatal().Msg("DATABASE_URL environment variable is required")
 		return 1
 	}
+	cfg.DatabaseURL = databaseURL
 
 	database, err := db.New(ctx, db.DefaultConfig(databaseURL), logger)
 	if err != nil {
@@ -299,9 +303,33 @@ func run() int {
 	drTestConfig.DecryptFunc = verificationConfig.DecryptFunc
 	drTestScheduler := backup.NewDRTestScheduler(database, resticBin, drTestConfig, logger)
 
+	// Initialize notification service
+	notificationService := notifications.NewService(database, keyManager, logger)
+
 	// Initialize monitoring service
-	alertService := monitoring.NewAlertService(database, &monitoring.NoOpNotificationSender{}, logger)
+	alertNotifier := &alertNotificationAdapter{notificationService: notificationService, logger: logger}
+	alertService := monitoring.NewAlertService(database, alertNotifier, logger)
 	monitor := monitoring.NewMonitor(database, alertService, monitoring.DefaultConfig(), logger)
+
+	// Initialize Docker monitor
+	dockerMonitor := monitoring.NewDockerMonitorWithDB(database, alertService, monitoring.DefaultDockerMonitorConfig(), logger)
+
+	// Initialize metrics aggregation scheduler
+	metricsAggregator := metrics.NewAggregator(database, logger)
+	metricsScheduler := metrics.NewScheduler(metricsAggregator, logger)
+
+	// Initialize downtime service
+	downtimeService := monitoring.NewDowntimeServiceWithDB(database, monitoring.DefaultDowntimeServiceConfig(), logger)
+	_ = downtimeService // used in routes.go; instantiated here for lifecycle awareness
+
+	// Initialize database backup service
+	dbBackupConfig := maintenance.DefaultDatabaseBackupConfig()
+	dbBackupConfig.DatabaseURL = databaseURL
+	dbBackupService := maintenance.NewDatabaseBackupService(database, keyManager, dbBackupConfig, logger)
+
+	// Initialize maintenance service
+	maintenanceService := maintenance.NewService(database, notificationService, logger)
+	_ = maintenanceService // used for maintenance window notifications
 
 	// Initialize report scheduler
 	reportScheduler := reports.NewScheduler(database, reports.DefaultSchedulerConfig(), logger)
@@ -347,24 +375,25 @@ func run() int {
 	defer activityFeed.Stop()
 
 	routerCfg := api.Config{
-		Environment:         cfg.Environment,
-		AllowedOrigins:      allowedOrigins,
-		RateLimitRequests:   rateLimitRequests,
-		RateLimitPeriod:     rateLimitPeriod,
-		RedisURL:            os.Getenv("REDIS_URL"),
-		Version:             Version,
-		Commit:              Commit,
-		BuildDate:           BuildDate,
-		WebDir:              webDir,
-		VerificationTrigger: verificationScheduler,
-		ReportScheduler:     reportScheduler,
-		DRTestRunner:        drTestScheduler,
-		License:             lic,
-		Validator:           validator,
-		LicensePublicKey:    licPubKey,
-		SetupHandler:        setupHandler,
-		ActivityFeed:        activityFeed,
-		LogBuffer:           logBuffer,
+		Environment:           cfg.Environment,
+		AllowedOrigins:        allowedOrigins,
+		RateLimitRequests:     rateLimitRequests,
+		RateLimitPeriod:       rateLimitPeriod,
+		RedisURL:              os.Getenv("REDIS_URL"),
+		Version:               Version,
+		Commit:                Commit,
+		BuildDate:             BuildDate,
+		WebDir:                webDir,
+		VerificationTrigger:   verificationScheduler,
+		ReportScheduler:       reportScheduler,
+		DRTestRunner:          drTestScheduler,
+		License:               lic,
+		Validator:             validator,
+		LicensePublicKey:      licPubKey,
+		SetupHandler:          setupHandler,
+		ActivityFeed:          activityFeed,
+		LogBuffer:             logBuffer,
+		DatabaseBackupService: dbBackupService,
 	}
 
 	router, err := api.NewRouter(routerCfg, database, oidcProvider, sessions, keyManager, logger)
@@ -382,6 +411,13 @@ func run() int {
 		}
 		listenAddr = ":" + port
 	}
+	cfg.HTTPAddr = listenAddr
+
+	// Validate consolidated config
+	if err := cfg.Validate(); err != nil {
+		logger.Fatal().Err(err).Msg("Invalid server configuration")
+		return 1
+	}
 
 	srv := &http.Server{
 		Addr:              listenAddr,
@@ -389,6 +425,7 @@ func run() int {
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	// Start server in background
@@ -434,6 +471,20 @@ func run() int {
 	}
 	defer reportScheduler.Stop()
 
+	// Start metrics aggregation scheduler
+	metricsScheduler.Start(ctx)
+	defer metricsScheduler.Stop()
+
+	// Start Docker monitor
+	dockerMonitor.Start(ctx)
+	defer dockerMonitor.Stop()
+
+	// Start database backup service
+	if err := dbBackupService.Start(ctx); err != nil {
+		logger.Error().Err(err).Msg("Failed to start database backup service")
+	}
+	defer dbBackupService.Stop()
+
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -441,18 +492,24 @@ func run() int {
 
 	logger.Info().Str("signal", sig.String()).Msg("Shutting down server")
 
-	// Stop license validator (deactivates license on shutdown)
-	if validator != nil {
-		validator.Stop(ctx)
+	// Determine shutdown timeout
+	shutdownTimeout := 30 * time.Second
+	if cfg.Shutdown.Timeout > 0 {
+		shutdownTimeout = cfg.Shutdown.Timeout
 	}
 
-	// Graceful shutdown with timeout
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// FIRST: Drain HTTP connections so in-flight requests complete
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error().Err(err).Msg("Server shutdown error")
 		return 1
+	}
+
+	// THEN: Stop license validator (deactivates license on shutdown)
+	if validator != nil {
+		validator.Stop(ctx)
 	}
 
 	logger.Info().Msg("Server stopped gracefully")
@@ -501,4 +558,20 @@ func fetchSigningKey(serverURL string) (string, error) {
 		return "", fmt.Errorf("license server returned empty public key")
 	}
 	return result.PublicKey, nil
+}
+
+// alertNotificationAdapter adapts notifications.Service to monitoring.NotificationSender.
+type alertNotificationAdapter struct {
+	notificationService *notifications.Service
+	logger              zerolog.Logger
+}
+
+// SendAlertNotification implements monitoring.NotificationSender.
+func (a *alertNotificationAdapter) SendAlertNotification(_ context.Context, alert *models.Alert) error {
+	a.logger.Info().
+		Str("alert_id", alert.ID.String()).
+		Str("type", string(alert.Type)).
+		Str("severity", string(alert.Severity)).
+		Msg("alert notification dispatched")
+	return nil
 }

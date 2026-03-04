@@ -803,7 +803,13 @@ func (h *KomodoHandler) HandleWebhook(c *gin.Context) {
 	integration, err := h.store.GetKomodoIntegrationByID(c.Request.Context(), integrationID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("integration_id", integrationID.String()).Msg("webhook: integration not found")
-		c.JSON(http.StatusNotFound, gin.H{"error": "integration not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+
+	// Verify integration is enabled before processing webhooks
+	if !integration.Enabled {
+		c.JSON(http.StatusForbidden, gin.H{"error": "integration is disabled"})
 		return
 	}
 
@@ -819,7 +825,7 @@ func (h *KomodoHandler) HandleWebhook(c *gin.Context) {
 	result, err := h.webhookHandler.Process(c.Request.Context(), integration.OrgID, integrationID, payload)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to process webhook")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to process webhook: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to process webhook"})
 		return
 	}
 

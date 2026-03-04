@@ -436,7 +436,6 @@ Default: 100`,
 			if err := cfg.SaveDefault(); err != nil {
 				return fmt.Errorf("save config: %w", err)
 			}
-			fmt.Printf("Auto-check update: %v\n", cfg.AutoCheckUpdate)
 
 			fmt.Printf("Max queue size set to: %d\n", size)
 			return nil
@@ -600,7 +599,9 @@ func newBackupCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			return runBackup(cfg, scheduleName)
+			logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
+			resticBinary := resolveResticBinary(&logger)
+			return runBackup(cfg, scheduleName, resticBinary)
 		},
 	}
 
@@ -610,7 +611,7 @@ func newBackupCmd() *cobra.Command {
 	return cmd
 }
 
-func runBackup(cfg *config.AgentConfig, scheduleName string) error {
+func runBackup(cfg *config.AgentConfig, scheduleName string, resticBinary string) error {
 	client := agent.NewClient(cfg.ServerURL, cfg.APIKey)
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 
@@ -658,7 +659,7 @@ func runBackup(cfg *config.AgentConfig, scheduleName string) error {
 	}
 
 	// Run the backup
-	restic := backup.NewRestic(logger)
+	restic := backup.NewResticWithBinary(resticBinary, logger)
 	hostname, _ := os.Hostname()
 	tags := []string{
 		"agent:" + cfg.AgentID,
@@ -849,6 +850,31 @@ func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
 	fmt.Printf("Restic: %s\n", resticBinary)
 	fmt.Println()
 
+	// Initialize offline backup queue
+	configDir, err := config.DefaultConfigDir()
+	if err != nil {
+		logger.Warn().Err(err).Msg("could not determine config dir; offline queue disabled")
+	} else {
+		queueStore, err := agent.NewSQLiteStore(configDir, logger)
+		if err != nil {
+			logger.Warn().Err(err).Msg("could not open queue database; offline queue disabled")
+		} else {
+			defer queueStore.Close()
+			serverClient := agent.NewHTTPServerClient(cfg.ServerURL, cfg.APIKey, logger)
+			queueCfg := agent.DefaultQueueConfig()
+			if cfg.MaxQueueSize > 0 {
+				queueCfg.MaxQueueSize = cfg.MaxQueueSize
+			}
+			backupQueue := agent.NewQueue(queueStore, serverClient, queueCfg, logger)
+			if err := backupQueue.Start(context.Background()); err != nil {
+				logger.Warn().Err(err).Msg("failed to start backup queue")
+			} else {
+				defer backupQueue.Stop()
+				logger.Info().Int("max_queue_size", queueCfg.MaxQueueSize).Msg("offline backup queue initialized")
+			}
+		}
+	}
+
 	// Set up signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -869,7 +895,7 @@ func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
 	cronScheduler := cron.New()
 
 	// Fetch initial schedules and register them
-	refreshSchedules(cronScheduler, client, cfg, &logger)
+	refreshSchedules(cronScheduler, client, cfg, resticBinary, &logger)
 
 	cronScheduler.Start()
 	defer cronScheduler.Stop()
@@ -886,7 +912,7 @@ func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
 			sendHeartbeat(client, collector, &logger)
 			go pollAndExecuteCommands(client, cfg, &cmdMu, resticBinary, &logger)
 		case <-scheduleRefreshTicker.C:
-			refreshSchedules(cronScheduler, client, cfg, &logger)
+			refreshSchedules(cronScheduler, client, cfg, resticBinary, &logger)
 		case sig := <-sigChan:
 			fmt.Printf("\nReceived %s, shutting down...\n", sig)
 			return nil
@@ -895,7 +921,7 @@ func runDaemon(cfg *config.AgentConfig, heartbeatInterval time.Duration) error {
 }
 
 // refreshSchedules fetches schedules from the server and updates the cron scheduler.
-func refreshSchedules(c *cron.Cron, client *agent.Client, cfg *config.AgentConfig, logger *zerolog.Logger) {
+func refreshSchedules(c *cron.Cron, client *agent.Client, cfg *config.AgentConfig, resticBinary string, logger *zerolog.Logger) {
 	schedules, err := client.GetSchedules()
 	if err != nil {
 		logger.Warn().Err(err).Msg("failed to fetch schedules")
@@ -911,7 +937,7 @@ func refreshSchedules(c *cron.Cron, client *agent.Client, cfg *config.AgentConfi
 		s := sched // capture loop variable
 		_, err := c.AddFunc(s.CronExpression, func() {
 			logger.Info().Str("schedule", s.Name).Msg("cron triggered backup")
-			if err := runBackup(cfg, s.Name); err != nil {
+			if err := runBackup(cfg, s.Name, resticBinary); err != nil {
 				logger.Error().Err(err).Str("schedule", s.Name).Msg("scheduled backup failed")
 			}
 		})
@@ -965,12 +991,14 @@ func sendHeartbeat(client *agent.Client, collector *health.Collector, logger *ze
 
 	if err := client.SendHeartbeat(req); err != nil {
 		logger.Warn().Err(err).Msg("heartbeat failed")
-	} else {
+	} else if req.Metrics != nil {
 		logger.Debug().
 			Float64("cpu", req.Metrics.CPUUsage).
 			Float64("mem", req.Metrics.MemoryUsage).
 			Float64("disk", req.Metrics.DiskUsage).
 			Msg("heartbeat sent")
+	} else {
+		logger.Debug().Msg("heartbeat sent (no metrics)")
 	}
 }
 
@@ -2095,7 +2123,7 @@ func executeCommand(client *agent.Client, cfg *config.AgentConfig, cmd agent.Com
 	case "update_restic":
 		result, execErr = executeUpdateRestic(resticBinary, logger)
 	case "backup_now":
-		result, execErr = executeBackupNow(cfg, cmd.Payload, logger)
+		result, execErr = executeBackupNow(cfg, cmd.Payload, resticBinary, logger)
 	case "dry_run":
 		result, execErr = executeDryRun(cfg, cmd.Payload, resticBinary, logger)
 	case "restart":
@@ -2210,7 +2238,7 @@ func executeUpdateRestic(currentBinary string, logger *zerolog.Logger) (*agent.C
 }
 
 // executeBackupNow runs a backup for the specified or first schedule.
-func executeBackupNow(cfg *config.AgentConfig, payload *agent.CommandPayload, logger *zerolog.Logger) (*agent.CommandResultDetail, error) {
+func executeBackupNow(cfg *config.AgentConfig, payload *agent.CommandPayload, resticBinary string, logger *zerolog.Logger) (*agent.CommandResultDetail, error) {
 	scheduleName := ""
 
 	// If a schedule ID is provided, look it up to find the name
@@ -2232,7 +2260,7 @@ func executeBackupNow(cfg *config.AgentConfig, payload *agent.CommandPayload, lo
 		}
 	}
 
-	if err := runBackup(cfg, scheduleName); err != nil {
+	if err := runBackup(cfg, scheduleName, resticBinary); err != nil {
 		return nil, err
 	}
 
@@ -2271,7 +2299,7 @@ func executeDryRun(cfg *config.AgentConfig, payload *agent.CommandPayload, resti
 		Env:        sched.RepositoryEnv,
 	}
 
-	restic := backup.NewRestic(*logger)
+	restic := backup.NewResticWithBinary(resticBinary, *logger)
 	result, err := restic.DryRun(context.Background(), resticCfg, sched.Paths, sched.Excludes)
 	if err != nil {
 		return nil, fmt.Errorf("dry run failed: %w", err)

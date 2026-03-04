@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 interface ConfirmationModalProps {
 	isOpen: boolean;
 	onClose: () => void;
@@ -23,6 +25,19 @@ export function ConfirmationModal({
 	isLoading = false,
 	itemCount,
 }: ConfirmationModalProps) {
+	useEffect(() => {
+		if (!isOpen) return;
+
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				onClose();
+			}
+		};
+
+		document.addEventListener('keydown', handleKeyDown);
+		return () => document.removeEventListener('keydown', handleKeyDown);
+	}, [isOpen, onClose]);
+
 	if (!isOpen) return null;
 
 	const iconBgColor =
@@ -35,8 +50,20 @@ export function ConfirmationModal({
 			: 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500';
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+		<div
+			className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			onClick={(e) => {
+				if (e.target === e.currentTarget) {
+					onClose();
+				}
+			}}
+		>
+			<div
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="confirmation-modal-title"
+				className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
+			>
 				<div className="flex items-start gap-4">
 					<div className={`p-3 rounded-full ${iconBgColor}`}>
 						{variant === 'danger' ? (
@@ -72,7 +99,7 @@ export function ConfirmationModal({
 						)}
 					</div>
 					<div className="flex-1">
-						<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+						<h3 id="confirmation-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
 							{title}
 						</h3>
 						<p className="mt-2 text-sm text-gray-600 dark:text-gray-400">

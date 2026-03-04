@@ -234,6 +234,15 @@ func (u *Updater) Download(ctx context.Context, info *UpdateInfo, progress func(
 
 // Apply replaces the current binary with the new one and restarts.
 func (u *Updater) Apply(newBinaryPath string) error {
+	// Validate the new binary exists and has non-zero size before touching the old one
+	info, err := os.Stat(newBinaryPath)
+	if err != nil {
+		return fmt.Errorf("validate new binary: %w", err)
+	}
+	if info.Size() == 0 {
+		return fmt.Errorf("new binary is empty (0 bytes), refusing to replace current binary")
+	}
+
 	execPath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("get executable path: %w", err)

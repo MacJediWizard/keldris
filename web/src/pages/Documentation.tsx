@@ -123,9 +123,18 @@ function DocSidebar({
 	);
 }
 
+function escapeHtml(text: string): string {
+	return text
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#039;');
+}
+
 function MarkdownRenderer({ content }: { content: string }) {
 	// Basic markdown rendering - in production, use a proper markdown library
-	const html = content
+	const html = escapeHtml(content)
 		// Headers
 		.replace(
 			/^#### (.+)$/gm,
@@ -234,6 +243,7 @@ export function Documentation() {
 		null,
 	);
 	const [searchQuery, setSearchQuery] = useState('');
+	const [searchError, setSearchError] = useState<string | null>(null);
 
 	useEffect(() => {
 		const fetchDoc = async () => {
@@ -271,6 +281,7 @@ export function Documentation() {
 		}
 
 		setSearchQuery(query);
+		setSearchError(null);
 
 		try {
 			const response = await fetch(
@@ -279,15 +290,19 @@ export function Documentation() {
 			if (response.ok) {
 				const data = await response.json();
 				setSearchResults(data.results);
+			} else {
+				setSearchError('Search request failed. Please try again.');
 			}
 		} catch (err) {
 			console.error('Search failed:', err);
+			setSearchError('Search failed. Please check your connection and try again.');
 		}
 	};
 
 	const clearSearch = () => {
 		setSearchResults(null);
 		setSearchQuery('');
+		setSearchError(null);
 	};
 
 	// Show documentation index if no slug
@@ -314,6 +329,19 @@ export function Documentation() {
 								</h3>
 							</Link>
 						))}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	if (searchError) {
+		return (
+			<div className="flex h-full">
+				<DocSidebar currentSlug={slug} onSearch={handleSearch} />
+				<div className="flex-1 p-6">
+					<div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+						<p className="text-red-800 dark:text-red-400 font-medium">{searchError}</p>
 					</div>
 				</div>
 			</div>

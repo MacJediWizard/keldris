@@ -498,6 +498,11 @@ func (r *Restic) Forget(ctx context.Context, cfg ResticConfig, retention *models
 		return nil, errors.New("retention policy required for forget")
 	}
 
+	if retentionEmpty(retention) {
+		r.logger.Warn().Msg("all retention values are zero; skipping forget to avoid deleting all snapshots")
+		return &ForgetResult{}, nil
+	}
+
 	r.logger.Info().
 		Interface("retention", retention).
 		Msg("starting forget with retention policy")
@@ -558,6 +563,11 @@ type RepoStats struct {
 func (r *Restic) Prune(ctx context.Context, cfg ResticConfig, retention *models.RetentionPolicy) (*ForgetResult, error) {
 	if retention == nil {
 		return nil, errors.New("retention policy required for prune")
+	}
+
+	if retentionEmpty(retention) {
+		r.logger.Warn().Msg("all retention values are zero; skipping prune to avoid deleting all snapshots")
+		return &ForgetResult{}, nil
 	}
 
 	r.logger.Info().
@@ -722,6 +732,17 @@ func (r *Restic) run(ctx context.Context, cfg ResticConfig, args []string) ([]by
 	return stdout.Bytes(), nil
 }
 
+// retentionEmpty returns true if all retention values are zero/empty,
+// meaning no --keep-* flags would be generated.
+func retentionEmpty(retention *models.RetentionPolicy) bool {
+	return retention.KeepLast == 0 &&
+		retention.KeepHourly == 0 &&
+		retention.KeepDaily == 0 &&
+		retention.KeepWeekly == 0 &&
+		retention.KeepMonthly == 0 &&
+		retention.KeepYearly == 0
+}
+
 // buildRetentionArgs builds the restic forget arguments from a retention policy.
 func (r *Restic) buildRetentionArgs(repository string, retention *models.RetentionPolicy) []string {
 	args := []string{"forget", "--repo", repository, "--json"}
@@ -884,5 +905,22 @@ func parseDryRunOutput(output []byte, excludes []string) (*DryRunResult, error) 
 func redactArgs(args []string) []string {
 	redacted := make([]string, len(args))
 	copy(redacted, args)
+
+	// Redact values following sensitive flags
+	sensitiveFlags := map[string]bool{
+		"--repo":           true,
+		"-r":               true,
+		"--password":       true,
+		"--password-file":  true,
+		"--key-hint":       true,
+		"--repository-file": true,
+	}
+
+	for i := 0; i < len(redacted)-1; i++ {
+		if sensitiveFlags[redacted[i]] {
+			redacted[i+1] = "***"
+		}
+	}
+
 	return redacted
 }

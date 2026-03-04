@@ -155,10 +155,10 @@ func (db *DB) GetSystemSetting(ctx context.Context, key string) (*models.SystemS
 	var setting models.SystemSetting
 	var valueBytes []byte
 	err := db.Pool.QueryRow(ctx, `
-		SELECT key, value, description, updated_by, updated_at
+		SELECT setting_key, setting_value, description, updated_at
 		FROM system_settings
-		WHERE key = $1
-	`, key).Scan(&setting.Key, &valueBytes, &setting.Description, &setting.UpdatedBy, &setting.UpdatedAt)
+		WHERE setting_key = $1
+	`, key).Scan(&setting.Key, &valueBytes, &setting.Description, &setting.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("get system setting: %w", err)
 	}
@@ -169,9 +169,9 @@ func (db *DB) GetSystemSetting(ctx context.Context, key string) (*models.SystemS
 // GetSystemSettings returns all system settings.
 func (db *DB) GetSystemSettings(ctx context.Context) ([]*models.SystemSetting, error) {
 	rows, err := db.Pool.Query(ctx, `
-		SELECT key, value, description, updated_by, updated_at
+		SELECT setting_key, setting_value, description, updated_at
 		FROM system_settings
-		ORDER BY key
+		ORDER BY setting_key
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("list system settings: %w", err)
@@ -182,7 +182,7 @@ func (db *DB) GetSystemSettings(ctx context.Context) ([]*models.SystemSetting, e
 	for rows.Next() {
 		var setting models.SystemSetting
 		var valueBytes []byte
-		err := rows.Scan(&setting.Key, &valueBytes, &setting.Description, &setting.UpdatedBy, &setting.UpdatedAt)
+		err := rows.Scan(&setting.Key, &valueBytes, &setting.Description, &setting.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("scan system setting: %w", err)
 		}
@@ -202,9 +202,9 @@ func (db *DB) UpdateSystemSetting(ctx context.Context, key string, value interfa
 
 	result, err := db.Pool.Exec(ctx, `
 		UPDATE system_settings
-		SET value = $1, updated_by = $2, updated_at = NOW()
-		WHERE key = $3
-	`, valueBytes, updatedBy, key)
+		SET setting_value = $1, updated_at = NOW()
+		WHERE setting_key = $2
+	`, valueBytes, key)
 	if err != nil {
 		return fmt.Errorf("update system setting: %w", err)
 	}

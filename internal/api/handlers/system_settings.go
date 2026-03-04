@@ -2,9 +2,13 @@ package handlers
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	smtplib "net/smtp"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/license"
@@ -306,8 +310,6 @@ func (h *SystemSettingsHandler) TestSMTP(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual SMTP test connection
-	// For now, return a success response if validation passes
 	if err := smtp.Validate(); err != nil {
 		c.JSON(http.StatusOK, settings.TestSMTPResponse{
 			Success: false,
@@ -316,15 +318,76 @@ func (h *SystemSettingsHandler) TestSMTP(c *gin.Context) {
 		return
 	}
 
+	// Perform actual SMTP connection test
+	addr := fmt.Sprintf("%s:%d", smtp.Host, smtp.Port)
+	timeout := 10 * time.Second
+	if smtp.ConnectionTimeout > 0 {
+		timeout = time.Duration(smtp.ConnectionTimeout) * time.Second
+	}
+
+	var conn net.Conn
+	var dialErr error
+
+	tlsConfig := &tls.Config{
+		ServerName:         smtp.Host,
+		InsecureSkipVerify: smtp.SkipTLSVerify, //nolint:gosec // user-configured
+	}
+
+	if smtp.Encryption == "tls" {
+		dialer := &tls.Dialer{Config: tlsConfig, NetDialer: &net.Dialer{Timeout: timeout}}
+		conn, dialErr = dialer.DialContext(c.Request.Context(), "tcp", addr)
+	} else {
+		conn, dialErr = net.DialTimeout("tcp", addr, timeout)
+	}
+	if dialErr != nil {
+		c.JSON(http.StatusOK, settings.TestSMTPResponse{
+			Success: false,
+			Message: "Failed to connect to SMTP server: " + dialErr.Error(),
+		})
+		return
+	}
+
+	client, clientErr := smtplib.NewClient(conn, smtp.Host)
+	if clientErr != nil {
+		conn.Close()
+		c.JSON(http.StatusOK, settings.TestSMTPResponse{
+			Success: false,
+			Message: "Failed to create SMTP client: " + clientErr.Error(),
+		})
+		return
+	}
+	defer client.Close()
+
+	if smtp.Encryption == "starttls" {
+		if err := client.StartTLS(tlsConfig); err != nil {
+			c.JSON(http.StatusOK, settings.TestSMTPResponse{
+				Success: false,
+				Message: "STARTTLS failed: " + err.Error(),
+			})
+			return
+		}
+	}
+
+	if smtp.Username != "" {
+		auth := smtplib.PlainAuth("", smtp.Username, smtp.Password, smtp.Host)
+		if err := client.Auth(auth); err != nil {
+			c.JSON(http.StatusOK, settings.TestSMTPResponse{
+				Success: false,
+				Message: "SMTP authentication failed: " + err.Error(),
+			})
+			return
+		}
+	}
+
 	h.logger.Info().
 		Str("org_id", user.CurrentOrgID.String()).
 		Str("user_id", user.ID.String()).
 		Str("recipient", req.RecipientEmail).
-		Msg("SMTP test requested")
+		Msg("SMTP test connection successful")
 
 	c.JSON(http.StatusOK, settings.TestSMTPResponse{
 		Success: true,
-		Message: "SMTP configuration is valid. Test email would be sent to: " + req.RecipientEmail,
+		Message: "SMTP connection test successful. Server is reachable and authentication passed.",
 	})
 }
 
@@ -519,17 +582,51 @@ func (h *SystemSettingsHandler) TestOIDC(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual OIDC provider discovery check
+	// Perform actual OIDC provider discovery
+	discoveryURL := oidc.Issuer + "/.well-known/openid-configuration"
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	resp, err := httpClient.Get(discoveryURL) //nolint:gosec // URL from admin-configured issuer
+	if err != nil {
+		c.JSON(http.StatusOK, settings.TestOIDCResponse{
+			Success: false,
+			Message: "Failed to reach OIDC provider: " + err.Error(),
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.JSON(http.StatusOK, settings.TestOIDCResponse{
+			Success: false,
+			Message: fmt.Sprintf("OIDC discovery endpoint returned HTTP %d", resp.StatusCode),
+		})
+		return
+	}
+
+	var discovery map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&discovery); err != nil {
+		c.JSON(http.StatusOK, settings.TestOIDCResponse{
+			Success: false,
+			Message: "Failed to parse OIDC discovery document: " + err.Error(),
+		})
+		return
+	}
+
+	providerName := oidc.Issuer
+	if issuer, ok := discovery["issuer"].(string); ok {
+		providerName = issuer
+	}
+
 	h.logger.Info().
 		Str("org_id", user.CurrentOrgID.String()).
 		Str("user_id", user.ID.String()).
 		Str("issuer", oidc.Issuer).
-		Msg("OIDC test requested")
+		Msg("OIDC test connection successful")
 
 	c.JSON(http.StatusOK, settings.TestOIDCResponse{
 		Success:       true,
-		Message:       "OIDC configuration is valid",
-		ProviderName:  oidc.Issuer,
+		Message:       "OIDC provider is reachable and discovery document is valid",
+		ProviderName:  providerName,
 		SupportedFlow: "authorization_code",
 	})
 }

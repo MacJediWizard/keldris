@@ -799,7 +799,9 @@ func (v *Validator) storeEntitlementFromResponse(resp map[string]interface{}) {
 		v.mu.Unlock()
 		v.logger.Debug().Str("tier", string(ent.Tier)).Int("features", len(ent.Features)).Msg("entitlement token stored")
 	} else {
-		// No public key available, store token without verification
+		// No public key available — store raw token only (not parsed entitlement).
+		// Feature gating still relies on DB tier since v.entitlement is not set.
+		v.logger.Warn().Msg("no public key available, entitlement token stored without cryptographic verification")
 		v.mu.Lock()
 		v.entitlementToken = token
 		v.mu.Unlock()

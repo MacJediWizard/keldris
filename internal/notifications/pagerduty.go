@@ -15,9 +15,8 @@ import (
 )
 
 const (
+	// pagerDutyEventsURL is the PagerDuty Events API v2 endpoint.
 	pagerDutyEventsURL = "https://events.pagerduty.com/v2/enqueue"
-	// PagerDuty Events API v2 endpoint
-	pagerDutyEventsAPIURL = "https://events.pagerduty.com/v2/enqueue"
 )
 
 // PagerDutyService handles sending notifications via PagerDuty Events API v2.
@@ -217,7 +216,7 @@ func (s *PagerDutyService) Send(event *PagerDutyEvent) error {
 	}
 
 	ctx := context.Background()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, pagerDutyEventsAPIURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, pagerDutyEventsURL, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("create pagerduty request: %w", err)
 	}

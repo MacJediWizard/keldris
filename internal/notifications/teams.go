@@ -166,34 +166,6 @@ func ValidateTeamsConfig(config *models.TeamsChannelConfig) error {
 	return nil
 }
 
-// teamsAdaptiveCard represents a Teams webhook payload using Adaptive Cards.
-type teamsAdaptiveCard struct {
-	Type        string              `json:"type"`
-	Attachments []teamsAttachment   `json:"attachments"`
-}
-
-type teamsAttachment struct {
-	ContentType string            `json:"contentType"`
-	ContentURL  *string           `json:"contentUrl"`
-	Content     teamsCardContent  `json:"content"`
-}
-
-type teamsCardContent struct {
-	Schema  string          `json:"$schema"`
-	Type    string          `json:"type"`
-	Version string          `json:"version"`
-	Body    []teamsCardBody `json:"body"`
-}
-
-type teamsCardBody struct {
-	Type   string `json:"type"`
-	Text   string `json:"text"`
-	Size   string `json:"size,omitempty"`
-	Weight string `json:"weight,omitempty"`
-	Color  string `json:"color,omitempty"`
-	Wrap   bool   `json:"wrap,omitempty"`
-}
-
 // teamsSeverityColor maps notification severity to Adaptive Card color names.
 func teamsSeverityColor(severity string) string {
 	switch severity {
@@ -208,17 +180,17 @@ func teamsSeverityColor(severity string) string {
 
 // Send sends a notification message to a Teams webhook URL.
 func (t *TeamsSender) Send(ctx context.Context, webhookURL string, msg NotificationMessage) error {
-	payload := teamsAdaptiveCard{
+	payload := TeamsMessage{
 		Type: "message",
-		Attachments: []teamsAttachment{
+		Attachments: []TeamsAttachment{
 			{
 				ContentType: "application/vnd.microsoft.card.adaptive",
 				ContentURL:  nil,
-				Content: teamsCardContent{
+				Content: TeamsCardContent{
 					Schema:  "http://adaptivecards.io/schemas/adaptive-card.json",
 					Type:    "AdaptiveCard",
 					Version: "1.4",
-					Body: []teamsCardBody{
+					Body: []TeamsCardBody{
 						{
 							Type:   "TextBlock",
 							Text:   msg.Title,

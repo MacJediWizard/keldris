@@ -1198,6 +1198,8 @@ export interface OrgFeatureFlags {
 
 // Branding Settings (Enterprise)
 export interface BrandingSettings {
+	id: string;
+	org_id: string;
 	enabled: boolean;
 	product_name: string;
 	company_name: string;
@@ -1217,6 +1219,8 @@ export interface BrandingSettings {
 	login_bg_url: string;
 	hide_powered_by: boolean;
 	custom_css: string;
+	created_at: string;
+	updated_at: string;
 }
 
 export interface PublicBrandingSettings {
@@ -2989,20 +2993,7 @@ export interface FileHistoryParams {
 	repository_id: string;
 }
 
-// Branding types
-export interface BrandingSettings {
-	id: string;
-	org_id: string;
-	logo_url: string;
-	favicon_url: string;
-	product_name: string;
-	primary_color: string;
-	secondary_color: string;
-	support_url: string;
-	custom_css: string;
-	created_at: string;
-	updated_at: string;
-}
+// Branding types (re-export — canonical definition is above)
 
 export interface UpdateBrandingRequest {
 	logo_url?: string;
@@ -6246,7 +6237,7 @@ export interface RerunStatusResponse {
 }
 
 // License types
-export type LicenseTier = 'free' | 'pro' | 'professional' | 'enterprise';
+export type LicenseTier = 'free' | 'professional' | 'enterprise';
 export type LicenseStatus =
 	| 'active'
 	| 'expiring_soon'
@@ -6493,7 +6484,30 @@ export type LicenseFeature =
 	| 'audit_logs'
 	| 'multi_org'
 	| 'sla_tracking'
-	| 'white_label';
+	| 'white_label'
+	| 'notification_slack'
+	| 'notification_teams'
+	| 'notification_pagerduty'
+	| 'notification_discord'
+	| 'storage_s3'
+	| 'storage_b2'
+	| 'storage_sftp'
+	| 'storage_dropbox'
+	| 'storage_rest'
+	| 'docker_backup'
+	| 'multi_repo'
+	| 'api_access'
+	| 'air_gap'
+	| 'dr_runbooks'
+	| 'dr_tests'
+	| 'custom_reports'
+	| 'sso_sync'
+	| 'rbac'
+	| 'geo_replication'
+	| 'ransomware_protection'
+	| 'legal_holds'
+	| 'custom_retention'
+	| 'priority_support';
 
 export interface FeatureInfo {
 	name: LicenseFeature;
@@ -6546,7 +6560,7 @@ export interface FeatureCheckResponse {
 }
 
 // Trial types
-export type PlanTier = 'free' | 'pro' | 'enterprise';
+export type PlanTier = 'free' | 'pro' | 'professional' | 'enterprise';
 export type TrialStatus = 'none' | 'active' | 'expired' | 'converted';
 
 export interface TrialInfo {

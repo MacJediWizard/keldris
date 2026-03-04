@@ -6,6 +6,7 @@ import (
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/metadata"
+	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -24,9 +25,9 @@ type MetadataStore interface {
 	SearchAgentsByMetadata(ctx context.Context, orgID uuid.UUID, key, value string) ([]uuid.UUID, error)
 	SearchRepositoriesByMetadata(ctx context.Context, orgID uuid.UUID, key, value string) ([]uuid.UUID, error)
 	SearchSchedulesByMetadata(ctx context.Context, orgID uuid.UUID, key, value string) ([]uuid.UUID, error)
-	GetAgentByID(ctx context.Context, id uuid.UUID) (interface{}, error)
-	GetRepositoryByID(ctx context.Context, id uuid.UUID) (interface{}, error)
-	GetScheduleByID(ctx context.Context, id uuid.UUID) (interface{}, error)
+	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
+	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
+	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error)
 }
 
 // MetadataHandler handles metadata-related HTTP endpoints.

@@ -331,7 +331,6 @@ function App() {
 										<Route path="onboarding" element={<Onboarding />} />
 										<Route path="changelog" element={<Changelog />} />
 										<Route path="system/airgap" element={<AirGapLicense />} />
-										<Route path="license" element={<License />} />
 										<Route path="docs" element={<Documentation />} />
 										<Route path="docs/:slug" element={<Documentation />} />
 										<Route path="docs/*" element={<Docs />} />

@@ -1,5 +1,4 @@
 .PHONY: all build dev test test-integration lint clean deps swagger swagger-fmt
-.PHONY: all build dev test lint clean deps swagger swagger-fmt
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -78,7 +77,6 @@ test-integration:
 lint:
 	go vet ./...
 	@PATH="$$PATH:$$(go env GOPATH)/bin" staticcheck ./... || echo "staticcheck not installed, skipping"
-	@which staticcheck > /dev/null && staticcheck ./... || echo "staticcheck not installed, skipping"
 	cd web && npx @biomejs/biome check .
 
 fmt:

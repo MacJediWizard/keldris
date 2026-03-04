@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
@@ -283,7 +284,7 @@ func (h *LicenseManageHandler) CheckTrial(c *gin.Context) {
 		return
 	}
 
-	serverURL := fmt.Sprintf("%s/api/v1/trials/check?email=%s&product=keldris", h.validator.GetServerURL(), email)
+	serverURL := fmt.Sprintf("%s/api/v1/trials/check?email=%s&product=keldris", h.validator.GetServerURL(), url.QueryEscape(email))
 	resp, err := http.Get(serverURL) //nolint:gosec // URL is from trusted server config
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"has_trial": false})

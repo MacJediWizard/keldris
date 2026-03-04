@@ -486,7 +486,7 @@ func (db *DB) GetActiveAgentCountByOrgID(ctx context.Context, orgID uuid.UUID) (
 	var count int
 	err := db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*) FROM agents
-		WHERE org_id = $1 AND last_seen_at > NOW() - INTERVAL '24 hours'
+		WHERE org_id = $1 AND last_seen > NOW() - INTERVAL '24 hours'
 	`, orgID).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("count active agents: %w", err)

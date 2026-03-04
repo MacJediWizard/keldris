@@ -106,7 +106,7 @@ func (s *Service) NotifyBackupComplete(ctx context.Context, result BackupResult)
 	}
 
 	for _, pref := range prefs {
-		go s.sendNotification(ctx, pref, result)
+		go s.sendNotification(context.Background(), pref, result)
 	}
 }
 
@@ -139,7 +139,7 @@ func (s *Service) NotifyAgentOffline(ctx context.Context, agent *models.Agent, o
 	}
 
 	for _, pref := range prefs {
-		go s.sendAgentOfflineNotification(ctx, pref, data, orgID)
+		go s.sendAgentOfflineNotification(context.Background(), pref, data, orgID)
 	}
 }
 
@@ -296,9 +296,12 @@ func (s *Service) sendBackupEmail(ctx context.Context, channel *models.Notificat
 		return
 	}
 
-	recipients := []string{emailConfig.From}
+	recipients := emailConfig.Recipients
+	if len(recipients) == 0 {
+		recipients = []string{emailConfig.From}
+	}
 
-	log := models.NewNotificationLog(result.OrgID, &channel.ID, string(pref.EventType), recipients[0], subject)
+	log := models.NewNotificationLog(result.OrgID, &channel.ID, string(pref.EventType), strings.Join(recipients, ", "), subject)
 	if err := s.store.CreateNotificationLog(ctx, log); err != nil {
 		s.logger.Error().Err(err).Msg("failed to create notification log")
 	}
@@ -329,7 +332,7 @@ func (s *Service) sendBackupEmail(ctx context.Context, channel *models.Notificat
 		sendErr = emailService.SendBackupFailed(recipients, data)
 	}
 
-	s.finalizeLog(ctx, log, sendErr, channel.ID.String(), recipients[0])
+	s.finalizeLog(ctx, log, sendErr, channel.ID.String(), strings.Join(recipients, ", "))
 }
 
 // sendAgentOfflineNotification sends an agent offline notification.
@@ -453,15 +456,18 @@ func (s *Service) sendAgentOfflineEmail(ctx context.Context, channel *models.Not
 		return
 	}
 
-	recipients := []string{emailConfig.From}
+	recipients := emailConfig.Recipients
+	if len(recipients) == 0 {
+		recipients = []string{emailConfig.From}
+	}
 
-	log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), recipients[0], subject)
+	log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), strings.Join(recipients, ", "), subject)
 	if err := s.store.CreateNotificationLog(ctx, log); err != nil {
 		s.logger.Error().Err(err).Msg("failed to create notification log")
 	}
 
 	sendErr := emailService.SendAgentOffline(recipients, data)
-	s.finalizeLog(ctx, log, sendErr, channel.ID.String(), recipients[0])
+	s.finalizeLog(ctx, log, sendErr, channel.ID.String(), strings.Join(recipients, ", "))
 }
 
 // getChannelRecipient returns a display-friendly recipient string for logging.
@@ -469,7 +475,10 @@ func (s *Service) getChannelRecipient(channel *models.NotificationChannel) strin
 	switch channel.Type {
 	case models.ChannelTypeEmail:
 		var config models.EmailChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &config); err == nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &config); err == nil {
+			if len(config.Recipients) > 0 {
+				return strings.Join(config.Recipients, ", ")
+			}
 			return config.From
 		}
 	case models.ChannelTypeSlack:
@@ -480,13 +489,13 @@ func (s *Service) getChannelRecipient(channel *models.NotificationChannel) strin
 		return "discord-webhook"
 	case models.ChannelTypePagerDuty:
 		var config models.PagerDutyChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &config); err == nil && len(config.RoutingKey) > 8 {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &config); err == nil && len(config.RoutingKey) > 8 {
 			return "pagerduty:" + config.RoutingKey[:8] + "..."
 		}
 		return "pagerduty"
 	case models.ChannelTypeWebhook:
 		var config models.WebhookChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &config); err == nil {
+		if err := s.decryptConfig(channel.ConfigEncrypted, &config); err == nil {
 			return config.URL
 		}
 	}
@@ -521,7 +530,7 @@ func (s *Service) NotifyMaintenanceScheduled(ctx context.Context, window *models
 	}
 
 	for _, pref := range prefs {
-		go s.sendMaintenanceNotification(ctx, pref, data, window.OrgID)
+		go s.sendMaintenanceNotification(context.Background(), pref, data, window.OrgID)
 	}
 }
 
@@ -650,15 +659,18 @@ func (s *Service) sendMaintenanceEmail(ctx context.Context, channel *models.Noti
 		return
 	}
 
-	recipients := []string{emailConfig.From}
+	recipients := emailConfig.Recipients
+	if len(recipients) == 0 {
+		recipients = []string{emailConfig.From}
+	}
 
-	log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), recipients[0], subject)
+	log := models.NewNotificationLog(orgID, &channel.ID, string(pref.EventType), strings.Join(recipients, ", "), subject)
 	if err := s.store.CreateNotificationLog(ctx, log); err != nil {
 		s.logger.Error().Err(err).Msg("failed to create notification log")
 	}
 
 	sendErr := emailService.SendMaintenanceScheduled(recipients, data)
-	s.finalizeLog(ctx, log, sendErr, channel.ID.String(), recipients[0])
+	s.finalizeLog(ctx, log, sendErr, channel.ID.String(), strings.Join(recipients, ", "))
 }
 
 // finalizeLog updates a notification log with the send result.
@@ -694,8 +706,8 @@ func (s *Service) TestChannel(channel *models.NotificationChannel) error {
 	switch channel.Type {
 	case models.ChannelTypeEmail:
 		var config models.EmailChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-			return fmt.Errorf("parse email config: %w", err)
+		if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+			return fmt.Errorf("decrypt email config: %w", err)
 		}
 		smtpConfig := SMTPConfig{
 			Host:     config.Host,
@@ -720,44 +732,48 @@ func (s *Service) TestChannel(channel *models.NotificationChannel) error {
 			FilesNew:     10,
 			FilesChanged: 5,
 		}
-		return emailService.SendBackupSuccess([]string{config.From}, testData)
+		recipients := config.Recipients
+		if len(recipients) == 0 {
+			recipients = []string{config.From}
+		}
+		return emailService.SendBackupSuccess(recipients, testData)
 
 	case models.ChannelTypeSlack:
 		var config models.SlackChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-			return fmt.Errorf("parse slack config: %w", err)
+		if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+			return fmt.Errorf("decrypt slack config: %w", err)
 		}
 		msg := NotificationMessage{Title: "Test Notification", Body: "This is a test notification from Keldris.", EventType: "test", Severity: "info"}
 		return s.slackSenderFunc(s.logger).Send(context.Background(), config.WebhookURL, msg)
 
 	case models.ChannelTypeTeams:
 		var config models.TeamsChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-			return fmt.Errorf("parse teams config: %w", err)
+		if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+			return fmt.Errorf("decrypt teams config: %w", err)
 		}
 		msg := NotificationMessage{Title: "Test Notification", Body: "This is a test notification from Keldris.", EventType: "test", Severity: "info"}
 		return s.teamsSenderFunc(s.logger).Send(context.Background(), config.WebhookURL, msg)
 
 	case models.ChannelTypeDiscord:
 		var config models.DiscordChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-			return fmt.Errorf("parse discord config: %w", err)
+		if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+			return fmt.Errorf("decrypt discord config: %w", err)
 		}
 		msg := NotificationMessage{Title: "Test Notification", Body: "This is a test notification from Keldris.", EventType: "test", Severity: "info"}
 		return s.discordSenderFunc(s.logger).Send(context.Background(), config.WebhookURL, msg)
 
 	case models.ChannelTypePagerDuty:
 		var config models.PagerDutyChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-			return fmt.Errorf("parse pagerduty config: %w", err)
+		if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+			return fmt.Errorf("decrypt pagerduty config: %w", err)
 		}
 		event := PagerDutyEvent{Summary: "Test Notification from Keldris", Source: "keldris", Severity: "info", Group: "test"}
 		return s.pagerDutySenderFunc(s.logger).Send(context.Background(), config.RoutingKey, event)
 
 	case models.ChannelTypeWebhook:
 		var config models.WebhookChannelConfig
-		if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-			return fmt.Errorf("parse webhook config: %w", err)
+		if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+			return fmt.Errorf("decrypt webhook config: %w", err)
 		}
 		payload := WebhookPayload{EventType: "test", Timestamp: time.Now(), Data: map[string]string{"message": "Test notification from Keldris"}}
 		return s.webhookSenderFunc(s.logger).Send(context.Background(), config.URL, payload, config.Secret)
@@ -802,7 +818,7 @@ func (s *Service) NotifyTestRestoreFailed(ctx context.Context, result *models.Te
 	}
 
 	for _, pref := range prefs {
-		go s.sendTestRestoreFailedNotification(ctx, pref, data, repo.OrgID)
+		go s.sendTestRestoreFailedNotification(context.Background(), pref, data, repo.OrgID)
 	}
 }
 
@@ -868,8 +884,8 @@ func (s *Service) sendTestRestoreFailedNotification(ctx context.Context, pref *m
 // sendEmailTestRestoreFailed sends a test restore failed notification via email.
 func (s *Service) sendEmailTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
 	var emailConfig models.EmailChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
-		return fmt.Errorf("parse email config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &emailConfig); err != nil {
+		return fmt.Errorf("decrypt email config: %w", err)
 	}
 
 	smtpConfig := SMTPConfig{
@@ -886,14 +902,18 @@ func (s *Service) sendEmailTestRestoreFailed(channel *models.NotificationChannel
 		return fmt.Errorf("create email service: %w", err)
 	}
 
-	return emailService.SendTestRestoreFailed([]string{emailConfig.From}, data)
+	recipients := emailConfig.Recipients
+	if len(recipients) == 0 {
+		recipients = []string{emailConfig.From}
+	}
+	return emailService.SendTestRestoreFailed(recipients, data)
 }
 
 // sendSlackTestRestoreFailed sends a test restore failed notification via Slack.
 func (s *Service) sendSlackTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
 	var config models.SlackChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("parse slack config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("decrypt slack config: %w", err)
 	}
 
 	slackService, err := NewSlackService(config, s.logger)
@@ -907,8 +927,8 @@ func (s *Service) sendSlackTestRestoreFailed(channel *models.NotificationChannel
 // sendTeamsTestRestoreFailed sends a test restore failed notification via Microsoft Teams.
 func (s *Service) sendTeamsTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
 	var config models.TeamsChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("parse teams config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("decrypt teams config: %w", err)
 	}
 
 	teamsService, err := NewTeamsService(config, s.logger)
@@ -922,8 +942,8 @@ func (s *Service) sendTeamsTestRestoreFailed(channel *models.NotificationChannel
 // sendDiscordTestRestoreFailed sends a test restore failed notification via Discord.
 func (s *Service) sendDiscordTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
 	var config models.DiscordChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("parse discord config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("decrypt discord config: %w", err)
 	}
 
 	discordService, err := NewDiscordService(config, s.logger)
@@ -937,8 +957,8 @@ func (s *Service) sendDiscordTestRestoreFailed(channel *models.NotificationChann
 // sendPagerDutyTestRestoreFailed sends a test restore failed notification via PagerDuty.
 func (s *Service) sendPagerDutyTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
 	var config models.PagerDutyChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("parse pagerduty config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("decrypt pagerduty config: %w", err)
 	}
 
 	pdService, err := NewPagerDutyService(config, s.logger)
@@ -952,8 +972,8 @@ func (s *Service) sendPagerDutyTestRestoreFailed(channel *models.NotificationCha
 // sendWebhookTestRestoreFailed sends a test restore failed notification via generic webhook.
 func (s *Service) sendWebhookTestRestoreFailed(channel *models.NotificationChannel, data TestRestoreFailedData) error {
 	var config models.WebhookChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("parse webhook config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("decrypt webhook config: %w", err)
 	}
 
 	webhookService, err := NewWebhookService(config, s.logger)
@@ -1010,7 +1030,7 @@ func (s *Service) NotifyValidationFailed(ctx context.Context, result ValidationF
 	}
 
 	for _, pref := range prefs {
-		go s.sendValidationFailedNotification(ctx, pref, data, result.OrgID)
+		go s.sendValidationFailedNotification(context.Background(), pref, data, result.OrgID)
 	}
 }
 
@@ -1076,8 +1096,8 @@ func (s *Service) sendValidationFailedNotification(ctx context.Context, pref *mo
 // sendEmailValidationFailed sends a validation failed notification via email.
 func (s *Service) sendEmailValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
 	var emailConfig models.EmailChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &emailConfig); err != nil {
-		return fmt.Errorf("parse email config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &emailConfig); err != nil {
+		return fmt.Errorf("decrypt email config: %w", err)
 	}
 
 	smtpConfig := SMTPConfig{
@@ -1094,14 +1114,18 @@ func (s *Service) sendEmailValidationFailed(channel *models.NotificationChannel,
 		return fmt.Errorf("create email service: %w", err)
 	}
 
-	return emailService.SendValidationFailed([]string{emailConfig.From}, data)
+	recipients := emailConfig.Recipients
+	if len(recipients) == 0 {
+		recipients = []string{emailConfig.From}
+	}
+	return emailService.SendValidationFailed(recipients, data)
 }
 
 // sendSlackValidationFailed sends a validation failed notification via Slack.
 func (s *Service) sendSlackValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
 	var config models.SlackChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("parse slack config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("decrypt slack config: %w", err)
 	}
 
 	slackService, err := NewSlackService(config, s.logger)
@@ -1115,8 +1139,8 @@ func (s *Service) sendSlackValidationFailed(channel *models.NotificationChannel,
 // sendTeamsValidationFailed sends a validation failed notification via Microsoft Teams.
 func (s *Service) sendTeamsValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
 	var config models.TeamsChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("parse teams config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("decrypt teams config: %w", err)
 	}
 
 	teamsService, err := NewTeamsService(config, s.logger)
@@ -1130,8 +1154,8 @@ func (s *Service) sendTeamsValidationFailed(channel *models.NotificationChannel,
 // sendDiscordValidationFailed sends a validation failed notification via Discord.
 func (s *Service) sendDiscordValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
 	var config models.DiscordChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("parse discord config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("decrypt discord config: %w", err)
 	}
 
 	discordService, err := NewDiscordService(config, s.logger)
@@ -1145,8 +1169,8 @@ func (s *Service) sendDiscordValidationFailed(channel *models.NotificationChanne
 // sendPagerDutyValidationFailed sends a validation failed notification via PagerDuty.
 func (s *Service) sendPagerDutyValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
 	var config models.PagerDutyChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("parse pagerduty config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("decrypt pagerduty config: %w", err)
 	}
 
 	pdService, err := NewPagerDutyService(config, s.logger)
@@ -1160,8 +1184,8 @@ func (s *Service) sendPagerDutyValidationFailed(channel *models.NotificationChan
 // sendWebhookValidationFailed sends a validation failed notification via generic webhook.
 func (s *Service) sendWebhookValidationFailed(channel *models.NotificationChannel, data ValidationFailedData) error {
 	var config models.WebhookChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("parse webhook config: %w", err)
+	if err := s.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("decrypt webhook config: %w", err)
 	}
 
 	webhookService, err := NewWebhookService(config, s.logger)

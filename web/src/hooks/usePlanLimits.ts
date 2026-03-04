@@ -11,8 +11,8 @@ import { useLicense } from './useLicense';
 import { useCurrentOrganization } from './useOrganizations';
 
 // Map backend tier names to frontend plan types.
-// Backend uses "pro", frontend uses "professional".
-function tierToPlan(tier: LicenseTier | undefined): PlanType {
+// Backend may send "pro" as an alias for "professional".
+function tierToPlan(tier: LicenseTier | string | undefined): PlanType {
 	switch (tier) {
 		case 'enterprise':
 			return 'enterprise';

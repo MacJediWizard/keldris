@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/smtp"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -371,7 +372,7 @@ func (s *EmailService) send(to []string, subject, htmlBody string) error {
 func (s *EmailService) buildMessage(to []string, subject, htmlBody string) []byte {
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("From: %s\r\n", s.config.From))
-	buf.WriteString(fmt.Sprintf("To: %s\r\n", to[0]))
+	buf.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(to, ", ")))
 	buf.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
 	buf.WriteString("MIME-Version: 1.0\r\n")
 	buf.WriteString("Content-Type: text/html; charset=\"UTF-8\"\r\n")

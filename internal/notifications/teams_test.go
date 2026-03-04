@@ -12,7 +12,7 @@ import (
 )
 
 func TestTeamsSender_Send(t *testing.T) {
-	var received teamsAdaptiveCard
+	var received TeamsMessage
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {

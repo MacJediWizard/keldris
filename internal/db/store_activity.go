@@ -304,8 +304,9 @@ func (db *DB) SearchActivityEvents(ctx context.Context, orgID uuid.UUID, query s
 		limit = 50
 	}
 
-	// Sanitize the search query
-	searchQuery := "%" + strings.ToLower(query) + "%"
+	// Escape LIKE wildcards and sanitize the search query
+	escaped := strings.NewReplacer("%", "\\%", "_", "\\_").Replace(query)
+	searchQuery := "%" + strings.ToLower(escaped) + "%"
 
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id, org_id, type, category, title, description,

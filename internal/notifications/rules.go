@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -36,16 +37,30 @@ type RuleStore interface {
 
 // RuleEngine evaluates notification rules and executes actions.
 type RuleEngine struct {
-	store  RuleStore
-	logger zerolog.Logger
+	store      RuleStore
+	keyManager *crypto.KeyManager
+	logger     zerolog.Logger
 }
 
 // NewRuleEngine creates a new rule engine.
-func NewRuleEngine(store RuleStore, logger zerolog.Logger) *RuleEngine {
+func NewRuleEngine(store RuleStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *RuleEngine {
 	return &RuleEngine{
-		store:  store,
-		logger: logger.With().Str("component", "rule_engine").Logger(),
+		store:      store,
+		keyManager: keyManager,
+		logger:     logger.With().Str("component", "rule_engine").Logger(),
 	}
+}
+
+// decryptConfig decrypts an encrypted channel config and unmarshals it into dest.
+func (e *RuleEngine) decryptConfig(encrypted []byte, dest interface{}) error {
+	decrypted, err := e.keyManager.Decrypt(encrypted)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt config: %w", err)
+	}
+	if err := json.Unmarshal(decrypted, dest); err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
+	return nil
 }
 
 // EventContext contains context about the event being processed.
@@ -380,88 +395,85 @@ func (e *RuleEngine) executeWebhook(ctx context.Context, action models.RuleActio
 		Str("rule_id", rule.ID.String()).
 		Str("rule_name", rule.Name).
 		Str("webhook_url", action.WebhookURL).
-		Msg("calling webhook")
+		Str("trigger_type", string(eventCtx.TriggerType)).
+		Msg("rule engine: direct webhook action delivery not yet implemented")
 
-	// TODO: Implement actual HTTP call
 	return nil
 }
 
 // sendPagerDutyNotification sends a PagerDuty alert.
 func (e *RuleEngine) sendPagerDutyNotification(ctx context.Context, channel *models.NotificationChannel, rule *models.NotificationRule, eventCtx EventContext, message string) error {
-	// Parse PagerDuty config
-	var config struct {
-		RoutingKey string `json:"routing_key"`
-		ServiceKey string `json:"service_key"`
-	}
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("failed to parse PagerDuty config: %w", err)
+	var config models.PagerDutyChannelConfig
+	if err := e.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("failed to decrypt PagerDuty config: %w", err)
 	}
 
 	e.logger.Info().
 		Str("channel_id", channel.ID.String()).
+		Str("channel_name", channel.Name).
 		Str("trigger_type", string(eventCtx.TriggerType)).
+		Str("rule_name", rule.Name).
 		Str("message", message).
-		Msg("sending PagerDuty notification")
+		Str("routing_key_prefix", config.RoutingKey[:min(8, len(config.RoutingKey))]+"...").
+		Msg("rule engine: PagerDuty notification delivery not yet implemented")
 
-	// TODO: Implement actual PagerDuty API call
-	// For now, just log the intent
 	return nil
 }
 
 // sendSlackNotification sends a Slack message.
 func (e *RuleEngine) sendSlackNotification(ctx context.Context, channel *models.NotificationChannel, rule *models.NotificationRule, eventCtx EventContext, message string) error {
-	var config struct {
-		WebhookURL string `json:"webhook_url"`
-		Channel    string `json:"channel"`
-	}
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("failed to parse Slack config: %w", err)
+	var config models.SlackChannelConfig
+	if err := e.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("failed to decrypt Slack config: %w", err)
 	}
 
 	e.logger.Info().
 		Str("channel_id", channel.ID.String()).
+		Str("channel_name", channel.Name).
 		Str("trigger_type", string(eventCtx.TriggerType)).
+		Str("rule_name", rule.Name).
 		Str("message", message).
-		Msg("sending Slack notification")
+		Msg("rule engine: Slack notification delivery not yet implemented")
 
-	// TODO: Implement actual Slack API call
 	return nil
 }
 
 // sendEmailNotification sends an email notification.
 func (e *RuleEngine) sendEmailNotification(ctx context.Context, channel *models.NotificationChannel, rule *models.NotificationRule, eventCtx EventContext, message string) error {
 	var config models.EmailChannelConfig
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("failed to parse email config: %w", err)
+	if err := e.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("failed to decrypt email config: %w", err)
 	}
 
 	e.logger.Info().
 		Str("channel_id", channel.ID.String()).
+		Str("channel_name", channel.Name).
+		Str("from", config.From).
+		Str("host", config.Host).
 		Str("trigger_type", string(eventCtx.TriggerType)).
+		Str("rule_name", rule.Name).
 		Str("message", message).
-		Msg("sending email notification")
+		Msg("rule engine: email notification delivery not yet implemented")
 
-	// TODO: Implement actual email sending via SMTP
 	return nil
 }
 
 // sendWebhookNotification sends a generic webhook notification.
 func (e *RuleEngine) sendWebhookNotification(ctx context.Context, channel *models.NotificationChannel, rule *models.NotificationRule, eventCtx EventContext, message string) error {
-	var config struct {
-		URL     string            `json:"url"`
-		Headers map[string]string `json:"headers"`
-	}
-	if err := json.Unmarshal(channel.ConfigEncrypted, &config); err != nil {
-		return fmt.Errorf("failed to parse webhook config: %w", err)
+	var config models.WebhookChannelConfig
+	if err := e.decryptConfig(channel.ConfigEncrypted, &config); err != nil {
+		return fmt.Errorf("failed to decrypt webhook config: %w", err)
 	}
 
 	e.logger.Info().
 		Str("channel_id", channel.ID.String()).
+		Str("channel_name", channel.Name).
 		Str("trigger_type", string(eventCtx.TriggerType)).
+		Str("rule_name", rule.Name).
 		Str("url", config.URL).
-		Msg("sending webhook notification")
+		Str("message", message).
+		Msg("rule engine: webhook notification delivery not yet implemented")
 
-	// TODO: Implement actual HTTP call
 	return nil
 }
 

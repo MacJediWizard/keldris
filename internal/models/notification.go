@@ -134,12 +134,13 @@ func (n *NotificationLog) MarkFailed(errMsg string) {
 
 // EmailChannelConfig represents SMTP configuration for email channels
 type EmailChannelConfig struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	From     string `json:"from"`
-	TLS      bool   `json:"tls"`
+	Host       string   `json:"host"`
+	Port       int      `json:"port"`
+	Username   string   `json:"username"`
+	Password   string   `json:"password"`
+	From       string   `json:"from"`
+	Recipients []string `json:"recipients,omitempty"`
+	TLS        bool     `json:"tls"`
 }
 
 // SlackChannelConfig represents Slack webhook configuration

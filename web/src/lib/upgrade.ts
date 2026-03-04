@@ -26,7 +26,7 @@ export function generateUpgradeLink(options: UpgradeLinkOptions = {}): string {
 	}
 
 	const queryString = params.toString();
-	return `/organization/billing${queryString ? `?${queryString}` : ''}`;
+	return `/organization/license${queryString ? `?${queryString}` : ''}`;
 }
 
 /**
@@ -47,7 +47,7 @@ export function generateContactSalesLink(
 	}
 
 	const queryString = params.toString();
-	return `/organization/contact-sales${queryString ? `?${queryString}` : ''}`;
+	return `/organization/license${queryString ? `?${queryString}` : ''}`;
 }
 
 /**

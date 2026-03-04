@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -457,9 +458,15 @@ type licensePayload struct {
 	IssuedAt   int64       `json:"issued_at"`
 }
 
-// signingKey is used to validate license keys. In production this would be
-// loaded from configuration or an environment variable.
-var signingKey = []byte("keldris-license-signing-key")
+// signingKey is used to validate legacy HMAC-based license keys.
+// Set via HMAC_SIGNING_KEY env var or programmatically via SetSigningKey.
+var signingKey = func() []byte {
+	if key := os.Getenv("HMAC_SIGNING_KEY"); key != "" {
+		return []byte(key)
+	}
+	// Fallback for development/testing only — production MUST set HMAC_SIGNING_KEY
+	return []byte("keldris-license-signing-key-dev")
+}()
 
 // SetSigningKey configures the HMAC key used for license validation.
 func SetSigningKey(key []byte) {

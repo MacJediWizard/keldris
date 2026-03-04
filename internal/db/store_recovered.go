@@ -743,6 +743,7 @@ func (db *DB) GetAllBackups(ctx context.Context) ([]*models.Backup, error) {
 		       retention_applied, snapshots_removed, snapshots_kept, retention_error, created_at
 		FROM backups
 		ORDER BY started_at DESC
+		LIMIT 10000
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("get all backups: %w", err)

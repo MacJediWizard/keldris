@@ -2,10 +2,12 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // Backup Queue Methods
@@ -49,6 +51,9 @@ func (db *DB) GetQueuedBackupsByOrg(ctx context.Context, orgID uuid.UUID) ([]*mo
 		position++
 		entries = append(entries, &e)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate queued backups by org: %w", err)
+	}
 
 	return entries, nil
 }
@@ -80,6 +85,9 @@ func (db *DB) GetQueuedBackupsByAgent(ctx context.Context, agentID uuid.UUID) ([
 		position++
 		entries = append(entries, &e)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate queued backups by agent: %w", err)
+	}
 
 	return entries, nil
 }
@@ -96,7 +104,7 @@ func (db *DB) GetOldestQueuedBackup(ctx context.Context, orgID uuid.UUID) (*mode
 		LIMIT 1
 	`, orgID).Scan(&e.ID, &e.OrgID, &e.AgentID, &e.ScheduleID, &e.Priority, &e.QueuedAt, &e.StartedAt, &statusStr, &e.CreatedAt)
 	if err != nil {
-		if err.Error() == "no rows in result set" {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get oldest queued backup: %w", err)
@@ -212,6 +220,9 @@ func (db *DB) GetConcurrencyQueueSummary(ctx context.Context, orgID uuid.UUID) (
 		}
 		summary.ByAgent[agentID] = count
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate agent queue counts: %w", err)
+	}
 
 	// Calculate average wait time from started entries
 	var avgWait *float64
@@ -260,6 +271,9 @@ func (db *DB) GetQueuedBackupsWithDetails(ctx context.Context, orgID uuid.UUID) 
 		e.QueuePosition = position
 		position++
 		entries = append(entries, &e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate queued backups with details: %w", err)
 	}
 
 	return entries, nil

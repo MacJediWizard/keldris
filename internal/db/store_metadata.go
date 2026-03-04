@@ -55,6 +55,9 @@ func (db *DB) GetMetadataSchemasByOrgAndEntity(ctx context.Context, orgID uuid.U
 		}
 		schemas = append(schemas, &s)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate metadata schemas: %w", err)
+	}
 
 	return schemas, nil
 }
@@ -237,10 +240,15 @@ func (db *DB) UpdateScheduleMetadata(ctx context.Context, scheduleID uuid.UUID, 
 
 // SearchAgentsByMetadata searches for agents matching metadata criteria.
 func (db *DB) SearchAgentsByMetadata(ctx context.Context, orgID uuid.UUID, key, value string) ([]uuid.UUID, error) {
+	jsonObj := map[string]string{key: value}
+	jsonBytes, err := json.Marshal(jsonObj)
+	if err != nil {
+		return nil, fmt.Errorf("invalid metadata key/value: %w", err)
+	}
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id FROM agents
 		WHERE org_id = $1 AND metadata @> $2::jsonb
-	`, orgID, fmt.Sprintf(`{"%s": "%s"}`, key, value))
+	`, orgID, string(jsonBytes))
 	if err != nil {
 		return nil, fmt.Errorf("search agents by metadata: %w", err)
 	}
@@ -254,15 +262,23 @@ func (db *DB) SearchAgentsByMetadata(ctx context.Context, orgID uuid.UUID, key, 
 		}
 		ids = append(ids, id)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate agent metadata results: %w", err)
+	}
 	return ids, nil
 }
 
 // SearchRepositoriesByMetadata searches for repositories matching metadata criteria.
 func (db *DB) SearchRepositoriesByMetadata(ctx context.Context, orgID uuid.UUID, key, value string) ([]uuid.UUID, error) {
+	jsonObj := map[string]string{key: value}
+	jsonBytes, err := json.Marshal(jsonObj)
+	if err != nil {
+		return nil, fmt.Errorf("invalid metadata key/value: %w", err)
+	}
 	rows, err := db.Pool.Query(ctx, `
 		SELECT id FROM repositories
 		WHERE org_id = $1 AND metadata @> $2::jsonb
-	`, orgID, fmt.Sprintf(`{"%s": "%s"}`, key, value))
+	`, orgID, string(jsonBytes))
 	if err != nil {
 		return nil, fmt.Errorf("search repositories by metadata: %w", err)
 	}
@@ -276,16 +292,24 @@ func (db *DB) SearchRepositoriesByMetadata(ctx context.Context, orgID uuid.UUID,
 		}
 		ids = append(ids, id)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate repository metadata results: %w", err)
+	}
 	return ids, nil
 }
 
 // SearchSchedulesByMetadata searches for schedules matching metadata criteria.
 func (db *DB) SearchSchedulesByMetadata(ctx context.Context, orgID uuid.UUID, key, value string) ([]uuid.UUID, error) {
+	jsonObj := map[string]string{key: value}
+	jsonBytes, err := json.Marshal(jsonObj)
+	if err != nil {
+		return nil, fmt.Errorf("invalid metadata key/value: %w", err)
+	}
 	rows, err := db.Pool.Query(ctx, `
 		SELECT s.id FROM schedules s
 		JOIN agents a ON s.agent_id = a.id
 		WHERE a.org_id = $1 AND s.metadata @> $2::jsonb
-	`, orgID, fmt.Sprintf(`{"%s": "%s"}`, key, value))
+	`, orgID, string(jsonBytes))
 	if err != nil {
 		return nil, fmt.Errorf("search schedules by metadata: %w", err)
 	}
@@ -298,6 +322,9 @@ func (db *DB) SearchSchedulesByMetadata(ctx context.Context, orgID uuid.UUID, ke
 			return nil, fmt.Errorf("scan schedule id: %w", err)
 		}
 		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate schedule metadata results: %w", err)
 	}
 	return ids, nil
 }

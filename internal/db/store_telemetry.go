@@ -151,7 +151,7 @@ func (db *DB) CollectTelemetryData(ctx context.Context) (*telemetry.TelemetryCou
 		db.logger.Warn().Err(err).Msg("failed to count backups for telemetry")
 	}
 
-	err = db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM backups WHERE status = 'success'`).Scan(&counts.SuccessfulBackups)
+	err = db.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM backups WHERE status = 'completed'`).Scan(&counts.SuccessfulBackups)
 	if err != nil {
 		db.logger.Warn().Err(err).Msg("failed to count successful backups for telemetry")
 	}
@@ -203,7 +203,7 @@ func (db *DB) CollectTelemetryData(ctx context.Context) (*telemetry.TelemetryCou
 
 	// Check if Docker backups are being used
 	err = db.Pool.QueryRow(ctx, `
-		SELECT EXISTS(SELECT 1 FROM docker_backup_configs LIMIT 1)
+		SELECT EXISTS(SELECT 1 FROM docker_containers WHERE enabled = TRUE LIMIT 1)
 	`).Scan(&features.DockerBackupsEnabled)
 	if err != nil {
 		db.logger.Warn().Err(err).Msg("failed to check Docker backups for telemetry")
@@ -211,7 +211,7 @@ func (db *DB) CollectTelemetryData(ctx context.Context) (*telemetry.TelemetryCou
 
 	// Check if geo-replication is used
 	err = db.Pool.QueryRow(ctx, `
-		SELECT EXISTS(SELECT 1 FROM geo_replication_rules WHERE enabled = TRUE LIMIT 1)
+		SELECT EXISTS(SELECT 1 FROM geo_replication_configs WHERE enabled = TRUE LIMIT 1)
 	`).Scan(&features.GeoReplicationEnabled)
 	if err != nil {
 		db.logger.Warn().Err(err).Msg("failed to check geo-replication for telemetry")
@@ -227,7 +227,7 @@ func (db *DB) CollectTelemetryData(ctx context.Context) (*telemetry.TelemetryCou
 
 	// Check if ransomware protection features are used
 	err = db.Pool.QueryRow(ctx, `
-		SELECT EXISTS(SELECT 1 FROM ransomware_scans LIMIT 1)
+		SELECT EXISTS(SELECT 1 FROM ransomware_settings WHERE enabled = TRUE LIMIT 1)
 	`).Scan(&features.RansomwareProtection)
 	if err != nil {
 		db.logger.Warn().Err(err).Msg("failed to check ransomware protection for telemetry")
@@ -251,7 +251,7 @@ func (db *DB) CollectTelemetryData(ctx context.Context) (*telemetry.TelemetryCou
 
 	// Check if storage tiering is used
 	err = db.Pool.QueryRow(ctx, `
-		SELECT EXISTS(SELECT 1 FROM storage_tiers LIMIT 1)
+		SELECT EXISTS(SELECT 1 FROM storage_tier_configs WHERE enabled = TRUE LIMIT 1)
 	`).Scan(&features.StorageTieringUsed)
 	if err != nil {
 		db.logger.Warn().Err(err).Msg("failed to check storage tiering for telemetry")

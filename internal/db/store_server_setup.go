@@ -364,8 +364,15 @@ func (db *DB) ActivateLicense(ctx context.Context, licenseKey string, activatedB
 		license.MaxStorageGB = &storage
 	}
 
+	// Wrap deactivate + insert in a transaction
+	tx, err := db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	// Deactivate any existing licenses
-	_, err := db.Pool.Exec(ctx, `
+	_, err = tx.Exec(ctx, `
 		UPDATE license_keys SET status = 'expired', updated_at = NOW()
 		WHERE status = 'active'
 	`)
@@ -374,7 +381,7 @@ func (db *DB) ActivateLicense(ctx context.Context, licenseKey string, activatedB
 	}
 
 	// Insert the new license
-	_, err = db.Pool.Exec(ctx, `
+	_, err = tx.Exec(ctx, `
 		INSERT INTO license_keys (
 			id, license_key, license_type, status, max_agents, max_repositories, max_storage_gb,
 			features, issued_at, expires_at, activated_at, activated_by, company_name, contact_email,
@@ -387,6 +394,10 @@ func (db *DB) ActivateLicense(ctx context.Context, licenseKey string, activatedB
 		license.CreatedAt, license.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create license: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit license activation: %w", err)
 	}
 
 	return license, nil
@@ -531,8 +542,15 @@ func (db *DB) CreateFirstOrganization(ctx context.Context, name string, createdB
 		UpdatedAt: now,
 	}
 
+	// Wrap org insert + user update + membership create in a transaction
+	tx, err := db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	// Try to insert, or get existing if slug conflicts
-	err := db.Pool.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO organizations (id, name, slug, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (slug) DO UPDATE SET updated_at = EXCLUDED.updated_at
@@ -545,7 +563,7 @@ func (db *DB) CreateFirstOrganization(ctx context.Context, name string, createdB
 	}
 
 	// Update the superuser's org_id to this organization
-	_, err = db.Pool.Exec(ctx, `
+	_, err = tx.Exec(ctx, `
 		UPDATE users SET org_id = $1, updated_at = NOW()
 		WHERE id = $2
 	`, org.ID, createdBy)
@@ -554,13 +572,17 @@ func (db *DB) CreateFirstOrganization(ctx context.Context, name string, createdB
 	}
 
 	// Ensure membership exists
-	_, err = db.Pool.Exec(ctx, `
+	_, err = tx.Exec(ctx, `
 		INSERT INTO org_memberships (id, org_id, user_id, role, created_at, updated_at)
 		VALUES ($1, $2, $3, 'owner', $4, $5)
 		ON CONFLICT (org_id, user_id) DO NOTHING
 	`, uuid.New(), org.ID, createdBy, now, now)
 	if err != nil {
 		return nil, fmt.Errorf("create membership: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit first organization: %w", err)
 	}
 
 	return org, nil

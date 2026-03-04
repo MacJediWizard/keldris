@@ -568,7 +568,7 @@ func (c *HTTPServerClient) ReportQueuedBackups(ctx context.Context, backups []*Q
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", c.apiKey)
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -603,7 +603,7 @@ func (c *HTTPServerClient) NotifyReconnection(ctx context.Context, queuedCount i
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", c.apiKey)
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
