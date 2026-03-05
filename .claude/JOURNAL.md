@@ -1,5 +1,18 @@
 # Keldris Development Journal
 
+## 2026-03-04 - Build Fix: LicenseTier Type and Docker Build
+
+### What
+Docker build (v0.0.59) failed on `tsc -b` due to `'pro'` being removed from `LicenseTier` type while `TierBadge.tsx` still used it as a `Record<LicenseTier, string>` key. Local `npx vite build` passed because it uses esbuild (no strict TS checking), but the Dockerfile runs `tsc -b && vite build`.
+
+### Fix
+Restored `'pro'` to `LicenseTier` type — the backend still sends `'pro'` for trial tier, so it must remain in the union. Docker build now passes. Agent re-registered successfully after deploy; server, agent, and license server all connected.
+
+### Files Modified
+- `web/src/lib/types.ts` — added `'pro'` back to `LicenseTier`
+
+---
+
 ## 2026-03-04 - Exhaustive Codebase Audit: 44 Fixes Across Server, Agent, DB, Notifications, and Frontend
 
 ### What
