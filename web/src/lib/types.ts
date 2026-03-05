@@ -6237,7 +6237,7 @@ export interface RerunStatusResponse {
 }
 
 // License types
-export type LicenseTier = 'free' | 'professional' | 'enterprise';
+export type LicenseTier = 'free' | 'pro' | 'professional' | 'enterprise';
 export type LicenseStatus =
 	| 'active'
 	| 'expiring_soon'
