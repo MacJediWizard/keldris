@@ -80,7 +80,15 @@ func (m *mockRepositoryStore) GetRepositoryKeysWithEscrowByOrgID(_ context.Conte
 	return m.repoKeys, nil
 }
 
-func setupRepositoryTestRouter(store RepositoryStore, user *auth.SessionUser) *gin.Engine {
+func (m *mockRepositoryStore) GetMembershipByUserAndOrg(_ context.Context, userID, orgID uuid.UUID) (*models.OrgMembership, error) {
+	return &models.OrgMembership{UserID: userID, OrgID: orgID, Role: models.OrgRoleOwner}, nil
+}
+
+func (m *mockRepositoryStore) GetMembershipsByUserID(_ context.Context, userID uuid.UUID) ([]*models.OrgMembership, error) {
+	return nil, nil
+}
+
+func setupRepositoryTestRouter(store *mockRepositoryStore, user *auth.SessionUser) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(func(c *gin.Context) {
@@ -89,8 +97,9 @@ func setupRepositoryTestRouter(store RepositoryStore, user *auth.SessionUser) *g
 		}
 		c.Next()
 	})
+	rbac := auth.NewRBAC(store)
 	// Pass nil keyManager and checker - List/Get/Delete tests don't need encryption or license checks
-	handler := NewRepositoriesHandler(store, nil, nil, zerolog.Nop())
+	handler := NewRepositoriesHandler(store, rbac, nil, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r
@@ -393,7 +402,7 @@ func TestRecoverKey(t *testing.T) {
 	})
 }
 
-func setupRepositoryTestRouterWithKeyManager(store RepositoryStore, user *auth.SessionUser) *gin.Engine {
+func setupRepositoryTestRouterWithKeyManager(store *mockRepositoryStore, user *auth.SessionUser) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(func(c *gin.Context) {
@@ -402,8 +411,9 @@ func setupRepositoryTestRouterWithKeyManager(store RepositoryStore, user *auth.S
 		}
 		c.Next()
 	})
+	rbac := auth.NewRBAC(store)
 	km, _ := crypto.NewKeyManager(make([]byte, 32))
-	handler := NewRepositoriesHandler(store, km, nil, zerolog.Nop())
+	handler := NewRepositoriesHandler(store, rbac, km, nil, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

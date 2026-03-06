@@ -125,7 +125,15 @@ func (m *mockAgentStore) GetAgentDockerHealth(_ context.Context, _ uuid.UUID) (*
 	return nil, nil
 }
 
-func setupAgentTestRouter(store AgentStore, user *auth.SessionUser) *gin.Engine {
+func (m *mockAgentStore) GetMembershipByUserAndOrg(_ context.Context, userID, orgID uuid.UUID) (*models.OrgMembership, error) {
+	return &models.OrgMembership{UserID: userID, OrgID: orgID, Role: models.OrgRoleOwner}, nil
+}
+
+func (m *mockAgentStore) GetMembershipsByUserID(_ context.Context, userID uuid.UUID) ([]*models.OrgMembership, error) {
+	return nil, nil
+}
+
+func setupAgentTestRouter(store *mockAgentStore, user *auth.SessionUser) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 
@@ -137,7 +145,8 @@ func setupAgentTestRouter(store AgentStore, user *auth.SessionUser) *gin.Engine 
 		c.Next()
 	})
 
-	handler := NewAgentsHandler(store, zerolog.Nop())
+	rbac := auth.NewRBAC(store)
+	handler := NewAgentsHandler(store, rbac, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r
