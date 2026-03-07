@@ -41,6 +41,7 @@ func (h *PostgresHandler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		postgres.POST("/test-connection", h.TestConnection)
 		postgres.GET("/restore-instructions", h.GetRestoreInstructions)
+		postgres.POST("/encrypt-password", h.EncryptPassword)
 	}
 }
 

@@ -203,6 +203,9 @@ func scanDockerLogBackups(rows pgx.Rows) ([]*models.DockerLogBackup, error) {
 
 		backups = append(backups, &backup)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate docker log backups: %w", err)
+	}
 
 	return backups, nil
 }
@@ -428,16 +431,24 @@ func (db *DB) GetEnabledDockerLogSettings(ctx context.Context) ([]*models.Docker
 		}
 
 		if includeContainersJSON != nil {
-			json.Unmarshal(includeContainersJSON, &settings.IncludeContainers)
+			if err := json.Unmarshal(includeContainersJSON, &settings.IncludeContainers); err != nil {
+				db.logger.Warn().Err(err).Str("agent_id", settings.AgentID.String()).Msg("failed to unmarshal include_containers")
+			}
 		}
 		if excludeContainersJSON != nil {
-			json.Unmarshal(excludeContainersJSON, &settings.ExcludeContainers)
+			if err := json.Unmarshal(excludeContainersJSON, &settings.ExcludeContainers); err != nil {
+				db.logger.Warn().Err(err).Str("agent_id", settings.AgentID.String()).Msg("failed to unmarshal exclude_containers")
+			}
 		}
 		if includeLabelsJSON != nil {
-			json.Unmarshal(includeLabelsJSON, &settings.IncludeLabels)
+			if err := json.Unmarshal(includeLabelsJSON, &settings.IncludeLabels); err != nil {
+				db.logger.Warn().Err(err).Str("agent_id", settings.AgentID.String()).Msg("failed to unmarshal include_labels")
+			}
 		}
 		if excludeLabelsJSON != nil {
-			json.Unmarshal(excludeLabelsJSON, &settings.ExcludeLabels)
+			if err := json.Unmarshal(excludeLabelsJSON, &settings.ExcludeLabels); err != nil {
+				db.logger.Warn().Err(err).Str("agent_id", settings.AgentID.String()).Msg("failed to unmarshal exclude_labels")
+			}
 		}
 
 		if since != nil {
@@ -448,6 +459,9 @@ func (db *DB) GetEnabledDockerLogSettings(ctx context.Context) ([]*models.Docker
 		}
 
 		settingsList = append(settingsList, &settings)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate docker log settings: %w", err)
 	}
 
 	return settingsList, nil

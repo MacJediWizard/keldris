@@ -19,7 +19,7 @@ export function useAddFavorite() {
 			queryClient.invalidateQueries({
 				queryKey: ['favorites', favorite.entity_type],
 			});
-			queryClient.invalidateQueries({ queryKey: ['favorites', undefined] });
+			queryClient.invalidateQueries({ queryKey: ['favorites'] });
 		},
 	});
 }

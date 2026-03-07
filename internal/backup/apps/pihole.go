@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -685,7 +686,7 @@ func copyFile(src, dst string) error {
 			}
 		}
 		if err != nil {
-			if err.Error() == "EOF" {
+			if err == io.EOF {
 				break
 			}
 			return err

@@ -319,7 +319,8 @@ func (s *SQLiteStore) Close() error {
 	return s.db.Close()
 }
 
-// SetMetadata stores a key-value pair in the metadata table.
+// SetMetadata stores a key-value pair in queue metadata.
+// Reserved for future offline queue enhancements.
 func (s *SQLiteStore) SetMetadata(ctx context.Context, key, value string) error {
 	query := `
 		INSERT INTO queue_metadata (key, value, updated_at)
@@ -330,7 +331,8 @@ func (s *SQLiteStore) SetMetadata(ctx context.Context, key, value string) error 
 	return err
 }
 
-// GetMetadata retrieves a value from the metadata table.
+// GetMetadata retrieves a value from queue metadata.
+// Reserved for future offline queue enhancements.
 func (s *SQLiteStore) GetMetadata(ctx context.Context, key string) (string, error) {
 	var value string
 	err := s.db.QueryRowContext(ctx, "SELECT value FROM queue_metadata WHERE key = ?", key).Scan(&value)

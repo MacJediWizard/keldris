@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
@@ -505,8 +507,14 @@ func (h *SuperuserHandler) GetAuditLogs(c *gin.Context) {
 	offset := 0
 
 	if l := c.Query("limit"); l != "" {
-		if _, err := uuid.Parse(l); err == nil {
-			// Invalid limit, use default
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
+			limit = parsed
+		}
+	}
+
+	if o := c.Query("offset"); o != "" {
+		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
+			offset = parsed
 		}
 	}
 
@@ -541,7 +549,9 @@ func (h *SuperuserHandler) logAction(c *gin.Context, superuserID uuid.UUID, acti
 	}
 
 	go func() {
-		if err := h.store.CreateSuperuserAuditLog(context.Background(), log); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := h.store.CreateSuperuserAuditLog(ctx, log); err != nil {
 			h.logger.Error().Err(err).Str("action", string(action)).Msg("failed to create superuser audit log")
 		}
 	}()
@@ -561,7 +571,9 @@ func (h *SuperuserHandler) logActionWithDetails(c *gin.Context, superuserID uuid
 	}
 
 	go func() {
-		if err := h.store.CreateSuperuserAuditLog(context.Background(), log); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := h.store.CreateSuperuserAuditLog(ctx, log); err != nil {
 			h.logger.Error().Err(err).Str("action", string(action)).Msg("failed to create superuser audit log")
 		}
 	}()
@@ -581,7 +593,9 @@ func (h *SuperuserHandler) logActionWithImpersonation(c *gin.Context, superuserI
 	}
 
 	go func() {
-		if err := h.store.CreateSuperuserAuditLog(context.Background(), log); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := h.store.CreateSuperuserAuditLog(ctx, log); err != nil {
 			h.logger.Error().Err(err).Str("action", string(action)).Msg("failed to create superuser audit log")
 		}
 	}()

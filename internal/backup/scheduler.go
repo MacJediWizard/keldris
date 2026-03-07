@@ -969,7 +969,9 @@ func (s *Scheduler) replicateToOtherRepos(
 	allRepos []models.ScheduleRepository,
 	logger zerolog.Logger,
 ) {
-	// Verify geo-replication feature is available
+	// Verify geo-replication feature is available.
+	// HasFeature is used directly here instead of middleware.RequireFeature
+	// because this code runs in a scheduler context, not an HTTP handler.
 	if s.licenseChecker != nil {
 		lic := s.licenseChecker.GetLicense()
 		if lic == nil || !license.HasFeature(lic.Tier, license.FeatureGeoReplication) {

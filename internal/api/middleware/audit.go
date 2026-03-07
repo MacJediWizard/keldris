@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
@@ -87,14 +88,16 @@ func AuditMiddleware(store AuditStore, logger zerolog.Logger) gin.HandlerFunc {
 		}
 
 		// Save audit log asynchronously to not block the response
-		go func(ctx context.Context, entry *models.AuditLog) {
+		go func(entry *models.AuditLog) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
 			if err := store.CreateAuditLog(ctx, entry); err != nil {
 				log.Error().Err(err).
 					Str("action", string(entry.Action)).
 					Str("resource_type", entry.ResourceType).
 					Msg("failed to create audit log")
 			}
-		}(context.Background(), auditLog)
+		}(auditLog)
 	}
 }
 

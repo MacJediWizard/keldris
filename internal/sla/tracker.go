@@ -235,15 +235,21 @@ func (t *Tracker) CalculateOrgCompliance(ctx context.Context, orgID uuid.UUID, p
 				if compliance.RPOCompliant != nil && !*compliance.RPOCompliant && compliance.RPOActualMinutes != nil {
 					expected := float64(*sla.RPOMinutes)
 					actual := float64(*compliance.RPOActualMinutes)
-					_ = t.RecordBreach(ctx, sla, assignment, models.BreachTypeRPO, expected, actual)
+					if err := t.RecordBreach(ctx, sla, assignment, models.BreachTypeRPO, expected, actual); err != nil {
+						t.logger.Error().Err(err).Str("sla_id", sla.ID.String()).Msg("failed to record SLA breach")
+					}
 				}
 				if compliance.RTOCompliant != nil && !*compliance.RTOCompliant && compliance.RTOActualMinutes != nil {
 					expected := float64(*sla.RTOMinutes)
 					actual := float64(*compliance.RTOActualMinutes)
-					_ = t.RecordBreach(ctx, sla, assignment, models.BreachTypeRTO, expected, actual)
+					if err := t.RecordBreach(ctx, sla, assignment, models.BreachTypeRTO, expected, actual); err != nil {
+						t.logger.Error().Err(err).Str("sla_id", sla.ID.String()).Msg("failed to record SLA breach")
+					}
 				}
 				if compliance.UptimeCompliant != nil && !*compliance.UptimeCompliant && compliance.UptimeActualPercentage != nil {
-					_ = t.RecordBreach(ctx, sla, assignment, models.BreachTypeUptime, *sla.UptimePercentage, *compliance.UptimeActualPercentage)
+					if err := t.RecordBreach(ctx, sla, assignment, models.BreachTypeUptime, *sla.UptimePercentage, *compliance.UptimeActualPercentage); err != nil {
+						t.logger.Error().Err(err).Str("sla_id", sla.ID.String()).Msg("failed to record SLA breach")
+					}
 				}
 			}
 		}

@@ -65,6 +65,9 @@ func (s *Scheduler) run(ctx context.Context) {
 
 // Stop signals the scheduler to stop and waits for it to finish.
 func (s *Scheduler) Stop() {
+	if s.stop == nil {
+		return
+	}
 	close(s.stop)
 	<-s.done
 }

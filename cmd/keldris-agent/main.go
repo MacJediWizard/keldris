@@ -670,7 +670,10 @@ func runBackup(cfg *config.AgentConfig, scheduleName string, resticBinary string
 	fmt.Println("Starting Restic backup...")
 	startedAt := time.Now()
 
-	stats, err := restic.Backup(context.Background(), resticCfg, sched.Paths, sched.Excludes, tags)
+	backupCtx, backupCancel := context.WithTimeout(context.Background(), 24*time.Hour)
+	defer backupCancel()
+
+	stats, err := restic.Backup(backupCtx, resticCfg, sched.Paths, sched.Excludes, tags)
 
 	completedAt := time.Now()
 
@@ -797,7 +800,10 @@ func runRestore(cfg *config.AgentConfig, latest bool, snapshotID, targetPath str
 
 	fmt.Printf("Restoring snapshot %s to %s...\n", snapshotID, targetPath)
 
-	if err := restic.Restore(context.Background(), resticCfg, snapshotID, opts); err != nil {
+	restoreCtx, restoreCancel := context.WithTimeout(context.Background(), 24*time.Hour)
+	defer restoreCancel()
+
+	if err := restic.Restore(restoreCtx, resticCfg, snapshotID, opts); err != nil {
 		return fmt.Errorf("restore failed: %w", err)
 	}
 
@@ -934,6 +940,9 @@ func refreshSchedules(c *cron.Cron, client *agent.Client, cfg *config.AgentConfi
 	}
 
 	for _, sched := range schedules {
+		if !sched.Enabled {
+			continue
+		}
 		s := sched // capture loop variable
 		_, err := c.AddFunc(s.CronExpression, func() {
 			logger.Info().Str("schedule", s.Name).Msg("cron triggered backup")

@@ -464,7 +464,9 @@ var signingKey = func() []byte {
 	if key := os.Getenv("HMAC_SIGNING_KEY"); key != "" {
 		return []byte(key)
 	}
-	// Fallback for development/testing only — production MUST set HMAC_SIGNING_KEY
+	// SECURITY: Fallback for development/testing ONLY.
+	// Production MUST set the HMAC_SIGNING_KEY environment variable.
+	// This key is publicly known and provides NO security.
 	return []byte("keldris-license-signing-key-dev")
 }()
 
