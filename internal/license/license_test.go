@@ -74,7 +74,7 @@ func createValidLicenseKey(tier LicenseTier, customerID string, expiresAt, issue
 	payloadJSON, _ := json.Marshal(payload)
 	payloadB64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
 
-	key := []byte("keldris-license-signing-key")
+	key := []byte("keldris-license-signing-key-dev")
 	h := hmac.New(sha256.New, key)
 	h.Write(payloadJSON)
 	signature := h.Sum(nil)
@@ -161,7 +161,7 @@ func TestParseLicense(t *testing.T) {
 		invalidJSON := []byte("{invalid json")
 		payloadB64 := base64.RawURLEncoding.EncodeToString(invalidJSON)
 
-		key := []byte("keldris-license-signing-key")
+		key := []byte("keldris-license-signing-key-dev")
 		h := hmac.New(sha256.New, key)
 		h.Write(invalidJSON)
 		signature := h.Sum(nil)
