@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -307,8 +308,10 @@ func parseSemver(version string) [3]int {
 
 	segments := strings.Split(version, ".")
 	for i := 0; i < 3 && i < len(segments); i++ {
-		var val int
-		fmt.Sscanf(segments[i], "%d", &val)
+		val, err := strconv.Atoi(segments[i])
+		if err != nil {
+			val = 0
+		}
 		parts[i] = val
 	}
 

@@ -26,6 +26,11 @@ func NewClient(serverURL, apiKey string) *Client {
 		apiKey:    apiKey,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				MaxConnsPerHost: 10,
+				MaxIdleConns:    5,
+				IdleConnTimeout: 90 * time.Second,
+			},
 		},
 	}
 }
@@ -68,12 +73,51 @@ type BackupReport struct {
 }
 
 // ReportBackup reports a completed backup to the server.
+// It retries up to 3 times on transient (5xx) server errors.
 func (c *Client) ReportBackup(report *BackupReport) error {
-	var result map[string]any
-	if err := c.post("/api/v1/agent/backups", report, &result); err != nil {
-		return fmt.Errorf("report backup: %w", err)
+	data, err := json.Marshal(report)
+	if err != nil {
+		return fmt.Errorf("report backup: marshal request: %w", err)
 	}
-	return nil
+
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		if attempt > 0 {
+			time.Sleep(2 * time.Second)
+		}
+
+		req, err := http.NewRequest("POST", c.serverURL+"/api/v1/agent/backups", bytes.NewReader(data))
+		if err != nil {
+			return fmt.Errorf("report backup: %w", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("report backup: %w", err)
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			lastErr = fmt.Errorf("report backup: read response: %w", err)
+			continue
+		}
+
+		if resp.StatusCode == http.StatusOK {
+			return nil
+		}
+
+		lastErr = fmt.Errorf("report backup: server returned %d: %s", resp.StatusCode, string(body))
+
+		// Retry on 5xx (server error); fail immediately on 4xx (client error)
+		if resp.StatusCode < 500 {
+			return lastErr
+		}
+	}
+	return lastErr
 }
 
 // SnapshotInfo contains snapshot information returned by the server.

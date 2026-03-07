@@ -31,7 +31,7 @@ export function useCreateSavedFilter() {
 			queryClient.invalidateQueries({
 				queryKey: ['savedFilters', filter.entity_type],
 			});
-			queryClient.invalidateQueries({ queryKey: ['savedFilters', undefined] });
+			queryClient.invalidateQueries({ queryKey: ['savedFilters'] });
 		},
 	});
 }

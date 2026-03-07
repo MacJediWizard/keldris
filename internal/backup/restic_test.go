@@ -1078,12 +1078,19 @@ func TestRedactArgs(t *testing.T) {
 	redacted := redactArgs(args)
 
 	if len(redacted) != len(args) {
-		t.Errorf("redactArgs length = %d, want %d", len(redacted), len(args))
+		t.Fatalf("redactArgs length = %d, want %d", len(redacted), len(args))
 	}
 
-	for i, arg := range args {
-		if redacted[i] != arg {
-			t.Errorf("redactArgs[%d] = %v, want %v", i, redacted[i], arg)
+	// --repo value should be redacted, other args unchanged
+	expected := []string{"backup", "--repo", "***", "/home/user"}
+	for i, want := range expected {
+		if redacted[i] != want {
+			t.Errorf("redactArgs[%d] = %v, want %v", i, redacted[i], want)
 		}
+	}
+
+	// Verify original args are not modified
+	if args[2] != "/path/to/repo" {
+		t.Errorf("original args modified: args[2] = %v, want /path/to/repo", args[2])
 	}
 }

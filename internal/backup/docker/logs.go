@@ -94,6 +94,7 @@ func (s *LogBackupService) BackupContainerLogs(
 		backup.Fail(fmt.Sprintf("failed to create backup file: %v", err))
 		return fmt.Errorf("create backup file: %w", err)
 	}
+	defer outFile.Close()
 
 	var writer io.WriteCloser = outFile
 	var gzWriter *gzip.Writer
@@ -101,7 +102,6 @@ func (s *LogBackupService) BackupContainerLogs(
 	if policy.CompressEnabled {
 		gzWriter, err = gzip.NewWriterLevel(outFile, policy.CompressLevel)
 		if err != nil {
-			outFile.Close()
 			backup.Fail(fmt.Sprintf("failed to create gzip writer: %v", err))
 			return fmt.Errorf("create gzip writer: %w", err)
 		}
@@ -122,11 +122,9 @@ func (s *LogBackupService) BackupContainerLogs(
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
-			writer.Close()
 			if gzWriter != nil {
 				gzWriter.Close()
 			}
-			outFile.Close()
 			os.Remove(backupPath)
 			backup.Fail("backup cancelled")
 			return ctx.Err()
@@ -163,11 +161,9 @@ func (s *LogBackupService) BackupContainerLogs(
 		}
 
 		if _, err := writer.Write(append(backupLine, '\n')); err != nil {
-			writer.Close()
 			if gzWriter != nil {
 				gzWriter.Close()
 			}
-			outFile.Close()
 			backup.Fail(fmt.Sprintf("failed to write log line: %v", err))
 			return fmt.Errorf("write log line: %w", err)
 		}
@@ -185,27 +181,19 @@ func (s *LogBackupService) BackupContainerLogs(
 	}
 
 	if err := scanner.Err(); err != nil {
-		writer.Close()
 		if gzWriter != nil {
 			gzWriter.Close()
 		}
-		outFile.Close()
 		backup.Fail(fmt.Sprintf("failed to read logs: %v", err))
 		return fmt.Errorf("read logs: %w", err)
 	}
 
-	// Close writers
+	// Close writers (gzWriter must flush before outFile closes via defer)
 	if gzWriter != nil {
 		if err := gzWriter.Close(); err != nil {
-			outFile.Close()
 			backup.Fail(fmt.Sprintf("failed to close gzip writer: %v", err))
 			return fmt.Errorf("close gzip writer: %w", err)
 		}
-	}
-
-	if err := outFile.Close(); err != nil {
-		backup.Fail(fmt.Sprintf("failed to close backup file: %v", err))
-		return fmt.Errorf("close backup file: %w", err)
 	}
 
 	// Get compressed size

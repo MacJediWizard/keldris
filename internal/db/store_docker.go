@@ -36,6 +36,9 @@ func (db *DB) GetDockerContainersByAgentID(ctx context.Context, agentID uuid.UUI
 		}
 		containers = append(containers, c)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate docker containers: %w", err)
+	}
 
 	return containers, nil
 }
@@ -253,6 +256,9 @@ func (db *DB) GetEnabledDockerContainersForBackup(ctx context.Context, agentID u
 			containers = append(containers, c)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate enabled docker containers: %w", err)
+	}
 
 	return containers, nil
 }
@@ -392,6 +398,9 @@ func (db *DB) GetAgentDockerHealthByOrgID(ctx context.Context, orgID uuid.UUID) 
 
 		results = append(results, &health)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate agent docker health: %w", err)
+	}
 
 	return results, nil
 }
@@ -460,6 +469,9 @@ func scanContainerRestartEvents(rows pgx.Rows) ([]*models.ContainerRestartEvent,
 			return nil, fmt.Errorf("scan container restart event: %w", err)
 		}
 		events = append(events, &event)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate container restart events: %w", err)
 	}
 	return events, nil
 }

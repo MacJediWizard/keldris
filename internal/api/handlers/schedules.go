@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -33,13 +34,15 @@ type ScheduleStore interface {
 // SchedulesHandler handles schedule-related HTTP endpoints.
 type SchedulesHandler struct {
 	store  ScheduleStore
+	rbac   *auth.RBAC
 	logger zerolog.Logger
 }
 
 // NewSchedulesHandler creates a new SchedulesHandler.
-func NewSchedulesHandler(store ScheduleStore, logger zerolog.Logger) *SchedulesHandler {
+func NewSchedulesHandler(store ScheduleStore, rbac *auth.RBAC, logger zerolog.Logger) *SchedulesHandler {
 	return &SchedulesHandler{
 		store:  store,
+		rbac:   rbac,
 		logger: logger.With().Str("component", "schedules_handler").Logger(),
 	}
 }
@@ -161,6 +164,11 @@ func (h *SchedulesHandler) List(c *gin.Context) {
 		return
 	}
 
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermScheduleRead); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
 	// Optional agent_id filter
 	agentIDParam := c.Query("agent_id")
 	if agentIDParam != "" {
@@ -239,6 +247,11 @@ func (h *SchedulesHandler) Get(c *gin.Context) {
 		return
 	}
 
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermScheduleRead); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -284,6 +297,11 @@ func (h *SchedulesHandler) Create(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermScheduleCreate); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 
@@ -460,6 +478,11 @@ func (h *SchedulesHandler) Update(c *gin.Context) {
 		return
 	}
 
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermScheduleUpdate); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -626,6 +649,11 @@ func (h *SchedulesHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermScheduleDelete); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -725,6 +753,11 @@ func (h *SchedulesHandler) Run(c *gin.Context) {
 		return
 	}
 
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermScheduleRun); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -794,6 +827,11 @@ func (h *SchedulesHandler) DryRun(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermScheduleRun); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 
@@ -871,6 +909,11 @@ func (h *SchedulesHandler) GetReplicationStatus(c *gin.Context) {
 		return
 	}
 
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermScheduleRead); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -922,6 +965,11 @@ func (h *SchedulesHandler) Clone(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermScheduleCreate); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 
@@ -1062,6 +1110,11 @@ func (h *SchedulesHandler) BulkClone(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermScheduleCreate); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 

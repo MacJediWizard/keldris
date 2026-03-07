@@ -619,11 +619,17 @@ func (i *Importer) importRepository(ctx context.Context, repoExport RepositoryEx
 	// Decrypt and restore secrets if present
 	if repoExport.EncryptedSecrets != "" && len(decryptionKey) > 0 {
 		km, err := crypto.NewKeyManager(decryptionKey)
-		if err == nil {
+		if err != nil {
+			i.logger.Warn().Err(err).Str("repo", repoExport.Name).Msg("failed to create key manager for secret import")
+		} else {
 			decoded, err := base64.StdEncoding.DecodeString(repoExport.EncryptedSecrets)
-			if err == nil {
+			if err != nil {
+				i.logger.Warn().Err(err).Str("repo", repoExport.Name).Msg("failed to decode encrypted secrets")
+			} else {
 				decrypted, err := km.Decrypt(decoded)
-				if err == nil {
+				if err != nil {
+					i.logger.Warn().Err(err).Str("repo", repoExport.Name).Msg("failed to decrypt secrets for import")
+				} else {
 					repo.ConfigEncrypted = decrypted
 				}
 			}

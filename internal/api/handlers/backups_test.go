@@ -83,7 +83,15 @@ func (m *mockBackupStore) GetBackupValidationByBackupID(_ context.Context, _ uui
 	return nil, nil
 }
 
-func setupBackupTestRouter(store BackupStore, user *auth.SessionUser) *gin.Engine {
+func (m *mockBackupStore) GetMembershipByUserAndOrg(_ context.Context, userID, orgID uuid.UUID) (*models.OrgMembership, error) {
+	return &models.OrgMembership{UserID: userID, OrgID: orgID, Role: models.OrgRoleOwner}, nil
+}
+
+func (m *mockBackupStore) GetMembershipsByUserID(_ context.Context, userID uuid.UUID) ([]*models.OrgMembership, error) {
+	return nil, nil
+}
+
+func setupBackupTestRouter(store *mockBackupStore, user *auth.SessionUser) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 
@@ -94,7 +102,8 @@ func setupBackupTestRouter(store BackupStore, user *auth.SessionUser) *gin.Engin
 		c.Next()
 	})
 
-	handler := NewBackupsHandler(store, zerolog.Nop())
+	rbac := auth.NewRBAC(store)
+	handler := NewBackupsHandler(store, rbac, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/backup/backends"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/license"
@@ -32,15 +33,17 @@ type RepositoryStore interface {
 // RepositoriesHandler handles repository-related HTTP endpoints.
 type RepositoriesHandler struct {
 	store      RepositoryStore
+	rbac       *auth.RBAC
 	keyManager *crypto.KeyManager
 	checker    *license.FeatureChecker
 	logger     zerolog.Logger
 }
 
 // NewRepositoriesHandler creates a new RepositoriesHandler.
-func NewRepositoriesHandler(store RepositoryStore, keyManager *crypto.KeyManager, checker *license.FeatureChecker, logger zerolog.Logger) *RepositoriesHandler {
+func NewRepositoriesHandler(store RepositoryStore, rbac *auth.RBAC, keyManager *crypto.KeyManager, checker *license.FeatureChecker, logger zerolog.Logger) *RepositoriesHandler {
 	return &RepositoriesHandler{
 		store:      store,
+		rbac:       rbac,
 		keyManager: keyManager,
 		checker:    checker,
 		logger:     logger.With().Str("component", "repositories_handler").Logger(),
@@ -151,6 +154,11 @@ func (h *RepositoriesHandler) List(c *gin.Context) {
 		return
 	}
 
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermRepoRead); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
 	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list repositories")
@@ -195,6 +203,11 @@ func (h *RepositoriesHandler) Get(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermRepoRead); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 
@@ -249,6 +262,11 @@ func (h *RepositoriesHandler) Create(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermRepoCreate); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 
@@ -390,6 +408,11 @@ func (h *RepositoriesHandler) Update(c *gin.Context) {
 		return
 	}
 
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermRepoUpdate); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -482,6 +505,11 @@ func (h *RepositoriesHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermRepoDelete); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -546,6 +574,11 @@ func (h *RepositoriesHandler) Test(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermRepoRead); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 
@@ -617,6 +650,16 @@ func (h *RepositoriesHandler) Test(c *gin.Context) {
 func (h *RepositoriesHandler) TestConnection(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermRepoCreate); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 
@@ -699,6 +742,16 @@ func (h *RepositoriesHandler) TestConnection(c *gin.Context) {
 func (h *RepositoriesHandler) RecoverKey(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermRepoRead); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 
@@ -792,6 +845,16 @@ func (h *RepositoriesHandler) RecoverKey(c *gin.Context) {
 func (h *RepositoriesHandler) Clone(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
+		return
+	}
+
+	if user.CurrentOrgID == uuid.Nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermRepoCreate); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 

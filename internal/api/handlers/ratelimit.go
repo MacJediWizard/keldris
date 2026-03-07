@@ -11,9 +11,8 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// RateLimitStore defines the interface for fetching user and membership data.
+// RateLimitStore defines the interface for fetching membership data.
 type RateLimitStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetMembershipByUserAndOrg(ctx context.Context, userID, orgID uuid.UUID) (*models.OrgMembership, error)
 }
 
@@ -46,13 +45,11 @@ func (h *RateLimitHandler) isAdmin(c *gin.Context) bool {
 		return false
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
+	if user.CurrentOrgID == uuid.Nil {
 		return false
 	}
 
-	membership, err := h.store.GetMembershipByUserAndOrg(c.Request.Context(), user.ID, dbUser.OrgID)
+	membership, err := h.store.GetMembershipByUserAndOrg(c.Request.Context(), user.ID, user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get membership")
 		return false

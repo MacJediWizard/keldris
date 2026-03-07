@@ -313,7 +313,7 @@ func NewRouter(
 	orgsHandler.RegisterMultiOrgRoutes(orgsGroup, middleware.LimitMiddleware(database, "organizations", logger))
 
 	// Agents
-	agentsHandler := handlers.NewAgentsHandler(database, logger)
+	agentsHandler := handlers.NewAgentsHandler(database, rbac, logger)
 	agentsHandler.RegisterRoutes(apiV1, middleware.LimitMiddleware(database, "agents", logger))
 
 	agentCommandsHandler := handlers.NewAgentCommandsHandler(database, logger)
@@ -332,14 +332,14 @@ func NewRouter(
 	agentImportHandler.RegisterRoutes(apiV1)
 
 	// Repositories
-	reposHandler := handlers.NewRepositoriesHandler(database, keyManager, featureChecker, logger)
+	reposHandler := handlers.NewRepositoriesHandler(database, rbac, keyManager, featureChecker, logger)
 	reposHandler.RegisterRoutes(apiV1)
 
 	repoImportHandler := handlers.NewRepositoryImportHandler(database, keyManager, logger)
 	repoImportHandler.RegisterRoutes(apiV1)
 
 	// Schedules
-	schedulesHandler := handlers.NewSchedulesHandler(database, logger)
+	schedulesHandler := handlers.NewSchedulesHandler(database, rbac, logger)
 	schedulesHandler.RegisterRoutes(apiV1)
 
 	backupScriptsHandler := handlers.NewBackupScriptsHandler(database, logger)
@@ -356,7 +356,7 @@ func NewRouter(
 	policiesHandler.RegisterRoutes(apiV1)
 
 	// Backups and snapshots
-	backupsHandler := handlers.NewBackupsHandler(database, logger)
+	backupsHandler := handlers.NewBackupsHandler(database, rbac, logger)
 	backupsHandler.RegisterRoutes(apiV1)
 
 	snapshotsHandler := handlers.NewSnapshotsHandler(database, keyManager, logger)
