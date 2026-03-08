@@ -2,6 +2,13 @@ import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../hooks/useLicense', () => ({
+	useLicense: () => ({
+		data: { tier: 'enterprise', features: [] },
+		isLoading: false,
+	}),
+}));
+
 vi.mock('../hooks/useNotifications', () => ({
 	useNotificationChannels: vi.fn(),
 	useNotificationLogs: vi.fn(() => ({ data: [], isLoading: false })),

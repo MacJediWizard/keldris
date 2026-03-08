@@ -319,7 +319,7 @@ func (h *SystemSettingsHandler) TestSMTP(c *gin.Context) {
 	}
 
 	// Perform actual SMTP connection test
-	addr := fmt.Sprintf("%s:%d", smtp.Host, smtp.Port)
+	addr := net.JoinHostPort(smtp.Host, fmt.Sprintf("%d", smtp.Port))
 	timeout := 10 * time.Second
 	if smtp.ConnectionTimeout > 0 {
 		timeout = time.Duration(smtp.ConnectionTimeout) * time.Second

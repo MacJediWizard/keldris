@@ -12,6 +12,26 @@ vi.mock('../hooks/useAlerts', () => ({
 	useResolveAlert: () => ({ mutate: mockMutate, isPending: false }),
 }));
 
+vi.mock('../hooks/useSavedFilters', () => ({
+	useSavedFilters: () => ({ data: [], isLoading: false }),
+	useCreateSavedFilter: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useUpdateSavedFilter: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useDeleteSavedFilter: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
+vi.mock('../hooks/useAuth', () => ({
+	useMe: () => ({
+		data: {
+			id: 'u1',
+			email: 'test@test.com',
+			current_org_role: 'admin',
+			current_org_id: '1',
+			name: 'Test',
+		},
+		isLoading: false,
+	}),
+}));
+
 import { useAlerts } from '../hooks/useAlerts';
 
 function renderPage() {

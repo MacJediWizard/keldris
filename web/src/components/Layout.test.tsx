@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { createContext } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { type Mock, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -56,8 +57,20 @@ vi.mock('../hooks/useLocale', () => ({
 				'nav.organization': 'Organization',
 				'nav.members': 'Members',
 				'nav.settings': 'Settings',
+				'nav.fileSearch': 'File Search',
+				'nav.fileHistory': 'File History',
+				'nav.downtime': 'Downtime',
+				'nav.classifications': 'Classifications',
 				'org.organizations': 'Organizations',
 				'org.createOrganization': 'Create Organization',
+				'help.title': 'Help',
+				'help.gettingStarted': 'Getting Started',
+				'help.configuration': 'Configuration',
+				'help.agentDeployment': 'Agent Deployment',
+				'help.apiReference': 'API Reference',
+				'help.troubleshooting': 'Troubleshooting',
+				'help.keyboardShortcuts': 'Keyboard Shortcuts',
+				'help.swaggerDocs': 'Swagger Docs',
 			};
 			return translations[key] || key;
 		},
@@ -65,16 +78,127 @@ vi.mock('../hooks/useLocale', () => ({
 	}),
 }));
 
-vi.mock('../hooks/useAirGap', () => ({
-	useAirGapStatus: vi.fn().mockReturnValue({
-		data: { enabled: false, disabled_features: [], license: null },
+vi.mock('../hooks/useChangelog', () => ({
+	useLatestChanges: vi.fn().mockReturnValue({
+		latestEntry: null,
+		isLoading: false,
+		currentVersion: undefined,
+	}),
+	useNewVersionAvailable: vi.fn().mockReturnValue({
+		hasNewVersion: false,
+		latestVersion: null,
 	}),
 }));
 
-vi.mock('../hooks/useBranding', () => ({
-	useBranding: vi.fn().mockReturnValue({
-		data: null,
+vi.mock('../hooks/useKeyboardShortcuts', () => ({
+	useKeyboardShortcuts: vi.fn().mockReturnValue({
+		shortcuts: [],
+		defaultShortcuts: [],
+		customShortcuts: {},
+		updateCustomShortcut: vi.fn(),
+		resetShortcut: vi.fn(),
+		resetAllShortcuts: vi.fn(),
+		executeAction: vi.fn(),
 	}),
+}));
+
+vi.mock('../hooks/useLicense', () => ({
+	useLicense: vi.fn().mockReturnValue({
+		data: null,
+		isLoading: false,
+		error: null,
+	}),
+}));
+
+vi.mock('../hooks/useReadOnlyMode', () => {
+	const ReadOnlyModeContext = createContext({ isReadOnly: false });
+	return {
+		ReadOnlyModeContext,
+		useReadOnlyModeValue: vi.fn().mockReturnValue({ isReadOnly: false }),
+		useReadOnlyMode: vi.fn().mockReturnValue({ isReadOnly: false }),
+	};
+});
+
+vi.mock('../hooks/useSearch', () => ({
+	useSearch: vi.fn().mockReturnValue({
+		data: null,
+		isLoading: false,
+		error: null,
+	}),
+}));
+
+vi.mock('../hooks/useTheme', () => ({
+	useTheme: vi.fn().mockReturnValue({
+		theme: 'light',
+		toggleTheme: vi.fn(),
+	}),
+}));
+
+vi.mock('../hooks/useVersion', () => ({
+	useVersion: vi.fn().mockReturnValue({
+		data: { version: '0.0.1' },
+		isLoading: false,
+		error: null,
+	}),
+}));
+
+vi.mock('../contexts/BrandingContext', () => ({
+	useBranding: vi.fn().mockReturnValue({
+		branding: null,
+	}),
+}));
+
+// Mock child components that use their own React Query hooks internally
+vi.mock('./features/AirGapIndicator', () => ({
+	AirGapIndicator: () => null,
+}));
+
+vi.mock('./features/AnnouncementBanner', () => ({
+	AnnouncementBanner: () => null,
+}));
+
+vi.mock('./features/LicenseBanner', () => ({
+	LicenseBanner: () => null,
+}));
+
+vi.mock('./features/MaintenanceCountdown', () => ({
+	MaintenanceCountdown: () => null,
+}));
+
+vi.mock('./features/TrialBanner', () => ({
+	TrialBanner: () => null,
+}));
+
+vi.mock('./features/RecentItems', () => ({
+	RecentItemsDropdown: () => null,
+}));
+
+vi.mock('./features/TierBadge', () => ({
+	TierBadge: ({ tier }: { tier: string }) => (
+		<span data-testid="tier-badge">{tier}</span>
+	),
+}));
+
+vi.mock('./features/ShortcutHelpModal', () => ({
+	ShortcutHelpModal: () => null,
+}));
+
+vi.mock('./features/WhatsNewModal', () => ({
+	WhatsNewModal: () => null,
+}));
+
+vi.mock('./PasswordExpirationBanner', () => ({
+	PasswordExpirationBanner: () => null,
+}));
+
+vi.mock('./ui/Breadcrumbs', () => ({
+	Breadcrumbs: () => null,
+}));
+
+vi.mock('./ui/Toast', () => ({
+	ToastProvider: ({ children }: { children: React.ReactNode }) => (
+		<>{children}</>
+	),
 }));
 
 vi.mock('./features/LanguageSelector', () => ({

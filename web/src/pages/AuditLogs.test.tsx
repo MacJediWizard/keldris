@@ -13,6 +13,24 @@ vi.mock('../hooks/useAuditLogs', () => ({
 	useExportAuditLogsJson: () => ({ mutate: mockMutateJson, isPending: false }),
 }));
 
+vi.mock('../hooks/usePlanLimits', () => ({
+	usePlanLimits: () => ({
+		isLoading: false,
+		planType: 'enterprise',
+		limits: {},
+		features: {},
+		usage: { agentCount: 0, storageUsedBytes: 0 },
+		hasFeature: () => true,
+		canAddAgents: () => true,
+		canAddStorage: () => true,
+		getAgentLimitRemaining: () => undefined,
+		getStorageLimitRemaining: () => undefined,
+		isAtAgentLimit: () => false,
+		isAtStorageLimit: () => false,
+		getUpgradePlanFor: () => 'enterprise',
+	}),
+}));
+
 import { useAuditLogs } from '../hooks/useAuditLogs';
 
 function renderPage() {

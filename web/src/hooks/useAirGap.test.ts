@@ -1,38 +1,37 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createWrapper } from '../test/helpers';
 import { useAirGapStatus, useUploadLicense } from './useAirGap';
 
-vi.mock('../lib/api', () => ({
-	airGapApi: {
-		getStatus: vi.fn(),
-		uploadLicense: vi.fn(),
-	},
-}));
-
-import { airGapApi } from '../lib/api';
-
 const mockStatus = {
-	enabled: true,
-	disabled_features: [
-		{ name: 'auto_update', reason: 'Requires internet access' },
-	],
-	license: {
-		customer_id: 'cust-123',
-		tier: 'enterprise',
-		expires_at: '2025-12-31T00:00:00Z',
-		issued_at: '2024-01-01T00:00:00Z',
-		valid: true,
-	},
+	airgap_mode: true,
+	disable_update_checker: true,
+	disable_telemetry: true,
+	disable_external_links: false,
+	license_valid: true,
 };
+
+function mockFetch(data: unknown, ok = true, status = 200) {
+	const fn = vi.fn().mockResolvedValue({
+		ok,
+		status,
+		json: () => Promise.resolve(data),
+	} as unknown as Response);
+	vi.stubGlobal('fetch', fn);
+	return fn;
+}
 
 describe('useAirGapStatus', () => {
 	beforeEach(() => {
-		vi.clearAllMocks();
+		vi.restoreAllMocks();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
 	});
 
 	it('fetches air-gap status', async () => {
-		vi.mocked(airGapApi.getStatus).mockResolvedValue(mockStatus);
+		const fetchFn = mockFetch(mockStatus);
 
 		const { result } = renderHook(() => useAirGapStatus(), {
 			wrapper: createWrapper(),
@@ -40,60 +39,86 @@ describe('useAirGapStatus', () => {
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(result.current.data).toEqual(mockStatus);
-		expect(airGapApi.getStatus).toHaveBeenCalledOnce();
+		expect(fetchFn).toHaveBeenCalledWith('/api/v1/public/airgap/status');
 	});
 
-	it('handles error state', async () => {
-		vi.mocked(airGapApi.getStatus).mockRejectedValue(
-			new Error('Network error'),
-		);
+	it('returns default status on 404', async () => {
+		mockFetch({}, false, 404);
 
 		const { result } = renderHook(() => useAirGapStatus(), {
 			wrapper: createWrapper(),
 		});
 
-		await waitFor(() => expect(result.current.isError).toBe(true));
+		await waitFor(() => expect(result.current.isSuccess).toBe(true));
+		expect(result.current.data).toEqual({
+			airgap_mode: false,
+			disable_update_checker: false,
+			disable_telemetry: false,
+			disable_external_links: false,
+			license_valid: true,
+		});
+	});
+
+	it('handles error state', async () => {
+		mockFetch({ error: 'Server error' }, false, 500);
+
+		const { result } = renderHook(() => useAirGapStatus(), {
+			wrapper: createWrapper(),
+		});
+
+		// The hook sets retry: 1 which overrides the test QueryClient default,
+		// so wait long enough for the retry to complete.
+		await waitFor(() => expect(result.current.isError).toBe(true), {
+			timeout: 5000,
+		});
 		expect(result.current.error).toBeDefined();
 	});
 });
 
 describe('useUploadLicense', () => {
 	beforeEach(() => {
-		vi.clearAllMocks();
+		vi.restoreAllMocks();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
 	});
 
 	it('uploads a license', async () => {
 		const mockLicenseInfo = {
-			customer_id: 'cust-123',
-			tier: 'enterprise',
-			expires_at: '2025-12-31T00:00:00Z',
-			issued_at: '2024-01-01T00:00:00Z',
 			valid: true,
+			type: 'enterprise',
+			organization: 'Test Corp',
+			expires_at: '2025-12-31T00:00:00Z',
+			airgap_mode: true,
 		};
-		vi.mocked(airGapApi.uploadLicense).mockResolvedValue(mockLicenseInfo);
+		const fetchFn = mockFetch(mockLicenseInfo);
 
 		const { result } = renderHook(() => useUploadLicense(), {
 			wrapper: createWrapper(),
 		});
 
-		const buffer = new ArrayBuffer(8);
-		result.current.mutate(buffer);
+		result.current.mutate('license-data-string');
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(airGapApi.uploadLicense).toHaveBeenCalledWith(buffer);
+		expect(fetchFn).toHaveBeenCalledWith(
+			'/api/v1/airgap/license',
+			expect.objectContaining({
+				method: 'POST',
+				credentials: 'include',
+				body: JSON.stringify({ license: 'license-data-string' }),
+			}),
+		);
 	});
 
 	it('handles upload error', async () => {
-		vi.mocked(airGapApi.uploadLicense).mockRejectedValue(
-			new Error('Invalid license'),
-		);
+		mockFetch({ error: 'Invalid license' }, false, 400);
 
 		const { result } = renderHook(() => useUploadLicense(), {
 			wrapper: createWrapper(),
 		});
 
-		const buffer = new ArrayBuffer(8);
-		result.current.mutate(buffer);
+		result.current.mutate('bad-license-data');
 
 		await waitFor(() => expect(result.current.isError).toBe(true));
 	});

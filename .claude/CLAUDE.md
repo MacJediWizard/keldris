@@ -7,11 +7,11 @@
 
 | Layer | Technology | Version |
 |-------|------------|---------|
-| Server | Go | 1.25.7+ |
+| Server | Go | 1.25+ |
 | Server Framework | Gin | latest |
 | Database | PostgreSQL | 15+ |
 | ORM | pgx/v5 raw queries | latest |
-| Agent | Go + Cobra | 1.25.7+ |
+| Agent | Go + Cobra | 1.25+ |
 | Frontend | React | 18+ |
 | Frontend Build | Vite | 6+ |
 | Frontend Language | TypeScript (strict) | 5.6+ |
@@ -22,7 +22,6 @@
 | Backup Engine | Restic (exec wrapper) | latest |
 | i18next | i18next | ^25.7.4 |
 | i18n React Bindings | react-i18next | ^16.x |
-| i18n React Bindings | react-i18next | ^15.x |
 | Linting | Biome (frontend), staticcheck (Go) | latest |
 
 ---
@@ -576,6 +575,30 @@ Add agent health monitoring endpoint
 - Track health history in database
 - Display health timeline in UI
 ```
+
+---
+
+## Testing & Linting Requirements
+
+### Go
+```bash
+go vet ./...
+staticcheck ./...
+go test -race ./...
+```
+
+### Frontend
+```bash
+npx vitest run                    # Unit tests
+npx @biomejs/biome check .       # Linting
+npx tsc --noEmit                  # Type checking
+npx playwright test               # E2E smoke tests
+```
+
+### Test Patterns
+- Use `renderWithProviders` helper for components that use React Query
+- Use `vi.importActual` pattern for partial mocks (keep real exports, override specific ones)
+- Use exact `.toBe()` assertions with full strings, not `.toContain()` for weakened checks
 
 ---
 

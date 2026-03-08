@@ -12,6 +12,10 @@ vi.mock('../hooks/useSchedules', () => ({
 	useUpdateSchedule: () => ({ mutateAsync: vi.fn(), isPending: false }),
 	useDeleteSchedule: () => ({ mutateAsync: vi.fn(), isPending: false }),
 	useRunSchedule: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useDryRunSchedule: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useCloneSchedule: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useBulkCloneSchedule: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useCommandResult: () => ({ data: undefined }),
 }));
 
 vi.mock('../hooks/useAgents', () => ({
@@ -32,6 +36,13 @@ vi.mock('../hooks/usePolicies', () => ({
 	usePolicies: () => ({ data: [], isLoading: false }),
 }));
 
+vi.mock('../hooks/useFavorites', () => ({
+	useFavorites: () => ({ data: [], isLoading: false }),
+	useFavoriteIds: () => new Set<string>(),
+	useAddFavorite: () => ({ mutate: vi.fn() }),
+	useRemoveFavorite: () => ({ mutate: vi.fn() }),
+}));
+
 vi.mock('../components/features/BackupScriptsEditor', () => ({
 	BackupScriptsEditor: () => (
 		<div data-testid="scripts-editor">Scripts Editor</div>
@@ -44,6 +55,14 @@ vi.mock('../components/features/MultiRepoSelector', () => ({
 
 vi.mock('../components/features/PatternLibraryModal', () => ({
 	PatternLibraryModal: () => null,
+}));
+
+vi.mock('../components/features/ExportImportModal', () => ({
+	ExportImportModal: () => null,
+}));
+
+vi.mock('../components/features/DryRunResultsModal', () => ({
+	DryRunResultsModal: () => null,
 }));
 
 import { useSchedules } from '../hooks/useSchedules';

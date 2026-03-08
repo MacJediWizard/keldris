@@ -22,6 +22,10 @@ vi.mock('../hooks/useMaintenance', () => ({
 		mutateAsync: vi.fn(),
 		isPending: false,
 	}),
+	useEmergencyOverride: () => ({
+		mutateAsync: vi.fn(),
+		isPending: false,
+	}),
 }));
 
 import { useMe } from '../hooks/useAuth';
@@ -362,9 +366,7 @@ describe('Maintenance', () => {
 		renderPage();
 		await user.click(screen.getByText('Schedule Maintenance'));
 		expect(
-			screen.getByText(
-				'Send notification this many minutes before maintenance starts',
-			),
+			screen.getByText('Send notification before maintenance'),
 		).toBeInTheDocument();
 	});
 });

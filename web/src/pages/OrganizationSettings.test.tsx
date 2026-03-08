@@ -17,6 +17,16 @@ vi.mock('../hooks/useOrganizations', () => ({
 	useDeleteOrganization: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
+vi.mock('../hooks/useSupport', () => ({
+	useGenerateSupportBundle: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
+vi.mock('../hooks/useBackupQueue', () => ({
+	useBackupQueueSummary: () => ({ data: undefined, isLoading: false }),
+	useOrgConcurrency: () => ({ data: undefined, isLoading: false }),
+	useUpdateOrgConcurrency: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 import { useMe } from '../hooks/useAuth';
 import { useCurrentOrganization } from '../hooks/useOrganizations';
 
@@ -118,6 +128,6 @@ describe('OrganizationSettings', () => {
 			isLoading: false,
 		} as ReturnType<typeof useCurrentOrganization>);
 		renderPage();
-		expect(screen.getByText('Edit')).toBeInTheDocument();
+		expect(screen.getAllByText('Edit').length).toBeGreaterThan(0);
 	});
 });

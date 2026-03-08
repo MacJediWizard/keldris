@@ -2,10 +2,26 @@ import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@tanstack/react-query', async () => {
+	const actual = await vi.importActual('@tanstack/react-query');
+	return {
+		...actual,
+		useQueryClient: () => ({
+			invalidateQueries: vi.fn(),
+			setQueryData: vi.fn(),
+			getQueryData: vi.fn(),
+		}),
+	};
+});
+
 vi.mock('../hooks/useOnboarding', () => ({
 	useOnboardingStatus: vi.fn(),
 	useCompleteOnboardingStep: () => ({ mutateAsync: vi.fn(), isPending: false }),
 	useSkipOnboarding: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useCompleteSMTPStep: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useCompleteOIDCStep: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useTestOnboardingSMTP: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useTestOnboardingOIDC: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock('../hooks/useAgents', () => ({
@@ -14,14 +30,43 @@ vi.mock('../hooks/useAgents', () => ({
 
 vi.mock('../hooks/useOrganizations', () => ({
 	useOrganizations: () => ({ data: [] }),
+	useUpdateOrganization: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock('../hooks/useRepositories', () => ({
 	useRepositories: () => ({ data: [] }),
+	useCreateRepository: () => ({
+		mutateAsync: vi.fn(),
+		isPending: false,
+		isError: false,
+	}),
+	useTestConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock('../hooks/useSchedules', () => ({
 	useSchedules: () => ({ data: [] }),
+	useCreateSchedule: () => ({
+		mutateAsync: vi.fn(),
+		isPending: false,
+		isError: false,
+	}),
+	useRunSchedule: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useDryRunSchedule: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useCommandResult: () => ({ data: undefined }),
+}));
+
+vi.mock('../hooks/useLicense', () => ({
+	useLicense: () => ({ data: undefined, isLoading: false }),
+	useActivateLicense: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useStartTrial: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
+vi.mock('../hooks/useAgentRegistration', () => ({
+	useCreateRegistrationCode: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
+vi.mock('../hooks/useBackups', () => ({
+	useBackups: () => ({ data: [], isLoading: false }),
 }));
 
 vi.mock('../components/features/AgentDownloads', () => ({
@@ -120,7 +165,7 @@ describe('Onboarding', () => {
 			isLoading: false,
 		} as ReturnType<typeof useOnboardingStatus>);
 		renderPage();
-		expect(screen.getByText('Create Your Organization')).toBeInTheDocument();
+		expect(screen.getByText('Your Organization')).toBeInTheDocument();
 	});
 
 	it('renders SMTP step', () => {
@@ -146,7 +191,7 @@ describe('Onboarding', () => {
 			isLoading: false,
 		} as ReturnType<typeof useOnboardingStatus>);
 		renderPage();
-		expect(screen.getByText(/Create a Repository/i)).toBeInTheDocument();
+		expect(screen.getByText(/Create a Backup Repository/i)).toBeInTheDocument();
 	});
 
 	it('renders agent step with downloads', () => {
@@ -158,7 +203,7 @@ describe('Onboarding', () => {
 			isLoading: false,
 		} as ReturnType<typeof useOnboardingStatus>);
 		renderPage();
-		expect(screen.getByTestId('agent-downloads')).toBeInTheDocument();
+		expect(screen.getByText('Install a Backup Agent')).toBeInTheDocument();
 	});
 
 	it('renders schedule step', () => {

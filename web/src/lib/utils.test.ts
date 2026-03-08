@@ -244,23 +244,33 @@ describe('getAgentStatusColor', () => {
 
 describe('getBackupStatusColor', () => {
 	it('returns green for completed', () => {
-		expect(getBackupStatusColor('completed').bg).toBe('bg-green-100');
+		expect(getBackupStatusColor('completed').bg).toBe(
+			'bg-green-100 dark:bg-green-900/30',
+		);
 	});
 
 	it('returns blue for running', () => {
-		expect(getBackupStatusColor('running').bg).toBe('bg-blue-100');
+		expect(getBackupStatusColor('running').bg).toBe(
+			'bg-blue-100 dark:bg-blue-900/30',
+		);
 	});
 
 	it('returns red for failed', () => {
-		expect(getBackupStatusColor('failed').bg).toBe('bg-red-100');
+		expect(getBackupStatusColor('failed').bg).toBe(
+			'bg-red-100 dark:bg-red-900/30',
+		);
 	});
 
 	it('returns gray for canceled', () => {
-		expect(getBackupStatusColor('canceled').bg).toBe('bg-gray-100');
+		expect(getBackupStatusColor('canceled').bg).toBe(
+			'bg-gray-100 dark:bg-gray-700',
+		);
 	});
 
 	it('returns gray for unknown', () => {
-		expect(getBackupStatusColor('unknown').bg).toBe('bg-gray-100');
+		expect(getBackupStatusColor('unknown').bg).toBe(
+			'bg-gray-100 dark:bg-gray-700',
+		);
 	});
 });
 
@@ -289,8 +299,8 @@ describe('getRepositoryTypeBadge', () => {
 		expect(getRepositoryTypeBadge('dropbox').label).toBe('Dropbox');
 	});
 
-	it('returns type as label for unknown types', () => {
-		expect(getRepositoryTypeBadge('gcs').label).toBe('gcs');
+	it('returns Google Cloud for gcs type', () => {
+		expect(getRepositoryTypeBadge('gcs').label).toBe('Google Cloud');
 	});
 });
 
@@ -459,37 +469,39 @@ describe('formatPercent', () => {
 
 describe('getDedupRatioColor', () => {
 	it('returns green for high ratio', () => {
-		expect(getDedupRatioColor(3)).toBe('text-green-600');
+		expect(getDedupRatioColor(3)).toBe('text-green-600 dark:text-green-400');
 	});
 
 	it('returns blue for medium ratio', () => {
-		expect(getDedupRatioColor(2)).toBe('text-blue-600');
+		expect(getDedupRatioColor(2)).toBe('text-blue-600 dark:text-blue-400');
 	});
 
 	it('returns yellow for low ratio', () => {
-		expect(getDedupRatioColor(1.5)).toBe('text-yellow-600');
+		expect(getDedupRatioColor(1.5)).toBe(
+			'text-yellow-600 dark:text-yellow-400',
+		);
 	});
 
 	it('returns gray for very low ratio', () => {
-		expect(getDedupRatioColor(1)).toBe('text-gray-600');
+		expect(getDedupRatioColor(1)).toBe('text-gray-600 dark:text-gray-400');
 	});
 });
 
 describe('getSpaceSavedColor', () => {
 	it('returns green for high percentage', () => {
-		expect(getSpaceSavedColor(70)).toBe('text-green-600');
+		expect(getSpaceSavedColor(70)).toBe('text-green-600 dark:text-green-400');
 	});
 
 	it('returns blue for medium percentage', () => {
-		expect(getSpaceSavedColor(50)).toBe('text-blue-600');
+		expect(getSpaceSavedColor(50)).toBe('text-blue-600 dark:text-blue-400');
 	});
 
 	it('returns yellow for low percentage', () => {
-		expect(getSpaceSavedColor(30)).toBe('text-yellow-600');
+		expect(getSpaceSavedColor(30)).toBe('text-yellow-600 dark:text-yellow-400');
 	});
 
 	it('returns gray for very low percentage', () => {
-		expect(getSpaceSavedColor(10)).toBe('text-gray-600');
+		expect(getSpaceSavedColor(10)).toBe('text-gray-600 dark:text-gray-400');
 	});
 });
 
@@ -525,37 +537,47 @@ describe('formatDurationMs', () => {
 
 describe('getSuccessRateColor', () => {
 	it('returns green for high rate', () => {
-		expect(getSuccessRateColor(95)).toBe('text-green-600');
+		expect(getSuccessRateColor(95)).toBe('text-green-600 dark:text-green-400');
 	});
 
 	it('returns yellow for medium rate', () => {
-		expect(getSuccessRateColor(80)).toBe('text-yellow-600');
+		expect(getSuccessRateColor(80)).toBe(
+			'text-yellow-600 dark:text-yellow-400',
+		);
 	});
 
 	it('returns orange for low rate', () => {
-		expect(getSuccessRateColor(50)).toBe('text-orange-600');
+		expect(getSuccessRateColor(50)).toBe(
+			'text-orange-600 dark:text-orange-400',
+		);
 	});
 
 	it('returns red for very low rate', () => {
-		expect(getSuccessRateColor(30)).toBe('text-red-600');
+		expect(getSuccessRateColor(30)).toBe('text-red-600 dark:text-red-400');
 	});
 });
 
 describe('getSuccessRateBadge', () => {
 	it('returns green for high rate', () => {
-		expect(getSuccessRateBadge(95).bg).toBe('bg-green-100');
+		expect(getSuccessRateBadge(95).bg).toBe(
+			'bg-green-100 dark:bg-green-900/30',
+		);
 	});
 
 	it('returns yellow for medium rate', () => {
-		expect(getSuccessRateBadge(80).bg).toBe('bg-yellow-100');
+		expect(getSuccessRateBadge(80).bg).toBe(
+			'bg-yellow-100 dark:bg-yellow-900/30',
+		);
 	});
 
 	it('returns orange for low rate', () => {
-		expect(getSuccessRateBadge(50).bg).toBe('bg-orange-100');
+		expect(getSuccessRateBadge(50).bg).toBe(
+			'bg-orange-100 dark:bg-orange-900/30',
+		);
 	});
 
 	it('returns red for very low rate', () => {
-		expect(getSuccessRateBadge(30).bg).toBe('bg-red-100');
+		expect(getSuccessRateBadge(30).bg).toBe('bg-red-100 dark:bg-red-900/30');
 	});
 });
 

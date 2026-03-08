@@ -63,6 +63,8 @@ web/dist/
 web/.cache/
 web/tsconfig.tsbuildinfo
 web/coverage/
+web/test-results/
+web/playwright-report/
 
 # Logs
 npm-debug.log*

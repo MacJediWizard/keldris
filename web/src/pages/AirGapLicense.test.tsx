@@ -5,21 +5,11 @@ import { renderWithProviders } from '../test/helpers';
 vi.mock('../hooks/useAirGap', () => ({
 	useAirGapStatus: vi.fn().mockReturnValue({
 		data: {
-			enabled: true,
-			disabled_features: [
-				{ name: 'auto_update', reason: 'Requires internet access' },
-				{
-					name: 'external_webhooks',
-					reason: 'External webhooks require internet access',
-				},
-			],
-			license: {
-				customer_id: 'cust-123',
-				tier: 'enterprise',
-				expires_at: '2025-12-31T00:00:00Z',
-				issued_at: '2024-01-01T00:00:00Z',
-				valid: true,
-			},
+			airgap_mode: true,
+			disable_update_checker: true,
+			disable_telemetry: true,
+			disable_external_links: true,
+			license_valid: true,
 		},
 		isLoading: false,
 		error: null,
@@ -28,6 +18,16 @@ vi.mock('../hooks/useAirGap', () => ({
 		mutateAsync: vi.fn(),
 		isPending: false,
 		isSuccess: false,
+	}),
+	useLicenseStatus: vi.fn().mockReturnValue({
+		data: {
+			valid: true,
+			type: 'enterprise',
+			organization: 'Test Org',
+			expires_at: '2025-12-31T00:00:00Z',
+			airgap_mode: true,
+		},
+		isLoading: false,
 	}),
 }));
 
@@ -85,13 +85,14 @@ describe('AirGapLicense page', () => {
 
 	it('renders disabled features list', () => {
 		renderWithProviders(<AirGapLicensePage />);
-		expect(screen.getByText('auto update')).toBeInTheDocument();
-		expect(screen.getByText('external webhooks')).toBeInTheDocument();
+		expect(screen.getByText('Update checker disabled')).toBeInTheDocument();
+		expect(screen.getByText('Telemetry disabled')).toBeInTheDocument();
+		expect(screen.getByText('External links disabled')).toBeInTheDocument();
 	});
 
 	it('shows license information', () => {
 		renderWithProviders(<AirGapLicensePage />);
-		expect(screen.getByText('cust-123')).toBeInTheDocument();
+		expect(screen.getByText('Test Org')).toBeInTheDocument();
 		expect(screen.getByText('enterprise')).toBeInTheDocument();
 	});
 

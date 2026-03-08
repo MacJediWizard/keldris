@@ -20,6 +20,15 @@ vi.mock('../hooks/useAgents', () => ({
 	useRotateAgentApiKey: () => ({ mutateAsync: vi.fn(), isPending: false }),
 	useRevokeAgentApiKey: () => ({ mutateAsync: vi.fn(), isPending: false }),
 	useRunSchedule: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useAgentCommands: vi.fn(() => ({ data: [], isLoading: false })),
+	useCreateAgentCommand: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useCancelAgentCommand: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useSetAgentDebugMode: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
+vi.mock('../hooks/useBackupQueue', () => ({
+	useAgentConcurrency: () => ({ data: undefined, isLoading: false }),
+	useUpdateAgentConcurrency: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 import { useAgent } from '../hooks/useAgents';

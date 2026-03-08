@@ -68,7 +68,7 @@ describe('fetchApi core behavior', () => {
 		mockFetch({ error: 'Unauthorized' }, 401, false);
 		const { agentsApi } = await import('./api');
 		await expect(agentsApi.list()).rejects.toThrow('Unauthorized');
-		expect(window.location.href).toBe('/auth/login');
+		expect(window.location.href).toBe('/login');
 	});
 
 	it('throws ApiError on non-ok responses', async () => {
@@ -137,10 +137,10 @@ describe('authApi', () => {
 		);
 	});
 
-	it('getLoginUrl returns /auth/login', async () => {
+	it('getLoginUrl returns /login', async () => {
 		mockFetch({});
 		const { authApi } = await import('./api');
-		expect(authApi.getLoginUrl()).toBe('/auth/login');
+		expect(authApi.getLoginUrl()).toBe('/login');
 	});
 });
 
@@ -732,12 +732,12 @@ describe('snapshotsApi', () => {
 		);
 	});
 
-	it('compare calls /snapshots/:id1/compare/:id2', async () => {
+	it('compare calls /snapshots/compare with query params', async () => {
 		const fetchFn = mockFetch({ added: [], removed: [] });
 		const { snapshotsApi } = await import('./api');
 		await snapshotsApi.compare('sn1', 'sn2');
 		expect(fetchFn).toHaveBeenCalledWith(
-			'/api/v1/snapshots/sn1/compare/sn2',
+			'/api/v1/snapshots/compare?id1=sn1&id2=sn2',
 			expect.any(Object),
 		);
 	});

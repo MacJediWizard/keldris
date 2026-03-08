@@ -67,7 +67,7 @@ describe('Backups', () => {
 			isError: false,
 		} as ReturnType<typeof useBackups>);
 		renderPage();
-		expect(screen.getByText('No backups found')).toBeInTheDocument();
+		expect(screen.getByText('No backups yet')).toBeInTheDocument();
 	});
 
 	it('renders backup rows', () => {
@@ -187,7 +187,9 @@ describe('Backups', () => {
 		} as ReturnType<typeof useBackups>);
 		renderPage();
 		expect(
-			screen.getByText(/Backups will appear here once agents start running/),
+			screen.getByText(
+				/Backups will appear here once you create a schedule and agents start running/,
+			),
 		).toBeInTheDocument();
 	});
 

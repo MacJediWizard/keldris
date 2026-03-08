@@ -18,6 +18,28 @@ vi.mock('../hooks/useSnapshots', () => ({
 vi.mock('../hooks/useRestore', () => ({
 	useRestores: vi.fn(() => ({ data: [], isLoading: false })),
 	useCreateRestore: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useCreateCloudRestore: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useRestorePreview: vi.fn(() => ({ data: undefined, isLoading: false })),
+	useCloudRestoreProgress: vi.fn(() => ({ data: undefined, isLoading: false })),
+}));
+
+vi.mock('../hooks/useAuth', () => ({
+	useMe: () => ({
+		data: {
+			id: '1',
+			email: 'test@test.com',
+			current_org_role: 'admin',
+			current_org_id: '1',
+			name: 'Test User',
+		},
+		isLoading: false,
+	}),
+}));
+
+vi.mock('../hooks/useLegalHolds', () => ({
+	useLegalHolds: () => ({ data: [], isLoading: false }),
+	useCreateLegalHold: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useDeleteLegalHold: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock('../hooks/useSnapshotComments', () => ({

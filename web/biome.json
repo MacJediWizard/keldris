@@ -8,7 +8,15 @@
 			"portal/src/**/*.tsx",
 			"*.css"
 		],
-		"ignore": ["node_modules", "dist", "*.json", "*.config.js", "*.config.ts"]
+		"ignore": [
+			"node_modules",
+			"dist",
+			"e2e",
+			"*.spec.ts",
+			"*.json",
+			"*.config.js",
+			"*.config.ts"
+		]
 	},
 	"organizeImports": { "enabled": true },
 	"linter": {
@@ -17,7 +25,8 @@
 			"recommended": true,
 			"suspicious": {
 				"noExplicitAny": "error",
-				"noArrayIndexKey": "warn"
+				"noArrayIndexKey": "warn",
+				"noConsoleLog": "warn"
 			},
 			"a11y": {
 				"noSvgWithoutTitle": "warn",
@@ -28,7 +37,8 @@
 			},
 			"correctness": {
 				"noUnusedImports": "error",
-				"noUnusedVariables": "error"
+				"noUnusedVariables": "error",
+				"useExhaustiveDependencies": "warn"
 			}
 		}
 	},

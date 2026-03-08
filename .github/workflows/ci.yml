@@ -99,6 +99,18 @@ jobs:
       - name: Run Biome check
         run: npx @biomejs/biome check .
 
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run unit tests
+        run: npx vitest run
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E smoke tests
+        run: npx playwright test
+
       - name: Build
         run: npm run build
 

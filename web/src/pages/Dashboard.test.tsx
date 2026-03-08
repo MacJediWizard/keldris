@@ -11,6 +11,59 @@ vi.mock('../hooks/useAgents', () => ({
 		isLoading: false,
 		error: null,
 	}),
+	useFleetHealth: vi.fn().mockReturnValue({
+		data: undefined,
+		isLoading: false,
+	}),
+}));
+
+vi.mock('../hooks/useDRRunbooks', () => ({
+	useDRStatus: vi.fn().mockReturnValue({
+		data: undefined,
+		isLoading: false,
+	}),
+}));
+
+vi.mock('../hooks/useFavorites', () => ({
+	useFavorites: vi.fn().mockReturnValue({
+		data: [],
+		isLoading: false,
+	}),
+}));
+
+vi.mock('../hooks/useMetrics', () => ({
+	useDashboardStats: vi.fn().mockReturnValue({
+		data: {
+			agent_online: 1,
+			agent_offline: 1,
+			agent_total: 2,
+			repository_count: 1,
+			schedule_count: 1,
+			schedule_enabled: 1,
+			backup_total: 1,
+			backup_failed_24h: 0,
+			backup_running: 0,
+			success_rate_7d: 100,
+			success_rate_30d: 100,
+			avg_dedup_ratio: 2.0,
+			total_space_saved: 512 * 1024 * 1024,
+			total_raw_size: 1024 * 1024 * 1024,
+			total_backup_size: 512 * 1024 * 1024,
+		},
+		isLoading: false,
+	}),
+	useDailyBackupStats: vi.fn().mockReturnValue({
+		data: [],
+		isLoading: false,
+	}),
+	useStorageGrowthTrend: vi.fn().mockReturnValue({
+		data: [],
+		isLoading: false,
+	}),
+	useBackupDurationTrend: vi.fn().mockReturnValue({
+		data: [],
+		isLoading: false,
+	}),
 }));
 
 vi.mock('../hooks/useRepositories', () => ({
@@ -108,8 +161,9 @@ describe('Dashboard', () => {
 
 	it('shows stat values', () => {
 		renderWithProviders(<Dashboard />);
-		// Multiple stat cards show "1" (1 active agent, 1 repo, 1 schedule, 1 backup)
-		const statValues = screen.getAllByText('1');
-		expect(statValues.length).toBeGreaterThanOrEqual(1);
+		// Agents show "1/2" (1 online / 2 total), repos/schedules/backups show "1"
+		expect(screen.getByText('1/2')).toBeInTheDocument();
+		const ones = screen.getAllByText('1');
+		expect(ones.length).toBeGreaterThanOrEqual(1);
 	});
 });

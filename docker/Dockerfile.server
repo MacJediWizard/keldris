@@ -12,9 +12,9 @@ RUN npm ci --ignore-scripts && \
 COPY web/ ./
 RUN npm run build
 
-# SECURITY: Requires Go 1.24+ for stdlib vulnerability fixes
+# SECURITY: Requires Go 1.25+ for stdlib vulnerability fixes
 # Build Go server
-FROM golang:1.24-alpine AS go-builder
+FROM golang:1.25-alpine AS go-builder
 RUN apk add --no-cache git ca-certificates
 WORKDIR /app
 COPY go.mod go.sum ./

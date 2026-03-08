@@ -13,11 +13,40 @@ vi.mock('../hooks/useRepositories', () => ({
 	useTestRepository: () => ({ mutateAsync: vi.fn(), isPending: false }),
 	useTestConnection: () => ({ mutateAsync: vi.fn(), isPending: false }),
 	useRecoverRepositoryKey: () => ({ mutateAsync: vi.fn(), isPending: false }),
+	useCloneRepository: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock('../hooks/useVerifications', () => ({
 	useVerificationStatus: () => ({ data: undefined }),
 	useTriggerVerification: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
+vi.mock('../hooks/useAuth', () => ({
+	useMe: () => ({
+		data: {
+			id: '1',
+			email: 'test@test.com',
+			current_org_role: 'admin',
+			current_org_id: '1',
+			name: 'Test User',
+		},
+		isLoading: false,
+	}),
+}));
+
+vi.mock('../hooks/useFavorites', () => ({
+	useFavorites: () => ({ data: [], isLoading: false }),
+	useFavoriteIds: () => new Set<string>(),
+	useAddFavorite: () => ({ mutate: vi.fn() }),
+	useRemoveFavorite: () => ({ mutate: vi.fn() }),
+}));
+
+vi.mock('../hooks/useOrganizations', () => ({
+	useOrganizations: () => ({ data: [], isLoading: false }),
+}));
+
+vi.mock('../components/features/ImportRepositoryWizard', () => ({
+	ImportRepositoryWizard: () => null,
 }));
 
 import { useRepositories } from '../hooks/useRepositories';
