@@ -16,7 +16,6 @@ import (
 
 // UsageStore defines the interface for usage persistence operations.
 type UsageStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error)
 
 	// Usage metrics
@@ -100,16 +99,9 @@ func (h *UsageHandler) GetCurrentUsage(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	usage, err := h.meteringService.GetCurrentUsage(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	usage, err := h.meteringService.GetCurrentUsage(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get current usage")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get current usage")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve current usage"})
 		return
 	}
@@ -136,13 +128,6 @@ func (h *UsageHandler) GetUsageHistory(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	days := 30
 	if daysParam := c.Query("days"); daysParam != "" {
 		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 365 {
@@ -150,9 +135,9 @@ func (h *UsageHandler) GetUsageHistory(c *gin.Context) {
 		}
 	}
 
-	history, err := h.meteringService.GetUsageHistory(c.Request.Context(), dbUser.OrgID, days)
+	history, err := h.meteringService.GetUsageHistory(c.Request.Context(), user.CurrentOrgID, days)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get usage history")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get usage history")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve usage history"})
 		return
 	}
@@ -179,23 +164,16 @@ func (h *UsageHandler) GetUsageLimits(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	limits, err := h.store.GetOrgUsageLimits(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	limits, err := h.store.GetOrgUsageLimits(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get usage limits")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get usage limits")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve usage limits"})
 		return
 	}
 
 	if limits == nil {
 		// Return default limits
-		limits = models.NewOrgUsageLimits(dbUser.OrgID)
+		limits = models.NewOrgUsageLimits(user.CurrentOrgID)
 	}
 
 	c.JSON(http.StatusOK, limits)
@@ -242,13 +220,6 @@ func (h *UsageHandler) UpdateUsageLimits(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	var req UpdateUsageLimitsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
@@ -266,9 +237,9 @@ func (h *UsageHandler) UpdateUsageLimits(c *gin.Context) {
 	}
 
 	// Get existing limits or create new
-	limits, err := h.store.GetOrgUsageLimits(c.Request.Context(), dbUser.OrgID)
+	limits, err := h.store.GetOrgUsageLimits(c.Request.Context(), user.CurrentOrgID)
 	if err != nil || limits == nil {
-		limits = models.NewOrgUsageLimits(dbUser.OrgID)
+		limits = models.NewOrgUsageLimits(user.CurrentOrgID)
 	}
 
 	// Update fields
@@ -306,13 +277,13 @@ func (h *UsageHandler) UpdateUsageLimits(c *gin.Context) {
 	limits.UpdatedAt = time.Now()
 
 	if err := h.store.UpsertOrgUsageLimits(c.Request.Context(), limits); err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to update usage limits")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to update usage limits")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update usage limits"})
 		return
 	}
 
 	h.logger.Info().
-		Str("org_id", dbUser.OrgID.String()).
+		Str("org_id", user.CurrentOrgID.String()).
 		Str("updated_by", user.ID.String()).
 		Msg("usage limits updated")
 
@@ -337,16 +308,9 @@ func (h *UsageHandler) GetUsageAlerts(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	alerts, err := h.store.GetActiveUsageAlertsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	alerts, err := h.store.GetActiveUsageAlertsByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get usage alerts")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get usage alerts")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve usage alerts"})
 		return
 	}
@@ -418,13 +382,6 @@ func (h *UsageHandler) GetMonthlySummaries(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	months := 12
 	if monthsParam := c.Query("months"); monthsParam != "" {
 		if m, err := strconv.Atoi(monthsParam); err == nil && m > 0 && m <= 36 {
@@ -432,9 +389,9 @@ func (h *UsageHandler) GetMonthlySummaries(c *gin.Context) {
 		}
 	}
 
-	summaries, err := h.store.GetMonthlyUsageSummariesByOrgID(c.Request.Context(), dbUser.OrgID, months)
+	summaries, err := h.store.GetMonthlyUsageSummariesByOrgID(c.Request.Context(), user.CurrentOrgID, months)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get monthly summaries")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get monthly summaries")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve monthly summaries"})
 		return
 	}
@@ -474,16 +431,9 @@ func (h *UsageHandler) GetMonthlySummary(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	summary, err := h.store.GetMonthlyUsageSummary(c.Request.Context(), user.CurrentOrgID, yearMonth)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	summary, err := h.store.GetMonthlyUsageSummary(c.Request.Context(), dbUser.OrgID, yearMonth)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get monthly summary")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get monthly summary")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve monthly summary"})
 		return
 	}
@@ -528,16 +478,9 @@ func (h *UsageHandler) GetBillingReport(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	report, err := h.meteringService.GetBillingReport(c.Request.Context(), user.CurrentOrgID, yearMonth)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	report, err := h.meteringService.GetBillingReport(c.Request.Context(), dbUser.OrgID, yearMonth)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get billing report")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get billing report")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate billing report"})
 		return
 	}

@@ -121,9 +121,9 @@ func (h *LegalHoldsHandler) ListLegalHolds(c *gin.Context) {
 		return
 	}
 
-	holds, err := h.store.GetLegalHoldsByOrgID(c.Request.Context(), dbUser.OrgID)
+	holds, err := h.store.GetLegalHoldsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list legal holds")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list legal holds")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list legal holds"})
 		return
 	}
@@ -206,19 +206,19 @@ func (h *LegalHoldsHandler) CreateLegalHold(c *gin.Context) {
 	}
 
 	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
 		return
 	}
 
 	// Check if hold already exists
-	existing, _ := h.store.GetLegalHoldBySnapshotID(c.Request.Context(), snapshotID, dbUser.OrgID)
+	existing, _ := h.store.GetLegalHoldBySnapshotID(c.Request.Context(), snapshotID, user.CurrentOrgID)
 	if existing != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "legal hold already exists for this snapshot"})
 		return
 	}
 
-	hold := models.NewLegalHold(dbUser.OrgID, snapshotID, req.Reason, dbUser.ID)
+	hold := models.NewLegalHold(user.CurrentOrgID, snapshotID, req.Reason, dbUser.ID)
 
 	if err := h.store.CreateLegalHold(c.Request.Context(), hold); err != nil {
 		h.logger.Error().Err(err).Str("snapshot_id", snapshotID).Msg("failed to create legal hold")
@@ -227,7 +227,7 @@ func (h *LegalHoldsHandler) CreateLegalHold(c *gin.Context) {
 	}
 
 	// Create audit log
-	auditLog := models.NewAuditLog(dbUser.OrgID, models.AuditActionCreate, "legal_hold", models.AuditResultSuccess).
+	auditLog := models.NewAuditLog(user.CurrentOrgID, models.AuditActionCreate, "legal_hold", models.AuditResultSuccess).
 		WithUser(dbUser.ID).
 		WithResource(hold.ID).
 		WithDetails("Legal hold placed on snapshot " + snapshotID + ": " + req.Reason)
@@ -270,14 +270,7 @@ func (h *LegalHoldsHandler) GetLegalHold(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	hold, err := h.store.GetLegalHoldBySnapshotID(c.Request.Context(), snapshotID, dbUser.OrgID)
+	hold, err := h.store.GetLegalHoldBySnapshotID(c.Request.Context(), snapshotID, user.CurrentOrgID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no legal hold on this snapshot"})
 		return
@@ -327,7 +320,7 @@ func (h *LegalHoldsHandler) DeleteLegalHold(c *gin.Context) {
 		return
 	}
 
-	hold, err := h.store.GetLegalHoldBySnapshotID(c.Request.Context(), snapshotID, dbUser.OrgID)
+	hold, err := h.store.GetLegalHoldBySnapshotID(c.Request.Context(), snapshotID, user.CurrentOrgID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no legal hold on this snapshot"})
 		return
@@ -340,7 +333,7 @@ func (h *LegalHoldsHandler) DeleteLegalHold(c *gin.Context) {
 	}
 
 	// Create audit log
-	auditLog := models.NewAuditLog(dbUser.OrgID, models.AuditActionDelete, "legal_hold", models.AuditResultSuccess).
+	auditLog := models.NewAuditLog(user.CurrentOrgID, models.AuditActionDelete, "legal_hold", models.AuditResultSuccess).
 		WithUser(dbUser.ID).
 		WithResource(hold.ID).
 		WithDetails("Legal hold removed from snapshot " + snapshotID)

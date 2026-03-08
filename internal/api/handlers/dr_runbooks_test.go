@@ -182,20 +182,6 @@ func TestDRRunbooksList(t *testing.T) {
 		}
 	})
 
-	t.Run("user error", func(t *testing.T) {
-		errStore := &mockDRRunbookStore{
-			runbookByID: map[uuid.UUID]*models.DRRunbook{},
-			userErr:     errors.New("db error"),
-		}
-		r := setupDRRunbookTestRouter(errStore, user)
-		req := AuthenticatedRequest("GET", "/api/v1/dr-runbooks")
-		w := DoRequest(r, req)
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected status 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("list error", func(t *testing.T) {
 		errStore := &mockDRRunbookStore{
 			runbookByID: map[uuid.UUID]*models.DRRunbook{},
@@ -351,20 +337,6 @@ func TestDRRunbooksCreate(t *testing.T) {
 
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("expected status 400, got %d", w.Code)
-		}
-	})
-
-	t.Run("user error", func(t *testing.T) {
-		errStore := &mockDRRunbookStore{
-			runbookByID: map[uuid.UUID]*models.DRRunbook{},
-			userErr:     errors.New("db error"),
-		}
-		r := setupDRRunbookTestRouter(errStore, user)
-		req := JSONRequest("POST", "/api/v1/dr-runbooks", `{"name":"Test"}`)
-		w := DoRequest(r, req)
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected status 500, got %d", w.Code)
 		}
 	})
 
@@ -936,20 +908,6 @@ func TestDRRunbooksGenerateFromSchedule(t *testing.T) {
 		}
 	})
 
-	t.Run("user error", func(t *testing.T) {
-		errStore := &mockDRRunbookStore{
-			runbookByID: map[uuid.UUID]*models.DRRunbook{},
-			userErr:     errors.New("db error"),
-		}
-		r := setupDRRunbookTestRouter(errStore, user)
-		req := AuthenticatedRequest("POST", "/api/v1/dr-runbooks/"+scheduleID.String()+"/generate")
-		w := DoRequest(r, req)
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected status 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("schedule not found", func(t *testing.T) {
 		noSchedStore := &mockDRRunbookStore{
 			runbookByID: map[uuid.UUID]*models.DRRunbook{},
@@ -1045,20 +1003,6 @@ func TestDRRunbooksGetStatus(t *testing.T) {
 		}
 		if resp.TotalRunbooks != 5 {
 			t.Fatalf("expected 5 total runbooks, got %d", resp.TotalRunbooks)
-		}
-	})
-
-	t.Run("user error", func(t *testing.T) {
-		errStore := &mockDRRunbookStore{
-			runbookByID: map[uuid.UUID]*models.DRRunbook{},
-			userErr:     errors.New("db error"),
-		}
-		r := setupDRRunbookTestRouter(errStore, user)
-		req := AuthenticatedRequest("GET", "/api/v1/dr-runbooks/status")
-		w := DoRequest(r, req)
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected status 500, got %d", w.Code)
 		}
 	})
 

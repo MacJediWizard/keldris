@@ -24,7 +24,6 @@ type AuditLogStore interface {
 	GetAuditLogByID(ctx context.Context, id uuid.UUID) (*models.AuditLog, error)
 	CreateAuditLog(ctx context.Context, log *models.AuditLog) error
 	CountAuditLogsByOrgID(ctx context.Context, orgID uuid.UUID, filter db.AuditLogFilter) (int64, error)
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
 // AuditLogsHandler handles audit log HTTP endpoints.
@@ -75,29 +74,21 @@ func (h *AuditLogsHandler) List(c *gin.Context) {
 		return
 	}
 
-	// Get user's org ID
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Parse filter params
 	filter := h.parseFilterParams(c)
 
 	// Get audit logs
-	logs, err := h.store.GetAuditLogsByOrgID(c.Request.Context(), dbUser.OrgID, filter)
+	logs, err := h.store.GetAuditLogsByOrgID(c.Request.Context(), user.CurrentOrgID, filter)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list audit logs")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list audit logs")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list audit logs"})
 		return
 	}
 
 	// Get total count for pagination
-	totalCount, err := h.store.CountAuditLogsByOrgID(c.Request.Context(), dbUser.OrgID, filter)
+	totalCount, err := h.store.CountAuditLogsByOrgID(c.Request.Context(), user.CurrentOrgID, filter)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to count audit logs")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to count audit logs")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count audit logs"})
 		return
 	}
@@ -133,14 +124,7 @@ func (h *AuditLogsHandler) Get(c *gin.Context) {
 	}
 
 	// Verify user has access to this audit log's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if log.OrgID != dbUser.OrgID {
+	if log.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "audit log not found"})
 		return
 	}
@@ -160,22 +144,14 @@ func (h *AuditLogsHandler) ExportCSV(c *gin.Context) {
 		return
 	}
 
-	// Get user's org ID
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Parse filter params (no pagination for export)
 	filter := h.parseFilterParams(c)
 	filter.Limit = 0
 	filter.Offset = 0
 
-	logs, err := h.store.GetAuditLogsByOrgID(c.Request.Context(), dbUser.OrgID, filter)
+	logs, err := h.store.GetAuditLogsByOrgID(c.Request.Context(), user.CurrentOrgID, filter)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to export audit logs")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to export audit logs")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to export audit logs"})
 		return
 	}
@@ -220,7 +196,7 @@ func (h *AuditLogsHandler) ExportCSV(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("org_id", dbUser.OrgID.String()).
+		Str("org_id", user.CurrentOrgID.String()).
 		Int("count", len(logs)).
 		Msg("audit logs exported to CSV")
 }
@@ -237,22 +213,14 @@ func (h *AuditLogsHandler) ExportJSON(c *gin.Context) {
 		return
 	}
 
-	// Get user's org ID
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Parse filter params (no pagination for export)
 	filter := h.parseFilterParams(c)
 	filter.Limit = 0
 	filter.Offset = 0
 
-	logs, err := h.store.GetAuditLogsByOrgID(c.Request.Context(), dbUser.OrgID, filter)
+	logs, err := h.store.GetAuditLogsByOrgID(c.Request.Context(), user.CurrentOrgID, filter)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to export audit logs")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to export audit logs")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to export audit logs"})
 		return
 	}
@@ -270,7 +238,7 @@ func (h *AuditLogsHandler) ExportJSON(c *gin.Context) {
 	}
 
 	h.logger.Info().
-		Str("org_id", dbUser.OrgID.String()).
+		Str("org_id", user.CurrentOrgID.String()).
 		Int("count", len(logs)).
 		Msg("audit logs exported to JSON")
 }

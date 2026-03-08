@@ -14,7 +14,6 @@ import (
 
 // FileHistoryStore defines the interface for file history-related persistence operations.
 type FileHistoryStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 	GetBackupsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.Backup, error)
@@ -101,21 +100,13 @@ func (h *FileHistoryHandler) GetFileHistory(c *gin.Context) {
 		return
 	}
 
-	// Verify user access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	// Verify agent belongs to user's org
 	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
@@ -126,7 +117,7 @@ func (h *FileHistoryHandler) GetFileHistory(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}

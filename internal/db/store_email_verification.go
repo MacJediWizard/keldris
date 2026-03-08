@@ -171,6 +171,9 @@ func (db *DB) GetPendingVerificationUsers(ctx context.Context, orgID uuid.UUID) 
 		status.IsOIDCUser = oidcSubject != nil && *oidcSubject != ""
 		users = append(users, &status)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
+	}
 
 	return users, nil
 }

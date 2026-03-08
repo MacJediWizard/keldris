@@ -54,6 +54,9 @@ func (db *DB) GetUsersByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.U
 		u.OrgRole = models.OrgRole(orgRoleStr)
 		users = append(users, &u)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
+	}
 
 	return users, nil
 }
@@ -295,6 +298,9 @@ func (db *DB) GetUserActivityLogs(ctx context.Context, userID uuid.UUID, limit, 
 		}
 		logs = append(logs, &l)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
+	}
 
 	return logs, nil
 }
@@ -335,6 +341,9 @@ func (db *DB) GetOrgActivityLogs(ctx context.Context, orgID uuid.UUID, limit, of
 			l.Details = json.RawMessage(details)
 		}
 		logs = append(logs, &l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
 	}
 
 	return logs, nil
@@ -400,6 +409,9 @@ func (db *DB) GetImpersonationLogsByOrg(ctx context.Context, orgID uuid.UUID, li
 			return nil, fmt.Errorf("scan impersonation log: %w", err)
 		}
 		logs = append(logs, &l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
 	}
 
 	return logs, nil

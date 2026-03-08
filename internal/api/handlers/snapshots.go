@@ -174,17 +174,10 @@ func (h *SnapshotsHandler) ListSnapshots(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Get all agents in the org
-	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), dbUser.OrgID)
+	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list agents")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list agents")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list snapshots"})
 		return
 	}
@@ -305,14 +298,8 @@ func (h *SnapshotsHandler) GetSnapshot(c *gin.Context) {
 	}
 
 	// Verify access through agent
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
 		return
 	}
@@ -430,14 +417,8 @@ func (h *SnapshotsHandler) ListFiles(c *gin.Context) {
 	}
 
 	// Verify access through agent
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
 		return
 	}
@@ -747,21 +728,13 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 		}
 	}
 
-	// Verify user access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	// Verify access to target agent
 	targetAgent, err := h.store.GetAgentByID(c.Request.Context(), targetAgentID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "target agent not found"})
 		return
 	}
-	if targetAgent.OrgID != dbUser.OrgID {
+	if targetAgent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "target agent not found"})
 		return
 	}
@@ -773,7 +746,7 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "source agent not found"})
 			return
 		}
-		if sourceAgent.OrgID != dbUser.OrgID {
+		if sourceAgent.OrgID != user.CurrentOrgID {
 			c.JSON(http.StatusNotFound, gin.H{"error": "source agent not found"})
 			return
 		}
@@ -781,7 +754,7 @@ func (h *SnapshotsHandler) CreateRestore(c *gin.Context) {
 
 	// Verify repository access
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repositoryID)
-	if err != nil || repo.OrgID != dbUser.OrgID {
+	if err != nil || repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -871,27 +844,20 @@ func (h *SnapshotsHandler) PreviewRestore(c *gin.Context) {
 	}
 
 	// Verify user access to agent
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
 
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
 
 	// Verify repository access
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repositoryID)
-	if err != nil || repo.OrgID != dbUser.OrgID {
+	if err != nil || repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -1001,27 +967,20 @@ func (h *SnapshotsHandler) CreateCloudRestore(c *gin.Context) {
 	}
 
 	// Verify user access to agent
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
 
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
 
 	// Verify repository access
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repositoryID)
-	if err != nil || repo.OrgID != dbUser.OrgID {
+	if err != nil || repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -1103,14 +1062,8 @@ func (h *SnapshotsHandler) GetCloudRestoreProgress(c *gin.Context) {
 	}
 
 	// Verify access through agent
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	agent, err := h.store.GetAgentByID(c.Request.Context(), restore.AgentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
 		return
 	}
@@ -1166,17 +1119,10 @@ func (h *SnapshotsHandler) ListRestores(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Get all agents in the org
-	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), dbUser.OrgID)
+	agents, err := h.store.GetAgentsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list agents")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list agents")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list restores"})
 		return
 	}
@@ -1255,14 +1201,8 @@ func (h *SnapshotsHandler) GetRestore(c *gin.Context) {
 	}
 
 	// Verify access through agent
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	agent, err := h.store.GetAgentByID(c.Request.Context(), restore.AgentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
 		return
 	}
@@ -1322,19 +1262,13 @@ func (h *SnapshotsHandler) ListSnapshotComments(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
 		return
 	}
 
-	comments, err := h.store.GetSnapshotCommentsBySnapshotID(c.Request.Context(), snapshotID, dbUser.OrgID)
+	comments, err := h.store.GetSnapshotCommentsBySnapshotID(c.Request.Context(), snapshotID, user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("snapshot_id", snapshotID).Msg("failed to list comments")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list comments"})
@@ -1392,12 +1326,12 @@ func (h *SnapshotsHandler) CreateSnapshotComment(c *gin.Context) {
 	}
 
 	agent, err := h.store.GetAgentByID(c.Request.Context(), backup.AgentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "snapshot not found"})
 		return
 	}
 
-	comment := models.NewSnapshotComment(dbUser.OrgID, snapshotID, dbUser.ID, req.Content)
+	comment := models.NewSnapshotComment(user.CurrentOrgID, snapshotID, user.ID, req.Content)
 
 	if err := h.store.CreateSnapshotComment(c.Request.Context(), comment); err != nil {
 		h.logger.Error().Err(err).Str("snapshot_id", snapshotID).Msg("failed to create comment")
@@ -1408,7 +1342,7 @@ func (h *SnapshotsHandler) CreateSnapshotComment(c *gin.Context) {
 	h.logger.Info().
 		Str("comment_id", comment.ID.String()).
 		Str("snapshot_id", snapshotID).
-		Str("user_id", dbUser.ID.String()).
+		Str("user_id", user.ID.String()).
 		Msg("snapshot comment created")
 
 	c.JSON(http.StatusCreated, toSnapshotCommentResponse(comment, dbUser))
@@ -1442,13 +1376,13 @@ func (h *SnapshotsHandler) DeleteSnapshotComment(c *gin.Context) {
 		return
 	}
 
-	if comment.OrgID != dbUser.OrgID {
+	if comment.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "comment not found"})
 		return
 	}
 
 	// Only allow deletion by the comment author or admins
-	if comment.UserID != dbUser.ID && !dbUser.IsAdmin() {
+	if comment.UserID != user.ID && !dbUser.IsAdmin() {
 		c.JSON(http.StatusForbidden, gin.H{"error": "you can only delete your own comments"})
 		return
 	}
@@ -1461,7 +1395,7 @@ func (h *SnapshotsHandler) DeleteSnapshotComment(c *gin.Context) {
 
 	h.logger.Info().
 		Str("comment_id", id.String()).
-		Str("deleted_by", dbUser.ID.String()).
+		Str("deleted_by", user.ID.String()).
 		Msg("snapshot comment deleted")
 
 	c.JSON(http.StatusOK, gin.H{"message": "comment deleted"})
@@ -1521,14 +1455,6 @@ func (h *SnapshotsHandler) DiffFile(c *gin.Context) {
 		return
 	}
 
-	// Get user for org verification
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	// Verify access to first snapshot
 	backup1, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID1)
 	if err != nil {
@@ -1537,7 +1463,7 @@ func (h *SnapshotsHandler) DiffFile(c *gin.Context) {
 	}
 
 	agent1, err := h.store.GetAgentByID(c.Request.Context(), backup1.AgentID)
-	if err != nil || agent1.OrgID != dbUser.OrgID {
+	if err != nil || agent1.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "first snapshot not found"})
 		return
 	}
@@ -1550,7 +1476,7 @@ func (h *SnapshotsHandler) DiffFile(c *gin.Context) {
 	}
 
 	agent2, err := h.store.GetAgentByID(c.Request.Context(), backup2.AgentID)
-	if err != nil || agent2.OrgID != dbUser.OrgID {
+	if err != nil || agent2.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "second snapshot not found"})
 		return
 	}
@@ -1617,14 +1543,6 @@ func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 		return
 	}
 
-	// Get user for org verification
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	// Verify access to first snapshot
 	backup1, err := h.store.GetBackupBySnapshotID(c.Request.Context(), snapshotID1)
 	if err != nil {
@@ -1633,7 +1551,7 @@ func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 	}
 
 	agent1, err := h.store.GetAgentByID(c.Request.Context(), backup1.AgentID)
-	if err != nil || agent1.OrgID != dbUser.OrgID {
+	if err != nil || agent1.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "first snapshot not found"})
 		return
 	}
@@ -1646,7 +1564,7 @@ func (h *SnapshotsHandler) CompareSnapshots(c *gin.Context) {
 	}
 
 	agent2, err := h.store.GetAgentByID(c.Request.Context(), backup2.AgentID)
-	if err != nil || agent2.OrgID != dbUser.OrgID {
+	if err != nil || agent2.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "second snapshot not found"})
 		return
 	}
@@ -1833,24 +1751,16 @@ func (h *SnapshotsHandler) MountSnapshot(c *gin.Context) {
 		return
 	}
 
-	// Get user and verify org access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	// Verify agent access
 	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
 
 	// Verify repository access
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repositoryID)
-	if err != nil || repo.OrgID != dbUser.OrgID {
+	if err != nil || repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -1874,7 +1784,7 @@ func (h *SnapshotsHandler) MountSnapshot(c *gin.Context) {
 
 	// Create mount record
 	mountPath := "" // Will be set by agent when mount actually happens
-	mount := models.NewSnapshotMount(dbUser.OrgID, agentID, repositoryID, snapshotID, mountPath)
+	mount := models.NewSnapshotMount(user.CurrentOrgID, agentID, repositoryID, snapshotID, mountPath)
 
 	if err := h.store.CreateSnapshotMount(c.Request.Context(), mount); err != nil {
 		h.logger.Error().Err(err).Msg("failed to create snapshot mount")
@@ -1930,17 +1840,9 @@ func (h *SnapshotsHandler) UnmountSnapshot(c *gin.Context) {
 		return
 	}
 
-	// Get user and verify org access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	// Verify agent access
 	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
@@ -2007,16 +1909,9 @@ func (h *SnapshotsHandler) GetSnapshotMount(c *gin.Context) {
 		return
 	}
 
-	// Get user and verify org access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	// Verify agent access
 	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
@@ -2051,14 +1946,8 @@ func (h *SnapshotsHandler) ListMounts(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	var mounts []*models.SnapshotMount
+	var err error
 
 	// Filter by agent if specified
 	agentIDParam := c.Query("agent_id")
@@ -2071,7 +1960,7 @@ func (h *SnapshotsHandler) ListMounts(c *gin.Context) {
 
 		// Verify agent access
 		agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
-		if err != nil || agent.OrgID != dbUser.OrgID {
+		if err != nil || agent.OrgID != user.CurrentOrgID {
 			c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 			return
 		}
@@ -2083,7 +1972,7 @@ func (h *SnapshotsHandler) ListMounts(c *gin.Context) {
 			return
 		}
 	} else {
-		mounts, err = h.store.GetSnapshotMountsByOrgID(c.Request.Context(), dbUser.OrgID)
+		mounts, err = h.store.GetSnapshotMountsByOrgID(c.Request.Context(), user.CurrentOrgID)
 		if err != nil {
 			h.logger.Error().Err(err).Msg("failed to list mounts")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list mounts"})

@@ -16,7 +16,6 @@ import (
 
 // NotificationRuleStore defines the interface for notification rule persistence operations.
 type NotificationRuleStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetNotificationRulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.NotificationRule, error)
 	GetNotificationRuleByID(ctx context.Context, id uuid.UUID) (*models.NotificationRule, error)
 	GetEnabledRulesByTriggerType(ctx context.Context, orgID uuid.UUID, triggerType models.RuleTriggerType) ([]*models.NotificationRule, error)
@@ -70,16 +69,9 @@ func (h *NotificationRulesHandler) ListRules(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	rules, err := h.store.GetNotificationRulesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	rules, err := h.store.GetNotificationRulesByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list notification rules")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list notification rules")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list notification rules"})
 		return
 	}
@@ -109,14 +101,7 @@ func (h *NotificationRulesHandler) GetRule(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "notification rule not found"})
 		return
 	}
@@ -151,32 +136,25 @@ func (h *NotificationRulesHandler) CreateRule(c *gin.Context) {
 		}
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Verify any referenced channels exist and belong to org
 	for _, action := range req.Actions {
 		if action.ChannelID != nil {
 			channel, err := h.store.GetNotificationChannelByID(c.Request.Context(), *action.ChannelID)
-			if err != nil || channel.OrgID != dbUser.OrgID {
+			if err != nil || channel.OrgID != user.CurrentOrgID {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid channel ID in action"})
 				return
 			}
 		}
 		if action.EscalateToChannelID != nil {
 			channel, err := h.store.GetNotificationChannelByID(c.Request.Context(), *action.EscalateToChannelID)
-			if err != nil || channel.OrgID != dbUser.OrgID {
+			if err != nil || channel.OrgID != user.CurrentOrgID {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid escalation channel ID in action"})
 				return
 			}
 		}
 	}
 
-	rule := models.NewNotificationRule(dbUser.OrgID, req.Name, req.TriggerType)
+	rule := models.NewNotificationRule(user.CurrentOrgID, req.Name, req.TriggerType)
 	rule.Description = req.Description
 	rule.Enabled = req.Enabled
 	rule.Priority = req.Priority
@@ -193,7 +171,7 @@ func (h *NotificationRulesHandler) CreateRule(c *gin.Context) {
 		Str("rule_id", rule.ID.String()).
 		Str("name", req.Name).
 		Str("trigger_type", string(req.TriggerType)).
-		Str("org_id", dbUser.OrgID.String()).
+		Str("org_id", user.CurrentOrgID.String()).
 		Msg("notification rule created")
 
 	c.JSON(http.StatusCreated, rule)
@@ -226,14 +204,7 @@ func (h *NotificationRulesHandler) UpdateRule(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "notification rule not found"})
 		return
 	}
@@ -263,14 +234,14 @@ func (h *NotificationRulesHandler) UpdateRule(c *gin.Context) {
 			}
 			if action.ChannelID != nil {
 				channel, err := h.store.GetNotificationChannelByID(c.Request.Context(), *action.ChannelID)
-				if err != nil || channel.OrgID != dbUser.OrgID {
+				if err != nil || channel.OrgID != user.CurrentOrgID {
 					c.JSON(http.StatusBadRequest, gin.H{"error": "invalid channel ID in action"})
 					return
 				}
 			}
 			if action.EscalateToChannelID != nil {
 				channel, err := h.store.GetNotificationChannelByID(c.Request.Context(), *action.EscalateToChannelID)
-				if err != nil || channel.OrgID != dbUser.OrgID {
+				if err != nil || channel.OrgID != user.CurrentOrgID {
 					c.JSON(http.StatusBadRequest, gin.H{"error": "invalid escalation channel ID in action"})
 					return
 				}
@@ -310,14 +281,7 @@ func (h *NotificationRulesHandler) DeleteRule(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "notification rule not found"})
 		return
 	}
@@ -359,14 +323,7 @@ func (h *NotificationRulesHandler) TestRule(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "notification rule not found"})
 		return
 	}
@@ -409,14 +366,7 @@ func (h *NotificationRulesHandler) ListRuleEvents(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "notification rule not found"})
 		return
 	}
@@ -452,14 +402,7 @@ func (h *NotificationRulesHandler) ListRuleExecutions(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "notification rule not found"})
 		return
 	}

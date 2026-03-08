@@ -73,7 +73,8 @@ func (m *MountManager) Mount(ctx context.Context, id uuid.UUID, cfg backends.Res
 		Dur("timeout", timeout).
 		Msg("starting mount")
 
-	// Create cancellable context for the mount process
+	// mountCtx is independent of the request context — mounts persist until
+	// explicitly unmounted or auto-unmount timeout fires.
 	mountCtx, cancelFunc := context.WithCancel(context.Background())
 
 	// Build mount command
@@ -154,17 +155,31 @@ func (m *MountManager) waitForMount(info *MountInfo) {
 }
 
 // scheduleAutoUnmount schedules automatic unmount after the timeout.
+// If ExtendMount pushes ExpiresAt forward, the goroutine re-sleeps for
+// the remaining duration instead of unmounting early.
 func (m *MountManager) scheduleAutoUnmount(info *MountInfo, timeout time.Duration) {
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 
-	<-timer.C
+	for {
+		<-timer.C
 
-	m.mountMutex.RLock()
-	_, exists := m.mounts[info.ID]
-	m.mountMutex.RUnlock()
+		m.mountMutex.RLock()
+		_, exists := m.mounts[info.ID]
+		expiresAt := info.ExpiresAt
+		m.mountMutex.RUnlock()
 
-	if exists {
+		if !exists {
+			return
+		}
+
+		remaining := time.Until(expiresAt)
+		if remaining > 0 {
+			// ExtendMount pushed the deadline forward; re-sleep.
+			timer.Reset(remaining)
+			continue
+		}
+
 		m.logger.Info().
 			Str("mount_id", info.ID.String()).
 			Msg("auto-unmounting expired mount")
@@ -175,6 +190,7 @@ func (m *MountManager) scheduleAutoUnmount(info *MountInfo, timeout time.Duratio
 				Str("mount_id", info.ID.String()).
 				Msg("failed to auto-unmount")
 		}
+		return
 	}
 }
 

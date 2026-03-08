@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
@@ -25,7 +26,6 @@ type TestRestoreStore interface {
 	GetConsecutiveFailedTestRestores(ctx context.Context, repoID uuid.UUID) (int, error)
 	GetTestRestoreSummaryByOrgID(ctx context.Context, orgID uuid.UUID) (*db.TestRestoreSummary, error)
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
 // TestRestoreTrigger allows manually triggering test restores.
@@ -189,14 +189,7 @@ func (h *TestRestoreHandler) GetSummary(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user"})
-		return
-	}
-
-	summary, err := h.store.GetTestRestoreSummaryByOrgID(c.Request.Context(), dbUser.OrgID)
+	summary, err := h.store.GetTestRestoreSummaryByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to get test restore summary")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get test restore summary"})
@@ -227,7 +220,7 @@ func (h *TestRestoreHandler) GetStatus(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -276,7 +269,7 @@ func (h *TestRestoreHandler) ListResults(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -350,7 +343,7 @@ func (h *TestRestoreHandler) TriggerTestRestore(c *gin.Context) {
 		req.SamplePercentage = 10
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -386,7 +379,7 @@ func (h *TestRestoreHandler) GetSettings(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -427,7 +420,7 @@ func (h *TestRestoreHandler) CreateSettings(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -488,7 +481,7 @@ func (h *TestRestoreHandler) UpdateSettings(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -542,7 +535,7 @@ func (h *TestRestoreHandler) DeleteSettings(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -569,19 +562,14 @@ func (h *TestRestoreHandler) DeleteSettings(c *gin.Context) {
 }
 
 // verifyRepoAccess checks if the user has access to the repository.
-func (h *TestRestoreHandler) verifyRepoAccess(c *gin.Context, userID, repoID uuid.UUID) error {
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), userID)
-	if err != nil {
-		return err
-	}
-
+func (h *TestRestoreHandler) verifyRepoAccess(c *gin.Context, orgID, repoID uuid.UUID) error {
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repoID)
 	if err != nil {
 		return err
 	}
 
-	if repo.OrgID != dbUser.OrgID {
-		return err
+	if repo.OrgID != orgID {
+		return fmt.Errorf("repository does not belong to organization")
 	}
 
 	return nil

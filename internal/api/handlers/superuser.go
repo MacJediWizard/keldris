@@ -329,6 +329,7 @@ func (h *SuperuserHandler) StartImpersonation(c *gin.Context) {
 	}
 
 	// Start impersonation (impersonation logging is handled separately via logActionWithImpersonation)
+	// TODO: Create impersonation audit log record and pass its ID instead of uuid.Nil
 	if err := h.sessions.StartImpersonation(c.Request, c.Writer, user, targetSession, uuid.Nil); err != nil {
 		h.logger.Error().Err(err).Msg("failed to start impersonation")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start impersonation"})
@@ -357,9 +358,8 @@ func (h *SuperuserHandler) StartImpersonation(c *gin.Context) {
 // EndImpersonation ends the current impersonation session.
 // POST /api/v1/superuser/end-impersonation
 func (h *SuperuserHandler) EndImpersonation(c *gin.Context) {
-	user := middleware.GetUser(c)
+	user := middleware.RequireSuperuser(c)
 	if user == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
 		return
 	}
 

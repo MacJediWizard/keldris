@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
@@ -23,7 +24,6 @@ type VerificationStore interface {
 	UpdateVerificationSchedule(ctx context.Context, vs *models.VerificationSchedule) error
 	DeleteVerificationSchedule(ctx context.Context, id uuid.UUID) error
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
 // VerificationTrigger allows manually triggering verifications.
@@ -197,7 +197,7 @@ func (h *VerificationsHandler) Get(c *gin.Context) {
 	}
 
 	// Verify access via repository
-	if err := h.verifyRepoAccess(c, user.ID, verification.RepositoryID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, verification.RepositoryID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "verification not found"})
 		return
 	}
@@ -220,7 +220,7 @@ func (h *VerificationsHandler) ListByRepository(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -255,7 +255,7 @@ func (h *VerificationsHandler) GetStatus(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -305,7 +305,7 @@ func (h *VerificationsHandler) TriggerVerification(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -341,7 +341,7 @@ func (h *VerificationsHandler) ListSchedules(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -382,7 +382,7 @@ func (h *VerificationsHandler) CreateSchedule(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, repoID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -429,7 +429,7 @@ func (h *VerificationsHandler) GetSchedule(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, schedule.RepositoryID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, schedule.RepositoryID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return
 	}
@@ -464,7 +464,7 @@ func (h *VerificationsHandler) UpdateSchedule(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, schedule.RepositoryID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, schedule.RepositoryID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return
 	}
@@ -511,7 +511,7 @@ func (h *VerificationsHandler) DeleteSchedule(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRepoAccess(c, user.ID, schedule.RepositoryID); err != nil {
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, schedule.RepositoryID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return
 	}
@@ -527,19 +527,14 @@ func (h *VerificationsHandler) DeleteSchedule(c *gin.Context) {
 }
 
 // verifyRepoAccess checks if the user has access to the repository.
-func (h *VerificationsHandler) verifyRepoAccess(c *gin.Context, userID, repoID uuid.UUID) error {
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), userID)
-	if err != nil {
-		return err
-	}
-
+func (h *VerificationsHandler) verifyRepoAccess(c *gin.Context, orgID, repoID uuid.UUID) error {
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repoID)
 	if err != nil {
 		return err
 	}
 
-	if repo.OrgID != dbUser.OrgID {
-		return err
+	if repo.OrgID != orgID {
+		return fmt.Errorf("repository does not belong to organization")
 	}
 
 	return nil

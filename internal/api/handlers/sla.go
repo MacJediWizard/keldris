@@ -26,7 +26,6 @@ type SLAStore interface {
 	GetLatestSLAStatus(ctx context.Context, policyID uuid.UUID) (*models.SLAStatusSnapshot, error)
 	GetBackupSuccessRateForOrg(ctx context.Context, orgID uuid.UUID, hours int) (float64, error)
 	GetMaxRPOHoursForOrg(ctx context.Context, orgID uuid.UUID) (float64, error)
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	// Tracker methods
 	GetSLADefinitionByID(ctx context.Context, id uuid.UUID) (*models.SLADefinition, error)
 	ListActiveSLADefinitionsByOrg(ctx context.Context, orgID uuid.UUID) ([]*models.SLADefinition, error)
@@ -77,16 +76,9 @@ func (h *SLAHandler) List(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	policies, err := h.store.ListSLAPoliciesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	policies, err := h.store.ListSLAPoliciesByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list SLA policies")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list SLA policies")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list SLA policies"})
 		return
 	}
@@ -115,14 +107,7 @@ func (h *SLAHandler) Create(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	policy := models.NewSLAPolicy(dbUser.OrgID, req.Name, req.TargetRPOHours, req.TargetRTOHours, req.TargetSuccessRate)
+	policy := models.NewSLAPolicy(user.CurrentOrgID, req.Name, req.TargetRPOHours, req.TargetRTOHours, req.TargetSuccessRate)
 	policy.Description = req.Description
 
 	if err := h.store.CreateSLAPolicy(c.Request.Context(), policy); err != nil {
@@ -160,14 +145,7 @@ func (h *SLAHandler) Get(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if policy.OrgID != dbUser.OrgID {
+	if policy.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "SLA policy not found"})
 		return
 	}
@@ -195,14 +173,7 @@ func (h *SLAHandler) Update(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if policy.OrgID != dbUser.OrgID {
+	if policy.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "SLA policy not found"})
 		return
 	}
@@ -263,14 +234,7 @@ func (h *SLAHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if policy.OrgID != dbUser.OrgID {
+	if policy.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "SLA policy not found"})
 		return
 	}
@@ -309,19 +273,12 @@ func (h *SLAHandler) GetStatus(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if policy.OrgID != dbUser.OrgID {
+	if policy.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "SLA policy not found"})
 		return
 	}
 
-	status, err := h.calculator.CalculateSLAStatus(c.Request.Context(), dbUser.OrgID, id)
+	status, err := h.calculator.CalculateSLAStatus(c.Request.Context(), user.CurrentOrgID, id)
 	if err != nil {
 		h.logger.Error().Err(err).Str("policy_id", id.String()).Msg("failed to calculate SLA status")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to calculate SLA status"})
@@ -351,14 +308,7 @@ func (h *SLAHandler) GetHistory(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if policy.OrgID != dbUser.OrgID {
+	if policy.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "SLA policy not found"})
 		return
 	}

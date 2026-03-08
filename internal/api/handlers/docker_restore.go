@@ -14,7 +14,6 @@ import (
 
 // DockerRestoreStore defines the interface for Docker restore persistence operations.
 type DockerRestoreStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 	GetBackupBySnapshotID(ctx context.Context, snapshotID string) (*models.Backup, error)
@@ -263,13 +262,6 @@ func (h *DockerRestoreHandler) CreateDockerRestore(c *gin.Context) {
 		return
 	}
 
-	// Verify user access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
 	// Verify access to agent
 	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
@@ -277,14 +269,14 @@ func (h *DockerRestoreHandler) CreateDockerRestore(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
 
 	// Verify repository access
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repositoryID)
-	if err != nil || repo.OrgID != dbUser.OrgID {
+	if err != nil || repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -310,7 +302,7 @@ func (h *DockerRestoreHandler) CreateDockerRestore(c *gin.Context) {
 	}
 
 	// Create Docker restore job
-	restore := models.NewDockerRestore(dbUser.OrgID, agentID, repositoryID, req.SnapshotID)
+	restore := models.NewDockerRestore(user.CurrentOrgID, agentID, repositoryID, req.SnapshotID)
 	restore.ContainerName = req.ContainerName
 	restore.VolumeName = req.VolumeName
 	restore.NewContainerName = req.NewContainerName
@@ -391,22 +383,16 @@ func (h *DockerRestoreHandler) PreviewDockerRestore(c *gin.Context) {
 	}
 
 	// Verify user access to agent
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
 	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
 
 	// Verify repository access
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repositoryID)
-	if err != nil || repo.OrgID != dbUser.OrgID {
+	if err != nil || repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -478,14 +464,9 @@ func (h *DockerRestoreHandler) ListContainersInSnapshot(c *gin.Context) {
 	}
 
 	// Verify user access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
 	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
@@ -552,14 +533,9 @@ func (h *DockerRestoreHandler) ListVolumesInSnapshot(c *gin.Context) {
 	}
 
 	// Verify user access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
 	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 		return
 	}
@@ -618,13 +594,8 @@ func (h *DockerRestoreHandler) GetDockerRestore(c *gin.Context) {
 	}
 
 	// Verify access through organization
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if restore.OrgID != dbUser.OrgID {
+	if restore.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
 		return
 	}
@@ -666,13 +637,8 @@ func (h *DockerRestoreHandler) GetDockerRestoreProgress(c *gin.Context) {
 	}
 
 	// Verify access through organization
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if restore.OrgID != dbUser.OrgID {
+	if restore.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
 		return
 	}
@@ -725,14 +691,8 @@ func (h *DockerRestoreHandler) ListDockerRestores(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	var restores []*models.DockerRestore
+	var err error
 
 	// Filter by agent if specified
 	agentIDParam := c.Query("agent_id")
@@ -745,7 +705,7 @@ func (h *DockerRestoreHandler) ListDockerRestores(c *gin.Context) {
 
 		// Verify agent access
 		agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
-		if err != nil || agent.OrgID != dbUser.OrgID {
+		if err != nil || agent.OrgID != user.CurrentOrgID {
 			c.JSON(http.StatusNotFound, gin.H{"error": "agent not found"})
 			return
 		}
@@ -757,7 +717,7 @@ func (h *DockerRestoreHandler) ListDockerRestores(c *gin.Context) {
 			return
 		}
 	} else {
-		restores, err = h.store.GetDockerRestoresByOrgID(c.Request.Context(), dbUser.OrgID)
+		restores, err = h.store.GetDockerRestoresByOrgID(c.Request.Context(), user.CurrentOrgID)
 		if err != nil {
 			h.logger.Error().Err(err).Msg("failed to list Docker restores")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list Docker restores"})
@@ -813,13 +773,8 @@ func (h *DockerRestoreHandler) CancelDockerRestore(c *gin.Context) {
 	}
 
 	// Verify access through organization
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if restore.OrgID != dbUser.OrgID {
+	if restore.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "restore not found"})
 		return
 	}

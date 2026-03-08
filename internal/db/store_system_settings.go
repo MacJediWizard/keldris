@@ -57,6 +57,9 @@ func (db *DB) GetAllOrgSettings(ctx context.Context, orgID uuid.UUID) ([]*settin
 		}
 		result = append(result, &s)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
+	}
 
 	return result, nil
 }

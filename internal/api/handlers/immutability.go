@@ -179,7 +179,7 @@ func (h *ImmutabilityHandler) CreateLock(c *gin.Context) {
 		return
 	}
 
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -198,7 +198,7 @@ func (h *ImmutabilityHandler) CreateLock(c *gin.Context) {
 
 	lock, err := h.manager.LockSnapshot(
 		c.Request.Context(),
-		dbUser.OrgID,
+		user.CurrentOrgID,
 		repoID,
 		req.SnapshotID,
 		shortID,
@@ -257,13 +257,7 @@ func (h *ImmutabilityHandler) GetLock(c *gin.Context) {
 	}
 
 	// Verify user access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if lock.OrgID != dbUser.OrgID {
+	if lock.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "lock not found"})
 		return
 	}
@@ -320,7 +314,7 @@ func (h *ImmutabilityHandler) ExtendLock(c *gin.Context) {
 		return
 	}
 
-	if lock.OrgID != dbUser.OrgID {
+	if lock.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "lock not found"})
 		return
 	}
@@ -370,16 +364,9 @@ func (h *ImmutabilityHandler) ListLocks(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	locks, err := h.store.GetActiveImmutabilityLocksByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	locks, err := h.store.GetActiveImmutabilityLocksByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list locks")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list locks")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list locks"})
 		return
 	}
@@ -421,14 +408,8 @@ func (h *ImmutabilityHandler) ListRepositoryLocks(c *gin.Context) {
 	}
 
 	// Verify access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	repo, err := h.store.GetRepository(c.Request.Context(), repoID)
-	if err != nil || repo.OrgID != dbUser.OrgID {
+	if err != nil || repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -488,14 +469,8 @@ func (h *ImmutabilityHandler) GetSnapshotImmutability(c *gin.Context) {
 	}
 
 	// Verify access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	repo, err := h.store.GetRepository(c.Request.Context(), repoID)
-	if err != nil || repo.OrgID != dbUser.OrgID {
+	if err != nil || repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -538,14 +513,8 @@ func (h *ImmutabilityHandler) GetRepositoryImmutabilitySettings(c *gin.Context) 
 	}
 
 	// Verify access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	repo, err := h.store.GetRepository(c.Request.Context(), repoID)
-	if err != nil || repo.OrgID != dbUser.OrgID {
+	if err != nil || repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -604,7 +573,7 @@ func (h *ImmutabilityHandler) UpdateRepositoryImmutabilitySettings(c *gin.Contex
 	}
 
 	repo, err := h.store.GetRepository(c.Request.Context(), repoID)
-	if err != nil || repo.OrgID != dbUser.OrgID {
+	if err != nil || repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}

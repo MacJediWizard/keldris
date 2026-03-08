@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
@@ -20,7 +21,6 @@ type DRRunbookStore interface {
 	CreateDRRunbook(ctx context.Context, runbook *models.DRRunbook) error
 	UpdateDRRunbook(ctx context.Context, runbook *models.DRRunbook) error
 	DeleteDRRunbook(ctx context.Context, id uuid.UUID) error
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error)
 	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
@@ -107,16 +107,9 @@ func (h *DRRunbooksHandler) List(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	runbooks, err := h.store.GetDRRunbooksByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	runbooks, err := h.store.GetDRRunbooksByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list DR runbooks")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list DR runbooks")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list runbooks"})
 		return
 	}
@@ -146,7 +139,7 @@ func (h *DRRunbooksHandler) Get(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRunbookAccess(c, user.ID, runbook); err != nil {
+	if err := h.verifyRunbookAccess(c, user.CurrentOrgID, runbook); err != nil {
 		return
 	}
 
@@ -171,13 +164,6 @@ func (h *DRRunbooksHandler) Create(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Verify schedule belongs to user's org if provided
 	if req.ScheduleID != nil {
 		schedule, err := h.store.GetScheduleByID(c.Request.Context(), *req.ScheduleID)
@@ -186,13 +172,13 @@ func (h *DRRunbooksHandler) Create(c *gin.Context) {
 			return
 		}
 		agent, err := h.store.GetAgentByID(c.Request.Context(), schedule.AgentID)
-		if err != nil || agent.OrgID != dbUser.OrgID {
+		if err != nil || agent.OrgID != user.CurrentOrgID {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "schedule not found"})
 			return
 		}
 	}
 
-	runbook := models.NewDRRunbook(dbUser.OrgID, req.Name)
+	runbook := models.NewDRRunbook(user.CurrentOrgID, req.Name)
 	runbook.ScheduleID = req.ScheduleID
 	runbook.Description = req.Description
 	runbook.CredentialsLocation = req.CredentialsLocation
@@ -247,7 +233,7 @@ func (h *DRRunbooksHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRunbookAccess(c, user.ID, runbook); err != nil {
+	if err := h.verifyRunbookAccess(c, user.CurrentOrgID, runbook); err != nil {
 		return
 	}
 
@@ -308,7 +294,7 @@ func (h *DRRunbooksHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRunbookAccess(c, user.ID, runbook); err != nil {
+	if err := h.verifyRunbookAccess(c, user.CurrentOrgID, runbook); err != nil {
 		return
 	}
 
@@ -347,7 +333,7 @@ func (h *DRRunbooksHandler) Activate(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRunbookAccess(c, user.ID, runbook); err != nil {
+	if err := h.verifyRunbookAccess(c, user.CurrentOrgID, runbook); err != nil {
 		return
 	}
 
@@ -383,7 +369,7 @@ func (h *DRRunbooksHandler) Archive(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRunbookAccess(c, user.ID, runbook); err != nil {
+	if err := h.verifyRunbookAccess(c, user.CurrentOrgID, runbook); err != nil {
 		return
 	}
 
@@ -419,7 +405,7 @@ func (h *DRRunbooksHandler) Render(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRunbookAccess(c, user.ID, runbook); err != nil {
+	if err := h.verifyRunbookAccess(c, user.CurrentOrgID, runbook); err != nil {
 		return
 	}
 
@@ -448,13 +434,6 @@ func (h *DRRunbooksHandler) GenerateFromSchedule(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	schedule, err := h.store.GetScheduleByID(c.Request.Context(), scheduleID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
@@ -463,12 +442,12 @@ func (h *DRRunbooksHandler) GenerateFromSchedule(c *gin.Context) {
 
 	// Verify schedule belongs to user's org
 	agent, err := h.store.GetAgentByID(c.Request.Context(), schedule.AgentID)
-	if err != nil || agent.OrgID != dbUser.OrgID {
+	if err != nil || agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return
 	}
 
-	runbook, err := h.generator.GenerateForSchedule(c.Request.Context(), schedule, dbUser.OrgID)
+	runbook, err := h.generator.GenerateForSchedule(c.Request.Context(), schedule, user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("schedule_id", scheduleID.String()).Msg("failed to generate runbook")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate runbook"})
@@ -497,16 +476,9 @@ func (h *DRRunbooksHandler) GetStatus(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	status, err := h.store.GetDRStatus(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	status, err := h.store.GetDRStatus(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get DR status")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get DR status")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get DR status"})
 		return
 	}
@@ -535,7 +507,7 @@ func (h *DRRunbooksHandler) ListTestSchedules(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRunbookAccess(c, user.ID, runbook); err != nil {
+	if err := h.verifyRunbookAccess(c, user.CurrentOrgID, runbook); err != nil {
 		return
 	}
 
@@ -576,7 +548,7 @@ func (h *DRRunbooksHandler) CreateTestSchedule(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyRunbookAccess(c, user.ID, runbook); err != nil {
+	if err := h.verifyRunbookAccess(c, user.CurrentOrgID, runbook); err != nil {
 		return
 	}
 
@@ -600,17 +572,10 @@ func (h *DRRunbooksHandler) CreateTestSchedule(c *gin.Context) {
 }
 
 // verifyRunbookAccess checks if the user has access to the runbook.
-func (h *DRRunbooksHandler) verifyRunbookAccess(c *gin.Context, userID uuid.UUID, runbook *models.DRRunbook) error {
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), userID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", userID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return err
-	}
-
-	if runbook.OrgID != dbUser.OrgID {
+func (h *DRRunbooksHandler) verifyRunbookAccess(c *gin.Context, orgID uuid.UUID, runbook *models.DRRunbook) error {
+	if runbook.OrgID != orgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "runbook not found"})
-		return err
+		return fmt.Errorf("runbook does not belong to organization")
 	}
 
 	return nil

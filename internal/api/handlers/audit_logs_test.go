@@ -134,23 +134,6 @@ func TestListAuditLogs(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockAuditLogStore{
-			logs:    []*models.AuditLog{auditLog},
-			logByID: map[uuid.UUID]*models.AuditLog{logID: auditLog},
-			count:   1,
-			user:    nil,
-		}
-		randomUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupAuditLogTestRouter(noUserStore, randomUser)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/audit-logs", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("store error", func(t *testing.T) {
 		errStore := &mockAuditLogStore{
 			logs:    []*models.AuditLog{auditLog},
@@ -341,21 +324,6 @@ func TestExportAuditLogsCSV(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockAuditLogStore{
-			logs: []*models.AuditLog{},
-			user: nil,
-		}
-		randomUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupAuditLogTestRouter(noUserStore, randomUser)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/audit-logs/export/csv", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("with data", func(t *testing.T) {
 		csvLogID := uuid.New()
 		dataStore := &mockAuditLogStore{
@@ -501,20 +469,6 @@ func TestExportAuditLogsJSON(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockAuditLogStore{
-			logs: []*models.AuditLog{},
-			user: nil,
-		}
-		randomUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupAuditLogTestRouter(noUserStore, randomUser)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/audit-logs/export/json", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
 }
 
 func TestUuidPtrToString(t *testing.T) {

@@ -19,7 +19,6 @@ import (
 
 // NotificationStore defines the interface for notification persistence operations.
 type NotificationStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetNotificationChannelsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.NotificationChannel, error)
 	GetNotificationChannelByID(ctx context.Context, id uuid.UUID) (*models.NotificationChannel, error)
 	CreateNotificationChannel(ctx context.Context, channel *models.NotificationChannel) error
@@ -109,16 +108,9 @@ func (h *NotificationsHandler) ListChannels(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	channels, err := h.store.GetNotificationChannelsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	channels, err := h.store.GetNotificationChannelsByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list notification channels")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list notification channels")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list notification channels"})
 		return
 	}
@@ -148,14 +140,7 @@ func (h *NotificationsHandler) GetChannel(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if channel.OrgID != dbUser.OrgID {
+	if channel.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "notification channel not found"})
 		return
 	}
@@ -216,13 +201,6 @@ func (h *NotificationsHandler) CreateChannel(c *gin.Context) {
 		}
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	configEncrypted, err := h.keyManager.Encrypt([]byte(req.Config))
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to encrypt channel config")
@@ -230,7 +208,7 @@ func (h *NotificationsHandler) CreateChannel(c *gin.Context) {
 		return
 	}
 
-	channel := models.NewNotificationChannel(dbUser.OrgID, req.Name, req.Type, configEncrypted)
+	channel := models.NewNotificationChannel(user.CurrentOrgID, req.Name, req.Type, configEncrypted)
 
 	if err := h.store.CreateNotificationChannel(c.Request.Context(), channel); err != nil {
 		h.logger.Error().Err(err).Str("name", req.Name).Msg("failed to create notification channel")
@@ -242,7 +220,7 @@ func (h *NotificationsHandler) CreateChannel(c *gin.Context) {
 		Str("channel_id", channel.ID.String()).
 		Str("name", req.Name).
 		Str("type", string(req.Type)).
-		Str("org_id", dbUser.OrgID.String()).
+		Str("org_id", user.CurrentOrgID.String()).
 		Msg("notification channel created")
 
 	c.JSON(http.StatusCreated, channel)
@@ -282,14 +260,7 @@ func (h *NotificationsHandler) UpdateChannel(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if channel.OrgID != dbUser.OrgID {
+	if channel.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "notification channel not found"})
 		return
 	}
@@ -350,14 +321,7 @@ func (h *NotificationsHandler) DeleteChannel(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if channel.OrgID != dbUser.OrgID {
+	if channel.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "notification channel not found"})
 		return
 	}
@@ -380,16 +344,9 @@ func (h *NotificationsHandler) ListPreferences(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	prefs, err := h.store.GetNotificationPreferencesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	prefs, err := h.store.GetNotificationPreferencesByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list notification preferences")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list notification preferences")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list notification preferences"})
 		return
 	}
@@ -423,25 +380,18 @@ func (h *NotificationsHandler) CreatePreference(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Verify channel belongs to org
 	channel, err := h.store.GetNotificationChannelByID(c.Request.Context(), req.ChannelID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "notification channel not found"})
 		return
 	}
-	if channel.OrgID != dbUser.OrgID {
+	if channel.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "notification channel not found"})
 		return
 	}
 
-	pref := models.NewNotificationPreference(dbUser.OrgID, req.ChannelID, req.EventType)
+	pref := models.NewNotificationPreference(user.CurrentOrgID, req.ChannelID, req.EventType)
 	pref.Enabled = req.Enabled
 
 	if err := h.store.CreateNotificationPreference(c.Request.Context(), pref); err != nil {
@@ -488,15 +438,8 @@ func (h *NotificationsHandler) UpdatePreference(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	// Get all preferences to find this one and verify ownership
-	prefs, err := h.store.GetNotificationPreferencesByOrgID(c.Request.Context(), dbUser.OrgID)
+	prefs, err := h.store.GetNotificationPreferencesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to get preferences")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
@@ -543,15 +486,8 @@ func (h *NotificationsHandler) DeletePreference(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	// Get all preferences to verify ownership
-	prefs, err := h.store.GetNotificationPreferencesByOrgID(c.Request.Context(), dbUser.OrgID)
+	prefs, err := h.store.GetNotificationPreferencesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to get preferences")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
@@ -589,18 +525,11 @@ func (h *NotificationsHandler) ListLogs(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Default limit of 100 logs
 	limit := 100
-	logs, err := h.store.GetNotificationLogsByOrgID(c.Request.Context(), dbUser.OrgID, limit)
+	logs, err := h.store.GetNotificationLogsByOrgID(c.Request.Context(), user.CurrentOrgID, limit)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list notification logs")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list notification logs")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list notification logs"})
 		return
 	}
@@ -641,14 +570,7 @@ func (h *NotificationsHandler) TestChannel(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if channel.OrgID != dbUser.OrgID {
+	if channel.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "notification channel not found"})
 		return
 	}

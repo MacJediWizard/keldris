@@ -16,7 +16,6 @@ import (
 
 // KomodoStore defines the interface for Komodo persistence operations.
 type KomodoStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	// Integration CRUD
 	GetKomodoIntegrationsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.KomodoIntegration, error)
 	GetKomodoIntegrationByID(ctx context.Context, id uuid.UUID) (*models.KomodoIntegration, error)
@@ -102,16 +101,9 @@ func (h *KomodoHandler) ListIntegrations(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	integrations, err := h.store.GetKomodoIntegrationsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	integrations, err := h.store.GetKomodoIntegrationsByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list Komodo integrations")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list Komodo integrations")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list integrations"})
 		return
 	}
@@ -140,13 +132,6 @@ func (h *KomodoHandler) CreateIntegration(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Serialize config (should be encrypted in production)
 	configJSON, err := json.Marshal(req.Config)
 	if err != nil {
@@ -155,7 +140,7 @@ func (h *KomodoHandler) CreateIntegration(c *gin.Context) {
 		return
 	}
 
-	integration := models.NewKomodoIntegration(dbUser.OrgID, req.Name, req.URL, configJSON)
+	integration := models.NewKomodoIntegration(user.CurrentOrgID, req.Name, req.URL, configJSON)
 
 	if err := h.store.CreateKomodoIntegration(c.Request.Context(), integration); err != nil {
 		h.logger.Error().Err(err).Str("name", req.Name).Msg("failed to create Komodo integration")
@@ -166,7 +151,7 @@ func (h *KomodoHandler) CreateIntegration(c *gin.Context) {
 	h.logger.Info().
 		Str("integration_id", integration.ID.String()).
 		Str("name", req.Name).
-		Str("org_id", dbUser.OrgID.String()).
+		Str("org_id", user.CurrentOrgID.String()).
 		Msg("Komodo integration created")
 
 	c.JSON(http.StatusCreated, integration)
@@ -194,14 +179,7 @@ func (h *KomodoHandler) GetIntegration(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if integration.OrgID != dbUser.OrgID {
+	if integration.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "integration not found"})
 		return
 	}
@@ -260,14 +238,7 @@ func (h *KomodoHandler) UpdateIntegration(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if integration.OrgID != dbUser.OrgID {
+	if integration.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "integration not found"})
 		return
 	}
@@ -322,14 +293,7 @@ func (h *KomodoHandler) DeleteIntegration(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if integration.OrgID != dbUser.OrgID {
+	if integration.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "integration not found"})
 		return
 	}
@@ -365,14 +329,7 @@ func (h *KomodoHandler) TestConnection(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if integration.OrgID != dbUser.OrgID {
+	if integration.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "integration not found"})
 		return
 	}
@@ -443,14 +400,7 @@ func (h *KomodoHandler) SyncIntegration(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if integration.OrgID != dbUser.OrgID {
+	if integration.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "integration not found"})
 		return
 	}
@@ -477,7 +427,7 @@ func (h *KomodoHandler) SyncIntegration(c *gin.Context) {
 
 	// Run discovery
 	discoveryService := komodo.NewDiscoveryService(client, h.logger)
-	result, err := discoveryService.DiscoverAll(c.Request.Context(), dbUser.OrgID, id)
+	result, err := discoveryService.DiscoverAll(c.Request.Context(), user.CurrentOrgID, id)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("discovery failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "discovery failed: " + err.Error()})
@@ -536,14 +486,7 @@ func (h *KomodoHandler) DiscoverContainers(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if integration.OrgID != dbUser.OrgID {
+	if integration.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "integration not found"})
 		return
 	}
@@ -570,7 +513,7 @@ func (h *KomodoHandler) DiscoverContainers(c *gin.Context) {
 
 	// Run discovery
 	discoveryService := komodo.NewDiscoveryService(client, h.logger)
-	result, err := discoveryService.DiscoverAll(c.Request.Context(), dbUser.OrgID, id)
+	result, err := discoveryService.DiscoverAll(c.Request.Context(), user.CurrentOrgID, id)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("discovery failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "discovery failed: " + err.Error()})
@@ -588,16 +531,9 @@ func (h *KomodoHandler) ListContainers(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	containers, err := h.store.GetKomodoContainersByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	containers, err := h.store.GetKomodoContainersByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list Komodo containers")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list Komodo containers")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list containers"})
 		return
 	}
@@ -626,14 +562,7 @@ func (h *KomodoHandler) GetContainer(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if container.OrgID != dbUser.OrgID {
+	if container.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "container not found"})
 		return
 	}
@@ -674,14 +603,7 @@ func (h *KomodoHandler) UpdateContainer(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if container.OrgID != dbUser.OrgID {
+	if container.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "container not found"})
 		return
 	}
@@ -712,16 +634,9 @@ func (h *KomodoHandler) ListStacks(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	stacks, err := h.store.GetKomodoStacksByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	stacks, err := h.store.GetKomodoStacksByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list Komodo stacks")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list Komodo stacks")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list stacks"})
 		return
 	}
@@ -750,14 +665,7 @@ func (h *KomodoHandler) GetStack(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if stack.OrgID != dbUser.OrgID {
+	if stack.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "stack not found"})
 		return
 	}
@@ -773,16 +681,9 @@ func (h *KomodoHandler) ListWebhookEvents(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	events, err := h.store.GetKomodoWebhookEventsByOrgID(c.Request.Context(), user.CurrentOrgID, 100)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	events, err := h.store.GetKomodoWebhookEventsByOrgID(c.Request.Context(), dbUser.OrgID, 100)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list webhook events")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list webhook events")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list events"})
 		return
 	}
