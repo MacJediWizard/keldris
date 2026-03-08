@@ -46,6 +46,24 @@ const fetchMock = vi.fn(() =>
 );
 vi.stubGlobal('fetch', fetchMock);
 
+// Suppress undici InvalidArgumentError in jsdom (Node 20+ CI issue)
+// This error is thrown asynchronously by undici internals and is not
+// related to application code. Vitest catches it as an unhandled error.
+const originalEmit = process.emit.bind(process);
+// biome-ignore lint/suspicious/noExplicitAny: process.emit override requires any
+process.emit = function (event: string, ...args: any[]) {
+	if (event === 'unhandledRejection') {
+		const error = args[0];
+		if (
+			error instanceof Error &&
+			error.message === 'invalid onError method'
+		) {
+			return false;
+		}
+	}
+	return originalEmit(event, ...args);
+} as typeof process.emit;
+
 // Reset mocks between tests
 afterEach(() => {
 	vi.restoreAllMocks();
