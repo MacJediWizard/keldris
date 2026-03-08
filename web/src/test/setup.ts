@@ -40,8 +40,15 @@ Object.defineProperty(window, 'matchMedia', {
 	})),
 });
 
+// Mock global fetch to prevent undici errors in CI
+const fetchMock = vi.fn(() =>
+	Promise.resolve(new Response('{}', { status: 200 })),
+);
+vi.stubGlobal('fetch', fetchMock);
+
 // Reset mocks between tests
 afterEach(() => {
 	vi.restoreAllMocks();
+	vi.stubGlobal('fetch', fetchMock);
 	locationMock.href = '';
 });

@@ -216,11 +216,13 @@ func (db *DB) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	// Check if the user is the last owner of any organization
 	var ownerCount int
 	err = tx.QueryRow(ctx, `
-		SELECT COUNT(*)
-		FROM org_memberships
-		WHERE org_id = (SELECT org_id FROM org_memberships WHERE user_id = $1 AND role = 'owner' LIMIT 1)
-		  AND role = 'owner'
-		FOR UPDATE
+		WITH locked AS (
+			SELECT user_id FROM org_memberships
+			WHERE org_id = (SELECT org_id FROM org_memberships WHERE user_id = $1 AND role = 'owner' LIMIT 1)
+			  AND role = 'owner'
+			FOR UPDATE
+		)
+		SELECT COUNT(*) FROM locked
 	`, id).Scan(&ownerCount)
 	if err != nil {
 		return fmt.Errorf("check owner count: %w", err)
