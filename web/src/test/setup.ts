@@ -51,18 +51,15 @@ vi.stubGlobal('fetch', fetchMock);
 // related to application code. Vitest catches it as an unhandled error.
 const originalEmit = process.emit.bind(process);
 // biome-ignore lint/suspicious/noExplicitAny: process.emit override requires any
-process.emit = function (event: string, ...args: any[]) {
+process.emit = ((event: string, ...args: any[]) => {
 	if (event === 'unhandledRejection') {
 		const error = args[0];
-		if (
-			error instanceof Error &&
-			error.message === 'invalid onError method'
-		) {
+		if (error instanceof Error && error.message === 'invalid onError method') {
 			return false;
 		}
 	}
 	return originalEmit(event, ...args);
-} as typeof process.emit;
+}) as typeof process.emit;
 
 // Reset mocks between tests
 afterEach(() => {
