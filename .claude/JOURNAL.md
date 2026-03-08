@@ -1,5 +1,47 @@
 # Keldris Development Journal
 
+## 2026-03-08 - Cross-Repo Audit: 25 Issues Fixed (Keldris PR #266, License Server PR #1)
+
+### What
+Exhaustive audit across both Keldris and license-server repos using 8 parallel analysis agents. Found 25 verified issues (2 critical, 13 high, 10 medium). All fixed, tested, and merged.
+
+### Critical Fixes
+- **Multi-org bug** (31 handler files): All handlers used `dbUser.OrgID` (user's primary/default org from DB) instead of `user.CurrentOrgID` (currently selected org from session). This completely broke the org-switcher feature — users always operated on their primary org regardless of which org they selected.
+- **Postgres backup stderr deadlock** (`databases/postgres.go`): Synchronous 4KB `Read()` before `cmd.Wait()` deadlocked when stderr exceeded buffer size. Replaced with goroutine using `io.ReadAll()`.
+
+### High Priority Fixes
+- **9 missing `rows.Err()` checks** (5 store files): Added checks after every `for rows.Next()` loop in `store_backup_validation.go`, `store_email_verification.go`, `store_password_policy.go`, `store_system_settings.go`, `store_user_management.go`
+- **EndImpersonation auth bypass** (`superuser.go`): Used `GetUser()` instead of `RequireSuperuser()` — any authenticated user could end impersonation sessions
+- **Telemetry Stop() deadlock** (`telemetry.go`): Bare `<-doneCh` could block indefinitely during shutdown — added 5s timeout
+- **Webhook goroutine context leak** (`dispatcher.go`): Bare `context.Background()` → `context.WithTimeout(context.Background(), 30s)`
+- **DB backup cleanup context leak** (`db_backup.go`): Same pattern → 5-minute timeout
+- **Mount auto-unmount race** (`mount.go`): Timer fire could race with `ExpiresAt` update — now re-checks under lock
+- **Proxmox partial file leak** (`proxmox.go`): Failed `io.Copy` left partial file on disk — added `os.Remove(destPath)`
+- **Agent client missing request contexts** (`client.go`): `http.NewRequest` → `http.NewRequestWithContext` with 30s timeout
+- **Unbounded script timeout** (`scheduler.go`): User-provided timeout had no cap — added 24h maximum
+
+### Medium Priority Fixes
+- **Dashboard Math.max on empty arrays** (`Dashboard.tsx`): `Math.max(...[])` returns `-Infinity` — guarded with length check
+- **Schedules state in render path** (`Schedules.tsx`): Form initialization moved from render to `useEffect`
+
+### License Server Fixes (6 files)
+- **Heartbeat entitlement token stale** (`instances.go`): Layer 2 entitlement tokens expire in 24h but heartbeat never refreshed them — now generates and returns fresh token
+- **7 missing `rows.Err()` checks** (`store.go`)
+- **Fragile trial string comparison** (`trials.go`): `err.Error() == "..."` → `errors.Is(err, pgx.ErrNoRows)`
+- **Silent trial DB error** (`trials.go`): Non-ErrNoRows errors returned false `{"has_trial": false}` instead of 500
+- **Silent metrics unmarshal** (`instances.go`): `_ = json.Unmarshal` → error check with `logger.Warn()`
+
+### Test Changes
+- Removed 46 obsolete "user_not_found" test cases from 13 test files (test path no longer exists after removing `GetUserByID` calls)
+- Fixed 8 "repo access denied" tests in `verifications_test.go`: changed from different user ID / same org to different org ID (access control is now org-based)
+
+### Files Modified
+- **Keldris**: 61 files (31 handlers, 13 test files, 5 store files, 12 other)
+- **License Server**: 6 files (handlers, routes, store, tests)
+- Net: 613 insertions, 2574 deletions
+
+---
+
 ## 2026-03-07 - Codebase Audit: 42-Issue Fix (PR #265)
 
 ### What
