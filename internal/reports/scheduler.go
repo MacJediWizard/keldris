@@ -147,9 +147,9 @@ func (s *Scheduler) Reload(ctx context.Context) error {
 func (s *Scheduler) addSchedule(schedule *models.ReportSchedule) error {
 	cronExpr := s.frequencyToCron(schedule.Frequency)
 
-	sched := schedule // Copy for closure
+	schedCopy := *schedule // Dereference to copy value, avoiding data race in closure
 	entryID, err := s.cron.AddFunc(cronExpr, func() {
-		s.executeReport(sched)
+		s.executeReport(&schedCopy)
 	})
 	if err != nil {
 		return err

@@ -106,7 +106,12 @@ func (s *Service) NotifyBackupComplete(ctx context.Context, result BackupResult)
 	}
 
 	for _, pref := range prefs {
-		go s.sendNotification(context.Background(), pref, result)
+		pref := pref
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			s.sendNotification(ctx, pref, result)
+		}()
 	}
 }
 
@@ -139,7 +144,12 @@ func (s *Service) NotifyAgentOffline(ctx context.Context, agent *models.Agent, o
 	}
 
 	for _, pref := range prefs {
-		go s.sendAgentOfflineNotification(context.Background(), pref, data, orgID)
+		pref := pref
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			s.sendAgentOfflineNotification(ctx, pref, data, orgID)
+		}()
 	}
 }
 
@@ -530,7 +540,12 @@ func (s *Service) NotifyMaintenanceScheduled(ctx context.Context, window *models
 	}
 
 	for _, pref := range prefs {
-		go s.sendMaintenanceNotification(context.Background(), pref, data, window.OrgID)
+		pref := pref
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			s.sendMaintenanceNotification(ctx, pref, data, window.OrgID)
+		}()
 	}
 }
 
@@ -818,7 +833,12 @@ func (s *Service) NotifyTestRestoreFailed(ctx context.Context, result *models.Te
 	}
 
 	for _, pref := range prefs {
-		go s.sendTestRestoreFailedNotification(context.Background(), pref, data, repo.OrgID)
+		pref := pref
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			s.sendTestRestoreFailedNotification(ctx, pref, data, repo.OrgID)
+		}()
 	}
 }
 
@@ -1030,7 +1050,12 @@ func (s *Service) NotifyValidationFailed(ctx context.Context, result ValidationF
 	}
 
 	for _, pref := range prefs {
-		go s.sendValidationFailedNotification(context.Background(), pref, data, result.OrgID)
+		pref := pref
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			s.sendValidationFailedNotification(ctx, pref, data, result.OrgID)
+		}()
 	}
 }
 

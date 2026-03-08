@@ -391,14 +391,14 @@ func (e *RuleEngine) executeWebhook(ctx context.Context, action models.RuleActio
 		return fmt.Errorf("webhook URL required for webhook action")
 	}
 
-	e.logger.Info().
+	e.logger.Warn().
 		Str("rule_id", rule.ID.String()).
 		Str("rule_name", rule.Name).
 		Str("webhook_url", action.WebhookURL).
 		Str("trigger_type", string(eventCtx.TriggerType)).
 		Msg("rule engine: direct webhook action delivery not yet implemented")
 
-	return nil
+	return fmt.Errorf("webhook action delivery not yet implemented")
 }
 
 // sendPagerDutyNotification sends a PagerDuty alert.
@@ -408,7 +408,7 @@ func (e *RuleEngine) sendPagerDutyNotification(ctx context.Context, channel *mod
 		return fmt.Errorf("failed to decrypt PagerDuty config: %w", err)
 	}
 
-	e.logger.Info().
+	e.logger.Warn().
 		Str("channel_id", channel.ID.String()).
 		Str("channel_name", channel.Name).
 		Str("trigger_type", string(eventCtx.TriggerType)).
@@ -417,7 +417,7 @@ func (e *RuleEngine) sendPagerDutyNotification(ctx context.Context, channel *mod
 		Str("routing_key_prefix", config.RoutingKey[:min(8, len(config.RoutingKey))]+"...").
 		Msg("rule engine: PagerDuty notification delivery not yet implemented")
 
-	return nil
+	return fmt.Errorf("pagerduty notification delivery not yet implemented")
 }
 
 // sendSlackNotification sends a Slack message.
@@ -427,7 +427,7 @@ func (e *RuleEngine) sendSlackNotification(ctx context.Context, channel *models.
 		return fmt.Errorf("failed to decrypt Slack config: %w", err)
 	}
 
-	e.logger.Info().
+	e.logger.Warn().
 		Str("channel_id", channel.ID.String()).
 		Str("channel_name", channel.Name).
 		Str("trigger_type", string(eventCtx.TriggerType)).
@@ -435,7 +435,7 @@ func (e *RuleEngine) sendSlackNotification(ctx context.Context, channel *models.
 		Str("message", message).
 		Msg("rule engine: Slack notification delivery not yet implemented")
 
-	return nil
+	return fmt.Errorf("slack notification delivery not yet implemented")
 }
 
 // sendEmailNotification sends an email notification.
@@ -445,7 +445,7 @@ func (e *RuleEngine) sendEmailNotification(ctx context.Context, channel *models.
 		return fmt.Errorf("failed to decrypt email config: %w", err)
 	}
 
-	e.logger.Info().
+	e.logger.Warn().
 		Str("channel_id", channel.ID.String()).
 		Str("channel_name", channel.Name).
 		Str("from", config.From).
@@ -455,7 +455,7 @@ func (e *RuleEngine) sendEmailNotification(ctx context.Context, channel *models.
 		Str("message", message).
 		Msg("rule engine: email notification delivery not yet implemented")
 
-	return nil
+	return fmt.Errorf("email notification delivery not yet implemented")
 }
 
 // sendWebhookNotification sends a generic webhook notification.
@@ -465,7 +465,7 @@ func (e *RuleEngine) sendWebhookNotification(ctx context.Context, channel *model
 		return fmt.Errorf("failed to decrypt webhook config: %w", err)
 	}
 
-	e.logger.Info().
+	e.logger.Warn().
 		Str("channel_id", channel.ID.String()).
 		Str("channel_name", channel.Name).
 		Str("trigger_type", string(eventCtx.TriggerType)).
@@ -474,7 +474,7 @@ func (e *RuleEngine) sendWebhookNotification(ctx context.Context, channel *model
 		Str("message", message).
 		Msg("rule engine: webhook notification delivery not yet implemented")
 
-	return nil
+	return fmt.Errorf("webhook notification delivery not yet implemented")
 }
 
 // TestRule tests a rule with sample event data without persisting.

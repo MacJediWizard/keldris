@@ -207,8 +207,19 @@ func (s *SessionStore) SetUser(r *http.Request, w http.ResponseWriter, user *Ses
 	session.Values[LastActivityKey] = time.Now()
 	session.Values[SessionRecordIDKey] = user.SessionRecordID
 	session.Values[IsSuperuserKey] = user.IsSuperuser
-	session.Values[ImpersonatingUserIDKey] = user.ImpersonatingID
-	session.Values[OriginalUserIDKey] = user.OriginalUserID
+
+	// Only store impersonation fields if actively impersonating.
+	// Clear them otherwise to prevent stale impersonation state.
+	if user.Impersonating && user.OriginalUserID != uuid.Nil {
+		session.Values[ImpersonatingUserIDKey] = user.ImpersonatingID
+		session.Values[OriginalUserIDKey] = user.OriginalUserID
+		session.Values[ImpersonatingKey] = true
+	} else {
+		delete(session.Values, ImpersonatingUserIDKey)
+		delete(session.Values, OriginalUserIDKey)
+		delete(session.Values, ImpersonatingKey)
+		delete(session.Values, OriginalUserEmailKey)
+	}
 	return s.Save(r, w, session)
 }
 
@@ -362,6 +373,11 @@ func (s *SessionStore) StartImpersonation(r *http.Request, w http.ResponseWriter
 	session.Values[ImpersonatingUserIDKey] = targetUser.ID
 	session.Values[ImpersonationLogIDKey] = logID
 
+	s.logger.Info().
+		Str("superuser_id", originalUser.ID.String()).
+		Str("target_user_id", targetUser.ID.String()).
+		Msg("superuser started impersonation")
+
 	// Switch to target user's identity
 	session.Values[UserIDKey] = targetUser.ID
 	session.Values[OIDCSubjectKey] = targetUser.OIDCSubject
@@ -382,6 +398,10 @@ func (s *SessionStore) EndImpersonation(r *http.Request, w http.ResponseWriter, 
 	if err != nil {
 		return err
 	}
+
+	s.logger.Info().
+		Str("original_user_id", originalUser.ID.String()).
+		Msg("superuser ended impersonation")
 
 	// Restore original user
 	session.Values[UserIDKey] = originalUser.ID

@@ -265,7 +265,12 @@ func (h *TrialHandler) ConvertTrial(c *gin.Context) {
 		Msg("trial converted")
 
 	// Return updated status
-	info, _ := h.manager.GetTrialInfo(c.Request.Context(), user.CurrentOrgID)
+	info, err := h.manager.GetTrialInfo(c.Request.Context(), user.CurrentOrgID)
+	if err != nil {
+		h.logger.Warn().Err(err).Msg("failed to get trial info after conversion")
+		c.JSON(http.StatusOK, gin.H{"message": "trial converted successfully"})
+		return
+	}
 	c.JSON(http.StatusOK, info)
 }
 

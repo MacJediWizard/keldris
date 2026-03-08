@@ -423,8 +423,11 @@ func (h *OrganizationsHandler) Update(c *gin.Context) {
 		return
 	}
 
-	membership, _ := h.store.GetMembershipByUserAndOrg(c.Request.Context(), user.ID, orgID)
+	membership, err := h.store.GetMembershipByUserAndOrg(c.Request.Context(), user.ID, orgID)
 	role := ""
+	if err != nil {
+		h.logger.Warn().Err(err).Str("org_id", orgID.String()).Msg("failed to get membership for response")
+	}
 	if membership != nil {
 		role = string(membership.Role)
 	}

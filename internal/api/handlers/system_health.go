@@ -399,7 +399,9 @@ func (h *SystemHealthHandler) saveHealthRecord(ctx context.Context, response *Sy
 	}
 
 	go func() {
-		if err := h.store.SaveHealthHistoryRecord(context.Background(), record); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := h.store.SaveHealthHistoryRecord(ctx, record); err != nil {
 			h.logger.Warn().Err(err).Msg("failed to save health history record")
 		}
 	}()

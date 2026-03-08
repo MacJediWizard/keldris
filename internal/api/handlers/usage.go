@@ -237,7 +237,7 @@ func (h *UsageHandler) UpdateUsageLimits(c *gin.Context) {
 	}
 
 	// Check admin role
-	if user.CurrentOrgRole != "admin" && user.CurrentOrgRole != "owner" {
+	if !isAdmin(user.CurrentOrgRole) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "admin access required"})
 		return
 	}

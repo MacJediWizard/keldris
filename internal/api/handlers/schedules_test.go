@@ -109,7 +109,15 @@ func (m *mockScheduleStore) CreateAgentCommand(_ context.Context, _ *models.Agen
 	return m.createCmdErr
 }
 
-func setupScheduleTestRouter(store ScheduleStore, user *auth.SessionUser) *gin.Engine {
+func (m *mockScheduleStore) GetMembershipByUserAndOrg(_ context.Context, userID, orgID uuid.UUID) (*models.OrgMembership, error) {
+	return &models.OrgMembership{UserID: userID, OrgID: orgID, Role: models.OrgRoleOwner}, nil
+}
+
+func (m *mockScheduleStore) GetMembershipsByUserID(_ context.Context, userID uuid.UUID) ([]*models.OrgMembership, error) {
+	return nil, nil
+}
+
+func setupScheduleTestRouter(store *mockScheduleStore, user *auth.SessionUser) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 
@@ -120,7 +128,8 @@ func setupScheduleTestRouter(store ScheduleStore, user *auth.SessionUser) *gin.E
 		c.Next()
 	})
 
-	handler := NewSchedulesHandler(store, zerolog.Nop())
+	rbac := auth.NewRBAC(store)
+	handler := NewSchedulesHandler(store, rbac, zerolog.Nop())
 	api := r.Group("/api/v1")
 	handler.RegisterRoutes(api)
 	return r

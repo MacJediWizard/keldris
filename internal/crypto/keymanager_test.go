@@ -749,9 +749,9 @@ func TestMasterKeyFromBase64_Invalid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := masterKeyFromBase64(tt.encoded)
+			_, err := MasterKeyFromBase64(tt.encoded)
 			if err == nil {
-				t.Error("masterKeyFromBase64() expected error, got nil")
+				t.Error("MasterKeyFromBase64() expected error, got nil")
 			}
 		})
 	}

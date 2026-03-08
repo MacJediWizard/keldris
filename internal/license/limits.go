@@ -11,11 +11,12 @@ import (
 // TierLimits defines the resource limits for a license tier.
 // Only tracks resources monitored by the license server via heartbeat.
 type TierLimits struct {
-	MaxAgents  int   `json:"max_agents"`
-	MaxServers int   `json:"max_servers"`
-	MaxUsers   int   `json:"max_users"`
-	MaxOrgs    int   `json:"max_orgs"`
-	MaxStorage int64 `json:"max_storage_bytes"`
+	MaxAgents       int   `json:"max_agents"`
+	MaxServers      int   `json:"max_servers"`
+	MaxUsers        int   `json:"max_users"`
+	MaxOrgs         int   `json:"max_orgs"`
+	MaxRepositories int   `json:"max_repositories"`
+	MaxStorage      int64 `json:"max_storage_bytes"`
 }
 
 // Unlimited is a sentinel value indicating no limit on a resource.
@@ -24,25 +25,28 @@ const Unlimited = -1
 // tierLimits maps each license tier to its resource limits.
 var tierLimits = map[LicenseTier]TierLimits{
 	TierFree: {
-		MaxAgents:  3,
-		MaxServers: 1,
-		MaxUsers:   3,
-		MaxOrgs:    1,
-		MaxStorage: 10 * 1024 * 1024 * 1024, // 10 GB
+		MaxAgents:       3,
+		MaxServers:      1,
+		MaxUsers:        3,
+		MaxOrgs:         1,
+		MaxRepositories: 3,
+		MaxStorage:      10 * 1024 * 1024 * 1024, // 10 GB
 	},
 	TierPro: {
-		MaxAgents:  100,
-		MaxServers: 10,
-		MaxUsers:   10,
-		MaxOrgs:    3,
-		MaxStorage: 100 * 1024 * 1024 * 1024, // 100 GB
+		MaxAgents:       100,
+		MaxServers:      10,
+		MaxUsers:        10,
+		MaxOrgs:         3,
+		MaxRepositories: 50,
+		MaxStorage:      100 * 1024 * 1024 * 1024, // 100 GB
 	},
 	TierEnterprise: {
-		MaxAgents:  Unlimited,
-		MaxServers: Unlimited,
-		MaxUsers:   Unlimited,
-		MaxOrgs:    Unlimited,
-		MaxStorage: Unlimited,
+		MaxAgents:       Unlimited,
+		MaxServers:      Unlimited,
+		MaxUsers:        Unlimited,
+		MaxOrgs:         Unlimited,
+		MaxRepositories: Unlimited,
+		MaxStorage:      Unlimited,
 	},
 }
 
@@ -387,7 +391,7 @@ func (e *Enforcer) GetUsageStats(ctx context.Context) (*UsageStats, error) {
 		Repositories: UsageStat{
 			Current:   0, // Would need org context
 			Limit:     limits.MaxRepositories,
-			Unlimited: limits.MaxRepositories == -1,
+			Unlimited: IsUnlimited(limits.MaxRepositories),
 		},
 	}, nil
 }

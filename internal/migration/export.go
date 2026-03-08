@@ -251,9 +251,13 @@ func (e *Exporter) exportOrganizationData(
 		if opts.IncludeSecrets && len(opts.EncryptionKey) > 0 && len(repo.ConfigEncrypted) > 0 {
 			// Re-encrypt with the export encryption key
 			km, err := crypto.NewKeyManager(opts.EncryptionKey)
-			if err == nil {
+			if err != nil {
+				e.logger.Warn().Err(err).Str("repo", repo.Name).Msg("failed to create key manager for secret export")
+			} else {
 				encrypted, err := km.Encrypt(repo.ConfigEncrypted)
-				if err == nil {
+				if err != nil {
+					e.logger.Warn().Err(err).Str("repo", repo.Name).Msg("failed to encrypt secrets for export")
+				} else {
 					repoExport.EncryptedSecrets = base64.StdEncoding.EncodeToString(encrypted)
 				}
 			}

@@ -67,7 +67,7 @@ var rolePermissions = map[models.OrgRole][]Permission{
 		PermMemberRead, PermMemberInvite, PermMemberUpdate, PermMemberRemove,
 		// Users (full control)
 		PermUserRead, PermUserInvite, PermUserUpdate, PermUserDisable, PermUserDelete,
-		PermUserResetPassword, PermUserActivityView,
+		PermUserResetPassword, PermUserImpersonate, PermUserActivityView,
 		// Agents
 		PermAgentRead, PermAgentCreate, PermAgentUpdate, PermAgentDelete,
 		// Repositories

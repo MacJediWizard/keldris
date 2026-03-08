@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
+	"github.com/MacJediWizard/keldris/internal/auth"
 	"github.com/MacJediWizard/keldris/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -30,13 +31,15 @@ type BackupStore interface {
 // BackupsHandler handles backup-related HTTP endpoints.
 type BackupsHandler struct {
 	store  BackupStore
+	rbac   *auth.RBAC
 	logger zerolog.Logger
 }
 
 // NewBackupsHandler creates a new BackupsHandler.
-func NewBackupsHandler(store BackupStore, logger zerolog.Logger) *BackupsHandler {
+func NewBackupsHandler(store BackupStore, rbac *auth.RBAC, logger zerolog.Logger) *BackupsHandler {
 	return &BackupsHandler{
 		store:  store,
+		rbac:   rbac,
 		logger: logger.With().Str("component", "backups_handler").Logger(),
 	}
 }
@@ -77,6 +80,11 @@ func (h *BackupsHandler) RegisterRoutes(r *gin.RouterGroup) {
 func (h *BackupsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermBackupRead); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 
@@ -192,6 +200,11 @@ func (h *BackupsHandler) Get(c *gin.Context) {
 		return
 	}
 
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermBackupRead); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
+		return
+	}
+
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
@@ -243,6 +256,11 @@ func (h *BackupsHandler) GetValidation(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermBackupRead); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 
@@ -347,6 +365,11 @@ func (h *BackupsHandler) Calendar(c *gin.Context) {
 
 	if user.CurrentOrgID == uuid.Nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no organization selected"})
+		return
+	}
+
+	if err := h.rbac.RequirePermission(c.Request.Context(), user.ID, user.CurrentOrgID, auth.PermBackupRead); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied"})
 		return
 	}
 

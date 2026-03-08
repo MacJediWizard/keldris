@@ -197,9 +197,12 @@ func (m *Manager) doShutdown(ctx context.Context) error {
 
 	// Phase 1: Drain existing connections
 	m.logger.Info().Dur("drain_timeout", m.config.DrainTimeout).Msg("draining connections")
-	drainCtx, drainCancel := context.WithTimeout(ctx, m.config.DrainTimeout)
-	<-drainCtx.Done()
-	drainCancel()
+	drainTimer := time.NewTimer(m.config.DrainTimeout)
+	select {
+	case <-ctx.Done():
+		drainTimer.Stop()
+	case <-drainTimer.C:
+	}
 	m.logger.Debug().Msg("drain timeout reached")
 
 	// Check if parent context is cancelled

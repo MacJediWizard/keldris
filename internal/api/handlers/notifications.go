@@ -314,7 +314,6 @@ func (h *NotificationsHandler) UpdateChannel(c *gin.Context) {
 			return
 		}
 		channel.ConfigEncrypted = configEncrypted
-		channel.ConfigEncrypted = req.Config
 	}
 	if req.Enabled != nil {
 		channel.Enabled = *req.Enabled
