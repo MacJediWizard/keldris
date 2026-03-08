@@ -110,6 +110,24 @@ vi.mock('../hooks/useStorageStats', () => ({
 	}),
 }));
 
+vi.mock('../hooks/useActivity', () => ({
+	useActivityFeed: vi.fn().mockReturnValue({
+		events: [],
+		isConnected: false,
+	}),
+	useRecentActivity: vi.fn().mockReturnValue({
+		data: [],
+		isLoading: false,
+	}),
+}));
+
+vi.mock('../hooks/useBackupCalendar', () => ({
+	useBackupCalendar: vi.fn().mockReturnValue({
+		data: [],
+		isLoading: false,
+	}),
+}));
+
 vi.mock('../hooks/useLocale', () => ({
 	useLocale: vi.fn().mockReturnValue({
 		t: (key: string) => {
