@@ -11,10 +11,26 @@ const LOG_LEVEL_COLORS: Record<
 	LogLevel,
 	{ bg: string; text: string; dot: string }
 > = {
-	debug: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', dot: 'bg-gray-400' },
-	info: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400', dot: 'bg-blue-400' },
-	warn: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400', dot: 'bg-yellow-400' },
-	error: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-400' },
+	debug: {
+		bg: 'bg-gray-100 dark:bg-gray-700',
+		text: 'text-gray-700 dark:text-gray-300',
+		dot: 'bg-gray-400',
+	},
+	info: {
+		bg: 'bg-blue-100 dark:bg-blue-900/30',
+		text: 'text-blue-700 dark:text-blue-400',
+		dot: 'bg-blue-400',
+	},
+	warn: {
+		bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+		text: 'text-yellow-700 dark:text-yellow-400',
+		dot: 'bg-yellow-400',
+	},
+	error: {
+		bg: 'bg-red-100 dark:bg-red-900/30',
+		text: 'text-red-700 dark:text-red-400',
+		dot: 'bg-red-400',
+	},
 };
 
 function LogRow({ log }: { log: AgentLog }) {
@@ -159,7 +175,10 @@ export function AgentLogViewer({ agentId }: AgentLogViewerProps) {
 			<div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4 flex-wrap">
 				{/* Level Filter */}
 				<div className="flex items-center gap-2">
-					<label htmlFor="log-level" className="text-sm text-gray-600 dark:text-gray-400">
+					<label
+						htmlFor="log-level"
+						className="text-sm text-gray-600 dark:text-gray-400"
+					>
 						Level:
 					</label>
 					<select

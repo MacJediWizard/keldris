@@ -57,10 +57,14 @@ export function ConfirmationModal({
 					onClose();
 				}
 			}}
+			onKeyDown={(e) => {
+				if (e.key === 'Escape') {
+					onClose();
+				}
+			}}
 		>
-			<div
-				role="dialog"
-				aria-modal="true"
+			<dialog
+				open
 				aria-labelledby="confirmation-modal-title"
 				className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
 			>
@@ -99,7 +103,10 @@ export function ConfirmationModal({
 						)}
 					</div>
 					<div className="flex-1">
-						<h3 id="confirmation-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+						<h3
+							id="confirmation-modal-title"
+							className="text-lg font-semibold text-gray-900 dark:text-white"
+						>
 							{title}
 						</h3>
 						<p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -158,7 +165,7 @@ export function ConfirmationModal({
 						)}
 					</button>
 				</div>
-			</div>
+			</dialog>
 		</div>
 	);
 }

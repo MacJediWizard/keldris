@@ -42,8 +42,12 @@ export function NetworkMountSelector({
 								className="h-4 w-4 text-indigo-600 rounded"
 							/>
 							<div className="flex-1">
-								<div className="font-medium text-gray-900 dark:text-white">{mount.path}</div>
-								<div className="text-sm text-gray-500 dark:text-gray-400">{mount.remote}</div>
+								<div className="font-medium text-gray-900 dark:text-white">
+									{mount.path}
+								</div>
+								<div className="text-sm text-gray-500 dark:text-gray-400">
+									{mount.remote}
+								</div>
 							</div>
 							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded-full">
 								<span className="w-1.5 h-1.5 bg-green-50 dark:bg-green-900/300 rounded-full" />
@@ -56,15 +60,21 @@ export function NetworkMountSelector({
 
 			{unavailableMounts.length > 0 && (
 				<div className="mt-3">
-					<p className="text-sm text-amber-600 dark:text-amber-400 mb-2">Unavailable mounts:</p>
+					<p className="text-sm text-amber-600 dark:text-amber-400 mb-2">
+						Unavailable mounts:
+					</p>
 					{unavailableMounts.map((mount) => (
 						<div
 							key={mount.path}
 							className="flex items-center gap-3 p-3 border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 rounded-lg opacity-60"
 						>
 							<div className="flex-1">
-								<div className="font-medium text-gray-700 dark:text-gray-300">{mount.path}</div>
-								<div className="text-sm text-gray-500 dark:text-gray-400">{mount.remote}</div>
+								<div className="font-medium text-gray-700 dark:text-gray-300">
+									{mount.path}
+								</div>
+								<div className="text-sm text-gray-500 dark:text-gray-400">
+									{mount.remote}
+								</div>
 							</div>
 							<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 rounded-full">
 								{mount.status}

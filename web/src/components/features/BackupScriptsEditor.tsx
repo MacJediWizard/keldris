@@ -105,8 +105,12 @@ function ScriptForm({
 	return (
 		<form onSubmit={handleSubmit} className="space-y-4">
 			<div>
-				<h4 className="text-sm font-medium text-gray-900 dark:text-white">{typeInfo?.label}</h4>
-				<p className="text-xs text-gray-500 dark:text-gray-400">{typeInfo?.description}</p>
+				<h4 className="text-sm font-medium text-gray-900 dark:text-white">
+					{typeInfo?.label}
+				</h4>
+				<p className="text-xs text-gray-500 dark:text-gray-400">
+					{typeInfo?.description}
+				</p>
 			</div>
 
 			<div>
@@ -159,7 +163,9 @@ function ScriptForm({
 							onChange={(e) => setEnabled(e.target.checked)}
 							className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 						/>
-						<span className="text-sm text-gray-700 dark:text-gray-300">Enabled</span>
+						<span className="text-sm text-gray-700 dark:text-gray-300">
+							Enabled
+						</span>
 					</label>
 				</div>
 			</div>
@@ -235,7 +241,9 @@ function ScriptCard({ script, scheduleId, onEdit }: ScriptCardProps) {
 							</span>
 						)}
 					</div>
-					<p className="text-xs text-gray-500 dark:text-gray-400">{typeInfo?.description}</p>
+					<p className="text-xs text-gray-500 dark:text-gray-400">
+						{typeInfo?.description}
+					</p>
 				</div>
 				<div className="flex items-center gap-2">
 					<button
@@ -262,7 +270,9 @@ function ScriptCard({ script, scheduleId, onEdit }: ScriptCardProps) {
 			<div className="mt-2 flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
 				<span>Timeout: {script.timeout_seconds}s</span>
 				{script.type === 'pre_backup' && script.fail_on_error && (
-					<span className="text-amber-600 dark:text-amber-400">Fails backup on error</span>
+					<span className="text-amber-600 dark:text-amber-400">
+						Fails backup on error
+					</span>
 				)}
 			</div>
 		</div>

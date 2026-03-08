@@ -140,7 +140,9 @@ function BackupTagsEditor({ backupId, allTags }: BackupTagsEditorProps) {
 
 	return (
 		<div>
-			<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Tags</p>
+			<p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+				Tags
+			</p>
 			<div className="flex flex-wrap gap-1 mb-2">
 				{backupTags && backupTags.length > 0 ? (
 					backupTags.map((tag) => (
@@ -175,7 +177,9 @@ function BackupTagsEditor({ backupId, allTags }: BackupTagsEditorProps) {
 									className="w-3 h-3 rounded-full"
 									style={{ backgroundColor: tag.color }}
 								/>
-								<span className="text-sm text-gray-700 dark:text-gray-300">{tag.name}</span>
+								<span className="text-sm text-gray-700 dark:text-gray-300">
+									{tag.name}
+								</span>
 								{currentTagIds.has(tag.id) && (
 									<svg
 										aria-hidden="true"

@@ -93,7 +93,10 @@ function CreateRunbookModal({ isOpen, onClose }: CreateRunbookModalProps) {
 								onChange={(e) => setUseSchedule(e.target.checked)}
 								className="rounded border-gray-300"
 							/>
-							<label htmlFor="use-schedule" className="text-sm text-gray-700 dark:text-gray-300">
+							<label
+								htmlFor="use-schedule"
+								className="text-sm text-gray-700 dark:text-gray-300"
+							>
 								Generate from existing backup schedule
 							</label>
 						</div>
@@ -337,7 +340,9 @@ function RunbookRow({
 	return (
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900 dark:text-white">{runbook.name}</div>
+				<div className="font-medium text-gray-900 dark:text-white">
+					{runbook.name}
+				</div>
 				{runbook.description && (
 					<div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
 						{runbook.description}
@@ -467,7 +472,9 @@ export function DRRunbooks() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">DR Runbooks</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						DR Runbooks
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Disaster recovery procedures and testing
 					</p>
@@ -498,25 +505,33 @@ export function DRRunbooks() {
 			{drStatus && (
 				<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-						<p className="text-sm text-gray-600 dark:text-gray-400">Total Runbooks</p>
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Total Runbooks
+						</p>
 						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{drStatus.total_runbooks}
 						</p>
 					</div>
 					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-						<p className="text-sm text-gray-600 dark:text-gray-400">Active Runbooks</p>
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Active Runbooks
+						</p>
 						<p className="text-2xl font-bold text-green-600">
 							{drStatus.active_runbooks}
 						</p>
 					</div>
 					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-						<p className="text-sm text-gray-600 dark:text-gray-400">Tests (30 days)</p>
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Tests (30 days)
+						</p>
 						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{drStatus.tests_last_30_days}
 						</p>
 					</div>
 					<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-						<p className="text-sm text-gray-600 dark:text-gray-400">Pass Rate</p>
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Pass Rate
+						</p>
 						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{drStatus.pass_rate.toFixed(1)}%
 						</p>
@@ -526,7 +541,9 @@ export function DRRunbooks() {
 
 			{recentTests.length > 0 && (
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-					<h3 className="font-medium text-gray-900 dark:text-white mb-3">Recent Tests</h3>
+					<h3 className="font-medium text-gray-900 dark:text-white mb-3">
+						Recent Tests
+					</h3>
 					<div className="space-y-2">
 						{recentTests.map((test) => (
 							<div

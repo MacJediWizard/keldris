@@ -40,7 +40,10 @@ interface TabListProps {
 
 export function TabList({ children }: TabListProps) {
 	return (
-		<div className="border-b border-gray-200 dark:border-gray-700" role="tablist">
+		<div
+			className="border-b border-gray-200 dark:border-gray-700"
+			role="tablist"
+		>
 			<nav className="-mb-px flex space-x-8">{children}</nav>
 		</div>
 	);

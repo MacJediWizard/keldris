@@ -18,7 +18,10 @@ export function ErrorMessage({ message }: ErrorMessageProps) {
 						clipRule="evenodd"
 					/>
 				</svg>
-				<p className="text-sm font-medium text-red-800 dark:text-red-400" role="alert">
+				<p
+					className="text-sm font-medium text-red-800 dark:text-red-400"
+					role="alert"
+				>
 					{message}
 				</p>
 			</div>

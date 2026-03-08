@@ -29,7 +29,10 @@ function ChangeList({
 			</h4>
 			<ul className="space-y-1 pl-6">
 				{items.slice(0, 5).map((item) => (
-					<li key={item} className="text-sm text-gray-600 dark:text-gray-400 list-disc">
+					<li
+						key={item}
+						className="text-sm text-gray-600 dark:text-gray-400 list-disc"
+					>
 						{item}
 					</li>
 				))}

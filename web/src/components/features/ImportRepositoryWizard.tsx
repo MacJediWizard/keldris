@@ -59,7 +59,11 @@ function FormField({
 				className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
 				required={required}
 			/>
-			{helpText && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{helpText}</p>}
+			{helpText && (
+				<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+					{helpText}
+				</p>
+			)}
 		</div>
 	);
 }
@@ -689,13 +693,17 @@ export function ImportRepositoryWizard({
 
 				<div className="grid grid-cols-2 gap-4">
 					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-						<p className="text-sm text-gray-500 dark:text-gray-400">Snapshots</p>
+						<p className="text-sm text-gray-500 dark:text-gray-400">
+							Snapshots
+						</p>
 						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{preview.snapshot_count}
 						</p>
 					</div>
 					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-						<p className="text-sm text-gray-500 dark:text-gray-400">Total Size</p>
+						<p className="text-sm text-gray-500 dark:text-gray-400">
+							Total Size
+						</p>
 						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{formatBytes(preview.total_size)}
 						</p>
@@ -783,7 +791,9 @@ export function ImportRepositoryWizard({
 									}}
 									className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 								/>
-								<span className="text-sm text-gray-700 dark:text-gray-300">{hostname}</span>
+								<span className="text-sm text-gray-700 dark:text-gray-300">
+									{hostname}
+								</span>
 							</label>
 						))}
 					</div>
@@ -846,8 +856,12 @@ export function ImportRepositoryWizard({
 	const renderImportingStep = () => (
 		<div className="py-8 text-center">
 			<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
-			<p className="text-gray-600 dark:text-gray-400">Importing repository...</p>
-			<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">This may take a moment</p>
+			<p className="text-gray-600 dark:text-gray-400">
+				Importing repository...
+			</p>
+			<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+				This may take a moment
+			</p>
 		</div>
 	);
 

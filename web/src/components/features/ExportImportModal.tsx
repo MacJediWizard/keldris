@@ -468,7 +468,9 @@ export function ExportImportModal({
 								{validationResult.errors &&
 									validationResult.errors.length > 0 && (
 										<div className="bg-red-50 dark:bg-red-900/30 rounded-lg p-4">
-											<h4 className="font-medium text-red-800 dark:text-red-400 mb-2">Errors:</h4>
+											<h4 className="font-medium text-red-800 dark:text-red-400 mb-2">
+												Errors:
+											</h4>
 											<ul className="text-sm text-red-700 dark:text-red-400 space-y-1">
 												{validationResult.errors.map((error) => (
 													<li key={`${error.field}-${error.message}`}>

@@ -169,7 +169,9 @@ export function RegionMapIndicator({
 	if (activeConfigs.length === 0) {
 		return (
 			<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 text-center">
-				<p className="text-sm text-gray-500 dark:text-gray-400">No geo-replication configured</p>
+				<p className="text-sm text-gray-500 dark:text-gray-400">
+					No geo-replication configured
+				</p>
 			</div>
 		);
 	}
@@ -190,7 +192,9 @@ export function RegionMapIndicator({
 			<div className="flex items-center gap-3">
 				<div className="flex items-center gap-1.5">
 					<span className="w-2 h-2 rounded-full bg-green-50 dark:bg-green-900/300" />
-					<span className="text-xs text-gray-600 dark:text-gray-400">{syncedCount} synced</span>
+					<span className="text-xs text-gray-600 dark:text-gray-400">
+						{syncedCount} synced
+					</span>
 				</div>
 				{syncingCount > 0 && (
 					<div className="flex items-center gap-1.5">
@@ -203,7 +207,9 @@ export function RegionMapIndicator({
 				{failedCount > 0 && (
 					<div className="flex items-center gap-1.5">
 						<span className="w-2 h-2 rounded-full bg-red-50 dark:bg-red-900/300" />
-						<span className="text-xs text-gray-600 dark:text-gray-400">{failedCount} failed</span>
+						<span className="text-xs text-gray-600 dark:text-gray-400">
+							{failedCount} failed
+						</span>
 					</div>
 				)}
 			</div>

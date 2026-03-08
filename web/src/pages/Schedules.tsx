@@ -74,7 +74,11 @@ interface CreateScheduleModalProps {
 	editSchedule?: Schedule;
 }
 
-function CreateScheduleModal({ isOpen, onClose, editSchedule }: CreateScheduleModalProps) {
+function CreateScheduleModal({
+	isOpen,
+	onClose,
+	editSchedule,
+}: CreateScheduleModalProps) {
 	const isEditMode = !!editSchedule;
 	const [name, setName] = useState('');
 	const [agentId, setAgentId] = useState('');
@@ -252,7 +256,10 @@ function CreateScheduleModal({ isOpen, onClose, editSchedule }: CreateScheduleMo
 				};
 
 				if (bandwidthLimitKb && Number.parseInt(bandwidthLimitKb, 10) > 0) {
-					updateData.data.bandwidth_limit_kb = Number.parseInt(bandwidthLimitKb, 10);
+					updateData.data.bandwidth_limit_kb = Number.parseInt(
+						bandwidthLimitKb,
+						10,
+					);
 				}
 				if (windowStart || windowEnd) {
 					updateData.data.backup_window = {
@@ -924,7 +931,8 @@ function CreateScheduleModal({ isOpen, onClose, editSchedule }: CreateScheduleMo
 					</div>
 					{(createSchedule.isError || updateSchedule.isError) && (
 						<p className="text-sm text-red-600 mt-4">
-							Failed to {isEditMode ? 'update' : 'create'} schedule. Please try again.
+							Failed to {isEditMode ? 'update' : 'create'} schedule. Please try
+							again.
 						</p>
 					)}
 					<div className="flex justify-end gap-3 mt-6">
@@ -941,8 +949,12 @@ function CreateScheduleModal({ isOpen, onClose, editSchedule }: CreateScheduleMo
 							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
 						>
 							{isEditMode
-								? updateSchedule.isPending ? 'Saving...' : 'Save Changes'
-								: createSchedule.isPending ? 'Creating...' : 'Create Schedule'}
+								? updateSchedule.isPending
+									? 'Saving...'
+									: 'Save Changes'
+								: createSchedule.isPending
+									? 'Creating...'
+									: 'Create Schedule'}
 						</button>
 					</div>
 				</form>
@@ -1799,7 +1811,11 @@ export function Schedules() {
 				excluded_files: [],
 				message: cmd.result.output || '',
 			});
-		} else if (cmd.status === 'failed' || cmd.status === 'timed_out' || cmd.status === 'canceled') {
+		} else if (
+			cmd.status === 'failed' ||
+			cmd.status === 'timed_out' ||
+			cmd.status === 'canceled'
+		) {
 			setDryRunError(new Error(cmd.result?.error || `Command ${cmd.status}`));
 		}
 	}, [dryRunCommand.data]);
@@ -2036,7 +2052,9 @@ export function Schedules() {
 	const handleRun = (id: string) => {
 		runSchedule.mutate(id, {
 			onSuccess: () => {
-				alert('Backup command sent to agent. It will start within 60 seconds on the next heartbeat.');
+				alert(
+					'Backup command sent to agent. It will start within 60 seconds on the next heartbeat.',
+				);
 			},
 		});
 	};
@@ -2308,7 +2326,10 @@ export function Schedules() {
 										isUpdating={updateSchedule.isPending}
 										isDeleting={deleteSchedule.isPending}
 										isRunning={runSchedule.isPending}
-										isDryRunning={dryRunSchedule.isPending || (!!dryRunCommandId && !dryRunResults && !dryRunError)}
+										isDryRunning={
+											dryRunSchedule.isPending ||
+											(!!dryRunCommandId && !dryRunResults && !dryRunError)
+										}
 										isSelected={bulkSelect.isSelected(schedule.id)}
 										onToggleSelect={() => bulkSelect.toggle(schedule.id)}
 									/>
@@ -2465,7 +2486,10 @@ export function Schedules() {
 				isOpen={showDryRunModal}
 				onClose={handleCloseDryRunModal}
 				results={dryRunResults}
-				isLoading={dryRunSchedule.isPending || (!!dryRunCommandId && !dryRunResults && !dryRunError)}
+				isLoading={
+					dryRunSchedule.isPending ||
+					(!!dryRunCommandId && !dryRunResults && !dryRunError)
+				}
 				error={dryRunError}
 			/>
 

@@ -217,8 +217,12 @@ function ScheduleRow({ schedule, onRun, isRunning }: ScheduleRowProps) {
 	return (
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4">
-				<div className="font-medium text-gray-900 dark:text-white">{schedule.name}</div>
-				<div className="text-sm text-gray-500 dark:text-gray-400">{schedule.cron_expression}</div>
+				<div className="font-medium text-gray-900 dark:text-white">
+					{schedule.name}
+				</div>
+				<div className="text-sm text-gray-500 dark:text-gray-400">
+					{schedule.cron_expression}
+				</div>
 			</td>
 			<td className="px-6 py-4">
 				<span
@@ -271,9 +275,17 @@ function ScheduleRow({ schedule, onRun, isRunning }: ScheduleRowProps) {
 function getCommandStatusColor(status: CommandStatus) {
 	switch (status) {
 		case 'pending':
-			return { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-200', dot: 'bg-gray-400' };
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-700',
+				text: 'text-gray-800 dark:text-gray-200',
+				dot: 'bg-gray-400',
+			};
 		case 'acknowledged':
-			return { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-800 dark:text-blue-400', dot: 'bg-blue-400' };
+			return {
+				bg: 'bg-blue-100 dark:bg-blue-900/30',
+				text: 'text-blue-800 dark:text-blue-400',
+				dot: 'bg-blue-400',
+			};
 		case 'running':
 			return {
 				bg: 'bg-yellow-100 dark:bg-yellow-900/30',
@@ -287,7 +299,11 @@ function getCommandStatusColor(status: CommandStatus) {
 				dot: 'bg-green-400',
 			};
 		case 'failed':
-			return { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-400', dot: 'bg-red-400' };
+			return {
+				bg: 'bg-red-100 dark:bg-red-900/30',
+				text: 'text-red-800 dark:text-red-400',
+				dot: 'bg-red-400',
+			};
 		case 'timed_out':
 			return {
 				bg: 'bg-orange-100 dark:bg-orange-900/30',
@@ -295,9 +311,17 @@ function getCommandStatusColor(status: CommandStatus) {
 				dot: 'bg-orange-400',
 			};
 		case 'canceled':
-			return { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-400', dot: 'bg-gray-400' };
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-700',
+				text: 'text-gray-600 dark:text-gray-400',
+				dot: 'bg-gray-400',
+			};
 		default:
-			return { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-800 dark:text-gray-200', dot: 'bg-gray-400' };
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-700',
+				text: 'text-gray-800 dark:text-gray-200',
+				dot: 'bg-gray-400',
+			};
 	}
 }
 
@@ -541,7 +565,9 @@ export function AgentDetails() {
 	if (!agent) {
 		return (
 			<div className="text-center py-12">
-				<h2 className="text-xl font-semibold text-gray-900 dark:text-white">Agent not found</h2>
+				<h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+					Agent not found
+				</h2>
 				<p className="text-gray-500 dark:text-gray-400 mt-2">
 					The agent you're looking for doesn't exist.
 				</p>
@@ -910,7 +936,9 @@ export function AgentDetails() {
 				) : (
 					<>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Backups</p>
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+								Total Backups
+							</p>
 							<p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
 								{stats?.total_backups ?? 0}
 							</p>
@@ -920,7 +948,9 @@ export function AgentDetails() {
 							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Success Rate</p>
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+								Success Rate
+							</p>
 							<p
 								className={`text-3xl font-bold mt-1 ${
 									(stats?.success_rate ?? 0) >= 90
@@ -943,10 +973,14 @@ export function AgentDetails() {
 							<p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
 								{formatBytes(stats?.total_size_bytes)}
 							</p>
-							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Across all backups</p>
+							<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+								Across all backups
+							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Last Backup</p>
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+								Last Backup
+							</p>
 							<p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
 								{formatDate(stats?.last_backup_at)}
 							</p>
@@ -966,34 +1000,46 @@ export function AgentDetails() {
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 					<div>
 						<p className="text-sm text-gray-600 dark:text-gray-400">Hostname</p>
-						<p className="font-medium text-gray-900 dark:text-white">{agent.hostname}</p>
+						<p className="font-medium text-gray-900 dark:text-white">
+							{agent.hostname}
+						</p>
 					</div>
 					<div>
-						<p className="text-sm text-gray-600 dark:text-gray-400">Operating System</p>
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Operating System
+						</p>
 						<p className="font-medium text-gray-900 dark:text-white">
 							{agent.os_info?.os ?? 'Unknown'}
 						</p>
 					</div>
 					<div>
-						<p className="text-sm text-gray-600 dark:text-gray-400">Architecture</p>
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Architecture
+						</p>
 						<p className="font-medium text-gray-900 dark:text-white">
 							{agent.os_info?.arch ?? 'Unknown'}
 						</p>
 					</div>
 					<div>
-						<p className="text-sm text-gray-600 dark:text-gray-400">OS Version</p>
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							OS Version
+						</p>
 						<p className="font-medium text-gray-900 dark:text-white">
 							{agent.os_info?.version ?? 'Unknown'}
 						</p>
 					</div>
 					<div>
-						<p className="text-sm text-gray-600 dark:text-gray-400">Registered</p>
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Registered
+						</p>
 						<p className="font-medium text-gray-900 dark:text-white">
 							{formatDateTime(agent.created_at)}
 						</p>
 					</div>
 					<div>
-						<p className="text-sm text-gray-600 dark:text-gray-400">Last Seen</p>
+						<p className="text-sm text-gray-600 dark:text-gray-400">
+							Last Seen
+						</p>
 						<p className="font-medium text-gray-900 dark:text-white">
 							{formatDateTime(agent.last_seen)}
 						</p>
@@ -1041,13 +1087,17 @@ export function AgentDetails() {
 						<>
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
 								<div>
-									<p className="text-sm text-gray-600 dark:text-gray-400">Docker Version</p>
+									<p className="text-sm text-gray-600 dark:text-gray-400">
+										Docker Version
+									</p>
 									<p className="font-medium text-gray-900 dark:text-white">
 										{agent.docker_info.version ?? 'Unknown'}
 									</p>
 								</div>
 								<div>
-									<p className="text-sm text-gray-600 dark:text-gray-400">Containers</p>
+									<p className="text-sm text-gray-600 dark:text-gray-400">
+										Containers
+									</p>
 									<p className="font-medium text-gray-900 dark:text-white">
 										{agent.docker_info.container_count}
 										<span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
@@ -1056,14 +1106,18 @@ export function AgentDetails() {
 									</p>
 								</div>
 								<div>
-									<p className="text-sm text-gray-600 dark:text-gray-400">Volumes</p>
+									<p className="text-sm text-gray-600 dark:text-gray-400">
+										Volumes
+									</p>
 									<p className="font-medium text-gray-900 dark:text-white">
 										{agent.docker_info.volume_count}
 									</p>
 								</div>
 								{agent.docker_info.detected_at && (
 									<div>
-										<p className="text-sm text-gray-600 dark:text-gray-400">Last Detected</p>
+										<p className="text-sm text-gray-600 dark:text-gray-400">
+											Last Detected
+										</p>
 										<p className="font-medium text-gray-900 dark:text-white">
 											{formatDateTime(agent.docker_info.detected_at)}
 										</p>
@@ -1095,7 +1149,10 @@ export function AgentDetails() {
 												</thead>
 												<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 													{agent.docker_info.containers.map((container) => (
-														<tr key={container.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+														<tr
+															key={container.id}
+															className="hover:bg-gray-50 dark:hover:bg-gray-700"
+														>
 															<td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
 																{container.name}
 															</td>
@@ -1147,7 +1204,10 @@ export function AgentDetails() {
 												</thead>
 												<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 													{agent.docker_info.volumes.map((volume) => (
-														<tr key={volume.name} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+														<tr
+															key={volume.name}
+															className="hover:bg-gray-50 dark:hover:bg-gray-700"
+														>
 															<td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
 																{volume.name}
 															</td>
@@ -1268,19 +1328,25 @@ export function AgentDetails() {
 				) : (
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 						<div>
-							<p className="text-sm text-gray-600 dark:text-gray-400">Max Concurrent Backups</p>
+							<p className="text-sm text-gray-600 dark:text-gray-400">
+								Max Concurrent Backups
+							</p>
 							<p className="font-medium text-gray-900 dark:text-white">
 								{concurrencyLoading ? (
 									<span className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse inline-block" />
 								) : concurrencyData?.max_concurrent_backups != null ? (
 									concurrencyData.max_concurrent_backups
 								) : (
-									<span className="text-gray-500 dark:text-gray-400">Use org default</span>
+									<span className="text-gray-500 dark:text-gray-400">
+										Use org default
+									</span>
 								)}
 							</p>
 						</div>
 						<div>
-							<p className="text-sm text-gray-600 dark:text-gray-400">Currently Running</p>
+							<p className="text-sm text-gray-600 dark:text-gray-400">
+								Currently Running
+							</p>
 							<p className="font-medium text-gray-900 dark:text-white">
 								{concurrencyData?.running_count ?? 0}
 							</p>
@@ -1393,7 +1459,10 @@ export function AgentDetails() {
 							<div className="p-6">
 								<div className="animate-pulse space-y-4">
 									{[1, 2, 3].map((i) => (
-										<div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 rounded" />
+										<div
+											key={i}
+											className="h-12 bg-gray-100 dark:bg-gray-700 rounded"
+										/>
 									))}
 								</div>
 							</div>
@@ -1455,7 +1524,10 @@ export function AgentDetails() {
 							<div className="p-6">
 								<div className="animate-pulse space-y-4">
 									{[1, 2, 3].map((i) => (
-										<div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 rounded" />
+										<div
+											key={i}
+											className="h-12 bg-gray-100 dark:bg-gray-700 rounded"
+										/>
 									))}
 								</div>
 							</div>
@@ -1722,7 +1794,9 @@ export function AgentDetails() {
 										d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
 									/>
 								</svg>
-								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">CPU Usage</p>
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+									CPU Usage
+								</p>
 							</div>
 							<p
 								className={`text-3xl font-bold ${
@@ -1784,7 +1858,9 @@ export function AgentDetails() {
 										d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
 									/>
 								</svg>
-								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Disk Usage</p>
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+									Disk Usage
+								</p>
 							</div>
 							<p
 								className={`text-3xl font-bold ${
@@ -1820,7 +1896,9 @@ export function AgentDetails() {
 										d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
 									/>
 								</svg>
-								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Uptime</p>
+								<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+									Uptime
+								</p>
 							</div>
 							<p className="text-3xl font-bold text-gray-900 dark:text-white">
 								{formatUptime(agent.health_metrics?.uptime_seconds)}
@@ -1880,13 +1958,17 @@ export function AgentDetails() {
 						</h3>
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 							<div>
-								<p className="text-sm text-gray-600 dark:text-gray-400">Version</p>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									Version
+								</p>
 								<p className="font-medium text-gray-900 dark:text-white">
 									{agent.health_metrics?.restic_version || 'Unknown'}
 								</p>
 							</div>
 							<div>
-								<p className="text-sm text-gray-600 dark:text-gray-400">Available</p>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									Available
+								</p>
 								<span
 									className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
 										agent.health_metrics?.restic_available
@@ -1898,7 +1980,9 @@ export function AgentDetails() {
 								</span>
 							</div>
 							<div>
-								<p className="text-sm text-gray-600 dark:text-gray-400">Network</p>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									Network
+								</p>
 								<span
 									className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
 										agent.health_metrics?.network_up
@@ -2039,7 +2123,10 @@ export function AgentDetails() {
 												.map((h: AgentHealthHistory) => {
 													const hColor = getHealthStatusColor(h.health_status);
 													return (
-														<tr key={h.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+														<tr
+															key={h.id}
+															className="hover:bg-gray-50 dark:hover:bg-gray-700"
+														>
 															<td className="px-4 py-2 text-gray-900 dark:text-white">
 																{formatDateTime(h.recorded_at)}
 															</td>
@@ -2103,7 +2190,9 @@ export function AgentDetails() {
 			{activeTab === 'commands' && (
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 					<div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-						<h3 className="font-semibold text-gray-900 dark:text-white">Command History</h3>
+						<h3 className="font-semibold text-gray-900 dark:text-white">
+							Command History
+						</h3>
 						<span className="text-sm text-gray-500 dark:text-gray-400">
 							Showing last 50 commands
 						</span>
@@ -2176,10 +2265,14 @@ export function AgentDetails() {
 
 			{/* Uninstall Agent */}
 			<div className="bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-800 p-6">
-				<h3 className="text-lg font-semibold text-red-900 dark:text-red-400 mb-3">Uninstall Agent</h3>
+				<h3 className="text-lg font-semibold text-red-900 dark:text-red-400 mb-3">
+					Uninstall Agent
+				</h3>
 				<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-					Remotely uninstall the agent from <strong>{agent.hostname}</strong>. The agent must be online to receive the uninstall command.
-					Deleting the agent from the dashboard only removes it from the database — use these buttons to also remove the binary and service from the host.
+					Remotely uninstall the agent from <strong>{agent.hostname}</strong>.
+					The agent must be online to receive the uninstall command. Deleting
+					the agent from the dashboard only removes it from the database — use
+					these buttons to also remove the binary and service from the host.
 				</p>
 				<div className="flex items-center gap-3">
 					<button
@@ -2188,8 +2281,19 @@ export function AgentDetails() {
 						disabled={createCommand.isPending || agent.status !== 'active'}
 						className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 dark:text-red-400 dark:bg-red-900/30 dark:border-red-800 dark:hover:bg-red-900/50"
 					>
-						<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						<svg
+							aria-hidden="true"
+							className="w-4 h-4"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+							/>
 						</svg>
 						Uninstall
 					</button>
@@ -2199,15 +2303,28 @@ export function AgentDetails() {
 						disabled={createCommand.isPending || agent.status !== 'active'}
 						className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 border border-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 dark:bg-red-700 dark:border-red-700 dark:hover:bg-red-800"
 					>
-						<svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						<svg
+							aria-hidden="true"
+							className="w-4 h-4"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+							/>
 						</svg>
 						Uninstall &amp; Purge Data
 					</button>
 				</div>
 				<p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-					<strong>Uninstall</strong> removes the service and binary. <strong>Uninstall &amp; Purge Data</strong> also removes config, data, and managed restic binary.
-					The agent must be online to process the command.
+					<strong>Uninstall</strong> removes the service and binary.{' '}
+					<strong>Uninstall &amp; Purge Data</strong> also removes config, data,
+					and managed restic binary. The agent must be online to process the
+					command.
 				</p>
 			</div>
 

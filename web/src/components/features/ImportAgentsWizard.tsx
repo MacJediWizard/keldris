@@ -273,7 +273,9 @@ export function ImportAgentsWizard({
 								d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
 							/>
 						</svg>
-						<p className="text-sm font-medium text-green-700 dark:text-green-400">{file.name}</p>
+						<p className="text-sm font-medium text-green-700 dark:text-green-400">
+							{file.name}
+						</p>
 						<p className="text-xs text-green-600 mt-1">
 							{(file.size / 1024).toFixed(1)} KB
 						</p>
@@ -370,7 +372,10 @@ export function ImportAgentsWizard({
 							onChange={(e) => setHasHeader(e.target.checked)}
 							className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 						/>
-						<label htmlFor="has-header" className="text-sm text-gray-700 dark:text-gray-300">
+						<label
+							htmlFor="has-header"
+							className="text-sm text-gray-700 dark:text-gray-300"
+						>
 							First row contains headers
 						</label>
 					</div>
@@ -458,7 +463,10 @@ export function ImportAgentsWizard({
 							onChange={(e) => setCreateMissingGroups(e.target.checked)}
 							className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 						/>
-						<label htmlFor="create-groups" className="text-sm text-gray-700 dark:text-gray-300">
+						<label
+							htmlFor="create-groups"
+							className="text-sm text-gray-700 dark:text-gray-300"
+						>
 							Create missing groups automatically
 						</label>
 					</div>
@@ -500,7 +508,9 @@ export function ImportAgentsWizard({
 						<p className="text-2xl font-bold text-gray-900 dark:text-white">
 							{preview.total_rows}
 						</p>
-						<p className="text-xs text-gray-500 dark:text-gray-400">Total Rows</p>
+						<p className="text-xs text-gray-500 dark:text-gray-400">
+							Total Rows
+						</p>
 					</div>
 					<div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 text-center">
 						<p className="text-2xl font-bold text-green-600">
@@ -644,7 +654,9 @@ export function ImportAgentsWizard({
 		<div className="py-8 text-center">
 			<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
 			<p className="text-gray-600 dark:text-gray-400">Importing agents...</p>
-			<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">This may take a moment</p>
+			<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+				This may take a moment
+			</p>
 		</div>
 	);
 

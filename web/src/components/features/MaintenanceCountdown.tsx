@@ -199,7 +199,9 @@ export function MaintenanceCountdown() {
 					{showCountdown && countdown && (
 						<span
 							className={`font-mono px-2 py-0.5 rounded ${
-								countdown.isUrgent ? 'bg-white dark:bg-gray-800/30 animate-pulse' : 'bg-white dark:bg-gray-800/20'
+								countdown.isUrgent
+									? 'bg-white dark:bg-gray-800/30 animate-pulse'
+									: 'bg-white dark:bg-gray-800/20'
 							}`}
 						>
 							{countdown.display}

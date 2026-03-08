@@ -57,7 +57,11 @@ function FormField({
 				className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 				required={required}
 			/>
-			{helpText && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{helpText}</p>}
+			{helpText && (
+				<p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+					{helpText}
+				</p>
+			)}
 		</div>
 	);
 }
@@ -357,7 +361,9 @@ export function DockerRestoreWizard({
 							}}
 							className="text-indigo-600 focus:ring-indigo-500"
 						/>
-						<span className="text-sm text-gray-700 dark:text-gray-300">Volume only</span>
+						<span className="text-sm text-gray-700 dark:text-gray-300">
+							Volume only
+						</span>
 					</label>
 				</div>
 			</div>
@@ -490,8 +496,12 @@ export function DockerRestoreWizard({
 						<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
 							Container
 						</h4>
-						<p className="text-sm text-gray-900 dark:text-white">{preview.container.name}</p>
-						<p className="text-xs text-gray-500 dark:text-gray-400">{preview.container.image}</p>
+						<p className="text-sm text-gray-900 dark:text-white">
+							{preview.container.name}
+						</p>
+						<p className="text-xs text-gray-500 dark:text-gray-400">
+							{preview.container.image}
+						</p>
 					</div>
 				)}
 
@@ -517,7 +527,9 @@ export function DockerRestoreWizard({
 
 				<div className="grid grid-cols-2 gap-4">
 					<div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-						<p className="text-sm text-gray-500 dark:text-gray-400">Total Size</p>
+						<p className="text-sm text-gray-500 dark:text-gray-400">
+							Total Size
+						</p>
 						<p className="text-xl font-bold text-gray-900 dark:text-white">
 							{formatBytes(preview.total_size_bytes)}
 						</p>
@@ -586,7 +598,9 @@ export function DockerRestoreWizard({
 							onChange={() => setTargetType('local')}
 							className="text-indigo-600 focus:ring-indigo-500"
 						/>
-						<span className="text-sm text-gray-700 dark:text-gray-300">Local Docker Host</span>
+						<span className="text-sm text-gray-700 dark:text-gray-300">
+							Local Docker Host
+						</span>
 					</label>
 					<label className="flex items-center gap-2">
 						<input
@@ -597,7 +611,9 @@ export function DockerRestoreWizard({
 							onChange={() => setTargetType('remote')}
 							className="text-indigo-600 focus:ring-indigo-500"
 						/>
-						<span className="text-sm text-gray-700 dark:text-gray-300">Remote Docker Host</span>
+						<span className="text-sm text-gray-700 dark:text-gray-300">
+							Remote Docker Host
+						</span>
 					</label>
 				</div>
 			</div>
@@ -649,7 +665,10 @@ export function DockerRestoreWizard({
 						onChange={(e) => setOverwriteExisting(e.target.checked)}
 						className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 					/>
-					<label htmlFor="overwrite-existing" className="text-sm text-gray-700 dark:text-gray-300">
+					<label
+						htmlFor="overwrite-existing"
+						className="text-sm text-gray-700 dark:text-gray-300"
+					>
 						Overwrite existing containers/volumes
 					</label>
 				</div>
@@ -681,7 +700,10 @@ export function DockerRestoreWizard({
 									onChange={(e) => setVerifyStart(e.target.checked)}
 									className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
 								/>
-								<label htmlFor="verify-start" className="text-sm text-gray-700 dark:text-gray-300">
+								<label
+									htmlFor="verify-start"
+									className="text-sm text-gray-700 dark:text-gray-300"
+								>
 									Verify container starts successfully
 								</label>
 							</div>
@@ -695,8 +717,12 @@ export function DockerRestoreWizard({
 	const renderRestoringStep = () => (
 		<div className="py-8 text-center">
 			<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
-			<p className="text-gray-600 dark:text-gray-400">Starting Docker restore...</p>
-			<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">This may take a moment</p>
+			<p className="text-gray-600 dark:text-gray-400">
+				Starting Docker restore...
+			</p>
+			<p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+				This may take a moment
+			</p>
 		</div>
 	);
 

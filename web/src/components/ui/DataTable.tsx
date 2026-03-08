@@ -118,7 +118,10 @@ export function DataTable<T extends Record<string, unknown>>({
 							</tr>
 						) : (
 							pageData.map((row) => (
-								<tr key={String(row[keyField])} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+								<tr
+									key={String(row[keyField])}
+									className="hover:bg-gray-50 dark:hover:bg-gray-700"
+								>
 									{columns.map((col) => (
 										<td
 											key={col.key}

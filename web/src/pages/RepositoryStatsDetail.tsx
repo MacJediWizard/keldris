@@ -86,7 +86,9 @@ export function RepositoryStatsDetail() {
 				) : stats ? (
 					<>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Dedup Ratio</p>
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+								Dedup Ratio
+							</p>
 							<p
 								className={`text-3xl font-bold mt-1 ${getDedupRatioColor(stats.dedup_ratio)}`}
 							>
@@ -97,7 +99,9 @@ export function RepositoryStatsDetail() {
 							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Space Saved</p>
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+								Space Saved
+							</p>
 							<p
 								className={`text-3xl font-bold mt-1 ${getSpaceSavedColor(stats.space_saved_pct)}`}
 							>
@@ -119,7 +123,9 @@ export function RepositoryStatsDetail() {
 							</p>
 						</div>
 						<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">Original Size</p>
+							<p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+								Original Size
+							</p>
 							<p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
 								{formatBytes(stats.restore_size)}
 							</p>
@@ -192,11 +198,15 @@ export function RepositoryStatsDetail() {
 							<div className="flex items-center justify-center gap-4 mt-3">
 								<div className="flex items-center gap-1">
 									<div className="w-2 h-2 bg-indigo-500 rounded" />
-									<span className="text-xs text-gray-600 dark:text-gray-400">Stored</span>
+									<span className="text-xs text-gray-600 dark:text-gray-400">
+										Stored
+									</span>
 								</div>
 								<div className="flex items-center gap-1">
 									<div className="w-2 h-2 bg-gray-200 dark:bg-gray-700 rounded" />
-									<span className="text-xs text-gray-600 dark:text-gray-400">Original</span>
+									<span className="text-xs text-gray-600 dark:text-gray-400">
+										Original
+									</span>
 								</div>
 							</div>
 						</div>
@@ -292,7 +302,10 @@ export function RepositoryStatsDetail() {
 					<div className="p-6">
 						<div className="animate-pulse space-y-4">
 							{[1, 2, 3].map((i) => (
-								<div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 rounded" />
+								<div
+									key={i}
+									className="h-12 bg-gray-100 dark:bg-gray-700 rounded"
+								/>
 							))}
 						</div>
 					</div>

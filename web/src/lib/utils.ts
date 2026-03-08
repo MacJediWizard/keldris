@@ -188,9 +188,17 @@ export function getRepositoryTypeBadge(type: string): {
 		case 'dropbox':
 			return { label: 'Dropbox', className: 'bg-sky-100 text-sky-800' };
 		case 'azure':
-			return { label: 'Azure Blob', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' };
+			return {
+				label: 'Azure Blob',
+				className:
+					'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+			};
 		case 'gcs':
-			return { label: 'Google Cloud', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' };
+			return {
+				label: 'Google Cloud',
+				className:
+					'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+			};
 		default:
 			return { label: type, className: 'bg-gray-100 text-gray-800' };
 	}

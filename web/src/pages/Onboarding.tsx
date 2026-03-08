@@ -2403,7 +2403,9 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 	// Async dry run command tracking
 	const [dryRunCommandId, setDryRunCommandId] = useState<string | null>(null);
 	const [dryRunAgentId, setDryRunAgentId] = useState<string | null>(null);
-	const [activeDryRunScheduleId, setActiveDryRunScheduleId] = useState<string | null>(null);
+	const [activeDryRunScheduleId, setActiveDryRunScheduleId] = useState<
+		string | null
+	>(null);
 	const dryRunCommand = useCommandResult(dryRunAgentId, dryRunCommandId);
 	const [triggeredScheduleIds, setTriggeredScheduleIds] = useState<Set<string>>(
 		new Set(),
@@ -2437,7 +2439,11 @@ function VerifyStep({ onComplete, onSkip, isLoading }: StepProps) {
 			setDryRunCommandId(null);
 			setDryRunAgentId(null);
 			setActiveDryRunScheduleId(null);
-		} else if (cmd.status === 'failed' || cmd.status === 'timed_out' || cmd.status === 'canceled') {
+		} else if (
+			cmd.status === 'failed' ||
+			cmd.status === 'timed_out' ||
+			cmd.status === 'canceled'
+		) {
 			setDryRunErrors((prev) => ({
 				...prev,
 				[activeDryRunScheduleId]: cmd.result?.error || `Command ${cmd.status}`,

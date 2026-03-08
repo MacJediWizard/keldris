@@ -84,14 +84,22 @@ export function useDryRunSchedule() {
 	});
 }
 
-export function useCommandResult(agentId: string | null, commandId: string | null) {
+export function useCommandResult(
+	agentId: string | null,
+	commandId: string | null,
+) {
 	return useQuery({
 		queryKey: ['agents', agentId, 'commands', commandId],
-		queryFn: () => agentsApi.getCommand(agentId!, commandId!),
+		queryFn: () => agentsApi.getCommand(agentId as string, commandId as string),
 		enabled: !!agentId && !!commandId,
 		refetchInterval: (query) => {
 			const status = query.state.data?.status;
-			if (status === 'completed' || status === 'failed' || status === 'timed_out' || status === 'canceled') {
+			if (
+				status === 'completed' ||
+				status === 'failed' ||
+				status === 'timed_out' ||
+				status === 'canceled'
+			) {
 				return false;
 			}
 			return 2000;

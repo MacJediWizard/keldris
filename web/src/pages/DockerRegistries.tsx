@@ -30,7 +30,11 @@ function getHealthStatusColor(status: string) {
 				dot: 'bg-green-500',
 			};
 		case 'unhealthy':
-			return { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-500' };
+			return {
+				bg: 'bg-red-100 dark:bg-red-900/30',
+				text: 'text-red-700 dark:text-red-400',
+				dot: 'bg-red-500',
+			};
 		default:
 			return {
 				bg: 'bg-gray-100 dark:bg-gray-700',
@@ -144,7 +148,9 @@ function RegistryCard({
 				</div>
 				{registry.credentials_expires_at && (
 					<div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-						<span className="w-24 text-gray-500 dark:text-gray-400">Expires:</span>
+						<span className="w-24 text-gray-500 dark:text-gray-400">
+							Expires:
+						</span>
 						<span
 							className={
 								new Date(registry.credentials_expires_at) < new Date()

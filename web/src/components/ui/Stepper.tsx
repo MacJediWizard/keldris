@@ -121,7 +121,9 @@ export function VerticalStepper({
 								{!isLast && (
 									<div
 										className={`absolute left-5 top-10 h-full w-0.5 -translate-x-1/2 ${
-											isCompleted ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'
+											isCompleted
+												? 'bg-indigo-600'
+												: 'bg-gray-300 dark:bg-gray-600'
 										}`}
 									/>
 								)}

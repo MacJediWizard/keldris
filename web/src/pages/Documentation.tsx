@@ -295,7 +295,9 @@ export function Documentation() {
 			}
 		} catch (err) {
 			console.error('Search failed:', err);
-			setSearchError('Search failed. Please check your connection and try again.');
+			setSearchError(
+				'Search failed. Please check your connection and try again.',
+			);
 		}
 	};
 
@@ -341,7 +343,9 @@ export function Documentation() {
 				<DocSidebar currentSlug={slug} onSearch={handleSearch} />
 				<div className="flex-1 p-6">
 					<div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
-						<p className="text-red-800 dark:text-red-400 font-medium">{searchError}</p>
+						<p className="text-red-800 dark:text-red-400 font-medium">
+							{searchError}
+						</p>
 					</div>
 				</div>
 			</div>

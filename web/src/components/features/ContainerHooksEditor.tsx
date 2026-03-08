@@ -144,8 +144,12 @@ function HookForm({
 	return (
 		<form onSubmit={handleSubmit} className="space-y-4">
 			<div>
-				<h4 className="text-sm font-medium text-gray-900 dark:text-white">{typeInfo?.label}</h4>
-				<p className="text-xs text-gray-500 dark:text-gray-400">{typeInfo?.description}</p>
+				<h4 className="text-sm font-medium text-gray-900 dark:text-white">
+					{typeInfo?.label}
+				</h4>
+				<p className="text-xs text-gray-500 dark:text-gray-400">
+					{typeInfo?.description}
+				</p>
 			</div>
 
 			<div>
@@ -358,7 +362,9 @@ function HookForm({
 							onChange={(e) => setEnabled(e.target.checked)}
 							className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded"
 						/>
-						<span className="text-sm text-gray-700 dark:text-gray-300">Enabled</span>
+						<span className="text-sm text-gray-700 dark:text-gray-300">
+							Enabled
+						</span>
 					</label>
 				</div>
 			</div>
@@ -464,7 +470,9 @@ function HookCard({ hook, scheduleId, onEdit }: HookCardProps) {
 						)}
 					</div>
 					{hook.description && (
-						<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{hook.description}</p>
+						<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+							{hook.description}
+						</p>
 					)}
 				</div>
 				<div className="flex items-center gap-2">
@@ -494,7 +502,9 @@ function HookCard({ hook, scheduleId, onEdit }: HookCardProps) {
 				{hook.working_dir && <span>Dir: {hook.working_dir}</span>}
 				{hook.user && <span>User: {hook.user}</span>}
 				{hook.type === 'pre_backup' && hook.fail_on_error && (
-					<span className="text-amber-600 dark:text-amber-400">Fails backup on error</span>
+					<span className="text-amber-600 dark:text-amber-400">
+						Fails backup on error
+					</span>
 				)}
 			</div>
 		</div>
@@ -531,7 +541,9 @@ export function ContainerHooksEditor({
 		return (
 			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 				<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4">
-					<p className="text-red-600 dark:text-red-400">Failed to load container hooks</p>
+					<p className="text-red-600 dark:text-red-400">
+						Failed to load container hooks
+					</p>
 					<button
 						type="button"
 						onClick={onClose}

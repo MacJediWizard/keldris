@@ -35,7 +35,11 @@ export function MetadataSchemaManager({
 		entityType.charAt(0).toUpperCase() + entityType.slice(1);
 
 	if (isLoading) {
-		return <div className="text-sm text-gray-500 dark:text-gray-400">Loading schemas...</div>;
+		return (
+			<div className="text-sm text-gray-500 dark:text-gray-400">
+				Loading schemas...
+			</div>
+		);
 	}
 
 	return (
@@ -149,7 +153,9 @@ function SchemaCard({ schema, onEdit, onDelete, isDeleting }: SchemaCardProps) {
 		<div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex items-center justify-between">
 			<div className="flex-1">
 				<div className="flex items-center gap-2">
-					<span className="font-medium text-gray-900 dark:text-white">{schema.name}</span>
+					<span className="font-medium text-gray-900 dark:text-white">
+						{schema.name}
+					</span>
 					<span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
 						{fieldTypeLabels[schema.field_type]}
 					</span>
@@ -161,7 +167,9 @@ function SchemaCard({ schema, onEdit, onDelete, isDeleting }: SchemaCardProps) {
 				</div>
 				<div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
 					Key:{' '}
-					<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{schema.field_key}</code>
+					<code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+						{schema.field_key}
+					</code>
 					{schema.description && <span> - {schema.description}</span>}
 				</div>
 				{schema.field_type === 'select' && schema.options && (
@@ -515,7 +523,10 @@ function SchemaForm({
 					onChange={(e) => setRequired(e.target.checked)}
 					className="rounded border-gray-300 dark:border-gray-600 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
 				/>
-				<label htmlFor="required" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+				<label
+					htmlFor="required"
+					className="ml-2 text-sm text-gray-700 dark:text-gray-300"
+				>
 					Required field
 				</label>
 			</div>

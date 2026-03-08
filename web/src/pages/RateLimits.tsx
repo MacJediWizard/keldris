@@ -181,7 +181,9 @@ export function RateLimits() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Rate Limits</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Rate Limits
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Configure rate limiting for API endpoints
 					</p>
@@ -218,7 +220,9 @@ export function RateLimits() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">Rate Limits</h1>
+					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+						Rate Limits
+					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mt-1">
 						Configure rate limiting for API endpoints
 					</p>
@@ -228,7 +232,9 @@ export function RateLimits() {
 			{/* Stats Cards */}
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-					<div className="text-sm font-medium text-gray-500 dark:text-gray-400">Blocked Today</div>
+					<div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+						Blocked Today
+					</div>
 					<div className="mt-1 text-3xl font-bold text-red-600">
 						{stats?.blocked_today ?? 0}
 					</div>
@@ -242,7 +248,9 @@ export function RateLimits() {
 					</div>
 				</div>
 				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-					<div className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Bans</div>
+					<div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+						Active Bans
+					</div>
 					<div className="mt-1 text-3xl font-bold text-amber-600">
 						{bans?.filter(isBanActive).length ?? 0}
 					</div>
@@ -430,7 +438,9 @@ export function RateLimits() {
 											}
 											className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
 										/>
-										<span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Enabled</span>
+										<span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+											Enabled
+										</span>
 									</label>
 								</div>
 							</div>
@@ -465,7 +475,10 @@ export function RateLimits() {
 				) : (
 					<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 						{configs?.map((config) => (
-							<li key={config.id} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700">
+							<li
+								key={config.id}
+								className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700"
+							>
 								<div className="flex items-center justify-between">
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center gap-2">
@@ -514,7 +527,9 @@ export function RateLimits() {
 			{/* IP Bans Section */}
 			<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 				<div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-					<h2 className="text-lg font-medium text-gray-900 dark:text-white">IP Bans</h2>
+					<h2 className="text-lg font-medium text-gray-900 dark:text-white">
+						IP Bans
+					</h2>
 					{!showBanForm && (
 						<button
 							type="button"
@@ -643,7 +658,10 @@ export function RateLimits() {
 				) : (
 					<ul className="divide-y divide-gray-200 dark:divide-gray-700">
 						{bans?.map((ban) => (
-							<li key={ban.id} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700">
+							<li
+								key={ban.id}
+								className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700"
+							>
 								<div className="flex items-center justify-between">
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center gap-2">
@@ -720,7 +738,10 @@ export function RateLimits() {
 							</thead>
 							<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 								{blockedRequests.slice(0, 20).map((req) => (
-									<tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+									<tr
+										key={req.id}
+										className="hover:bg-gray-50 dark:hover:bg-gray-700"
+									>
 										<td className="px-4 py-2 text-sm text-gray-500 whitespace-nowrap">
 											{formatDateTime(req.blocked_at)}
 										</td>

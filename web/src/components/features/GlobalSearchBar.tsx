@@ -558,7 +558,9 @@ export function GlobalSearchBar({
 										}
 									}}
 									className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left cursor-pointer ${
-										selectedIndex === idx ? 'bg-indigo-50' : 'hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900'
+										selectedIndex === idx
+											? 'bg-indigo-50'
+											: 'hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900'
 									}`}
 									aria-selected={selectedIndex === idx}
 								>
