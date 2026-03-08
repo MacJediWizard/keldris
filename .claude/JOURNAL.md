@@ -1,5 +1,77 @@
 # Keldris Development Journal
 
+## 2026-03-07 - Codebase Audit: 42-Issue Fix (PR #265)
+
+### What
+Exhaustive audit across 8 parallel analysis agents identified 42 issues (6 critical, 13 high, 13 medium, 10 low). All fixed, tested, merged to main.
+
+### Critical Fixes
+- **Plaintext config overwrite** (`notifications.go:317`): Deleted line that overwrote AES-encrypted channel config with plaintext
+- **Missing TierLimits field** (`limits.go`): Added `MaxRepositories` to `TierLimits` struct and all tier definitions
+- **Wrong type parse** (`superuser.go:508`): Changed `uuid.Parse` to `strconv.Atoi` for limit query param
+- **Unregistered route** (`postgres.go`): Wired `EncryptPassword` handler to route group
+- **Nil trial response** (`trial.go:268`): Added error check with fallback JSON
+
+### High Priority Fixes
+- **Goroutine context leaks** (5 files): Added `context.WithTimeout(context.Background(), ...)` to goroutines in superuser.go, system_health.go, audit.go, notifications/service.go (5 goroutines)
+- **Session impersonation leak** (`session.go`): `SetUser` now clears impersonation keys on normal login
+- **Wrong org ID in admin check** (`ratelimit.go`): Replaced DB lookup with direct `user.CurrentOrgID`
+- **EOF string comparison** (`pihole.go`): Changed `err.Error() == "EOF"` to `err == io.EOF`
+- **File handle leak** (`docker/logs.go`): Added `defer outFile.Close()` immediately after creation
+- **Dead code** (`keymanager.go`): Removed private `masterKeyFromBase64` duplicating public method
+- **Silent encryption failures** (`migration/export.go`, `import.go`): Changed `if err == nil` to `if err != nil` with warning logs
+- **Stub actions returning nil** (`notifications/rules.go`): 5 stubs now return `fmt.Errorf` so callers know action failed
+
+### Medium Priority Fixes
+- **rows.Err() checks** (`store_docker.go`, `store_docker_logs.go`): Added 6 missing checks after `for rows.Next()` loops
+- **JSON unmarshal errors** (`store_docker_logs.go`): 4 unchecked `json.Unmarshal` calls now log warnings
+- **Ignored error** (`organizations.go:426`): Added `h.logger.Warn()` for membership lookup failure
+- **Metrics scheduler nil panic** (`metrics/scheduler.go`): Guard `if s.stop == nil` in `Stop()`
+- **Reports data race** (`reports/scheduler.go`): Changed pointer capture to value copy in closure
+- **Shutdown drain timeout** (`shutdown/manager.go`): Replaced blocking `<-ctx.Done()` with `time.NewTimer` + `select`
+- **SLA breach errors discarded** (`sla/tracker.go`): 3 instances now log via `t.logger.Error()`
+- **Version parsing** (`updates/checker.go`): Replaced `fmt.Sscanf` with `strconv.Atoi` for proper error handling
+- **Cache invalidation** (`useSavedFilters.ts`, `useFavorites.ts`): Fixed `['key', undefined]` → `['key']` for prefix matching
+
+### Low Priority Fixes
+- **Agent disabled schedules** (`cmd/keldris-agent/main.go`): Added `if !sched.Enabled { continue }` check
+- **Agent backup timeout** (`cmd/keldris-agent/main.go`): Added 24h timeout context for restic operations
+- **Agent report retry** (`agent/client.go`): 3-attempt retry with 2s delay for 5xx errors
+- **HTTP connection pooling** (`agent/client.go`): Added `http.Transport` with connection limits
+- **Duplicate isAdmin** (`usage.go`): Replaced inline check with shared `isAdmin()` function
+- **Clarifying comments** on 4 design decisions across scheduler, runbook, storage, docker
+
+### Test Fixes
+- **License signing key mismatch** (`license_test.go`): Test key aligned to `"keldris-license-signing-key-dev"`
+- **TestRedactArgs** (`restic_test.go`): Test expected no redaction but `redactArgs` redacts `--repo` values — fixed expectations
+
+### Files Modified (35)
+- `cmd/keldris-agent/main.go`
+- `internal/agent/client.go`, `storage.go`
+- `internal/api/handlers/` — notifications, organizations, postgres, ratelimit, superuser, system_health, trial, usage
+- `internal/api/middleware/audit.go`
+- `internal/auth/session.go`
+- `internal/backup/` — apps/pihole, docker/logs, scheduler, restic_test
+- `internal/crypto/keymanager.go`, `keymanager_test.go`
+- `internal/db/store_docker.go`, `store_docker_logs.go`
+- `internal/dr/runbook.go`
+- `internal/license/license.go`, `limits.go`, `license_test.go`
+- `internal/metrics/scheduler.go`
+- `internal/migration/export.go`, `import.go`
+- `internal/notifications/rules.go`, `service.go`
+- `internal/reports/scheduler.go`
+- `internal/shutdown/manager.go`
+- `internal/sla/tracker.go`
+- `internal/updates/checker.go`
+- `web/src/hooks/useFavorites.ts`, `useSavedFilters.ts`
+
+### Result
+- `go test ./...`: all pass
+- `staticcheck ./...`: clean
+- PR #265 merged to main
+
+---
+
 ## 2026-03-04 - Build Fix: LicenseTier Type and Docker Build
 
 ### What
