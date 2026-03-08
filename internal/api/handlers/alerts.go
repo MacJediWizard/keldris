@@ -23,7 +23,6 @@ type AlertStore interface {
 	CreateAlertRule(ctx context.Context, rule *models.AlertRule) error
 	UpdateAlertRule(ctx context.Context, rule *models.AlertRule) error
 	DeleteAlertRule(ctx context.Context, id uuid.UUID) error
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
 // AlertsHandler handles alert-related HTTP endpoints.
@@ -81,16 +80,9 @@ func (h *AlertsHandler) List(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	alerts, err := h.store.GetAlertsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	alerts, err := h.store.GetAlertsByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list alerts")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list alerts")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list alerts"})
 		return
 	}
@@ -110,16 +102,9 @@ func (h *AlertsHandler) ListActive(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	alerts, err := h.store.GetActiveAlertsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	alerts, err := h.store.GetActiveAlertsByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list active alerts")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list active alerts")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list alerts"})
 		return
 	}
@@ -150,16 +135,9 @@ func (h *AlertsHandler) Count(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	count, err := h.store.GetActiveAlertCountByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	count, err := h.store.GetActiveAlertCountByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to count alerts")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to count alerts")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count alerts"})
 		return
 	}
@@ -190,14 +168,7 @@ func (h *AlertsHandler) Get(c *gin.Context) {
 	}
 
 	// Verify user has access to this alert's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "alert not found"})
 		return
 	}
@@ -227,14 +198,7 @@ func (h *AlertsHandler) Acknowledge(c *gin.Context) {
 	}
 
 	// Verify user has access to this alert's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "alert not found"})
 		return
 	}
@@ -282,14 +246,7 @@ func (h *AlertsHandler) Resolve(c *gin.Context) {
 	}
 
 	// Verify user has access to this alert's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "alert not found"})
 		return
 	}
@@ -322,16 +279,9 @@ func (h *AlertsHandler) ListRules(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	rules, err := h.store.GetAlertRulesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	rules, err := h.store.GetAlertRulesByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list alert rules")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list alert rules")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list alert rules"})
 		return
 	}
@@ -375,14 +325,7 @@ func (h *AlertsHandler) CreateRule(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	rule := models.NewAlertRule(dbUser.OrgID, req.Name, req.Type, req.Config)
+	rule := models.NewAlertRule(user.CurrentOrgID, req.Name, req.Type, req.Config)
 	rule.Enabled = req.Enabled
 
 	if err := h.store.CreateAlertRule(c.Request.Context(), rule); err != nil {
@@ -423,14 +366,7 @@ func (h *AlertsHandler) GetRule(c *gin.Context) {
 	}
 
 	// Verify user has access to this rule's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "alert rule not found"})
 		return
 	}
@@ -467,14 +403,7 @@ func (h *AlertsHandler) UpdateRule(c *gin.Context) {
 	}
 
 	// Verify user has access to this rule's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "alert rule not found"})
 		return
 	}
@@ -528,14 +457,7 @@ func (h *AlertsHandler) DeleteRule(c *gin.Context) {
 	}
 
 	// Verify user has access to this rule's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "alert rule not found"})
 		return
 	}

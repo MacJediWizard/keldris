@@ -776,7 +776,7 @@ func (h *RepositoriesHandler) RecoverKey(c *gin.Context) {
 		return
 	}
 
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}

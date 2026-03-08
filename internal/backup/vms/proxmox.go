@@ -418,6 +418,7 @@ func (c *ProxmoxClient) DownloadBackup(ctx context.Context, volid string, destDi
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		// Body will be closed by the deferred resp.Body.Close() above
 		return c.downloadBackupDirect(ctx, storage, filename, destDir)
 	}
 
@@ -429,6 +430,8 @@ func (c *ProxmoxClient) DownloadBackup(ctx context.Context, volid string, destDi
 	defer outFile.Close()
 
 	if _, err := io.Copy(outFile, resp.Body); err != nil {
+		outFile.Close()
+		os.Remove(destPath)
 		return "", fmt.Errorf("download backup: %w", err)
 	}
 

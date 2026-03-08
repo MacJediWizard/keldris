@@ -3,6 +3,7 @@ package agent
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -86,8 +87,10 @@ func (c *Client) ReportBackup(report *BackupReport) error {
 			time.Sleep(2 * time.Second)
 		}
 
-		req, err := http.NewRequest("POST", c.serverURL+"/api/v1/agent/backups", bytes.NewReader(data))
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		req, err := http.NewRequestWithContext(ctx, "POST", c.serverURL+"/api/v1/agent/backups", bytes.NewReader(data))
 		if err != nil {
+			cancel()
 			return fmt.Errorf("report backup: %w", err)
 		}
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
@@ -95,12 +98,14 @@ func (c *Client) ReportBackup(report *BackupReport) error {
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
+			cancel()
 			lastErr = fmt.Errorf("report backup: %w", err)
 			continue
 		}
 
 		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
+		cancel()
 		if err != nil {
 			lastErr = fmt.Errorf("report backup: read response: %w", err)
 			continue
@@ -179,7 +184,10 @@ func (c *Client) SendHeartbeat(req *HeartbeatRequest) error {
 }
 
 func (c *Client) get(path string, result any) error {
-	req, err := http.NewRequest("GET", c.serverURL+path, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", c.serverURL+path, nil)
 	if err != nil {
 		return err
 	}
@@ -209,7 +217,10 @@ func (c *Client) post(path string, payload, result any) error {
 		return fmt.Errorf("marshal request: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", c.serverURL+path, bytes.NewReader(data))
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", c.serverURL+path, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}

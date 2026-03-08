@@ -14,7 +14,6 @@ import (
 
 // StatsStore defines the interface for storage stats persistence operations.
 type StatsStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 	GetRepositoriesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Repository, error)
 	GetLatestStorageStats(ctx context.Context, repositoryID uuid.UUID) (*models.StorageStats, error)
@@ -60,16 +59,9 @@ func (h *StatsHandler) GetSummary(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	summary, err := h.store.GetStorageStatsSummary(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	summary, err := h.store.GetStorageStatsSummary(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get stats summary")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get stats summary")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve stats summary"})
 		return
 	}
@@ -85,13 +77,6 @@ func (h *StatsHandler) GetGrowth(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	days := 30
 	if daysParam := c.Query("days"); daysParam != "" {
 		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 365 {
@@ -99,9 +84,9 @@ func (h *StatsHandler) GetGrowth(c *gin.Context) {
 		}
 	}
 
-	growth, err := h.store.GetAllStorageGrowth(c.Request.Context(), dbUser.OrgID, days)
+	growth, err := h.store.GetAllStorageGrowth(c.Request.Context(), user.CurrentOrgID, days)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get storage growth")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get storage growth")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve storage growth"})
 		return
 	}
@@ -117,24 +102,17 @@ func (h *StatsHandler) ListRepositoryStats(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	stats, err := h.store.GetLatestStatsForAllRepos(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	stats, err := h.store.GetLatestStatsForAllRepos(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get repository stats")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get repository stats")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve repository stats"})
 		return
 	}
 
 	// Get repository names for enriched response
-	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), dbUser.OrgID)
+	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get repositories")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get repositories")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve repositories"})
 		return
 	}
@@ -178,20 +156,13 @@ func (h *StatsHandler) GetRepositoryStats(c *gin.Context) {
 	}
 
 	// Verify repository belongs to user's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repoID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
 
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -229,20 +200,13 @@ func (h *StatsHandler) GetRepositoryGrowth(c *gin.Context) {
 	}
 
 	// Verify repository belongs to user's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repoID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
 
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -284,20 +248,13 @@ func (h *StatsHandler) GetRepositoryHistory(c *gin.Context) {
 	}
 
 	// Verify repository belongs to user's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repoID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
 
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}

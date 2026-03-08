@@ -374,18 +374,6 @@ func TestListSnapshots(t *testing.T) {
 		// snapshots should be null or empty since running backup is skipped
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockSnapshotStore{
-			getUserErr: errors.New("db error"),
-		}
-		r := setupSnapshotsRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots"))
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("agents error", func(t *testing.T) {
 		store := &mockSnapshotStore{
 			user:         dbUser,
@@ -571,19 +559,6 @@ func TestGetSnapshot(t *testing.T) {
 		}
 	})
 
-	t.Run("user error", func(t *testing.T) {
-		store := &mockSnapshotStore{
-			backupBySnapshot: map[string]*models.Backup{snapshotID: backup},
-			getUserErr:       errors.New("db error"),
-		}
-		r := setupSnapshotsRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID))
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("agent wrong org", func(t *testing.T) {
 		wrongOrgAgent := &models.Agent{ID: agentID, OrgID: uuid.New(), Hostname: "other"}
 		store := &mockSnapshotStore{
@@ -727,19 +702,6 @@ func TestListFiles(t *testing.T) {
 
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
-		}
-	})
-
-	t.Run("user error", func(t *testing.T) {
-		store := &mockSnapshotStore{
-			backupBySnapshot: map[string]*models.Backup{snapshotID: backup},
-			getUserErr:       errors.New("db error"),
-		}
-		r := setupSnapshotsRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID+"/files"))
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 
@@ -892,18 +854,6 @@ func TestCreateRestore(t *testing.T) {
 		}
 	})
 
-	t.Run("user error", func(t *testing.T) {
-		store := &mockSnapshotStore{
-			getUserErr: errors.New("db error"),
-		}
-		r := setupSnapshotsRouter(store, sessionUser)
-		w := DoRequest(r, JSONRequest("POST", "/api/v1/restores", validBody))
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("agent not found", func(t *testing.T) {
 		store := &mockSnapshotStore{
 			user: dbUser,
@@ -1048,18 +998,6 @@ func TestListRestores(t *testing.T) {
 		_ = json.Unmarshal(resp["restores"], &restores)
 		if len(restores) != 1 {
 			t.Fatalf("expected 1 restore, got %d", len(restores))
-		}
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockSnapshotStore{
-			getUserErr: errors.New("db error"),
-		}
-		r := setupSnapshotsRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/restores"))
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 
@@ -1252,19 +1190,6 @@ func TestGetRestore(t *testing.T) {
 		}
 	})
 
-	t.Run("user error", func(t *testing.T) {
-		store := &mockSnapshotStore{
-			restore:    restore,
-			getUserErr: errors.New("db error"),
-		}
-		r := setupSnapshotsRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/restores/"+restoreID.String()))
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("agent wrong org", func(t *testing.T) {
 		wrongOrgAgent := &models.Agent{ID: agentID, OrgID: uuid.New(), Hostname: "other"}
 		store := &mockSnapshotStore{
@@ -1400,19 +1325,6 @@ func TestListSnapshotComments(t *testing.T) {
 		}
 	})
 
-	t.Run("user error", func(t *testing.T) {
-		store := &mockSnapshotStore{
-			backupBySnapshot: map[string]*models.Backup{snapshotID: backup},
-			getUserErr:       errors.New("db error"),
-		}
-		r := setupSnapshotsRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID+"/comments"))
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("agent wrong org", func(t *testing.T) {
 		wrongOrgAgent := &models.Agent{ID: agentID, OrgID: uuid.New(), Hostname: "other"}
 		store := &mockSnapshotStore{
@@ -1539,19 +1451,6 @@ func TestCreateSnapshotComment(t *testing.T) {
 		}
 	})
 
-	t.Run("user error", func(t *testing.T) {
-		store := &mockSnapshotStore{
-			backupBySnapshot: map[string]*models.Backup{snapshotID: backup},
-			getUserErr:       errors.New("db error"),
-		}
-		r := setupSnapshotsRouter(store, sessionUser)
-		w := DoRequest(r, JSONRequest("POST", "/api/v1/snapshots/"+snapshotID+"/comments", `{"content":"test"}`))
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("agent wrong org", func(t *testing.T) {
 		wrongOrgAgent := &models.Agent{ID: agentID, OrgID: uuid.New(), Hostname: "other"}
 		store := &mockSnapshotStore{
@@ -1675,19 +1574,6 @@ func TestDeleteSnapshotComment(t *testing.T) {
 
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
-		}
-	})
-
-	t.Run("user error", func(t *testing.T) {
-		store := &mockSnapshotStore{
-			comment:    comment,
-			getUserErr: errors.New("db error"),
-		}
-		r := setupSnapshotsRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("DELETE", "/api/v1/comments/"+commentID.String()))
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 
@@ -1898,18 +1784,6 @@ func TestCompareSnapshots(t *testing.T) {
 
 		if w.Code != http.StatusNotFound {
 			t.Fatalf("expected 404, got %d", w.Code)
-		}
-	})
-
-	t.Run("user error", func(t *testing.T) {
-		store := &mockSnapshotStore{
-			getUserErr: errors.New("db error"),
-		}
-		r := setupCompareRouter(store, sessionUser)
-		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 

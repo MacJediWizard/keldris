@@ -188,18 +188,6 @@ func TestListSLAPolicies(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockSLAStore{user: nil}
-		wrongUserSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupSLATestRouter(noUserStore, wrongUserSession)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/sla/policies", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("store error", func(t *testing.T) {
 		errStore := &mockSLAStore{user: dbUser, listErr: errors.New("db error")}
 		r := setupSLATestRouter(errStore, user)
@@ -275,19 +263,6 @@ func TestCreateSLAPolicy(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockSLAStore{user: nil}
-		wrongUserSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupSLATestRouter(noUserStore, wrongUserSession)
-		w := httptest.NewRecorder()
-		body := `{"name":"Gold SLA","target_rpo_hours":24,"target_rto_hours":4,"target_success_rate":99.5}`
-		req, _ := http.NewRequest("POST", "/api/v1/sla/policies", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
 }
 
 func TestGetSLAPolicy(t *testing.T) {

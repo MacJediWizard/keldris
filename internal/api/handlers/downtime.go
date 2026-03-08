@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 
@@ -22,7 +21,6 @@ type DowntimeHandler struct {
 
 // DowntimeStore defines the interface for downtime persistence operations.
 type DowntimeStore interface {
-	GetUserByID(c context.Context, id uuid.UUID) (*models.User, error)
 }
 
 // NewDowntimeHandler creates a new DowntimeHandler.
@@ -72,12 +70,6 @@ func (h *DowntimeHandler) ListEvents(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	// Parse pagination params
 	limit := 100
@@ -93,9 +85,9 @@ func (h *DowntimeHandler) ListEvents(c *gin.Context) {
 		}
 	}
 
-	events, err := h.service.ListDowntimeEvents(c.Request.Context(), dbUser.OrgID, limit, offset)
+	events, err := h.service.ListDowntimeEvents(c.Request.Context(), user.CurrentOrgID, limit, offset)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list downtime events")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list downtime events")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list downtime events"})
 		return
 	}
@@ -114,16 +106,10 @@ func (h *DowntimeHandler) ListActiveEvents(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	events, err := h.service.ListActiveDowntime(c.Request.Context(), dbUser.OrgID)
+	events, err := h.service.ListActiveDowntime(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list active downtime events")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list active downtime events")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list active downtime events"})
 		return
 	}
@@ -142,16 +128,10 @@ func (h *DowntimeHandler) GetSummary(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	summary, err := h.service.GetUptimeSummary(c.Request.Context(), dbUser.OrgID)
+	summary, err := h.service.GetUptimeSummary(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get uptime summary")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get uptime summary")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get uptime summary"})
 		return
 	}
@@ -201,12 +181,6 @@ func (h *DowntimeHandler) CreateEvent(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	var componentID *uuid.UUID
 	if req.ComponentID != nil {
@@ -218,7 +192,7 @@ func (h *DowntimeHandler) CreateEvent(c *gin.Context) {
 		componentID = &id
 	}
 
-	event, err := h.service.RecordDowntimeStart(c.Request.Context(), dbUser.OrgID, componentType, componentID, req.ComponentName, severity, req.Cause)
+	event, err := h.service.RecordDowntimeStart(c.Request.Context(), user.CurrentOrgID, componentType, componentID, req.ComponentName, severity, req.Cause)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to create downtime event")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create downtime event"})
@@ -255,14 +229,8 @@ func (h *DowntimeHandler) GetEvent(c *gin.Context) {
 	}
 
 	// Verify user has access to this event's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if event.OrgID != dbUser.OrgID {
+	if event.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "downtime event not found"})
 		return
 	}
@@ -298,14 +266,8 @@ func (h *DowntimeHandler) UpdateEvent(c *gin.Context) {
 	}
 
 	// Verify user has access to this event's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if event.OrgID != dbUser.OrgID {
+	if event.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "downtime event not found"})
 		return
 	}
@@ -372,14 +334,8 @@ func (h *DowntimeHandler) ResolveEvent(c *gin.Context) {
 	}
 
 	// Verify user has access to this event's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if event.OrgID != dbUser.OrgID {
+	if event.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "downtime event not found"})
 		return
 	}
@@ -428,14 +384,8 @@ func (h *DowntimeHandler) DeleteEvent(c *gin.Context) {
 	}
 
 	// Verify user has access to this event's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if event.OrgID != dbUser.OrgID {
+	if event.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "downtime event not found"})
 		return
 	}
@@ -460,16 +410,10 @@ func (h *DowntimeHandler) GetBadges(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	summary, err := h.service.GetUptimeSummary(c.Request.Context(), dbUser.OrgID)
+	summary, err := h.service.GetUptimeSummary(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get badges")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get badges")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get badges"})
 		return
 	}
@@ -489,20 +433,14 @@ func (h *DowntimeHandler) RefreshBadges(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	if err := h.service.UpdateUptimeBadges(c.Request.Context(), dbUser.OrgID); err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to refresh badges")
+	if err := h.service.UpdateUptimeBadges(c.Request.Context(), user.CurrentOrgID); err != nil {
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to refresh badges")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to refresh badges"})
 		return
 	}
 
-	h.logger.Info().Str("org_id", dbUser.OrgID.String()).Msg("uptime badges refreshed")
+	h.logger.Info().Str("org_id", user.CurrentOrgID.String()).Msg("uptime badges refreshed")
 
 	c.JSON(http.StatusOK, gin.H{"message": "badges refreshed"})
 }
@@ -529,17 +467,11 @@ func (h *DowntimeHandler) GetMonthlyReport(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	report, err := h.service.GetMonthlyReport(c.Request.Context(), dbUser.OrgID, year, month)
+	report, err := h.service.GetMonthlyReport(c.Request.Context(), user.CurrentOrgID, year, month)
 	if err != nil {
 		h.logger.Error().Err(err).
-			Str("org_id", dbUser.OrgID.String()).
+			Str("org_id", user.CurrentOrgID.String()).
 			Int("year", year).
 			Int("month", month).
 			Msg("failed to get monthly report")
@@ -559,16 +491,10 @@ func (h *DowntimeHandler) ListAlerts(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	alerts, err := h.service.ListDowntimeAlerts(c.Request.Context(), dbUser.OrgID)
+	alerts, err := h.service.ListDowntimeAlerts(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list downtime alerts")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list downtime alerts")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list downtime alerts"})
 		return
 	}
@@ -612,14 +538,8 @@ func (h *DowntimeHandler) CreateAlert(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	alert := models.NewDowntimeAlert(dbUser.OrgID, req.Name, req.UptimeThreshold, req.EvaluationPeriod)
+	alert := models.NewDowntimeAlert(user.CurrentOrgID, req.Name, req.UptimeThreshold, req.EvaluationPeriod)
 
 	if req.ComponentType != nil {
 		ct := models.ComponentType(*req.ComponentType)
@@ -676,14 +596,8 @@ func (h *DowntimeHandler) GetAlert(c *gin.Context) {
 	}
 
 	// Verify user has access to this alert's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "downtime alert not found"})
 		return
 	}
@@ -722,14 +636,8 @@ func (h *DowntimeHandler) UpdateAlert(c *gin.Context) {
 	}
 
 	// Verify user has access to this alert's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "downtime alert not found"})
 		return
 	}
@@ -797,14 +705,8 @@ func (h *DowntimeHandler) DeleteAlert(c *gin.Context) {
 	}
 
 	// Verify user has access to this alert's org
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "downtime alert not found"})
 		return
 	}

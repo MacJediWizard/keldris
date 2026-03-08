@@ -16,7 +16,6 @@ import (
 
 // DockerRegistryStore defines the interface for Docker registry persistence operations.
 type DockerRegistryStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetDockerRegistriesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.DockerRegistry, error)
 	GetDockerRegistryByID(ctx context.Context, id uuid.UUID) (*models.DockerRegistry, error)
 	GetDefaultDockerRegistry(ctx context.Context, orgID uuid.UUID) (*models.DockerRegistry, error)
@@ -76,16 +75,10 @@ func (h *DockerRegistriesHandler) ListRegistries(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	registries, err := h.store.GetDockerRegistriesByOrgID(c.Request.Context(), dbUser.OrgID)
+	registries, err := h.store.GetDockerRegistriesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list docker registries")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list docker registries")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list docker registries"})
 		return
 	}
@@ -115,14 +108,8 @@ func (h *DockerRegistriesHandler) GetRegistry(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if registry.OrgID != dbUser.OrgID {
+	if registry.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "docker registry not found"})
 		return
 	}
@@ -180,12 +167,6 @@ func (h *DockerRegistriesHandler) CreateRegistry(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	credentials := &models.DockerRegistryCredentials{
 		Username:           req.Credentials.Username,
@@ -200,7 +181,7 @@ func (h *DockerRegistriesHandler) CreateRegistry(c *gin.Context) {
 		GCRKeyJSON:         req.Credentials.GCRKeyJSON,
 	}
 
-	registry, err := h.registryMgr.CreateRegistry(c.Request.Context(), dbUser.OrgID, req.Name, req.Type, req.URL, credentials, &user.ID)
+	registry, err := h.registryMgr.CreateRegistry(c.Request.Context(), user.CurrentOrgID, req.Name, req.Type, req.URL, credentials, &user.ID)
 	if err != nil {
 		h.logger.Error().Err(err).Str("name", req.Name).Msg("failed to create docker registry")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create docker registry: " + err.Error()})
@@ -209,7 +190,7 @@ func (h *DockerRegistriesHandler) CreateRegistry(c *gin.Context) {
 
 	// Set as default if requested
 	if req.IsDefault {
-		if err := h.store.SetDefaultDockerRegistry(c.Request.Context(), dbUser.OrgID, registry.ID); err != nil {
+		if err := h.store.SetDefaultDockerRegistry(c.Request.Context(), user.CurrentOrgID, registry.ID); err != nil {
 			h.logger.Warn().Err(err).Str("registry_id", registry.ID.String()).Msg("failed to set registry as default")
 		} else {
 			registry.IsDefault = true
@@ -217,14 +198,14 @@ func (h *DockerRegistriesHandler) CreateRegistry(c *gin.Context) {
 	}
 
 	// Create audit log
-	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), dbUser.OrgID, registry.ID, &user.ID, "create",
+	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), user.CurrentOrgID, registry.ID, &user.ID, "create",
 		map[string]interface{}{"name": req.Name, "type": req.Type}, c.ClientIP(), c.Request.UserAgent())
 
 	h.logger.Info().
 		Str("registry_id", registry.ID.String()).
 		Str("name", req.Name).
 		Str("type", string(req.Type)).
-		Str("org_id", dbUser.OrgID.String()).
+		Str("org_id", user.CurrentOrgID.String()).
 		Msg("docker registry created")
 
 	c.JSON(http.StatusCreated, registry)
@@ -265,14 +246,8 @@ func (h *DockerRegistriesHandler) UpdateRegistry(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if registry.OrgID != dbUser.OrgID {
+	if registry.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "docker registry not found"})
 		return
 	}
@@ -296,7 +271,7 @@ func (h *DockerRegistriesHandler) UpdateRegistry(c *gin.Context) {
 
 	// Handle default setting separately
 	if req.IsDefault != nil && *req.IsDefault {
-		if err := h.store.SetDefaultDockerRegistry(c.Request.Context(), dbUser.OrgID, id); err != nil {
+		if err := h.store.SetDefaultDockerRegistry(c.Request.Context(), user.CurrentOrgID, id); err != nil {
 			h.logger.Warn().Err(err).Str("registry_id", id.String()).Msg("failed to set registry as default")
 		} else {
 			registry.IsDefault = true
@@ -304,7 +279,7 @@ func (h *DockerRegistriesHandler) UpdateRegistry(c *gin.Context) {
 	}
 
 	// Create audit log
-	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), dbUser.OrgID, registry.ID, &user.ID, "update",
+	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), user.CurrentOrgID, registry.ID, &user.ID, "update",
 		map[string]interface{}{"name": registry.Name}, c.ClientIP(), c.Request.UserAgent())
 
 	h.logger.Info().Str("registry_id", id.String()).Msg("docker registry updated")
@@ -332,20 +307,14 @@ func (h *DockerRegistriesHandler) DeleteRegistry(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if registry.OrgID != dbUser.OrgID {
+	if registry.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "docker registry not found"})
 		return
 	}
 
 	// Create audit log before deletion
-	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), dbUser.OrgID, id, &user.ID, "delete",
+	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), user.CurrentOrgID, id, &user.ID, "delete",
 		map[string]interface{}{"name": registry.Name}, c.ClientIP(), c.Request.UserAgent())
 
 	if err := h.registryMgr.DeleteRegistry(c.Request.Context(), id); err != nil {
@@ -379,27 +348,21 @@ func (h *DockerRegistriesHandler) Login(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if registry.OrgID != dbUser.OrgID {
+	if registry.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "docker registry not found"})
 		return
 	}
 
 	result, err := h.registryMgr.Login(c.Request.Context(), id)
 	if err != nil {
-		_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), dbUser.OrgID, id, &user.ID, "login",
+		_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), user.CurrentOrgID, id, &user.ID, "login",
 			map[string]interface{}{"success": false, "error": err.Error()}, c.ClientIP(), c.Request.UserAgent())
 		c.JSON(http.StatusBadRequest, gin.H{"error": "login failed", "result": result})
 		return
 	}
 
-	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), dbUser.OrgID, id, &user.ID, "login",
+	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), user.CurrentOrgID, id, &user.ID, "login",
 		map[string]interface{}{"success": true}, c.ClientIP(), c.Request.UserAgent())
 
 	c.JSON(http.StatusOK, gin.H{"result": result})
@@ -413,14 +376,8 @@ func (h *DockerRegistriesHandler) LoginAll(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	results, err := h.registryMgr.LoginAll(c.Request.Context(), dbUser.OrgID)
+	results, err := h.registryMgr.LoginAll(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to login: " + err.Error()})
 		return
@@ -450,14 +407,8 @@ func (h *DockerRegistriesHandler) HealthCheck(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if registry.OrgID != dbUser.OrgID {
+	if registry.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "docker registry not found"})
 		return
 	}
@@ -468,7 +419,7 @@ func (h *DockerRegistriesHandler) HealthCheck(c *gin.Context) {
 		return
 	}
 
-	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), dbUser.OrgID, id, &user.ID, "health_check",
+	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), user.CurrentOrgID, id, &user.ID, "health_check",
 		map[string]interface{}{"status": result.Status}, c.ClientIP(), c.Request.UserAgent())
 
 	c.JSON(http.StatusOK, gin.H{"result": result})
@@ -482,14 +433,8 @@ func (h *DockerRegistriesHandler) HealthCheckAll(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	results, err := h.registryMgr.HealthCheckAll(c.Request.Context(), dbUser.OrgID)
+	results, err := h.registryMgr.HealthCheckAll(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "health check failed: " + err.Error()})
 		return
@@ -531,14 +476,8 @@ func (h *DockerRegistriesHandler) RotateCredentials(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if registry.OrgID != dbUser.OrgID {
+	if registry.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "docker registry not found"})
 		return
 	}
@@ -562,7 +501,7 @@ func (h *DockerRegistriesHandler) RotateCredentials(c *gin.Context) {
 		return
 	}
 
-	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), dbUser.OrgID, id, &user.ID, "rotate_credentials",
+	_ = h.store.CreateDockerRegistryAuditLog(c.Request.Context(), user.CurrentOrgID, id, &user.ID, "rotate_credentials",
 		map[string]interface{}{"expires_at": req.ExpiresAt}, c.ClientIP(), c.Request.UserAgent())
 
 	h.logger.Info().Str("registry_id", id.String()).Msg("docker registry credentials rotated")
@@ -590,19 +529,13 @@ func (h *DockerRegistriesHandler) SetDefault(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if registry.OrgID != dbUser.OrgID {
+	if registry.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "docker registry not found"})
 		return
 	}
 
-	if err := h.store.SetDefaultDockerRegistry(c.Request.Context(), dbUser.OrgID, id); err != nil {
+	if err := h.store.SetDefaultDockerRegistry(c.Request.Context(), user.CurrentOrgID, id); err != nil {
 		h.logger.Error().Err(err).Str("registry_id", id.String()).Msg("failed to set default registry")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to set default registry"})
 		return
@@ -671,20 +604,14 @@ func (h *DockerRegistriesHandler) ListExpiringCredentials(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	// Default to 30 days warning
 	days := 30
 	warningThreshold := time.Now().Add(time.Duration(days) * 24 * time.Hour)
 
-	registries, err := h.store.GetDockerRegistriesWithExpiringCredentials(c.Request.Context(), dbUser.OrgID, warningThreshold)
+	registries, err := h.store.GetDockerRegistriesWithExpiringCredentials(c.Request.Context(), user.CurrentOrgID, warningThreshold)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get expiring credentials")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get expiring credentials")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get expiring credentials"})
 		return
 	}

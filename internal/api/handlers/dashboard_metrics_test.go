@@ -124,15 +124,6 @@ func TestDashboardGetStats(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockDashboardMetricsStore{getUserErr: errors.New("not found")}
-		r := setupDashboardMetricsTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/dashboard-metrics/stats"))
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("dash stats error", func(t *testing.T) {
 		store := &mockDashboardMetricsStore{user: dbUser, dashErr: errors.New("db error")}
 		r := setupDashboardMetricsTestRouter(store, user)

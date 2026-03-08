@@ -170,7 +170,8 @@ function StorageGrowthChart({
 	data: { date: string; total_size: number; raw_size: number }[];
 	isLoading: boolean;
 }) {
-	const maxSize = Math.max(...data.map((d) => d.total_size), 1);
+	const maxSize =
+		data.length > 0 ? Math.max(...data.map((d) => d.total_size), 1) : 1;
 
 	return (
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -236,7 +237,8 @@ function BackupDurationChart({
 	}[];
 	isLoading: boolean;
 }) {
-	const maxDuration = Math.max(...data.map((d) => d.avg_duration_ms), 1);
+	const maxDuration =
+		data.length > 0 ? Math.max(...data.map((d) => d.avg_duration_ms), 1) : 1;
 
 	return (
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -294,7 +296,8 @@ function DailyBackupsChart({
 	}[];
 	isLoading: boolean;
 }) {
-	const maxCount = Math.max(...data.map((d) => d.total), 1);
+	const maxCount =
+		data.length > 0 ? Math.max(...data.map((d) => d.total), 1) : 1;
 
 	return (
 		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">

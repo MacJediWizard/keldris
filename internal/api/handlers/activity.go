@@ -21,7 +21,6 @@ type ActivityStore interface {
 	GetRecentActivityEvents(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.ActivityEvent, error)
 	GetActivityCategories(ctx context.Context, orgID uuid.UUID) (map[string]int, error)
 	SearchActivityEvents(ctx context.Context, orgID uuid.UUID, query string, limit int) ([]*models.ActivityEvent, error)
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
 // ActivityHandler handles activity-related HTTP endpoints.
@@ -83,13 +82,6 @@ func (h *ActivityHandler) List(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	filter := models.ActivityEventFilter{}
 
 	// Parse query parameters
@@ -139,9 +131,9 @@ func (h *ActivityHandler) List(c *gin.Context) {
 		}
 	}
 
-	events, err := h.store.GetActivityEvents(c.Request.Context(), dbUser.OrgID, filter)
+	events, err := h.store.GetActivityEvents(c.Request.Context(), user.CurrentOrgID, filter)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list activity events")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list activity events")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list activity events"})
 		return
 	}
@@ -172,13 +164,6 @@ func (h *ActivityHandler) Recent(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	limit := 20
 	if limitStr := c.Query("limit"); limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
@@ -186,9 +171,9 @@ func (h *ActivityHandler) Recent(c *gin.Context) {
 		}
 	}
 
-	events, err := h.store.GetRecentActivityEvents(c.Request.Context(), dbUser.OrgID, limit)
+	events, err := h.store.GetRecentActivityEvents(c.Request.Context(), user.CurrentOrgID, limit)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get recent activity events")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get recent activity events")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get recent activity events"})
 		return
 	}
@@ -220,13 +205,6 @@ func (h *ActivityHandler) Count(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	filter := models.ActivityEventFilter{}
 
 	if category := c.Query("category"); category != "" {
@@ -239,9 +217,9 @@ func (h *ActivityHandler) Count(c *gin.Context) {
 		filter.Type = &t
 	}
 
-	count, err := h.store.GetActivityEventCount(c.Request.Context(), dbUser.OrgID, filter)
+	count, err := h.store.GetActivityEventCount(c.Request.Context(), user.CurrentOrgID, filter)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to count activity events")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to count activity events")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count activity events"})
 		return
 	}
@@ -267,16 +245,9 @@ func (h *ActivityHandler) Categories(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	categories, err := h.store.GetActivityCategories(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	categories, err := h.store.GetActivityCategories(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get activity categories")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get activity categories")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get activity categories"})
 		return
 	}
@@ -311,13 +282,6 @@ func (h *ActivityHandler) Search(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	limit := 50
 	if limitStr := c.Query("limit"); limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
@@ -325,9 +289,9 @@ func (h *ActivityHandler) Search(c *gin.Context) {
 		}
 	}
 
-	events, err := h.store.SearchActivityEvents(c.Request.Context(), dbUser.OrgID, query, limit)
+	events, err := h.store.SearchActivityEvents(c.Request.Context(), user.CurrentOrgID, query, limit)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to search activity events")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to search activity events")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to search activity events"})
 		return
 	}
@@ -354,12 +318,5 @@ func (h *ActivityHandler) WebSocket(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	h.feed.HandleWebSocket(c.Writer, c.Request, dbUser.OrgID, user.ID)
+	h.feed.HandleWebSocket(c.Writer, c.Request, user.CurrentOrgID, user.ID)
 }

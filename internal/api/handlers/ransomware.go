@@ -26,7 +26,6 @@ type RansomwareStore interface {
 	UpdateRansomwareAlert(ctx context.Context, alert *models.RansomwareAlert) error
 	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error)
 	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	ResumeSchedule(ctx context.Context, scheduleID uuid.UUID) error
 }
 
@@ -78,16 +77,9 @@ func (h *RansomwareHandler) ListSettings(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	settings, err := h.store.GetRansomwareSettingsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	settings, err := h.store.GetRansomwareSettingsByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list ransomware settings")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list ransomware settings")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list ransomware settings"})
 		return
 	}
@@ -127,13 +119,7 @@ func (h *RansomwareHandler) GetSettingsBySchedule(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return
 	}
@@ -190,13 +176,7 @@ func (h *RansomwareHandler) CreateSettings(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return
 	}
@@ -289,13 +269,7 @@ func (h *RansomwareHandler) UpdateSettings(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ransomware settings not found"})
 		return
 	}
@@ -375,13 +349,7 @@ func (h *RansomwareHandler) DeleteSettings(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ransomware settings not found"})
 		return
 	}
@@ -406,16 +374,9 @@ func (h *RansomwareHandler) ListAlerts(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	alerts, err := h.store.GetRansomwareAlertsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	alerts, err := h.store.GetRansomwareAlertsByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list ransomware alerts")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list ransomware alerts")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list ransomware alerts"})
 		return
 	}
@@ -435,16 +396,9 @@ func (h *RansomwareHandler) ListActiveAlerts(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	alerts, err := h.store.GetActiveRansomwareAlertsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	alerts, err := h.store.GetActiveRansomwareAlertsByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list active ransomware alerts")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list active ransomware alerts")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list ransomware alerts"})
 		return
 	}
@@ -464,16 +418,9 @@ func (h *RansomwareHandler) CountActiveAlerts(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	count, err := h.store.GetActiveRansomwareAlertCountByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	count, err := h.store.GetActiveRansomwareAlertCountByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to count ransomware alerts")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to count ransomware alerts")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count ransomware alerts"})
 		return
 	}
@@ -504,13 +451,7 @@ func (h *RansomwareHandler) GetAlert(c *gin.Context) {
 	}
 
 	// Verify access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ransomware alert not found"})
 		return
 	}
@@ -540,13 +481,7 @@ func (h *RansomwareHandler) Investigate(c *gin.Context) {
 	}
 
 	// Verify access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ransomware alert not found"})
 		return
 	}
@@ -605,13 +540,7 @@ func (h *RansomwareHandler) MarkFalsePositive(c *gin.Context) {
 	}
 
 	// Verify access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ransomware alert not found"})
 		return
 	}
@@ -660,13 +589,7 @@ func (h *RansomwareHandler) MarkConfirmed(c *gin.Context) {
 	}
 
 	// Verify access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ransomware alert not found"})
 		return
 	}
@@ -715,13 +638,7 @@ func (h *RansomwareHandler) Resolve(c *gin.Context) {
 	}
 
 	// Verify access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ransomware alert not found"})
 		return
 	}
@@ -764,13 +681,7 @@ func (h *RansomwareHandler) ResumeBackups(c *gin.Context) {
 	}
 
 	// Verify access
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ransomware alert not found"})
 		return
 	}

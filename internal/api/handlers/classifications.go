@@ -15,7 +15,6 @@ import (
 
 // ClassificationStore defines the interface for classification persistence operations.
 type ClassificationStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.Schedule, error)
 	GetSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Schedule, error)
 	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
@@ -126,16 +125,10 @@ func (h *ClassificationsHandler) ListRules(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	rules, err := h.store.GetPathClassificationRulesByOrgID(c.Request.Context(), dbUser.OrgID)
+	rules, err := h.store.GetPathClassificationRulesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list classification rules")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list classification rules")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list classification rules"})
 		return
 	}
@@ -164,13 +157,8 @@ func (h *ClassificationsHandler) GetRule(c *gin.Context) {
 	}
 
 	// Verify org ownership
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "classification rule not found"})
 		return
 	}
@@ -212,14 +200,8 @@ func (h *ClassificationsHandler) CreateRule(c *gin.Context) {
 		dataTypes = []classification.DataType{classification.DataTypeGeneral}
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	rule := models.NewPathClassificationRule(dbUser.OrgID, req.Pattern, classification.Level(req.Level), dataTypes)
+	rule := models.NewPathClassificationRule(user.CurrentOrgID, req.Pattern, classification.Level(req.Level), dataTypes)
 	rule.Description = req.Description
 	if req.Priority != nil {
 		rule.Priority = *req.Priority
@@ -262,13 +244,8 @@ func (h *ClassificationsHandler) UpdateRule(c *gin.Context) {
 	}
 
 	// Verify org ownership
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "classification rule not found"})
 		return
 	}
@@ -341,13 +318,8 @@ func (h *ClassificationsHandler) DeleteRule(c *gin.Context) {
 	}
 
 	// Verify org ownership
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if rule.OrgID != dbUser.OrgID {
+	if rule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "classification rule not found"})
 		return
 	}
@@ -375,29 +347,24 @@ func (h *ClassificationsHandler) ListScheduleClassifications(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	// Optional filter by level
 	level := c.Query("level")
 	var schedules []*models.Schedule
+	var err error
 
 	if level != "" {
 		if !classification.ValidateLevel(level) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid classification level"})
 			return
 		}
-		schedules, err = h.store.GetSchedulesByClassificationLevel(c.Request.Context(), dbUser.OrgID, level)
+		schedules, err = h.store.GetSchedulesByClassificationLevel(c.Request.Context(), user.CurrentOrgID, level)
 	} else {
-		schedules, err = h.store.GetSchedulesByOrgID(c.Request.Context(), dbUser.OrgID)
+		schedules, err = h.store.GetSchedulesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	}
 
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list schedules")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list schedules")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list schedules"})
 		return
 	}
@@ -432,13 +399,8 @@ func (h *ClassificationsHandler) GetScheduleClassification(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return
 	}
@@ -501,13 +463,8 @@ func (h *ClassificationsHandler) SetScheduleClassification(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return
 	}
@@ -553,19 +510,14 @@ func (h *ClassificationsHandler) AutoClassifySchedule(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if agent.OrgID != dbUser.OrgID {
+	if agent.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule not found"})
 		return
 	}
 
 	// Get organization's classification rules
-	rules, err := h.store.GetPathClassificationRulesByOrgID(c.Request.Context(), dbUser.OrgID)
+	rules, err := h.store.GetPathClassificationRulesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to get classification rules")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get classification rules"})
@@ -625,16 +577,10 @@ func (h *ClassificationsHandler) ListBackupsByClassification(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	backups, err := h.store.GetBackupsByClassificationLevel(c.Request.Context(), dbUser.OrgID, level, 100)
+	backups, err := h.store.GetBackupsByClassificationLevel(c.Request.Context(), user.CurrentOrgID, level, 100)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list backups by classification")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list backups by classification")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list backups"})
 		return
 	}
@@ -650,16 +596,10 @@ func (h *ClassificationsHandler) GetSummary(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	summary, err := h.store.GetClassificationSummary(c.Request.Context(), dbUser.OrgID)
+	summary, err := h.store.GetClassificationSummary(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get classification summary")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get classification summary")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get classification summary"})
 		return
 	}
@@ -675,17 +615,11 @@ func (h *ClassificationsHandler) GetComplianceReport(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	// Get summary
-	summary, err := h.store.GetClassificationSummary(c.Request.Context(), dbUser.OrgID)
+	summary, err := h.store.GetClassificationSummary(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get classification summary")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get classification summary")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get classification summary"})
 		return
 	}
@@ -693,7 +627,7 @@ func (h *ClassificationsHandler) GetComplianceReport(c *gin.Context) {
 	// Get schedules grouped by level
 	schedulesByLevel := make(map[string][]models.ScheduleSummary)
 	for _, level := range []string{"public", "internal", "confidential", "restricted"} {
-		schedules, err := h.store.GetSchedulesByClassificationLevel(c.Request.Context(), dbUser.OrgID, level)
+		schedules, err := h.store.GetSchedulesByClassificationLevel(c.Request.Context(), user.CurrentOrgID, level)
 		if err != nil {
 			h.logger.Error().Err(err).Str("level", level).Msg("failed to get schedules by level")
 			continue
@@ -718,7 +652,7 @@ func (h *ClassificationsHandler) GetComplianceReport(c *gin.Context) {
 
 	report := gin.H{
 		"generated_at":       time.Now(),
-		"org_id":             dbUser.OrgID,
+		"org_id":             user.CurrentOrgID,
 		"summary":            summary,
 		"schedules_by_level": schedulesByLevel,
 	}

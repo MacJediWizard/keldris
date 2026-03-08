@@ -169,18 +169,6 @@ func TestListAlerts(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockAlertStore{user: nil}
-		wrongUserSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupAlertTestRouter(noUserStore, wrongUserSession)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/alerts", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("store error", func(t *testing.T) {
 		errStore := &mockAlertStore{user: dbUser, listErr: errors.New("db error")}
 		r := setupAlertTestRouter(errStore, user)
@@ -217,18 +205,6 @@ func TestListActiveAlerts(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("expected 401, got %d", w.Code)
-		}
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockAlertStore{user: nil}
-		wrongUserSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupAlertTestRouter(noUserStore, wrongUserSession)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/alerts/active", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 
@@ -275,18 +251,6 @@ func TestAlertCount(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("expected 401, got %d", w.Code)
-		}
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockAlertStore{user: nil}
-		wrongUserSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupAlertTestRouter(noUserStore, wrongUserSession)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/alerts/count", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 
@@ -640,17 +604,6 @@ func TestListAlertRules(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockAlertStore{user: nil}
-		wrongUserSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupAlertTestRouter(noUserStore, wrongUserSession)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/alert-rules", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
 }
 
 func TestCreateAlertRule(t *testing.T) {
@@ -728,19 +681,6 @@ func TestCreateAlertRule(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockAlertStore{user: nil}
-		wrongUserSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupAlertTestRouter(noUserStore, wrongUserSession)
-		w := httptest.NewRecorder()
-		body := `{"name":"offline-rule","type":"agent_offline","enabled":true,"config":{"offline_threshold_minutes":15}}`
-		req, _ := http.NewRequest("POST", "/api/v1/alert-rules", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
 }
 
 func TestGetAlertRule(t *testing.T) {

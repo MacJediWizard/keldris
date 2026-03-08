@@ -214,18 +214,6 @@ func TestFileHistoryGetHistory(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockFileHistoryStore{getUserErr: errors.New("not found")}
-		r := setupFileHistoryTestRouter(store, user)
-
-		path := "/api/v1/files/history?path=/test&agent_id=" + agentID.String() + "&repository_id=" + repoID.String()
-		resp := DoRequest(r, AuthenticatedRequest("GET", path))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("agent not found", func(t *testing.T) {
 		store := &mockFileHistoryStore{
 			user:        dbUser,

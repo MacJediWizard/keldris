@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
@@ -20,7 +21,6 @@ type DRTestStore interface {
 	CreateDRTest(ctx context.Context, test *models.DRTest) error
 	UpdateDRTest(ctx context.Context, test *models.DRTest) error
 	GetDRRunbookByID(ctx context.Context, id uuid.UUID) (*models.DRRunbook, error)
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 }
 
 // DRTestRunner defines the interface for running DR tests.
@@ -77,13 +77,6 @@ func (h *DRTestsHandler) List(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Check for runbook_id filter
 	runbookIDParam := c.Query("runbook_id")
 	if runbookIDParam != "" {
@@ -99,7 +92,7 @@ func (h *DRTestsHandler) List(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "runbook not found"})
 			return
 		}
-		if runbook.OrgID != dbUser.OrgID {
+		if runbook.OrgID != user.CurrentOrgID {
 			c.JSON(http.StatusNotFound, gin.H{"error": "runbook not found"})
 			return
 		}
@@ -116,9 +109,9 @@ func (h *DRTestsHandler) List(c *gin.Context) {
 	}
 
 	// Get all tests for the org
-	tests, err := h.store.GetDRTestsByOrgID(c.Request.Context(), dbUser.OrgID)
+	tests, err := h.store.GetDRTestsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list DR tests")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list DR tests")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list tests"})
 		return
 	}
@@ -160,7 +153,7 @@ func (h *DRTestsHandler) Get(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyTestAccess(c, user.ID, test); err != nil {
+	if err := h.verifyTestAccess(c, user.CurrentOrgID, test); err != nil {
 		return
 	}
 
@@ -185,20 +178,13 @@ func (h *DRTestsHandler) Run(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Verify runbook belongs to user's org
 	runbook, err := h.store.GetDRRunbookByID(c.Request.Context(), req.RunbookID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "runbook not found"})
 		return
 	}
-	if runbook.OrgID != dbUser.OrgID {
+	if runbook.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "runbook not found"})
 		return
 	}
@@ -262,7 +248,7 @@ func (h *DRTestsHandler) Cancel(c *gin.Context) {
 		return
 	}
 
-	if err := h.verifyTestAccess(c, user.ID, test); err != nil {
+	if err := h.verifyTestAccess(c, user.CurrentOrgID, test); err != nil {
 		return
 	}
 
@@ -284,23 +270,16 @@ func (h *DRTestsHandler) Cancel(c *gin.Context) {
 }
 
 // verifyTestAccess checks if the user has access to the test.
-func (h *DRTestsHandler) verifyTestAccess(c *gin.Context, userID uuid.UUID, test *models.DRTest) error {
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), userID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", userID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return err
-	}
-
+func (h *DRTestsHandler) verifyTestAccess(c *gin.Context, orgID uuid.UUID, test *models.DRTest) error {
 	runbook, err := h.store.GetDRRunbookByID(c.Request.Context(), test.RunbookID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "test not found"})
 		return err
 	}
 
-	if runbook.OrgID != dbUser.OrgID {
+	if runbook.OrgID != orgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "test not found"})
-		return err
+		return fmt.Errorf("test does not belong to organization")
 	}
 
 	return nil

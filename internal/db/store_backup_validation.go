@@ -180,5 +180,8 @@ func (db *DB) scanBackupValidations(rows pgx.Rows) ([]*models.BackupValidation, 
 		}
 		validations = append(validations, &v)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
+	}
 	return validations, nil
 }

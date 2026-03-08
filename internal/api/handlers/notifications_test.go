@@ -176,18 +176,6 @@ func TestListChannels(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockNotificationStore{user: nil}
-		wrongSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupNotificationTestRouter(noUserStore, wrongSession)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/notifications/channels", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("store error", func(t *testing.T) {
 		errStore := &mockNotificationStore{
 			user:        dbUser,
@@ -349,19 +337,6 @@ func TestCreateChannel(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockNotificationStore{user: nil}
-		wrongSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupNotificationTestRouter(noUserStore, wrongSession)
-		w := httptest.NewRecorder()
-		body := `{"name":"test","type":"slack","config":{"webhook_url":"https://x"}}`
-		req, _ := http.NewRequest("POST", "/api/v1/notifications/channels", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
 }
 
 func TestUpdateChannel(t *testing.T) {
@@ -577,17 +552,6 @@ func TestListPreferences(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockNotificationStore{user: nil}
-		wrongSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupNotificationTestRouter(noUserStore, wrongSession)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/notifications/preferences", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
 }
 
 func TestCreatePreference(t *testing.T) {
@@ -658,20 +622,6 @@ func TestCreatePreference(t *testing.T) {
 			createPrefErr: errors.New("db error"),
 		}
 		r := setupNotificationTestRouter(errStore, user)
-		w := httptest.NewRecorder()
-		body := `{"channel_id":"` + channelID.String() + `","event_type":"backup_success","enabled":true}`
-		req, _ := http.NewRequest("POST", "/api/v1/notifications/preferences", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockNotificationStore{user: nil}
-		wrongSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupNotificationTestRouter(noUserStore, wrongSession)
 		w := httptest.NewRecorder()
 		body := `{"channel_id":"` + channelID.String() + `","event_type":"backup_success","enabled":true}`
 		req, _ := http.NewRequest("POST", "/api/v1/notifications/preferences", strings.NewReader(body))
@@ -876,15 +826,4 @@ func TestListLogs(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockNotificationStore{user: nil, logs: []*models.NotificationLog{}}
-		wrongSession := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupNotificationTestRouter(noUserStore, wrongSession)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/notifications/logs", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
 }

@@ -188,7 +188,9 @@ func (d *Dispatcher) Dispatch(ctx context.Context, orgID uuid.UUID, eventType mo
 
 		// Send immediately in background
 		go func(ep *models.WebhookEndpoint, del *models.WebhookDelivery) {
-			d.sendWebhook(context.Background(), ep, del)
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			d.sendWebhook(ctx, ep, del)
 		}(endpoint, delivery)
 	}
 

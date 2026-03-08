@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ClassificationBadge } from '../components/ClassificationBadge';
 import { BackupScriptsEditor } from '../components/features/BackupScriptsEditor';
 import { DryRunResultsModal } from '../components/features/DryRunResultsModal';
@@ -110,8 +110,8 @@ function CreateScheduleModal({ isOpen, onClose, editSchedule }: CreateScheduleMo
 	// Priority and preemption state
 	const [priority, setPriority] = useState<SchedulePriority>(2);
 	const [preemptible, setPreemptible] = useState(false);
-	// Track whether we've initialized for this editSchedule
-	const [initializedForId, setInitializedForId] = useState<string | null>(null);
+	// Track whether we've initialized for this editSchedule (ref to avoid re-render loops)
+	const initializedForIdRef = useRef<string | null>(null);
 
 	const { data: agents } = useAgents();
 	const { data: repositories } = useRepositories();
@@ -120,47 +120,64 @@ function CreateScheduleModal({ isOpen, onClose, editSchedule }: CreateScheduleMo
 	const updateSchedule = useUpdateSchedule();
 
 	// Pre-fill form when editing
-	if (isOpen && editSchedule && initializedForId !== editSchedule.id) {
-		setName(editSchedule.name);
-		setAgentId(editSchedule.agent_id);
-		setSelectedRepos(
-			editSchedule.repositories?.map((r) => ({
-				repository_id: r.repository_id,
-				priority: r.priority,
-				enabled: r.enabled,
-			})) ?? [],
-		);
-		setCronExpression(editSchedule.cron_expression);
-		setPaths(editSchedule.paths.join('\n'));
-		setExcludes(editSchedule.excludes ?? []);
-		if (editSchedule.retention_policy) {
-			setShowRetention(true);
-			setKeepLast(editSchedule.retention_policy.keep_last ?? 5);
-			setKeepDaily(editSchedule.retention_policy.keep_daily ?? 7);
-			setKeepWeekly(editSchedule.retention_policy.keep_weekly ?? 4);
-			setKeepMonthly(editSchedule.retention_policy.keep_monthly ?? 6);
-			setKeepYearly(editSchedule.retention_policy.keep_yearly ?? 0);
-		} else {
-			setShowRetention(false);
+	useEffect(() => {
+		if (
+			isOpen &&
+			editSchedule &&
+			initializedForIdRef.current !== editSchedule.id
+		) {
+			setName(editSchedule.name);
+			setAgentId(editSchedule.agent_id);
+			setSelectedRepos(
+				editSchedule.repositories?.map((r) => ({
+					repository_id: r.repository_id,
+					priority: r.priority,
+					enabled: r.enabled,
+				})) ?? [],
+			);
+			setCronExpression(editSchedule.cron_expression);
+			setPaths(editSchedule.paths.join('\n'));
+			setExcludes(editSchedule.excludes ?? []);
+			if (editSchedule.retention_policy) {
+				setShowRetention(true);
+				setKeepLast(editSchedule.retention_policy.keep_last ?? 5);
+				setKeepDaily(editSchedule.retention_policy.keep_daily ?? 7);
+				setKeepWeekly(editSchedule.retention_policy.keep_weekly ?? 4);
+				setKeepMonthly(editSchedule.retention_policy.keep_monthly ?? 6);
+				setKeepYearly(editSchedule.retention_policy.keep_yearly ?? 0);
+			} else {
+				setShowRetention(false);
+			}
+			setBandwidthLimitKb(editSchedule.bandwidth_limit_kb?.toString() ?? '');
+			setWindowStart(editSchedule.backup_window?.start ?? '');
+			setWindowEnd(editSchedule.backup_window?.end ?? '');
+			setExcludedHours(editSchedule.excluded_hours ?? []);
+			setCompressionLevel(editSchedule.compression_level ?? '');
+			setMaxFileSizeMb(editSchedule.max_file_size_mb?.toString() ?? '');
+			setOnMountUnavailable(editSchedule.on_mount_unavailable ?? 'fail');
+			setPriority(editSchedule.priority ?? 2);
+			setPreemptible(editSchedule.preemptible ?? false);
+			const hasAdvanced = !!(
+				editSchedule.bandwidth_limit_kb ||
+				editSchedule.backup_window ||
+				(editSchedule.excluded_hours &&
+					editSchedule.excluded_hours.length > 0) ||
+				editSchedule.compression_level ||
+				editSchedule.max_file_size_mb ||
+				(editSchedule.on_mount_unavailable &&
+					editSchedule.on_mount_unavailable !== 'fail') ||
+				editSchedule.priority !== 2 ||
+				editSchedule.preemptible
+			);
+			setShowAdvanced(hasAdvanced);
+			initializedForIdRef.current = editSchedule.id;
 		}
-		setBandwidthLimitKb(editSchedule.bandwidth_limit_kb?.toString() ?? '');
-		setWindowStart(editSchedule.backup_window?.start ?? '');
-		setWindowEnd(editSchedule.backup_window?.end ?? '');
-		setExcludedHours(editSchedule.excluded_hours ?? []);
-		setCompressionLevel(editSchedule.compression_level ?? '');
-		setMaxFileSizeMb(editSchedule.max_file_size_mb?.toString() ?? '');
-		setOnMountUnavailable(editSchedule.on_mount_unavailable ?? 'fail');
-		setPriority(editSchedule.priority ?? 2);
-		setPreemptible(editSchedule.preemptible ?? false);
-		const hasAdvanced = !!(editSchedule.bandwidth_limit_kb || editSchedule.backup_window || (editSchedule.excluded_hours && editSchedule.excluded_hours.length > 0) || editSchedule.compression_level || editSchedule.max_file_size_mb || (editSchedule.on_mount_unavailable && editSchedule.on_mount_unavailable !== 'fail') || editSchedule.priority !== 2 || editSchedule.preemptible);
-		setShowAdvanced(hasAdvanced);
-		setInitializedForId(editSchedule.id);
-	}
 
-	// Reset initializedForId when modal closes
-	if (!isOpen && initializedForId !== null) {
-		setInitializedForId(null);
-	}
+		// Reset ref when modal closes
+		if (!isOpen) {
+			initializedForIdRef.current = null;
+		}
+	}, [isOpen, editSchedule]);
 
 	const handlePolicySelect = (policyId: string) => {
 		setSelectedPolicyId(policyId);

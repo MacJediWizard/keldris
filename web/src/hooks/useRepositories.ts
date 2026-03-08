@@ -58,12 +58,14 @@ export function useDeleteRepository() {
 	});
 }
 
+// Error handling delegated to consuming components via mutation.error state
 export function useTestRepository() {
 	return useMutation({
 		mutationFn: (id: string) => repositoriesApi.test(id),
 	});
 }
 
+// Error handling delegated to consuming components via mutation.error state
 export function useTestConnection() {
 	return useMutation({
 		mutationFn: (data: TestConnectionRequest) =>
@@ -71,6 +73,7 @@ export function useTestConnection() {
 	});
 }
 
+// Error handling delegated to consuming components via mutation.error state
 export function useRecoverRepositoryKey() {
 	return useMutation({
 		mutationFn: (id: string) => repositoriesApi.recoverKey(id),

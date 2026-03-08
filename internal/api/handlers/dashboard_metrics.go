@@ -15,7 +15,6 @@ import (
 
 // DashboardMetricsStore defines the interface for dashboard metrics persistence operations.
 type DashboardMetricsStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetDashboardStats(ctx context.Context, orgID uuid.UUID) (*models.DashboardStats, error)
 	GetBackupSuccessRates(ctx context.Context, orgID uuid.UUID) (*models.BackupSuccessRate, *models.BackupSuccessRate, error)
 	GetStorageGrowthTrend(ctx context.Context, orgID uuid.UUID, days int) ([]*models.StorageGrowthTrend, error)
@@ -63,22 +62,16 @@ func (h *DashboardMetricsHandler) GetDashboardStats(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	stats, err := h.store.GetDashboardStats(c.Request.Context(), dbUser.OrgID)
+	stats, err := h.store.GetDashboardStats(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get dashboard stats")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get dashboard stats")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve dashboard stats"})
 		return
 	}
 
 	// Get success rates
-	rate7d, rate30d, err := h.store.GetBackupSuccessRates(c.Request.Context(), dbUser.OrgID)
+	rate7d, rate30d, err := h.store.GetBackupSuccessRates(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Warn().Err(err).Msg("failed to get success rates")
 	} else {
@@ -91,14 +84,14 @@ func (h *DashboardMetricsHandler) GetDashboardStats(c *gin.Context) {
 	}
 
 	// Get ransomware alert counts (displayed prominently)
-	activeCount, err := h.store.GetActiveRansomwareAlertCountByOrgID(c.Request.Context(), dbUser.OrgID)
+	activeCount, err := h.store.GetActiveRansomwareAlertCountByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Warn().Err(err).Msg("failed to get active ransomware alert count")
 	} else {
 		stats.RansomwareAlertsActive = activeCount
 	}
 
-	criticalCount, err := h.store.GetCriticalRansomwareAlertCountByOrgID(c.Request.Context(), dbUser.OrgID)
+	criticalCount, err := h.store.GetCriticalRansomwareAlertCountByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		h.logger.Warn().Err(err).Msg("failed to get critical ransomware alert count")
 	} else {
@@ -116,16 +109,10 @@ func (h *DashboardMetricsHandler) GetBackupSuccessRates(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	rate7d, rate30d, err := h.store.GetBackupSuccessRates(c.Request.Context(), dbUser.OrgID)
+	rate7d, rate30d, err := h.store.GetBackupSuccessRates(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get success rates")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get success rates")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve success rates"})
 		return
 	}
@@ -144,12 +131,6 @@ func (h *DashboardMetricsHandler) GetStorageGrowthTrend(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	days := 30
 	if daysParam := c.Query("days"); daysParam != "" {
@@ -158,9 +139,9 @@ func (h *DashboardMetricsHandler) GetStorageGrowthTrend(c *gin.Context) {
 		}
 	}
 
-	trend, err := h.store.GetStorageGrowthTrend(c.Request.Context(), dbUser.OrgID, days)
+	trend, err := h.store.GetStorageGrowthTrend(c.Request.Context(), user.CurrentOrgID, days)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get storage growth trend")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get storage growth trend")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve storage growth trend"})
 		return
 	}
@@ -176,12 +157,6 @@ func (h *DashboardMetricsHandler) GetBackupDurationTrend(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	days := 30
 	if daysParam := c.Query("days"); daysParam != "" {
@@ -190,9 +165,9 @@ func (h *DashboardMetricsHandler) GetBackupDurationTrend(c *gin.Context) {
 		}
 	}
 
-	trend, err := h.store.GetBackupDurationTrend(c.Request.Context(), dbUser.OrgID, days)
+	trend, err := h.store.GetBackupDurationTrend(c.Request.Context(), user.CurrentOrgID, days)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get backup duration trend")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get backup duration trend")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve backup duration trend"})
 		return
 	}
@@ -210,12 +185,6 @@ func (h *DashboardMetricsHandler) GetDailyBackupStats(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	days := 30
 	if daysParam := c.Query("days"); daysParam != "" {
@@ -230,7 +199,7 @@ func (h *DashboardMetricsHandler) GetDailyBackupStats(c *gin.Context) {
 		startDate := now.AddDate(0, 0, -days)
 		endDate := now.AddDate(0, 0, -1) // Exclude today (not yet complete)
 
-		summaries, err := h.store.GetDailySummaries(c.Request.Context(), dbUser.OrgID, startDate, endDate)
+		summaries, err := h.store.GetDailySummaries(c.Request.Context(), user.CurrentOrgID, startDate, endDate)
 		if err == nil && len(summaries) > 0 {
 			stats := make([]*models.DailyBackupStats, 0, len(summaries))
 			for _, s := range summaries {
@@ -251,9 +220,9 @@ func (h *DashboardMetricsHandler) GetDailyBackupStats(c *gin.Context) {
 	}
 
 	// Fall back to real-time query
-	stats, err := h.store.GetDailyBackupStats(c.Request.Context(), dbUser.OrgID, days)
+	stats, err := h.store.GetDailyBackupStats(c.Request.Context(), user.CurrentOrgID, days)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get daily backup stats")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get daily backup stats")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve daily backup stats"})
 		return
 	}
@@ -280,23 +249,17 @@ func (h *DashboardMetricsHandler) GetDockerHealthWidget(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	// Get Docker health summary
-	summary, err := h.store.GetDockerHealthSummary(c.Request.Context(), dbUser.OrgID)
+	summary, err := h.store.GetDockerHealthSummary(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Warn().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get docker health summary")
+		h.logger.Warn().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get docker health summary")
 		// Return empty summary if no data available
 		summary = &models.DockerHealthSummary{}
 	}
 
 	// Get recent restart events
-	restarts, err := h.store.GetRecentContainerRestartEvents(c.Request.Context(), dbUser.OrgID, 10)
+	restarts, err := h.store.GetRecentContainerRestartEvents(c.Request.Context(), user.CurrentOrgID, 10)
 	if err != nil {
 		h.logger.Warn().Err(err).Msg("failed to get recent restart events")
 		restarts = []*models.ContainerRestartEvent{}

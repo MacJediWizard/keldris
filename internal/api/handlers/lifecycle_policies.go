@@ -161,9 +161,9 @@ func (h *LifecyclePoliciesHandler) ListLifecyclePolicies(c *gin.Context) {
 		return
 	}
 
-	policies, err := h.store.GetLifecyclePoliciesByOrgID(c.Request.Context(), dbUser.OrgID)
+	policies, err := h.store.GetLifecyclePoliciesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list lifecycle policies")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list lifecycle policies")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list lifecycle policies"})
 		return
 	}
@@ -230,7 +230,7 @@ func (h *LifecyclePoliciesHandler) CreateLifecyclePolicy(c *gin.Context) {
 		return
 	}
 
-	policy := models.NewLifecyclePolicy(dbUser.OrgID, req.Name, dbUser.ID)
+	policy := models.NewLifecyclePolicy(user.CurrentOrgID, req.Name, dbUser.ID)
 	policy.Description = req.Description
 	policy.Rules = req.Rules
 
@@ -271,7 +271,7 @@ func (h *LifecyclePoliciesHandler) CreateLifecyclePolicy(c *gin.Context) {
 	}
 
 	// Create audit log
-	auditLog := models.NewAuditLog(dbUser.OrgID, models.AuditActionCreate, "lifecycle_policy", models.AuditResultSuccess).
+	auditLog := models.NewAuditLog(user.CurrentOrgID, models.AuditActionCreate, "lifecycle_policy", models.AuditResultSuccess).
 		WithUser(dbUser.ID).
 		WithResource(policy.ID).
 		WithDetails("Created lifecycle policy: " + policy.Name)
@@ -316,13 +316,6 @@ func (h *LifecyclePoliciesHandler) GetLifecyclePolicy(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	policy, err := h.store.GetLifecyclePolicyByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "lifecycle policy not found"})
@@ -330,7 +323,7 @@ func (h *LifecyclePoliciesHandler) GetLifecyclePolicy(c *gin.Context) {
 	}
 
 	// Verify org access
-	if policy.OrgID != dbUser.OrgID {
+	if policy.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "lifecycle policy not found"})
 		return
 	}
@@ -394,7 +387,7 @@ func (h *LifecyclePoliciesHandler) UpdateLifecyclePolicy(c *gin.Context) {
 	}
 
 	// Verify org access
-	if policy.OrgID != dbUser.OrgID {
+	if policy.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "lifecycle policy not found"})
 		return
 	}
@@ -442,7 +435,7 @@ func (h *LifecyclePoliciesHandler) UpdateLifecyclePolicy(c *gin.Context) {
 	}
 
 	// Create audit log
-	auditLog := models.NewAuditLog(dbUser.OrgID, models.AuditActionUpdate, "lifecycle_policy", models.AuditResultSuccess).
+	auditLog := models.NewAuditLog(user.CurrentOrgID, models.AuditActionUpdate, "lifecycle_policy", models.AuditResultSuccess).
 		WithUser(dbUser.ID).
 		WithResource(policy.ID).
 		WithDetails("Updated lifecycle policy: " + policy.Name)
@@ -506,7 +499,7 @@ func (h *LifecyclePoliciesHandler) DeleteLifecyclePolicy(c *gin.Context) {
 	}
 
 	// Verify org access
-	if policy.OrgID != dbUser.OrgID {
+	if policy.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "lifecycle policy not found"})
 		return
 	}
@@ -518,7 +511,7 @@ func (h *LifecyclePoliciesHandler) DeleteLifecyclePolicy(c *gin.Context) {
 	}
 
 	// Create audit log
-	auditLog := models.NewAuditLog(dbUser.OrgID, models.AuditActionDelete, "lifecycle_policy", models.AuditResultSuccess).
+	auditLog := models.NewAuditLog(user.CurrentOrgID, models.AuditActionDelete, "lifecycle_policy", models.AuditResultSuccess).
 		WithUser(dbUser.ID).
 		WithResource(policy.ID).
 		WithDetails("Deleted lifecycle policy: " + policy.Name)
@@ -582,12 +575,12 @@ func (h *LifecyclePoliciesHandler) DryRunPolicy(c *gin.Context) {
 	}
 
 	// Verify org access
-	if policy.OrgID != dbUser.OrgID {
+	if policy.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "lifecycle policy not found"})
 		return
 	}
 
-	result, err := h.performDryRun(c.Request.Context(), dbUser.OrgID, policy.Rules, policy.RepositoryIDs, policy.ScheduleIDs)
+	result, err := h.performDryRun(c.Request.Context(), user.CurrentOrgID, policy.Rules, policy.RepositoryIDs, policy.ScheduleIDs)
 	if err != nil {
 		h.logger.Error().Err(err).Str("policy_id", id.String()).Msg("failed to perform dry run")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to perform dry run"})
@@ -657,7 +650,7 @@ func (h *LifecyclePoliciesHandler) PreviewDryRun(c *gin.Context) {
 			return
 		}
 
-		if policy.OrgID != dbUser.OrgID {
+		if policy.OrgID != user.CurrentOrgID {
 			c.JSON(http.StatusNotFound, gin.H{"error": "policy not found"})
 			return
 		}
@@ -696,7 +689,7 @@ func (h *LifecyclePoliciesHandler) PreviewDryRun(c *gin.Context) {
 		}
 	}
 
-	result, err := h.performDryRun(c.Request.Context(), dbUser.OrgID, rules, repoIDs, schedIDs)
+	result, err := h.performDryRun(c.Request.Context(), user.CurrentOrgID, rules, repoIDs, schedIDs)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to perform dry run preview")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to perform dry run"})
@@ -876,13 +869,6 @@ func (h *LifecyclePoliciesHandler) ListDeletionEvents(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	policy, err := h.store.GetLifecyclePolicyByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "lifecycle policy not found"})
@@ -890,7 +876,7 @@ func (h *LifecyclePoliciesHandler) ListDeletionEvents(c *gin.Context) {
 	}
 
 	// Verify org access
-	if policy.OrgID != dbUser.OrgID {
+	if policy.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "lifecycle policy not found"})
 		return
 	}
@@ -952,9 +938,9 @@ func (h *LifecyclePoliciesHandler) ListOrgDeletionEvents(c *gin.Context) {
 		}
 	}
 
-	events, err := h.store.GetLifecycleDeletionEventsByOrgID(c.Request.Context(), dbUser.OrgID, limit)
+	events, err := h.store.GetLifecycleDeletionEventsByOrgID(c.Request.Context(), user.CurrentOrgID, limit)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list deletion events")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list deletion events")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list deletion events"})
 		return
 	}

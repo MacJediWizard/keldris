@@ -154,22 +154,6 @@ func TestListReportSchedules(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockReportStore{
-			schedules:    []*models.ReportSchedule{schedule},
-			scheduleByID: map[uuid.UUID]*models.ReportSchedule{scheduleID: schedule},
-			user:         nil,
-		}
-		randomUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupReportTestRouter(noUserStore, randomUser)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/reports/schedules", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("store error", func(t *testing.T) {
 		errStore := &mockReportStore{
 			schedules:        []*models.ReportSchedule{schedule},
@@ -320,23 +304,6 @@ func TestCreateReportSchedule(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("expected 401, got %d", w.Code)
-		}
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockReportStore{
-			scheduleByID: map[uuid.UUID]*models.ReportSchedule{},
-			user:         nil,
-		}
-		randomUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupReportTestRouter(noUserStore, randomUser)
-		w := httptest.NewRecorder()
-		body := `{"name":"test","frequency":"daily","recipients":["a@b.com"]}`
-		req, _ := http.NewRequest("POST", "/api/v1/reports/schedules", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 
@@ -613,21 +580,6 @@ func TestListReportHistory(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("expected 401, got %d", w.Code)
-		}
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		noUserStore := &mockReportStore{
-			history: []*models.ReportHistory{},
-			user:    nil,
-		}
-		randomUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: orgID}
-		r := setupReportTestRouter(noUserStore, randomUser)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/reports/history", nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", w.Code)
 		}
 	})
 

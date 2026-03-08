@@ -834,6 +834,9 @@ func (s *Scheduler) executeScript(ctx context.Context, script *models.BackupScri
 	if timeout == 0 {
 		timeout = 30 * time.Second
 	}
+	if timeout > 24*time.Hour {
+		timeout = 24 * time.Hour
+	}
 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

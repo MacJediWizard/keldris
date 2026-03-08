@@ -294,19 +294,6 @@ func TestVerificationsGet(t *testing.T) {
 		}
 	})
 
-	t.Run("repo access denied user not found", func(t *testing.T) {
-		// User exists in session but not found in the store => verifyRepoAccess fails
-		otherUserID := uuid.New()
-		otherSessionUser := &auth.SessionUser{ID: otherUserID, CurrentOrgID: orgID}
-		r := setupVerificationsTestRouter(store, trigger, otherSessionUser)
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/v1/verifications/"+ver.ID.String(), nil)
-		r.ServeHTTP(w, req)
-		if w.Code != http.StatusNotFound {
-			t.Fatalf("expected 404, got %d", w.Code)
-		}
-	})
-
 	t.Run("repo access denied repo not found", func(t *testing.T) {
 		// Verification references a repo that doesn't exist in the store
 		otherRepoID := uuid.New()
@@ -392,8 +379,8 @@ func TestVerificationsListByRepository(t *testing.T) {
 	})
 
 	t.Run("repo access denied", func(t *testing.T) {
-		otherUserID := uuid.New()
-		otherSessionUser := &auth.SessionUser{ID: otherUserID, CurrentOrgID: orgID}
+		otherOrgID := uuid.New()
+		otherSessionUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: otherOrgID}
 		r := setupVerificationsTestRouter(store, trigger, otherSessionUser)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/repositories/"+repoID.String()+"/verifications", nil)
@@ -530,8 +517,7 @@ func TestVerificationsGetStatus(t *testing.T) {
 	})
 
 	t.Run("repo access denied", func(t *testing.T) {
-		otherUserID := uuid.New()
-		otherSessionUser := &auth.SessionUser{ID: otherUserID, CurrentOrgID: orgID}
+		otherSessionUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
 		r := setupVerificationsTestRouter(store, trigger, otherSessionUser)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/repositories/"+repoID.String()+"/verification-status", nil)
@@ -674,8 +660,7 @@ func TestVerificationsTrigger(t *testing.T) {
 	})
 
 	t.Run("repo access denied", func(t *testing.T) {
-		otherUserID := uuid.New()
-		otherSessionUser := &auth.SessionUser{ID: otherUserID, CurrentOrgID: orgID}
+		otherSessionUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
 		r := setupVerificationsTestRouter(store, trigger, otherSessionUser)
 		w := httptest.NewRecorder()
 		body := `{"type":"check"}`
@@ -769,8 +754,7 @@ func TestVerificationsListSchedules(t *testing.T) {
 	})
 
 	t.Run("repo access denied", func(t *testing.T) {
-		otherUserID := uuid.New()
-		otherSessionUser := &auth.SessionUser{ID: otherUserID, CurrentOrgID: orgID}
+		otherSessionUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
 		r := setupVerificationsTestRouter(store, trigger, otherSessionUser)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/repositories/"+repoID.String()+"/verification-schedules", nil)
@@ -924,8 +908,7 @@ func TestVerificationsCreateSchedule(t *testing.T) {
 	})
 
 	t.Run("repo access denied", func(t *testing.T) {
-		otherUserID := uuid.New()
-		otherSessionUser := &auth.SessionUser{ID: otherUserID, CurrentOrgID: orgID}
+		otherSessionUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
 		r := setupVerificationsTestRouter(store, trigger, otherSessionUser)
 		w := httptest.NewRecorder()
 		body := `{"type":"check","cron_expression":"0 2 * * *"}`
@@ -1028,8 +1011,7 @@ func TestVerificationsGetSchedule(t *testing.T) {
 	})
 
 	t.Run("repo access denied", func(t *testing.T) {
-		otherUserID := uuid.New()
-		otherSessionUser := &auth.SessionUser{ID: otherUserID, CurrentOrgID: orgID}
+		otherSessionUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
 		r := setupVerificationsTestRouter(store, trigger, otherSessionUser)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/verification-schedules/"+schedule.ID.String(), nil)
@@ -1150,8 +1132,7 @@ func TestVerificationsUpdateSchedule(t *testing.T) {
 	})
 
 	t.Run("repo access denied", func(t *testing.T) {
-		otherUserID := uuid.New()
-		otherSessionUser := &auth.SessionUser{ID: otherUserID, CurrentOrgID: orgID}
+		otherSessionUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
 		r := setupVerificationsTestRouter(store, trigger, otherSessionUser)
 		w := httptest.NewRecorder()
 		body := `{"cron_expression":"0 4 * * *"}`
@@ -1252,8 +1233,7 @@ func TestVerificationsDeleteSchedule(t *testing.T) {
 	})
 
 	t.Run("repo access denied", func(t *testing.T) {
-		otherUserID := uuid.New()
-		otherSessionUser := &auth.SessionUser{ID: otherUserID, CurrentOrgID: orgID}
+		otherSessionUser := &auth.SessionUser{ID: uuid.New(), CurrentOrgID: uuid.New()}
 		r := setupVerificationsTestRouter(store, trigger, otherSessionUser)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("DELETE", "/api/v1/verification-schedules/"+schedule.ID.String(), nil)

@@ -15,7 +15,6 @@ import (
 
 // CostEstimationStore defines the interface for cost estimation persistence operations.
 type CostEstimationStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetRepositoriesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Repository, error)
 	GetRepositoryByID(ctx context.Context, id uuid.UUID) (*models.Repository, error)
 	GetLatestStorageStats(ctx context.Context, repositoryID uuid.UUID) (*models.StorageStats, error)
@@ -91,31 +90,25 @@ func (h *CostEstimationHandler) GetCostSummary(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	// Get all repositories
-	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), dbUser.OrgID)
+	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get repositories")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get repositories")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve repositories"})
 		return
 	}
 
 	// Get latest stats for all repos
-	stats, err := h.store.GetLatestStatsForAllRepos(c.Request.Context(), dbUser.OrgID)
+	stats, err := h.store.GetLatestStatsForAllRepos(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get storage stats")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get storage stats")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve storage stats"})
 		return
 	}
 
 	// Get custom pricing
-	customPricing, _ := h.store.GetStoragePricingByOrgID(c.Request.Context(), dbUser.OrgID)
+	customPricing, _ := h.store.GetStoragePricingByOrgID(c.Request.Context(), user.CurrentOrgID)
 
 	// Build custom pricing map
 	pricingMap := make(map[string]*models.StoragePricing)
@@ -169,7 +162,7 @@ func (h *CostEstimationHandler) GetCostSummary(c *gin.Context) {
 
 	// Calculate forecasts based on growth
 	if len(stats) > 0 {
-		growth, err := h.store.GetAllStorageGrowth(c.Request.Context(), dbUser.OrgID, 30)
+		growth, err := h.store.GetAllStorageGrowth(c.Request.Context(), user.CurrentOrgID, 30)
 		if err == nil && len(growth) > 1 {
 			sizes := make([]int64, len(growth))
 			for i, g := range growth {
@@ -202,29 +195,23 @@ func (h *CostEstimationHandler) ListRepositoryCosts(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), dbUser.OrgID)
+	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get repositories")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get repositories")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve repositories"})
 		return
 	}
 
-	stats, err := h.store.GetLatestStatsForAllRepos(c.Request.Context(), dbUser.OrgID)
+	stats, err := h.store.GetLatestStatsForAllRepos(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get storage stats")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get storage stats")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve storage stats"})
 		return
 	}
 
 	// Get custom pricing
-	customPricing, _ := h.store.GetStoragePricingByOrgID(c.Request.Context(), dbUser.OrgID)
+	customPricing, _ := h.store.GetStoragePricingByOrgID(c.Request.Context(), user.CurrentOrgID)
 	pricingMap := make(map[string]*models.StoragePricing)
 	for _, p := range customPricing {
 		pricingMap[p.RepositoryType] = p
@@ -287,20 +274,13 @@ func (h *CostEstimationHandler) GetRepositoryCost(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
 	repo, err := h.store.GetRepositoryByID(c.Request.Context(), repoID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
 
-	if repo.OrgID != dbUser.OrgID {
+	if repo.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
 		return
 	}
@@ -314,7 +294,7 @@ func (h *CostEstimationHandler) GetRepositoryCost(c *gin.Context) {
 
 	// Check for custom pricing
 	var costPerGB float64
-	customPricing, err := h.store.GetStoragePricingByType(c.Request.Context(), dbUser.OrgID, string(repo.Type))
+	customPricing, err := h.store.GetStoragePricingByType(c.Request.Context(), user.CurrentOrgID, string(repo.Type))
 	if err == nil && customPricing != nil {
 		costPerGB = customPricing.StoragePerGBMonth
 	} else {
@@ -358,12 +338,6 @@ func (h *CostEstimationHandler) GetCostForecast(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	// Get storage growth history
 	days := 30
@@ -373,9 +347,9 @@ func (h *CostEstimationHandler) GetCostForecast(c *gin.Context) {
 		}
 	}
 
-	growth, err := h.store.GetAllStorageGrowth(c.Request.Context(), dbUser.OrgID, days)
+	growth, err := h.store.GetAllStorageGrowth(c.Request.Context(), user.CurrentOrgID, days)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get storage growth")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get storage growth")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve storage growth"})
 		return
 	}
@@ -389,22 +363,22 @@ func (h *CostEstimationHandler) GetCostForecast(c *gin.Context) {
 	}
 
 	// Get current costs
-	stats, err := h.store.GetLatestStatsForAllRepos(c.Request.Context(), dbUser.OrgID)
+	stats, err := h.store.GetLatestStatsForAllRepos(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get storage stats")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get storage stats")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve storage stats"})
 		return
 	}
 
-	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), dbUser.OrgID)
+	repos, err := h.store.GetRepositoriesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get repositories")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get repositories")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve repositories"})
 		return
 	}
 
 	// Get custom pricing
-	customPricing, _ := h.store.GetStoragePricingByOrgID(c.Request.Context(), dbUser.OrgID)
+	customPricing, _ := h.store.GetStoragePricingByOrgID(c.Request.Context(), user.CurrentOrgID)
 	pricingMap := make(map[string]*models.StoragePricing)
 	for _, p := range customPricing {
 		pricingMap[p.RepositoryType] = p
@@ -466,12 +440,6 @@ func (h *CostEstimationHandler) GetCostHistory(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	days := 30
 	if daysParam := c.Query("days"); daysParam != "" {
@@ -480,15 +448,15 @@ func (h *CostEstimationHandler) GetCostHistory(c *gin.Context) {
 		}
 	}
 
-	estimates, err := h.store.GetLatestCostEstimates(c.Request.Context(), dbUser.OrgID)
+	estimates, err := h.store.GetLatestCostEstimates(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get cost estimates")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get cost estimates")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve cost history"})
 		return
 	}
 
 	// Also get growth data for chart
-	growth, _ := h.store.GetAllStorageGrowth(c.Request.Context(), dbUser.OrgID, days)
+	growth, _ := h.store.GetAllStorageGrowth(c.Request.Context(), user.CurrentOrgID, days)
 
 	c.JSON(http.StatusOK, gin.H{
 		"estimates":      estimates,
@@ -504,16 +472,10 @@ func (h *CostEstimationHandler) ListPricing(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	pricing, err := h.store.GetStoragePricingByOrgID(c.Request.Context(), dbUser.OrgID)
+	pricing, err := h.store.GetStoragePricingByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get pricing")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get pricing")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve pricing"})
 		return
 	}
@@ -551,14 +513,8 @@ func (h *CostEstimationHandler) CreatePricing(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	pricing := models.NewStoragePricing(dbUser.OrgID, req.RepositoryType)
+	pricing := models.NewStoragePricing(user.CurrentOrgID, req.RepositoryType)
 	pricing.StoragePerGBMonth = req.StoragePerGBMonth
 	pricing.EgressPerGB = req.EgressPerGB
 	pricing.OperationsPerK = req.OperationsPerK
@@ -566,7 +522,7 @@ func (h *CostEstimationHandler) CreatePricing(c *gin.Context) {
 	pricing.ProviderDescription = req.ProviderDescription
 
 	if err := h.store.CreateStoragePricing(c.Request.Context(), pricing); err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to create pricing")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to create pricing")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create pricing"})
 		return
 	}
@@ -595,15 +551,9 @@ func (h *CostEstimationHandler) UpdatePricing(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	// Get existing pricing by querying all and filtering
-	allPricing, err := h.store.GetStoragePricingByOrgID(c.Request.Context(), dbUser.OrgID)
+	allPricing, err := h.store.GetStoragePricingByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "pricing not found"})
 		return
@@ -663,15 +613,9 @@ func (h *CostEstimationHandler) DeletePricing(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	// Verify ownership
-	allPricing, _ := h.store.GetStoragePricingByOrgID(c.Request.Context(), dbUser.OrgID)
+	allPricing, _ := h.store.GetStoragePricingByOrgID(c.Request.Context(), user.CurrentOrgID)
 	found := false
 	for _, p := range allPricing {
 		if p.ID == id {
@@ -702,16 +646,10 @@ func (h *CostEstimationHandler) ListCostAlerts(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	alerts, err := h.store.GetCostAlertsByOrgID(c.Request.Context(), dbUser.OrgID)
+	alerts, err := h.store.GetCostAlertsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to get cost alerts")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to get cost alerts")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve cost alerts"})
 		return
 	}
@@ -734,12 +672,6 @@ func (h *CostEstimationHandler) GetCostAlert(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	alert, err := h.store.GetCostAlertByID(c.Request.Context(), id)
 	if err != nil {
@@ -747,7 +679,7 @@ func (h *CostEstimationHandler) GetCostAlert(c *gin.Context) {
 		return
 	}
 
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "alert not found"})
 		return
 	}
@@ -769,14 +701,8 @@ func (h *CostEstimationHandler) CreateCostAlert(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	alert := models.NewCostAlert(dbUser.OrgID, req.Name, req.MonthlyThreshold)
+	alert := models.NewCostAlert(user.CurrentOrgID, req.Name, req.MonthlyThreshold)
 	if req.Enabled != nil {
 		alert.Enabled = *req.Enabled
 	}
@@ -791,7 +717,7 @@ func (h *CostEstimationHandler) CreateCostAlert(c *gin.Context) {
 	}
 
 	if err := h.store.CreateCostAlert(c.Request.Context(), alert); err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to create cost alert")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to create cost alert")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create cost alert"})
 		return
 	}
@@ -820,12 +746,6 @@ func (h *CostEstimationHandler) UpdateCostAlert(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	alert, err := h.store.GetCostAlertByID(c.Request.Context(), id)
 	if err != nil {
@@ -833,7 +753,7 @@ func (h *CostEstimationHandler) UpdateCostAlert(c *gin.Context) {
 		return
 	}
 
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "alert not found"})
 		return
 	}
@@ -882,12 +802,6 @@ func (h *CostEstimationHandler) DeleteCostAlert(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	alert, err := h.store.GetCostAlertByID(c.Request.Context(), id)
 	if err != nil {
@@ -895,7 +809,7 @@ func (h *CostEstimationHandler) DeleteCostAlert(c *gin.Context) {
 		return
 	}
 
-	if alert.OrgID != dbUser.OrgID {
+	if alert.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "alert not found"})
 		return
 	}

@@ -122,15 +122,6 @@ func TestStatsGetSummary(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockStatsStore{getUserErr: errors.New("not found")}
-		r := setupStatsTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/stats/summary"))
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("summary error", func(t *testing.T) {
 		store := &mockStatsStore{user: dbUser, summaryErr: errors.New("db error")}
 		r := setupStatsTestRouter(store, user)

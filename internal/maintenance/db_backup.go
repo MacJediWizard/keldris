@@ -188,7 +188,11 @@ func (s *DatabaseBackupService) CreateBackup(ctx context.Context) (*models.Datab
 		Msg("database backup completed successfully")
 
 	// Run retention cleanup
-	go s.cleanupOldBackups(context.Background())
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		s.cleanupOldBackups(ctx)
+	}()
 
 	return backup, nil
 }

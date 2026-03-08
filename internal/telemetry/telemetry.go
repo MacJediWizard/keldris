@@ -213,7 +213,12 @@ func (s *Service) Stop() {
 	doneCh := s.doneCh
 	s.mu.Unlock()
 
-	<-doneCh
+	select {
+	case <-doneCh:
+		// Clean shutdown
+	case <-time.After(5 * time.Second):
+		// Force exit after timeout
+	}
 }
 
 func (s *Service) run() {

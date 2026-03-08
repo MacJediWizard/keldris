@@ -242,16 +242,6 @@ func TestCostEstimationGetCostSummary(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/costs/summary"))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("repos error", func(t *testing.T) {
 		store := &mockCostEstimationStore{
 			user:        dbUser,
@@ -346,16 +336,6 @@ func TestCostEstimationListRepositoryCosts(t *testing.T) {
 
 		if resp.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", resp.Code, resp.Body.String())
-		}
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/costs/repositories"))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
 		}
 	})
 
@@ -480,16 +460,6 @@ func TestCostEstimationGetRepositoryCost(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/costs/repositories/"+repoID.String()))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("repo not found", func(t *testing.T) {
 		store := &mockCostEstimationStore{
 			user:       dbUser,
@@ -587,16 +557,6 @@ func TestCostEstimationGetCostForecast(t *testing.T) {
 
 		if resp.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", resp.Code, resp.Body.String())
-		}
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/costs/forecast"))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
 		}
 	})
 
@@ -735,16 +695,6 @@ func TestCostEstimationGetCostHistory(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/costs/history"))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("estimates error", func(t *testing.T) {
 		store := &mockCostEstimationStore{
 			user:            dbUser,
@@ -799,16 +749,6 @@ func TestCostEstimationListPricing(t *testing.T) {
 		}
 		if len(body["pricing"]) != 1 {
 			t.Fatalf("expected 1 pricing entry, got %d", len(body["pricing"]))
-		}
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/pricing"))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
 		}
 	})
 
@@ -921,18 +861,6 @@ func TestCostEstimationCreatePricing(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-
-		body := `{"repository_type":"s3","storage_per_gb_month":0.05}`
-		resp := DoRequest(r, JSONRequest("POST", "/api/v1/pricing", body))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("create error", func(t *testing.T) {
 		store := &mockCostEstimationStore{
 			user:             dbUser,
@@ -1037,18 +965,6 @@ func TestCostEstimationUpdatePricing(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-
-		body := `{"storage_per_gb_month":0.05}`
-		resp := DoRequest(r, JSONRequest("PUT", "/api/v1/pricing/"+pricingID.String(), body))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("pricing not found", func(t *testing.T) {
 		store := &mockCostEstimationStore{
 			user:    dbUser,
@@ -1145,16 +1061,6 @@ func TestCostEstimationDeletePricing(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("DELETE", "/api/v1/pricing/"+pricingID.String()))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("not found", func(t *testing.T) {
 		store := &mockCostEstimationStore{
 			user:    dbUser,
@@ -1228,16 +1134,6 @@ func TestCostEstimationListCostAlerts(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/cost-alerts"))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("alerts error", func(t *testing.T) {
 		store := &mockCostEstimationStore{
 			user:         dbUser,
@@ -1300,16 +1196,6 @@ func TestCostEstimationGetCostAlert(t *testing.T) {
 
 		if resp.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d", resp.Code)
-		}
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/cost-alerts/"+alertID.String()))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
 		}
 	})
 
@@ -1430,18 +1316,6 @@ func TestCostEstimationCreateCostAlert(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-
-		body := `{"name":"Budget Alert","monthly_threshold":100.0}`
-		resp := DoRequest(r, JSONRequest("POST", "/api/v1/cost-alerts", body))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("create error", func(t *testing.T) {
 		store := &mockCostEstimationStore{
 			user:           dbUser,
@@ -1553,18 +1427,6 @@ func TestCostEstimationUpdateCostAlert(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-
-		body := `{"name":"Update"}`
-		resp := DoRequest(r, JSONRequest("PUT", "/api/v1/cost-alerts/"+alertID.String(), body))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
-		}
-	})
-
 	t.Run("alert not found", func(t *testing.T) {
 		store := &mockCostEstimationStore{
 			user:        dbUser,
@@ -1654,16 +1516,6 @@ func TestCostEstimationDeleteCostAlert(t *testing.T) {
 
 		if resp.Code != http.StatusBadRequest {
 			t.Fatalf("expected 400, got %d", resp.Code)
-		}
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		store := &mockCostEstimationStore{getUserErr: errors.New("not found")}
-		r := setupCostEstimationTestRouter(store, user)
-		resp := DoRequest(r, AuthenticatedRequest("DELETE", "/api/v1/cost-alerts/"+alertID.String()))
-
-		if resp.Code != http.StatusInternalServerError {
-			t.Fatalf("expected 500, got %d", resp.Code)
 		}
 	})
 

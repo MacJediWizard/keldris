@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -334,15 +335,24 @@ func (p *PostgresBackup) backupAllDatabases(ctx context.Context, outputDir strin
 		return result, fmt.Errorf("start pg_dumpall: %w", err)
 	}
 
-	// Read stderr for any errors
-	stderrBytes := make([]byte, 4096)
-	n, _ := stderrOutput.Read(stderrBytes)
-	stderr := string(stderrBytes[:n])
+	// Read stderr in goroutine to prevent deadlock
+	var stderr string
+	var stderrErr error
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		stderrBytes, err := io.ReadAll(stderrOutput)
+		stderr = string(stderrBytes)
+		stderrErr = err
+	}()
 
 	if err := cmd.Wait(); err != nil {
+		<-done // wait for stderr reader
 		result.ErrorMessage = fmt.Sprintf("pg_dumpall failed: %v: %s", err, stderr)
 		return result, fmt.Errorf("pg_dumpall: %w", err)
 	}
+	<-done
+	_ = stderrErr
 
 	// Verify backup was created
 	info, err := os.Stat(backupFile)

@@ -109,6 +109,9 @@ func (db *DB) GetPasswordHistory(ctx context.Context, userID uuid.UUID, limit in
 		}
 		history = append(history, &h)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
+	}
 
 	return history, nil
 }
@@ -247,6 +250,9 @@ func (db *DB) GetUsersWithExpiredPasswords(ctx context.Context, orgID uuid.UUID)
 			user.OIDCSubject = *oidcSubject
 		}
 		users = append(users, &user)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
 	}
 
 	return users, nil

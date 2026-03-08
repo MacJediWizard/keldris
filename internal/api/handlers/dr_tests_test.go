@@ -201,21 +201,6 @@ func TestDRTestsList(t *testing.T) {
 		}
 	})
 
-	t.Run("user error", func(t *testing.T) {
-		errStore := &mockDRTestStore{
-			testByID:    map[uuid.UUID]*models.DRTest{},
-			runbookByID: map[uuid.UUID]*models.DRRunbook{},
-			userErr:     errors.New("db error"),
-		}
-		r := setupDRTestsTestRouter(errStore, nil, user)
-		req := AuthenticatedRequest("GET", "/api/v1/dr-tests")
-		w := DoRequest(r, req)
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected status 500, got %d", w.Code)
-		}
-	})
-
 	t.Run("list error", func(t *testing.T) {
 		errStore := &mockDRTestStore{
 			testByID:    map[uuid.UUID]*models.DRTest{},
@@ -408,21 +393,6 @@ func TestDRTestsRun(t *testing.T) {
 
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("expected status 400, got %d", w.Code)
-		}
-	})
-
-	t.Run("user error", func(t *testing.T) {
-		errStore := &mockDRTestStore{
-			testByID:    map[uuid.UUID]*models.DRTest{},
-			runbookByID: map[uuid.UUID]*models.DRRunbook{},
-			userErr:     errors.New("db error"),
-		}
-		r := setupDRTestsTestRouter(errStore, nil, user)
-		req := JSONRequest("POST", "/api/v1/dr-tests", `{"runbook_id":"`+runbookID.String()+`"}`)
-		w := DoRequest(r, req)
-
-		if w.Code != http.StatusInternalServerError {
-			t.Fatalf("expected status 500, got %d", w.Code)
 		}
 	})
 

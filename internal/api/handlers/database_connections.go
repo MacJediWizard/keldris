@@ -16,7 +16,6 @@ import (
 
 // DatabaseConnectionStore defines the interface for database connection persistence operations.
 type DatabaseConnectionStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetDatabaseConnectionsByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.DatabaseConnection, error)
 	GetDatabaseConnectionsByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.DatabaseConnection, error)
 	GetDatabaseConnectionByID(ctx context.Context, id uuid.UUID) (*models.DatabaseConnection, error)
@@ -68,16 +67,10 @@ func (h *DatabaseConnectionsHandler) ListConnections(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
-	connections, err := h.store.GetDatabaseConnectionsByOrgID(c.Request.Context(), dbUser.OrgID)
+	connections, err := h.store.GetDatabaseConnectionsByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list database connections")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list database connections")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list database connections"})
 		return
 	}
@@ -107,14 +100,8 @@ func (h *DatabaseConnectionsHandler) GetConnection(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if conn.OrgID != dbUser.OrgID {
+	if conn.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "database connection not found"})
 		return
 	}
@@ -167,12 +154,6 @@ func (h *DatabaseConnectionsHandler) CreateConnection(c *gin.Context) {
 		port = models.DefaultPort(req.Type)
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
 
 	// Encrypt the password
 	credentials := &models.DatabaseCredentials{Password: req.Password}
@@ -190,7 +171,7 @@ func (h *DatabaseConnectionsHandler) CreateConnection(c *gin.Context) {
 		return
 	}
 
-	conn := models.NewDatabaseConnection(dbUser.OrgID, req.Name, req.Type, req.Host, port, req.Username, credentialsEncrypted)
+	conn := models.NewDatabaseConnection(user.CurrentOrgID, req.Name, req.Type, req.Host, port, req.Username, credentialsEncrypted)
 	conn.SSLMode = req.SSLMode
 	conn.AgentID = req.AgentID
 	conn.CreatedBy = &user.ID
@@ -248,14 +229,8 @@ func (h *DatabaseConnectionsHandler) UpdateConnection(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if conn.OrgID != dbUser.OrgID {
+	if conn.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "database connection not found"})
 		return
 	}
@@ -311,14 +286,8 @@ func (h *DatabaseConnectionsHandler) DeleteConnection(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if conn.OrgID != dbUser.OrgID {
+	if conn.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "database connection not found"})
 		return
 	}
@@ -354,14 +323,8 @@ func (h *DatabaseConnectionsHandler) TestConnection(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if conn.OrgID != dbUser.OrgID {
+	if conn.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "database connection not found"})
 		return
 	}
@@ -522,14 +485,8 @@ func (h *DatabaseConnectionsHandler) UpdateCredentials(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
 
-	if conn.OrgID != dbUser.OrgID {
+	if conn.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "database connection not found"})
 		return
 	}

@@ -15,7 +15,6 @@ import (
 
 // ReportStore defines the interface for report persistence operations.
 type ReportStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetReportSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.ReportSchedule, error)
 	GetReportScheduleByID(ctx context.Context, id uuid.UUID) (*models.ReportSchedule, error)
 	CreateReportSchedule(ctx context.Context, schedule *models.ReportSchedule) error
@@ -72,16 +71,9 @@ func (h *ReportsHandler) ListSchedules(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	schedules, err := h.store.GetReportSchedulesByOrgID(c.Request.Context(), user.CurrentOrgID)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	schedules, err := h.store.GetReportSchedulesByOrgID(c.Request.Context(), dbUser.OrgID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list report schedules")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list report schedules")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list report schedules"})
 		return
 	}
@@ -111,13 +103,7 @@ func (h *ReportsHandler) GetSchedule(c *gin.Context) {
 	}
 
 	// Verify org ownership
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if schedule.OrgID != dbUser.OrgID {
+	if schedule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "report schedule not found"})
 		return
 	}
@@ -149,14 +135,7 @@ func (h *ReportsHandler) CreateSchedule(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	schedule := models.NewReportSchedule(dbUser.OrgID, req.Name, models.ReportFrequency(req.Frequency), req.Recipients)
+	schedule := models.NewReportSchedule(user.CurrentOrgID, req.Name, models.ReportFrequency(req.Frequency), req.Recipients)
 
 	if req.Timezone != "" {
 		schedule.Timezone = req.Timezone
@@ -207,13 +186,7 @@ func (h *ReportsHandler) UpdateSchedule(c *gin.Context) {
 	}
 
 	// Verify org ownership
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if schedule.OrgID != dbUser.OrgID {
+	if schedule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "report schedule not found"})
 		return
 	}
@@ -279,13 +252,7 @@ func (h *ReportsHandler) DeleteSchedule(c *gin.Context) {
 	}
 
 	// Verify org ownership
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if schedule.OrgID != dbUser.OrgID {
+	if schedule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "report schedule not found"})
 		return
 	}
@@ -327,13 +294,7 @@ func (h *ReportsHandler) SendReport(c *gin.Context) {
 	}
 
 	// Verify org ownership
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if schedule.OrgID != dbUser.OrgID {
+	if schedule.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "report schedule not found"})
 		return
 	}
@@ -392,13 +353,6 @@ func (h *ReportsHandler) PreviewReport(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	timezone := req.Timezone
 	if timezone == "" {
 		timezone = "UTC"
@@ -406,7 +360,7 @@ func (h *ReportsHandler) PreviewReport(c *gin.Context) {
 
 	data, periodStart, periodEnd, err := h.scheduler.GeneratePreview(
 		c.Request.Context(),
-		dbUser.OrgID,
+		user.CurrentOrgID,
 		models.ReportFrequency(req.Frequency),
 		timezone,
 	)
@@ -433,16 +387,9 @@ func (h *ReportsHandler) ListHistory(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
+	history, err := h.store.GetReportHistoryByOrgID(c.Request.Context(), user.CurrentOrgID, 100)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	history, err := h.store.GetReportHistoryByOrgID(c.Request.Context(), dbUser.OrgID, 100)
-	if err != nil {
-		h.logger.Error().Err(err).Str("org_id", dbUser.OrgID.String()).Msg("failed to list report history")
+		h.logger.Error().Err(err).Str("org_id", user.CurrentOrgID.String()).Msg("failed to list report history")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list report history"})
 		return
 	}
@@ -471,13 +418,7 @@ func (h *ReportsHandler) GetHistoryEntry(c *gin.Context) {
 	}
 
 	// Verify org ownership
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify access"})
-		return
-	}
-
-	if entry.OrgID != dbUser.OrgID {
+	if entry.OrgID != user.CurrentOrgID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "report history not found"})
 		return
 	}

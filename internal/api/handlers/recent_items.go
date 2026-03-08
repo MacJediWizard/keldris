@@ -20,7 +20,6 @@ type RecentItemsHandler struct {
 
 // RecentItemsStore defines the interface for recent items persistence operations.
 type RecentItemsStore interface {
-	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	CreateOrUpdateRecentItem(ctx context.Context, item *models.RecentItem) error
 	GetRecentItemsByUser(ctx context.Context, orgID, userID uuid.UUID, limit int) ([]*models.RecentItem, error)
 	GetRecentItemsByUserAndType(ctx context.Context, orgID, userID uuid.UUID, itemType models.RecentItemType, limit int) ([]*models.RecentItem, error)
@@ -55,13 +54,6 @@ func (h *RecentItemsHandler) List(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
 	// Parse optional query parameters
 	limit := 20
 	if l := c.Query("limit"); l != "" {
@@ -73,14 +65,15 @@ func (h *RecentItemsHandler) List(c *gin.Context) {
 	itemType := c.Query("type")
 
 	var items []*models.RecentItem
+	var err error
 	if itemType != "" {
 		if !models.IsValidItemType(itemType) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid item type"})
 			return
 		}
-		items, err = h.store.GetRecentItemsByUserAndType(c.Request.Context(), dbUser.OrgID, dbUser.ID, models.RecentItemType(itemType), limit)
+		items, err = h.store.GetRecentItemsByUserAndType(c.Request.Context(), user.CurrentOrgID, user.ID, models.RecentItemType(itemType), limit)
 	} else {
-		items, err = h.store.GetRecentItemsByUser(c.Request.Context(), dbUser.OrgID, dbUser.ID, limit)
+		items, err = h.store.GetRecentItemsByUser(c.Request.Context(), user.CurrentOrgID, user.ID, limit)
 	}
 
 	if err != nil {
@@ -130,14 +123,7 @@ func (h *RecentItemsHandler) Track(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	item := models.NewRecentItem(dbUser.OrgID, dbUser.ID, models.RecentItemType(req.ItemType), itemID, req.ItemName, req.PagePath)
+	item := models.NewRecentItem(user.CurrentOrgID, user.ID, models.RecentItemType(req.ItemType), itemID, req.ItemName, req.PagePath)
 
 	if err := h.store.CreateOrUpdateRecentItem(c.Request.Context(), item); err != nil {
 		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to track recent item")
@@ -196,14 +182,7 @@ func (h *RecentItemsHandler) ClearAll(c *gin.Context) {
 		return
 	}
 
-	dbUser, err := h.store.GetUserByID(c.Request.Context(), user.ID)
-	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to get user")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve user"})
-		return
-	}
-
-	if err := h.store.DeleteRecentItemsForUser(c.Request.Context(), dbUser.OrgID, dbUser.ID); err != nil {
+	if err := h.store.DeleteRecentItemsForUser(c.Request.Context(), user.CurrentOrgID, user.ID); err != nil {
 		h.logger.Error().Err(err).Str("user_id", user.ID.String()).Msg("failed to clear recent items")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to clear recent items"})
 		return
