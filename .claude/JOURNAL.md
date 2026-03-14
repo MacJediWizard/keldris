@@ -1283,3 +1283,88 @@ Wired up the command dispatch infrastructure so admins can push agent updates, r
 - `go build ./...`: clean
 - `npx tsc --noEmit`: clean
 - `npx biome check`: clean
+
+---
+
+## 2026-03-14 — Code Audit: Security, Accessibility, UI Polish, Tests
+
+### What
+Full audit of both Keldris and license-server repos. Fixed security vulnerabilities, accessibility gaps, UI inconsistencies, and expanded test coverage. Executed in 4 parallel batches using 11 subagents.
+
+### Phase 1: Critical Security Fixes
+
+**XSS in Documentation.tsx (Keldris)**
+- Link regex injected URLs directly into `href` — `javascript:alert(1)` bypassed `escapeHtml()`
+- Installed DOMPurify, wrapped HTML output in `DOMPurify.sanitize()` before `dangerouslySetInnerHTML`
+- 15 regression tests (javascript:, data:, vbscript: URIs, img onerror, script tags, event handlers, normal rendering)
+
+**org_id in GetAgentLogs (Keldris)**
+- `store_recovered.go` filtered by `agent_id` only — `agent_logs` table has `org_id` but it wasn't in WHERE clause
+- Added `orgID uuid.UUID` param, `AND org_id = $2` to query, updated interface + handler + mock
+
+**Activation Race Condition (License Server)**
+- Count-then-insert without transaction — two concurrent requests both pass limit check
+- New `CreateActivationWithLimitCheck` method: `SELECT FOR UPDATE` on license row, count + insert in single tx
+- Sentinel error `ErrMaxActivationsReached`, concurrent Go test (10 goroutines, verify exactly N succeed)
+
+**Silent Audit Log Errors (License Server)**
+- `_ = h.store.CreateValidationLog(...)` silently dropped audit trail errors → now logged via `h.logger.Error()`
+- `json.Marshal` errors on `limitKeys`/`limits` → now return 400 instead of nil
+- Added explicit comment on intentionally unchecked optional revoke reason
+
+### Phase 2: Accessibility & TODO Completions
+
+**Modal Focus Trap (Keldris)**
+- Removed `role="button"` and `tabIndex={-1}` from overlay backdrop
+- Added focus trap: save previous focus on mount, trap Tab within dialog, restore on unmount
+- Added `aria-labelledby` via `useId()` + `ModalTitleIdContext` linking dialog to ModalHeader h3
+- 8 new tests (focus movement, tab trapping, focus restoration, aria attributes)
+
+**Critical TODOs Completed (Keldris)**
+- `repositories.go:462` — Stale TODO removed (encrypted config already implemented above it)
+- `superuser.go:332` — Created `SuperuserAuditLog` synchronously before `StartImpersonation`, passes real audit log ID
+- `backup_queue.go:350` — New `GetQueuedBackupsCountByAgent` DB method replaces hardcoded `0`
+
+### Phase 3: UI Polish
+
+**Dark Mode Gaps**
+- `Pagination.tsx` — active page button + ellipsis
+- `Tags.tsx`, `DRTests.tsx`, `DRRunbooks.tsx`, `Maintenance.tsx`, `LicenseManagement.tsx`, `PasswordRequirements.tsx` — loading skeletons
+- `OrganizationSettings.tsx` — role badge, cancel buttons, danger zone, delete modal
+
+**Form Double-Submit Prevention**
+- Added `disabled:cursor-not-allowed` to 14 submit buttons across SystemSettings, OrganizationSettings, Schedules, Agents
+
+**Icon Button Accessibility**
+- Added `aria-label` to 26 icon-only buttons across 20 files (theme toggle, close, search, download, favorites, etc.)
+
+**Component Extraction**
+- Created `components/ui/LoadingRow.tsx` — configurable table skeleton (width, pill, button, align, render, barClassName)
+- Created `components/ui/LoadingCard.tsx` — 7 built-in variants (stat, stat-sm, alert, template, repo, sla, health)
+- Removed 27 inline LoadingRow/LoadingCard definitions across pages
+- Consolidated 11 status color functions into `lib/utils.ts` (restore, command, DR test/runbook, notification, health, lifecycle, docker log, user status, role badge)
+
+### Phase 4: Test Coverage (+184 new tests)
+
+| Page | Tests | Key areas covered |
+|------|-------|-------------------|
+| License.tsx | 34 | Loading, error, tier badges, limits, trial states, forms, history |
+| Activity.tsx | 17 | Feed rendering, category filtering, WebSocket indicators, deduplication |
+| LifecyclePolicies.tsx | 36 | CRUD, status toggle, delete confirmation, dry run, create form |
+| Webhooks.tsx | 33 | CRUD, event types, delivery log modal, retry, signature verification |
+| SystemHealth.tsx | 49 | All sections, warning/critical states, auto-refresh, historical data |
+| Documentation.tsx | 15 | XSS vectors + normal markdown rendering (Phase 1) |
+
+**Total vitest: 1635 (up from ~1446)**
+
+### Verification
+- `go vet ./...`: clean (both repos)
+- `staticcheck ./...`: clean (both repos)
+- `go test -race ./...`: pass (both repos)
+- `npx vitest run`: 1635 pass (112 files)
+- `npx @biomejs/biome check .`: clean (383 files)
+- `npx tsc --noEmit`: clean
+
+### Commits
+- Keldris `045ede98` — Fix security vulnerabilities, improve accessibility, polish UI, expand tests (74 files, +2942/-1159)
+- License Server `35a6ae3` — Fix activation race condition, audit log errors, and input validation (8 files, +257/-42)
