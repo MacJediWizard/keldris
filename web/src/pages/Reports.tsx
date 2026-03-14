@@ -19,24 +19,14 @@ import type {
 } from '../lib/types';
 import { formatDate } from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+import { LoadingRow } from '../components/ui/LoadingRow';
+
+const reportLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-24' },
+	{ width: 'w-16', button: true, align: 'right' as const },
+] as const;
 
 function formatBytes(bytes: number): string {
 	if (bytes === 0) return '0 B';
@@ -783,8 +773,8 @@ export default function Reports() {
 						<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 							{schedulesLoading ? (
 								<>
-									<LoadingRow />
-									<LoadingRow />
+									<LoadingRow columns={[...reportLoadingColumns]} />
+									<LoadingRow columns={[...reportLoadingColumns]} />
 								</>
 							) : schedules?.length === 0 ? (
 								<tr>
@@ -835,8 +825,8 @@ export default function Reports() {
 						<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 							{historyLoading ? (
 								<>
-									<LoadingRow />
-									<LoadingRow />
+									<LoadingRow columns={[...reportLoadingColumns]} />
+									<LoadingRow columns={[...reportLoadingColumns]} />
 								</>
 							) : history?.length === 0 ? (
 								<tr>

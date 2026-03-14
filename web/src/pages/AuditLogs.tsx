@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { UpgradePrompt } from '../components/features/UpgradePrompt';
+import { LoadingRow } from '../components/ui/LoadingRow';
 import {
 	useAuditLogs,
 	useExportAuditLogsCsv,
@@ -15,30 +16,14 @@ import {
 	getAuditResultColor,
 } from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-		</tr>
-	);
-}
+const auditLogLoadingColumns = [
+	{ width: 'w-24' },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-20' },
+	{ width: 'w-32' },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-28' },
+] as const;
 
 export function AuditLogs() {
 	const [filter, setFilter] = useState<AuditLogFilter>({
@@ -288,11 +273,11 @@ export function AuditLogs() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...auditLogLoadingColumns]} />
+							<LoadingRow columns={[...auditLogLoadingColumns]} />
+							<LoadingRow columns={[...auditLogLoadingColumns]} />
+							<LoadingRow columns={[...auditLogLoadingColumns]} />
+							<LoadingRow columns={[...auditLogLoadingColumns]} />
 						</tbody>
 					</table>
 				) : data && data.audit_logs.length > 0 ? (

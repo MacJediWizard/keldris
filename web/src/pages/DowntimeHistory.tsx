@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LoadingCard } from '../components/ui/LoadingCard';
 import {
 	useActiveDowntime,
 	useDowntimeEvents,
@@ -12,21 +13,6 @@ import type {
 	DowntimeSeverity,
 } from '../lib/types';
 import { formatDate, formatDateTime } from '../lib/utils';
-
-function LoadingCard() {
-	return (
-		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
-			<div className="flex items-start gap-4">
-				<div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
-				<div className="flex-1">
-					<div className="h-5 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-					<div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
-					<div className="h-3 w-1/4 bg-gray-200 dark:bg-gray-700 rounded" />
-				</div>
-			</div>
-		</div>
-	);
-}
 
 function getSeverityColor(severity: DowntimeSeverity) {
 	switch (severity) {
@@ -637,9 +623,9 @@ export function DowntimeHistory() {
 						</div>
 					) : isLoading ? (
 						<div className="space-y-4">
-							<LoadingCard />
-							<LoadingCard />
-							<LoadingCard />
+							<LoadingCard variant="alert" />
+							<LoadingCard variant="alert" />
+							<LoadingCard variant="alert" />
 						</div>
 					) : filteredEvents && filteredEvents.length > 0 ? (
 						viewMode === 'timeline' ? (

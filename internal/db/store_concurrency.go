@@ -92,6 +92,20 @@ func (db *DB) GetQueuedBackupsByAgent(ctx context.Context, agentID uuid.UUID) ([
 	return entries, nil
 }
 
+// GetQueuedBackupsCountByAgent returns the count of queued backups for an agent.
+func (db *DB) GetQueuedBackupsCountByAgent(ctx context.Context, agentID uuid.UUID) (int, error) {
+	var count int
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM backup_queue
+		WHERE agent_id = $1 AND status = 'queued'
+	`, agentID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("get queued backups count by agent: %w", err)
+	}
+	return count, nil
+}
+
 // GetOldestQueuedBackup returns the oldest queued backup for an organization.
 func (db *DB) GetOldestQueuedBackup(ctx context.Context, orgID uuid.UUID) (*models.BackupQueueEntry, error) {
 	var e models.BackupQueueEntry

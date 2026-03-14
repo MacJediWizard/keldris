@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LoadingRow } from '../components/ui/LoadingRow';
 import { useMe } from '../hooks/useAuth';
 import {
 	useCreateInvitation,
@@ -10,29 +11,15 @@ import {
 	useUpdateMember,
 } from '../hooks/useOrganizations';
 import type { OrgInvitation, OrgMember, OrgRole } from '../lib/types';
-import { formatDate } from '../lib/utils';
+import { formatDate, getRoleBadgeColor } from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+const orgMemberLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-40' },
+	{ width: 'w-20', pill: true },
+	{ width: 'w-24' },
+	{ width: 'w-16', button: true, align: 'right' as const },
+] as const;
 
 interface InviteModalProps {
 	isOpen: boolean;
@@ -130,21 +117,6 @@ function InviteModal({ isOpen, onClose, orgId }: InviteModalProps) {
 			</div>
 		</div>
 	);
-}
-
-function getRoleBadgeColor(role: OrgRole) {
-	switch (role) {
-		case 'owner':
-			return 'bg-purple-100 text-purple-700';
-		case 'admin':
-			return 'bg-blue-100 text-blue-700';
-		case 'member':
-			return 'bg-green-100 text-green-700';
-		case 'readonly':
-			return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-		default:
-			return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-	}
 }
 
 interface MemberRowProps {
@@ -416,8 +388,8 @@ export function OrganizationMembers() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...orgMemberLoadingColumns]} />
+							<LoadingRow columns={[...orgMemberLoadingColumns]} />
 						</tbody>
 					</table>
 				) : members && members.length > 0 ? (

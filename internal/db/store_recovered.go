@@ -635,7 +635,7 @@ func (db *DB) GetActiveRansomwareAlertCountByOrgID(ctx context.Context, orgID uu
 }
 
 // GetAgentLogs returns logs for an agent with optional filtering.
-func (db *DB) GetAgentLogs(ctx context.Context, agentID uuid.UUID, filter *models.AgentLogFilter) ([]*models.AgentLog, int, error) {
+func (db *DB) GetAgentLogs(ctx context.Context, agentID uuid.UUID, orgID uuid.UUID, filter *models.AgentLogFilter) ([]*models.AgentLog, int, error) {
 	if filter == nil {
 		filter = &models.AgentLogFilter{}
 	}
@@ -648,10 +648,10 @@ func (db *DB) GetAgentLogs(ctx context.Context, agentID uuid.UUID, filter *model
 
 	// Build the query with optional filters
 	var args []interface{}
-	args = append(args, agentID)
-	argIndex := 2
+	args = append(args, agentID, orgID)
+	argIndex := 3
 
-	whereClause := "WHERE agent_id = $1"
+	whereClause := "WHERE agent_id = $1 AND org_id = $2"
 
 	if filter.Level != "" {
 		whereClause += fmt.Sprintf(" AND level = $%d", argIndex)

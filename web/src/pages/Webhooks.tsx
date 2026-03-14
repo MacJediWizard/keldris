@@ -30,24 +30,14 @@ const EVENT_TYPE_LABELS: Record<WebhookEventType, string> = {
 	'alert.resolved': 'Alert Resolved',
 };
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+import { LoadingRow } from '../components/ui/LoadingRow';
+
+const webhookLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-48' },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-16', button: true, align: 'right' as const },
+] as const;
 
 function StatusBadge({ status }: { status: WebhookDeliveryStatus }) {
 	const styles: Record<WebhookDeliveryStatus, string> = {
@@ -324,6 +314,7 @@ function DeliveryLogModal({
 						type="button"
 						onClick={onClose}
 						className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+						aria-label="Close"
 					>
 						<svg
 							className="w-6 h-6"
@@ -551,9 +542,9 @@ export default function Webhooks() {
 					<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 						{isLoading ? (
 							<>
-								<LoadingRow />
-								<LoadingRow />
-								<LoadingRow />
+								<LoadingRow columns={[...webhookLoadingColumns]} />
+								<LoadingRow columns={[...webhookLoadingColumns]} />
+								<LoadingRow columns={[...webhookLoadingColumns]} />
 							</>
 						) : !endpoints || endpoints.length === 0 ? (
 							<tr>

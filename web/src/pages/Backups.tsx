@@ -36,38 +36,20 @@ import {
 	truncateSnapshotId,
 } from '../lib/utils';
 
+import { LoadingRow } from '../components/ui/LoadingRow';
+
 type ViewMode = 'list' | 'calendar';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4 w-12">
-				<div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+const backupLoadingColumns = [
+	{ width: 'w-4', tdClassName: 'w-12' },
+	{ width: 'w-20' },
+	{ width: 'w-24' },
+	{ width: 'w-24' },
+	{ width: 'w-16' },
+	{ width: 'w-20', pill: true },
+	{ width: 'w-28' },
+	{ width: 'w-12', align: 'right' as const },
+] as const;
 
 interface TagChipProps {
 	tag: Tag;
@@ -951,11 +933,11 @@ export function Backups() {
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-									<LoadingRow />
-									<LoadingRow />
-									<LoadingRow />
-									<LoadingRow />
-									<LoadingRow />
+									<LoadingRow columns={[...backupLoadingColumns]} />
+									<LoadingRow columns={[...backupLoadingColumns]} />
+									<LoadingRow columns={[...backupLoadingColumns]} />
+									<LoadingRow columns={[...backupLoadingColumns]} />
+									<LoadingRow columns={[...backupLoadingColumns]} />
 								</tbody>
 							</table>
 						) : filteredBackups && filteredBackups.length > 0 ? (

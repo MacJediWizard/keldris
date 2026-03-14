@@ -36,10 +36,10 @@ export function PasswordRequirements({
 
 	if (isLoading) {
 		return (
-			<div className="bg-gray-50 rounded-lg p-4">
+			<div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
 				<div className="animate-pulse">
-					<div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-					<div className="h-3 bg-gray-200 rounded w-1/2" />
+					<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2" />
+					<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
 				</div>
 			</div>
 		);

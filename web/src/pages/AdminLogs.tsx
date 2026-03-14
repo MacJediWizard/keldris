@@ -59,24 +59,14 @@ function getLogLevelColor(level: ServerLogLevel): {
 	}
 }
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-		</tr>
-	);
-}
+import { LoadingRow } from '../components/ui/LoadingRow';
+
+const adminLogLoadingColumns = [
+	{ width: 'w-24' },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-20' },
+	{ width: 'w-64' },
+] as const;
 
 export function AdminLogs() {
 	const [filter, setFilter] = useState<ServerLogFilter>({
@@ -402,11 +392,11 @@ export function AdminLogs() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...adminLogLoadingColumns]} />
+							<LoadingRow columns={[...adminLogLoadingColumns]} />
+							<LoadingRow columns={[...adminLogLoadingColumns]} />
+							<LoadingRow columns={[...adminLogLoadingColumns]} />
+							<LoadingRow columns={[...adminLogLoadingColumns]} />
 						</tbody>
 					</table>
 				) : data && data.logs.length > 0 ? (

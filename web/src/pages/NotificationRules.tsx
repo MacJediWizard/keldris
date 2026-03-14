@@ -42,27 +42,15 @@ const ACTION_TYPES: { value: RuleActionType; label: string }[] = [
 	{ value: 'webhook', label: 'Call Webhook' },
 ];
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+import { LoadingRow } from '../components/ui/LoadingRow';
+
+const notificationRuleLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-24', pill: true },
+	{ width: 'w-20' },
+	{ width: 'w-16' },
+	{ width: 'w-16', button: true, align: 'right' as const },
+] as const;
 
 interface AddRuleModalProps {
 	isOpen: boolean;
@@ -671,7 +659,10 @@ export function NotificationRules() {
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 							{[1, 2, 3].map((i) => (
-								<LoadingRow key={i} />
+								<LoadingRow
+									key={i}
+									columns={[...notificationRuleLoadingColumns]}
+								/>
 							))}
 						</tbody>
 					</table>

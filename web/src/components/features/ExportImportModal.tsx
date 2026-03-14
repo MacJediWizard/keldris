@@ -155,6 +155,7 @@ export function ExportImportModal({
 						type="button"
 						onClick={handleClose}
 						className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
+						aria-label="Close"
 					>
 						<svg
 							aria-hidden="true"

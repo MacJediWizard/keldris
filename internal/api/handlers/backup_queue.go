@@ -19,6 +19,7 @@ type BackupQueueStore interface {
 	DeleteBackupQueueEntry(ctx context.Context, id uuid.UUID) error
 	GetRunningBackupsCountByOrg(ctx context.Context, orgID uuid.UUID) (int, error)
 	GetRunningBackupsCountByAgent(ctx context.Context, agentID uuid.UUID) (int, error)
+	GetQueuedBackupsCountByAgent(ctx context.Context, agentID uuid.UUID) (int, error)
 	UpdateOrganizationConcurrencyLimit(ctx context.Context, orgID uuid.UUID, limit *int) error
 	UpdateAgentConcurrencyLimit(ctx context.Context, agentID uuid.UUID, limit *int) error
 	GetOrganizationByIDWithConcurrency(ctx context.Context, id uuid.UUID) (*models.Organization, error)
@@ -343,11 +344,12 @@ func (h *BackupQueueHandler) GetAgentConcurrency(c *gin.Context) {
 	}
 
 	runningCount, _ := h.store.GetRunningBackupsCountByAgent(c.Request.Context(), agentID)
+	queuedCount, _ := h.store.GetQueuedBackupsCountByAgent(c.Request.Context(), agentID)
 
 	c.JSON(http.StatusOK, ConcurrencyResponse{
 		MaxConcurrentBackups: agent.MaxConcurrentBackups,
 		RunningCount:         runningCount,
-		QueuedCount:          0, // TODO: Get agent-specific queued count
+		QueuedCount:          queuedCount,
 	})
 }
 

@@ -1,4 +1,17 @@
-import { type ReactNode, useEffect } from 'react';
+import {
+	type ReactNode,
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useId,
+	useRef,
+} from 'react';
+
+const FOCUSABLE_SELECTOR =
+	'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+const ModalTitleIdContext = createContext<string | undefined>(undefined);
 
 interface ModalProps {
 	open: boolean;
@@ -7,10 +20,70 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, children }: ModalProps) {
+	const titleId = useId();
+	const dialogRef = useRef<HTMLDialogElement>(null);
+	const previousFocusRef = useRef<Element | null>(null);
+
+	// Save previous focus and restore on unmount/close
 	useEffect(() => {
-		function handleKeyDown(e: KeyboardEvent) {
-			if (e.key === 'Escape') onClose();
+		if (open) {
+			previousFocusRef.current = document.activeElement;
 		}
+		return () => {
+			if (previousFocusRef.current instanceof HTMLElement) {
+				previousFocusRef.current.focus();
+				previousFocusRef.current = null;
+			}
+		};
+	}, [open]);
+
+	// Focus the dialog when it opens
+	useEffect(() => {
+		if (open && dialogRef.current) {
+			const focusable =
+				dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+			if (focusable.length > 0) {
+				focusable[0].focus();
+			} else {
+				dialogRef.current.focus();
+			}
+		}
+	}, [open]);
+
+	// Handle keyboard: Escape to close, Tab to trap focus
+	const handleKeyDown = useCallback(
+		(e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				onClose();
+				return;
+			}
+
+			if (e.key === 'Tab' && dialogRef.current) {
+				const focusable = Array.from(
+					dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+				);
+				if (focusable.length === 0) return;
+
+				const first = focusable[0];
+				const last = focusable[focusable.length - 1];
+
+				if (e.shiftKey) {
+					if (document.activeElement === first) {
+						e.preventDefault();
+						last.focus();
+					}
+				} else {
+					if (document.activeElement === last) {
+						e.preventDefault();
+						first.focus();
+					}
+				}
+			}
+		},
+		[onClose],
+	);
+
+	useEffect(() => {
 		if (open) {
 			document.addEventListener('keydown', handleKeyDown);
 			document.body.style.overflow = 'hidden';
@@ -19,51 +92,52 @@ export function Modal({ open, onClose, children }: ModalProps) {
 			document.removeEventListener('keydown', handleKeyDown);
 			document.body.style.overflow = '';
 		};
-	}, [open, onClose]);
+	}, [open, handleKeyDown]);
 
 	if (!open) return null;
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center">
-			<div
-				className="fixed inset-0 bg-black/50"
-				onClick={onClose}
-				onKeyDown={(e) => {
-					if (e.key === 'Enter' || e.key === ' ') onClose();
-				}}
-				role="button"
-				tabIndex={-1}
-				data-testid="modal-overlay"
-			/>
-			<dialog
-				className="relative z-10 w-full max-w-lg rounded-lg bg-white dark:bg-gray-800 shadow-xl"
-				open
-				aria-modal="true"
-			>
-				<button
-					type="button"
+		<ModalTitleIdContext.Provider value={titleId}>
+			<div className="fixed inset-0 z-50 flex items-center justify-center">
+				{/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop overlay, not an interactive element */}
+				<div
+					className="fixed inset-0 bg-black/50"
 					onClick={onClose}
-					className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-					aria-label="Close"
+					data-testid="modal-overlay"
+				/>
+				<dialog
+					ref={dialogRef}
+					className="relative z-10 w-full max-w-lg rounded-lg bg-white dark:bg-gray-800 shadow-xl"
+					open
+					aria-modal="true"
+					aria-labelledby={titleId}
+					tabIndex={-1}
 				>
-					<svg
-						className="h-5 w-5"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						aria-hidden="true"
+					<button
+						type="button"
+						onClick={onClose}
+						className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+						aria-label="Close"
 					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M6 18L18 6M6 6l12 12"
-						/>
-					</svg>
-				</button>
-				{children}
-			</dialog>
-		</div>
+						<svg
+							className="h-5 w-5"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+							aria-hidden="true"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M6 18L18 6M6 6l12 12"
+							/>
+						</svg>
+					</button>
+					{children}
+				</dialog>
+			</div>
+		</ModalTitleIdContext.Provider>
 	);
 }
 
@@ -72,9 +146,13 @@ interface ModalHeaderProps {
 }
 
 export function ModalHeader({ children }: ModalHeaderProps) {
+	const titleId = useContext(ModalTitleIdContext);
 	return (
 		<div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-			<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+			<h3
+				id={titleId}
+				className="text-lg font-semibold text-gray-900 dark:text-white"
+			>
 				{children}
 			</h3>
 		</div>

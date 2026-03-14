@@ -324,6 +324,7 @@ function RecentItemRow({
 				onClick={onDelete}
 				className="flex-shrink-0 p-1 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 hover:text-red-600 dark:hover:text-red-400 transition-all"
 				title="Remove from recent"
+				aria-label="Remove from recent"
 			>
 				<svg
 					className="w-4 h-4"

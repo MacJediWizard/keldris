@@ -43,30 +43,16 @@ import type {
 	ScheduleRepositoryRequest,
 } from '../lib/types';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4 w-12">
-				<div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+import { LoadingRow } from '../components/ui/LoadingRow';
+
+const scheduleLoadingColumns = [
+	{ width: 'w-4', tdClassName: 'w-12' },
+	{ width: 'w-32' },
+	{ width: 'w-24' },
+	{ width: 'w-20' },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-24', button: true, align: 'right' as const },
+] as const;
 
 interface CreateScheduleModalProps {
 	isOpen: boolean;
@@ -946,7 +932,7 @@ function CreateScheduleModal({
 						<button
 							type="submit"
 							disabled={createSchedule.isPending || updateSchedule.isPending}
-							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							{isEditMode
 								? updateSchedule.isPending
@@ -1155,7 +1141,7 @@ function CloneScheduleModal({
 						<button
 							type="submit"
 							disabled={isCloning}
-							className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+							className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							{isCloning ? 'Cloning...' : 'Clone Schedule'}
 						</button>
@@ -1379,7 +1365,7 @@ function BulkCloneScheduleModal({
 							<button
 								type="submit"
 								disabled={isBulkCloning || selectedAgentIds.length === 0}
-								className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+								className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								{isBulkCloning
 									? 'Cloning...'
@@ -2258,9 +2244,9 @@ export function Schedules() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...scheduleLoadingColumns]} />
+							<LoadingRow columns={[...scheduleLoadingColumns]} />
+							<LoadingRow columns={[...scheduleLoadingColumns]} />
 						</tbody>
 					</table>
 				) : filteredSchedules && filteredSchedules.length > 0 ? (

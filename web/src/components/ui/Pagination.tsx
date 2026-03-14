@@ -47,7 +47,7 @@ export function Pagination({
 			</button>
 			{getPageNumbers().map((page) =>
 				typeof page === 'string' ? (
-					<span key={page} className="px-2 text-gray-400">
+					<span key={page} className="px-2 text-gray-400 dark:text-gray-500">
 						...
 					</span>
 				) : (
@@ -57,7 +57,7 @@ export function Pagination({
 						onClick={() => onPageChange(page)}
 						className={`rounded-md px-3 py-2 text-sm font-medium ${
 							page === currentPage
-								? 'bg-indigo-600 text-white'
+								? 'bg-indigo-600 text-white dark:bg-indigo-500'
 								: 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
 						}`}
 						aria-current={page === currentPage ? 'page' : undefined}

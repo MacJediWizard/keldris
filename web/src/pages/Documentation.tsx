@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useLocale } from '../hooks/useLocale';
@@ -57,6 +58,7 @@ function DocSidebar({
 					<button
 						type="submit"
 						className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+						aria-label="Search"
 					>
 						<svg
 							aria-hidden="true"
@@ -132,7 +134,7 @@ function escapeHtml(text: string): string {
 		.replace(/'/g, '&#039;');
 }
 
-function MarkdownRenderer({ content }: { content: string }) {
+export function MarkdownRenderer({ content }: { content: string }) {
 	// Basic markdown rendering - in production, use a proper markdown library
 	const html = escapeHtml(content)
 		// Headers
@@ -176,10 +178,12 @@ function MarkdownRenderer({ content }: { content: string }) {
 			'<p class="my-3 text-gray-700 dark:text-gray-300 leading-relaxed">$1</p>',
 		);
 
+	const sanitizedHtml = DOMPurify.sanitize(html);
+
 	return (
 		<div
 			className="prose prose-indigo dark:prose-invert max-w-none"
-			dangerouslySetInnerHTML={{ __html: html }}
+			dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
 		/>
 	);
 }

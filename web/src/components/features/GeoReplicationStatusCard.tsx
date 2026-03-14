@@ -239,6 +239,7 @@ export function GeoReplicationStatusCard({
 											onClick={() => onTriggerReplication(config.id)}
 											className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded"
 											title="Trigger sync now"
+											aria-label="Trigger sync now"
 										>
 											<svg
 												aria-hidden="true"
@@ -266,6 +267,11 @@ export function GeoReplicationStatusCard({
 												: 'text-gray-400 hover:bg-gray-200'
 										}`}
 										title={
+											config.enabled
+												? 'Disable replication'
+												: 'Enable replication'
+										}
+										aria-label={
 											config.enabled
 												? 'Disable replication'
 												: 'Enable replication'

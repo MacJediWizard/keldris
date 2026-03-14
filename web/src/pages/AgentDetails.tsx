@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AgentLogViewer } from '../components/features/AgentLogViewer';
+import { LoadingCard } from '../components/ui/LoadingCard';
+import { LoadingRow } from '../components/ui/LoadingRow';
 import {
 	useAgent,
 	useAgentBackups,
@@ -24,7 +26,6 @@ import type {
 	AgentCommand,
 	AgentHealthHistory,
 	Backup,
-	CommandStatus,
 	CommandType,
 	Schedule,
 } from '../lib/types';
@@ -37,41 +38,18 @@ import {
 	formatUptime,
 	getAgentStatusColor,
 	getBackupStatusColor,
+	getCommandStatusColor,
 	getHealthStatusColor,
 	getHealthStatusLabel,
 } from '../lib/utils';
 
-function LoadingCard() {
-	return (
-		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
-			<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-			<div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-1" />
-			<div className="h-3 w-20 bg-gray-100 dark:bg-gray-700 rounded" />
-		</div>
-	);
-}
-
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-		</tr>
-	);
-}
+const agentDetailLoadingRowColumns = [
+	{ width: 'w-24' },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-20' },
+	{ width: 'w-16' },
+	{ width: 'w-24' },
+] as const;
 
 interface ApiKeyModalProps {
 	apiKey: string;
@@ -270,59 +248,6 @@ function ScheduleRow({ schedule, onRun, isRunning }: ScheduleRowProps) {
 			</td>
 		</tr>
 	);
-}
-
-function getCommandStatusColor(status: CommandStatus) {
-	switch (status) {
-		case 'pending':
-			return {
-				bg: 'bg-gray-100 dark:bg-gray-700',
-				text: 'text-gray-800 dark:text-gray-200',
-				dot: 'bg-gray-400',
-			};
-		case 'acknowledged':
-			return {
-				bg: 'bg-blue-100 dark:bg-blue-900/30',
-				text: 'text-blue-800 dark:text-blue-400',
-				dot: 'bg-blue-400',
-			};
-		case 'running':
-			return {
-				bg: 'bg-yellow-100 dark:bg-yellow-900/30',
-				text: 'text-yellow-800 dark:text-yellow-400',
-				dot: 'bg-yellow-400',
-			};
-		case 'completed':
-			return {
-				bg: 'bg-green-100 dark:bg-green-900/30',
-				text: 'text-green-800 dark:text-green-400',
-				dot: 'bg-green-400',
-			};
-		case 'failed':
-			return {
-				bg: 'bg-red-100 dark:bg-red-900/30',
-				text: 'text-red-800 dark:text-red-400',
-				dot: 'bg-red-400',
-			};
-		case 'timed_out':
-			return {
-				bg: 'bg-orange-100 dark:bg-orange-900/30',
-				text: 'text-orange-800 dark:text-orange-400',
-				dot: 'bg-orange-400',
-			};
-		case 'canceled':
-			return {
-				bg: 'bg-gray-100 dark:bg-gray-700',
-				text: 'text-gray-600 dark:text-gray-400',
-				dot: 'bg-gray-400',
-			};
-		default:
-			return {
-				bg: 'bg-gray-100 dark:bg-gray-700',
-				text: 'text-gray-800 dark:text-gray-200',
-				dot: 'bg-gray-400',
-			};
-	}
 }
 
 function getCommandTypeLabel(type: CommandType) {
@@ -1604,9 +1529,9 @@ export function AgentDetails() {
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-								<LoadingRow />
-								<LoadingRow />
-								<LoadingRow />
+								<LoadingRow columns={[...agentDetailLoadingRowColumns]} />
+								<LoadingRow columns={[...agentDetailLoadingRowColumns]} />
+								<LoadingRow columns={[...agentDetailLoadingRowColumns]} />
 							</tbody>
 						</table>
 					) : backups.length > 0 ? (
@@ -1692,8 +1617,22 @@ export function AgentDetails() {
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-								<LoadingRow />
-								<LoadingRow />
+								<LoadingRow
+									columns={[
+										{ width: 'w-32' },
+										{ width: 'w-16', pill: true },
+										{ width: 'w-24' },
+										{ width: 'w-16', button: true, align: 'right' },
+									]}
+								/>
+								<LoadingRow
+									columns={[
+										{ width: 'w-32' },
+										{ width: 'w-16', pill: true },
+										{ width: 'w-24' },
+										{ width: 'w-16', button: true, align: 'right' },
+									]}
+								/>
 							</tbody>
 						</table>
 					) : schedules.length > 0 ? (

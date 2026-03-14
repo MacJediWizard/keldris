@@ -16,27 +16,15 @@ import type {
 } from '../lib/types';
 import { formatDate } from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32" />
-			</td>
-			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-48" />
-			</td>
-			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24" />
-			</td>
-			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20" />
-			</td>
-			<td className="px-6 py-4 whitespace-nowrap">
-				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16" />
-			</td>
-		</tr>
-	);
-}
+import { LoadingRow } from '../components/ui/LoadingRow';
+
+const policyLoadingColumns = [
+	{ width: 'w-32', tdClassName: 'whitespace-nowrap' },
+	{ width: 'w-48', tdClassName: 'whitespace-nowrap' },
+	{ width: 'w-24', tdClassName: 'whitespace-nowrap' },
+	{ width: 'w-20', tdClassName: 'whitespace-nowrap' },
+	{ width: 'w-16', tdClassName: 'whitespace-nowrap' },
+] as const;
 
 interface CreatePolicyModalProps {
 	isOpen: boolean;
@@ -857,9 +845,9 @@ export function Policies() {
 					<tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 						{isLoading ? (
 							<>
-								<LoadingRow />
-								<LoadingRow />
-								<LoadingRow />
+								<LoadingRow columns={[...policyLoadingColumns]} />
+								<LoadingRow columns={[...policyLoadingColumns]} />
+								<LoadingRow columns={[...policyLoadingColumns]} />
 							</>
 						) : isError ? (
 							<tr>

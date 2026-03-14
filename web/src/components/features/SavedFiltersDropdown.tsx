@@ -203,6 +203,9 @@ function FilterItem({
 							onClick={onToggleDefault}
 							className="p-1 text-gray-400 hover:text-indigo-600"
 							title={filter.is_default ? 'Remove as default' : 'Set as default'}
+							aria-label={
+								filter.is_default ? 'Remove as default' : 'Set as default'
+							}
 						>
 							<svg
 								className={`w-4 h-4 ${filter.is_default ? 'fill-current text-indigo-600' : ''}`}
@@ -226,6 +229,7 @@ function FilterItem({
 							onClick={onDelete}
 							className="p-1 text-gray-400 hover:text-red-600"
 							title="Delete filter"
+							aria-label="Delete filter"
 						>
 							<svg
 								className="w-4 h-4"

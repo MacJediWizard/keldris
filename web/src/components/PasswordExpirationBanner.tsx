@@ -83,6 +83,7 @@ export function PasswordExpirationBanner() {
 							type="button"
 							onClick={() => setShowChangePassword(false)}
 							className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+							aria-label="Close"
 						>
 							<svg
 								className="w-6 h-6"

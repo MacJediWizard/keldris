@@ -311,6 +311,7 @@ export function PatternLibraryModal({
 						type="button"
 						onClick={onClose}
 						className="text-gray-400 hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-300"
+						aria-label="Close"
 					>
 						<svg
 							className="w-6 h-6"

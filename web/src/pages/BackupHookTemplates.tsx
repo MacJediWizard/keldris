@@ -25,21 +25,7 @@ function getIconPath(icon?: string): string {
 	return SERVICE_ICONS[icon || 'database'] || SERVICE_ICONS.database;
 }
 
-function LoadingCard() {
-	return (
-		<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 animate-pulse">
-			<div className="flex items-center gap-4 mb-4">
-				<div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg" />
-				<div>
-					<div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-					<div className="h-3 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
-				</div>
-			</div>
-			<div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-			<div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded" />
-		</div>
-	);
-}
+import { LoadingCard } from '../components/ui/LoadingCard';
 
 interface ApplyTemplateModalProps {
 	isOpen: boolean;
@@ -905,7 +891,7 @@ export function BackupHookTemplates() {
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 					{[...Array(6)].map((_, i) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: Static loading skeleton has no state
-						<LoadingCard key={`loading-card-${i}`} />
+						<LoadingCard key={`loading-card-${i}`} variant="template" />
 					))}
 				</div>
 			) : filteredTemplates && filteredTemplates.length > 0 ? (

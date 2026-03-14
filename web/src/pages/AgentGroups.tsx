@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { EmptyStateNoGroups } from '../components/ui/EmptyState';
+import { LoadingRow } from '../components/ui/LoadingRow';
 import {
 	useAddAgentToGroup,
 	useAgentGroupMembers,
@@ -13,27 +14,13 @@ import { useAgents } from '../hooks/useAgents';
 import type { AgentGroup } from '../lib/types';
 import { formatDate } from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-8 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+const agentGroupLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-48' },
+	{ width: 'w-8', pill: true },
+	{ width: 'w-32' },
+	{ width: 'w-16', button: true, align: 'right' as const },
+] as const;
 
 interface CreateModalProps {
 	isOpen: boolean;
@@ -335,6 +322,7 @@ function ManageMembersModal({
 						type="button"
 						onClick={onClose}
 						className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+						aria-label="Close"
 					>
 						<svg
 							aria-hidden="true"
@@ -656,9 +644,9 @@ export function AgentGroups() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...agentGroupLoadingColumns]} />
+							<LoadingRow columns={[...agentGroupLoadingColumns]} />
+							<LoadingRow columns={[...agentGroupLoadingColumns]} />
 						</tbody>
 					</table>
 				) : filteredGroups && filteredGroups.length > 0 ? (

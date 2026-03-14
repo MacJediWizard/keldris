@@ -21,27 +21,22 @@ const DEFAULT_COLORS = [
 	'#3b82f6', // blue
 ];
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="flex items-center gap-2">
-					<div className="w-4 h-4 rounded-full bg-gray-200" />
-					<div className="h-4 w-24 bg-gray-200 rounded" />
-				</div>
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-20 bg-gray-200 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+import { LoadingRow } from '../components/ui/LoadingRow';
+
+const tagLoadingColumns = [
+	{
+		width: 'w-24',
+		render: (
+			<div className="flex items-center gap-2">
+				<div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700" />
+				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
+			</div>
+		),
+	},
+	{ width: 'w-16' },
+	{ width: 'w-32' },
+	{ width: 'w-20', button: true, align: 'right' as const },
+] as const;
 
 interface CreateTagModalProps {
 	isOpen: boolean;
@@ -397,9 +392,9 @@ export function Tags() {
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200">
-								<LoadingRow />
-								<LoadingRow />
-								<LoadingRow />
+								<LoadingRow columns={[...tagLoadingColumns]} />
+								<LoadingRow columns={[...tagLoadingColumns]} />
+								<LoadingRow columns={[...tagLoadingColumns]} />
 							</tbody>
 						</table>
 					) : tags && tags.length > 0 ? (

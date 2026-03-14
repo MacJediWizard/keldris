@@ -35,7 +35,7 @@ type AgentStore interface {
 	GetAgentHealthHistory(ctx context.Context, agentID uuid.UUID, limit int) ([]*models.AgentHealthHistory, error)
 	GetFleetHealthSummary(ctx context.Context, orgID uuid.UUID) (*models.FleetHealthSummary, error)
 	SetAgentDebugMode(ctx context.Context, id uuid.UUID, enabled bool, expiresAt *time.Time, enabledBy *uuid.UUID) error
-	GetAgentLogs(ctx context.Context, agentID uuid.UUID, filter *models.AgentLogFilter) ([]*models.AgentLog, int, error)
+	GetAgentLogs(ctx context.Context, agentID uuid.UUID, orgID uuid.UUID, filter *models.AgentLogFilter) ([]*models.AgentLog, int, error)
 	GetAgentDockerHealth(ctx context.Context, agentID uuid.UUID) (*models.AgentDockerHealth, error)
 }
 
@@ -1067,7 +1067,7 @@ func (h *AgentsHandler) Logs(c *gin.Context) {
 		}
 	}
 
-	logs, totalCount, err := h.store.GetAgentLogs(c.Request.Context(), id, filter)
+	logs, totalCount, err := h.store.GetAgentLogs(c.Request.Context(), id, user.CurrentOrgID, filter)
 	if err != nil {
 		h.logger.Error().Err(err).Str("agent_id", id.String()).Msg("failed to get agent logs")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get agent logs"})

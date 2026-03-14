@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LoadingRow } from '../components/ui/LoadingRow';
 import { useLicense } from '../hooks/useLicense';
 import {
 	useCreateNotificationChannel,
@@ -23,26 +24,14 @@ import type {
 	TeamsChannelConfig,
 	WebhookChannelConfig,
 } from '../lib/types';
-import { formatDate } from '../lib/utils';
+import { formatDate, getNotificationStatusColor } from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+const notificationLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-24' },
+	{ width: 'w-16', button: true, align: 'right' as const },
+] as const;
 
 // Channel type definitions for the type selector
 const CHANNEL_TYPE_OPTIONS: {
@@ -1241,33 +1230,8 @@ function ChannelRow({
 	);
 }
 
-function getStatusColor(status: string): { bg: string; text: string } {
-	switch (status) {
-		case 'sent':
-			return {
-				bg: 'bg-green-100 dark:bg-green-900/30',
-				text: 'text-green-800 dark:text-green-400',
-			};
-		case 'failed':
-			return {
-				bg: 'bg-red-100 dark:bg-red-900/30',
-				text: 'text-red-800 dark:text-red-400',
-			};
-		case 'queued':
-			return {
-				bg: 'bg-yellow-100 dark:bg-yellow-900/30',
-				text: 'text-yellow-800 dark:text-yellow-400',
-			};
-		default:
-			return {
-				bg: 'bg-gray-100 dark:bg-gray-700',
-				text: 'text-gray-800 dark:text-gray-300',
-			};
-	}
-}
-
 function LogRow({ log }: { log: NotificationLog }) {
-	const statusColor = getStatusColor(log.status);
+	const statusColor = getNotificationStatusColor(log.status);
 	return (
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
 			<td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
@@ -1410,7 +1374,10 @@ export function Notifications() {
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 								{[1, 2, 3].map((i) => (
-									<LoadingRow key={i} />
+									<LoadingRow
+										key={i}
+										columns={[...notificationLoadingColumns]}
+									/>
 								))}
 							</tbody>
 						</table>
@@ -1508,7 +1475,10 @@ export function Notifications() {
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 								{[1, 2, 3].map((i) => (
-									<LoadingRow key={i} />
+									<LoadingRow
+										key={i}
+										columns={[...notificationLoadingColumns]}
+									/>
 								))}
 							</tbody>
 						</table>

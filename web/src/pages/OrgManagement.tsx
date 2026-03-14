@@ -32,30 +32,16 @@ function formatDate(dateStr: string): string {
 	});
 }
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-		</tr>
-	);
-}
+import { LoadingRow } from '../components/ui/LoadingRow';
+
+const orgManagementLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-24' },
+	{ width: 'w-20' },
+	{ width: 'w-16' },
+	{ width: 'w-24' },
+	{ width: 'w-16' },
+] as const;
 
 interface CreateOrgModalProps {
 	isOpen: boolean;
@@ -985,9 +971,9 @@ export function OrgManagement() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...orgManagementLoadingColumns]} />
+							<LoadingRow columns={[...orgManagementLoadingColumns]} />
+							<LoadingRow columns={[...orgManagementLoadingColumns]} />
 						</tbody>
 					</table>
 				) : data && data.organizations.length > 0 ? (

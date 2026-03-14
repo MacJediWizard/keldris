@@ -459,8 +459,6 @@ func (h *RepositoriesHandler) Update(c *gin.Context) {
 		}
 		repo.ConfigEncrypted = configEncrypted
 	}
-	// TODO: Update encrypted config when crypto package is available
-	// if req.Config != nil { ... }
 
 	if err := h.store.UpdateRepository(c.Request.Context(), repo); err != nil {
 		h.logger.Error().Err(err).Str("repo_id", id.String()).Msg("failed to update repository")

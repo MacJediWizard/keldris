@@ -533,7 +533,7 @@ export function SystemSettings() {
 										type="button"
 										onClick={handleTestSMTP}
 										disabled={testSMTP.isPending || !testEmail}
-										className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+										className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 									>
 										{testSMTP.isPending ? 'Testing...' : 'Send Test Email'}
 									</button>
@@ -566,7 +566,7 @@ export function SystemSettings() {
 									type="button"
 									onClick={handleSaveSMTP}
 									disabled={updateSMTP.isPending}
-									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{updateSMTP.isPending ? 'Saving...' : 'Save Changes'}
 								</button>
@@ -806,7 +806,7 @@ export function SystemSettings() {
 									type="button"
 									onClick={handleTestOIDC}
 									disabled={testOIDC.isPending}
-									className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+									className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{testOIDC.isPending ? 'Testing...' : 'Test Configuration'}
 								</button>
@@ -838,7 +838,7 @@ export function SystemSettings() {
 									type="button"
 									onClick={handleSaveOIDC}
 									disabled={updateOIDC.isPending}
-									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{updateOIDC.isPending ? 'Saving...' : 'Save Changes'}
 								</button>
@@ -1119,7 +1119,7 @@ export function SystemSettings() {
 									type="button"
 									onClick={handleSaveStorage}
 									disabled={updateStorage.isPending}
-									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{updateStorage.isPending ? 'Saving...' : 'Save Changes'}
 								</button>
@@ -1455,7 +1455,7 @@ export function SystemSettings() {
 									type="button"
 									onClick={handleSaveSecurity}
 									disabled={updateSecurity.isPending}
-									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{updateSecurity.isPending ? 'Saving...' : 'Save Changes'}
 								</button>

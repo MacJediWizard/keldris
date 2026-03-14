@@ -173,13 +173,16 @@ export function Maintenance() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-					<div className="h-4 w-64 bg-gray-200 rounded animate-pulse mt-2" />
+					<div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+					<div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2" />
 				</div>
-				<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
 					<div className="space-y-4">
 						{[1, 2, 3].map((i) => (
-							<div key={i} className="h-16 bg-gray-200 rounded animate-pulse" />
+							<div
+								key={i}
+								className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+							/>
 						))}
 					</div>
 				</div>

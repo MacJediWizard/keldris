@@ -90,6 +90,7 @@ function ShortcutEditor({
 							type="button"
 							onClick={handleCancelEditing}
 							className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-400"
+							aria-label="Cancel editing"
 						>
 							<svg
 								aria-hidden="true"

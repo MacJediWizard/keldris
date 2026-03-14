@@ -6,27 +6,15 @@ import { useDeleteLegalHold, useLegalHolds } from '../hooks/useLegalHolds';
 import { usePlanLimits } from '../hooks/usePlanLimits';
 import { formatDateTime } from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-8 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-		</tr>
-	);
-}
+import { LoadingRow } from '../components/ui/LoadingRow';
+
+const legalHoldLoadingColumns = [
+	{ width: 'w-24' },
+	{ width: 'w-48' },
+	{ width: 'w-32' },
+	{ width: 'w-28' },
+	{ width: 'w-20', button: true },
+] as const;
 
 export function LegalHolds() {
 	const { data: user } = useMe();
@@ -182,9 +170,9 @@ export function LegalHolds() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...legalHoldLoadingColumns]} />
+							<LoadingRow columns={[...legalHoldLoadingColumns]} />
+							<LoadingRow columns={[...legalHoldLoadingColumns]} />
 						</tbody>
 					</table>
 				) : holds && holds.length > 0 ? (

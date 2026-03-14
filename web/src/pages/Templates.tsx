@@ -14,30 +14,16 @@ import type {
 } from '../lib/types';
 import { formatDate } from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+import { LoadingRow } from '../components/ui/LoadingRow';
+
+const templateLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-20' },
+	{ width: 'w-24' },
+	{ width: 'w-16' },
+	{ width: 'w-24' },
+	{ width: 'w-16', button: true, align: 'right' as const },
+] as const;
 
 interface CreateTemplateModalProps {
 	isOpen: boolean;
@@ -622,9 +608,9 @@ export function Templates() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...templateLoadingColumns]} />
+							<LoadingRow columns={[...templateLoadingColumns]} />
+							<LoadingRow columns={[...templateLoadingColumns]} />
 						</tbody>
 					</table>
 				) : filteredTemplates && filteredTemplates.length > 0 ? (

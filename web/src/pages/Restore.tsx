@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SnapshotComments } from '../components/features/SnapshotComments';
+import { LoadingRow } from '../components/ui/LoadingRow';
 import { useAgents } from '../hooks/useAgents';
 import { useMe } from '../hooks/useAuth';
 import {
@@ -29,80 +30,22 @@ import type {
 	Snapshot,
 	SnapshotFile,
 } from '../lib/types';
-import { formatBytes, formatDate, formatDateTime } from '../lib/utils';
+import {
+	formatBytes,
+	formatDate,
+	formatDateTime,
+	getRestoreStatusColor,
+} from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
-
-function getRestoreStatusColor(status: RestoreStatus): {
-	bg: string;
-	text: string;
-	dot: string;
-} {
-	switch (status) {
-		case 'completed':
-			return {
-				bg: 'bg-green-100',
-				text: 'text-green-800',
-				dot: 'bg-green-500',
-			};
-		case 'running':
-			return {
-				bg: 'bg-blue-100',
-				text: 'text-blue-800',
-				dot: 'bg-blue-500',
-			};
-		case 'uploading':
-			return {
-				bg: 'bg-purple-100',
-				text: 'text-purple-800',
-				dot: 'bg-purple-500',
-			};
-		case 'verifying':
-			return {
-				bg: 'bg-cyan-100',
-				text: 'text-cyan-800',
-				dot: 'bg-cyan-500',
-			};
-		case 'pending':
-			return {
-				bg: 'bg-yellow-100',
-				text: 'text-yellow-800',
-				dot: 'bg-yellow-500',
-			};
-		case 'failed':
-			return { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-500' };
-		case 'canceled':
-			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
-		default:
-			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
-	}
-}
+const restoreLoadingColumns = [
+	{ width: 'w-4' },
+	{ width: 'w-20' },
+	{ width: 'w-24' },
+	{ width: 'w-24' },
+	{ width: 'w-16' },
+	{ width: 'w-28' },
+	{ width: 'w-16', align: 'right' as const },
+] as const;
 
 function CommentIndicator({ snapshotId }: { snapshotId: string }) {
 	const { data: comments } = useSnapshotComments(snapshotId);
@@ -2641,9 +2584,9 @@ export function Restore() {
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-									<LoadingRow />
-									<LoadingRow />
-									<LoadingRow />
+									<LoadingRow columns={[...restoreLoadingColumns]} />
+									<LoadingRow columns={[...restoreLoadingColumns]} />
+									<LoadingRow columns={[...restoreLoadingColumns]} />
 								</tbody>
 							</table>
 						) : snapshots && snapshots.length > 0 ? (
@@ -2748,9 +2691,9 @@ export function Restore() {
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-								<LoadingRow />
-								<LoadingRow />
-								<LoadingRow />
+								<LoadingRow columns={[...restoreLoadingColumns]} />
+								<LoadingRow columns={[...restoreLoadingColumns]} />
+								<LoadingRow columns={[...restoreLoadingColumns]} />
 							</tbody>
 						</table>
 					) : restores && restores.length > 0 ? (

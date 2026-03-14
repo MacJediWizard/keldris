@@ -15,6 +15,7 @@ import type {
 	DockerLogBackupStatus,
 	DockerLogEntry,
 } from '../lib/types';
+import { getDockerLogStatusColor } from '../lib/utils';
 
 function formatDateTime(dateStr: string): string {
 	if (!dateStr) return '-';
@@ -30,45 +31,6 @@ function formatBytes(bytes: number): string {
 	return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 }
 
-function getStatusColor(status: DockerLogBackupStatus): {
-	bg: string;
-	text: string;
-	dot: string;
-} {
-	switch (status) {
-		case 'pending':
-			return {
-				bg: 'bg-gray-100 dark:bg-gray-800',
-				text: 'text-gray-700 dark:text-gray-300',
-				dot: 'bg-gray-400',
-			};
-		case 'running':
-			return {
-				bg: 'bg-blue-100 dark:bg-blue-900',
-				text: 'text-blue-700 dark:text-blue-300',
-				dot: 'bg-blue-500',
-			};
-		case 'completed':
-			return {
-				bg: 'bg-green-100 dark:bg-green-900',
-				text: 'text-green-700 dark:text-green-300',
-				dot: 'bg-green-500',
-			};
-		case 'failed':
-			return {
-				bg: 'bg-red-100 dark:bg-red-900',
-				text: 'text-red-700 dark:text-red-300',
-				dot: 'bg-red-500',
-			};
-		default:
-			return {
-				bg: 'bg-gray-100 dark:bg-gray-800',
-				text: 'text-gray-700 dark:text-gray-300',
-				dot: 'bg-gray-400',
-			};
-	}
-}
-
 function getStreamColor(stream: string): string {
 	switch (stream) {
 		case 'stdout':
@@ -80,30 +42,16 @@ function getStreamColor(stream: string): string {
 	}
 }
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-		</tr>
-	);
-}
+import { LoadingRow } from '../components/ui/LoadingRow';
+
+const dockerLogLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-24' },
+	{ width: 'w-20', pill: true },
+	{ width: 'w-16' },
+	{ width: 'w-24' },
+	{ width: 'w-24', button: true },
+] as const;
 
 interface LogViewerModalProps {
 	backup: DockerLogBackup;
@@ -175,6 +123,7 @@ function LogViewerModal({ backup, onClose }: LogViewerModalProps) {
 							type="button"
 							onClick={onClose}
 							className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+							aria-label="Close"
 						>
 							<svg
 								aria-hidden="true"
@@ -644,11 +593,11 @@ export function DockerLogs() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...dockerLogLoadingColumns]} />
+							<LoadingRow columns={[...dockerLogLoadingColumns]} />
+							<LoadingRow columns={[...dockerLogLoadingColumns]} />
+							<LoadingRow columns={[...dockerLogLoadingColumns]} />
+							<LoadingRow columns={[...dockerLogLoadingColumns]} />
 						</tbody>
 					</table>
 				) : filteredBackups && filteredBackups.length > 0 ? (
@@ -682,7 +631,7 @@ export function DockerLogs() {
 								</thead>
 								<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 									{filteredBackups.map((backup) => {
-										const statusColor = getStatusColor(backup.status);
+										const statusColor = getDockerLogStatusColor(backup.status);
 										return (
 											<tr
 												key={backup.id}

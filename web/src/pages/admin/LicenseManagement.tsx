@@ -70,8 +70,8 @@ export function LicenseManagement() {
 	if (licenseLoading) {
 		return (
 			<div className="p-6 animate-pulse">
-				<div className="h-8 bg-gray-200 rounded w-1/4 mb-6" />
-				<div className="h-64 bg-gray-200 rounded" />
+				<div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6" />
+				<div className="h-64 bg-gray-200 dark:bg-gray-700 rounded" />
 			</div>
 		);
 	}
@@ -218,8 +218,8 @@ export function LicenseManagement() {
 
 					{packagesLoading ? (
 						<div className="animate-pulse space-y-2">
-							<div className="h-12 bg-gray-200 rounded" />
-							<div className="h-12 bg-gray-200 rounded" />
+							<div className="h-12 bg-gray-200 dark:bg-gray-700 rounded" />
+							<div className="h-12 bg-gray-200 dark:bg-gray-700 rounded" />
 						</div>
 					) : packages?.packages && packages.packages.length > 0 ? (
 						<div className="overflow-x-auto">

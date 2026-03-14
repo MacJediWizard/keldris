@@ -359,6 +359,320 @@ export function formatPercent(percent: number | undefined): string {
 	return `${percent.toFixed(1)}%`;
 }
 
+// Get restore status color classes for badges
+export function getRestoreStatusColor(status: string): {
+	bg: string;
+	text: string;
+	dot: string;
+} {
+	switch (status) {
+		case 'completed':
+			return {
+				bg: 'bg-green-100',
+				text: 'text-green-800',
+				dot: 'bg-green-500',
+			};
+		case 'running':
+			return {
+				bg: 'bg-blue-100',
+				text: 'text-blue-800',
+				dot: 'bg-blue-500',
+			};
+		case 'uploading':
+			return {
+				bg: 'bg-purple-100',
+				text: 'text-purple-800',
+				dot: 'bg-purple-500',
+			};
+		case 'verifying':
+			return {
+				bg: 'bg-cyan-100',
+				text: 'text-cyan-800',
+				dot: 'bg-cyan-500',
+			};
+		case 'pending':
+			return {
+				bg: 'bg-yellow-100',
+				text: 'text-yellow-800',
+				dot: 'bg-yellow-500',
+			};
+		case 'failed':
+			return { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-500' };
+		case 'canceled':
+			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+		default:
+			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+	}
+}
+
+// Get command status color classes for badges
+export function getCommandStatusColor(status: string): {
+	bg: string;
+	text: string;
+	dot: string;
+} {
+	switch (status) {
+		case 'pending':
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-700',
+				text: 'text-gray-800 dark:text-gray-200',
+				dot: 'bg-gray-400',
+			};
+		case 'acknowledged':
+			return {
+				bg: 'bg-blue-100 dark:bg-blue-900/30',
+				text: 'text-blue-800 dark:text-blue-400',
+				dot: 'bg-blue-400',
+			};
+		case 'running':
+			return {
+				bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+				text: 'text-yellow-800 dark:text-yellow-400',
+				dot: 'bg-yellow-400',
+			};
+		case 'completed':
+			return {
+				bg: 'bg-green-100 dark:bg-green-900/30',
+				text: 'text-green-800 dark:text-green-400',
+				dot: 'bg-green-400',
+			};
+		case 'failed':
+			return {
+				bg: 'bg-red-100 dark:bg-red-900/30',
+				text: 'text-red-800 dark:text-red-400',
+				dot: 'bg-red-400',
+			};
+		case 'timed_out':
+			return {
+				bg: 'bg-orange-100 dark:bg-orange-900/30',
+				text: 'text-orange-800 dark:text-orange-400',
+				dot: 'bg-orange-400',
+			};
+		case 'canceled':
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-700',
+				text: 'text-gray-600 dark:text-gray-400',
+				dot: 'bg-gray-400',
+			};
+		default:
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-700',
+				text: 'text-gray-800 dark:text-gray-200',
+				dot: 'bg-gray-400',
+			};
+	}
+}
+
+// Get DR test status color classes for badges
+export function getDRTestStatusColor(status: string): {
+	bg: string;
+	text: string;
+	dot: string;
+} {
+	switch (status) {
+		case 'passed':
+		case 'completed':
+			return {
+				bg: 'bg-green-100',
+				text: 'text-green-800',
+				dot: 'bg-green-500',
+			};
+		case 'failed':
+			return { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-500' };
+		case 'running':
+			return {
+				bg: 'bg-blue-100',
+				text: 'text-blue-800',
+				dot: 'bg-blue-500',
+			};
+		case 'pending':
+			return {
+				bg: 'bg-yellow-100',
+				text: 'text-yellow-800',
+				dot: 'bg-yellow-500',
+			};
+		case 'skipped':
+			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+		default:
+			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+	}
+}
+
+// Get DR runbook status color classes for badges
+export function getDRRunbookStatusColor(status: string): {
+	bg: string;
+	text: string;
+	dot: string;
+} {
+	switch (status) {
+		case 'active':
+			return {
+				bg: 'bg-green-100',
+				text: 'text-green-800',
+				dot: 'bg-green-500',
+			};
+		case 'draft':
+			return {
+				bg: 'bg-yellow-100',
+				text: 'text-yellow-800',
+				dot: 'bg-yellow-500',
+			};
+		case 'archived':
+			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+		default:
+			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+	}
+}
+
+// Get notification log status color classes for badges
+export function getNotificationStatusColor(status: string): {
+	bg: string;
+	text: string;
+} {
+	switch (status) {
+		case 'sent':
+			return {
+				bg: 'bg-green-100 dark:bg-green-900/30',
+				text: 'text-green-800 dark:text-green-400',
+			};
+		case 'failed':
+			return {
+				bg: 'bg-red-100 dark:bg-red-900/30',
+				text: 'text-red-800 dark:text-red-400',
+			};
+		case 'queued':
+			return {
+				bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+				text: 'text-yellow-800 dark:text-yellow-400',
+			};
+		default:
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-700',
+				text: 'text-gray-800 dark:text-gray-300',
+			};
+	}
+}
+
+// Get system health status color classes for badges
+export function getSystemHealthStatusColor(status: string): {
+	bg: string;
+	text: string;
+	dot: string;
+} {
+	switch (status) {
+		case 'healthy':
+			return {
+				bg: 'bg-green-100 dark:bg-green-900',
+				text: 'text-green-700 dark:text-green-300',
+				dot: 'bg-green-500',
+			};
+		case 'warning':
+			return {
+				bg: 'bg-yellow-100 dark:bg-yellow-900',
+				text: 'text-yellow-700 dark:text-yellow-300',
+				dot: 'bg-yellow-500',
+			};
+		case 'critical':
+			return {
+				bg: 'bg-red-100 dark:bg-red-900',
+				text: 'text-red-700 dark:text-red-300',
+				dot: 'bg-red-500',
+			};
+		default:
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-800',
+				text: 'text-gray-700 dark:text-gray-300',
+				dot: 'bg-gray-400',
+			};
+	}
+}
+
+// Get lifecycle policy status color string
+export function getLifecyclePolicyStatusColor(status: string): string {
+	switch (status) {
+		case 'active':
+			return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+		case 'draft':
+			return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+		case 'disabled':
+			return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+		default:
+			return 'bg-gray-100 text-gray-800';
+	}
+}
+
+// Get docker log backup status color classes for badges
+export function getDockerLogStatusColor(status: string): {
+	bg: string;
+	text: string;
+	dot: string;
+} {
+	switch (status) {
+		case 'pending':
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-800',
+				text: 'text-gray-700 dark:text-gray-300',
+				dot: 'bg-gray-400',
+			};
+		case 'running':
+			return {
+				bg: 'bg-blue-100 dark:bg-blue-900',
+				text: 'text-blue-700 dark:text-blue-300',
+				dot: 'bg-blue-500',
+			};
+		case 'completed':
+			return {
+				bg: 'bg-green-100 dark:bg-green-900',
+				text: 'text-green-700 dark:text-green-300',
+				dot: 'bg-green-500',
+			};
+		case 'failed':
+			return {
+				bg: 'bg-red-100 dark:bg-red-900',
+				text: 'text-red-700 dark:text-red-300',
+				dot: 'bg-red-500',
+			};
+		default:
+			return {
+				bg: 'bg-gray-100 dark:bg-gray-800',
+				text: 'text-gray-700 dark:text-gray-300',
+				dot: 'bg-gray-400',
+			};
+	}
+}
+
+// Get user status badge color string
+export function getUserStatusBadgeColor(status: string): string {
+	switch (status) {
+		case 'active':
+			return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+		case 'disabled':
+			return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+		case 'pending':
+			return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+		case 'locked':
+			return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+		default:
+			return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+	}
+}
+
+// Get role badge color string
+export function getRoleBadgeColor(role: string): string {
+	switch (role) {
+		case 'owner':
+			return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+		case 'admin':
+			return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+		case 'member':
+			return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+		case 'readonly':
+			return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+		default:
+			return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+	}
+}
+
 // Get color class based on dedup ratio quality
 export function getDedupRatioColor(ratio: number): string {
 	if (ratio >= 3) return 'text-green-600 dark:text-green-400';

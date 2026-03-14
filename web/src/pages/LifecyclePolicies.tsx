@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { UpgradePrompt } from '../components/features/UpgradePrompt';
+import { LoadingRow } from '../components/ui/LoadingRow';
 import { useMe } from '../hooks/useAuth';
 import {
 	useCreateLifecyclePolicy,
@@ -19,7 +20,11 @@ import type {
 	LifecyclePolicyStatus,
 	RetentionDuration,
 } from '../lib/types';
-import { formatBytes, formatDateTime } from '../lib/utils';
+import {
+	formatBytes,
+	formatDateTime,
+	getLifecyclePolicyStatusColor,
+} from '../lib/utils';
 
 const CLASSIFICATION_LEVELS: { value: ClassificationLevel; label: string }[] = [
 	{ value: 'public', label: 'Public' },
@@ -28,27 +33,13 @@ const CLASSIFICATION_LEVELS: { value: ClassificationLevel; label: string }[] = [
 	{ value: 'restricted', label: 'Restricted' },
 ];
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-8 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-		</tr>
-	);
-}
+const lifecyclePolicyLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-20' },
+	{ width: 'w-16' },
+	{ width: 'w-24' },
+	{ width: 'w-20', button: true },
+] as const;
 
 interface RetentionRuleEditorProps {
 	rule: ClassificationRetention;
@@ -517,19 +508,6 @@ function DryRunModal({ policy, isOpen, onClose }: DryRunModalProps) {
 	);
 }
 
-function getStatusColor(status: LifecyclePolicyStatus): string {
-	switch (status) {
-		case 'active':
-			return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-		case 'draft':
-			return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-		case 'disabled':
-			return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-		default:
-			return 'bg-gray-100 text-gray-800';
-	}
-}
-
 export function LifecyclePolicies() {
 	const { data: user } = useMe();
 	const {
@@ -730,9 +708,9 @@ export function LifecyclePolicies() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...lifecyclePolicyLoadingColumns]} />
+							<LoadingRow columns={[...lifecyclePolicyLoadingColumns]} />
+							<LoadingRow columns={[...lifecyclePolicyLoadingColumns]} />
 						</tbody>
 					</table>
 				) : policies && policies.length > 0 ? (
@@ -775,7 +753,7 @@ export function LifecyclePolicies() {
 										</td>
 										<td className="px-6 py-4">
 											<span
-												className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(policy.status)}`}
+												className={`px-2 py-1 rounded-full text-xs font-medium ${getLifecyclePolicyStatusColor(policy.status)}`}
 											>
 												{policy.status}
 											</span>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LoadingRow } from '../components/ui/LoadingRow';
 import {
 	useActivateDRRunbook,
 	useArchiveDRRunbook,
@@ -12,29 +13,15 @@ import {
 import { useDRTests, useRunDRTest } from '../hooks/useDRTests';
 import { useSchedules } from '../hooks/useSchedules';
 import type { DRRunbook, DRRunbookStatus } from '../lib/types';
-import { formatDate } from '../lib/utils';
+import { formatDate, getDRRunbookStatusColor } from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-24 bg-gray-200 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+const drRunbookLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-24' },
+	{ width: 'w-20' },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-24', button: true, align: 'right' as const },
+] as const;
 
 interface CreateRunbookModalProps {
 	isOpen: boolean;
@@ -293,27 +280,6 @@ function ViewRunbookModal({
 	);
 }
 
-function getStatusColor(status: DRRunbookStatus) {
-	switch (status) {
-		case 'active':
-			return {
-				bg: 'bg-green-100',
-				text: 'text-green-800',
-				dot: 'bg-green-500',
-			};
-		case 'draft':
-			return {
-				bg: 'bg-yellow-100',
-				text: 'text-yellow-800',
-				dot: 'bg-yellow-500',
-			};
-		case 'archived':
-			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
-		default:
-			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
-	}
-}
-
 interface RunbookRowProps {
 	runbook: DRRunbook;
 	onView: (id: string) => void;
@@ -335,7 +301,7 @@ function RunbookRow({
 	isUpdating,
 	isDeleting,
 }: RunbookRowProps) {
-	const statusColor = getStatusColor(runbook.status);
+	const statusColor = getDRRunbookStatusColor(runbook.status);
 
 	return (
 		<tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -624,9 +590,9 @@ export function DRRunbooks() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...drRunbookLoadingColumns]} />
+							<LoadingRow columns={[...drRunbookLoadingColumns]} />
+							<LoadingRow columns={[...drRunbookLoadingColumns]} />
 						</tbody>
 					</table>
 				) : filteredRunbooks && filteredRunbooks.length > 0 ? (

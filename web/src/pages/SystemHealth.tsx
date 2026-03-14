@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LoadingCard } from '../components/ui/LoadingCard';
 import {
 	useSystemHealth,
 	useSystemHealthHistory,
@@ -8,6 +9,7 @@ import type {
 	ServerError,
 	SystemHealthStatus,
 } from '../lib/types';
+import { getSystemHealthStatusColor } from '../lib/utils';
 
 function formatDateTime(dateStr: string): string {
 	const date = new Date(dateStr);
@@ -38,41 +40,8 @@ function formatBytes(bytes: number): string {
 	return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
 
-function getStatusColor(status: SystemHealthStatus): {
-	bg: string;
-	text: string;
-	dot: string;
-} {
-	switch (status) {
-		case 'healthy':
-			return {
-				bg: 'bg-green-100 dark:bg-green-900',
-				text: 'text-green-700 dark:text-green-300',
-				dot: 'bg-green-500',
-			};
-		case 'warning':
-			return {
-				bg: 'bg-yellow-100 dark:bg-yellow-900',
-				text: 'text-yellow-700 dark:text-yellow-300',
-				dot: 'bg-yellow-500',
-			};
-		case 'critical':
-			return {
-				bg: 'bg-red-100 dark:bg-red-900',
-				text: 'text-red-700 dark:text-red-300',
-				dot: 'bg-red-500',
-			};
-		default:
-			return {
-				bg: 'bg-gray-100 dark:bg-gray-800',
-				text: 'text-gray-700 dark:text-gray-300',
-				dot: 'bg-gray-400',
-			};
-	}
-}
-
 function StatusBadge({ status }: { status: SystemHealthStatus }) {
-	const color = getStatusColor(status);
+	const color = getSystemHealthStatusColor(status);
 	return (
 		<span
 			className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${color.bg} ${color.text}`}
@@ -110,16 +79,6 @@ function MetricCard({
 					{subtitle}
 				</p>
 			)}
-		</div>
-	);
-}
-
-function LoadingCard() {
-	return (
-		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
-			<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			<div className="mt-2 h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			<div className="mt-1 h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
 		</div>
 	);
 }
@@ -369,10 +328,10 @@ export function SystemHealth() {
 				<div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 					{isLoading ? (
 						<>
-							<LoadingCard />
-							<LoadingCard />
-							<LoadingCard />
-							<LoadingCard />
+							<LoadingCard variant="health" />
+							<LoadingCard variant="health" />
+							<LoadingCard variant="health" />
+							<LoadingCard variant="health" />
 						</>
 					) : health ? (
 						<>
@@ -412,10 +371,10 @@ export function SystemHealth() {
 				<div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 					{isLoading ? (
 						<>
-							<LoadingCard />
-							<LoadingCard />
-							<LoadingCard />
-							<LoadingCard />
+							<LoadingCard variant="health" />
+							<LoadingCard variant="health" />
+							<LoadingCard variant="health" />
+							<LoadingCard variant="health" />
 						</>
 					) : health ? (
 						<>
@@ -465,9 +424,9 @@ export function SystemHealth() {
 				<div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
 					{isLoading ? (
 						<>
-							<LoadingCard />
-							<LoadingCard />
-							<LoadingCard />
+							<LoadingCard variant="health" />
+							<LoadingCard variant="health" />
+							<LoadingCard variant="health" />
 						</>
 					) : health ? (
 						<>
@@ -499,8 +458,8 @@ export function SystemHealth() {
 				<div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
 					{isLoading ? (
 						<>
-							<LoadingCard />
-							<LoadingCard />
+							<LoadingCard variant="health" />
+							<LoadingCard variant="health" />
 						</>
 					) : health ? (
 						<>

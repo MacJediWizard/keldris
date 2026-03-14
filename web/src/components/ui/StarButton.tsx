@@ -42,6 +42,7 @@ export function StarButton({
 			disabled={isLoading}
 			className={`${buttonClasses} rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50`}
 			title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+			aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
 		>
 			<svg
 				aria-hidden="true"

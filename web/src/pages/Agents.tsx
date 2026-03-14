@@ -13,6 +13,7 @@ import {
 	BulkSelectToolbar,
 } from '../components/ui/BulkSelect';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { LoadingRow } from '../components/ui/LoadingRow';
 import { useAddAgentToGroup, useAgentGroups } from '../hooks/useAgentGroups';
 import {
 	useCreateRegistrationCode,
@@ -33,30 +34,14 @@ import { useRunSchedule, useSchedules } from '../hooks/useSchedules';
 import type { Agent, AgentStatus, PendingRegistration } from '../lib/types';
 import { getAgentStatusColor } from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4 w-12">
-				<div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+const agentLoadingColumns = [
+	{ width: 'w-4', tdClassName: 'w-12' },
+	{ width: 'w-32' },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-24' },
+	{ width: 'w-32' },
+	{ width: 'w-16', button: true, align: 'right' as const },
+] as const;
 
 interface GenerateCodeModalProps {
 	isOpen: boolean;
@@ -134,7 +119,7 @@ function GenerateCodeModal({
 						<button
 							type="submit"
 							disabled={createCode.isPending}
-							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							{createCode.isPending ? 'Generating...' : 'Generate Code'}
 						</button>
@@ -1110,9 +1095,9 @@ export function Agents() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...agentLoadingColumns]} />
+							<LoadingRow columns={[...agentLoadingColumns]} />
+							<LoadingRow columns={[...agentLoadingColumns]} />
 						</tbody>
 					</table>
 				) : filteredAgents && filteredAgents.length > 0 ? (

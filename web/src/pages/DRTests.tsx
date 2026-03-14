@@ -1,63 +1,23 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { LoadingRow } from '../components/ui/LoadingRow';
 import { useCancelDRTest, useDRTests } from '../hooks/useDRTests';
 import type { DRTest, DRTestStatus } from '../lib/types';
-import { formatDate, formatDateTime, formatDuration } from '../lib/utils';
+import {
+	formatDate,
+	formatDateTime,
+	formatDuration,
+	getDRTestStatusColor,
+} from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-20 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-16 bg-gray-200 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
-
-function getStatusColor(status: DRTestStatus) {
-	switch (status) {
-		case 'passed':
-		case 'completed':
-			return {
-				bg: 'bg-green-100',
-				text: 'text-green-800',
-				dot: 'bg-green-500',
-			};
-		case 'failed':
-			return { bg: 'bg-red-100', text: 'text-red-800', dot: 'bg-red-500' };
-		case 'running':
-			return {
-				bg: 'bg-blue-100',
-				text: 'text-blue-800',
-				dot: 'bg-blue-500',
-			};
-		case 'pending':
-			return {
-				bg: 'bg-yellow-100',
-				text: 'text-yellow-800',
-				dot: 'bg-yellow-500',
-			};
-		case 'skipped':
-			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
-		default:
-			return { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
-	}
-}
+const drTestLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-24' },
+	{ width: 'w-20' },
+	{ width: 'w-16' },
+	{ width: 'w-16', button: true, align: 'right' as const },
+] as const;
 
 function getDurationMinutes(test: DRTest): string | null {
 	if (!test.started_at) return null;
@@ -71,7 +31,7 @@ interface TestRowProps {
 }
 
 function TestRow({ test, onCancel, isCancelling }: TestRowProps) {
-	const statusColor = getStatusColor(test.status);
+	const statusColor = getDRTestStatusColor(test.status);
 	const duration = getDurationMinutes(test);
 
 	return (
@@ -383,9 +343,9 @@ export function DRTests() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...drTestLoadingColumns]} />
+							<LoadingRow columns={[...drTestLoadingColumns]} />
+							<LoadingRow columns={[...drTestLoadingColumns]} />
 						</tbody>
 					</table>
 				) : filteredTests && filteredTests.length > 0 ? (

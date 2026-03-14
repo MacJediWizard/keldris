@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { LoadingRow } from '../components/ui/LoadingRow';
 import { useMe } from '../hooks/useAuth';
 import {
 	useBulkInviteCSV,
@@ -23,35 +24,22 @@ import type {
 	OrgInvitation,
 	OrgRole,
 	UserActivityLog,
-	UserStatus,
 	UserWithMembership,
 } from '../lib/types';
-import { formatDate } from '../lib/utils';
+import {
+	formatDate,
+	getRoleBadgeColor,
+	getUserStatusBadgeColor,
+} from '../lib/utils';
 
-function LoadingRow() {
-	return (
-		<tr className="animate-pulse">
-			<td className="px-6 py-4">
-				<div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</td>
-			<td className="px-6 py-4">
-				<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-			</td>
-			<td className="px-6 py-4 text-right">
-				<div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded inline-block" />
-			</td>
-		</tr>
-	);
-}
+const userManagementLoadingColumns = [
+	{ width: 'w-32' },
+	{ width: 'w-40' },
+	{ width: 'w-20', pill: true },
+	{ width: 'w-16', pill: true },
+	{ width: 'w-24' },
+	{ width: 'w-16', button: true, align: 'right' as const },
+] as const;
 
 interface InviteModalProps {
 	isOpen: boolean;
@@ -512,6 +500,7 @@ function ActivityModal({ isOpen, onClose, user }: ActivityModalProps) {
 						type="button"
 						onClick={onClose}
 						className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+						aria-label="Close"
 					>
 						<svg
 							aria-hidden="true"
@@ -792,36 +781,6 @@ function BulkInviteModal({ isOpen, onClose, orgId }: BulkInviteModalProps) {
 	);
 }
 
-function getStatusBadgeColor(status: UserStatus) {
-	switch (status) {
-		case 'active':
-			return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-		case 'disabled':
-			return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-		case 'pending':
-			return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
-		case 'locked':
-			return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
-		default:
-			return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
-	}
-}
-
-function getRoleBadgeColor(role: OrgRole) {
-	switch (role) {
-		case 'owner':
-			return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
-		case 'admin':
-			return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-		case 'member':
-			return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-		case 'readonly':
-			return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
-		default:
-			return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
-	}
-}
-
 interface UserRowProps {
 	user: UserWithMembership;
 	currentUserId: string;
@@ -893,7 +852,7 @@ function UserRow({
 			</td>
 			<td className="px-6 py-4">
 				<span
-					className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusBadgeColor(user.status)}`}
+					className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getUserStatusBadgeColor(user.status)}`}
 				>
 					{user.status}
 				</span>
@@ -980,6 +939,7 @@ function UserRow({
 										disabled={disableUser.isPending}
 										className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 text-sm disabled:opacity-50"
 										title="Disable"
+										aria-label="Disable user"
 									>
 										<svg
 											aria-hidden="true"
@@ -1003,6 +963,7 @@ function UserRow({
 										disabled={enableUser.isPending}
 										className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 text-sm disabled:opacity-50"
 										title="Enable"
+										aria-label="Enable user"
 									>
 										<svg
 											aria-hidden="true"
@@ -1026,6 +987,7 @@ function UserRow({
 									disabled={deleteUser.isPending}
 									className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
 									title="Delete"
+									aria-label="Delete user"
 								>
 									<svg
 										aria-hidden="true"
@@ -1241,9 +1203,9 @@ export function UserManagement() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-							<LoadingRow />
-							<LoadingRow />
-							<LoadingRow />
+							<LoadingRow columns={[...userManagementLoadingColumns]} />
+							<LoadingRow columns={[...userManagementLoadingColumns]} />
+							<LoadingRow columns={[...userManagementLoadingColumns]} />
 						</tbody>
 					</table>
 				) : users && users.length > 0 ? (

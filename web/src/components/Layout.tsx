@@ -982,6 +982,7 @@ function Sidebar() {
 						onClick={toggleTheme}
 						title={`Theme: ${theme}`}
 						className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+						aria-label={`Toggle theme, current: ${theme}`}
 					>
 						{theme === 'light' ? (
 							<svg

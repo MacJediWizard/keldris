@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ImportRepositoryWizard } from '../components/features/ImportRepositoryWizard';
+import { LoadingCard } from '../components/ui/LoadingCard';
 import { useMe } from '../hooks/useAuth';
 import { useFavoriteIds } from '../hooks/useFavorites';
 import { useOrganizations } from '../hooks/useOrganizations';
@@ -32,18 +33,6 @@ import type {
 	VerificationType,
 } from '../lib/types';
 import { formatDate, getRepositoryTypeBadge } from '../lib/utils';
-
-function LoadingCard() {
-	return (
-		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
-			<div className="flex items-start justify-between mb-4">
-				<div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-				<div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded-full" />
-			</div>
-			<div className="h-4 w-24 bg-gray-100 rounded" />
-		</div>
-	);
-}
 
 interface FormFieldProps {
 	label: string;
@@ -1672,9 +1661,9 @@ export function Repositories() {
 					</div>
 				) : isLoading ? (
 					<div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-						<LoadingCard />
-						<LoadingCard />
-						<LoadingCard />
+						<LoadingCard variant="repo" />
+						<LoadingCard variant="repo" />
+						<LoadingCard variant="repo" />
 					</div>
 				) : filteredRepositories && filteredRepositories.length > 0 ? (
 					<div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

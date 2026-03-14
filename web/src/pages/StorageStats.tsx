@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { LoadingCard } from '../components/ui/LoadingCard';
 import {
 	useRepositoryStatsList,
 	useStorageGrowth,
@@ -14,16 +15,6 @@ import {
 	getDedupRatioColor,
 	getSpaceSavedColor,
 } from '../lib/utils';
-
-function LoadingCard() {
-	return (
-		<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
-			<div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-			<div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-1" />
-			<div className="h-3 w-20 bg-gray-100 rounded" />
-		</div>
-	);
-}
 
 function LoadingTable() {
 	return (

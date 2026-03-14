@@ -209,14 +209,14 @@ export function OrganizationSettings() {
 								<button
 									type="button"
 									onClick={handleCancel}
-									className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+									className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 								>
 									Cancel
 								</button>
 								<button
 									type="submit"
 									disabled={updateOrganization.isPending}
-									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{updateOrganization.isPending ? 'Saving...' : 'Save Changes'}
 								</button>
@@ -228,7 +228,7 @@ export function OrganizationSettings() {
 								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
 									Organization Name
 								</dt>
-								<dd className="mt-1 text-sm text-gray-900">
+								<dd className="mt-1 text-sm text-gray-900 dark:text-white">
 									{currentOrg.organization.name}
 								</dd>
 							</div>
@@ -236,7 +236,7 @@ export function OrganizationSettings() {
 								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
 									URL Slug
 								</dt>
-								<dd className="mt-1 text-sm text-gray-900">
+								<dd className="mt-1 text-sm text-gray-900 dark:text-white">
 									{currentOrg.organization.slug}
 								</dd>
 							</div>
@@ -245,7 +245,7 @@ export function OrganizationSettings() {
 									Your Role
 								</dt>
 								<dd className="mt-1">
-									<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize bg-indigo-100 text-indigo-700">
+									<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
 										{currentUserRole}
 									</span>
 								</dd>
@@ -254,7 +254,7 @@ export function OrganizationSettings() {
 								<dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
 									Created
 								</dt>
-								<dd className="mt-1 text-sm text-gray-900">
+								<dd className="mt-1 text-sm text-gray-900 dark:text-white">
 									{new Date(
 										currentOrg.organization.created_at,
 									).toLocaleDateString()}
@@ -322,7 +322,7 @@ export function OrganizationSettings() {
 								<button
 									type="submit"
 									disabled={updateOrgConcurrency.isPending}
-									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+									className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{updateOrgConcurrency.isPending
 										? 'Saving...'
@@ -418,7 +418,7 @@ export function OrganizationSettings() {
 							type="button"
 							onClick={() => generateSupportBundle.mutate()}
 							disabled={generateSupportBundle.isPending}
-							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex-shrink-0 flex items-center gap-2"
+							className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 flex items-center gap-2"
 						>
 							{generateSupportBundle.isPending ? (
 								<>
@@ -479,9 +479,11 @@ export function OrganizationSettings() {
 			</div>
 
 			{isOwner && (
-				<div className="bg-white rounded-lg border border-red-200">
-					<div className="px-6 py-4 border-b border-red-200 bg-red-50">
-						<h2 className="text-lg font-semibold text-red-900">Danger Zone</h2>
+				<div className="bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-800">
+					<div className="px-6 py-4 border-b border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+						<h2 className="text-lg font-semibold text-red-900 dark:text-red-400">
+							Danger Zone
+						</h2>
 					</div>
 					<div className="p-6">
 						<div className="flex items-start justify-between">
@@ -498,7 +500,7 @@ export function OrganizationSettings() {
 							<button
 								type="button"
 								onClick={() => setShowDeleteConfirm(true)}
-								className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"
+								className="px-4 py-2 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
 							>
 								Delete Organization
 							</button>
@@ -511,10 +513,10 @@ export function OrganizationSettings() {
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 					<div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
 						<div className="flex items-center gap-3 mb-4">
-							<div className="p-2 bg-red-100 rounded-full">
+							<div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full">
 								<svg
 									aria-hidden="true"
-									className="w-6 h-6 text-red-600"
+									className="w-6 h-6 text-red-600 dark:text-red-400"
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
@@ -548,7 +550,7 @@ export function OrganizationSettings() {
 							className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-4"
 						/>
 						{deleteOrganization.isError && (
-							<p className="text-sm text-red-600 mb-4">
+							<p className="text-sm text-red-600 dark:text-red-400 mb-4">
 								Failed to delete organization. Please try again.
 							</p>
 						)}
@@ -559,7 +561,7 @@ export function OrganizationSettings() {
 									setShowDeleteConfirm(false);
 									setDeleteConfirmText('');
 								}}
-								className="px-4 py-2 text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+								className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
 							>
 								Cancel
 							</button>
@@ -570,7 +572,7 @@ export function OrganizationSettings() {
 									deleteConfirmText !== currentOrg.organization.name ||
 									deleteOrganization.isPending
 								}
-								className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+								className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								{deleteOrganization.isPending
 									? 'Deleting...'

@@ -328,16 +328,23 @@ func (h *SuperuserHandler) StartImpersonation(c *gin.Context) {
 		CurrentOrgRole: string(memberships[0].Role),
 	}
 
-	// Start impersonation (impersonation logging is handled separately via logActionWithImpersonation)
-	// TODO: Create impersonation audit log record and pass its ID instead of uuid.Nil
-	if err := h.sessions.StartImpersonation(c.Request, c.Writer, user, targetSession, uuid.Nil); err != nil {
+	// Create impersonation audit log record so we can track the session
+	auditLog := models.NewSuperuserAuditLog(user.ID, models.SuperuserActionImpersonate, "user").
+		WithRequestInfo(c.ClientIP(), c.Request.UserAgent()).
+		WithTargetID(targetID).
+		WithImpersonatedUser(targetID)
+	if err := h.store.CreateSuperuserAuditLog(c.Request.Context(), auditLog); err != nil {
+		h.logger.Error().Err(err).Msg("failed to create impersonation audit log")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create audit log"})
+		return
+	}
+
+	// Start impersonation with the audit log ID linked to the session
+	if err := h.sessions.StartImpersonation(c.Request, c.Writer, user, targetSession, auditLog.ID); err != nil {
 		h.logger.Error().Err(err).Msg("failed to start impersonation")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start impersonation"})
 		return
 	}
-
-	// Log the action
-	h.logActionWithImpersonation(c, user.ID, models.SuperuserActionImpersonate, "user", &targetID, nil, targetID)
 
 	h.logger.Info().
 		Str("superuser_id", user.ID.String()).

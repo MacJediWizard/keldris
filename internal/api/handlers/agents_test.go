@@ -117,7 +117,7 @@ func (m *mockAgentStore) SetAgentDebugMode(_ context.Context, _ uuid.UUID, _ boo
 	return nil
 }
 
-func (m *mockAgentStore) GetAgentLogs(_ context.Context, _ uuid.UUID, _ *models.AgentLogFilter) ([]*models.AgentLog, int, error) {
+func (m *mockAgentStore) GetAgentLogs(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *models.AgentLogFilter) ([]*models.AgentLog, int, error) {
 	return nil, 0, nil
 }
 
