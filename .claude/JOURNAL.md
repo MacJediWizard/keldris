@@ -1368,3 +1368,18 @@ Full audit of both Keldris and license-server repos. Fixed security vulnerabilit
 ### Commits
 - Keldris `045ede98` — Fix security vulnerabilities, improve accessibility, polish UI, expand tests (74 files, +2942/-1159)
 - License Server `35a6ae3` — Fix activation race condition, audit log errors, and input validation (8 files, +257/-42)
+- License Server `e89b5f0` — Add vitest unit tests for all 6 frontend pages (9 files, +2968)
+
+### License Server Frontend Tests (added separately)
+Initially missed in Phase 4 — corrected after review. Added 131 new vitest tests across 6 pages:
+
+| Page | Tests | Key areas |
+|------|-------|-----------|
+| Dashboard | 6 | Stats display, loading, fallback values |
+| Products | 24 | CRUD, billing units, form validation |
+| Customers | 17 | CRUD, search, delete confirmation |
+| Licenses | 32 | CRUD, key display, status/tier badges, trial filter |
+| Instances | 24 | Status badges, anomalies, kill action, filtering |
+| PricingPlans | 28 | CRUD, pricing display, active toggle, seed defaults |
+
+**License server total vitest: 157 (up from 26)**
