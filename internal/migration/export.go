@@ -22,7 +22,7 @@ type ExporterStore interface {
 
 	// User operations
 	GetAllUsers(ctx context.Context) ([]*models.User, error)
-	GetUsersByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.User, error)
+	GetUsersByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.UserWithMembership, error)
 
 	// Agent operations
 	GetAllAgents(ctx context.Context) ([]*models.Agent, error)

@@ -25,7 +25,7 @@ type MigrationStore interface {
 
 	// User operations
 	GetAllUsers(ctx context.Context) ([]*models.User, error)
-	GetUsersByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.User, error)
+	GetUsersByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.UserWithMembership, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	CreateUser(ctx context.Context, user *models.User) error
 
@@ -112,21 +112,21 @@ type ExportRequest struct {
 
 // ExportResponse is the response for export operations.
 type ExportResponse struct {
-	Success   bool        `json:"success"`
-	Message   string      `json:"message,omitempty"`
-	Summary   *ExportSummary `json:"summary,omitempty"`
-	ExportData string     `json:"export_data,omitempty"`
+	Success    bool           `json:"success"`
+	Message    string         `json:"message,omitempty"`
+	Summary    *ExportSummary `json:"summary,omitempty"`
+	ExportData string         `json:"export_data,omitempty"`
 }
 
 // ExportSummary provides a summary of the export.
 type ExportSummary struct {
-	Organizations int  `json:"organizations"`
-	Users         int  `json:"users"`
-	Agents        int  `json:"agents"`
-	Repositories  int  `json:"repositories"`
-	Schedules     int  `json:"schedules"`
-	Policies      int  `json:"policies"`
-	Encrypted     bool `json:"encrypted"`
+	Organizations  int  `json:"organizations"`
+	Users          int  `json:"users"`
+	Agents         int  `json:"agents"`
+	Repositories   int  `json:"repositories"`
+	Schedules      int  `json:"schedules"`
+	Policies       int  `json:"policies"`
+	Encrypted      bool `json:"encrypted"`
 	SecretsOmitted bool `json:"secrets_omitted"`
 }
 

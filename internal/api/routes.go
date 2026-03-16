@@ -2,18 +2,18 @@
 package api
 
 import (
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-	"io/fs"
 
 	"github.com/MacJediWizard/keldris/internal/activity"
 	"github.com/MacJediWizard/keldris/internal/api/handlers"
 	"github.com/MacJediWizard/keldris/internal/api/middleware"
 	"github.com/MacJediWizard/keldris/internal/auth"
-	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/backup/docker"
+	"github.com/MacJediWizard/keldris/internal/config"
 	"github.com/MacJediWizard/keldris/internal/crypto"
 	"github.com/MacJediWizard/keldris/internal/db"
 	"github.com/MacJediWizard/keldris/internal/license"
@@ -629,9 +629,9 @@ func NewRouter(
 	metadataHandler := handlers.NewMetadataHandler(database, logger)
 	metadataHandler.RegisterRoutes(apiV1)
 
-	// Migration (export/import) routes: not yet wired — *db.DB.GetUsersByOrgID
-	// returns []*models.UserWithMembership but MigrationStore expects []*models.User.
-	// TODO: add adapter or dedicated DB method to bridge the type mismatch.
+	// Migration (export/import) routes
+	migrationHandler := handlers.NewMigrationHandler(database, sessions, logger)
+	migrationHandler.RegisterRoutes(apiV1)
 
 	// Email verification routes
 	if cfg.EmailService != nil {
@@ -703,4 +703,3 @@ func NewRouter(
 	r.logger.Info().Msg("API router initialized")
 	return r, nil
 }
-

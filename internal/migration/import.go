@@ -24,7 +24,7 @@ type ImporterStore interface {
 
 	// User operations
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	GetUsersByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.User, error)
+	GetUsersByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.UserWithMembership, error)
 	CreateUser(ctx context.Context, user *models.User) error
 
 	// Agent operations
@@ -232,8 +232,8 @@ func (i *Importer) Import(ctx context.Context, export *MigrationExport, req Impo
 	}
 
 	// Import agent groups
-	agentGroupIDMap := make(map[string]uuid.UUID)      // original ID -> new ID
-	agentGroupNameMap := make(map[string]uuid.UUID)    // "orgSlug:groupName" -> new ID
+	agentGroupIDMap := make(map[string]uuid.UUID)   // original ID -> new ID
+	agentGroupNameMap := make(map[string]uuid.UUID) // "orgSlug:groupName" -> new ID
 	for _, agExport := range export.AgentGroups {
 		orgID, ok := orgIDMap[agExport.OrgSlug]
 		if !ok {
