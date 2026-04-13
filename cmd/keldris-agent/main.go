@@ -2159,6 +2159,14 @@ func executeCommand(client *agent.Client, cfg *config.AgentConfig, cmd agent.Com
 			logger.Error().Err(err).Msg("uninstall failed")
 		}
 		return
+	case "restore_preview":
+		result, execErr = executeRestorePreview(cfg, cmd.Payload, resticBinary, logger)
+	case "snapshot_diff":
+		result, execErr = executeSnapshotDiff(cfg, cmd.Payload, resticBinary, logger)
+	case "file_diff":
+		result, execErr = executeFileDiff(cfg, cmd.Payload, resticBinary, logger)
+	case "docker_inspect":
+		result, execErr = executeDockerInspect(cfg, cmd.Payload, logger)
 	default:
 		execErr = fmt.Errorf("unknown command type: %s", cmd.Type)
 	}
@@ -2741,4 +2749,235 @@ func removeTempFiles() {
 		}
 	}
 	fmt.Println("done")
+}
+
+// findRepoConfig looks up repository credentials from agent schedules by repository ID.
+func findRepoConfig(cfg *config.AgentConfig, repoID string) (*backends.ResticConfig, error) {
+	client := agent.NewClient(cfg.ServerURL, cfg.APIKey)
+	schedules, err := client.GetSchedules()
+	if err != nil {
+		return nil, fmt.Errorf("fetch schedules: %w", err)
+	}
+
+	for _, s := range schedules {
+		if s.RepositoryID.String() == repoID {
+			return &backends.ResticConfig{
+				Repository: s.Repository,
+				Password:   s.RepositoryPassword,
+				Env:        s.RepositoryEnv,
+			}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("repository %s not found in agent schedules", repoID)
+}
+
+// executeRestorePreview runs a restic restore dry-run and returns the preview.
+func executeRestorePreview(cfg *config.AgentConfig, payload *agent.CommandPayload, resticBinary string, logger *zerolog.Logger) (*agent.CommandResultDetail, error) {
+	if payload == nil || payload.SnapshotID == "" || payload.RepositoryID == "" {
+		return nil, fmt.Errorf("snapshot_id and repository_id are required for restore preview")
+	}
+
+	resticCfg, err := findRepoConfig(cfg, payload.RepositoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	restic := backup.NewResticWithBinary(resticBinary, *logger)
+
+	targetPath := payload.TargetPath
+	if targetPath == "" {
+		targetPath = "/"
+	}
+
+	opts := backup.RestoreOptions{
+		TargetPath: targetPath,
+	}
+
+	preview, err := restic.RestorePreviewResult(context.Background(), *resticCfg, payload.SnapshotID, opts)
+	if err != nil {
+		return nil, fmt.Errorf("restore preview: %w", err)
+	}
+
+	previewJSON, err := json.Marshal(preview)
+	if err != nil {
+		return nil, fmt.Errorf("marshal preview: %w", err)
+	}
+
+	return &agent.CommandResultDetail{
+		Output: string(previewJSON),
+	}, nil
+}
+
+// executeSnapshotDiff compares two snapshots and returns their differences.
+func executeSnapshotDiff(cfg *config.AgentConfig, payload *agent.CommandPayload, resticBinary string, logger *zerolog.Logger) (*agent.CommandResultDetail, error) {
+	if payload == nil || payload.SnapshotID == "" || payload.SnapshotID2 == "" {
+		return nil, fmt.Errorf("snapshot_id and snapshot_id_2 are required for snapshot diff")
+	}
+
+	var err error
+	var resticCfg *backends.ResticConfig
+	if payload.RepositoryID != "" {
+		resticCfg, err = findRepoConfig(cfg, payload.RepositoryID)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		client := agent.NewClient(cfg.ServerURL, cfg.APIKey)
+		schedules, schedErr := client.GetSchedules()
+		if schedErr != nil {
+			return nil, fmt.Errorf("fetch schedules: %w", schedErr)
+		}
+		if len(schedules) == 0 {
+			return nil, fmt.Errorf("no schedules configured, cannot determine repository")
+		}
+		resticCfg = &backends.ResticConfig{
+			Repository: schedules[0].Repository,
+			Password:   schedules[0].RepositoryPassword,
+			Env:        schedules[0].RepositoryEnv,
+		}
+	}
+
+	restic := backup.NewResticWithBinary(resticBinary, *logger)
+
+	diffResult, err := restic.Diff(context.Background(), *resticCfg, payload.SnapshotID, payload.SnapshotID2)
+	if err != nil {
+		return nil, fmt.Errorf("snapshot diff: %w", err)
+	}
+
+	diffJSON, err := json.Marshal(diffResult)
+	if err != nil {
+		return nil, fmt.Errorf("marshal diff: %w", err)
+	}
+
+	return &agent.CommandResultDetail{
+		Output: string(diffJSON),
+	}, nil
+}
+
+// executeFileDiff diffs a specific file between two snapshots.
+func executeFileDiff(cfg *config.AgentConfig, payload *agent.CommandPayload, resticBinary string, logger *zerolog.Logger) (*agent.CommandResultDetail, error) {
+	if payload == nil || payload.SnapshotID == "" || payload.SnapshotID2 == "" || payload.FilePath == "" {
+		return nil, fmt.Errorf("snapshot_id, snapshot_id_2, and file_path are required for file diff")
+	}
+
+	var err error
+	var resticCfg *backends.ResticConfig
+	if payload.RepositoryID != "" {
+		resticCfg, err = findRepoConfig(cfg, payload.RepositoryID)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		client := agent.NewClient(cfg.ServerURL, cfg.APIKey)
+		schedules, schedErr := client.GetSchedules()
+		if schedErr != nil {
+			return nil, fmt.Errorf("fetch schedules: %w", schedErr)
+		}
+		if len(schedules) == 0 {
+			return nil, fmt.Errorf("no schedules configured, cannot determine repository")
+		}
+		resticCfg = &backends.ResticConfig{
+			Repository: schedules[0].Repository,
+			Password:   schedules[0].RepositoryPassword,
+			Env:        schedules[0].RepositoryEnv,
+		}
+	}
+
+	restic := backup.NewResticWithBinary(resticBinary, *logger)
+
+	diffResult, err := restic.DiffFile(context.Background(), *resticCfg, payload.SnapshotID, payload.SnapshotID2, payload.FilePath)
+	if err != nil {
+		return nil, fmt.Errorf("file diff: %w", err)
+	}
+
+	diffJSON, err := json.Marshal(diffResult)
+	if err != nil {
+		return nil, fmt.Errorf("marshal file diff: %w", err)
+	}
+
+	return &agent.CommandResultDetail{
+		Output: string(diffJSON),
+	}, nil
+}
+
+// executeDockerInspect inspects Docker containers/volumes in a snapshot.
+func executeDockerInspect(_ *config.AgentConfig, payload *agent.CommandPayload, logger *zerolog.Logger) (*agent.CommandResultDetail, error) {
+	if payload == nil || payload.SnapshotID == "" {
+		return nil, fmt.Errorf("snapshot_id is required for docker inspect")
+	}
+
+	logger.Info().
+		Str("snapshot_id", payload.SnapshotID).
+		Msg("inspecting Docker snapshot contents")
+
+	// List Docker containers and volumes on this host
+	type containerInfo struct {
+		ID     string `json:"id"`
+		Name   string `json:"name"`
+		Image  string `json:"image"`
+		Status string `json:"status"`
+	}
+	type volumeInfo struct {
+		Name       string `json:"name"`
+		Driver     string `json:"driver"`
+		Mountpoint string `json:"mountpoint"`
+	}
+
+	result := map[string]any{
+		"snapshot_id": payload.SnapshotID,
+		"containers":  []containerInfo{},
+		"volumes":     []volumeInfo{},
+	}
+
+	// Try to list containers via docker CLI
+	dockerCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	containerOut, err := exec.CommandContext(dockerCtx, "docker", "ps", "-a", "--format", "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}").Output()
+	if err == nil {
+		var containers []containerInfo
+		for _, line := range strings.Split(strings.TrimSpace(string(containerOut)), "\n") {
+			parts := strings.Split(line, "\t")
+			if len(parts) >= 4 {
+				containers = append(containers, containerInfo{
+					ID:     parts[0],
+					Name:   parts[1],
+					Image:  parts[2],
+					Status: parts[3],
+				})
+			}
+		}
+		result["containers"] = containers
+	} else {
+		logger.Warn().Err(err).Msg("docker not available for container listing")
+	}
+
+	// Try to list volumes
+	volumeOut, err := exec.CommandContext(dockerCtx, "docker", "volume", "ls", "--format", "{{.Name}}\t{{.Driver}}\t{{.Mountpoint}}").Output()
+	if err == nil {
+		var volumes []volumeInfo
+		for _, line := range strings.Split(strings.TrimSpace(string(volumeOut)), "\n") {
+			parts := strings.Split(line, "\t")
+			if len(parts) >= 2 {
+				v := volumeInfo{Name: parts[0], Driver: parts[1]}
+				if len(parts) >= 3 {
+					v.Mountpoint = parts[2]
+				}
+				volumes = append(volumes, v)
+			}
+		}
+		result["volumes"] = volumes
+	} else {
+		logger.Warn().Err(err).Msg("docker not available for volume listing")
+	}
+
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("marshal docker inspect: %w", err)
+	}
+
+	return &agent.CommandResultDetail{
+		Output: string(resultJSON),
+	}, nil
 }
