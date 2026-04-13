@@ -5,12 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/backup/apps"
+	"github.com/MacJediWizard/keldris/internal/backup/vms"
 	"github.com/MacJediWizard/keldris/internal/license"
 	"github.com/MacJediWizard/keldris/internal/maintenance"
 	"github.com/MacJediWizard/keldris/internal/models"
@@ -47,12 +49,14 @@ type ScheduleStore interface {
 	// GetEnabledBackupScriptsByScheduleID returns all enabled backup scripts for a schedule.
 	GetEnabledBackupScriptsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.BackupScript, error)
 
+	// GetProxmoxConnectionByID returns a Proxmox connection by ID.
+	GetProxmoxConnectionByID(ctx context.Context, id uuid.UUID) (*models.ProxmoxConnection, error)
+
 	// Checkpoint methods for resumable backups
 	CheckpointStore
 
 	// Validation methods for backup validation
 	ValidationStore
-	// GetAgentByID returns an agent by ID.
 }
 
 const (
@@ -940,7 +944,152 @@ func (s *Scheduler) executePiholeBackup(ctx context.Context, schedule models.Sch
 // executeProxmoxBackup handles Proxmox VM/container backup execution.
 func (s *Scheduler) executeProxmoxBackup(ctx context.Context, schedule models.Schedule, agent *models.Agent, logger zerolog.Logger) {
 	logger.Info().Msg("executing Proxmox backup")
-	logger.Warn().Msg("Proxmox backup not yet implemented in scheduler")
+
+	if schedule.ProxmoxOptions == nil {
+		logger.Error().Msg("no Proxmox options configured for schedule")
+		return
+	}
+
+	opts := schedule.ProxmoxOptions
+
+	// Get enabled repositories
+	enabledRepos := schedule.GetEnabledRepositories()
+	if len(enabledRepos) == 0 {
+		logger.Error().Msg("no enabled repositories for Proxmox backup")
+		return
+	}
+
+	primaryRepo := &enabledRepos[0]
+	backup := models.NewBackup(schedule.ID, schedule.AgentID, &primaryRepo.RepositoryID)
+	backup.BackupType = models.BackupTypeProxmox
+	if err := s.store.CreateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Msg("failed to create Proxmox backup record")
+		return
+	}
+
+	// Get the Proxmox connection
+	if opts.ConnectionID == "" {
+		s.failBackup(ctx, backup, "no Proxmox connection ID configured", logger)
+		return
+	}
+
+	connID, err := uuid.Parse(opts.ConnectionID)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("invalid Proxmox connection ID: %v", err), logger)
+		return
+	}
+
+	conn, err := s.store.GetProxmoxConnectionByID(ctx, connID)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("get Proxmox connection: %v", err), logger)
+		return
+	}
+
+	if !conn.Enabled {
+		s.failBackup(ctx, backup, "Proxmox connection is disabled", logger)
+		return
+	}
+
+	// Decrypt the token secret
+	if s.config.DecryptFunc == nil {
+		s.failBackup(ctx, backup, "decrypt function not configured", logger)
+		return
+	}
+
+	tokenSecretBytes, err := s.config.DecryptFunc(conn.TokenSecretEncrypted)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("decrypt token secret: %v", err), logger)
+		return
+	}
+
+	// Create Proxmox client from connection
+	client := vms.NewProxmoxClientFromConnection(conn, string(tokenSecretBytes), logger)
+
+	// Create temp directory for backup files
+	tempDir, err := os.MkdirTemp("", "keldris-proxmox-backup-*")
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("create temp dir: %v", err), logger)
+		return
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Execute Proxmox backup via the backup service
+	proxmoxService := vms.NewProxmoxBackupService(logger)
+	result, err := proxmoxService.BackupVMs(ctx, client, opts, tempDir)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("Proxmox backup failed: %v", err), logger)
+		return
+	}
+
+	if !result.Success {
+		s.failBackup(ctx, backup, fmt.Sprintf("Proxmox backup failed: %s", result.ErrorMessage), logger)
+		return
+	}
+
+	if len(result.BackupPaths) == 0 {
+		logger.Info().Msg("Proxmox backup produced no files (no VMs matched)")
+		backup.Complete("", 0, 0, 0)
+		if err := s.store.UpdateBackup(ctx, backup); err != nil {
+			logger.Error().Err(err).Msg("failed to update Proxmox backup record")
+		}
+		return
+	}
+
+	// Back up the Proxmox files to the restic repository
+	repo, err := s.store.GetRepository(ctx, primaryRepo.RepositoryID)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("get repository: %v", err), logger)
+		return
+	}
+
+	if s.config.PasswordFunc == nil {
+		s.failBackup(ctx, backup, "password function not configured", logger)
+		return
+	}
+
+	configJSON, err := s.config.DecryptFunc(repo.ConfigEncrypted)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("decrypt config: %v", err), logger)
+		return
+	}
+
+	backend, err := ParseBackend(repo.Type, configJSON)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("parse backend: %v", err), logger)
+		return
+	}
+
+	password, err := s.config.PasswordFunc(repo.ID)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("get password: %v", err), logger)
+		return
+	}
+
+	resticCfg := backend.ToResticConfig(password)
+	tags := []string{
+		"proxmox",
+		fmt.Sprintf("schedule:%s", schedule.ID.String()),
+		fmt.Sprintf("vms:%d", result.VMsBackedUp),
+	}
+
+	stats, err := s.restic.Backup(ctx, resticCfg, result.BackupPaths, nil, tags)
+	if err != nil {
+		s.failBackup(ctx, backup, fmt.Sprintf("restic backup failed: %v", err), logger)
+		return
+	}
+
+	logger.Info().
+		Int("vms_backed_up", result.VMsBackedUp).
+		Int64("total_size", result.TotalSize).
+		Str("snapshot_id", stats.SnapshotID).
+		Msg("Proxmox backup completed successfully")
+
+	backup.Complete(stats.SnapshotID, stats.FilesNew, stats.FilesChanged, stats.SizeBytes)
+	if err := s.store.UpdateBackup(ctx, backup); err != nil {
+		logger.Error().Err(err).Msg("failed to update Proxmox backup record")
+	}
+
+	s.sendBackupNotification(ctx, schedule, backup, true, "")
 }
 
 // runBackupValidation runs automated validation after a successful backup.

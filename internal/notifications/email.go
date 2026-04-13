@@ -298,6 +298,20 @@ func (s *EmailService) SendPasswordResetSuccess(to []string, data PasswordResetS
 	return s.sendTemplate(to, subject, "password_reset_success.html", data)
 }
 
+// RuleNotificationData holds data for rule-engine email notifications
+type RuleNotificationData struct {
+	RuleName    string
+	TriggerType string
+	Message     string
+	Severity    string
+	TriggeredAt time.Time
+}
+
+// SendRuleNotification sends a notification triggered by the rule engine
+func (s *EmailService) SendRuleNotification(to []string, subject string, data RuleNotificationData) error {
+	return s.sendTemplate(to, subject, "rule_notification.html", data)
+}
+
 // FormatBytes formats bytes into a human-readable string
 func FormatBytes(bytes int64) string {
 	const (

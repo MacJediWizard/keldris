@@ -179,8 +179,8 @@ func (db *DB) RevokeAllUserSessions(ctx context.Context, userID uuid.UUID, excep
 	return 0, nil
 }
 
-// CleanupExpiredSessions removes expired sessions older than the given duration.
-func (db *DB) CleanupExpiredSessions(ctx context.Context, olderThan time.Duration) (int64, error) {
+// CleanupExpiredUserSessions removes expired user sessions older than the given duration.
+func (db *DB) CleanupExpiredUserSessions(ctx context.Context, olderThan time.Duration) (int64, error) {
 	cutoff := time.Now().Add(-olderThan)
 	result, err := db.Pool.Exec(ctx, `
 		DELETE FROM user_sessions

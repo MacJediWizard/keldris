@@ -344,7 +344,7 @@ func run() int {
 			Store:         database,
 			Metrics:       database,
 			OrgCounter:    database,
-			PublicKey:      ed25519.PublicKey(licPubKey),
+			PublicKey:     ed25519.PublicKey(licPubKey),
 			Logger:        logger,
 		})
 		if lic != nil {
@@ -401,6 +401,9 @@ func run() int {
 		logger.Fatal().Err(err).Msg("Failed to initialize router")
 		return 1
 	}
+
+	// Wire Komodo webhook backup trigger to the scheduler
+	router.SetBackupTrigger(backupScheduler.TriggerBackup)
 
 	// Start HTTP server
 	listenAddr := os.Getenv("LISTEN_ADDR")

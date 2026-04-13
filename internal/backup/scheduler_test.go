@@ -135,6 +135,10 @@ func (m *mockStore) GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Age
 	}, nil
 }
 
+func (m *mockStore) GetProxmoxConnectionByID(_ context.Context, _ uuid.UUID) (*models.ProxmoxConnection, error) {
+	return nil, errors.New("proxmox connection not found")
+}
+
 func (m *mockStore) GetEnabledBackupScriptsByScheduleID(ctx context.Context, scheduleID uuid.UUID) ([]*models.BackupScript, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

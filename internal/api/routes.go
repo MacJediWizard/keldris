@@ -131,11 +131,12 @@ func ProductionConfig() Config {
 
 // Router wraps a Gin engine with configured middleware and routes.
 type Router struct {
-	Engine     *gin.Engine
-	logger     zerolog.Logger
-	sessions   *auth.SessionStore
-	db         *db.DB
-	keyManager *crypto.KeyManager
+	Engine        *gin.Engine
+	logger        zerolog.Logger
+	sessions      *auth.SessionStore
+	db            *db.DB
+	keyManager    *crypto.KeyManager
+	komodoHandler *handlers.KomodoHandler
 }
 
 // NewRouter creates a new Router with the given dependencies.
@@ -612,6 +613,7 @@ func NewRouter(
 	komodoHandler := handlers.NewKomodoHandler(database, logger)
 	komodoHandler.RegisterRoutes(apiV1)
 	komodoHandler.RegisterWebhookRoutes(r.Engine)
+	r.komodoHandler = komodoHandler
 
 	// Pi-hole backup routes
 	piholeHandler := handlers.NewPiholeHandler(database, logger)
@@ -702,4 +704,13 @@ func NewRouter(
 
 	r.logger.Info().Msg("API router initialized")
 	return r, nil
+}
+
+// SetBackupTrigger sets the backup trigger function for Komodo webhook-initiated backups.
+func (r *Router) SetBackupTrigger(fn handlers.BackupTriggerFunc) {
+	if r.komodoHandler != nil {
+		r.komodoHandler.SetBackupTrigger(fn)
+	} else {
+		r.logger.Warn().Msg("komodo handler not initialized, backup trigger not wired")
+	}
 }

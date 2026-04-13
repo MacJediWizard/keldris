@@ -22,6 +22,7 @@ type DockerRestoreStore interface {
 	GetDockerRestoreByID(ctx context.Context, id uuid.UUID) (*models.DockerRestore, error)
 	GetDockerRestoresByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.DockerRestore, error)
 	GetDockerRestoresByAgentID(ctx context.Context, agentID uuid.UUID) ([]*models.DockerRestore, error)
+	CreateAgentCommand(ctx context.Context, cmd *models.AgentCommand) error
 }
 
 // DockerRestoreHandler handles Docker restore HTTP endpoints.
@@ -262,7 +263,6 @@ func (h *DockerRestoreHandler) CreateDockerRestore(c *gin.Context) {
 		return
 	}
 
-
 	// Verify access to agent
 	agent, err := h.store.GetAgentByID(c.Request.Context(), agentID)
 	if err != nil {
@@ -411,14 +411,25 @@ func (h *DockerRestoreHandler) PreviewDockerRestore(c *gin.Context) {
 		Str("volume_name", req.VolumeName).
 		Msg("Docker restore preview requested")
 
-	// In a full implementation, this would communicate with the agent
-	// to run the actual preview. For now, return a placeholder response.
-	c.JSON(http.StatusOK, DockerRestorePlanResponse{
-		Container:      nil,
-		Volumes:        []DockerVolumeResponse{},
-		TotalSizeBytes: 0,
-		Conflicts:      []DockerRestoreConflictResponse{},
-		Dependencies:   []string{},
+	// Docker restore preview requires the agent to inspect the snapshot contents.
+	// Dispatch a command to the agent and return the command ID for polling.
+	previewPayload := &models.CommandPayload{
+		SnapshotID:   req.SnapshotID,
+		RepositoryID: req.RepositoryID,
+	}
+	cmd := models.NewAgentCommand(agentID, user.CurrentOrgID, models.CommandTypeDockerInspect, previewPayload, &user.ID)
+	cmd.CreatedByName = user.Name
+
+	if err := h.store.CreateAgentCommand(c.Request.Context(), cmd); err != nil {
+		h.logger.Error().Err(err).Msg("failed to create docker inspect command")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to initiate restore preview"})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"command_id": cmd.ID.String(),
+		"status":     "pending",
+		"message":    "Restore preview initiated. Poll the command status for results.",
 	})
 }
 
@@ -483,11 +494,25 @@ func (h *DockerRestoreHandler) ListContainersInSnapshot(c *gin.Context) {
 		Str("agent_id", agentIDParam).
 		Msg("listing containers in snapshot")
 
-	// In a full implementation, this would communicate with the agent
-	// to list containers in the snapshot. For now, return a placeholder.
-	c.JSON(http.StatusOK, gin.H{
+	// Dispatch docker inspect command to the agent
+	payload := &models.CommandPayload{SnapshotID: snapshotID}
+	cmd := models.NewAgentCommand(agentID, user.CurrentOrgID, models.CommandTypeDockerInspect, payload, &user.ID)
+	cmd.CreatedByName = user.Name
+	cmd.Payload = &models.CommandPayload{
+		SnapshotID: snapshotID,
+	}
+
+	if err := h.store.CreateAgentCommand(c.Request.Context(), cmd); err != nil {
+		h.logger.Error().Err(err).Msg("failed to create docker inspect command")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to initiate container listing"})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"command_id": cmd.ID.String(),
 		"containers": []DockerContainerResponse{},
-		"message":    "Container listing requires agent communication. Containers will be populated when agent connectivity is implemented.",
+		"status":     "pending",
+		"message":    "Container listing initiated. Poll the command status for results.",
 	})
 }
 
@@ -552,11 +577,25 @@ func (h *DockerRestoreHandler) ListVolumesInSnapshot(c *gin.Context) {
 		Str("agent_id", agentIDParam).
 		Msg("listing volumes in snapshot")
 
-	// In a full implementation, this would communicate with the agent
-	// to list volumes in the snapshot. For now, return a placeholder.
-	c.JSON(http.StatusOK, gin.H{
-		"volumes": []DockerVolumeResponse{},
-		"message": "Volume listing requires agent communication. Volumes will be populated when agent connectivity is implemented.",
+	// Dispatch docker inspect command to the agent
+	payload := &models.CommandPayload{SnapshotID: snapshotID}
+	cmd := models.NewAgentCommand(agentID, user.CurrentOrgID, models.CommandTypeDockerInspect, payload, &user.ID)
+	cmd.CreatedByName = user.Name
+	cmd.Payload = &models.CommandPayload{
+		SnapshotID: snapshotID,
+	}
+
+	if err := h.store.CreateAgentCommand(c.Request.Context(), cmd); err != nil {
+		h.logger.Error().Err(err).Msg("failed to create docker inspect command")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to initiate volume listing"})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"command_id": cmd.ID.String(),
+		"volumes":    []DockerVolumeResponse{},
+		"status":     "pending",
+		"message":    "Volume listing initiated. Poll the command status for results.",
 	})
 }
 

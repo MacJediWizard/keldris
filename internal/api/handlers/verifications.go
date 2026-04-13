@@ -77,17 +77,17 @@ func (h *VerificationsHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // VerificationResponse is the API response for a verification.
 type VerificationResponse struct {
-	ID           string                       `json:"id"`
-	RepositoryID string                       `json:"repository_id"`
-	Type         string                       `json:"type"`
-	SnapshotID   string                       `json:"snapshot_id,omitempty"`
-	StartedAt    string                       `json:"started_at"`
-	CompletedAt  string                       `json:"completed_at,omitempty"`
-	Status       string                       `json:"status"`
-	DurationMs   *int64                       `json:"duration_ms,omitempty"`
-	ErrorMessage string                       `json:"error_message,omitempty"`
-	Details      *models.VerificationDetails  `json:"details,omitempty"`
-	CreatedAt    string                       `json:"created_at"`
+	ID           string                      `json:"id"`
+	RepositoryID string                      `json:"repository_id"`
+	Type         string                      `json:"type"`
+	SnapshotID   string                      `json:"snapshot_id,omitempty"`
+	StartedAt    string                      `json:"started_at"`
+	CompletedAt  string                      `json:"completed_at,omitempty"`
+	Status       string                      `json:"status"`
+	DurationMs   *int64                      `json:"duration_ms,omitempty"`
+	ErrorMessage string                      `json:"error_message,omitempty"`
+	Details      *models.VerificationDetails `json:"details,omitempty"`
+	CreatedAt    string                      `json:"created_at"`
 }
 
 func toVerificationResponse(v *models.Verification) VerificationResponse {
@@ -162,16 +162,44 @@ type UpdateVerificationScheduleRequest struct {
 	ReadDataSubset string `json:"read_data_subset,omitempty"`
 }
 
-// List returns all verifications accessible to the user.
-// GET /api/v1/verifications
+// List returns verifications filtered by repository_id.
+// GET /api/v1/verifications?repository_id=<uuid>
 func (h *VerificationsHandler) List(c *gin.Context) {
 	user := middleware.RequireUser(c)
 	if user == nil {
 		return
 	}
 
-	// For now, just return an empty list or require repository_id filter
-	c.JSON(http.StatusOK, gin.H{"verifications": []VerificationResponse{}})
+	repoIDParam := c.Query("repository_id")
+	if repoIDParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "repository_id query parameter is required"})
+		return
+	}
+
+	repoID, err := uuid.Parse(repoIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid repository_id"})
+		return
+	}
+
+	if err := h.verifyRepoAccess(c, user.CurrentOrgID, repoID); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
+		return
+	}
+
+	verifications, err := h.store.GetVerificationsByRepoID(c.Request.Context(), repoID)
+	if err != nil {
+		h.logger.Error().Err(err).Str("repo_id", repoID.String()).Msg("failed to get verifications")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get verifications"})
+		return
+	}
+
+	responses := make([]VerificationResponse, 0, len(verifications))
+	for _, v := range verifications {
+		responses = append(responses, toVerificationResponse(v))
+	}
+
+	c.JSON(http.StatusOK, gin.H{"verifications": responses})
 }
 
 // Get returns a specific verification by ID.

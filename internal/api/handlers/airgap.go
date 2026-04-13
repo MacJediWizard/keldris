@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -257,16 +258,94 @@ func (h *AirGapHandler) ApplyUpdate(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual update application logic
-	// For now, return a placeholder response
 	h.logger.Info().
 		Str("user_id", user.ID.String()).
 		Str("package", filename).
 		Msg("update application requested")
 
+	// Extract the update package to a staging directory
+	stagingDir, err := os.MkdirTemp("", "keldris-update-*")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create staging directory"})
+		return
+	}
+
+	// Extract tar.gz package with path traversal protection
+	extractCmd := exec.CommandContext(c.Request.Context(), "tar", "--no-same-owner", "--no-same-permissions", "-xzf", absPath, "-C", stagingDir)
+	if output, err := extractCmd.CombinedOutput(); err != nil {
+		os.RemoveAll(stagingDir)
+		h.logger.Error().Err(err).Str("output", string(output)).Msg("failed to extract update package")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to extract update package"})
+		return
+	}
+
+	// Verify no path traversal occurred during extraction
+	serverBinary := filepath.Join(stagingDir, "keldris-server")
+	absBinary, _ := filepath.Abs(serverBinary)
+	if !isSubPath(stagingDir, absBinary) {
+		os.RemoveAll(stagingDir)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid update package structure"})
+		return
+	}
+
+	// Look for the server binary in the staging directory
+	if _, err := os.Stat(serverBinary); os.IsNotExist(err) {
+		os.RemoveAll(stagingDir)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "update package does not contain keldris-server binary"})
+		return
+	}
+
+	// Get the current executable path
+	currentExe, err := os.Executable()
+	if err != nil {
+		os.RemoveAll(stagingDir)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to determine current executable path"})
+		return
+	}
+
+	// Back up the current binary
+	backupPath := currentExe + ".bak"
+	if err := copyFile(currentExe, backupPath); err != nil {
+		os.RemoveAll(stagingDir)
+		h.logger.Error().Err(err).Msg("failed to backup current binary")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to backup current binary"})
+		return
+	}
+
+	// Replace the binary
+	if err := copyFile(serverBinary, currentExe); err != nil {
+		// Restore backup on failure
+		copyFile(backupPath, currentExe)
+		os.RemoveAll(stagingDir)
+		h.logger.Error().Err(err).Msg("failed to replace binary")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to apply update"})
+		return
+	}
+
+	// Make the new binary executable
+	if err := os.Chmod(currentExe, 0755); err != nil {
+		// Restore backup if chmod fails
+		if restoreErr := copyFile(backupPath, currentExe); restoreErr != nil {
+			h.logger.Error().Err(restoreErr).Msg("failed to restore backup after chmod failure")
+		}
+		os.RemoveAll(stagingDir)
+		h.logger.Error().Err(err).Msg("failed to set executable permission on new binary")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to set executable permission"})
+		return
+	}
+
+	// Clean up staging
+	os.RemoveAll(stagingDir)
+
+	h.logger.Info().
+		Str("backup", backupPath).
+		Str("package", filename).
+		Msg("update applied successfully, restart required")
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Update queued for application. The system will restart automatically.",
+		"message": "Update applied successfully. Restart the server to activate the new version.",
 		"package": filename,
+		"backup":  backupPath,
 	})
 }
 
@@ -373,4 +452,30 @@ func isSubPath(parent, child string) bool {
 		return false
 	}
 	return !filepath.IsAbs(rel) && len(rel) >= 2 && rel[:2] != ".."
+}
+
+// copyFile copies a file from src to dst, ensuring data is flushed to disk.
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+
+	if _, err = io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+
+	if err = out.Sync(); err != nil {
+		out.Close()
+		return err
+	}
+
+	return out.Close()
 }

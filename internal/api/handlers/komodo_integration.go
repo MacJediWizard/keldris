@@ -40,13 +40,19 @@ type KomodoStore interface {
 	CreateKomodoWebhookEvent(ctx context.Context, event *models.KomodoWebhookEvent) error
 	GetKomodoWebhookEventsByOrgID(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.KomodoWebhookEvent, error)
 	UpdateKomodoWebhookEvent(ctx context.Context, event *models.KomodoWebhookEvent) error
+	// Schedule lookup for webhook-triggered backups
+	GetSchedulesByOrgID(ctx context.Context, orgID uuid.UUID) ([]*models.Schedule, error)
 }
+
+// BackupTriggerFunc is a callback to trigger a backup for a given schedule.
+type BackupTriggerFunc func(ctx context.Context, scheduleID uuid.UUID) error
 
 // KomodoHandler handles Komodo integration HTTP endpoints.
 type KomodoHandler struct {
-	store          KomodoStore
-	webhookHandler *komodo.WebhookHandler
-	logger         zerolog.Logger
+	store             KomodoStore
+	webhookHandler    *komodo.WebhookHandler
+	backupTriggerFunc BackupTriggerFunc
+	logger            zerolog.Logger
 }
 
 // NewKomodoHandler creates a new KomodoHandler.
@@ -56,6 +62,11 @@ func NewKomodoHandler(store KomodoStore, logger zerolog.Logger) *KomodoHandler {
 		webhookHandler: komodo.NewWebhookHandler(logger),
 		logger:         logger.With().Str("component", "komodo_handler").Logger(),
 	}
+}
+
+// SetBackupTrigger sets the backup trigger function for webhook-initiated backups.
+func (h *KomodoHandler) SetBackupTrigger(fn BackupTriggerFunc) {
+	h.backupTriggerFunc = fn
 }
 
 // RegisterRoutes registers Komodo routes on the given router group.
@@ -741,19 +752,48 @@ func (h *KomodoHandler) HandleWebhook(c *gin.Context) {
 		Bool("should_backup", result.ShouldBackup).
 		Msg("Komodo webhook received")
 
-	// If backup should be triggered, we would initiate it here
-	// This would integrate with the backup scheduling system
+	// Trigger backup if the webhook signals it
 	if result.ShouldBackup && result.BackupTrigger != nil {
 		h.logger.Info().
 			Str("container_id", result.BackupTrigger.ContainerID).
 			Str("stack_id", result.BackupTrigger.StackID).
 			Msg("backup trigger received from Komodo webhook")
-		// TODO: Integrate with backup scheduler to trigger backup
+
+		if h.backupTriggerFunc != nil {
+			integration, intErr := h.store.GetKomodoIntegrationByID(c.Request.Context(), integrationID)
+			if intErr != nil {
+				h.logger.Error().Err(intErr).Str("integration_id", integrationID.String()).Msg("failed to get integration for backup trigger")
+			} else {
+				schedules, schErr := h.store.GetSchedulesByOrgID(c.Request.Context(), integration.OrgID)
+				if schErr != nil {
+					h.logger.Error().Err(schErr).Str("org_id", integration.OrgID.String()).Msg("failed to get schedules for backup trigger")
+				} else {
+					for _, sched := range schedules {
+						if sched.BackupType == models.BackupTypeDocker && sched.Enabled {
+							if triggerErr := h.backupTriggerFunc(c.Request.Context(), sched.ID); triggerErr != nil {
+								h.logger.Error().Err(triggerErr).
+									Str("schedule_id", sched.ID.String()).
+									Msg("failed to trigger backup from Komodo webhook")
+							} else {
+								h.logger.Info().
+									Str("schedule_id", sched.ID.String()).
+									Str("schedule_name", sched.Name).
+									Msg("backup triggered by Komodo webhook")
+							}
+						}
+					}
+				}
+			}
+		} else {
+			h.logger.Warn().Msg("backup trigger function not configured")
+		}
 	}
 
 	// Mark event as processed
 	result.Event.MarkProcessed()
-	h.store.UpdateKomodoWebhookEvent(c.Request.Context(), result.Event)
+	if err := h.store.UpdateKomodoWebhookEvent(c.Request.Context(), result.Event); err != nil {
+		h.logger.Error().Err(err).Str("event_id", result.Event.ID.String()).Msg("failed to mark webhook event as processed")
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":       "webhook processed",

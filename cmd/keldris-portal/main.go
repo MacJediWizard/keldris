@@ -29,13 +29,15 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/MacJediWizard/keldris/internal/db"
+	portal "github.com/MacJediWizard/keldris/internal/portal"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -66,41 +68,42 @@ func main() {
 		port = "8081"
 	}
 
-	// TODO: Initialize database connection
-	// dbConfig := db.Config{
-	//     Host:     os.Getenv("DB_HOST"),
-	//     Port:     os.Getenv("DB_PORT"),
-	//     User:     os.Getenv("DB_USER"),
-	//     Password: os.Getenv("DB_PASSWORD"),
-	//     Database: os.Getenv("DB_NAME"),
-	// }
-	// database, err := db.New(context.Background(), dbConfig, log.Logger)
-	// if err != nil {
-	//     log.Fatal().Err(err).Msg("Failed to connect to database")
-	// }
-	// defer database.Close()
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		log.Fatal().Msg("DATABASE_URL environment variable is required")
+	}
 
-	// TODO: Run migrations
-	// if err := database.Migrate(context.Background()); err != nil {
-	//     log.Fatal().Err(err).Msg("Failed to run migrations")
-	// }
+	// Initialize database connection
+	ctx := context.Background()
+	database, err := db.New(ctx, db.DefaultConfig(databaseURL), log.Logger)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to connect to database")
+	}
+	defer database.Close()
 
-	// TODO: Initialize portal router
-	// portalConfig := portal.Config{
-	//     AllowedOrigins: strings.Split(os.Getenv("ALLOWED_ORIGINS"), ","),
-	//     Version:        Version,
-	//     Commit:         Commit,
-	//     BuildDate:      BuildDate,
-	// }
-	// router, err := portal.NewRouter(portalConfig, database, log.Logger)
-	// if err != nil {
-	//     log.Fatal().Err(err).Msg("Failed to create router")
-	// }
+	// Run migrations
+	if err := database.Migrate(ctx); err != nil {
+		log.Fatal().Err(err).Msg("Failed to run migrations")
+	}
+
+	// Initialize portal router
+	portalConfig := portal.Config{
+		AllowedOrigins: strings.Split(os.Getenv("ALLOWED_ORIGINS"), ","),
+		Version:        Version,
+		Commit:         Commit,
+		BuildDate:      BuildDate,
+	}
+
+	portalStore := db.NewPortalStore(database)
+	router, err := portal.NewRouter(portalConfig, portalStore, log.Logger)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create router")
+	}
 
 	// Create HTTP server
 	srv := &http.Server{
-		Addr: ":" + port,
-		// Handler:      router.Engine,
+		Addr:         ":" + port,
+		Handler:      router.Engine,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -122,13 +125,12 @@ func main() {
 	log.Info().Msg("Shutting down server...")
 
 	// Graceful shutdown with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error().Err(err).Msg("Server shutdown error")
 	}
 
 	log.Info().Msg("Server stopped")
-	fmt.Println("Keldris Customer Portal - implement database connection!")
 }
