@@ -25,6 +25,8 @@ const (
 	CommandTypeDryRun CommandType = "dry_run"
 	// CommandTypeUninstall triggers a remote agent uninstall.
 	CommandTypeUninstall CommandType = "uninstall"
+	// CommandTypeDockerInspect inspects Docker snapshot contents on the agent.
+	CommandTypeDockerInspect CommandType = "docker_inspect"
 )
 
 // CommandStatus represents the current status of a command.
@@ -59,14 +61,17 @@ type CommandPayload struct {
 	DiagnosticTypes []string `json:"diagnostic_types,omitempty"`
 	// For uninstall command
 	Purge bool `json:"purge,omitempty"`
+	// For docker_inspect command
+	SnapshotID   string `json:"snapshot_id,omitempty"`
+	RepositoryID string `json:"repository_id,omitempty"`
 }
 
 // CommandResult contains the result of a command execution.
 type CommandResult struct {
-	Output      string              `json:"output,omitempty"`
-	Error       string              `json:"error,omitempty"`
-	Diagnostics map[string]any      `json:"diagnostics,omitempty"`
-	BackupID    *uuid.UUID          `json:"backup_id,omitempty"`
+	Output      string               `json:"output,omitempty"`
+	Error       string               `json:"error,omitempty"`
+	Diagnostics map[string]any       `json:"diagnostics,omitempty"`
+	BackupID    *uuid.UUID           `json:"backup_id,omitempty"`
 	DryRun      *DryRunCommandResult `json:"dry_run,omitempty"`
 }
 

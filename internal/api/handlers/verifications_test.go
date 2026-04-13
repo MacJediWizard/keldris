@@ -192,10 +192,23 @@ func TestVerificationsList(t *testing.T) {
 	trigger := &mockVerificationTrigger{}
 	user := &auth.SessionUser{ID: userID, CurrentOrgID: orgID}
 
-	t.Run("success returns empty list", func(t *testing.T) {
+	t.Run("requires repository_id parameter", func(t *testing.T) {
 		r := setupVerificationsTestRouter(store, trigger, user)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/verifications", nil)
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("success returns empty list", func(t *testing.T) {
+		repoID := uuid.New()
+		store.repo = &models.Repository{ID: repoID, OrgID: orgID, Name: "test-repo"}
+		r := setupVerificationsTestRouter(store, trigger, user)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/verifications?repository_id="+repoID.String(), nil)
 		r.ServeHTTP(w, req)
 
 		if w.Code != http.StatusOK {

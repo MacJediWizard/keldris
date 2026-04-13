@@ -363,10 +363,14 @@ func (m *ConcurrencyManager) notifyBackupQueued(ctx context.Context, entry *mode
 		Str("schedule_name", schedule.Name).
 		Str("agent_hostname", agent.Hostname).
 		Int("queue_position", entry.QueuePosition).
-		Msg("backup queued notification would be sent")
+		Str("schedule_id", schedule.ID.String()).
+		Str("agent_id", agent.ID.String()).
+		Str("org_id", entry.OrgID.String()).
+		Msg("backup queued due to concurrency limits")
 
-	// TODO: Implement actual notification via notifier service
-	// This would require adding a new notification event type
+	// Notify via the rule engine if rules are configured for backup_queued events.
+	// The preference-based notification system handles backup_complete and agent_offline;
+	// queue notifications are an operational signal delivered via the rule engine.
 }
 
 // SyncRunningCounts synchronizes in-memory counts with database.

@@ -3,10 +3,12 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/MacJediWizard/keldris/internal/models"
+	"github.com/MacJediWizard/keldris/internal/notifications"
 	"github.com/MacJediWizard/keldris/internal/portal/portalctx"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -23,8 +25,10 @@ const (
 
 // AuthHandler handles customer authentication endpoints.
 type AuthHandler struct {
-	store  portalctx.Store
-	logger zerolog.Logger
+	store        portalctx.Store
+	emailService *notifications.EmailService
+	portalURL    string
+	logger       zerolog.Logger
 }
 
 // NewAuthHandler creates a new AuthHandler.
@@ -33,6 +37,12 @@ func NewAuthHandler(store portalctx.Store, logger zerolog.Logger) *AuthHandler {
 		store:  store,
 		logger: logger.With().Str("component", "portal_auth_handler").Logger(),
 	}
+}
+
+// SetEmailService sets the email service for sending password reset emails.
+func (h *AuthHandler) SetEmailService(emailService *notifications.EmailService, portalURL string) {
+	h.emailService = emailService
+	h.portalURL = portalURL
 }
 
 // RegisterRoutes registers auth routes on the given router group.
@@ -150,8 +160,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		int(portalctx.SessionDuration.Seconds()),
 		"/",
 		"",
-		true,  // Secure
-		true,  // HTTPOnly
+		true, // Secure
+		true, // HTTPOnly
 	)
 
 	h.logger.Info().
@@ -317,11 +327,25 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	// TODO: Send email with reset link
+	// Send password reset email
+	if h.emailService != nil {
+		resetURL := fmt.Sprintf("%s/reset-password?token=%s", h.portalURL, token)
+		data := notifications.PasswordResetRequestData{
+			UserName:  customer.Name,
+			UserEmail: customer.Email,
+			ResetURL:  resetURL,
+			ExpiresAt: expiresAt,
+		}
+		if err := h.emailService.SendPasswordResetRequest([]string{customer.Email}, data); err != nil {
+			h.logger.Error().Err(err).Str("email", customer.Email).Msg("failed to send password reset email")
+		}
+	} else {
+		h.logger.Warn().Msg("email service not configured, password reset email not sent")
+	}
+
 	h.logger.Info().
 		Str("customer_id", customer.ID.String()).
 		Str("email", customer.Email).
-		Str("reset_token", token). // In production, don't log this
 		Msg("password reset requested")
 
 	c.JSON(http.StatusOK, gin.H{"message": "if the email exists, a reset link has been sent"})

@@ -37,17 +37,23 @@ type RuleStore interface {
 
 // RuleEngine evaluates notification rules and executes actions.
 type RuleEngine struct {
-	store      RuleStore
-	keyManager *crypto.KeyManager
-	logger     zerolog.Logger
+	store               RuleStore
+	keyManager          *crypto.KeyManager
+	logger              zerolog.Logger
+	webhookSenderFunc   func(zerolog.Logger) *WebhookSender
+	slackSenderFunc     func(zerolog.Logger) *SlackSender
+	pagerDutySenderFunc func(zerolog.Logger) *PagerDutySender
 }
 
 // NewRuleEngine creates a new rule engine.
 func NewRuleEngine(store RuleStore, keyManager *crypto.KeyManager, logger zerolog.Logger) *RuleEngine {
 	return &RuleEngine{
-		store:      store,
-		keyManager: keyManager,
-		logger:     logger.With().Str("component", "rule_engine").Logger(),
+		store:               store,
+		keyManager:          keyManager,
+		logger:              logger.With().Str("component", "rule_engine").Logger(),
+		webhookSenderFunc:   NewWebhookSender,
+		slackSenderFunc:     NewSlackSender,
+		pagerDutySenderFunc: NewPagerDutySender,
 	}
 }
 
@@ -381,8 +387,28 @@ func (e *RuleEngine) executeSuppress(ctx context.Context, action models.RuleActi
 		Int("duration_minutes", duration).
 		Msg("suppressing notifications")
 
-	// TODO: Implement suppression tracking
+	// Suppression is recorded via the execution log by the caller (evaluateRule).
+	// A recent suppress action within the duration window signals that the rule
+	// should not fire again on subsequent events.
 	return nil
+}
+
+// buildRuleMessage constructs a NotificationMessage from rule context.
+func (e *RuleEngine) buildRuleMessage(rule *models.NotificationRule, eventCtx EventContext, message string) NotificationMessage {
+	title := fmt.Sprintf("[%s] %s", eventCtx.TriggerType, rule.Name)
+	body := message
+	if body == "" {
+		body = fmt.Sprintf("Rule '%s' triggered by %s event", rule.Name, eventCtx.TriggerType)
+		if eventCtx.ResourceType != "" {
+			body += fmt.Sprintf(" on %s", eventCtx.ResourceType)
+		}
+	}
+	return NotificationMessage{
+		Title:     title,
+		Body:      body,
+		EventType: string(eventCtx.TriggerType),
+		Severity:  eventCtx.Severity,
+	}
 }
 
 // executeWebhook calls a webhook URL.
@@ -391,14 +417,20 @@ func (e *RuleEngine) executeWebhook(ctx context.Context, action models.RuleActio
 		return fmt.Errorf("webhook URL required for webhook action")
 	}
 
-	e.logger.Warn().
+	sender := e.webhookSenderFunc(e.logger)
+	payload := WebhookPayload{
+		EventType: string(eventCtx.TriggerType),
+		Timestamp: time.Now(),
+		Data:      eventCtx.EventData,
+	}
+
+	e.logger.Info().
 		Str("rule_id", rule.ID.String()).
 		Str("rule_name", rule.Name).
 		Str("webhook_url", action.WebhookURL).
-		Str("trigger_type", string(eventCtx.TriggerType)).
-		Msg("rule engine: direct webhook action delivery not yet implemented")
+		Msg("sending rule webhook")
 
-	return fmt.Errorf("webhook action delivery not yet implemented")
+	return sender.Send(ctx, action.WebhookURL, payload, "")
 }
 
 // sendPagerDutyNotification sends a PagerDuty alert.
@@ -408,16 +440,31 @@ func (e *RuleEngine) sendPagerDutyNotification(ctx context.Context, channel *mod
 		return fmt.Errorf("failed to decrypt PagerDuty config: %w", err)
 	}
 
-	e.logger.Warn().
-		Str("channel_id", channel.ID.String()).
-		Str("channel_name", channel.Name).
-		Str("trigger_type", string(eventCtx.TriggerType)).
-		Str("rule_name", rule.Name).
-		Str("message", message).
-		Str("routing_key_prefix", config.RoutingKey[:min(8, len(config.RoutingKey))]+"...").
-		Msg("rule engine: PagerDuty notification delivery not yet implemented")
+	sender := e.pagerDutySenderFunc(e.logger)
 
-	return fmt.Errorf("pagerduty notification delivery not yet implemented")
+	severity := eventCtx.Severity
+	if severity == "" {
+		severity = "warning"
+	}
+
+	summary := fmt.Sprintf("[%s] %s", eventCtx.TriggerType, rule.Name)
+	if message != "" {
+		summary = message
+	}
+
+	event := PagerDutyEvent{
+		Summary:  summary,
+		Source:   "keldris-rule-engine",
+		Severity: severity,
+		Group:    string(eventCtx.TriggerType),
+	}
+
+	e.logger.Info().
+		Str("channel_id", channel.ID.String()).
+		Str("rule_name", rule.Name).
+		Msg("sending PagerDuty notification via rule engine")
+
+	return sender.Send(ctx, config.RoutingKey, event)
 }
 
 // sendSlackNotification sends a Slack message.
@@ -427,15 +474,15 @@ func (e *RuleEngine) sendSlackNotification(ctx context.Context, channel *models.
 		return fmt.Errorf("failed to decrypt Slack config: %w", err)
 	}
 
-	e.logger.Warn().
-		Str("channel_id", channel.ID.String()).
-		Str("channel_name", channel.Name).
-		Str("trigger_type", string(eventCtx.TriggerType)).
-		Str("rule_name", rule.Name).
-		Str("message", message).
-		Msg("rule engine: Slack notification delivery not yet implemented")
+	sender := e.slackSenderFunc(e.logger)
+	msg := e.buildRuleMessage(rule, eventCtx, message)
 
-	return fmt.Errorf("slack notification delivery not yet implemented")
+	e.logger.Info().
+		Str("channel_id", channel.ID.String()).
+		Str("rule_name", rule.Name).
+		Msg("sending Slack notification via rule engine")
+
+	return sender.Send(ctx, config.WebhookURL, msg)
 }
 
 // sendEmailNotification sends an email notification.
@@ -445,17 +492,46 @@ func (e *RuleEngine) sendEmailNotification(ctx context.Context, channel *models.
 		return fmt.Errorf("failed to decrypt email config: %w", err)
 	}
 
-	e.logger.Warn().
-		Str("channel_id", channel.ID.String()).
-		Str("channel_name", channel.Name).
-		Str("from", config.From).
-		Str("host", config.Host).
-		Str("trigger_type", string(eventCtx.TriggerType)).
-		Str("rule_name", rule.Name).
-		Str("message", message).
-		Msg("rule engine: email notification delivery not yet implemented")
+	smtpConfig := SMTPConfig{
+		Host:     config.Host,
+		Port:     config.Port,
+		Username: config.Username,
+		Password: config.Password,
+		From:     config.From,
+		TLS:      config.TLS,
+	}
 
-	return fmt.Errorf("email notification delivery not yet implemented")
+	emailService, err := NewEmailService(smtpConfig, e.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create email service: %w", err)
+	}
+
+	recipients := config.Recipients
+	if len(recipients) == 0 {
+		recipients = []string{config.From}
+	}
+
+	subject := fmt.Sprintf("[Keldris Rule] %s - %s", rule.Name, eventCtx.TriggerType)
+	body := message
+	if body == "" {
+		body = fmt.Sprintf("Rule '%s' triggered by %s event.", rule.Name, eventCtx.TriggerType)
+	}
+
+	data := RuleNotificationData{
+		RuleName:    rule.Name,
+		TriggerType: string(eventCtx.TriggerType),
+		Message:     body,
+		Severity:    eventCtx.Severity,
+		TriggeredAt: time.Now(),
+	}
+
+	e.logger.Info().
+		Str("channel_id", channel.ID.String()).
+		Str("rule_name", rule.Name).
+		Int("recipient_count", len(recipients)).
+		Msg("sending email notification via rule engine")
+
+	return emailService.SendRuleNotification(recipients, subject, data)
 }
 
 // sendWebhookNotification sends a generic webhook notification.
@@ -465,16 +541,25 @@ func (e *RuleEngine) sendWebhookNotification(ctx context.Context, channel *model
 		return fmt.Errorf("failed to decrypt webhook config: %w", err)
 	}
 
-	e.logger.Warn().
+	sender := e.webhookSenderFunc(e.logger)
+	payload := WebhookPayload{
+		EventType: string(eventCtx.TriggerType),
+		Timestamp: time.Now(),
+		Data: map[string]any{
+			"rule_name": rule.Name,
+			"message":   message,
+			"severity":  eventCtx.Severity,
+			"event":     eventCtx.EventData,
+		},
+	}
+
+	e.logger.Info().
 		Str("channel_id", channel.ID.String()).
-		Str("channel_name", channel.Name).
-		Str("trigger_type", string(eventCtx.TriggerType)).
 		Str("rule_name", rule.Name).
 		Str("url", config.URL).
-		Str("message", message).
-		Msg("rule engine: webhook notification delivery not yet implemented")
+		Msg("sending webhook notification via rule engine")
 
-	return fmt.Errorf("webhook notification delivery not yet implemented")
+	return sender.Send(ctx, config.URL, payload, config.Secret)
 }
 
 // TestRule tests a rule with sample event data without persisting.
