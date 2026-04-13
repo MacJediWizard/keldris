@@ -57,14 +57,14 @@ export function ChangePasswordForm({
 	return (
 		<form onSubmit={handleSubmit} className="space-y-6">
 			{error && (
-				<div className="bg-red-50 border border-red-200 rounded-lg p-4">
-					<p className="text-sm text-red-700">{error}</p>
+				<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+					<p className="text-sm text-red-700 dark:text-red-300">{error}</p>
 				</div>
 			)}
 
 			{success && (
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4">
-					<p className="text-sm text-green-700">
+				<div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+					<p className="text-sm text-green-700 dark:text-green-300">
 						Password changed successfully!
 					</p>
 				</div>
@@ -73,7 +73,7 @@ export function ChangePasswordForm({
 			<div>
 				<label
 					htmlFor="current_password"
-					className="block text-sm font-medium text-gray-700"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 				>
 					Current Password
 				</label>
@@ -84,7 +84,7 @@ export function ChangePasswordForm({
 						value={currentPassword}
 						onChange={(e) => setCurrentPassword(e.target.value)}
 						required
-						className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pr-10"
+						className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pr-10 dark:bg-gray-800 dark:text-white"
 					/>
 					<button
 						type="button"
@@ -93,7 +93,7 @@ export function ChangePasswordForm({
 					>
 						{showCurrentPassword ? (
 							<svg
-								className="w-5 h-5 text-gray-400"
+								className="w-5 h-5 text-gray-400 dark:text-gray-500"
 								fill="none"
 								stroke="currentColor"
 								viewBox="0 0 24 24"
@@ -108,7 +108,7 @@ export function ChangePasswordForm({
 							</svg>
 						) : (
 							<svg
-								className="w-5 h-5 text-gray-400"
+								className="w-5 h-5 text-gray-400 dark:text-gray-500"
 								fill="none"
 								stroke="currentColor"
 								viewBox="0 0 24 24"
@@ -135,7 +135,7 @@ export function ChangePasswordForm({
 			<div>
 				<label
 					htmlFor="new_password"
-					className="block text-sm font-medium text-gray-700"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 				>
 					New Password
 				</label>
@@ -146,7 +146,7 @@ export function ChangePasswordForm({
 						value={newPassword}
 						onChange={(e) => setNewPassword(e.target.value)}
 						required
-						className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pr-10"
+						className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm pr-10 dark:bg-gray-800 dark:text-white"
 					/>
 					<button
 						type="button"
@@ -155,7 +155,7 @@ export function ChangePasswordForm({
 					>
 						{showNewPassword ? (
 							<svg
-								className="w-5 h-5 text-gray-400"
+								className="w-5 h-5 text-gray-400 dark:text-gray-500"
 								fill="none"
 								stroke="currentColor"
 								viewBox="0 0 24 24"
@@ -170,7 +170,7 @@ export function ChangePasswordForm({
 							</svg>
 						) : (
 							<svg
-								className="w-5 h-5 text-gray-400"
+								className="w-5 h-5 text-gray-400 dark:text-gray-500"
 								fill="none"
 								stroke="currentColor"
 								viewBox="0 0 24 24"
@@ -199,7 +199,7 @@ export function ChangePasswordForm({
 			<div>
 				<label
 					htmlFor="confirm_password"
-					className="block text-sm font-medium text-gray-700"
+					className="block text-sm font-medium text-gray-700 dark:text-gray-300"
 				>
 					Confirm New Password
 				</label>
@@ -210,15 +210,17 @@ export function ChangePasswordForm({
 						value={confirmPassword}
 						onChange={(e) => setConfirmPassword(e.target.value)}
 						required
-						className={`block w-full rounded-md shadow-sm sm:text-sm ${
+						className={`block w-full rounded-md shadow-sm sm:text-sm dark:bg-gray-800 dark:text-white ${
 							confirmPassword && newPassword !== confirmPassword
-								? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-								: 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+								? 'border-red-300 dark:border-red-600 focus:border-red-500 focus:ring-red-500'
+								: 'border-gray-300 dark:border-gray-600 focus:border-indigo-500 focus:ring-indigo-500'
 						}`}
 					/>
 				</div>
 				{confirmPassword && newPassword !== confirmPassword && (
-					<p className="mt-1 text-sm text-red-600">Passwords do not match</p>
+					<p className="mt-1 text-sm text-red-600 dark:text-red-400">
+						Passwords do not match
+					</p>
 				)}
 			</div>
 
@@ -227,7 +229,7 @@ export function ChangePasswordForm({
 					<button
 						type="button"
 						onClick={onCancel}
-						className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+						className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
 					>
 						Cancel
 					</button>

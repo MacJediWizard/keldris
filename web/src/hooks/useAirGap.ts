@@ -1,6 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
-const API_BASE = '/api/v1';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchApi, fetchBlob } from "../lib/api";
 
 // Types
 
@@ -15,7 +14,7 @@ export interface AirGapStatus {
 
 export interface LicenseStatus {
 	valid: boolean;
-	type?: 'community' | 'pro' | 'enterprise';
+	type?: "community" | "pro" | "enterprise";
 	organization?: string;
 	expires_at?: string;
 	days_until_expiry?: number;
@@ -24,16 +23,6 @@ export interface LicenseStatus {
 	max_agents?: number;
 	error?: string;
 	metadata?: Record<string, string>;
-}
-
-export interface RenewalRequest {
-	license_id: string;
-	organization: string;
-	email: string;
-	current_type: string;
-	hardware_id: string;
-	requested_at: string;
-	expires_at: string;
 }
 
 export interface UpdatePackage {
@@ -63,12 +52,11 @@ export interface DocumentationIndex {
 	search_index?: Record<string, string>;
 }
 
-// API functions
-
+// The public airgap status endpoint doesn't require auth and needs
+// special 404 handling, so it uses raw fetch instead of the api client.
 async function fetchAirGapStatus(): Promise<AirGapStatus> {
-	const res = await fetch(`${API_BASE}/public/airgap/status`);
+	const res = await fetch("/api/v1/public/airgap/status");
 	if (!res.ok) {
-		// Air-gap endpoint may not be registered if AirGapManager is not configured
 		if (res.status === 404) {
 			return {
 				airgap_mode: false,
@@ -78,142 +66,54 @@ async function fetchAirGapStatus(): Promise<AirGapStatus> {
 				license_valid: true,
 			};
 		}
-		throw new Error('Failed to fetch air-gap status');
-	}
-	return res.json();
-}
-
-async function fetchLicenseStatus(): Promise<LicenseStatus> {
-	const res = await fetch(`${API_BASE}/airgap/license`, {
-		credentials: 'include',
-	});
-	if (!res.ok) {
-		throw new Error('Failed to fetch license status');
-	}
-	return res.json();
-}
-
-async function uploadLicense(licenseData: string): Promise<LicenseStatus> {
-	const res = await fetch(`${API_BASE}/airgap/license`, {
-		method: 'POST',
-		credentials: 'include',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ license: licenseData }),
-	});
-	if (!res.ok) {
-		const error = await res.json();
-		throw new Error(error.error || 'Failed to upload license');
-	}
-	return res.json();
-}
-
-async function fetchRenewalRequest(): Promise<Blob> {
-	const res = await fetch(`${API_BASE}/airgap/license/renewal-request`, {
-		credentials: 'include',
-	});
-	if (!res.ok) {
-		throw new Error('Failed to generate renewal request');
-	}
-	return res.blob();
-}
-
-async function updateRevocationList(data: string): Promise<void> {
-	const res = await fetch(`${API_BASE}/airgap/revocations`, {
-		method: 'POST',
-		credentials: 'include',
-		headers: { 'Content-Type': 'application/json' },
-		body: data,
-	});
-	if (!res.ok) {
-		const error = await res.json();
-		throw new Error(error.error || 'Failed to update revocation list');
-	}
-}
-
-async function fetchUpdatePackages(): Promise<UpdatePackagesResponse> {
-	const res = await fetch(`${API_BASE}/airgap/updates`, {
-		credentials: 'include',
-	});
-	if (!res.ok) {
-		throw new Error('Failed to fetch update packages');
-	}
-	return res.json();
-}
-
-async function applyUpdate(filename: string): Promise<void> {
-	const res = await fetch(`${API_BASE}/airgap/updates/${filename}/apply`, {
-		method: 'POST',
-		credentials: 'include',
-	});
-	if (!res.ok) {
-		const error = await res.json();
-		throw new Error(error.error || 'Failed to apply update');
-	}
-}
-
-async function fetchDocumentationIndex(): Promise<DocumentationIndex> {
-	const res = await fetch(`${API_BASE}/airgap/docs`, {
-		credentials: 'include',
-	});
-	if (!res.ok) {
-		throw new Error('Failed to fetch documentation index');
+		throw new Error("Failed to fetch air-gap status");
 	}
 	return res.json();
 }
 
 // Hooks
 
-/**
- * Hook to get air-gap mode status (public, no auth required).
- * Use this to conditionally disable features that require network access.
- */
 export function useAirGapStatus() {
 	return useQuery({
-		queryKey: ['airgap-status'],
+		queryKey: ["airgap-status"],
 		queryFn: fetchAirGapStatus,
-		staleTime: 5 * 60 * 1000, // 5 minutes
+		staleTime: 5 * 60 * 1000,
 		retry: 1,
 	});
 }
 
-/**
- * Hook to get detailed license status (requires auth).
- */
 export function useLicenseStatus() {
 	return useQuery({
-		queryKey: ['license-status'],
-		queryFn: fetchLicenseStatus,
-		staleTime: 60 * 1000, // 1 minute
+		queryKey: ["license-status"],
+		queryFn: () => fetchApi<LicenseStatus>("/airgap/license"),
+		staleTime: 60 * 1000,
 	});
 }
-
-/**
- * Hook to upload a new license file.
- */
 
 export function useUploadLicense() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: uploadLicense,
+		mutationFn: (licenseData: string) =>
+			fetchApi<LicenseStatus>("/airgap/license", {
+				method: "POST",
+				body: JSON.stringify({ license: licenseData }),
+			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['license-status'] });
-			queryClient.invalidateQueries({ queryKey: ['airgap-status'] });
+			queryClient.invalidateQueries({ queryKey: ["license-status"] });
+			queryClient.invalidateQueries({ queryKey: ["airgap-status"] });
 		},
 	});
 }
 
-/**
- * Hook to generate and download a license renewal request.
- */
 export function useDownloadRenewalRequest() {
 	return useMutation({
 		mutationFn: async () => {
-			const blob = await fetchRenewalRequest();
+			const blob = await fetchBlob("/airgap/license/renewal-request");
 			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
+			const a = document.createElement("a");
 			a.href = url;
-			a.download = 'license-renewal-request.json';
+			a.download = "license-renewal-request.json";
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);
@@ -222,54 +122,46 @@ export function useDownloadRenewalRequest() {
 	});
 }
 
-/**
- * Hook to update the revocation list.
- */
 export function useUpdateRevocationList() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: updateRevocationList,
+		mutationFn: (data: string) =>
+			fetchApi<void>("/airgap/revocations", {
+				method: "POST",
+				body: data,
+			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['license-status'] });
+			queryClient.invalidateQueries({ queryKey: ["license-status"] });
 		},
 	});
 }
 
-/**
- * Hook to list available offline update packages.
- */
 export function useUpdatePackages() {
 	return useQuery({
-		queryKey: ['update-packages'],
-		queryFn: fetchUpdatePackages,
-		staleTime: 30 * 1000, // 30 seconds
+		queryKey: ["update-packages"],
+		queryFn: () => fetchApi<UpdatePackagesResponse>("/airgap/updates"),
+		staleTime: 30 * 1000,
 	});
 }
 
-/**
- * Hook to apply an offline update package.
- */
 export function useApplyUpdate() {
 	return useMutation({
-		mutationFn: applyUpdate,
+		mutationFn: (filename: string) =>
+			fetchApi<void>(`/airgap/updates/${filename}/apply`, {
+				method: "POST",
+			}),
 	});
 }
 
-/**
- * Hook to get the offline documentation index.
- */
 export function useDocumentationIndex() {
 	return useQuery({
-		queryKey: ['documentation-index'],
-		queryFn: fetchDocumentationIndex,
-		staleTime: 10 * 60 * 1000, // 10 minutes
+		queryKey: ["documentation-index"],
+		queryFn: () => fetchApi<DocumentationIndex>("/airgap/docs"),
+		staleTime: 10 * 60 * 1000,
 	});
 }
 
-/**
- * Convenience hook that combines air-gap status with computed values.
- */
 export function useAirGap() {
 	const { data: status, isLoading, error } = useAirGapStatus();
 
@@ -283,7 +175,6 @@ export function useAirGap() {
 		offlineDocsVersion: status?.offline_docs_version,
 		licenseValid: status?.license_valid ?? false,
 
-		// Helper to check if external links should be disabled
 		shouldBlockExternalLink: (url: string) => {
 			if (!status?.disable_external_links) return false;
 			try {

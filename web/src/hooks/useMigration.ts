@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchApi } from '../lib/api';
 import type {
 	MigrationExportRequest,
 	MigrationImportRequest,
@@ -6,59 +7,30 @@ import type {
 	MigrationValidationResult,
 } from '../lib/types';
 
-const API_BASE = '/api/v1';
-
-class ApiError extends Error {
-	constructor(
-		public status: number,
-		message: string,
-	) {
-		super(message);
-		this.name = 'ApiError';
-	}
-}
-
 // Migration Export API
 export function useGenerateExportKey() {
 	return useMutation({
-		mutationFn: async (): Promise<{ key: string }> => {
-			const response = await fetch(
-				`${API_BASE}/migration/export/generate-key`,
-				{
-					method: 'POST',
-					credentials: 'include',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-				},
-			);
-			if (!response.ok) {
-				const errorData = await response
-					.json()
-					.catch(() => ({ error: 'Failed to generate key' }));
-				throw new ApiError(response.status, errorData.error);
-			}
-			return response.json();
-		},
+		mutationFn: () =>
+			fetchApi<{ key: string }>('/migration/export/generate-key', {
+				method: 'POST',
+			}),
 	});
 }
 
 export function useMigrationExport() {
 	return useMutation({
 		mutationFn: async (data: MigrationExportRequest): Promise<Blob> => {
-			const response = await fetch(`${API_BASE}/migration/export`, {
+			const response = await fetch('/api/v1/migration/export', {
 				method: 'POST',
 				credentials: 'include',
-				headers: {
-					'Content-Type': 'application/json',
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(data),
 			});
 			if (!response.ok) {
 				const errorData = await response
 					.json()
 					.catch(() => ({ error: 'Export failed' }));
-				throw new ApiError(response.status, errorData.error);
+				throw new Error(errorData.error);
 			}
 			return response.blob();
 		},
@@ -67,54 +39,24 @@ export function useMigrationExport() {
 
 export function useValidateMigrationImport() {
 	return useMutation({
-		mutationFn: async (data: {
-			data: string;
-			decryption_key?: string;
-		}): Promise<MigrationValidationResult> => {
-			const response = await fetch(`${API_BASE}/migration/import/validate`, {
+		mutationFn: (data: { data: string; decryption_key?: string }) =>
+			fetchApi<MigrationValidationResult>('/migration/import/validate', {
 				method: 'POST',
-				credentials: 'include',
-				headers: {
-					'Content-Type': 'application/json',
-				},
 				body: JSON.stringify(data),
-			});
-			if (!response.ok) {
-				const errorData = await response
-					.json()
-					.catch(() => ({ error: 'Validation failed' }));
-				throw new ApiError(response.status, errorData.error);
-			}
-			return response.json();
-		},
+			}),
 	});
 }
 
 export function useMigrationImport() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: async (
-			data: MigrationImportRequest,
-		): Promise<MigrationImportResult> => {
-			const response = await fetch(`${API_BASE}/migration/import`, {
+		mutationFn: (data: MigrationImportRequest) =>
+			fetchApi<MigrationImportResult>('/migration/import', {
 				method: 'POST',
-				credentials: 'include',
-				headers: {
-					'Content-Type': 'application/json',
-				},
 				body: JSON.stringify(data),
-			});
-			if (!response.ok) {
-				const errorData = await response
-					.json()
-					.catch(() => ({ error: 'Import failed' }));
-				throw new ApiError(response.status, errorData.error);
-			}
-			return response.json();
-		},
+			}),
 		onSuccess: (result) => {
 			if (result.success && !result.dry_run) {
-				// Invalidate all relevant queries after successful import
 				queryClient.invalidateQueries({ queryKey: ['organizations'] });
 				queryClient.invalidateQueries({ queryKey: ['users'] });
 				queryClient.invalidateQueries({ queryKey: ['agents'] });

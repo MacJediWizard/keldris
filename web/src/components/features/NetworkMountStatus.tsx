@@ -9,26 +9,26 @@ function getMountStatusColor(status: string) {
 	switch (status) {
 		case 'connected':
 			return {
-				bg: 'bg-green-100',
-				text: 'text-green-800',
+				bg: 'bg-green-100 dark:bg-green-900/30',
+				text: 'text-green-800 dark:text-green-300',
 				dot: 'bg-green-500',
 			};
 		case 'stale':
 			return {
-				bg: 'bg-amber-100',
-				text: 'text-amber-800',
+				bg: 'bg-amber-100 dark:bg-amber-900/30',
+				text: 'text-amber-800 dark:text-amber-300',
 				dot: 'bg-amber-500',
 			};
 		case 'disconnected':
 			return {
-				bg: 'bg-red-100',
-				text: 'text-red-800',
+				bg: 'bg-red-100 dark:bg-red-900/30',
+				text: 'text-red-800 dark:text-red-300',
 				dot: 'bg-red-500',
 			};
 		default:
 			return {
-				bg: 'bg-gray-100',
-				text: 'text-gray-800',
+				bg: 'bg-gray-100 dark:bg-gray-700',
+				text: 'text-gray-800 dark:text-gray-300',
 				dot: 'bg-gray-500',
 			};
 	}
@@ -48,7 +48,7 @@ export function NetworkMountStatus({
 	if (compact) {
 		return (
 			<div className="flex items-center gap-2 flex-wrap">
-				<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded">
+				<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded">
 					<svg
 						className="w-3 h-3"
 						fill="none"
@@ -66,13 +66,13 @@ export function NetworkMountStatus({
 					{mounts.length} mount{mounts.length !== 1 ? 's' : ''}
 				</span>
 				{connectedCount > 0 && (
-					<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-green-50 text-green-700 rounded">
+					<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded">
 						<span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
 						{connectedCount} connected
 					</span>
 				)}
 				{unavailableCount > 0 && (
-					<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-amber-50 text-amber-700 rounded">
+					<span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded">
 						<span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
 						{unavailableCount} unavailable
 					</span>
@@ -83,20 +83,22 @@ export function NetworkMountStatus({
 
 	return (
 		<div className="mt-4">
-			<h4 className="text-sm font-medium text-gray-700 mb-2">Network Mounts</h4>
+			<h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+				Network Mounts
+			</h4>
 			<div className="space-y-2">
 				{mounts.map((mount) => {
 					const color = getMountStatusColor(mount.status);
 					return (
 						<div
 							key={mount.path}
-							className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+							className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
 						>
 							<div>
-								<div className="text-sm font-medium text-gray-900">
+								<div className="text-sm font-medium text-gray-900 dark:text-white">
 									{mount.path}
 								</div>
-								<div className="text-xs text-gray-500">
+								<div className="text-xs text-gray-500 dark:text-gray-400">
 									{mount.type.toUpperCase()} - {mount.remote}
 								</div>
 							</div>
