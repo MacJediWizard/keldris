@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchApi, fetchBlob } from "../lib/api";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchApi, fetchBlob } from '../lib/api';
 
 // Types
 
@@ -14,7 +14,7 @@ export interface AirGapStatus {
 
 export interface LicenseStatus {
 	valid: boolean;
-	type?: "community" | "pro" | "enterprise";
+	type?: 'community' | 'pro' | 'enterprise';
 	organization?: string;
 	expires_at?: string;
 	days_until_expiry?: number;
@@ -55,7 +55,7 @@ export interface DocumentationIndex {
 // The public airgap status endpoint doesn't require auth and needs
 // special 404 handling, so it uses raw fetch instead of the api client.
 async function fetchAirGapStatus(): Promise<AirGapStatus> {
-	const res = await fetch("/api/v1/public/airgap/status");
+	const res = await fetch('/api/v1/public/airgap/status');
 	if (!res.ok) {
 		if (res.status === 404) {
 			return {
@@ -66,7 +66,7 @@ async function fetchAirGapStatus(): Promise<AirGapStatus> {
 				license_valid: true,
 			};
 		}
-		throw new Error("Failed to fetch air-gap status");
+		throw new Error('Failed to fetch air-gap status');
 	}
 	return res.json();
 }
@@ -75,7 +75,7 @@ async function fetchAirGapStatus(): Promise<AirGapStatus> {
 
 export function useAirGapStatus() {
 	return useQuery({
-		queryKey: ["airgap-status"],
+		queryKey: ['airgap-status'],
 		queryFn: fetchAirGapStatus,
 		staleTime: 5 * 60 * 1000,
 		retry: 1,
@@ -84,8 +84,8 @@ export function useAirGapStatus() {
 
 export function useLicenseStatus() {
 	return useQuery({
-		queryKey: ["license-status"],
-		queryFn: () => fetchApi<LicenseStatus>("/airgap/license"),
+		queryKey: ['license-status'],
+		queryFn: () => fetchApi<LicenseStatus>('/airgap/license'),
 		staleTime: 60 * 1000,
 	});
 }
@@ -95,13 +95,13 @@ export function useUploadLicense() {
 
 	return useMutation({
 		mutationFn: (licenseData: string) =>
-			fetchApi<LicenseStatus>("/airgap/license", {
-				method: "POST",
+			fetchApi<LicenseStatus>('/airgap/license', {
+				method: 'POST',
 				body: JSON.stringify({ license: licenseData }),
 			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["license-status"] });
-			queryClient.invalidateQueries({ queryKey: ["airgap-status"] });
+			queryClient.invalidateQueries({ queryKey: ['license-status'] });
+			queryClient.invalidateQueries({ queryKey: ['airgap-status'] });
 		},
 	});
 }
@@ -109,11 +109,11 @@ export function useUploadLicense() {
 export function useDownloadRenewalRequest() {
 	return useMutation({
 		mutationFn: async () => {
-			const blob = await fetchBlob("/airgap/license/renewal-request");
+			const blob = await fetchBlob('/airgap/license/renewal-request');
 			const url = URL.createObjectURL(blob);
-			const a = document.createElement("a");
+			const a = document.createElement('a');
 			a.href = url;
-			a.download = "license-renewal-request.json";
+			a.download = 'license-renewal-request.json';
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);
@@ -127,20 +127,20 @@ export function useUpdateRevocationList() {
 
 	return useMutation({
 		mutationFn: (data: string) =>
-			fetchApi<void>("/airgap/revocations", {
-				method: "POST",
+			fetchApi<void>('/airgap/revocations', {
+				method: 'POST',
 				body: data,
 			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["license-status"] });
+			queryClient.invalidateQueries({ queryKey: ['license-status'] });
 		},
 	});
 }
 
 export function useUpdatePackages() {
 	return useQuery({
-		queryKey: ["update-packages"],
-		queryFn: () => fetchApi<UpdatePackagesResponse>("/airgap/updates"),
+		queryKey: ['update-packages'],
+		queryFn: () => fetchApi<UpdatePackagesResponse>('/airgap/updates'),
 		staleTime: 30 * 1000,
 	});
 }
@@ -149,15 +149,15 @@ export function useApplyUpdate() {
 	return useMutation({
 		mutationFn: (filename: string) =>
 			fetchApi<void>(`/airgap/updates/${filename}/apply`, {
-				method: "POST",
+				method: 'POST',
 			}),
 	});
 }
 
 export function useDocumentationIndex() {
 	return useQuery({
-		queryKey: ["documentation-index"],
-		queryFn: () => fetchApi<DocumentationIndex>("/airgap/docs"),
+		queryKey: ['documentation-index'],
+		queryFn: () => fetchApi<DocumentationIndex>('/airgap/docs'),
 		staleTime: 10 * 60 * 1000,
 	});
 }
