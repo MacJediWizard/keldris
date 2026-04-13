@@ -634,7 +634,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 	return response.json() as Promise<T>;
 }
 
-async function fetchApi<T>(
+export async function fetchApi<T>(
 	endpoint: string,
 	options: RequestInit = {},
 ): Promise<T> {
@@ -648,6 +648,16 @@ async function fetchApi<T>(
 	});
 
 	return handleResponse<T>(response);
+}
+
+export async function fetchBlob(endpoint: string): Promise<Blob> {
+	const response = await fetch(`${API_BASE}${endpoint}`, {
+		credentials: 'include',
+	});
+	if (!response.ok) {
+		throw new ApiError(response.status, 'Failed to fetch blob');
+	}
+	return response.blob();
 }
 
 async function fetchAuth<T>(

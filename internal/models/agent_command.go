@@ -27,6 +27,12 @@ const (
 	CommandTypeUninstall CommandType = "uninstall"
 	// CommandTypeDockerInspect inspects Docker snapshot contents on the agent.
 	CommandTypeDockerInspect CommandType = "docker_inspect"
+	// CommandTypeRestorePreview runs a restore dry-run to preview files.
+	CommandTypeRestorePreview CommandType = "restore_preview"
+	// CommandTypeSnapshotDiff compares two snapshots.
+	CommandTypeSnapshotDiff CommandType = "snapshot_diff"
+	// CommandTypeFileDiff diffs a file between two snapshots.
+	CommandTypeFileDiff CommandType = "file_diff"
 )
 
 // CommandStatus represents the current status of a command.
@@ -61,9 +67,12 @@ type CommandPayload struct {
 	DiagnosticTypes []string `json:"diagnostic_types,omitempty"`
 	// For uninstall command
 	Purge bool `json:"purge,omitempty"`
-	// For docker_inspect command
+	// For docker_inspect, restore_preview, snapshot_diff, file_diff commands
 	SnapshotID   string `json:"snapshot_id,omitempty"`
 	RepositoryID string `json:"repository_id,omitempty"`
+	TargetPath   string `json:"target_path,omitempty"`
+	SnapshotID2  string `json:"snapshot_id_2,omitempty"`
+	FilePath     string `json:"file_path,omitempty"`
 }
 
 // CommandResult contains the result of a command execution.

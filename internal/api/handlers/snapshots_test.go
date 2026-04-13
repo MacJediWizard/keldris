@@ -222,6 +222,10 @@ func (m *mockSnapshotStore) DeleteSnapshotMount(_ context.Context, _ uuid.UUID) 
 	return nil
 }
 
+func (m *mockSnapshotStore) CreateAgentCommand(_ context.Context, _ *models.AgentCommand) error {
+	return nil
+}
+
 // setupSnapshotsRouter registers all snapshot/restore routes for testing.
 func setupSnapshotsRouter(store SnapshotStore, user *auth.SessionUser) *gin.Engine {
 	r := SetupTestRouter(user)
@@ -299,9 +303,9 @@ func TestListSnapshots(t *testing.T) {
 
 	t.Run("success with snapshots", func(t *testing.T) {
 		store := &mockSnapshotStore{
-			user:    dbUser,
-			agents:  []*models.Agent{agent},
-			backups: map[uuid.UUID][]*models.Backup{agentID: {backup}},
+			user:     dbUser,
+			agents:   []*models.Agent{agent},
+			backups:  map[uuid.UUID][]*models.Backup{agentID: {backup}},
 			schedule: schedule,
 		}
 		r := setupSnapshotsRouter(store, sessionUser)
@@ -465,9 +469,9 @@ func TestListSnapshots(t *testing.T) {
 
 	t.Run("invalid repository_id", func(t *testing.T) {
 		store := &mockSnapshotStore{
-			user:    dbUser,
-			agents:  []*models.Agent{agent},
-			backups: map[uuid.UUID][]*models.Backup{agentID: {backup}},
+			user:     dbUser,
+			agents:   []*models.Agent{agent},
+			backups:  map[uuid.UUID][]*models.Backup{agentID: {backup}},
 			schedule: schedule,
 		}
 		r := setupSnapshotsRouter(store, sessionUser)
@@ -1726,33 +1730,30 @@ func TestCompareSnapshots(t *testing.T) {
 		r := setupCompareRouter(store, sessionUser)
 		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
 
-		if w.Code != http.StatusOK {
-			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		if w.Code != http.StatusAccepted {
+			t.Fatalf("expected 202, got %d: %s", w.Code, w.Body.String())
 		}
-		var resp SnapshotCompareResponse
+		var resp map[string]interface{}
 		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 			t.Fatalf("json unmarshal: %v", err)
 		}
-		if resp.SnapshotID1 != snapshotID1 {
-			t.Errorf("expected snapshot_id_1 %s, got %s", snapshotID1, resp.SnapshotID1)
+		if resp["command_id"] == nil {
+			t.Fatal("expected command_id in response")
 		}
-		if resp.SnapshotID2 != snapshotID2 {
-			t.Errorf("expected snapshot_id_2 %s, got %s", snapshotID2, resp.SnapshotID2)
+		if resp["status"] != "pending" {
+			t.Fatalf("expected status=pending, got %v", resp["status"])
 		}
-		if resp.Snapshot1 == nil {
+		if resp["snapshot_id_1"] != snapshotID1 {
+			t.Errorf("expected snapshot_id_1 %s, got %v", snapshotID1, resp["snapshot_id_1"])
+		}
+		if resp["snapshot_id_2"] != snapshotID2 {
+			t.Errorf("expected snapshot_id_2 %s, got %v", snapshotID2, resp["snapshot_id_2"])
+		}
+		if resp["snapshot_1"] == nil {
 			t.Fatal("expected snapshot_1 to be set")
 		}
-		if resp.Snapshot2 == nil {
+		if resp["snapshot_2"] == nil {
 			t.Fatal("expected snapshot_2 to be set")
-		}
-		if resp.Snapshot1.Hostname != "host-1" {
-			t.Errorf("expected snapshot_1 hostname host-1, got %s", resp.Snapshot1.Hostname)
-		}
-		if resp.Snapshot1.RepositoryID != repoID.String() {
-			t.Errorf("expected snapshot_1 repo ID %s, got %s", repoID.String(), resp.Snapshot1.RepositoryID)
-		}
-		if len(resp.Changes) != 0 {
-			t.Errorf("expected empty changes (placeholder), got %d", len(resp.Changes))
 		}
 	})
 
@@ -1848,7 +1849,7 @@ func TestCompareSnapshots(t *testing.T) {
 	})
 
 	t.Run("schedule error for first snapshot still succeeds", func(t *testing.T) {
-		// CompareSnapshots logs schedule errors but does not fail
+		// CompareSnapshots logs schedule errors but does not fail — command is still dispatched
 		store := &mockSnapshotStore{
 			user:  dbUser,
 			agent: agent,
@@ -1861,14 +1862,17 @@ func TestCompareSnapshots(t *testing.T) {
 		r := setupCompareRouter(store, sessionUser)
 		w := DoRequest(r, AuthenticatedRequest("GET", "/api/v1/snapshots/"+snapshotID1+"/compare/"+snapshotID2))
 
-		if w.Code != http.StatusOK {
-			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		if w.Code != http.StatusAccepted {
+			t.Fatalf("expected 202, got %d: %s", w.Code, w.Body.String())
 		}
-		var resp SnapshotCompareResponse
+		var resp map[string]interface{}
 		_ = json.Unmarshal(w.Body.Bytes(), &resp)
-		// Paths should be nil when schedule fails
-		if resp.Snapshot1 != nil && resp.Snapshot1.Paths != nil {
-			t.Errorf("expected nil paths when schedule error, got %v", resp.Snapshot1.Paths)
+		if resp["command_id"] == nil {
+			t.Fatal("expected command_id in response")
+		}
+		// Snapshot info should still be present even if schedule lookup failed
+		if resp["snapshot_1"] == nil {
+			t.Error("expected snapshot_1 to be present in response")
 		}
 	})
 

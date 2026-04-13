@@ -10,38 +10,38 @@ interface GeoReplicationStatusCardProps {
 function StatusBadge({ status }: { status: string }) {
 	const config = {
 		pending: {
-			bg: 'bg-gray-100',
-			text: 'text-gray-700',
+			bg: 'bg-gray-100 dark:bg-gray-700',
+			text: 'text-gray-700 dark:text-gray-300',
 			dot: 'bg-gray-400',
 			label: 'Pending',
 		},
 		syncing: {
-			bg: 'bg-blue-100',
-			text: 'text-blue-700',
+			bg: 'bg-blue-100 dark:bg-blue-900/40',
+			text: 'text-blue-700 dark:text-blue-300',
 			dot: 'bg-blue-500 animate-pulse',
 			label: 'Syncing',
 		},
 		synced: {
-			bg: 'bg-green-100',
-			text: 'text-green-700',
+			bg: 'bg-green-100 dark:bg-green-900/40',
+			text: 'text-green-700 dark:text-green-300',
 			dot: 'bg-green-500',
 			label: 'Synced',
 		},
 		failed: {
-			bg: 'bg-red-100',
-			text: 'text-red-700',
+			bg: 'bg-red-100 dark:bg-red-900/40',
+			text: 'text-red-700 dark:text-red-300',
 			dot: 'bg-red-500',
 			label: 'Failed',
 		},
 		disabled: {
-			bg: 'bg-gray-100',
-			text: 'text-gray-500',
+			bg: 'bg-gray-100 dark:bg-gray-700',
+			text: 'text-gray-500 dark:text-gray-400',
 			dot: 'bg-gray-300',
 			label: 'Disabled',
 		},
 	}[status] ?? {
-		bg: 'bg-gray-100',
-		text: 'text-gray-700',
+		bg: 'bg-gray-100 dark:bg-gray-700',
+		text: 'text-gray-700 dark:text-gray-300',
 		dot: 'bg-gray-400',
 		label: status,
 	};
@@ -80,8 +80,8 @@ function LagIndicator({
 		<div
 			className={`text-xs px-2 py-1 rounded ${
 				isHealthy
-					? 'bg-green-50 text-green-700'
-					: 'bg-yellow-50 text-yellow-700'
+					? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+					: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
 			}`}
 		>
 			{lag.snapshots_behind > 0 && (
@@ -131,11 +131,11 @@ export function GeoReplicationStatusCard({
 
 	if (configs.length === 0) {
 		return (
-			<div className="bg-white rounded-lg border border-gray-200 p-4">
-				<h3 className="text-sm font-medium text-gray-900 mb-2">
+			<div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-4">
+				<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
 					Geo-Replication Status
 				</h3>
-				<p className="text-sm text-gray-500">
+				<p className="text-sm text-gray-500 dark:text-gray-400">
 					No geo-replication configured. Set up replication to automatically
 					copy backups to secondary regions for disaster recovery.
 				</p>
@@ -144,12 +144,12 @@ export function GeoReplicationStatusCard({
 	}
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-4">
+		<div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-4">
 			<div className="flex items-center justify-between mb-3">
-				<h3 className="text-sm font-medium text-gray-900">
+				<h3 className="text-sm font-medium text-gray-900 dark:text-white">
 					Geo-Replication Status
 				</h3>
-				<div className="text-xs text-gray-500">
+				<div className="text-xs text-gray-500 dark:text-gray-400">
 					{configs.filter((c) => c.enabled).length} of {configs.length} active
 				</div>
 			</div>
@@ -158,7 +158,9 @@ export function GeoReplicationStatusCard({
 					<div
 						key={config.id}
 						className={`p-3 rounded-lg ${
-							config.enabled ? 'bg-gray-50' : 'bg-gray-100 opacity-60'
+							config.enabled
+								? 'bg-gray-50 dark:bg-gray-800'
+								: 'bg-gray-100 dark:bg-gray-700 opacity-60'
 						}`}
 					>
 						<div className="flex items-start gap-3">
@@ -167,7 +169,9 @@ export function GeoReplicationStatusCard({
 								<svg
 									aria-hidden="true"
 									className={`w-4 h-4 ${
-										config.enabled ? 'text-gray-400' : 'text-gray-300'
+										config.enabled
+											? 'text-gray-400 dark:text-gray-500'
+											: 'text-gray-300 dark:text-gray-600'
 									}`}
 									fill="none"
 									stroke="currentColor"
@@ -185,17 +189,17 @@ export function GeoReplicationStatusCard({
 							<div className="flex-1 min-w-0">
 								{/* Source -> Target */}
 								<div className="flex items-center gap-2 text-sm">
-									<span className="font-medium text-gray-900 truncate">
+									<span className="font-medium text-gray-900 dark:text-white truncate">
 										{getRepoName(config.source_repository_id)}
 									</span>
-									<span className="text-gray-400">→</span>
-									<span className="font-medium text-gray-900 truncate">
+									<span className="text-gray-400 dark:text-gray-500">→</span>
+									<span className="font-medium text-gray-900 dark:text-white truncate">
 										{getRepoName(config.target_repository_id)}
 									</span>
 								</div>
 
 								{/* Regions */}
-								<div className="text-xs text-gray-500 mt-0.5">
+								<div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
 									{config.source_region.display_name} →{' '}
 									{config.target_region.display_name}
 								</div>
@@ -204,7 +208,7 @@ export function GeoReplicationStatusCard({
 								<div className="flex flex-wrap items-center gap-2 mt-2">
 									<StatusBadge status={config.status} />
 									{config.last_sync_at && (
-										<span className="text-xs text-gray-500">
+										<span className="text-xs text-gray-500 dark:text-gray-400">
 											Last synced: {formatRelativeTime(config.last_sync_at)}
 										</span>
 									)}
@@ -237,7 +241,7 @@ export function GeoReplicationStatusCard({
 										<button
 											type="button"
 											onClick={() => onTriggerReplication(config.id)}
-											className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded"
+											className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 rounded"
 											title="Trigger sync now"
 											aria-label="Trigger sync now"
 										>
@@ -263,8 +267,8 @@ export function GeoReplicationStatusCard({
 										onClick={() => onToggleEnabled(config.id, !config.enabled)}
 										className={`p-1.5 rounded ${
 											config.enabled
-												? 'text-green-600 hover:bg-green-50'
-												: 'text-gray-400 hover:bg-gray-200'
+												? 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/30'
+												: 'text-gray-400 hover:bg-gray-200 dark:text-gray-500 dark:hover:bg-gray-700'
 										}`}
 										title={
 											config.enabled

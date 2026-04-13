@@ -144,11 +144,11 @@ function getLineClass(
 ): string {
 	switch (type) {
 		case 'added':
-			return 'bg-green-50 text-green-900';
+			return 'bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-100';
 		case 'removed':
-			return 'bg-red-50 text-red-900';
+			return 'bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100';
 		case 'header':
-			return 'bg-blue-50 text-blue-700 font-semibold';
+			return 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-semibold';
 		default:
 			return '';
 	}
@@ -159,11 +159,11 @@ function getLineNumClass(
 ): string {
 	switch (type) {
 		case 'added':
-			return 'bg-green-100 text-green-600';
+			return 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400';
 		case 'removed':
-			return 'bg-red-100 text-red-600';
+			return 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400';
 		default:
-			return 'bg-gray-50 text-gray-400';
+			return 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500';
 	}
 }
 
@@ -172,21 +172,21 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 
 	if (diff.is_binary) {
 		return (
-			<div className="border border-gray-200 rounded-lg overflow-hidden">
-				<div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+			<div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+				<div className="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
 					<div className="flex items-center justify-between">
-						<h3 className="font-mono text-sm text-gray-700 truncate">
+						<h3 className="font-mono text-sm text-gray-700 dark:text-gray-300 truncate">
 							{diff.path}
 						</h3>
-						<span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+						<span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-2 py-1 rounded">
 							Binary file
 						</span>
 					</div>
 				</div>
-				<div className="p-6 text-center text-gray-500">
+				<div className="p-6 text-center text-gray-500 dark:text-gray-400">
 					<svg
 						aria-hidden="true"
-						className="w-12 h-12 mx-auto mb-3 text-gray-300"
+						className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -198,14 +198,18 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
 						/>
 					</svg>
-					<p className="font-medium text-gray-900 mb-2">Binary file</p>
+					<p className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+						Binary file
+					</p>
 					<p className="text-sm">
 						Content comparison is not available for binary files
 					</p>
 					<div className="mt-4 flex justify-center gap-8 text-sm">
 						{diff.old_size !== undefined && (
 							<div>
-								<span className="text-gray-500">Old size: </span>
+								<span className="text-gray-500 dark:text-gray-400">
+									Old size:{' '}
+								</span>
 								<span className="font-medium">
 									{formatBytes(diff.old_size)}
 								</span>
@@ -213,7 +217,9 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 						)}
 						{diff.new_size !== undefined && (
 							<div>
-								<span className="text-gray-500">New size: </span>
+								<span className="text-gray-500 dark:text-gray-400">
+									New size:{' '}
+								</span>
 								<span className="font-medium">
 									{formatBytes(diff.new_size)}
 								</span>
@@ -221,7 +227,7 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 						)}
 					</div>
 					{diff.old_hash && diff.new_hash && (
-						<div className="mt-4 text-xs text-gray-400">
+						<div className="mt-4 text-xs text-gray-400 dark:text-gray-500">
 							<p>
 								{diff.old_hash === diff.new_hash
 									? 'Files are identical'
@@ -239,20 +245,20 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 	const hasContent = diffLines.length > 0;
 
 	return (
-		<div className="border border-gray-200 rounded-lg overflow-hidden">
-			<div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+		<div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+			<div className="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-3">
-						<h3 className="font-mono text-sm text-gray-700 truncate">
+						<h3 className="font-mono text-sm text-gray-700 dark:text-gray-300 truncate">
 							{diff.path}
 						</h3>
 						<span
 							className={`text-xs px-2 py-0.5 rounded ${
 								diff.change_type === 'added'
-									? 'bg-green-100 text-green-800'
+									? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
 									: diff.change_type === 'removed'
-										? 'bg-red-100 text-red-800'
-										: 'bg-blue-100 text-blue-800'
+										? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+										: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
 							}`}
 						>
 							{diff.change_type}
@@ -260,15 +266,17 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 					</div>
 					{hasContent && (
 						<div className="flex items-center gap-2">
-							<span className="text-xs text-gray-500">View:</span>
-							<div className="flex border border-gray-300 rounded overflow-hidden">
+							<span className="text-xs text-gray-500 dark:text-gray-400">
+								View:
+							</span>
+							<div className="flex border border-gray-300 dark:border-gray-600 rounded overflow-hidden">
 								<button
 									type="button"
 									onClick={() => setViewMode('unified')}
 									className={`px-3 py-1 text-xs ${
 										viewMode === 'unified'
 											? 'bg-indigo-600 text-white'
-											: 'bg-white text-gray-700 hover:bg-gray-50'
+											: 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
 									}`}
 								>
 									Unified
@@ -276,10 +284,10 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 								<button
 									type="button"
 									onClick={() => setViewMode('split')}
-									className={`px-3 py-1 text-xs border-l border-gray-300 ${
+									className={`px-3 py-1 text-xs border-l border-gray-300 dark:border-gray-600 ${
 										viewMode === 'split'
 											? 'bg-indigo-600 text-white'
-											: 'bg-white text-gray-700 hover:bg-gray-50'
+											: 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
 									}`}
 								>
 									Split
@@ -291,10 +299,10 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 			</div>
 
 			{!hasContent ? (
-				<div className="p-6 text-center text-gray-500">
+				<div className="p-6 text-center text-gray-500 dark:text-gray-400">
 					<svg
 						aria-hidden="true"
-						className="w-12 h-12 mx-auto mb-3 text-gray-300"
+						className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -306,7 +314,7 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 							d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
 						/>
 					</svg>
-					<p className="font-medium text-gray-900 mb-2">
+					<p className="font-medium text-gray-900 dark:text-gray-100 mb-2">
 						{diff.change_type === 'added'
 							? 'New file'
 							: diff.change_type === 'removed'
@@ -323,7 +331,9 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 					<div className="mt-4 flex justify-center gap-8 text-sm">
 						{diff.old_size !== undefined && diff.old_size > 0 && (
 							<div>
-								<span className="text-gray-500">Old size: </span>
+								<span className="text-gray-500 dark:text-gray-400">
+									Old size:{' '}
+								</span>
 								<span className="font-medium">
 									{formatBytes(diff.old_size)}
 								</span>
@@ -331,7 +341,9 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 						)}
 						{diff.new_size !== undefined && diff.new_size > 0 && (
 							<div>
-								<span className="text-gray-500">New size: </span>
+								<span className="text-gray-500 dark:text-gray-400">
+									New size:{' '}
+								</span>
 								<span className="font-medium">
 									{formatBytes(diff.new_size)}
 								</span>
@@ -354,19 +366,25 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 										{line.oldLineNum ?? ''}
 									</td>
 									<td
-										className={`px-2 py-0 text-right select-none w-12 border-r border-gray-200 ${getLineNumClass(line.type)}`}
+										className={`px-2 py-0 text-right select-none w-12 border-r border-gray-200 dark:border-gray-700 ${getLineNumClass(line.type)}`}
 									>
 										{line.newLineNum ?? ''}
 									</td>
 									<td className="px-2 py-0 whitespace-pre">
 										{line.type === 'added' && (
-											<span className="text-green-600 mr-1">+</span>
+											<span className="text-green-600 dark:text-green-400 mr-1">
+												+
+											</span>
 										)}
 										{line.type === 'removed' && (
-											<span className="text-red-600 mr-1">-</span>
+											<span className="text-red-600 dark:text-red-400 mr-1">
+												-
+											</span>
 										)}
 										{line.type === 'context' && (
-											<span className="text-gray-400 mr-1"> </span>
+											<span className="text-gray-400 dark:text-gray-500 mr-1">
+												{' '}
+											</span>
 										)}
 										{line.content}
 									</td>
@@ -378,12 +396,12 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 			) : (
 				<div className="overflow-x-auto">
 					<table className="w-full text-sm font-mono">
-						<thead className="bg-gray-100 border-b border-gray-200">
+						<thead className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
 							<tr>
-								<th className="px-2 py-1 text-left text-xs font-medium text-gray-500 w-1/2 border-r border-gray-200">
+								<th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 w-1/2 border-r border-gray-200 dark:border-gray-700">
 									{diff.snapshot_id_1?.slice(0, 8) || 'Old'}
 								</th>
-								<th className="px-2 py-1 text-left text-xs font-medium text-gray-500 w-1/2">
+								<th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 w-1/2">
 									{diff.snapshot_id_2?.slice(0, 8) || 'New'}
 								</th>
 							</tr>
@@ -394,12 +412,12 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 									key={`${row.left?.lineNum ?? 'e'}-${row.right?.lineNum ?? 'e'}-${row.left?.content.slice(0, 10) ?? row.right?.content.slice(0, 10)}`}
 								>
 									<td
-										className={`px-0 py-0 w-1/2 border-r border-gray-200 ${
+										className={`px-0 py-0 w-1/2 border-r border-gray-200 dark:border-gray-700 ${
 											row.left?.type === 'removed'
-												? 'bg-red-50'
+												? 'bg-red-50 dark:bg-red-900/20'
 												: row.left?.type === 'context'
 													? ''
-													: 'bg-gray-50'
+													: 'bg-gray-50 dark:bg-gray-800'
 										}`}
 									>
 										{row.left && (
@@ -410,7 +428,7 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 													{row.left.lineNum ?? ''}
 												</span>
 												<span
-													className={`flex-1 px-2 py-0 whitespace-pre ${row.left.type === 'removed' ? 'text-red-900' : ''}`}
+													className={`flex-1 px-2 py-0 whitespace-pre ${row.left.type === 'removed' ? 'text-red-900 dark:text-red-100' : ''}`}
 												>
 													{row.left.content}
 												</span>
@@ -420,10 +438,10 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 									<td
 										className={`px-0 py-0 w-1/2 ${
 											row.right?.type === 'added'
-												? 'bg-green-50'
+												? 'bg-green-50 dark:bg-green-900/20'
 												: row.right?.type === 'context'
 													? ''
-													: 'bg-gray-50'
+													: 'bg-gray-50 dark:bg-gray-800'
 										}`}
 									>
 										{row.right && (
@@ -434,7 +452,7 @@ export function DiffViewer({ diff }: DiffViewerProps) {
 													{row.right.lineNum ?? ''}
 												</span>
 												<span
-													className={`flex-1 px-2 py-0 whitespace-pre ${row.right.type === 'added' ? 'text-green-900' : ''}`}
+													className={`flex-1 px-2 py-0 whitespace-pre ${row.right.type === 'added' ? 'text-green-900 dark:text-green-100' : ''}`}
 												>
 													{row.right.content}
 												</span>

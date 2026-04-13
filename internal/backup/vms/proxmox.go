@@ -56,14 +56,14 @@ type ProxmoxVM struct {
 
 // BackupJob represents an active vzdump backup task.
 type BackupJob struct {
-	UPID      string    `json:"upid"`
-	Node      string    `json:"node"`
-	VMID      int       `json:"vmid"`
-	Type      string    `json:"type"` // qemu or lxc
-	Status    string    `json:"status"`
-	StartTime time.Time `json:"starttime"`
+	UPID      string     `json:"upid"`
+	Node      string     `json:"node"`
+	VMID      int        `json:"vmid"`
+	Type      string     `json:"type"` // qemu or lxc
+	Status    string     `json:"status"`
+	StartTime time.Time  `json:"starttime"`
 	EndTime   *time.Time `json:"endtime,omitempty"`
-	ExitCode  string    `json:"exitstatus,omitempty"`
+	ExitCode  string     `json:"exitstatus,omitempty"`
 }
 
 // BackupFile represents a backup file stored on Proxmox.
@@ -438,11 +438,35 @@ func (c *ProxmoxClient) DownloadBackup(ctx context.Context, volid string, destDi
 	return destPath, nil
 }
 
-// downloadBackupDirect attempts to download the backup file directly.
+// downloadBackupDirect downloads a backup file using the Proxmox storage content API.
 func (c *ProxmoxClient) downloadBackupDirect(ctx context.Context, storage, filename, destDir string) (string, error) {
-	// This would typically use PBS or a direct file transfer method
-	// For now, return an error indicating manual intervention may be needed
-	return "", fmt.Errorf("direct download not implemented for storage %s, file %s - consider using Proxmox Backup Server integration", storage, filename)
+	volid := storage + ":" + filename
+	path := fmt.Sprintf("/nodes/%s/storage/%s/content/%s", c.config.Node, storage, url.PathEscape(volid))
+
+	resp, err := c.doRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return "", fmt.Errorf("download backup from storage %s: %w", storage, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("download backup from storage %s returned status %d", storage, resp.StatusCode)
+	}
+
+	destPath := filepath.Join(destDir, filepath.Base(filename))
+	outFile, err := os.Create(destPath)
+	if err != nil {
+		return "", fmt.Errorf("create destination file: %w", err)
+	}
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, resp.Body); err != nil {
+		outFile.Close()
+		os.Remove(destPath)
+		return "", fmt.Errorf("download backup: %w", err)
+	}
+
+	return destPath, nil
 }
 
 // DeleteBackup removes a backup file from Proxmox storage.
