@@ -37,7 +37,8 @@
     "previous": "Anterior",
     "submit": "Enviar",
     "selectOrg": "Selecionar org",
-    "version": "v{{version}}"
+    "version": "v{{version}}",
+    "versionAvailable": "v{{version}} disponível"
   },
   "time": {
     "minutesAgo": "{{count}}m atrás",

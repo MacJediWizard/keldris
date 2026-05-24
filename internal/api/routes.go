@@ -390,10 +390,10 @@ func NewRouter(
 	notificationsHandler := handlers.NewNotificationsHandlerWithEnv(database, keyManager, featureChecker, logger, cfg.Environment)
 	notificationsHandler.RegisterRoutes(apiV1)
 
-	// Notification rules (feature gated - requires Pro+ for notification automation)
-	notificationRulesGroup := apiV1.Group("", middleware.FeatureMiddleware(license.FeatureNotificationSlack, logger))
+	// Notification rules — per-channel feature gating happens when the underlying
+	// notification channel is created, so the rules CRUD itself isn't gated here.
 	notificationRulesHandler := handlers.NewNotificationRulesHandler(database, keyManager, logger)
-	notificationRulesHandler.RegisterRoutes(notificationRulesGroup)
+	notificationRulesHandler.RegisterRoutes(apiV1)
 
 	// Reports (feature gated - requires Pro+)
 	if cfg.ReportScheduler != nil {

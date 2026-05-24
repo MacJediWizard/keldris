@@ -249,9 +249,13 @@ func (h *DatabaseBackupHandler) VerifyBackup(c *gin.Context) {
 		return
 	}
 
-	// Mark as verified in database
 	if err := h.store.MarkDatabaseBackupVerified(c.Request.Context(), backupID); err != nil {
 		h.logger.Error().Err(err).Msg("failed to mark backup as verified")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":    "verification succeeded but failed to persist verification status",
+			"verified": true,
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{

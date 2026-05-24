@@ -21,7 +21,7 @@ type NotificationRuleStore interface {
 	GetEnabledRulesByTriggerType(ctx context.Context, orgID uuid.UUID, triggerType models.RuleTriggerType) ([]*models.NotificationRule, error)
 	CreateNotificationRule(ctx context.Context, rule *models.NotificationRule) error
 	UpdateNotificationRule(ctx context.Context, rule *models.NotificationRule) error
-	DeleteNotificationRule(ctx context.Context, id uuid.UUID) error
+	DeleteNotificationRule(ctx context.Context, id, orgID uuid.UUID) error
 	GetRecentEventsForRule(ctx context.Context, ruleID uuid.UUID, limit int) ([]*models.NotificationRuleEvent, error)
 	GetRecentExecutionsForRule(ctx context.Context, ruleID uuid.UUID, limit int) ([]*models.NotificationRuleExecution, error)
 	GetNotificationChannelByID(ctx context.Context, id uuid.UUID) (*models.NotificationChannel, error)
@@ -286,7 +286,7 @@ func (h *NotificationRulesHandler) DeleteRule(c *gin.Context) {
 		return
 	}
 
-	if err := h.store.DeleteNotificationRule(c.Request.Context(), id); err != nil {
+	if err := h.store.DeleteNotificationRule(c.Request.Context(), id, user.CurrentOrgID); err != nil {
 		h.logger.Error().Err(err).Str("rule_id", id.String()).Msg("failed to delete notification rule")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete notification rule"})
 		return
