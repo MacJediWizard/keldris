@@ -135,9 +135,9 @@ func (db *DB) UpdateNotificationRule(ctx context.Context, rule *models.Notificat
 	return nil
 }
 
-// DeleteNotificationRule deletes a notification rule.
-func (db *DB) DeleteNotificationRule(ctx context.Context, id uuid.UUID) error {
-	_, err := db.Pool.Exec(ctx, `DELETE FROM notification_rules WHERE id = $1`, id)
+// DeleteNotificationRule deletes a notification rule scoped to its org.
+func (db *DB) DeleteNotificationRule(ctx context.Context, id, orgID uuid.UUID) error {
+	_, err := db.Pool.Exec(ctx, `DELETE FROM notification_rules WHERE id = $1 AND org_id = $2`, id, orgID)
 	if err != nil {
 		return fmt.Errorf("delete notification rule: %w", err)
 	}

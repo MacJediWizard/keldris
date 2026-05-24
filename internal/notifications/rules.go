@@ -20,7 +20,7 @@ type RuleStore interface {
 	GetEnabledRulesByTriggerType(ctx context.Context, orgID uuid.UUID, triggerType models.RuleTriggerType) ([]*models.NotificationRule, error)
 	CreateNotificationRule(ctx context.Context, rule *models.NotificationRule) error
 	UpdateNotificationRule(ctx context.Context, rule *models.NotificationRule) error
-	DeleteNotificationRule(ctx context.Context, id uuid.UUID) error
+	DeleteNotificationRule(ctx context.Context, id, orgID uuid.UUID) error
 
 	// Events
 	CreateNotificationRuleEvent(ctx context.Context, event *models.NotificationRuleEvent) error

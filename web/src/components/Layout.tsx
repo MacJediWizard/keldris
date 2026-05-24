@@ -1041,7 +1041,7 @@ function Sidebar() {
 					</span>
 					{hasNewVersion && (
 						<span className="px-1.5 py-0.5 text-[10px] font-medium bg-indigo-600 text-white rounded-full">
-							v{latestVersion} available
+							{t('common.versionAvailable', { version: latestVersion })}
 						</span>
 					)}
 				</Link>
@@ -1179,7 +1179,7 @@ function HelpMenu({ onShowShortcuts }: { onShowShortcuts: () => void }) {
 			<button
 				type="button"
 				onClick={() => setShowDropdown(!showDropdown)}
-				className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+				className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
 				aria-label={t('help.title')}
 			>
 				<svg
@@ -1198,9 +1198,9 @@ function HelpMenu({ onShowShortcuts }: { onShowShortcuts: () => void }) {
 				</svg>
 			</button>
 			{showDropdown && (
-				<div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-					<div className="px-4 py-2 border-b border-gray-100">
-						<p className="text-sm font-semibold text-gray-900">
+				<div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+					<div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+						<p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
 							{t('help.title')}
 						</p>
 					</div>
@@ -1210,30 +1210,32 @@ function HelpMenu({ onShowShortcuts }: { onShowShortcuts: () => void }) {
 								key={link.path}
 								to={link.path}
 								onClick={() => setShowDropdown(false)}
-								className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+								className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
 							>
 								{link.label}
 							</Link>
 						))}
 					</div>
-					<div className="border-t border-gray-100 py-1">
+					<div className="border-t border-gray-100 dark:border-gray-700 py-1">
 						<button
 							type="button"
 							onClick={() => {
 								setShowDropdown(false);
 								onShowShortcuts();
 							}}
-							className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
+							className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700 flex items-center justify-between"
 						>
 							<span>{t('help.keyboardShortcuts')}</span>
-							<span className="text-xs text-gray-400 font-mono">?</span>
+							<span className="text-xs text-gray-400 dark:text-gray-500 font-mono">
+								?
+							</span>
 						</button>
 						<a
 							href="/api/docs"
 							target="_blank"
 							rel="noopener noreferrer"
 							onClick={() => setShowDropdown(false)}
-							className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+							className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700 flex items-center gap-2"
 						>
 							{t('help.swaggerDocs')}
 							<svg
