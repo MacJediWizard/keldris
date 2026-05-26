@@ -21,7 +21,6 @@ type mockLegalHoldStore struct {
 	agent     *models.Agent
 	statusMap map[string]bool
 	onHold    bool
-	tier      license.Tier
 	err       error
 }
 
